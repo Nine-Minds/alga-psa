@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { withTransaction } from '@alga-psa/db';
-import { publishEvent } from '@alga-psa/shared/events/publisher';
-import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
-import type { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
-import { processInboundEmailInApp } from '@alga-psa/shared/services/email/processInboundEmailInApp';
-import {
-  isInboundEmailInAppProcessingEnabled,
-  isUnifiedInboundEmailPointerQueueEnabled,
-} from '@alga-psa/shared/services/email/inboundEmailInAppFeatureFlag';
 import { enqueueUnifiedInboundEmailQueueJob } from '@alga-psa/shared/services/email/unifiedInboundEmailQueue';
 
 interface MicrosoftNotification {
@@ -107,7 +99,6 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
     const knex = await getAdminConnection();
     const processedNotifications: string[] = [];
     let unifiedQueuedCount = 0;
-    let inlineProcessedCount = 0;
     const enqueueFailures: Array<{
       subscriptionId: string;
       messageId: string;
@@ -186,246 +177,53 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
             return;
           }
 
-          const useUnifiedQueue = isUnifiedInboundEmailPointerQueueEnabled({
-            tenantId: row.tenant,
-            providerId: row.id,
-          });
-
-          if (useUnifiedQueue) {
-            let enqueueResult;
-            try {
-              enqueueResult = await enqueueUnifiedInboundEmailQueueJob({
-                tenantId: row.tenant,
-                providerId: row.id,
-                provider: 'microsoft',
-                pointer: {
-                  subscriptionId: notification.subscriptionId,
-                  messageId,
-                  resource: notification.resource,
-                  changeType: notification.changeType,
-                },
-              });
-            } catch (enqueueError: any) {
-              const enrichedError = new Error(
-                `Failed to enqueue Microsoft pointer job for message ${messageId}`
-              ) as Error & {
-                code?: string;
-                details?: {
-                  subscriptionId: string;
-                  messageId: string;
-                  providerId: string;
-                  tenantId: string;
-                  reason: string;
-                };
-              };
-              enrichedError.code = 'UNIFIED_INBOUND_ENQUEUE_FAILED';
-              enrichedError.details = {
+          let enqueueResult;
+          try {
+            enqueueResult = await enqueueUnifiedInboundEmailQueueJob({
+              tenantId: row.tenant,
+              providerId: row.id,
+              provider: 'microsoft',
+              pointer: {
                 subscriptionId: notification.subscriptionId,
                 messageId,
-                providerId: row.id,
-                tenantId: row.tenant,
-                reason: enqueueError?.message || String(enqueueError),
+                resource: notification.resource,
+                changeType: notification.changeType,
+              },
+            });
+          } catch (enqueueError: any) {
+            const enrichedError = new Error(
+              `Failed to enqueue Microsoft pointer job for message ${messageId}`
+            ) as Error & {
+              code?: string;
+              details?: {
+                subscriptionId: string;
+                messageId: string;
+                providerId: string;
+                tenantId: string;
+                reason: string;
               };
-              throw enrichedError;
-            }
-
-            processedNotifications.push(messageId);
-            unifiedQueuedCount += 1;
-            console.log('✅ Enqueued unified inbound email pointer job (Microsoft)', {
-              providerId: row.id,
-              tenantId: row.tenant,
+            };
+            enrichedError.code = 'UNIFIED_INBOUND_ENQUEUE_FAILED';
+            enrichedError.details = {
               subscriptionId: notification.subscriptionId,
               messageId,
-              queueDepth: enqueueResult.queueDepth,
-              jobId: enqueueResult.job.jobId,
-            });
-            return;
-          }
-
-          // Check if this email has already been processed (deduplication)
-          // Microsoft may send duplicate webhook notifications for reliability
-          const existingProcessed = await trx('email_processed_messages')
-            .where({ message_id: messageId, tenant: row.tenant })
-            .first();
-
-          if (existingProcessed) {
-            console.log(`⚠️ Email ${messageId} already processed (status: ${existingProcessed.processing_status}), skipping duplicate webhook`);
-            return;
-          }
-
-          // Insert processing record BEFORE publishing event to prevent race conditions
-          // This ensures that if Microsoft sends duplicate webhooks simultaneously,
-          // only one will proceed past this point
-          try {
-            await trx('email_processed_messages').insert({
-              message_id: messageId,
-              provider_id: row.id,
-              tenant: row.tenant,
-              processed_at: new Date(),
-              processing_status: 'processing',
-              from_email: null, // Will be updated after fetching details
-              subject: notification.resourceData?.subject || null,
-              received_at: null,
-              attachment_count: 0,
-              metadata: JSON.stringify({
-                subscriptionId: notification.subscriptionId,
-                changeType: notification.changeType,
-                webhookReceivedAt: new Date().toISOString(),
-              }),
-            });
-          } catch (insertErr: any) {
-            // If insert fails due to unique constraint, another webhook is processing this email
-            if (insertErr.code === '23505' || insertErr.message?.includes('duplicate') || insertErr.message?.includes('unique')) {
-              console.log(`⚠️ Email ${messageId} is being processed by another webhook, skipping`);
-              return;
-            }
-            throw insertErr;
-          }
-
-          // Build provider config to fetch full email details
-          // Derive webhook URL from environment (provider row doesn't store it in prod schema)
-          const baseUrl = process.env.NGROK_URL || process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
-          const derivedWebhookUrl = `${baseUrl}/api/email/webhooks/microsoft`;
-
-          // Determine folder to monitor from saved config (first folder if multiple)
-          const ff = (row as any).mc_folder_filters;
-          const folderToMonitor = Array.isArray(ff)
-            ? (ff[0] || 'Inbox')
-            : (() => { try { const parsed = JSON.parse(ff || '[]'); return parsed[0] || 'Inbox'; } catch { return 'Inbox'; } })();
-
-          const providerConfig: EmailProviderConfig = {
-            id: row.id,
-            tenant: row.tenant,
-            name: row.provider_name || row.mailbox,
-            provider_type: 'microsoft',
-            mailbox: row.mailbox,
-            folder_to_monitor: folderToMonitor,
-            active: row.is_active,
-            webhook_notification_url: (row as any).webhook_notification_url || derivedWebhookUrl,
-            webhook_subscription_id: row.mc_webhook_subscription_id,
-            webhook_verification_token: (row as any).webhook_verification_token || undefined,
-            webhook_expires_at: row.mc_webhook_expires_at,
-            connection_status: (row as any).connection_status || row.status || 'connected',
-            created_at: row.created_at,
-            updated_at: row.updated_at,
-            provider_config: {
-              client_id: (row as any).mc_client_id,
-              client_secret: (row as any).mc_client_secret,
-              tenant_id: (row as any).mc_tenant_id,
-              access_token: (row as any).mc_access_token,
-              refresh_token: (row as any).mc_refresh_token,
-              token_expires_at: (row as any).mc_token_expires_at,
-            },
-          } as any;
-
-          let details: any | null = null;
-          let detailsErrorMessage: string | null = null;
-          const useInApp = isInboundEmailInAppProcessingEnabled({ tenantId: row.tenant, providerId: row.id });
-          let inAppResult: any | null = null;
-          try {
-            const adapter = new MicrosoftGraphAdapter(providerConfig);
-            await adapter.connect();
-            details = await adapter.getMessageDetails(messageId);
-          } catch (detailErr: any) {
-            detailsErrorMessage = detailErr?.message || String(detailErr);
-            console.warn(`Failed to fetch Microsoft message details for ${messageId}: ${detailsErrorMessage}`);
-          }
-
-          if (details) {
-            if (useInApp) {
-              inAppResult = await processInboundEmailInApp({
-                tenantId: row.tenant,
-                providerId: row.id,
-                emailData: details as any,
-              });
-              console.log('✅ In-app inbound email processing completed', { messageId, result: inAppResult });
-            } else {
-              await publishEvent({
-                eventType: 'INBOUND_EMAIL_RECEIVED',
-                tenant: row.tenant,
-                payload: {
-                  tenantId: row.tenant,
-                  tenant: row.tenant,
-                  providerId: row.id,
-                  emailData: details,
-                },
-              });
-            }
-          } else {
-            // Fallback: publish minimal event (acknowledge receipt; workflow may decide how to handle missing fields)
-            const minimal = {
-              id: messageId,
-              provider: 'microsoft',
               providerId: row.id,
-              tenant: row.tenant,
-              receivedAt: new Date().toISOString(),
-              from: { email: '', name: undefined },
-              to: [],
-              subject: notification.resourceData?.subject || '',
-              body: { text: '', html: undefined },
-            } as any;
-
-            if (useInApp) {
-              inAppResult = await processInboundEmailInApp({
-                tenantId: row.tenant,
-                providerId: row.id,
-                emailData: minimal,
-              });
-              console.log('✅ In-app inbound email processing completed (minimal payload)', { messageId, result: inAppResult });
-            } else {
-              await publishEvent({
-                eventType: 'INBOUND_EMAIL_RECEIVED',
-                tenant: row.tenant,
-                payload: {
-                  tenantId: row.tenant,
-                  tenant: row.tenant,
-                  providerId: row.id,
-                  emailData: minimal,
-                },
-              });
-            }
-          }
-
-          // Best-effort bookkeeping (do not publish a second event if this fails)
-          try {
-            await trx('email_providers')
-              .where('id', row.id)
-              .andWhere('tenant', row.tenant)
-              .update({
-                last_sync_at: trx.fn.now(),
-                updated_at: trx.fn.now()
-              });
-          } catch (syncErr: any) {
-            console.warn(`Failed to update last_sync_at for provider ${row.id}: ${syncErr?.message || syncErr}`);
-          }
-
-          try {
-            const processingStatus = useInApp
-              ? (inAppResult?.outcome === 'skipped' ? 'partial' : 'success')
-              : (details ? 'success' : 'partial');
-
-            const errorMessage = useInApp
-              ? (inAppResult?.outcome === 'skipped' ? `skipped:${inAppResult?.reason}` : null)
-              : (details ? null : (detailsErrorMessage || 'Failed to fetch full email details'));
-
-            await trx('email_processed_messages')
-              .where({ message_id: messageId, provider_id: row.id, tenant: row.tenant })
-              .update({
-                processing_status: processingStatus,
-                ticket_id: useInApp ? (inAppResult?.ticketId ?? null) : null,
-                from_email: details?.from?.email || null,
-                subject: details?.subject || notification.resourceData?.subject || null,
-                received_at: details?.receivedAt ? new Date(details.receivedAt) : null,
-                attachment_count: details?.attachments?.length || 0,
-                error_message: errorMessage,
-              });
-          } catch (statusErr: any) {
-            console.warn(`Failed to update processing status for ${messageId}: ${statusErr?.message || statusErr}`);
+              tenantId: row.tenant,
+              reason: enqueueError?.message || String(enqueueError),
+            };
+            throw enrichedError;
           }
 
           processedNotifications.push(messageId);
-          inlineProcessedCount += 1;
-          console.log(`Published ${details ? 'enriched' : 'minimal'} event for Microsoft email: ${messageId} from ${row.mailbox}`);
+          unifiedQueuedCount += 1;
+          console.log('✅ Enqueued unified inbound email pointer job (Microsoft)', {
+            providerId: row.id,
+            tenantId: row.tenant,
+            subscriptionId: notification.subscriptionId,
+            messageId,
+            queueDepth: enqueueResult.queueDepth,
+            jobId: enqueueResult.job.jobId,
+          });
         });
       } catch (error: any) {
         console.error('Error processing Microsoft notification:', error);
@@ -447,19 +245,11 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
       );
     }
 
-    const handoff =
-      unifiedQueuedCount > 0 && inlineProcessedCount === 0
-        ? 'unified_pointer_queue'
-        : unifiedQueuedCount > 0
-          ? 'mixed'
-          : 'inline_processing';
-
     return NextResponse.json({
       success: true,
-      queued: unifiedQueuedCount > 0 && inlineProcessedCount === 0,
-      handoff,
+      queued: unifiedQueuedCount > 0,
+      handoff: 'unified_pointer_queue',
       unifiedQueuedCount,
-      inlineProcessedCount,
       processedCount: processedNotifications.length,
       messageIds: processedNotifications,
     });
@@ -479,4 +269,3 @@ function extractMessageId(resource: string): string | null {
   const match = resource.match(/\/messages\/([^\/]+)/);
   return match ? match[1] : null;
 }
-

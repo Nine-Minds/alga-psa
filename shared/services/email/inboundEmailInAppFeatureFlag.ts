@@ -45,20 +45,3 @@ export function isImapInboundEmailInAppProcessingEnabled(params: {
     enabledImapProviders.has(params.providerId)
   );
 }
-
-export function isUnifiedInboundEmailPointerQueueEnabled(params: {
-  tenantId: string;
-  providerId: string;
-}): boolean {
-  const globallyEnabled =
-    typeof process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_ENABLED === 'string' &&
-    TRUE_VALUES.has(process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_ENABLED.toLowerCase());
-  const enabledTenants = parseCsv(process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_TENANT_IDS);
-  const enabledProviders = parseCsv(process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_PROVIDER_IDS);
-
-  return (
-    globallyEnabled ||
-    enabledTenants.has(params.tenantId) ||
-    enabledProviders.has(params.providerId)
-  );
-}

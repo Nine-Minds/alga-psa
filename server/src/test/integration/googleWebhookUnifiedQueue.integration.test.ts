@@ -44,9 +44,6 @@ function createJwt(email: string): string {
 
 describe('Google unified inbound pointer queue ingress', () => {
   beforeEach(() => {
-    process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_ENABLED = 'true';
-    process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_TENANT_IDS = '';
-    process.env.UNIFIED_INBOUND_EMAIL_POINTER_QUEUE_PROVIDER_IDS = '';
     process.env.NEXTAUTH_URL = 'https://example.test';
 
     enqueueUnifiedInboundEmailQueueJobMock.mockReset();
