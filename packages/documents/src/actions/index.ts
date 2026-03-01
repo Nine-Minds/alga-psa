@@ -3,6 +3,7 @@
  */
 
 export * from './documentActions';
+export * from './folderTemplateActions';
 export * from './documentBlockContentActions';
 export * from './documentContentActions';
 export * from './document-download';

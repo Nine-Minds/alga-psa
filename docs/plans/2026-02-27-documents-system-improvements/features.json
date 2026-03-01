@@ -210,7 +210,7 @@
   {
     "id": "F028",
     "description": "Action: getFolderTemplates(entityType?) returns filtered template list",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2.5"
     ]
