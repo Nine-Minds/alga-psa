@@ -176,4 +176,57 @@ describe('Google unified inbound pointer queue ingress', () => {
     expect(enqueuePayload).not.toHaveProperty('attachments');
     expect(enqueuePayload).not.toHaveProperty('rawMimeBase64');
   });
+
+  it('T005: Google callback success waits for durable enqueue completion', async () => {
+    const { POST } = await import('@alga-psa/integrations/webhooks/email/google');
+
+    let resolveEnqueue!: (value: { job: { jobId: string }; queueDepth: number }) => void;
+    const enqueueGate = new Promise<{ job: { jobId: string }; queueDepth: number }>((resolve) => {
+      resolveEnqueue = resolve;
+    });
+    enqueueUnifiedInboundEmailQueueJobMock.mockImplementation(() => enqueueGate);
+
+    const notification = {
+      emailAddress: 'support@example.com',
+      historyId: '43',
+    };
+    const pubsubPayload = {
+      message: {
+        data: Buffer.from(JSON.stringify(notification)).toString('base64'),
+        messageId: 'pubsub-msg-2',
+        publishTime: new Date().toISOString(),
+      },
+      subscription: 'projects/example-project/subscriptions/sub-google-1',
+    };
+
+    const request = new NextRequest('http://localhost:3000/api/email/webhooks/google', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${createJwt('pubsub-service@example-project.iam.gserviceaccount.com')}`,
+      },
+      body: JSON.stringify(pubsubPayload),
+    });
+
+    let settled = false;
+    const responsePromise = POST(request).then((response) => {
+      settled = true;
+      return response;
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(enqueueUnifiedInboundEmailQueueJobMock).toHaveBeenCalledTimes(1);
+    expect(settled).toBe(false);
+
+    resolveEnqueue({ job: { jobId: 'job-g-gated' }, queueDepth: 2 });
+    const response = await responsePromise;
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toMatchObject({
+      success: true,
+      queued: true,
+      handoff: 'unified_pointer_queue',
+      historyId: '43',
+    });
+  });
 });
