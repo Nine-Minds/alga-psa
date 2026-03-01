@@ -56,7 +56,7 @@
   {
     "id": "F007",
     "description": "Show upload failure UI with retry/remove action for pasted images",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
