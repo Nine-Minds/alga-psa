@@ -83,3 +83,4 @@ EOF && git add ee/docs/plans/2026-03-01-ticket-comment-clipboard-image-attachmen
 - (2026-03-01) T020 implemented: contract assertions verify cancel action opens keep-vs-delete prompt when draft includes uploaded clipboard images.
 EOF && git add ee/docs/plans/2026-03-01-ticket-comment-clipboard-image-attachments/tests.json ee/docs/plans/2026-03-01-ticket-comment-clipboard-image-attachments/SCRATCHPAD.md && git commit -m "test(T020): verify cancel prompt for uploaded draft images"- (2026-03-01) T021 implemented: contract coverage validates keep path handler clears draft state and closes editor without invoking hard-delete action.
 - (2026-03-01) T022 implemented: added `clipboardImageDraftActions.contract.test.ts` validating hard-delete loop invokes `deleteDocument` for vetted draft artifacts.
+- (2026-03-01) T023 implemented: draft-delete contract test asserts saved-comment reference guard (`already_referenced`) based on comment payload token scan.

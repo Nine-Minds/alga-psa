@@ -181,7 +181,7 @@
   {
     "id": "T023",
     "description": "API integration guard path: delete attempt is rejected for image already referenced by a saved ticket comment",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
