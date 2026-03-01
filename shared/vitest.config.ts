@@ -5,9 +5,6 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['services/**/*.test.ts', '**/__tests__/**/*.test.ts'],
-    coverage: {
-      enabled: false,
-    },
   },
   resolve: {
     alias: [
@@ -28,6 +25,10 @@ export default defineConfig({
       {
         find: /^@alga-psa\/core\/logger$/,
         replacement: path.resolve(__dirname, '../packages/core/src/lib/logger.ts'),
+      },
+      {
+        find: /^@alga-psa\/core\/secrets$/,
+        replacement: path.resolve(__dirname, '../packages/core/src/lib/secrets/index.ts'),
       },
     ],
   },

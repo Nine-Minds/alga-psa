@@ -251,6 +251,75 @@ function stateLog(event: string, fields: Record<string, unknown> = {}) {
   }
 }
 
+export async function dispatchImapInboundWebhookWithRetry(input: {
+  url: string;
+  timeoutMs: number;
+  maxAttempts: number;
+  payload: unknown;
+  headers: Record<string, string>;
+  providerId: string;
+  tenant: string;
+  folder: string;
+  listenerId: string;
+  retryBaseMs?: number;
+  jitterPct?: number;
+  sleepFn?: (ms: number) => Promise<void>;
+}): Promise<void> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 1; attempt <= input.maxAttempts; attempt += 1) {
+    try {
+      const response = await axios.post(input.url, input.payload, {
+        timeout: input.timeoutMs,
+        headers: input.headers,
+        validateStatus: () => true,
+      });
+
+      if (response.status >= 200 && response.status < 300) {
+        return;
+      }
+
+      let bodySummary = '';
+      if (typeof response.data === 'string') {
+        bodySummary = response.data.slice(0, 300);
+      } else if (response.data) {
+        try {
+          bodySummary = JSON.stringify(response.data).slice(0, 300);
+        } catch {
+          bodySummary = '[unserializable response body]';
+        }
+      }
+
+      lastError = new Error(
+        `IMAP webhook returned HTTP ${response.status}${bodySummary ? ` (${bodySummary})` : ''}`
+      );
+    } catch (error: any) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+    }
+
+    stateLog('webhook_retry', {
+      providerId: input.providerId,
+      tenant: input.tenant,
+      folder: input.folder,
+      listenerId: input.listenerId,
+      attempt,
+      maxAttempts: input.maxAttempts,
+      message: lastError?.message || 'unknown webhook dispatch error',
+    });
+
+    if (attempt < input.maxAttempts) {
+      const retryBase = Math.min(
+        (input.retryBaseMs ?? DEFAULT_WEBHOOK_RETRY_BASE_MS) * 2 ** (attempt - 1),
+        5_000
+      );
+      const delayMs = jitterMs(retryBase, input.jitterPct ?? getTimerJitterPct());
+      await (input.sleepFn ?? sleep)(delayMs);
+    }
+  }
+
+  throw lastError || new Error('Failed to dispatch IMAP webhook');
+}
+
 function normalizeImapError(error: any): {
   message: string;
   responseStatus?: string;
@@ -555,56 +624,20 @@ class ImapFolderListener {
           tenantId: this.provider.tenant,
           emailData: input.emailData,
         };
-
-    let lastError: Error | null = null;
-
-    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-      try {
-        const response = await axios.post(url, payload, {
-          timeout: timeoutMs,
-          headers,
-          validateStatus: () => true,
-        });
-
-        if (response.status >= 200 && response.status < 300) {
-          return;
-        }
-
-        let bodySummary = '';
-        if (typeof response.data === 'string') {
-          bodySummary = response.data.slice(0, 300);
-        } else if (response.data) {
-          try {
-            bodySummary = JSON.stringify(response.data).slice(0, 300);
-          } catch {
-            bodySummary = '[unserializable response body]';
-          }
-        }
-
-        lastError = new Error(
-          `IMAP webhook returned HTTP ${response.status}${bodySummary ? ` (${bodySummary})` : ''}`
-        );
-      } catch (error: any) {
-        lastError = error instanceof Error ? error : new Error(String(error));
-      }
-
-      stateLog('webhook_retry', {
-        providerId: this.provider.id,
-        tenant: this.provider.tenant,
-        folder: this.folder,
-        listenerId: this.listenerId,
-        attempt,
-        maxAttempts,
-        message: lastError?.message || 'unknown webhook dispatch error',
-      });
-
-      if (attempt < maxAttempts) {
-        const retryBase = Math.min(DEFAULT_WEBHOOK_RETRY_BASE_MS * 2 ** (attempt - 1), 5_000);
-        await sleep(jitterMs(retryBase, this.jitterPct));
-      }
-    }
-
-    throw lastError || new Error('Failed to dispatch IMAP webhook');
+    await dispatchImapInboundWebhookWithRetry({
+      url,
+      timeoutMs,
+      maxAttempts,
+      payload,
+      headers,
+      providerId: this.provider.id,
+      tenant: this.provider.tenant,
+      folder: this.folder,
+      listenerId: this.listenerId,
+      jitterPct: this.jitterPct,
+      retryBaseMs: DEFAULT_WEBHOOK_RETRY_BASE_MS,
+      sleepFn: sleep,
+    });
   }
 
   private async getPasswordSecret(): Promise<string | null> {

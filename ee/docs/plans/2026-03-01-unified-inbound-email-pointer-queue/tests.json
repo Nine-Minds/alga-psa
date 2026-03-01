@@ -44,7 +44,7 @@
   {
     "id": "T008",
     "description": "Integration: IMAP delivery retries when server ingress returns non-2xx",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
