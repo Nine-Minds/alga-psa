@@ -74,7 +74,7 @@
   {
     "id": "F009",
     "description": "Load and render attachment-backed image references in ticket comment stream via attachment-serving URLs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
