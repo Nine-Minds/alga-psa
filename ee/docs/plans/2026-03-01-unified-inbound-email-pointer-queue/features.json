@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "Implement consume-time provider fetch for full email payload based on pointer job data",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Data / API / Integrations"]
   },
   {

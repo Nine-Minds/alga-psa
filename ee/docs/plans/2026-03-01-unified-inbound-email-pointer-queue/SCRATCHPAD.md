@@ -53,6 +53,8 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - Unified queue helper: `shared/services/email/unifiedInboundEmailQueue.ts`
 - Unified queue flag gate helper: `shared/services/email/inboundEmailInAppFeatureFlag.ts`
 - Unified queue consumer loop: `shared/services/email/unifiedInboundEmailQueueConsumer.ts`
+- Server queue job processor: `server/src/services/email/unifiedInboundEmailQueueJobProcessor.ts`
+- Server consumer entrypoint: `server/src/bin/unifiedInboundEmailQueueConsumer.ts`
 
 ## Progress Log
 
@@ -64,6 +66,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `F006`: Unified queue mode ingress responses now acknowledge only after enqueue returns success; enqueue errors return non-success responses so callers can retry.
 - (2026-03-01) Completed `F007`: Microsoft, Google, and IMAP unified-queue paths now return `503` when enqueue fails, preserving upstream retry behavior.
 - (2026-03-01) Completed `F008`: Added a reusable consumer loop (`UnifiedInboundEmailQueueConsumer`) plus queue claim/ack/fail/reclaim primitives for processing unified inbound pointer jobs.
+- (2026-03-01) Completed `F009`: Added provider-specific consume-time pointer resolution in `unifiedInboundEmailQueueJobProcessor` for Microsoft (`messageId`), Google (`historyId` -> message IDs), and IMAP (`uid` fetch) before downstream processing.
 
 ## Open Questions
 
