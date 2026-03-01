@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "Ensure ingress endpoints/listeners return success only after durable enqueue succeeds",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
