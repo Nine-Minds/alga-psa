@@ -101,7 +101,7 @@
   {
     "id": "F012",
     "description": "Generate CID inline attachments for outbound ticket-comment email images",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Explicit Decisions Locked In"
