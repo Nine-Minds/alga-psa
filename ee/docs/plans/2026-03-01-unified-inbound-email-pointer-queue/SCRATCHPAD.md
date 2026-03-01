@@ -127,6 +127,7 @@ Working notes for moving Microsoft, Google, and IMAP inbound email ingress to on
 - (2026-03-01) Completed `T018`: Added queue ACK primitive test validating successful consume removes payload from processing list and clears inflight hash/lease entries.
 - (2026-03-01) Completed `T019`: Added consumer failure-path test validating processing exceptions skip ACK and invoke retry-handling path (`failUnifiedInboundEmailQueueJob`).
 - (2026-03-01) Completed `T020`: Added reclaim-path queue test validating expired inflight claims are removed from processing structures and requeued to ready state.
+- (2026-03-01) Completed `T021`: Added retry-path queue test validating failed consume increments job attempt prior to requeue.
 
 ## Open Questions
 
