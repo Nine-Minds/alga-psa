@@ -88,6 +88,19 @@ const TEMPLATES = [
       pl: { title: 'Dodano dodatkowego agenta', message: '{{additionalAgentName}} został(a) dodany(a) jako dodatkowy agent do Twojego zadania "{{taskName}}" w projekcie "{{projectName}}"' },
     },
   },
+  {
+    templateName: 'task-team-assigned',
+    subtypeName: 'task-team-assigned',
+    translations: {
+      en: { title: 'Team Assigned to Task', message: "Team '{{teamName}}' has been assigned to task '{{taskName}}' in project '{{projectName}}' by {{performedByName}}" },
+      fr: { title: 'Équipe assignée à la tâche', message: "L'équipe '{{teamName}}' a été assignée à la tâche '{{taskName}}' dans le projet '{{projectName}}' par {{performedByName}}" },
+      es: { title: 'Equipo asignado a la tarea', message: "El equipo '{{teamName}}' ha sido asignado a la tarea '{{taskName}}' del proyecto '{{projectName}}' por {{performedByName}}" },
+      de: { title: 'Team der Aufgabe zugewiesen', message: "Team '{{teamName}}' wurde der Aufgabe '{{taskName}}' im Projekt '{{projectName}}' von {{performedByName}} zugewiesen" },
+      nl: { title: 'Team toegewezen aan taak', message: "Team '{{teamName}}' is toegewezen aan taak '{{taskName}}' in project '{{projectName}}' door {{performedByName}}" },
+      it: { title: 'Team assegnato al task', message: "Il team '{{teamName}}' è stato assegnato al task '{{taskName}}' nel progetto '{{projectName}}' da {{performedByName}}" },
+      pl: { title: 'Zespół przypisany do zadania', message: "Zespół '{{teamName}}' został przypisany do zadania '{{taskName}}' w projekcie '{{projectName}}' przez {{performedByName}}" },
+    },
+  },
 ];
 
 module.exports = { TEMPLATES };

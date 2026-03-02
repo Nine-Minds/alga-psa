@@ -744,7 +744,7 @@ export const assignTeamToProjectTask = withAuth(async (
 ): Promise<void> => {
     try {
         const {knex: db} = await createTenantKnex();
-        await withTransaction(db, async (trx: Knex.Transaction) => {
+        const eventData = await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'update', trx);
 
             const task = await trx('project_tasks')
@@ -763,6 +763,14 @@ export const assignTeamToProjectTask = withAuth(async (
             if (!team.manager_id) {
                 throw new Error('Team lead not found');
             }
+
+            // Resolve project_id via phase
+            const phase = task.phase_id
+                ? await trx('project_phases')
+                    .where({ phase_id: task.phase_id, tenant })
+                    .select('project_id')
+                    .first()
+                : null;
 
             const teamMembers = await trx('team_members')
                 .join('users', function() {
@@ -790,32 +798,55 @@ export const assignTeamToProjectTask = withAuth(async (
                 .map((member: { user_id: string }) => member.user_id)
                 .filter((userId: string) => userId && userId !== assignedTo);
 
-            if (memberIds.length === 0) {
-                return;
+            if (memberIds.length > 0) {
+                const existingResources = await trx('task_resources')
+                    .where({ task_id: taskId, tenant })
+                    .whereIn('additional_user_id', memberIds)
+                    .select('additional_user_id');
+
+                const existingIds = new Set(existingResources.map((row: { additional_user_id: string }) => row.additional_user_id));
+                const toInsert = memberIds.filter((userId) => !existingIds.has(userId));
+
+                if (toInsert.length > 0) {
+                    await trx('task_resources').insert(
+                        toInsert.map((userId) => ({
+                            tenant,
+                            task_id: taskId,
+                            assigned_to: assignedTo,
+                            additional_user_id: userId,
+                            role: 'team_member'
+                        }))
+                    );
+                }
             }
 
-            const existingResources = await trx('task_resources')
-                .where({ task_id: taskId, tenant })
-                .whereIn('additional_user_id', memberIds)
-                .select('additional_user_id');
-
-            const existingIds = new Set(existingResources.map((row: { additional_user_id: string }) => row.additional_user_id));
-            const toInsert = memberIds.filter((userId) => !existingIds.has(userId));
-
-            if (toInsert.length === 0) {
-                return;
-            }
-
-            await trx('task_resources').insert(
-                toInsert.map((userId) => ({
-                    tenant,
-                    task_id: taskId,
-                    assigned_to: assignedTo,
-                    additional_user_id: userId,
-                    role: 'team_member'
-                }))
-            );
+            return {
+                projectId: phase?.project_id,
+                assignedTo,
+            };
         });
+
+        // Emit event after transaction commits so subscribers can see the data
+        if (eventData.projectId) {
+            const occurredAt = new Date();
+            await publishWorkflowEvent({
+                eventType: 'PROJECT_TASK_ASSIGNED',
+                ctx: {
+                    tenantId: tenant,
+                    occurredAt,
+                    actor: { actorType: 'USER' as const, actorUserId: user.user_id },
+                },
+                payload: buildProjectTaskAssignedPayload({
+                    projectId: eventData.projectId,
+                    taskId,
+                    assignedToId: teamId,
+                    assignedToType: 'team',
+                    assignedByUserId: user.user_id,
+                    assignedByName: user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : undefined,
+                    assignedAt: occurredAt,
+                }),
+            });
+        }
     } catch (error) {
         console.error('Error assigning team to project task:', error);
         throw error;

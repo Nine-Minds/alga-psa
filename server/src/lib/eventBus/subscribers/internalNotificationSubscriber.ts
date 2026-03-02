@@ -208,7 +208,7 @@ async function getAllTaskAssignees(
 }
 
 /**
- * Handle ticket assigned events (primary assignment only)
+ * Handle ticket assigned events (primary assignment + team members)
  */
 async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
   const { tenantId, ticketId, userId, assignedByUserId } = event.payload;
@@ -256,7 +256,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       ticketNumber: ticket.ticket_number
     });
 
-    // Simple: just notify the assigned user (primary assignment)
+    // Notify the primary assigned user
     await createNotificationFromTemplateInternal(db, {
       tenant: tenantId,
       user_id: userId,
@@ -278,6 +278,55 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       userId,
       tenantId
     });
+
+    // If this is a team assignment, notify team members (excluding primary assignee)
+    const assignedTeamId = (event.payload as any).changes?.assigned_team_id as string | undefined;
+    if (assignedTeamId) {
+      const team = await db('teams')
+        .select('team_name')
+        .where({ team_id: assignedTeamId, tenant: tenantId })
+        .first();
+
+      if (team) {
+        const teamMembers = await db('team_members')
+          .join('users', function() {
+            this.on('team_members.user_id', 'users.user_id')
+                .andOn('team_members.tenant', 'users.tenant');
+          })
+          .where({ 'team_members.team_id': assignedTeamId, 'team_members.tenant': tenantId })
+          .andWhere('users.is_inactive', false)
+          .select('team_members.user_id');
+
+        const memberIds = teamMembers
+          .map((m: { user_id: string }) => m.user_id)
+          .filter((id: string) => id !== userId); // Exclude primary assignee who already got notified
+
+        for (const memberId of memberIds) {
+          await createNotificationFromTemplateInternal(db, {
+            tenant: tenantId,
+            user_id: memberId,
+            template_name: 'ticket-team-assigned',
+            type: 'info',
+            category: 'tickets',
+            link: internalUrl,
+            data: {
+              ticketId: ticket.ticket_number,
+              ticketNumber: ticket.ticket_number,
+              ticketTitle: ticket.title,
+              teamName: team.team_name,
+              performedByName
+            }
+          });
+        }
+
+        logger.info('[InternalNotificationSubscriber] Created team member notifications for ticket assigned', {
+          ticketId,
+          teamId: assignedTeamId,
+          memberCount: memberIds.length,
+          tenantId
+        });
+      }
+    }
   } catch (error) {
     logger.error('[InternalNotificationSubscriber] Error handling ticket assigned:', error);
   }
@@ -1947,11 +1996,12 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
 }
 
 /**
- * Handle task assigned events
+ * Handle task assigned events (user or team assignment)
  */
 async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId, projectId, taskId, assignedToId, assignedByUserId } = payload;
+  const assignedToType = (payload as any).assignedToType as string | undefined;
 
   try {
     const db = await getConnection(tenantId);
@@ -2004,27 +2054,101 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
       phaseId: task.phase_id
     });
 
-    // Primary assignment notification
-    await createNotificationFromTemplateInternal(db, {
-      tenant: tenantId,
-      user_id: assignedToId,
-      template_name: 'task-assigned',
-      type: 'info',
-      category: 'projects',
-      link: internalUrl,
-      data: {
-        taskName: task.task_name,
-        projectName: task.project_name,
-        performedByName
-      }
-    });
+    if (assignedToType === 'team') {
+      // Team assignment: assignedToId is the team ID
+      const team = await db('teams')
+        .select('team_name', 'manager_id')
+        .where({ team_id: assignedToId, tenant: tenantId })
+        .first();
 
-    logger.info('[InternalNotificationSubscriber] Created notification for task assigned', {
-      taskId,
-      projectId,
-      assignedToId,
-      tenantId
-    });
+      if (!team) {
+        logger.warn('[InternalNotificationSubscriber] Team not found for task assignment', {
+          taskId,
+          teamId: assignedToId,
+          tenantId
+        });
+        return;
+      }
+
+      // Get all active team members
+      const teamMembers = await db('team_members')
+        .join('users', function() {
+          this.on('team_members.user_id', 'users.user_id')
+              .andOn('team_members.tenant', 'users.tenant');
+        })
+        .where({ 'team_members.team_id': assignedToId, 'team_members.tenant': tenantId })
+        .andWhere('users.is_inactive', false)
+        .select('team_members.user_id');
+
+      const memberIds = teamMembers.map((m: { user_id: string }) => m.user_id);
+
+      // Notify team manager with task-assigned (primary assignee)
+      if (team.manager_id && memberIds.includes(team.manager_id)) {
+        await createNotificationFromTemplateInternal(db, {
+          tenant: tenantId,
+          user_id: team.manager_id,
+          template_name: 'task-assigned',
+          type: 'info',
+          category: 'projects',
+          link: internalUrl,
+          data: {
+            taskName: task.task_name,
+            projectName: task.project_name,
+            performedByName
+          }
+        });
+      }
+
+      // Notify other team members with task-team-assigned
+      const otherMembers = memberIds.filter((id: string) => id !== team.manager_id);
+      for (const memberId of otherMembers) {
+        await createNotificationFromTemplateInternal(db, {
+          tenant: tenantId,
+          user_id: memberId,
+          template_name: 'task-team-assigned',
+          type: 'info',
+          category: 'projects',
+          link: internalUrl,
+          data: {
+            taskName: task.task_name,
+            projectName: task.project_name,
+            teamName: team.team_name,
+            performedByName
+          }
+        });
+      }
+
+      logger.info('[InternalNotificationSubscriber] Created team notifications for task assigned', {
+        taskId,
+        projectId,
+        teamId: assignedToId,
+        managerNotified: !!team.manager_id,
+        memberCount: otherMembers.length,
+        tenantId
+      });
+    } else {
+      // User assignment (existing behavior)
+      await createNotificationFromTemplateInternal(db, {
+        tenant: tenantId,
+        user_id: assignedToId,
+        template_name: 'task-assigned',
+        type: 'info',
+        category: 'projects',
+        link: internalUrl,
+        data: {
+          taskName: task.task_name,
+          projectName: task.project_name,
+          performedByName
+        }
+      });
+
+      logger.info('[InternalNotificationSubscriber] Created notification for task assigned', {
+        taskId,
+        projectId,
+        assignedToId,
+        tenantId
+      });
+    }
   } catch (error) {
     logger.error('[InternalNotificationSubscriber] Error handling task assigned', {
       error,
