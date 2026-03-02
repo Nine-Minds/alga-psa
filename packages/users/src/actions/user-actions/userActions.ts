@@ -3,7 +3,7 @@
 import User from '@alga-psa/db/models/user';
 import { DeletionValidationResult, IUser, IRole, IUserWithRoles, IRoleWithPermissions, IUserRole } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
-import { createTenantKnex, User } from '@alga-psa/db';
+import { createTenantKnex } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { withAdminTransaction, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
