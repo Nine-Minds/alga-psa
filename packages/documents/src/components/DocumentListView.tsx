@@ -3,7 +3,7 @@
 import React from 'react';
 import type { IDocument } from '@alga-psa/types';
 import { formatBytes, formatDate } from '@alga-psa/core/formatters';
-import { FileIcon, Download, Trash2 } from 'lucide-react';
+import { FileIcon, Download, Trash2, Share2, Link2 } from 'lucide-react';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -18,6 +18,9 @@ interface DocumentListViewProps {
   showVisibilityControls?: boolean;
   onToggleVisibility?: (document: IDocument, nextValue: boolean) => void | Promise<void>;
   visibilityUpdatingIds?: Set<string>;
+  showShareControls?: boolean;
+  onShare?: (document: IDocument) => void;
+  documentsWithShareLinks?: Set<string>;
 }
 
 export default function DocumentListView({
@@ -28,7 +31,10 @@ export default function DocumentListView({
   onClick,
   showVisibilityControls = false,
   onToggleVisibility,
-  visibilityUpdatingIds
+  visibilityUpdatingIds,
+  showShareControls = false,
+  onShare,
+  documentsWithShareLinks
 }: DocumentListViewProps) {
   const { t } = useTranslation('common');
 
@@ -114,6 +120,9 @@ export default function DocumentListView({
                   ) : null}
                   <FileIcon className={`w-4 h-4 text-gray-400 ${doc.thumbnail_file_id ? 'hidden' : ''}`} />
                   <span className="text-sm font-medium">{doc.document_name}</span>
+                  {documentsWithShareLinks?.has(doc.document_id) && (
+                    <Link2 className="w-3 h-3 text-blue-500" title={t('documents.hasShareLinks', 'Has active share links')} />
+                  )}
                 </div>
               </TableCell>
               <TableCell className="text-muted-foreground">
@@ -161,6 +170,16 @@ export default function DocumentListView({
                   >
                     <Download className="w-4 h-4 text-gray-500" />
                   </button>
+                  {showShareControls && onShare && (
+                    <button
+                      id={`document-share-${doc.document_id}`}
+                      className="p-1 hover:bg-blue-100 rounded transition-colors"
+                      onClick={() => onShare(doc)}
+                      title={t('documents.share', 'Share')}
+                    >
+                      <Share2 className="w-4 h-4 text-blue-500" />
+                    </button>
+                  )}
                   {onDelete && (
                     <button
                       id={`document-delete-${doc.document_id}`}
