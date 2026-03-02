@@ -27,3 +27,12 @@ export { QuickBooksCSVAdapter, buildQuickBooksCsvMemo } from '../adapters/accoun
 export { QuickBooksDesktopAdapter } from '../adapters/accounting/quickBooksDesktopAdapter';
 export { XeroAdapter, buildXeroInvoiceReference } from '../adapters/accounting/xeroAdapter';
 export { XeroCsvAdapter, buildXeroCsvReference } from '../adapters/accounting/xeroCsvAdapter';
+
+// External tax import
+export {
+  ExternalTaxImportService,
+  getExternalTaxImportService,
+  type SingleImportResult,
+  type BatchImportResult,
+  type ReconciliationResult
+} from './externalTaxImportService';

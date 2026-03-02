@@ -1,13 +1,14 @@
 import { v4 as uuid4 } from 'uuid';
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex } from '../db';
-import { IExternalTaxImport, IExternalTaxImportResult, TaxSource } from '../../interfaces/tax.interfaces';
+import { createTenantKnex } from '@alga-psa/db';
+import { IExternalTaxImport, TaxSource } from '@alga-psa/types';
 import {
   AccountingExportAdapter,
   ExternalInvoiceData,
   ExternalInvoiceFetchResult
 } from '@alga-psa/types';
-import { QuickBooksOnlineAdapter, XeroAdapter } from '@alga-psa/billing/services';
+import { QuickBooksOnlineAdapter } from '../adapters/accounting/quickBooksOnlineAdapter';
+import { XeroAdapter } from '../adapters/accounting/xeroAdapter';
 
 /**
  * Result of a single invoice tax import operation
