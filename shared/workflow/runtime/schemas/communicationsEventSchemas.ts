@@ -3,6 +3,8 @@ import { BaseDomainEventPayloadSchema, uuidSchema } from './commonEventPayloadSc
 
 const messageIdSchema = uuidSchema('Message ID');
 const threadIdSchema = uuidSchema('Thread ID');
+const inboundProviderMessageIdSchema = z.string().min(1).describe('Provider message ID');
+const inboundProviderThreadIdSchema = z.string().min(1).describe('Provider thread ID');
 const ticketIdSchema = uuidSchema('Ticket ID');
 
 const emailAddressSchema = z.string().email().describe('Email address');
@@ -10,8 +12,9 @@ const emailListSchema = z.array(emailAddressSchema).min(1);
 const providerSchema = z.string().min(1).describe('Provider identifier');
 
 export const inboundEmailReplyReceivedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  messageId: messageIdSchema,
-  threadId: threadIdSchema,
+  // Provider IDs (Google/Microsoft/IMAP) are not guaranteed to be UUIDs.
+  messageId: inboundProviderMessageIdSchema,
+  threadId: inboundProviderThreadIdSchema,
   ticketId: ticketIdSchema.optional(),
   from: emailAddressSchema,
   to: emailListSchema,

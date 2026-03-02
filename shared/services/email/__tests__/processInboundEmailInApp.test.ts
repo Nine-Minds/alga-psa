@@ -396,6 +396,76 @@ describe('processInboundEmailInApp', () => {
     );
   });
 
+  it('skips self-sent notification emails from provider mailbox', async () => {
+    parseEmailReplyBodyMock.mockResolvedValue({
+      sanitizedText: 'Notification body',
+      sanitizedHtml: undefined,
+      confidence: 0.95,
+      strategy: 'plain',
+      appliedHeuristics: [],
+      warnings: [],
+      tokens: { conversationToken: 'self-token-123' },
+    });
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        id: 'email-self-notification-1',
+        from: { email: 'support@example.com', name: 'Support Mailbox' },
+        inReplyTo: 'outbound-message-id-1',
+        references: ['outbound-message-id-1'],
+        threadId: 'thread-1',
+      }),
+    });
+
+    expect(result).toEqual({
+      outcome: 'skipped',
+      reason: 'self_notification',
+    });
+    expect(findTicketByReplyTokenMock).not.toHaveBeenCalled();
+    expect(findTicketByEmailThreadMock).not.toHaveBeenCalled();
+    expect(createTicketFromEmailMock).not.toHaveBeenCalled();
+    expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+    expect(processInboundEmailArtifactsBestEffortMock).not.toHaveBeenCalled();
+  });
+
+  it('skips token-only inbound emails with no content above reply marker', async () => {
+    parseEmailReplyBodyMock.mockResolvedValue({
+      sanitizedText:
+        '\\[ALGA-REPLY-TOKEN 5723f287-affb-4166-b674-fd05c9df98ed ticketId=9dc3ffd6-2342-4a85-bddb-fbb1975efd25\\]',
+      sanitizedHtml: undefined,
+      confidence: 0.95,
+      strategy: 'plain',
+      appliedHeuristics: [],
+      warnings: [],
+      tokens: { conversationToken: '5723f287-affb-4166-b674-fd05c9df98ed' },
+    });
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        id: 'email-token-only-1',
+        from: { email: 'client@example.com', name: 'Client' },
+      }),
+    });
+
+    expect(result).toEqual({
+      outcome: 'skipped',
+      reason: 'self_notification',
+    });
+    expect(findTicketByReplyTokenMock).not.toHaveBeenCalled();
+    expect(findTicketByEmailThreadMock).not.toHaveBeenCalled();
+    expect(createTicketFromEmailMock).not.toHaveBeenCalled();
+    expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+    expect(processInboundEmailArtifactsBestEffortMock).not.toHaveBeenCalled();
+  });
+
   it('rewrites data:image embeds to served attachment URLs in stored comment note after artifacts persist', async () => {
     const updatedNotes: any[] = [];
     withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
