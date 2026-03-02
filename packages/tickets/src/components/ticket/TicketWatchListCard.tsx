@@ -6,10 +6,14 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { ContentCard } from '@alga-psa/ui/components';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import type { GetUserAvatarUrlsBatch } from '@alga-psa/ui/components/UserPicker';
+import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
+import type { GetTeamAvatarUrlsBatch } from '@alga-psa/ui/components/UserAndTeamPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { ToggleGroup, ToggleGroupItem } from '@alga-psa/ui/components/ToggleGroup';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import type { IContact, IUser } from '@alga-psa/types';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import type { IContact, ITeam, IUser } from '@alga-psa/types';
 import { normalizeEmailAddress } from '@shared/lib/email/addressUtils';
 import {
   mergeTicketWatchListRecipients,
@@ -28,6 +32,9 @@ interface TicketWatchListCardProps {
   allContacts?: IContact[];
   allContactsLoading?: boolean;
   onLoadAllContacts?: () => Promise<void>;
+  teams?: ITeam[];
+  getUserAvatarUrlsBatch?: GetUserAvatarUrlsBatch;
+  getTeamAvatarUrlsBatch?: GetTeamAvatarUrlsBatch;
 }
 
 type WatcherAddMode = 'client-contact' | 'internal-user' | 'email';
@@ -43,7 +50,11 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
   allContacts = [],
   allContactsLoading = false,
   onLoadAllContacts,
+  teams = [],
+  getUserAvatarUrlsBatch,
+  getTeamAvatarUrlsBatch,
 }) => {
+  const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const [watchListInput, setWatchListInput] = useState('');
   const [watcherAddMode, setWatcherAddMode] = useState<WatcherAddMode>('client-contact');
   const [contactScope, setContactScope] = useState<ContactScope>('client');
@@ -178,6 +189,39 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
   const handleRemoveWatcher = async (email: string) => {
     const nextWatchList = watchList.filter((entry) => entry.email !== email);
     await persistWatchList(nextWatchList);
+  };
+
+  const handleAddTeamMembers = async (teamId: string) => {
+    const team = teams.find((t) => t.team_id === teamId);
+    if (!team || !team.members || team.members.length === 0) {
+      setWatchListError('Team has no members.');
+      return;
+    }
+
+    const recipients: TicketWatchListRecipientInput[] = [];
+    for (const member of team.members) {
+      if (member.is_inactive) continue;
+      const normalizedEmail = normalizeEmailAddress(member.email);
+      if (!normalizedEmail) continue;
+      const displayName = `${member.first_name || ''} ${member.last_name || ''}`.trim();
+      recipients.push({
+        email: normalizedEmail,
+        source: 'manual',
+        name: displayName || undefined,
+        entity_type: 'user',
+        entity_id: member.user_id,
+      });
+    }
+
+    if (recipients.length === 0) {
+      setWatchListError('No team members with valid email addresses.');
+      return;
+    }
+
+    const mergedWatchList = mergeTicketWatchListRecipients(watchList, recipients);
+    if (JSON.stringify(mergedWatchList) !== JSON.stringify(watchList)) {
+      await persistWatchList(mergedWatchList);
+    }
   };
 
   const handleAddContact = async () => {
@@ -346,15 +390,33 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
           ) : null}
 
           {watcherAddMode === 'internal-user' ? (
-            <UserPicker
-              id={`${id}-user-picker`}
-              value={selectedUserId}
-              onValueChange={setSelectedUserId}
-              users={internalUsers}
-              placeholder="Select internal user"
-              size="sm"
-              disabled={isWatchListSaving}
-            />
+            teamsV2Enabled && teams.length > 0 ? (
+              <UserAndTeamPicker
+                id={`${id}-user-picker`}
+                value={selectedUserId}
+                onValueChange={setSelectedUserId}
+                onTeamSelect={handleAddTeamMembers}
+                users={internalUsers}
+                teams={teams}
+                getUserAvatarUrlsBatch={getUserAvatarUrlsBatch}
+                getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatch}
+                placeholder="Select user or team"
+                size="sm"
+                labelStyle="none"
+                buttonWidth="full"
+                disabled={isWatchListSaving}
+              />
+            ) : (
+              <UserPicker
+                id={`${id}-user-picker`}
+                value={selectedUserId}
+                onValueChange={setSelectedUserId}
+                users={internalUsers}
+                placeholder="Select internal user"
+                size="sm"
+                disabled={isWatchListSaving}
+              />
+            )
           ) : null}
 
           {watcherAddMode === 'email' ? (

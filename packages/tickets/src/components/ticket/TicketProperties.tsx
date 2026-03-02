@@ -1054,6 +1054,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         allContacts={allContactsForWatchList}
         allContactsLoading={allContactsForWatchListLoading}
         onLoadAllContacts={onLoadAllContactsForWatchList}
+        teams={teams}
+        getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+        getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
       />
 
 
