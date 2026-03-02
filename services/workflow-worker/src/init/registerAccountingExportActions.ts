@@ -25,9 +25,9 @@ export async function registerAccountingExportWorkflowActions(): Promise<void> {
     'accounting_export.create_batch',
     'Create an accounting export batch',
     createParameters,
-    async (params) => {
+    async (params, context) => {
       try {
-        const { createAccountingExportBatch } = await import('@alga-psa/billing/actions');
+        const { createAccountingExportBatch } = await import('@alga-psa/billing/runtime');
         const filters: Record<string, unknown> = {};
 
         if (params.startDate) {
@@ -54,7 +54,7 @@ export async function registerAccountingExportWorkflowActions(): Promise<void> {
           target_realm: params.targetRealm || null,
           filters: Object.keys(filters).length > 0 ? filters : null,
           notes: params.notes || null
-        });
+        }, context.tenant);
 
         return {
           success: true,
@@ -78,10 +78,10 @@ export async function registerAccountingExportWorkflowActions(): Promise<void> {
     'accounting_export.execute_batch',
     'Execute an accounting export batch',
     executeParameters,
-    async (params) => {
+    async (params, context) => {
       try {
-        const { executeAccountingExportBatch } = await import('@alga-psa/billing/actions');
-        const result = await executeAccountingExportBatch(params.batchId);
+        const { executeAccountingExportBatch } = await import('@alga-psa/billing/runtime');
+        const result = await executeAccountingExportBatch(params.batchId, context.tenant);
         return {
           success: true,
           delivery: result
