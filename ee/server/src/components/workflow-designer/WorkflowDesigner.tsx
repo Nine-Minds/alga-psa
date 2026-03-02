@@ -450,16 +450,42 @@ const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSch
     const resolvedProp = resolveSchema(propSchema, root);
     const type = normalizeSchemaType(resolvedProp) ?? 'string';
     const isFieldRequired = requiredFields.includes(name);
+    const rawResolved = resolvedProp as {
+      format?: string;
+      minItems?: number;
+      maxItems?: number;
+      minLength?: number;
+      maxLength?: number;
+      minimum?: number;
+      maximum?: number;
+      pattern?: string;
+      items?: JsonSchema;
+    };
 
     let children: ActionInputField[] | undefined;
+    let itemType: string | undefined;
     if (type === 'object' && resolvedProp.properties) {
       children = extractActionInputFields(resolvedProp, root);
     } else if (type === 'array' && resolvedProp.items) {
       const itemSchema = resolveSchema(resolvedProp.items, root);
+      itemType = normalizeSchemaType(itemSchema) ?? undefined;
       if (itemSchema.properties) {
         children = extractActionInputFields(itemSchema, root);
       }
     }
+
+    const constraints = {
+      format: rawResolved.format,
+      minItems: rawResolved.minItems,
+      maxItems: rawResolved.maxItems,
+      minLength: rawResolved.minLength,
+      maxLength: rawResolved.maxLength,
+      minimum: rawResolved.minimum,
+      maximum: rawResolved.maximum,
+      pattern: rawResolved.pattern,
+      itemType
+    };
+    const hasConstraints = Object.values(constraints).some((constraint) => constraint !== undefined);
 
     return {
       name,
@@ -468,6 +494,7 @@ const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSch
       required: isFieldRequired,
       enum: resolvedProp.enum,
       default: resolvedProp.default,
+      constraints: hasConstraints ? constraints : undefined,
       children
     };
   });
