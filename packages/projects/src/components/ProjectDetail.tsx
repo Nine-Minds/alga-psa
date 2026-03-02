@@ -345,6 +345,7 @@ export default function ProjectDetail({
 
   // Fetch tags when component mounts
   useEffect(() => {
+    let stale = false;
     const fetchTags = async () => {
       if (!project.project_id) return;
 
@@ -353,6 +354,7 @@ export default function ProjectDetail({
           console.warn('Failed to fetch project tags, continuing without tags:', error);
           return [];
         });
+        if (stale) return;
 
         setProjectTags(tags);
 
@@ -363,11 +365,12 @@ export default function ProjectDetail({
           hasNotifiedParent.current = true;
         }
       } catch (error) {
-        console.error('Error fetching project tags:', error);
+        if (!stale) console.error('Error fetching project tags:', error);
       }
     };
     fetchTags();
-  }, [project.project_id]); // Remove onTagsUpdate from dependencies to prevent infinite loop
+    return () => { stale = true; };
+  }, [project.project_id]);
   const [duplicateTaskToggleDetails, setDuplicateTaskToggleDetails] = useState<{
       hasChecklist: boolean;
       hasPrimaryAssignee: boolean;
@@ -491,15 +494,17 @@ export default function ProjectDetail({
 
   // Fetch task counts for all phases when component loads
   useEffect(() => {
+    let stale = false;
     const fetchTaskCounts = async () => {
       try {
         const counts = await getPhaseTaskCounts(project.project_id);
-        setPhaseTaskCounts(counts);
+        if (!stale) setPhaseTaskCounts(counts);
       } catch (error) {
-        console.error('Error fetching phase task counts:', error);
+        if (!stale) console.error('Error fetching phase task counts:', error);
       }
     };
     fetchTaskCounts();
+    return () => { stale = true; };
   }, [project.project_id]);
 
   // When project changes, invalidate listViewData to trigger a re-fetch
@@ -696,21 +701,24 @@ export default function ProjectDetail({
   useEffect(() => {
     if (listViewData !== null || listViewLoading) return;
     if (viewMode !== 'list') return; // Don't eagerly load for kanban
+    let stale = false;
     const refetchListViewData = async () => {
       setListViewLoading(true);
       try {
         const data = await getAllProjectTasksForListView(project.project_id);
+        if (stale) return;
         setListViewData(data);
         setAllProjectTasks(data.tasks);
         setAllProjectTaskResources(data.taskResources);
         setAllProjectTaskTags(data.taskTags);
       } catch (error) {
-        handleError(error, 'Failed to load list view data');
+        if (!stale) handleError(error, 'Failed to load list view data');
       } finally {
-        setListViewLoading(false);
+        if (!stale) setListViewLoading(false);
       }
     };
     refetchListViewData();
+    return () => { stale = true; };
   }, [listViewData, listViewLoading, project.project_id, viewMode]);
 
   // Keep selectedTaskIdRef in sync with selectedTask for reliable access in callbacks
@@ -800,12 +808,19 @@ export default function ProjectDetail({
     }
   };
   
-  // Fetch project completion metrics and project tree data
+  // Fetch project completion metrics, tree data, priorities, and task types in parallel
   useEffect(() => {
+    let stale = false;
     const fetchInitialData = async () => {
       try {
-        // Fetch project metrics
-        const metrics = await calculateProjectCompletion(project.project_id);
+        const [metrics, treeData, allPriorities, types] = await Promise.all([
+          calculateProjectCompletion(project.project_id),
+          getProjectTreeData(),
+          getAllPriorities('project_task'),
+          getTaskTypes(),
+        ]);
+        if (stale) return;
+
         setProjectMetrics({
           taskCompletionPercentage: metrics.taskCompletionPercentage,
           hoursCompletionPercentage: metrics.hoursCompletionPercentage,
@@ -813,28 +828,20 @@ export default function ProjectDetail({
           spentHours: metrics.spentHours,
           remainingHours: metrics.remainingHours
         });
-        
-        // Fetch project tree data once
-        const treeData = await getProjectTreeData();
-        if (isActionPermissionError(treeData)) {
-          handleError(treeData.permissionError);
-          return;
-        }
-        setProjectTreeData(treeData);
-        
-        // Fetch priorities for project tasks
-        const allPriorities = await getAllPriorities('project_task');
-        setPriorities(allPriorities);
 
-        // Fetch task types
-        const types = await getTaskTypes();
+        if (!isActionPermissionError(treeData)) {
+          setProjectTreeData(treeData);
+        }
+
+        setPriorities(allPriorities);
         setTaskTypes(types);
       } catch (error) {
-        handleError(error, 'Failed to load initial data');
+        if (!stale) handleError(error, 'Failed to load initial data');
       }
     };
-    
+
     fetchInitialData();
+    return () => { stale = true; };
   }, [project.project_id]);
   
   // When list view data loads, merge its tags (covers all phases, not just current)
@@ -882,6 +889,7 @@ export default function ProjectDetail({
 
   // Fetch tasks when phase is selected
   useEffect(() => {
+    let stale = false;
     const fetchPhaseTasks = async () => {
       if (!selectedPhase) {
         setProjectTasks([]);
@@ -894,6 +902,7 @@ export default function ProjectDetail({
       setIsLoadingTasks(true);
       try {
         const { tasks, ticketLinks, taskResources, taskDependencies, checklistItems, taskTags: phaseTags } = await getTasksForPhase(selectedPhase.phase_id);
+        if (stale) return;
 
         // Add checklist items to tasks from batch-loaded data
         const tasksWithChecklists = tasks.map((task) => ({
@@ -909,17 +918,19 @@ export default function ProjectDetail({
         // Merge phase tags into kanban tags
         setTaskTags(prev => ({ ...prev, ...phaseTags }));
       } catch (error) {
-        handleError(error, 'Failed to load tasks for the selected phase');
+        if (!stale) handleError(error, 'Failed to load tasks for the selected phase');
       } finally {
-        setIsLoadingTasks(false);
+        if (!stale) setIsLoadingTasks(false);
       }
     };
 
     fetchPhaseTasks();
+    return () => { stale = true; };
   }, [selectedPhase]);
 
   // Fetch avatar URLs for task resources (additional agents)
   useEffect(() => {
+    let stale = false;
     const fetchAvatarUrls = async () => {
       const userIds = new Set<string>();
 
@@ -934,28 +945,30 @@ export default function ProjectDetail({
 
       if (userIds.size === 0) return;
 
-      // Get tenant from project
       const tenant = project.tenant;
       if (!tenant) return;
 
       try {
         const avatarUrlsMap = await getUserAvatarUrlsBatchAction(Array.from(userIds), tenant);
+        if (stale) return;
         const urlsRecord: Record<string, string | null> = {};
         avatarUrlsMap.forEach((url, id) => {
           urlsRecord[id] = url;
         });
         setAvatarUrls(urlsRecord);
       } catch (error) {
-        console.error('Failed to fetch avatar URLs:', error);
+        if (!stale) console.error('Failed to fetch avatar URLs:', error);
       }
     };
 
     fetchAvatarUrls();
+    return () => { stale = true; };
   }, [phaseTaskResources, project.tenant]);
 
   // Fetch team names and avatar URLs for tasks with assigned teams
   useEffect(() => {
     if (!teamsV2Enabled) return;
+    let stale = false;
 
     const fetchTeamData = async () => {
       const tenant = project.tenant;
@@ -963,6 +976,7 @@ export default function ProjectDetail({
 
       try {
         const allTeams = await getTeamsBasic();
+        if (stale) return;
         const namesMap: Record<string, string> = {};
         allTeams.forEach(team => {
           namesMap[team.team_id] = team.team_name;
@@ -972,6 +986,7 @@ export default function ProjectDetail({
         const teamIds = allTeams.map(t => t.team_id);
         if (teamIds.length > 0) {
           const avatarUrlsMap = await getTeamAvatarUrlsBatchAction(teamIds, tenant);
+          if (stale) return;
           const urlsRecord: Record<string, string | null> = {};
           if (avatarUrlsMap instanceof Map) {
             avatarUrlsMap.forEach((url, id) => { urlsRecord[id] = url; });
@@ -981,11 +996,12 @@ export default function ProjectDetail({
           setTeamAvatarUrls(urlsRecord);
         }
       } catch (error) {
-        console.error('Failed to fetch team data:', error);
+        if (!stale) console.error('Failed to fetch team data:', error);
       }
     };
 
     fetchTeamData();
+    return () => { stale = true; };
   }, [teamsV2Enabled, project.tenant]);
 
   // Handle opening task from URL parameter (e.g., from notifications)
@@ -1048,6 +1064,7 @@ export default function ProjectDetail({
   // Fetch document counts once when phase tasks load (not on filter changes)
   const phaseTaskIds = useMemo(() => projectTasks.map(t => t.task_id).sort().join(','), [projectTasks]);
   useEffect(() => {
+    let stale = false;
     const fetchDocumentCounts = async () => {
       if (!selectedPhase || projectTasks.length === 0) {
         setTaskDocumentCounts(new Map());
@@ -1057,14 +1074,17 @@ export default function ProjectDetail({
       try {
         const taskIds = projectTasks.map(task => task.task_id);
         const countMap = await getDocumentCountsForEntities(taskIds, 'project_task');
-        setTaskDocumentCounts(countMap);
+        if (!stale) setTaskDocumentCounts(countMap);
       } catch (error) {
-        console.error('Error fetching document counts:', error);
-        setTaskDocumentCounts(new Map());
+        if (!stale) {
+          console.error('Error fetching document counts:', error);
+          setTaskDocumentCounts(new Map());
+        }
       }
     };
 
     fetchDocumentCounts();
+    return () => { stale = true; };
   }, [selectedPhase, phaseTaskIds]);
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
