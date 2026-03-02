@@ -14,6 +14,10 @@
       "import": "./src/actions/index.ts",
       "types": "./src/actions/index.ts"
     },
+    "./runtime": {
+      "import": "./src/runtime.ts",
+      "types": "./src/runtime.ts"
+    },
     "./actions/*": {
       "import": "./src/actions/*.ts",
       "types": "./src/actions/*.ts"

@@ -63,6 +63,11 @@ export class AccountingExportRepository {
     return new AccountingExportRepository(knex, tenant ?? null);
   }
 
+  static async createForTenant(tenantId: string): Promise<AccountingExportRepository> {
+    const { knex, tenant } = await createTenantKnex(tenantId);
+    return new AccountingExportRepository(knex, tenant ?? null);
+  }
+
   getTenantId(): string | null {
     return this.tenantId;
   }

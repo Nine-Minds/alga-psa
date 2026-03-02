@@ -418,7 +418,7 @@ async function downloadAttachmentBuffer(args: {
   }
 
   if (providerRow.provider_type === 'google') {
-    const { GmailAdapter } = await import('@alga-psa/integrations');
+    const { GmailAdapter } = await import('@alga-psa/integrations/runtime');
     const providerConfig = await buildGoogleProviderConfig(args.knex, args.tenant, providerRow);
     const adapter = new GmailAdapter(providerConfig);
     await adapter.connect();
@@ -461,7 +461,7 @@ async function downloadOriginalMime(args: {
   }
 
   if (providerRow.provider_type === 'google') {
-    const { GmailAdapter } = await import('@alga-psa/integrations');
+    const { GmailAdapter } = await import('@alga-psa/integrations/runtime');
     const providerConfig = await buildGoogleProviderConfig(args.knex, args.tenant, providerRow);
     const adapter = new GmailAdapter(providerConfig);
     await adapter.connect();
