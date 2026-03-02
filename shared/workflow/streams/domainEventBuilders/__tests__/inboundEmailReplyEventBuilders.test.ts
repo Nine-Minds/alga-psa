@@ -25,6 +25,28 @@ describe('buildInboundEmailReplyReceivedPayload', () => {
     expect(inboundEmailReplyReceivedEventPayloadSchema.parse(payload)).toEqual(payload);
   });
 
+  it('accepts provider-native message/thread identifiers (non-UUID)', () => {
+    const base = buildInboundEmailReplyReceivedPayload({
+      messageId:
+        'AAMkADljNmQ3M2YzLTI3N2EtNDQ0OC05MjM2LTI0ZjlkMTU0MzUwNQBGAAAAAABsymEH1nfSRoQWGbfhaom2BwD51_5h5He8SrvX0UqJVsXoAAAAAAEMAAD51_5h5He8SrvX0UqJVsXoAATykjyvAAA=',
+      threadId: 'AAQkADljNmQ3M2YzLTI3N2EtNDQ0OC05MjM2LTI0ZjlkMTU0MzUwNQAQAJHU1jiHi2pKpVAYlu6Zbws=',
+      ticketId: '7bffbe44-9b92-4d39-9d0a-94b4d2554a5a',
+      from: 'customer@example.com',
+      to: ['support@example.com'],
+      subject: 'Re: Ticket update',
+      receivedAt: '2026-01-24T01:02:03.000Z',
+      provider: 'microsoft',
+      matchedBy: 'thread_headers',
+    });
+
+    const payload = buildWorkflowPayload(base, {
+      tenantId: 'c6da0f3a-d8d7-4b34-85c8-7f75e0b4f9ce',
+      occurredAt: '2026-01-24T01:02:03.000Z',
+    });
+
+    expect(inboundEmailReplyReceivedEventPayloadSchema.parse(payload)).toEqual(payload);
+  });
+
   it('throws when required fields are missing', () => {
     expect(() =>
       buildInboundEmailReplyReceivedPayload({
@@ -38,4 +60,3 @@ describe('buildInboundEmailReplyReceivedPayload', () => {
     ).toThrow(/messageId/);
   });
 });
-
