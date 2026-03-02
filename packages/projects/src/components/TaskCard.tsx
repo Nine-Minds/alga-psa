@@ -339,7 +339,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         <div className="flex items-center gap-2">
           <div
             ref={titleRef}
-            className={`font-semibold ${zoomScales.titleSize} flex-1 ${!isTitleExpanded ? 'line-clamp-2' : ''}`}
+            className={`font-semibold ${zoomScales.titleSize} flex-1 ${!isTitleExpanded ? 'line-clamp-4' : ''}`}
           >
             {highlightSearchMatch(task.task_name, searchQuery, searchCaseSensitive, searchWholeWord)}
           </div>
