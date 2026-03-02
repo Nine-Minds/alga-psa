@@ -9,7 +9,7 @@ import { ITaskResource } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTaskTypes } from '../actions/projectTaskActions';
-import { findTagsByEntityId, findTagsByEntityIds } from '@alga-psa/tags/actions';
+import { findTagsByEntityId } from '@alga-psa/tags/actions';
 import { getDocumentCountsForEntities } from '@alga-psa/documents/actions/documentActions';
 import { TagFilter } from '@alga-psa/ui/components';
 import { TagManager } from '@alga-psa/tags/components';
@@ -44,7 +44,7 @@ import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
 import { useUserPreference } from '@alga-psa/users/hooks';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
-import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { getTeamsBasic, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTheme } from 'next-themes';
 
@@ -502,19 +502,13 @@ export default function ProjectDetail({
     fetchTaskCounts();
   }, [project.project_id]);
 
-  // Load all project tasks for phase count filtering (like list view does)
+  // When project changes, invalidate listViewData to trigger a re-fetch
+  const prevProjectIdRef = useRef(project.project_id);
   useEffect(() => {
-    const fetchAllProjectTasks = async () => {
-      try {
-        const data = await getAllProjectTasksForListView(project.project_id);
-        setAllProjectTasks(data.tasks);
-        setAllProjectTaskResources(data.taskResources);
-        setAllProjectTaskTags(data.taskTags);
-      } catch (error) {
-        console.error('Error fetching all project tasks:', error);
-      }
-    };
-    fetchAllProjectTasks();
+    if (prevProjectIdRef.current !== project.project_id) {
+      prevProjectIdRef.current = project.project_id;
+      setListViewData(null);
+    }
   }, [project.project_id]);
 
   // Filter all project tasks (same logic as list view) for phase count calculation
@@ -698,25 +692,25 @@ export default function ProjectDetail({
     };
   }, [showStickyStatusNames, viewMode]);
 
-  // Lazy load list view data when switching to list mode
-  const loadListViewData = useCallback(async () => {
-    if (listViewLoading || listViewData) return;
-    setListViewLoading(true);
-    try {
-      const data = await getAllProjectTasksForListView(project.project_id);
-      setListViewData(data);
-    } catch (error) {
-      handleError(error, 'Failed to load list view data');
-    } finally {
-      setListViewLoading(false);
-    }
-  }, [project.project_id, listViewData, listViewLoading]);
-
+  // Re-fetch list view data when it's been invalidated (set to null by refreshListView)
   useEffect(() => {
-    if (viewMode === 'list') {
-      loadListViewData();
-    }
-  }, [viewMode, loadListViewData]);
+    if (listViewData !== null || listViewLoading) return;
+    const refetchListViewData = async () => {
+      setListViewLoading(true);
+      try {
+        const data = await getAllProjectTasksForListView(project.project_id);
+        setListViewData(data);
+        setAllProjectTasks(data.tasks);
+        setAllProjectTaskResources(data.taskResources);
+        setAllProjectTaskTags(data.taskTags);
+      } catch (error) {
+        handleError(error, 'Failed to load list view data');
+      } finally {
+        setListViewLoading(false);
+      }
+    };
+    refetchListViewData();
+  }, [listViewData, listViewLoading, project.project_id]);
 
   // Keep selectedTaskIdRef in sync with selectedTask for reliable access in callbacks
   useEffect(() => {
@@ -842,47 +836,22 @@ export default function ProjectDetail({
     fetchInitialData();
   }, [project.project_id]);
   
-  // Fetch tags for all tasks
+  // Derive kanban taskTags from listViewData (loaded on mount) — no separate fetch needed
   useEffect(() => {
-    const fetchTaskTags = async () => {
-      if (projectTasks.length === 0) return;
-      
-      try {
-        const taskIds = projectTasks.map(task => task.task_id);
-        // Add error handling for the server action call
-        const tags = await findTagsByEntityIds(taskIds, 'project_task').catch((error) => {
-          console.warn('Failed to fetch task tags, continuing without tags:', error);
-          return [];
-        });
-        
-        // Group tags by task
-        const tagsByTask: Record<string, ITag[]> = {};
-        tags.forEach((tag: ITag) => {
-          if (!tagsByTask[tag.tagged_id]) {
-            tagsByTask[tag.tagged_id] = [];
-          }
-          tagsByTask[tag.tagged_id].push(tag);
-        });
-        
-        setTaskTags(tagsByTask);
-        // Get unique task tags by tag_text to prevent duplicates
-        const taskTagsMap = new Map<string, ITag>();
-        allTags
-          .filter(tag => tag.tagged_type === 'project_task')
-          .forEach(tag => {
-            // Only keep the first occurrence of each tag text
-            if (!taskTagsMap.has(tag.tag_text)) {
-              taskTagsMap.set(tag.tag_text, tag);
-            }
-          });
-        setAllTaskTags(Array.from(taskTagsMap.values()));
-      } catch (error) {
-        console.error('Error fetching task tags:', error);
-      }
-    };
-    
-    fetchTaskTags();
-  }, [projectTasks, allTags]);
+    if (!listViewData?.taskTags) return;
+    setTaskTags(listViewData.taskTags);
+
+    // Get unique task tags by tag_text to prevent duplicates (for filter dropdown)
+    const taskTagsMap = new Map<string, ITag>();
+    allTags
+      .filter(tag => tag.tagged_type === 'project_task')
+      .forEach(tag => {
+        if (!taskTagsMap.has(tag.tag_text)) {
+          taskTagsMap.set(tag.tag_text, tag);
+        }
+      });
+    setAllTaskTags(Array.from(taskTagsMap.values()));
+  }, [listViewData?.taskTags, allTags]);
 
   // Update task tags when global tags change (for color updates)
   useEffect(() => {
@@ -987,7 +956,7 @@ export default function ProjectDetail({
       if (!tenant) return;
 
       try {
-        const allTeams = await getTeams();
+        const allTeams = await getTeamsBasic();
         const namesMap: Record<string, string> = {};
         allTeams.forEach(team => {
           namesMap[team.team_id] = team.team_name;

@@ -224,6 +224,25 @@ export const getTeamById = withAuth(async (user, { tenant }, teamId: string): Pr
   }
 });
 
+/**
+ * Lightweight version of getTeams — returns team rows without loading members.
+ * Use when you only need team_id, team_name, manager_id (e.g., for display badges).
+ */
+export const getTeamsBasic = withAuth(async (user, { tenant }): Promise<Omit<ITeam, 'members'>[]> => {
+  const { knex } = await createTenantKnex();
+  const canRead = await hasPermission(user, 'user_settings', 'read', knex);
+  if (!canRead) {
+    throw new Error('Permission denied: cannot view teams.');
+  }
+
+  try {
+    return await Team.getAll(knex, tenant);
+  } catch (error) {
+    console.error(error);
+    throw new Error('Failed to fetch teams');
+  }
+});
+
 export const getTeams = withAuth(async (user, { tenant }): Promise<ITeam[]> => {
   const { knex } = await createTenantKnex();
   const canRead = await hasPermission(user, 'user_settings', 'read', knex);
