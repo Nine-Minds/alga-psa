@@ -46,10 +46,9 @@ export const assignTeamToTicket = withAuth(async (
       .andWhere('users.is_inactive', false)
       .select('team_members.user_id');
 
-    let resolvedAssignedTo = ticket.assigned_to as string | null;
-    if (!resolvedAssignedTo) {
-      resolvedAssignedTo = team.manager_id;
-    }
+    // assigned_to is guaranteed non-null: either the ticket already has one,
+    // or we fall back to team.manager_id (validated above).
+    const resolvedAssignedTo: string = (ticket.assigned_to as string | null) || team.manager_id;
 
     await trx('tickets')
       .where({ ticket_id: ticketId, tenant })

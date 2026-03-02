@@ -781,10 +781,9 @@ export const assignTeamToProjectTask = withAuth(async (
                 .andWhere('users.is_inactive', false)
                 .select('team_members.user_id');
 
-            let assignedTo = task.assigned_to as string | null;
-            if (!assignedTo) {
-                assignedTo = team.manager_id;
-            }
+            // assigned_to is guaranteed non-null: either the task already has one,
+            // or we fall back to team.manager_id (validated above).
+            const assignedTo: string = (task.assigned_to as string | null) || team.manager_id;
 
             await trx('project_tasks')
                 .where({ task_id: taskId, tenant })
@@ -827,7 +826,7 @@ export const assignTeamToProjectTask = withAuth(async (
         });
 
         // Emit event after transaction commits so subscribers can see the data
-        if (eventData.projectId) {
+        if (eventData?.projectId) {
             const occurredAt = new Date();
             await publishWorkflowEvent({
                 eventType: 'PROJECT_TASK_ASSIGNED',
