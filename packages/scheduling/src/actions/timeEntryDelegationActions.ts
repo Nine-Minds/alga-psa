@@ -1,8 +1,9 @@
 'use server';
 
 import type { IUser } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, User } from '@alga-psa/db';
 import { hasPermission, withAuth } from '@alga-psa/auth';
+import { isFeatureFlagEnabled } from '@alga-psa/core';
 
 function sortUsersByName(users: IUser[]): IUser[] {
   return [...users].sort((a, b) => {
@@ -73,6 +74,26 @@ export const fetchEligibleTimeEntrySubjects = withAuth(async (user, { tenant }):
 
   for (const row of rows) {
     subjectsById.set(row.user_id, pickUserRow(row));
+  }
+
+  // Also include reports_to subordinates when teams-v2 is enabled
+  const reportsToEnabled = await isFeatureFlagEnabled('teams-v2', {
+    userId: user.user_id,
+    tenantId: tenant
+  });
+
+  if (reportsToEnabled) {
+    const subordinateIds = await User.getReportsToSubordinateIds(db, user.user_id);
+    if (subordinateIds.length > 0) {
+      const subordinateRows = await db('users')
+        .whereIn('user_id', subordinateIds)
+        .where({ tenant, user_type: 'internal' })
+        .select('user_id', 'username', 'first_name', 'last_name', 'email', 'is_inactive', 'tenant', 'user_type', 'timezone');
+
+      for (const row of subordinateRows) {
+        subjectsById.set(row.user_id, pickUserRow(row));
+      }
+    }
   }
 
   return sortUsersByName(Array.from(subjectsById.values()));

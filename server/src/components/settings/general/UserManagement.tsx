@@ -647,7 +647,7 @@ const fetchContacts = async (): Promise<void> => {
                 <UserPicker
                   value={newUser.reportsTo}
                   onValueChange={(value) => setNewUser({ ...newUser, reportsTo: value || '' })}
-                  users={users}
+                  users={users.filter(u => !u.is_inactive)}
                   getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                   labelStyle="none"
                   buttonWidth="full"
@@ -903,7 +903,15 @@ const fetchContacts = async (): Promise<void> => {
                     />
                   </div>
                 ) : (
-                  <OrgChart users={users} onUserUpdated={fetchUsers} />
+                  <OrgChart
+                    users={users.filter(u =>
+                      filterStatus === 'all' ||
+                      (filterStatus === 'active' && !u.is_inactive) ||
+                      (filterStatus === 'inactive' && u.is_inactive)
+                    )}
+                    onUserUpdated={fetchUsers}
+                    searchTerm={searchTerm}
+                  />
                 )}
               </TabsContent>
             </Tabs>

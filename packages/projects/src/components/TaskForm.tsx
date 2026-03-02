@@ -1509,28 +1509,11 @@ export default function TaskForm({
                       teams={teams}
                       teamSectionLabel="Add Team Members"
                       onTeamValuesChange={(selectedTeamIds) => {
-                        // When a team is selected, expand its members into individual agents
+                        // When a team is selected, use handleAssignTeam which already
+                        // expands team members into task_resources server-side.
+                        // Do NOT also call handleAddAgent per member (causes duplicates).
                         for (const teamId of selectedTeamIds) {
-                          const selectedTeam = teams.find(t => t.team_id === teamId);
-                          if (!selectedTeam?.members) continue;
-
-                          // Assign the team so the team badge appears
-                          setAssignedTeamId(teamId);
-
-                          // Set team lead as primary if no primary agent yet
-                          const leadId = selectedTeam.manager_id || selectedTeam.members.find(m => m.role === 'lead')?.user_id;
-                          if (!assignedUser && leadId) {
-                            setAssignedUser(leadId);
-                          }
-
-                          const primaryId = assignedUser || leadId;
-                          const currentResources = task?.task_id ? taskResources : tempTaskResources;
-                          const currentUserIds = new Set(currentResources.map(r => r.additional_user_id));
-                          const newMembers = selectedTeam.members
-                            .filter(m => m.user_id !== primaryId && !currentUserIds.has(m.user_id));
-                          for (const member of newMembers) {
-                            handleAddAgent(member.user_id);
-                          }
+                          handleAssignTeam(teamId);
                         }
                       }}
                       onValuesChange={async (newUserIds) => {

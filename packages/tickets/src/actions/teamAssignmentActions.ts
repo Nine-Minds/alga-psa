@@ -37,8 +37,13 @@ export const assignTeamToTicket = withAuth(async (
     }
 
     const teamMembers = await trx('team_members')
-      .where({ team_id: teamId, tenant })
-      .select('user_id');
+      .join('users', function() {
+        this.on('team_members.user_id', 'users.user_id')
+          .andOn('team_members.tenant', 'users.tenant');
+      })
+      .where({ 'team_members.team_id': teamId, 'team_members.tenant': tenant })
+      .andWhere('users.is_inactive', false)
+      .select('team_members.user_id');
 
     let assignedTo = ticket.assigned_to as string | null;
     if (!assignedTo) {

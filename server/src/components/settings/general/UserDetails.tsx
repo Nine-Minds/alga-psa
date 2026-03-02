@@ -74,7 +74,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
     const fetchReportsToOptions = async () => {
       try {
         const allUsers = await getAllUsers(false, 'internal');
-        const filteredUsers = allUsers.filter((item) => item.user_id !== userId);
+        const filteredUsers = allUsers.filter((item) => item.user_id !== userId && !item.is_inactive);
 
         // Batch fetch avatar URLs
         const userIds = filteredUsers.map((u) => u.user_id);

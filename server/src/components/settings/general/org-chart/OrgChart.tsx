@@ -14,6 +14,7 @@ const OrgChartFlow = dynamic(() => import('./OrgChartFlow'), { ssr: false });
 interface OrgChartProps {
   users: IUser[];
   onUserUpdated: () => void;
+  searchTerm?: string;
 }
 
 const NODE_WIDTH = 240;
@@ -21,7 +22,7 @@ const NODE_HEIGHT = 80;
 const HORIZONTAL_GAP = 40;
 const VERTICAL_GAP = 120;
 
-const OrgChart = ({ users, onUserUpdated }: OrgChartProps) => {
+const OrgChart = ({ users, onUserUpdated, searchTerm = '' }: OrgChartProps) => {
   const { openDrawer } = useDrawer();
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
 
@@ -115,6 +116,12 @@ const OrgChart = ({ users, onUserUpdated }: OrgChartProps) => {
       const x = startX + (width - NODE_WIDTH) / 2;
       const y = depth * (NODE_HEIGHT + VERTICAL_GAP);
 
+      const lowerSearch = searchTerm.toLowerCase();
+      const fullName = `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase();
+      const isHighlighted = lowerSearch.length > 0 && (
+        fullName.includes(lowerSearch) || user.email.toLowerCase().includes(lowerSearch)
+      );
+
       positionedNodes.push({
         id: user.user_id,
         type: 'orgChartNode',
@@ -123,6 +130,7 @@ const OrgChart = ({ users, onUserUpdated }: OrgChartProps) => {
           user,
           avatarUrl: avatarUrls[user.user_id] ?? null,
           roleLabel: user.user_type === 'client' ? 'Client User' : 'Internal User',
+          isHighlighted,
         },
       });
 
@@ -156,7 +164,7 @@ const OrgChart = ({ users, onUserUpdated }: OrgChartProps) => {
     });
 
     return { nodes: positionedNodes, edges: positionedEdges };
-  }, [users, avatarUrls]);
+  }, [users, avatarUrls, searchTerm]);
 
   const nodeTypes: NodeTypes = useMemo(() => ({
     orgChartNode: OrgChartNode,

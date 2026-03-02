@@ -11,7 +11,7 @@ import {
   ITimeSheetApprovalView,
   ITimePeriodView
 } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, User } from '@alga-psa/db';
 import { formatISO } from 'date-fns';
 import { toPlainDate, isFeatureFlagEnabled } from '@alga-psa/core';
 import {
@@ -152,28 +152,9 @@ export const fetchTimeSheetsForApproval = withAuth(async (
         tenantId: tenant
       });
 
-      let reportsToUserIds: string[] = [];
-      if (reportsToEnabled) {
-        const { rows } = await db.raw(
-          `
-            WITH RECURSIVE reports_to_chain AS (
-              SELECT u.user_id
-              FROM users u
-              WHERE u.reports_to = ?
-                AND u.tenant = ?
-              UNION ALL
-              SELECT u2.user_id
-              FROM users u2
-              JOIN reports_to_chain rtc ON u2.reports_to = rtc.user_id
-              WHERE u2.tenant = ?
-            )
-            SELECT user_id
-            FROM reports_to_chain
-          `,
-          [user.user_id, tenant, tenant]
-        );
-        reportsToUserIds = rows.map((row: { user_id: string }) => row.user_id);
-      }
+      const reportsToUserIds = reportsToEnabled
+        ? await User.getReportsToSubordinateIds(db, user.user_id)
+        : [];
 
       query = query
         .where((builder) => {

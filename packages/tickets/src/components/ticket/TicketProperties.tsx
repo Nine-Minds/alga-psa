@@ -197,6 +197,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [removeTeamMode, setRemoveTeamMode] = useState<'remove_all' | 'keep_all' | 'selective'>('remove_all');
   const [selectedTeamMemberIds, setSelectedTeamMemberIds] = useState<string[]>([]);
   const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
+  const [pendingSwitchTeamId, setPendingSwitchTeamId] = useState<string | null>(null);
 
   // Register unsaved changes for contact, client, and location pickers
   // Popup triggers if picker is open AND a different selection is made (but not yet saved)
@@ -953,21 +954,17 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 teams={teams}
                 teamSectionLabel="Add Team Members"
                 onTeamValuesChange={(selectedTeamIds) => {
-                  // When a team is selected, assign the team and expand its members into individual agents
+                  // When a team is selected, assign the team — assignTeamToTicket already
+                  // expands team members into ticket_resources, so we must NOT also call
+                  // onAddAgent for each member (that would cause duplicate-insert errors).
                   for (const teamId of selectedTeamIds) {
-                    const selectedTeam = teams.find(t => t.team_id === teamId);
-                    if (!selectedTeam?.members) continue;
-                    // Assign the team so the team badge appears
-                    if (onAssignTeam) {
+                    if (ticket.assigned_team_id && onRemoveTeamAssignment) {
+                      // A team is already assigned — show the removal dialog first,
+                      // then assign the new team after the user confirms.
+                      setPendingSwitchTeamId(teamId);
+                      setIsRemoveTeamDialogOpen(true);
+                    } else if (onAssignTeam) {
                       onAssignTeam(teamId);
-                    }
-                    const currentUserIds = new Set(
-                      additionalAgents.filter(a => a.additional_user_id).map(a => a.additional_user_id!)
-                    );
-                    const newMembers = selectedTeam.members
-                      .filter(m => m.user_id !== ticket.assigned_to && !currentUserIds.has(m.user_id));
-                    for (const member of newMembers) {
-                      onAddAgent(member.user_id);
                     }
                   }
                 }}
@@ -1073,8 +1070,11 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
       {teamsV2Enabled && ticket.assigned_team_id && (
         <Dialog
           isOpen={isRemoveTeamDialogOpen}
-          onClose={() => setIsRemoveTeamDialogOpen(false)}
-          title="Remove team assignment"
+          onClose={() => {
+            setPendingSwitchTeamId(null);
+            setIsRemoveTeamDialogOpen(false);
+          }}
+          title={pendingSwitchTeamId ? "Switch team assignment" : "Remove team assignment"}
           id={`${id}-remove-team-dialog`}
         >
         <DialogContent className="space-y-4">
@@ -1147,7 +1147,10 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           <Button
             id="remove-team-cancel-btn"
             variant="outline"
-            onClick={() => setIsRemoveTeamDialogOpen(false)}
+            onClick={() => {
+              setPendingSwitchTeamId(null);
+              setIsRemoveTeamDialogOpen(false);
+            }}
           >
             Cancel
           </Button>
@@ -1161,6 +1164,11 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                   removeTeamMode === 'selective' ? selectedTeamMemberIds : undefined
                 );
               }
+              // If switching to a new team, assign it after the old one is removed
+              if (pendingSwitchTeamId && onAssignTeam) {
+                await onAssignTeam(pendingSwitchTeamId);
+              }
+              setPendingSwitchTeamId(null);
               setIsRemoveTeamDialogOpen(false);
             }}
           >
