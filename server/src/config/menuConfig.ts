@@ -5,6 +5,7 @@ import {
   AtSign,
   BarChart3,
   Bell,
+  BookOpen,
   Building2,
   Calendar,
   CalendarClock,
@@ -17,6 +18,7 @@ import {
   FileSignature,
   FileText,
   FlaskConical,
+  FolderTree,
   Globe,
   Gauge,
   Handshake,
@@ -112,6 +114,11 @@ export const navigationSections: NavigationSection[] = [
         href: '/msp/documents'
       },
       {
+        name: 'Knowledge Base',
+        icon: BookOpen,
+        href: '/msp/knowledge-base'
+      },
+      {
         name: 'Assets',
         icon: Monitor,
         href: '/msp/assets'
@@ -199,6 +206,7 @@ export const settingsNavigationSections: NavigationSection[] = [
       { name: 'Ticketing', icon: MessageSquare, href: '/msp/settings?tab=ticketing' },
       { name: 'SLA', icon: Timer, href: '/msp/settings/sla' },
       { name: 'Projects', icon: Layers, href: '/msp/settings?tab=projects' },
+      { name: 'Document Templates', icon: FolderTree, href: '/msp/settings?tab=document-templates' },
       { name: 'Interactions', icon: Handshake, href: '/msp/settings?tab=interactions' },
     ]
   },

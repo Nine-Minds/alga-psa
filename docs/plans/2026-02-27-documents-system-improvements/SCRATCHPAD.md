@@ -70,6 +70,49 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Work Log
 
+- (2026-02-28) **F094–F104 implemented**: Phase 5 knowledge base UI components:
+  - F094: `KBArticleList` component with filterable article table (status, audience, type, search), pagination, bulk selection, archive/edit/publish actions.
+  - F095: `KBArticleEditor` component wrapping `DocumentEditor` with KB metadata sidebar (title, slug, type, audience, category, review cycle).
+  - F096: `KBPublishingControls` component for status transitions (Draft→Review→Published→Archived).
+  - F097: `KBReviewDashboard` component showing articles awaiting review and overdue reviews.
+  - F098: `KBCategoryTree` component for category navigation (reuses standard_categories).
+  - F099: `KBStalenessBadge` component showing overdue/due soon review status.
+  - F100: `ClientKBPage` component for client portal KB browsing with category sidebar, search, article cards.
+  - F101: `ClientKBArticleView` component with read-only article rendering and "Was this helpful?" feedback buttons.
+  - F102: KB section added to MSP navigation in `menuConfig.ts` with `/msp/knowledge-base` route.
+  - F103: KB link added to client portal navigation in `ClientPortalLayout.tsx` with `/client-portal/knowledge-base` route.
+  - F104: Article tagging integration via `TagManager` in `KBArticleEditor`, tag filter in `KBArticleFilters`, `tagIds` filter support in `getArticles()` query.
+- (2026-02-28) **F076–F093 implemented**: Phase 5 knowledge base foundation (backend):
+  - F076: Migration `20260228300000_create_kb_articles_table.cjs` with slug, article_type, audience, status, review cycle, view/feedback counts, category.
+  - F077: Migration `20260228301000_create_kb_article_relations_table.cjs` for related/prerequisite/supersedes relationships.
+  - F078: Migration `20260228302000_create_kb_article_templates_table.cjs` with BlockNote JSON template data.
+  - F079: Migration `20260228303000_create_kb_article_reviewers_table.cjs` with review status tracking.
+  - F080: Migration `20260228304000_add_phase5_kb_tables_rls_policies.cjs` with tenant isolation on all KB tables.
+  - F081-F093: KB article actions in `packages/documents/src/actions/kbArticleActions.ts`: `createArticle()`, `updateArticle()`, `publishArticle()`, `archiveArticle()`, `submitForReview()`, `completeReview()`, `getArticles()`, `getArticle()`, `getStaleArticles()`, `recordArticleView()`, `recordArticleFeedback()`, `getArticleTemplates()`, `createArticleFromTicket()`.
+- (2026-02-28) **F056–F074 implemented**: Phase 4 shareable document URLs:
+  - F056: Migration `20260228200000_create_document_share_links_table.cjs` with token, share_type, password_hash, expiry, max_downloads, download_count, revocation tracking.
+  - F057: Migration `20260228201000_create_document_share_access_log_table.cjs` with access logging (IP, user agent, access type, success/failure).
+  - F058: Migration `20260228202000_add_phase4_document_share_tables_rls_policies.cjs` with tenant isolation policies.
+  - F059-F062: Share link actions in `packages/documents/src/actions/shareLinkActions.ts`: `createShareLink()` with 256-bit token generation and bcrypt password hashing, `getShareLinksForDocument()`, `revokeShareLink()`, `validateShareToken()` using admin connection.
+  - F063-F068: API route `server/src/app/api/share/[token]/route.ts` handles file download with password verification, portal auth check, access logging, download count increment, expiry/limit enforcement.
+  - F067: API route `server/src/app/api/share/[token]/info/route.ts` returns document metadata without download.
+  - F069-F070: Public share landing page at `server/src/app/share/[token]/page.tsx` with password input, download button, expiry/limit status.
+  - F071-F072: `ShareLinkDialog` component for creating/managing share links with type selector, password input, expiry picker, max downloads, copy URL, revoke actions.
+  - F073: Added `onShare` prop and Share button to `DocumentListView` actions column.
+  - F074: Added `documentsWithShareLinks` prop and Link2 indicator icon next to document names.
+- (2026-02-28) **F038–F040 implemented**: Phase 2 folder template management UI:
+  - F038: `FolderTemplateList` component in `packages/documents/src/components/settings/` with templates grouped by entity type, default badges, set-default action, delete with confirmation, and edit callbacks.
+  - F039: `FolderTemplateEditor` component with drag-and-drop folder reordering, add/remove folders at any depth, client visibility toggles per folder, save/cancel workflow.
+  - F040: `DocumentTemplatesSettings` wraps list and editor with create/edit mode switching. Integrated into `SettingsPage.tsx` as "Document Templates" tab, added to `menuConfig.ts` under Work Management section.
+  - Components exported via `packages/documents/src/components/settings/index.ts` and re-exported from main `packages/documents/src/components/index.ts`.
+- (2026-02-28) **F049–F054 implemented**: Phase 3 client portal documents UI:
+  - F049: New client portal documents page at `/client-portal/documents` (`server/src/app/client-portal/documents/page.tsx`).
+  - F050: 'Documents' nav link added to `ClientPortalLayout.tsx` between Projects and Appointments.
+  - F051: `ClientDocumentsPage` component with collapsible folder tree sidebar and responsive document grid.
+  - F052: `FolderTreeNode` (read-only folder tree for portal) embedded in `ClientDocumentsPage`.
+  - F053: `DocumentCard` component (view/download only, no edit/delete) with MIME type icons.
+  - F054: Search filter in `ClientDocumentsPage`, folder path filtering, pagination controls.
+  - Component exported via `packages/client-portal/src/components/index.ts`.
 - (2026-02-28) **F043–F048, F055 implemented**: Phase 3 client portal document actions and API access:
   - F043: `getClientDocuments(page, limit, filters)` in `packages/client-portal/src/actions/client-portal-actions/client-documents.ts` with pagination, search, folder, and date filters. Aggregates documents across direct client associations, tickets, project tasks, and contracts.
   - F044: `getClientDocumentFolders()` returns folder tree of client-visible folders.
@@ -116,6 +159,27 @@ Rolling notes for the 5-phase documents system overhaul: entity-scoped folders, 
 
 ## Recent Validation
 
+- (2026-03-01) **E2E tests implemented** (T020, T042-T045): Created `server/src/test/e2e/document-system.playwright.test.ts` with Playwright E2E tests for:
+  - T020: Ticket detail page inline documents section shows all attached documents regardless of is_client_visible flag
+  - T042: Create entity-scoped folders for client, upload document, toggle visibility, verify client portal Documents hub
+  - T043: Generate public share link, open in incognito browser, verify download without auth
+  - T044: Create KB article, publish with audience='client', verify client portal KB section with feedback buttons
+  - T045: Configure folder template as default, open new client Documents tab, verify folders auto-created
+- (2026-03-01) **Integration tests implemented** (T001-T006, T009-T013, T015-T019, T022-T028, T031-T039): Created integration test files:
+  - `server/src/test/integration/documentEntityFolders.integration.test.ts` (T001-T006)
+  - `server/src/test/integration/documentFolderTemplates.integration.test.ts` (T009-T013)
+  - `server/src/test/integration/clientPortalDocuments.integration.test.ts` (T015-T019)
+  - `server/src/test/integration/documentShareLinks.integration.test.ts` (T022-T028)
+  - `server/src/test/integration/kbArticles.integration.test.ts` (T031-T039)
+- (2026-02-28) **Component tests implemented** (T007, T008, T014, T021, T029, T030, T040, T041):
+  - T007: Documents.drawer.test.tsx - "renders FolderTreeView sidebar in entity mode" (already existed)
+  - T008: DocumentListView.visibility.test.tsx and VisibilityToggle.test.tsx (already existed)
+  - T014: FolderTemplateEditor.test.tsx - template name, entity type, folder tree, visibility toggles
+  - T021: ClientDocumentsPage.test.tsx - folder tree, document cards, search filter, view/download only
+  - T029: ShareLinkDialog.test.tsx - share type selector, password input, expiry picker, existing links with copy/revoke
+  - T030: page.test.tsx (share/[token]) - document info, download button, password input, expiry/limit messages
+  - T040: KBArticleEditor.test.tsx - metadata sidebar, DocumentEditor wrapper, tags, statistics
+  - T041: KBPublishingControls.test.tsx - status transitions (draft→review→published→archived)
 - (2026-03-01) Ran focused unit coverage for template create/list/detail actions: `cd server && npx vitest run src/test/unit/documentFolderTemplateActions.test.ts --config vitest.config.ts` (pass, 10 tests).
 - (2026-03-01) Ran focused unit coverage for template list/detail actions: `cd server && npx vitest run src/test/unit/documentFolderTemplateActions.test.ts --config vitest.config.ts` (pass, 7 tests).
 - (2026-03-01) Ran focused unit coverage for template-list action: `cd server && npx vitest run src/test/unit/documentFolderTemplateActions.test.ts --config vitest.config.ts` (pass, 3 tests).

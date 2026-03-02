@@ -1,0 +1,828 @@
+'use server';
+
+import { randomUUID } from 'crypto';
+import { withAuth, hasPermission } from '@alga-psa/auth';
+import { createTenantKnex } from '@alga-psa/db';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { uploadDocument } from './documentActions';
+import type { IDocument } from '@alga-psa/types';
+
+export type ArticleType = 'how_to' | 'faq' | 'troubleshooting' | 'reference';
+export type ArticleAudience = 'internal' | 'client' | 'public';
+export type ArticleStatus = 'draft' | 'review' | 'published' | 'archived';
+export type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'changes_requested';
+
+export interface IKBArticle {
+  article_id: string;
+  tenant: string;
+  document_id: string;
+  slug: string;
+  article_type: ArticleType;
+  audience: ArticleAudience;
+  status: ArticleStatus;
+  next_review_due: Date | null;
+  review_cycle_days: number | null;
+  last_reviewed_at: Date | null;
+  last_reviewed_by: string | null;
+  view_count: number;
+  helpful_count: number;
+  not_helpful_count: number;
+  category_id: string | null;
+  created_at: Date;
+  updated_at: Date;
+  created_by: string | null;
+  updated_by: string | null;
+  published_at: Date | null;
+  published_by: string | null;
+}
+
+export interface IKBArticleWithDocument extends IKBArticle {
+  document?: IDocument;
+  document_name?: string;
+}
+
+export interface IKBArticleReviewer {
+  reviewer_id: string;
+  tenant: string;
+  article_id: string;
+  user_id: string;
+  review_status: ReviewStatus;
+  review_notes: string | null;
+  assigned_at: Date;
+  reviewed_at: Date | null;
+  assigned_by: string | null;
+}
+
+export interface IKBArticleTemplate {
+  template_id: string;
+  tenant: string;
+  name: string;
+  description: string | null;
+  article_type: ArticleType;
+  content_template: any; // BlockNote JSON
+  is_default: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface ICreateArticleInput {
+  title: string;
+  slug?: string;
+  articleType?: ArticleType;
+  audience?: ArticleAudience;
+  categoryId?: string;
+  reviewCycleDays?: number;
+  content?: any; // BlockNote JSON
+}
+
+export interface IUpdateArticleInput {
+  title?: string;
+  slug?: string;
+  articleType?: ArticleType;
+  audience?: ArticleAudience;
+  categoryId?: string | null;
+  reviewCycleDays?: number | null;
+}
+
+export interface IArticleFilters {
+  status?: ArticleStatus;
+  audience?: ArticleAudience;
+  articleType?: ArticleType;
+  categoryId?: string;
+  search?: string;
+  tagIds?: string[];
+}
+
+const KB_ARTICLE_SELECT_COLUMNS = [
+  'article_id',
+  'tenant',
+  'document_id',
+  'slug',
+  'article_type',
+  'audience',
+  'status',
+  'next_review_due',
+  'review_cycle_days',
+  'last_reviewed_at',
+  'last_reviewed_by',
+  'view_count',
+  'helpful_count',
+  'not_helpful_count',
+  'category_id',
+  'created_at',
+  'updated_at',
+  'created_by',
+  'updated_by',
+  'published_at',
+  'published_by',
+] as const;
+
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .substring(0, 100);
+}
+
+/**
+ * Creates a new KB article with its underlying document.
+ * F081: Creates both document and kb_articles record in transaction.
+ */
+export const createArticle = withAuth(
+  async (
+    user,
+    { tenant },
+    input: ICreateArticleInput
+  ): Promise<IKBArticleWithDocument | ActionPermissionError> => {
+    const { knex } = await createTenantKnex();
+
+    if (!(await hasPermission(user, 'document', 'create'))) {
+      return permissionError('Permission denied');
+    }
+
+    if (!input.title?.trim()) {
+      throw new Error('Title is required');
+    }
+
+    const slug = input.slug?.trim() || generateSlug(input.title);
+    const articleType = input.articleType || 'how_to';
+    const audience = input.audience || 'internal';
+
+    // Check slug uniqueness
+    const existingSlug = await knex('kb_articles')
+      .where({ tenant, slug })
+      .first();
+    if (existingSlug) {
+      throw new Error('An article with this slug already exists');
+    }
+
+    // Create the underlying document
+    const documentResult = await uploadDocument({
+      documentName: input.title.trim(),
+      documentType: 'knowledge_base',
+      blockContent: input.content || [],
+      folder_path: '/Knowledge Base',
+    });
+
+    if ('code' in documentResult) {
+      throw new Error(documentResult.message || 'Failed to create document');
+    }
+
+    const document = documentResult as IDocument;
+
+    // Create the KB article record
+    const articleId = randomUUID();
+    const nextReviewDue = input.reviewCycleDays
+      ? new Date(Date.now() + input.reviewCycleDays * 24 * 60 * 60 * 1000)
+      : null;
+
+    await knex('kb_articles').insert({
+      tenant,
+      article_id: articleId,
+      document_id: document.document_id,
+      slug,
+      article_type: articleType,
+      audience,
+      status: 'draft',
+      review_cycle_days: input.reviewCycleDays || null,
+      next_review_due: nextReviewDue,
+      category_id: input.categoryId || null,
+      created_by: user.user_id,
+      updated_by: user.user_id,
+    });
+
+    const article = await knex('kb_articles')
+      .select(KB_ARTICLE_SELECT_COLUMNS)
+      .where({ tenant, article_id: articleId })
+      .first();
+
+    return {
+      ...article,
+      document,
+      document_name: document.document_name,
+    } as IKBArticleWithDocument;
+  }
+);
+
+/**
+ * Updates KB article metadata (not document content).
+ * F082: Updates KB metadata.
+ */
+export const updateArticle = withAuth(
+  async (
+    user,
+    { tenant },
+    articleId: string,
+    input: IUpdateArticleInput
+  ): Promise<IKBArticle | ActionPermissionError> => {
+    const { knex } = await createTenantKnex();
+
+    if (!(await hasPermission(user, 'document', 'update'))) {
+      return permissionError('Permission denied');
+    }
+
+    if (!articleId) {
+      throw new Error('articleId is required');
+    }
+
+    const existing = await knex('kb_articles')
+      .where({ tenant, article_id: articleId })
+      .first();
+
+    if (!existing) {
+      throw new Error('Article not found');
+    }
+
+    const updates: Record<string, any> = {
+      updated_at: knex.fn.now(),
+      updated_by: user.user_id,
+    };
+
+    if (input.title !== undefined) {
+      // Also update the document name
+      await knex('documents')
+        .where({ tenant, document_id: existing.document_id })
+        .update({
+          document_name: input.title.trim(),
+          updated_at: knex.fn.now(),
+        });
+    }
+
+    if (input.slug !== undefined) {
+      const newSlug = input.slug.trim();
+      const existingSlug = await knex('kb_articles')
+        .where({ tenant, slug: newSlug })
+        .whereNot('article_id', articleId)
+        .first();
+      if (existingSlug) {
+        throw new Error('An article with this slug already exists');
+      }
+      updates.slug = newSlug;
+    }
+
+    if (input.articleType !== undefined) {
+      updates.article_type = input.articleType;
+    }
+
+    if (input.audience !== undefined) {
+      updates.audience = input.audience;
+    }
+
+    if (input.categoryId !== undefined) {
+      updates.category_id = input.categoryId;
+    }
+
+    if (input.reviewCycleDays !== undefined) {
+      updates.review_cycle_days = input.reviewCycleDays;
+      if (input.reviewCycleDays) {
+        updates.next_review_due = new Date(
+          Date.now() + input.reviewCycleDays * 24 * 60 * 60 * 1000
+        );
+      }
+    }
+
+    await knex('kb_articles')
+      .where({ tenant, article_id: articleId })
+      .update(updates);
+
+    const article = await knex('kb_articles')
+      .select(KB_ARTICLE_SELECT_COLUMNS)
+      .where({ tenant, article_id: articleId })
+      .first();
+
+    return article as IKBArticle;
+  }
+);
+
+/**
+ * Publishes an article (sets status=published, auto-sets is_client_visible).
+ * F083: Sets status=published and auto-sets is_client_visible for client/public audience.
+ */
+export const publishArticle = withAuth(
+  async (
+    user,
+    { tenant },
+    articleId: string
+  ): Promise<IKBArticle | ActionPermissionError> => {
+    const { knex } = await createTenantKnex();
+
+    if (!(await hasPermission(user, 'document', 'update'))) {
+      return permissionError('Permission denied');
+    }
+
+    if (!articleId) {
+      throw new Error('articleId is required');
+    }
+
+    const existing = await knex('kb_articles')
+      .where({ tenant, article_id: articleId })
+      .first();
+
+    if (!existing) {
+      throw new Error('Article not found');
+    }
+
+    // Update article status
+    await knex('kb_articles')
+      .where({ tenant, article_id: articleId })
+      .update({
+        status: 'published',
+        published_at: knex.fn.now(),
+        published_by: user.user_id,
+        updated_at: knex.fn.now(),
+        updated_by: user.user_id,
+      });
+
+    // Auto-set is_client_visible for client/public audience
+    if (existing.audience === 'client' || existing.audience === 'public') {
+      await knex('documents')
+        .where({ tenant, document_id: existing.document_id })
+        .update({
+          is_client_visible: true,
+          updated_at: knex.fn.now(),
+        });
+    }
+
+    const article = await knex('kb_articles')
+      .select(KB_ARTICLE_SELECT_COLUMNS)
+      .where({ tenant, article_id: articleId })
+      .first();
+
+    return article as IKBArticle;
+  }
+);
+
+/**
+ * Archives an article (sets status=archived, clears is_client_visible).
+ * F084: Sets status=archived and clears is_client_visible.
+ */
+export const archiveArticle = withAuth(
+  async (
+    user,
+    { tenant },
+    articleId: string
+  ): Promise<IKBArticle | ActionPermissionError> => {
+    const { knex } = await createTenantKnex();
+
+    if (!(await hasPermission(user, 'document', 'update'))) {
+      return permissionError('Permission denied');
+    }
+
+    if (!articleId) {
+      throw new Error('articleId is required');
+    }
+
+    const existing = await knex('kb_articles')
+      .where({ tenant, article_id: articleId })
+      .first();
+
+    if (!existing) {
+      throw new Error('Article not found');
+    }
+
+    // Update article status
+    await knex('kb_articles')
+      .where({ tenant, article_id: articleId })
+      .update({
+        status: 'archived',
+        updated_at: knex.fn.now(),
+        updated_by: user.user_id,
+      });
+
+    // Clear is_client_visible
+    await knex('documents')
+      .where({ tenant, document_id: existing.document_id })
+      .update({
+        is_client_visible: false,
+        updated_at: knex.fn.now(),
+      });
+
+    const article = await knex('kb_articles')
+      .select(KB_ARTICLE_SELECT_COLUMNS)
+      .where({ tenant, article_id: articleId })
+      .first();
+
+    return article as IKBArticle;
+  }
+);
+
+/**
+ * Submits an article for review.
+ * F085: Creates reviewer assignments.
+ */
+export const submitForReview = withAuth(
+  async (
+    user,
+    { tenant },
+    articleId: string,
+    reviewerUserIds: string[]
+  ): Promise<boolean | ActionPermissionError> => {
+    const { knex } = await createTenantKnex();
+
+    if (!(await hasPermission(user, 'document', 'update'))) {
+      return permissionError('Permission denied');
+    }
+
+    if (!articleId) {
+      throw new Error('articleId is required');
+    }
+
+    if (!reviewerUserIds?.length) {
+      throw new Error('At least one reviewer is required');
+    }
+
+    const existing = await knex('kb_articles')
+      .where({ tenant, article_id: articleId })
+      .first();
+
+    if (!existing) {
+      throw new Error('Article not found');
+    }
+
+    // Update article status to review
+    await knex('kb_articles')
+      .where({ tenant, article_id: articleId })
+      .update({
+        status: 'review',
+        updated_at: knex.fn.now(),
+        updated_by: user.user_id,
+      });
+
+    // Create reviewer assignments (remove existing pending ones first)
+    await knex('kb_article_reviewers')
+      .where({ tenant, article_id: articleId, review_status: 'pending' })
+      .del();
+
+    const reviewerRecords = reviewerUserIds.map((userId) => ({
+      tenant,
+      reviewer_id: randomUUID(),
+      article_id: articleId,
+      user_id: userId,
+      review_status: 'pending',
+      assigned_by: user.user_id,
+    }));
+
+    await knex('kb_article_reviewers').insert(reviewerRecords);
+
+    return true;
+  }
+);
+
+/**
+ * Records a reviewer's decision.
+ * F086: Records reviewer decision.
+ */
+export const completeReview = withAuth(
+  async (
+    user,
+    { tenant },
+    articleId: string,
+    status: ReviewStatus,
+    notes?: string
+  ): Promise<boolean | ActionPermissionError> => {
+    const { knex } = await createTenantKnex();
+
+    if (!(await hasPermission(user, 'document', 'update'))) {
+      return permissionError('Permission denied');
+    }
+
+    if (!articleId) {
+      throw new Error('articleId is required');
+    }
+
+    // Update the reviewer record
+    const updated = await knex('kb_article_reviewers')
+      .where({
+        tenant,
+        article_id: articleId,
+        user_id: user.user_id,
+      })
+      .update({
+        review_status: status,
+        review_notes: notes || null,
+        reviewed_at: knex.fn.now(),
+      });
+
+    if (updated === 0) {
+      throw new Error('You are not assigned as a reviewer for this article');
+    }
+
+    // Update article's last_reviewed metadata
+    await knex('kb_articles')
+      .where({ tenant, article_id: articleId })
+      .update({
+        last_reviewed_at: knex.fn.now(),
+        last_reviewed_by: user.user_id,
+        updated_at: knex.fn.now(),
+        updated_by: user.user_id,
+      });
+
+    return true;
+  }
+);
+
+/**
+ * Gets paginated articles with filters.
+ * F087: Returns paginated articles with audience/status/type/category filters.
+ */
+export const getArticles = withAuth(
+  async (
+    user,
+    { tenant },
+    page: number = 1,
+    pageSize: number = 20,
+    filters: IArticleFilters = {}
+  ): Promise<{ articles: IKBArticleWithDocument[]; total: number; totalPages: number } | ActionPermissionError> => {
+    const { knex } = await createTenantKnex();
+
+    if (!(await hasPermission(user, 'document', 'read'))) {
+      return permissionError('Permission denied');
+    }
+
+    let query = knex('kb_articles as ka')
+      .select([
+        ...KB_ARTICLE_SELECT_COLUMNS.map((col) => `ka.${col}`),
+        'd.document_name',
+      ])
+      .leftJoin('documents as d', function () {
+        this.on('d.document_id', '=', 'ka.document_id').andOn('d.tenant', '=', 'ka.tenant');
+      })
+      .where('ka.tenant', tenant);
+
+    if (filters.status) {
+      query = query.andWhere('ka.status', filters.status);
+    }
+
+    if (filters.audience) {
+      query = query.andWhere('ka.audience', filters.audience);
+    }
+
+    if (filters.articleType) {
+      query = query.andWhere('ka.article_type', filters.articleType);
+    }
+
+    if (filters.categoryId) {
+      query = query.andWhere('ka.category_id', filters.categoryId);
+    }
+
+    if (filters.search) {
+      query = query.andWhere(function () {
+        this.whereILike('d.document_name', `%${filters.search}%`)
+          .orWhereILike('ka.slug', `%${filters.search}%`);
+      });
+    }
+
+    // Filter by tags (articles that have ANY of the specified tags)
+    if (filters.tagIds && filters.tagIds.length > 0) {
+      query = query.whereExists(function () {
+        this.select(knex.raw('1'))
+          .from('tag_mappings as tm')
+          .whereRaw('tm.tagged_id = ka.article_id')
+          .whereRaw('tm.tenant = ka.tenant')
+          .where('tm.tagged_type', 'knowledge_base_article')
+          .whereIn('tm.tag_id', filters.tagIds as string[]);
+      });
+    }
+
+    // Get total count
+    const countResult = await query.clone().clearSelect().count('* as count').first();
+    const total = parseInt((countResult as any)?.count || '0', 10);
+
+    // Get paginated results
+    const offset = (page - 1) * pageSize;
+    const articles = await query
+      .orderBy('ka.updated_at', 'desc')
+      .limit(pageSize)
+      .offset(offset);
+
+    return {
+      articles: articles as IKBArticleWithDocument[],
+      total,
+      totalPages: Math.ceil(total / pageSize),
+    };
+  }
+);
+
+/**
+ * Gets a single article with its document content.
+ * F088: Returns full article with document content.
+ */
+export const getArticle = withAuth(
+  async (
+    user,
+    { tenant },
+    articleId: string
+  ): Promise<IKBArticleWithDocument | null | ActionPermissionError> => {
+    const { knex } = await createTenantKnex();
+
+    if (!(await hasPermission(user, 'document', 'read'))) {
+      return permissionError('Permission denied');
+    }
+
+    if (!articleId) {
+      return null;
+    }
+
+    const article = await knex('kb_articles as ka')
+      .select([
+        ...KB_ARTICLE_SELECT_COLUMNS.map((col) => `ka.${col}`),
+        'd.document_name',
+        'd.block_content',
+        'd.content',
+        'd.file_id',
+        'd.mime_type',
+      ])
+      .leftJoin('documents as d', function () {
+        this.on('d.document_id', '=', 'ka.document_id').andOn('d.tenant', '=', 'ka.tenant');
+      })
+      .where('ka.tenant', tenant)
+      .andWhere('ka.article_id', articleId)
+      .first();
+
+    if (!article) {
+      return null;
+    }
+
+    return article as IKBArticleWithDocument;
+  }
+);
+
+/**
+ * Gets articles that are past their review due date.
+ * F089: Returns articles past next_review_due.
+ */
+export const getStaleArticles = withAuth(
+  async (
+    user,
+    { tenant }
+  ): Promise<IKBArticleWithDocument[] | ActionPermissionError> => {
+    const { knex } = await createTenantKnex();
+
+    if (!(await hasPermission(user, 'document', 'read'))) {
+      return permissionError('Permission denied');
+    }
+
+    const articles = await knex('kb_articles as ka')
+      .select([
+        ...KB_ARTICLE_SELECT_COLUMNS.map((col) => `ka.${col}`),
+        'd.document_name',
+      ])
+      .leftJoin('documents as d', function () {
+        this.on('d.document_id', '=', 'ka.document_id').andOn('d.tenant', '=', 'ka.tenant');
+      })
+      .where('ka.tenant', tenant)
+      .andWhere('ka.status', 'published')
+      .andWhere('ka.next_review_due', '<=', knex.fn.now())
+      .orderBy('ka.next_review_due', 'asc');
+
+    return articles as IKBArticleWithDocument[];
+  }
+);
+
+/**
+ * Increments the view count for an article.
+ * F090: Increments view_count.
+ */
+export const recordArticleView = withAuth(
+  async (
+    user,
+    { tenant },
+    articleId: string
+  ): Promise<boolean | ActionPermissionError> => {
+    const { knex } = await createTenantKnex();
+
+    // No permission check - anyone who can view can record a view
+    if (!articleId) {
+      return false;
+    }
+
+    await knex('kb_articles')
+      .where({ tenant, article_id: articleId })
+      .increment('view_count', 1);
+
+    return true;
+  }
+);
+
+/**
+ * Records helpful/not helpful feedback.
+ * F091: Increments helpful_count or not_helpful_count.
+ */
+export const recordArticleFeedback = withAuth(
+  async (
+    user,
+    { tenant },
+    articleId: string,
+    helpful: boolean
+  ): Promise<boolean | ActionPermissionError> => {
+    const { knex } = await createTenantKnex();
+
+    // No permission check - anyone can give feedback
+    if (!articleId) {
+      return false;
+    }
+
+    const column = helpful ? 'helpful_count' : 'not_helpful_count';
+
+    await knex('kb_articles')
+      .where({ tenant, article_id: articleId })
+      .increment(column, 1);
+
+    return true;
+  }
+);
+
+/**
+ * Gets KB article templates.
+ * F092: Returns KB article templates.
+ */
+export const getArticleTemplates = withAuth(
+  async (
+    user,
+    { tenant },
+    articleType?: ArticleType
+  ): Promise<IKBArticleTemplate[] | ActionPermissionError> => {
+    const { knex } = await createTenantKnex();
+
+    if (!(await hasPermission(user, 'document', 'read'))) {
+      return permissionError('Permission denied');
+    }
+
+    let query = knex('kb_article_templates')
+      .select('*')
+      .where('tenant', tenant);
+
+    if (articleType) {
+      query = query.andWhere('article_type', articleType);
+    }
+
+    const templates = await query.orderBy('name', 'asc');
+
+    return templates as IKBArticleTemplate[];
+  }
+);
+
+/**
+ * Creates an article pre-populated from a ticket's resolution data.
+ * F093: Pre-populates article from ticket resolution data.
+ */
+export const createArticleFromTicket = withAuth(
+  async (
+    user,
+    { tenant },
+    ticketId: string
+  ): Promise<IKBArticleWithDocument | ActionPermissionError> => {
+    const { knex } = await createTenantKnex();
+
+    if (!(await hasPermission(user, 'document', 'create'))) {
+      return permissionError('Permission denied');
+    }
+
+    if (!ticketId) {
+      throw new Error('ticketId is required');
+    }
+
+    // Get the ticket
+    const ticket = await knex('tickets')
+      .where({ tenant, ticket_id: ticketId })
+      .first();
+
+    if (!ticket) {
+      throw new Error('Ticket not found');
+    }
+
+    // Build article content from ticket data
+    const title = `${ticket.title} - Resolution`;
+    const content = [
+      {
+        type: 'heading',
+        props: { level: 2 },
+        content: [{ type: 'text', text: 'Problem' }],
+      },
+      {
+        type: 'paragraph',
+        content: [{ type: 'text', text: ticket.description || 'No description provided.' }],
+      },
+      {
+        type: 'heading',
+        props: { level: 2 },
+        content: [{ type: 'text', text: 'Resolution' }],
+      },
+      {
+        type: 'paragraph',
+        content: [{ type: 'text', text: ticket.resolution || 'Enter resolution details here.' }],
+      },
+    ];
+
+    // Create the article
+    return createArticle({
+      title,
+      articleType: 'troubleshooting',
+      audience: 'internal',
+      content,
+    });
+  }
+);

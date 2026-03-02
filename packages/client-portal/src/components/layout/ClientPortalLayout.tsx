@@ -4,7 +4,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { signOut } from "next-auth/react";
-import { LogOut, User, CreditCard } from 'lucide-react';
+import { LogOut, User, CreditCard, FileText, BookOpen } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -135,6 +135,18 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
                   className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"
                 >
                   {t('nav.projects')}
+                </Link>
+                <Link
+                  href="/client-portal/documents"
+                  className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"
+                >
+                  {t('nav.documents')}
+                </Link>
+                <Link
+                  href="/client-portal/knowledge-base"
+                  className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"
+                >
+                  {t('nav.knowledgeBase', 'Knowledge Base')}
                 </Link>
                 <Link
                   href="/client-portal/appointments"

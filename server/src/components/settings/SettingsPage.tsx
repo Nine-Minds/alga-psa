@@ -5,7 +5,7 @@
 
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle, KeyRound, FlaskConical } from 'lucide-react';
+import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle, KeyRound, FlaskConical, FolderTree } from 'lucide-react';
 import CustomTabs, { TabContent } from "@alga-psa/ui/components/CustomTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 import GeneralSettings from './general/GeneralSettings';
@@ -45,6 +45,7 @@ import { EmailSettings } from '@alga-psa/integrations/email/settings/entry';
 import Link from 'next/link';
 // Removed import: import { getCurrentUser } from '@alga-psa/users/actions';
 import { ProjectSettings } from '@alga-psa/projects/components';
+import { DocumentTemplatesSettings } from '@alga-psa/documents/components';
 import { SecretsManagement } from './secrets';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
@@ -85,6 +86,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     ...(isMspI18nEnabled && { language: 'Language' }),
     ticketing: 'Ticketing',
     projects: 'Projects',
+    'document-templates': 'Document Templates',
     interactions: 'Interactions',
     notifications: 'Notifications',
     'time-entry': 'Time Entry',
@@ -193,6 +195,11 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       label: "Projects",
       icon: Layers,
       content: <ProjectSettings />,
+    },
+    {
+      label: "Document Templates",
+      icon: FolderTree,
+      content: <DocumentTemplatesSettings />,
     },
     {
       label: "Interactions",

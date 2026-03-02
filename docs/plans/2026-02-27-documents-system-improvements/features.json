@@ -290,7 +290,7 @@
   {
     "id": "F038",
     "description": "UI: FolderTemplateList component showing templates by entity type with default badge",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2.5"
     ]
@@ -298,7 +298,7 @@
   {
     "id": "F039",
     "description": "UI: FolderTemplateEditor component with drag-and-drop reorder, add/remove, visibility toggles",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2.9"
     ]
@@ -306,7 +306,7 @@
   {
     "id": "F040",
     "description": "UI: Admin settings page/section for Document Templates",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2.5"
     ]
@@ -371,7 +371,7 @@
   {
     "id": "F049",
     "description": "UI: New client portal documents page at /client-portal/documents",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3.1"
     ]
@@ -379,7 +379,7 @@
   {
     "id": "F050",
     "description": "UI: 'Documents' nav link added to ClientPortalLayout between Projects and Appointments",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3.2"
     ]
@@ -387,7 +387,7 @@
   {
     "id": "F051",
     "description": "UI: ClientDocumentsPage component with folder tree sidebar and document grid/list",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3.6"
     ]
@@ -395,7 +395,7 @@
   {
     "id": "F052",
     "description": "UI: ClientFolderTree component (read-only folder tree for portal)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3.6"
     ]
@@ -403,7 +403,7 @@
   {
     "id": "F053",
     "description": "UI: ClientDocumentCard component (view/download only, no edit/delete)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3.6"
     ]
@@ -411,7 +411,7 @@
   {
     "id": "F054",
     "description": "UI: ClientDocumentFilters component (search, source type, date range)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3.6"
     ]
@@ -427,7 +427,7 @@
   {
     "id": "F056",
     "description": "Migration: Create document_share_links table with token, type, password_hash, expiry, limits, revocation (includes inline distributeIfCitus)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4.1"
     ]
@@ -435,7 +435,7 @@
   {
     "id": "F057",
     "description": "Migration: Create document_share_access_log table (includes inline distributeIfCitus)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4.2"
     ]
@@ -443,7 +443,7 @@
   {
     "id": "F058",
     "description": "Migration: RLS policies on Phase 4 tables",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "NFR-1"
     ]
@@ -451,7 +451,7 @@
   {
     "id": "F059",
     "description": "Action: createShareLink(input) generates 256-bit token, hashes password if provided, inserts record",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4.3",
       "FR-4.4"
@@ -460,7 +460,7 @@
   {
     "id": "F060",
     "description": "Action: getShareLinksForDocument(documentId) returns active (non-revoked) links",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4.11"
     ]
@@ -468,7 +468,7 @@
   {
     "id": "F061",
     "description": "Action: revokeShareLink(shareId) soft-revokes link",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4.13"
     ]
@@ -476,7 +476,7 @@
   {
     "id": "F062",
     "description": "Action: validateShareToken(token) uses admin connection, validates expiry/revocation/download limits",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4.6",
       "NFR-4"
@@ -485,7 +485,7 @@
   {
     "id": "F063",
     "description": "API: GET /api/share/[token] serves file for valid public shares without session",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4.6"
     ]
@@ -493,7 +493,7 @@
   {
     "id": "F064",
     "description": "API: GET /api/share/[token] verifies password for password-protected shares",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4.7"
     ]
@@ -501,7 +501,7 @@
   {
     "id": "F065",
     "description": "API: GET /api/share/[token] verifies portal session for portal-authenticated shares",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4.8"
     ]
@@ -509,7 +509,7 @@
   {
     "id": "F066",
     "description": "API: GET /api/share/[token] logs access and increments download_count",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4.12"
     ]
@@ -517,7 +517,7 @@
   {
     "id": "F067",
     "description": "API: GET /api/share/[token]/info returns document metadata without download",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4.9"
     ]
@@ -525,7 +525,7 @@
   {
     "id": "F068",
     "description": "API: Share routes enforce expiry and max_downloads limits",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4.5"
     ]
@@ -533,7 +533,7 @@
   {
     "id": "F069",
     "description": "UI: Public share landing page at /share/[token] with download button and minimal layout",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4.10"
     ]
@@ -541,7 +541,7 @@
   {
     "id": "F070",
     "description": "UI: Share landing page shows password input for password-protected links",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4.10"
     ]
@@ -549,7 +549,7 @@
   {
     "id": "F071",
     "description": "UI: ShareLinkDialog component with share type selector, password input, expiry picker, max downloads",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4.11"
     ]
@@ -557,7 +557,7 @@
   {
     "id": "F072",
     "description": "UI: ShareLinkDialog lists existing share links with copy URL and revoke actions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4.11"
     ]
@@ -565,7 +565,7 @@
   {
     "id": "F073",
     "description": "UI: 'Share' option added to document context menu in DocumentListView and DocumentCard",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4.11"
     ]
@@ -573,7 +573,7 @@
   {
     "id": "F074",
     "description": "UI: Share indicator icon shown on documents that have active share links",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4.11"
     ]
@@ -581,7 +581,7 @@
   {
     "id": "F076",
     "description": "Migration: Create kb_articles table extending documents with article_type, audience, status, review fields, slug (includes inline distributeIfCitus)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.1",
       "FR-5.2",
@@ -592,7 +592,7 @@
   {
     "id": "F077",
     "description": "Migration: Create kb_article_relations table (related/prerequisite/supersedes) (includes inline distributeIfCitus)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.9"
     ]
@@ -600,7 +600,7 @@
   {
     "id": "F078",
     "description": "Migration: Create kb_article_templates table with BlockNote JSON template data (includes inline distributeIfCitus)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.10"
     ]
@@ -608,7 +608,7 @@
   {
     "id": "F079",
     "description": "Migration: Create kb_article_reviewers table with review status tracking (includes inline distributeIfCitus)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.8"
     ]
@@ -616,7 +616,7 @@
   {
     "id": "F080",
     "description": "Migration: RLS policies on all Phase 5 tables",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "NFR-1"
     ]
@@ -624,7 +624,7 @@
   {
     "id": "F081",
     "description": "Action: createArticle(data) creates both document and kb_articles record in transaction",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.1"
     ]
@@ -632,7 +632,7 @@
   {
     "id": "F082",
     "description": "Action: updateArticle(articleId, data) updates KB metadata",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.1"
     ]
@@ -640,7 +640,7 @@
   {
     "id": "F083",
     "description": "Action: publishArticle(articleId) sets status=published and auto-sets is_client_visible for client/public audience",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.4",
       "FR-5.5"
@@ -649,7 +649,7 @@
   {
     "id": "F084",
     "description": "Action: archiveArticle(articleId) sets status=archived and clears is_client_visible",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.4",
       "FR-5.6"
@@ -658,7 +658,7 @@
   {
     "id": "F085",
     "description": "Action: submitForReview(articleId, reviewerUserIds) creates reviewer assignments",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.8"
     ]
@@ -666,7 +666,7 @@
   {
     "id": "F086",
     "description": "Action: completeReview(articleId, status, notes) records reviewer decision",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.8"
     ]
@@ -674,7 +674,7 @@
   {
     "id": "F087",
     "description": "Action: getArticles(filters) returns paginated articles with audience/status/type/category filters",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.11"
     ]
@@ -682,7 +682,7 @@
   {
     "id": "F088",
     "description": "Action: getArticle(articleId) returns full article with document content",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.11"
     ]
@@ -690,7 +690,7 @@
   {
     "id": "F089",
     "description": "Action: getStaleArticles() returns articles past next_review_due",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.7"
     ]
@@ -698,7 +698,7 @@
   {
     "id": "F090",
     "description": "Action: recordArticleView(articleId) increments view_count",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.15"
     ]
@@ -706,7 +706,7 @@
   {
     "id": "F091",
     "description": "Action: recordArticleFeedback(articleId, helpful) increments helpful_count or not_helpful_count",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.15"
     ]
@@ -714,7 +714,7 @@
   {
     "id": "F092",
     "description": "Action: getArticleTemplates() returns KB article templates",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.10"
     ]
@@ -722,7 +722,7 @@
   {
     "id": "F093",
     "description": "Action: createArticleFromTicket(ticketId) pre-populates article from ticket resolution data",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.14"
     ]
@@ -730,7 +730,7 @@
   {
     "id": "F094",
     "description": "UI: KBArticleList component with filterable article list (status, audience, type, category)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.11"
     ]
@@ -738,7 +738,7 @@
   {
     "id": "F095",
     "description": "UI: KBArticleEditor component wrapping DocumentEditor with KB metadata sidebar",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.11"
     ]
@@ -746,7 +746,7 @@
   {
     "id": "F096",
     "description": "UI: KBPublishingControls component for status transitions (Draft/Review/Published/Archived)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.4"
     ]
@@ -754,7 +754,7 @@
   {
     "id": "F097",
     "description": "UI: KBReviewDashboard component showing articles awaiting review and overdue reviews",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.7",
       "FR-5.8"
@@ -763,7 +763,7 @@
   {
     "id": "F098",
     "description": "UI: KBCategoryTree component for category navigation (reuses standard_categories)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.11"
     ]
@@ -771,7 +771,7 @@
   {
     "id": "F099",
     "description": "UI: Staleness badge shown on articles past review due date",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.7"
     ]
@@ -779,7 +779,7 @@
   {
     "id": "F100",
     "description": "UI: ClientKBPage component for client portal KB browsing with search and categories",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.12"
     ]
@@ -787,7 +787,7 @@
   {
     "id": "F101",
     "description": "UI: ClientKBArticleView component with read-only rendering and 'Was this helpful?' feedback",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.12"
     ]
@@ -795,7 +795,7 @@
   {
     "id": "F102",
     "description": "UI: KB section added to MSP navigation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.11"
     ]
@@ -803,7 +803,7 @@
   {
     "id": "F103",
     "description": "UI: Knowledge Base tab/section added to client portal Documents hub",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.12"
     ]
@@ -811,7 +811,7 @@
   {
     "id": "F104",
     "description": "Integration: Articles can be tagged via existing tag system with tagged_type = 'knowledge_base_article'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5.13"
     ]
