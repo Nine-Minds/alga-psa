@@ -25,7 +25,7 @@ let testDb: any;
 let testTenant: string;
 
 // Mock createTenantKnex to use test database
-vi.mock('../../../lib/db', () => ({
+vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn().mockImplementation(async () => ({
     knex: testDb,
     tenant: testTenant
@@ -44,7 +44,7 @@ describe('External Tax Import', () => {
     testTenant = ctx.tenantId;
 
     // Import the service after mocking
-    const serviceModule = await import('../../../lib/services/externalTaxImportService');
+    const serviceModule = await import('@alga-psa/billing/services');
     ExternalTaxImportService = serviceModule.ExternalTaxImportService;
     getExternalTaxImportService = serviceModule.getExternalTaxImportService;
 
