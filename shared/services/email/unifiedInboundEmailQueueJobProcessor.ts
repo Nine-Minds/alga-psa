@@ -1,6 +1,7 @@
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import axios from 'axios';
 import type {
   EmailMessageDetails,
   EmailProviderConfig,
@@ -33,6 +34,7 @@ const DEFAULT_IMAP_CONNECTION_TIMEOUT_MS = 10_000;
 const DEFAULT_IMAP_SOCKET_TIMEOUT_MS = 30_000;
 const DEFAULT_IMAP_FETCH_TIMEOUT_MS = 45_000;
 const DEFAULT_IMAP_PARSE_TIMEOUT_MS = 30_000;
+const OAUTH_TOKEN_REFRESH_SKEW_MS = 5 * 60 * 1000;
 
 function asNonEmptyString(value: unknown): string | null {
   if (typeof value !== 'string') return null;
@@ -119,6 +121,142 @@ function resolveImapFolderFromFilters(value: unknown): string | null {
   }
 
   return null;
+}
+
+function applyOauthMechanismOverride(client: ImapFlow, mechanism: 'XOAUTH2' | 'OAUTHBEARER'): void {
+  if (mechanism !== 'XOAUTH2') return;
+
+  const anyClient = client as any;
+  const commands: Map<string, any> | undefined = anyClient.commands;
+  if (!commands?.get) return;
+
+  const originalAuthenticate = commands.get('AUTHENTICATE');
+  if (typeof originalAuthenticate !== 'function') return;
+
+  const patchedCommands = new Map(commands);
+  patchedCommands.set('AUTHENTICATE', async (connection: any, username: string, authOpts: any) => {
+    if (authOpts?.accessToken) {
+      const caps = connection?.capabilities;
+      const hadOauthBearer = Boolean(caps?.has?.('AUTH=OAUTHBEARER'));
+      const hasXoauth = Boolean(caps?.has?.('AUTH=XOAUTH') || caps?.has?.('AUTH=XOAUTH2'));
+
+      if (hadOauthBearer && hasXoauth && caps?.delete && caps?.set) {
+        caps.delete('AUTH=OAUTHBEARER');
+        try {
+          return await originalAuthenticate(connection, username, authOpts);
+        } finally {
+          caps.set('AUTH=OAUTHBEARER', true);
+        }
+      }
+    }
+
+    return await originalAuthenticate(connection, username, authOpts);
+  });
+
+  anyClient.commands = patchedCommands;
+}
+
+function isTokenExpired(tokenExpiresAt: unknown): boolean {
+  if (typeof tokenExpiresAt !== 'string' || !tokenExpiresAt.trim()) return true;
+  const expiresAtMs = new Date(tokenExpiresAt).getTime();
+  if (!Number.isFinite(expiresAtMs)) return true;
+  return expiresAtMs - Date.now() < OAUTH_TOKEN_REFRESH_SKEW_MS;
+}
+
+function isImapAuthenticationError(error: any): boolean {
+  if (!error) return false;
+  if (error.authenticationFailed === true) return true;
+
+  const serverCode = String(error.serverResponseCode || '').toUpperCase();
+  if (serverCode.includes('AUTHENTICATIONFAILED')) return true;
+
+  const responseStatus = String(error.responseStatus || '').toUpperCase();
+  if (responseStatus === 'NO' && /invalid credentials/i.test(String(error.responseText || ''))) {
+    return true;
+  }
+
+  return false;
+}
+
+async function getImapOauthSecrets(provider: {
+  id: string;
+  tenant: string;
+}): Promise<{ clientSecret: string | null; refreshToken: string | null }> {
+  const secretProvider = await getSecretProviderInstance();
+  const clientSecret =
+    (await secretProvider.getTenantSecret(provider.tenant, `imap_oauth_client_secret_${provider.id}`)) ?? null;
+  const refreshToken =
+    (await secretProvider.getTenantSecret(provider.tenant, `imap_refresh_token_${provider.id}`)) ?? null;
+  return { clientSecret, refreshToken };
+}
+
+async function refreshImapAccessToken(params: {
+  provider: {
+    id: string;
+    tenant: string;
+    oauth_token_url?: string | null;
+    oauth_client_id?: string | null;
+    oauth_client_secret?: string | null;
+    refresh_token?: string | null;
+    access_token?: string | null;
+    token_expires_at?: string | null;
+  };
+  db: Awaited<ReturnType<typeof getAdminConnection>>;
+}): Promise<string> {
+  const { provider, db } = params;
+  if (!provider.oauth_token_url || !provider.oauth_client_id) {
+    throw new Error('IMAP OAuth token URL or client ID missing');
+  }
+
+  const { clientSecret, refreshToken } = await getImapOauthSecrets({
+    id: provider.id,
+    tenant: provider.tenant,
+  });
+  const effectiveRefreshToken = refreshToken || provider.refresh_token;
+  const effectiveClientSecret = clientSecret || provider.oauth_client_secret;
+  if (!effectiveRefreshToken) {
+    throw new Error('IMAP OAuth refresh token missing');
+  }
+
+  const paramsBody = new URLSearchParams();
+  paramsBody.append('grant_type', 'refresh_token');
+  paramsBody.append('refresh_token', effectiveRefreshToken);
+  paramsBody.append('client_id', provider.oauth_client_id);
+  if (effectiveClientSecret) {
+    paramsBody.append('client_secret', effectiveClientSecret);
+  }
+
+  const response = await axios.post(provider.oauth_token_url, paramsBody, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  });
+  const accessToken = asNonEmptyString(response?.data?.access_token);
+  if (!accessToken) {
+    throw new Error('IMAP OAuth refresh returned no access token');
+  }
+
+  const expiresInSeconds = Number(response?.data?.expires_in || 3600);
+  const expiresAt = new Date(
+    Date.now() + (Number.isFinite(expiresInSeconds) ? expiresInSeconds : 3600) * 1000
+  ).toISOString();
+
+  await db('imap_email_provider_config')
+    .where({ email_provider_id: provider.id, tenant: provider.tenant })
+    .update({
+      access_token: accessToken,
+      token_expires_at: expiresAt,
+      updated_at: db.fn.now(),
+    });
+
+  provider.access_token = accessToken;
+  provider.token_expires_at = expiresAt;
+  console.info('[UnifiedInboundEmailQueueJobProcessor] refreshed IMAP OAuth access token', {
+    event: 'imap_oauth_refresh',
+    tenantId: provider.tenant,
+    providerId: provider.id,
+    expiresAt,
+  });
+
+  return accessToken;
 }
 
 async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): Promise<EmailProviderConfig> {
@@ -263,25 +401,15 @@ async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Pro
       'ic.allow_starttls',
       'ic.auth_type',
       'ic.username',
-      'ic.access_token'
+      'ic.access_token',
+      'ic.oauth_token_url',
+      'ic.oauth_client_id',
+      'ic.oauth_client_secret',
+      'ic.refresh_token',
+      'ic.token_expires_at'
     );
   if (!provider) {
     throw new SourceMessageUnavailableError('imap_provider_not_found');
-  }
-
-  const auth: any = {
-    user: provider.username,
-  };
-  if (provider.auth_type === 'oauth2') {
-    auth.accessToken = provider.access_token;
-    auth.method = 'XOAUTH2';
-  } else {
-    const secretProvider = await getSecretProviderInstance();
-    auth.pass = await secretProvider.getTenantSecret(provider.tenant, `imap_password_${provider.id}`);
-  }
-
-  if (!auth.pass && !auth.accessToken) {
-    throw new SourceMessageUnavailableError('imap_credentials_missing');
   }
 
   const connectionTimeoutMs = parsePositiveInteger(
@@ -303,139 +431,196 @@ async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Pro
 
   const secure = Boolean(provider.secure);
   const rejectUnauthorized = (process.env.IMAP_TLS_REJECT_UNAUTHORIZED || 'true') !== 'false';
-  const client = new ImapFlow({
-    host: provider.host,
-    port: Number(provider.port),
-    secure,
-    auth,
-    disableAutoIdle: true,
-    logger: false,
-    connectionTimeout: connectionTimeoutMs,
-    greetingTimeout: connectionTimeoutMs,
-    socketTimeout: socketTimeoutMs,
-    tls: secure || provider.allow_starttls ? { rejectUnauthorized } : undefined,
-  });
-  client.on('error', (error: any) => {
-    console.error('[UnifiedInboundEmailQueueJobProcessor] IMAP pointer fetch error', {
-      event: 'imap_pointer_fetch_error',
-      tenantId: job.tenantId,
-      providerId: job.providerId,
-      uid: job.pointer.uid,
-      mailbox: job.pointer.mailbox,
-      message: error?.message || String(error),
-      code: error?.code || null,
+  const oauthMechanism: 'XOAUTH2' | 'OAUTHBEARER' =
+    process.env.IMAP_OAUTH_AUTH_MECHANISM === 'OAUTHBEARER' ? 'OAUTHBEARER' : 'XOAUTH2';
+
+  const password =
+    provider.auth_type === 'oauth2'
+      ? null
+      : await (await getSecretProviderInstance()).getTenantSecret(provider.tenant, `imap_password_${provider.id}`);
+  let accessToken = asNonEmptyString(provider.access_token);
+
+  if (provider.auth_type === 'oauth2' && (!accessToken || isTokenExpired(provider.token_expires_at))) {
+    accessToken = await refreshImapAccessToken({
+      provider,
+      db,
     });
-  });
+  }
 
-  try {
-    await withTimeout(client.connect(), connectionTimeoutMs + 5_000, 'imap_connect');
-    const pointerMailbox = asNonEmptyString(job.pointer.mailbox);
-    const providerFolder = resolveImapFolderFromFilters((provider as any).folder_filters);
-    const mailbox =
-      pointerMailbox && !isLikelyMailboxEmailAddress(pointerMailbox)
-        ? pointerMailbox
-        : providerFolder || 'INBOX';
-    const lock = await withTimeout(client.getMailboxLock(mailbox), fetchTimeoutMs, 'imap_mailbox_lock');
-    try {
-      const fetched = await withTimeout(
-        (async () => {
-          let matched: any | null = null;
-          for await (const msg of client.fetch(
-            `${pointerUid}:${pointerUid}`,
-            { uid: true, source: true },
-            { uid: true }
-          )) {
-            if (Number(msg?.uid) === pointerUid && msg?.source) {
-              matched = msg;
-              break;
-            }
-          }
-          return matched;
-        })(),
-        fetchTimeoutMs,
-        'imap_message_fetch'
-      );
-
-      if (!fetched?.source) {
-        throw new SourceMessageUnavailableError('imap_message_not_found');
-      }
-
-      const rawMimeBuffer = Buffer.isBuffer(fetched.source)
-        ? fetched.source
-        : Buffer.from(fetched.source);
-      const parsed: any = await withTimeout(
-        simpleParser(rawMimeBuffer),
-        parseTimeoutMs,
-        'imap_mime_parse'
-      );
-      const from = parsed.from?.value?.[0];
-      const to = parsed.to?.value || [];
-      const cc = parsed.cc?.value || [];
-      const messageId = asNonEmptyString(parsed.messageId) || `imap-uid-${pointerUid}`;
-      const references = extractMessageIds(parsed.references);
-      const inReplyTo = extractMessageIds(parsed.inReplyTo)[0];
-      const threadId = references[0] || inReplyTo;
-
-      return {
-        id: messageId,
-        provider: 'imap',
-        providerId: provider.id,
-        tenant: provider.tenant,
-        receivedAt: parsed.date ? new Date(parsed.date).toISOString() : new Date().toISOString(),
-        from: {
-          email: from?.address || '',
-          name: from?.name || undefined,
-        },
-        to: to.map((item: any) => ({
-          email: item?.address || '',
-          name: item?.name || undefined,
-        })),
-        cc: cc.length
-          ? cc.map((item: any) => ({
-              email: item?.address || '',
-              name: item?.name || undefined,
-            }))
-          : undefined,
-        subject: parsed.subject || '',
-        body: {
-          text: parsed.text || '',
-          html: parsed.html ? String(parsed.html) : undefined,
-        },
-        attachments: Array.isArray(parsed.attachments)
-          ? parsed.attachments.map((attachment: any, index: number) => {
-              const contentBuffer = Buffer.isBuffer(attachment?.content)
-                ? attachment.content
-                : Buffer.from(attachment?.content || '');
-              return {
-                id: String(attachment?.contentId || attachment?.checksum || `${messageId}-att-${index}`),
-                name: String(attachment?.filename || `attachment-${index + 1}`),
-                contentType: String(attachment?.contentType || 'application/octet-stream'),
-                size: Number(attachment?.size || contentBuffer.length || 0),
-                contentId: asNonEmptyString(attachment?.contentId) || undefined,
-                isInline: Boolean(attachment?.contentDisposition === 'inline'),
-                content: contentBuffer.toString('base64'),
-              };
-            })
-          : [],
-        threadId: threadId || undefined,
-        references: references.length ? references : undefined,
-        inReplyTo: inReplyTo || undefined,
-        rawMimeBase64: rawMimeBuffer.toString('base64'),
-      };
-    } finally {
-      lock.release();
+  for (let authAttempt = 0; authAttempt < 2; authAttempt += 1) {
+    const auth: any = {
+      user: provider.username,
+    };
+    if (provider.auth_type === 'oauth2') {
+      auth.accessToken = accessToken;
+      auth.method = oauthMechanism;
+    } else {
+      auth.pass = password;
     }
-  } finally {
+
+    if (!auth.pass && !auth.accessToken) {
+      throw new SourceMessageUnavailableError('imap_credentials_missing');
+    }
+
+    const client = new ImapFlow({
+      host: provider.host,
+      port: Number(provider.port),
+      secure,
+      auth,
+      disableAutoIdle: true,
+      logger: false,
+      connectionTimeout: connectionTimeoutMs,
+      greetingTimeout: connectionTimeoutMs,
+      socketTimeout: socketTimeoutMs,
+      tls: secure || provider.allow_starttls ? { rejectUnauthorized } : undefined,
+    });
+    applyOauthMechanismOverride(client, oauthMechanism);
+    client.on('error', (error: any) => {
+      console.error('[UnifiedInboundEmailQueueJobProcessor] IMAP pointer fetch error', {
+        event: 'imap_pointer_fetch_error',
+        tenantId: job.tenantId,
+        providerId: job.providerId,
+        uid: job.pointer.uid,
+        mailbox: job.pointer.mailbox,
+        message: error?.message || String(error),
+        code: error?.code || null,
+      });
+    });
+
     try {
-      await client.logout();
-    } catch {
+      await withTimeout(client.connect(), connectionTimeoutMs + 5_000, 'imap_connect');
+      const pointerMailbox = asNonEmptyString(job.pointer.mailbox);
+      const providerFolder = resolveImapFolderFromFilters((provider as any).folder_filters);
+      const mailbox =
+        pointerMailbox && !isLikelyMailboxEmailAddress(pointerMailbox)
+          ? pointerMailbox
+          : providerFolder || 'INBOX';
+      const lock = await withTimeout(client.getMailboxLock(mailbox), fetchTimeoutMs, 'imap_mailbox_lock');
       try {
-        client.close();
+        const fetched = await withTimeout(
+          (async () => {
+            let matched: any | null = null;
+            for await (const msg of client.fetch(
+              `${pointerUid}:${pointerUid}`,
+              { uid: true, source: true },
+              { uid: true }
+            )) {
+              if (Number(msg?.uid) === pointerUid && msg?.source) {
+                matched = msg;
+                break;
+              }
+            }
+            return matched;
+          })(),
+          fetchTimeoutMs,
+          'imap_message_fetch'
+        );
+
+        if (!fetched?.source) {
+          throw new SourceMessageUnavailableError('imap_message_not_found');
+        }
+
+        const rawMimeBuffer = Buffer.isBuffer(fetched.source)
+          ? fetched.source
+          : Buffer.from(fetched.source);
+        const parsed: any = await withTimeout(
+          simpleParser(rawMimeBuffer),
+          parseTimeoutMs,
+          'imap_mime_parse'
+        );
+        const from = parsed.from?.value?.[0];
+        const to = parsed.to?.value || [];
+        const cc = parsed.cc?.value || [];
+        const messageId = asNonEmptyString(parsed.messageId) || `imap-uid-${pointerUid}`;
+        const references = extractMessageIds(parsed.references);
+        const inReplyTo = extractMessageIds(parsed.inReplyTo)[0];
+        const threadId = references[0] || inReplyTo;
+
+        return {
+          id: messageId,
+          provider: 'imap',
+          providerId: provider.id,
+          tenant: provider.tenant,
+          receivedAt: parsed.date ? new Date(parsed.date).toISOString() : new Date().toISOString(),
+          from: {
+            email: from?.address || '',
+            name: from?.name || undefined,
+          },
+          to: to.map((item: any) => ({
+            email: item?.address || '',
+            name: item?.name || undefined,
+          })),
+          cc: cc.length
+            ? cc.map((item: any) => ({
+                email: item?.address || '',
+                name: item?.name || undefined,
+              }))
+            : undefined,
+          subject: parsed.subject || '',
+          body: {
+            text: parsed.text || '',
+            html: parsed.html ? String(parsed.html) : undefined,
+          },
+          attachments: Array.isArray(parsed.attachments)
+            ? parsed.attachments.map((attachment: any, index: number) => {
+                const contentBuffer = Buffer.isBuffer(attachment?.content)
+                  ? attachment.content
+                  : Buffer.from(attachment?.content || '');
+                return {
+                  id: String(attachment?.contentId || attachment?.checksum || `${messageId}-att-${index}`),
+                  name: String(attachment?.filename || `attachment-${index + 1}`),
+                  contentType: String(attachment?.contentType || 'application/octet-stream'),
+                  size: Number(attachment?.size || contentBuffer.length || 0),
+                  contentId: asNonEmptyString(attachment?.contentId) || undefined,
+                  isInline: Boolean(attachment?.contentDisposition === 'inline'),
+                  content: contentBuffer.toString('base64'),
+                };
+              })
+            : [],
+          threadId: threadId || undefined,
+          references: references.length ? references : undefined,
+          inReplyTo: inReplyTo || undefined,
+          rawMimeBase64: rawMimeBuffer.toString('base64'),
+        };
+      } finally {
+        lock.release();
+      }
+    } catch (error: any) {
+      if (
+        provider.auth_type === 'oauth2' &&
+        authAttempt === 0 &&
+        isImapAuthenticationError(error)
+      ) {
+        console.warn('[UnifiedInboundEmailQueueJobProcessor] IMAP auth failed, refreshing token and retrying once', {
+          event: 'imap_oauth_auth_retry',
+          tenantId: job.tenantId,
+          providerId: job.providerId,
+          uid: job.pointer.uid,
+          mailbox: job.pointer.mailbox,
+          message: error?.message || String(error),
+          code: error?.code || null,
+        });
+        accessToken = await refreshImapAccessToken({
+          provider,
+          db,
+        });
+        continue;
+      }
+      throw error;
+    } finally {
+      try {
+        await client.logout();
       } catch {
-        // best effort
+        try {
+          client.close();
+        } catch {
+          // best effort
+        }
       }
     }
   }
+
+  throw new Error('imap_auth_retry_exhausted');
 }
 
 async function fetchEmailPayloadsForJob(job: UnifiedInboundEmailQueueJob): Promise<EmailMessageDetails[]> {
