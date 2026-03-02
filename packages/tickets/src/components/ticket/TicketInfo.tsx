@@ -127,6 +127,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
   const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
+  const [pendingTeamId, setPendingTeamId] = useState<string | null>(null);
 
   // Capture original ticket values when form is initialized
   const [originalTicketValues, setOriginalTicketValues] = useState<Partial<ITicket>>(() => ({
@@ -221,8 +222,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     const hasTitleChange = titleValue !== ticket.title;
     const hasDescriptionChange = hasDescriptionContentChanged;
 
-    return hasPendingTicketChanges || hasPendingItilChanges || hasTitleChange || hasDescriptionChange;
-  }, [isFormInitialized, pendingChanges, pendingItilChanges, titleValue, ticket.title, hasDescriptionContentChanged]);
+    return hasPendingTicketChanges || hasPendingItilChanges || hasTitleChange || hasDescriptionChange || pendingTeamId !== null;
+  }, [isFormInitialized, pendingChanges, pendingItilChanges, titleValue, ticket.title, hasDescriptionContentChanged, pendingTeamId]);
 
   // Register unsaved changes with the context
   useRegisterUnsavedChanges(`ticket-info-${id}`, hasUnsavedChanges);
@@ -555,6 +556,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         }
       }
 
+      // Assign team if pending (fires server action for member expansion)
+      if (pendingTeamId && onAssignTeam) {
+        await onAssignTeam(pendingTeamId);
+        setPendingTeamId(null);
+      }
+
       if (onSaveChanges) {
         const success = await onSaveChanges(allChanges);
         if (success) {
@@ -615,7 +622,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [hasUnsavedChanges, pendingChanges, pendingItilChanges, titleValue, ticket.title, onSaveChanges, onSelectChange, onItilFieldChange, isEditingDescription, onUpdateDescription, descriptionContent]);
+  }, [hasUnsavedChanges, pendingChanges, pendingItilChanges, titleValue, ticket.title, onSaveChanges, onSelectChange, onItilFieldChange, isEditingDescription, onUpdateDescription, descriptionContent, pendingTeamId, onAssignTeam]);
 
   // Handler for discarding all pending changes
   const handleDiscardChanges = useCallback(() => {
@@ -624,6 +631,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     setPendingItilChanges({});
     setPendingBoardConfig(null);
     setPendingCategories(null);
+    setPendingTeamId(null);
     if (originalDescriptionRef.current) {
       setDescriptionContent(originalDescriptionRef.current);
     }
@@ -880,8 +888,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     value={pendingChanges.assigned_to ?? originalTicketValues.assigned_to ?? ''}
                     onValueChange={(value) => handlePendingChange('assigned_to', value)}
                     onTeamSelect={async (teamId) => {
-                      if (onAssignTeam) {
-                        await onAssignTeam(teamId);
+                      // Defer team assignment to Save Changes (consistent with assigned_to)
+                      setPendingTeamId(teamId);
+                      // Also set assigned_to to the team lead as a pending change
+                      const selectedTeam = teams.find(t => t.team_id === teamId);
+                      const leadId = selectedTeam?.manager_id || selectedTeam?.members?.find(m => m.role === 'lead')?.user_id;
+                      if (leadId) {
+                        handlePendingChange('assigned_to', leadId);
                       }
                     }}
                     users={usersList}

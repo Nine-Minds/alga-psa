@@ -2,6 +2,7 @@
 
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { Knex } from 'knex';
 
 export const assignTeamToTicket = withAuth(async (
@@ -11,7 +12,7 @@ export const assignTeamToTicket = withAuth(async (
   teamId: string
 ): Promise<void> => {
   const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
+  const assignedTo = await withTransaction(db, async (trx: Knex.Transaction) => {
     if (!await hasPermission(user, 'ticket', 'update', trx)) {
       throw new Error('Permission denied: Cannot assign team to ticket');
     }
@@ -37,53 +38,67 @@ export const assignTeamToTicket = withAuth(async (
     }
 
     const teamMembers = await trx('team_members')
-      .where({ team_id: teamId, tenant })
-      .select('user_id');
+      .join('users', function() {
+        this.on('team_members.user_id', 'users.user_id')
+          .andOn('team_members.tenant', 'users.tenant');
+      })
+      .where({ 'team_members.team_id': teamId, 'team_members.tenant': tenant })
+      .andWhere('users.is_inactive', false)
+      .select('team_members.user_id');
 
-    let assignedTo = ticket.assigned_to as string | null;
-    if (!assignedTo) {
-      assignedTo = team.manager_id;
-    }
+    // assigned_to is guaranteed non-null: either the ticket already has one,
+    // or we fall back to team.manager_id (validated above).
+    const resolvedAssignedTo: string = (ticket.assigned_to as string | null) || team.manager_id;
 
     await trx('tickets')
       .where({ ticket_id: ticketId, tenant })
       .update({
         assigned_team_id: teamId,
-        assigned_to: assignedTo,
+        assigned_to: resolvedAssignedTo,
         updated_by: user.user_id,
         updated_at: new Date()
       });
 
     const memberIds = teamMembers
       .map((member: { user_id: string }) => member.user_id)
-      .filter((userId: string) => userId && userId !== assignedTo);
+      .filter((userId: string) => userId && userId !== resolvedAssignedTo);
 
-    if (memberIds.length === 0) {
-      return;
+    if (memberIds.length > 0) {
+      const existingResources = await trx('ticket_resources')
+        .where({ ticket_id: ticketId, tenant })
+        .whereIn('additional_user_id', memberIds)
+        .select('additional_user_id');
+
+      const existingIds = new Set(existingResources.map((row: { additional_user_id: string }) => row.additional_user_id));
+      const toInsert = memberIds.filter((userId) => !existingIds.has(userId));
+
+      if (toInsert.length > 0) {
+        await trx('ticket_resources').insert(
+          toInsert.map((userId) => ({
+            ticket_id: ticketId,
+            assigned_to: resolvedAssignedTo,
+            additional_user_id: userId,
+            role: 'team_member',
+            tenant,
+            assigned_at: new Date()
+          }))
+        );
+      }
     }
 
-    const existingResources = await trx('ticket_resources')
-      .where({ ticket_id: ticketId, tenant })
-      .whereIn('additional_user_id', memberIds)
-      .select('additional_user_id');
+    return resolvedAssignedTo;
+  });
 
-    const existingIds = new Set(existingResources.map((row: { additional_user_id: string }) => row.additional_user_id));
-    const toInsert = memberIds.filter((userId) => !existingIds.has(userId));
-
-    if (toInsert.length === 0) {
-      return;
+  // Emit event after transaction commits so subscribers can see the data
+  await publishEvent({
+    eventType: 'TICKET_ASSIGNED',
+    payload: {
+      tenantId: tenant,
+      ticketId,
+      userId: assignedTo,
+      assignedByUserId: user.user_id,
+      changes: { assigned_team_id: teamId }
     }
-
-    await trx('ticket_resources').insert(
-      toInsert.map((userId) => ({
-        ticket_id: ticketId,
-        assigned_to: assignedTo,
-        additional_user_id: userId,
-        role: 'team_member',
-        tenant,
-        assigned_at: new Date()
-      }))
-    );
   });
 });
 
