@@ -568,6 +568,7 @@ export const getTasksForPhase = withAuth(async (
     taskResources: { [taskId: string]: any[] };
     taskDependencies: { [taskId: string]: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] } };
     checklistItems: { [taskId: string]: ITaskChecklistItem[] };
+    taskTags: Record<string, ITag[]>;
 }> => {
     try {
         const {knex: db} = await createTenantKnex();
@@ -588,7 +589,7 @@ export const getTasksForPhase = withAuth(async (
 
             // Get all related data in parallel
             const taskIds = tasks.map(t => t.task_id);
-            const [ticketLinksArray, taskResourcesArray, checklistItemsArray, predecessorsArray, successorsArray] = await Promise.all([
+            const [ticketLinksArray, taskResourcesArray, checklistItemsArray, tagsArray, predecessorsArray, successorsArray] = await Promise.all([
                 taskIds.length > 0 ? ProjectTaskModel.getTaskTicketLinksForTasks(trx, tenant, taskIds) : [],
                 taskIds.length > 0 ? ProjectTaskModel.getTaskResourcesForTasks(trx, tenant, taskIds) : [],
                 taskIds.length > 0
@@ -596,6 +597,9 @@ export const getTasksForPhase = withAuth(async (
                         .whereIn('task_id', taskIds)
                         .andWhere('tenant', tenant)
                         .orderBy('order_number')
+                    : [],
+                taskIds.length > 0
+                    ? findTagsByEntityIds(taskIds, 'project_task').catch(() => [])
                     : [],
                 // Fetch dependencies where task is the successor (predecessors of task)
                 taskIds.length > 0
@@ -625,6 +629,7 @@ export const getTasksForPhase = withAuth(async (
             const ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] } = {};
             const taskResources: { [taskId: string]: any[] } = {};
             const checklistItems: { [taskId: string]: ITaskChecklistItem[] } = {};
+            const taskTags: Record<string, ITag[]> = {};
             const taskDependencies: { [taskId: string]: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] } } = {};
 
             for (const link of ticketLinksArray) {
@@ -688,7 +693,17 @@ export const getTasksForPhase = withAuth(async (
                 });
             }
 
-            return { tasks, ticketLinks, taskResources, taskDependencies, checklistItems };
+            for (const tag of tagsArray) {
+                const entityId = tag.tagged_id;
+                if (entityId) {
+                    if (!taskTags[entityId]) {
+                        taskTags[entityId] = [];
+                    }
+                    taskTags[entityId].push(tag);
+                }
+            }
+
+            return { tasks, ticketLinks, taskResources, taskDependencies, checklistItems, taskTags };
         });
     } catch (error) {
         console.error('Error getting tasks for phase:', error);

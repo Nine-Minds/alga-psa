@@ -692,9 +692,10 @@ export default function ProjectDetail({
     };
   }, [showStickyStatusNames, viewMode]);
 
-  // Re-fetch list view data when it's been invalidated (set to null by refreshListView)
+  // Fetch list view data only when in list view mode or when explicitly invalidated while in list view
   useEffect(() => {
     if (listViewData !== null || listViewLoading) return;
+    if (viewMode !== 'list') return; // Don't eagerly load for kanban
     const refetchListViewData = async () => {
       setListViewLoading(true);
       try {
@@ -710,7 +711,7 @@ export default function ProjectDetail({
       }
     };
     refetchListViewData();
-  }, [listViewData, listViewLoading, project.project_id]);
+  }, [listViewData, listViewLoading, project.project_id, viewMode]);
 
   // Keep selectedTaskIdRef in sync with selectedTask for reliable access in callbacks
   useEffect(() => {
@@ -836,12 +837,14 @@ export default function ProjectDetail({
     fetchInitialData();
   }, [project.project_id]);
   
-  // Derive kanban taskTags from listViewData (loaded on mount) — no separate fetch needed
+  // When list view data loads, merge its tags (covers all phases, not just current)
   useEffect(() => {
     if (!listViewData?.taskTags) return;
-    setTaskTags(listViewData.taskTags);
+    setTaskTags(prev => ({ ...listViewData.taskTags, ...prev }));
+  }, [listViewData?.taskTags]);
 
-    // Get unique task tags by tag_text to prevent duplicates (for filter dropdown)
+  // Derive unique task tag options for the filter dropdown from allTags
+  useEffect(() => {
     const taskTagsMap = new Map<string, ITag>();
     allTags
       .filter(tag => tag.tagged_type === 'project_task')
@@ -851,7 +854,7 @@ export default function ProjectDetail({
         }
       });
     setAllTaskTags(Array.from(taskTagsMap.values()));
-  }, [listViewData?.taskTags, allTags]);
+  }, [allTags]);
 
   // Update task tags when global tags change (for color updates)
   useEffect(() => {
@@ -890,7 +893,7 @@ export default function ProjectDetail({
 
       setIsLoadingTasks(true);
       try {
-        const { tasks, ticketLinks, taskResources, taskDependencies, checklistItems } = await getTasksForPhase(selectedPhase.phase_id);
+        const { tasks, ticketLinks, taskResources, taskDependencies, checklistItems, taskTags: phaseTags } = await getTasksForPhase(selectedPhase.phase_id);
 
         // Add checklist items to tasks from batch-loaded data
         const tasksWithChecklists = tasks.map((task) => ({
@@ -902,6 +905,9 @@ export default function ProjectDetail({
         setPhaseTicketLinks(ticketLinks);
         setPhaseTaskResources(taskResources);
         setPhaseTaskDependencies(taskDependencies);
+
+        // Merge phase tags into kanban tags
+        setTaskTags(prev => ({ ...prev, ...phaseTags }));
       } catch (error) {
         handleError(error, 'Failed to load tasks for the selected phase');
       } finally {
@@ -1039,36 +1045,27 @@ export default function ProjectDetail({
     }
   }, [initialTaskId, projectTasks, showQuickAdd]);
 
-  // Fetch document counts for tasks in the selected phase
+  // Fetch document counts once when phase tasks load (not on filter changes)
+  const phaseTaskIds = useMemo(() => projectTasks.map(t => t.task_id).sort().join(','), [projectTasks]);
   useEffect(() => {
     const fetchDocumentCounts = async () => {
-      if (!selectedPhase || filteredTasks.length === 0) {
+      if (!selectedPhase || projectTasks.length === 0) {
         setTaskDocumentCounts(new Map());
         return;
       }
-      
+
       try {
-        // Get task IDs for bulk fetch
-        const taskIds = filteredTasks.map(task => task.task_id);
-        
-        // Fetch all document counts in one query
+        const taskIds = projectTasks.map(task => task.task_id);
         const countMap = await getDocumentCountsForEntities(taskIds, 'project_task');
-        
-        // Set the Map directly
         setTaskDocumentCounts(countMap);
       } catch (error) {
         console.error('Error fetching document counts:', error);
-        // Set empty counts on error
-        const emptyMap = new Map<string, number>();
-        filteredTasks.forEach(task => {
-          emptyMap.set(task.task_id, 0);
-        });
-        setTaskDocumentCounts(emptyMap);
+        setTaskDocumentCounts(new Map());
       }
     };
-    
+
     fetchDocumentCounts();
-  }, [selectedPhase, filteredTasks]);
+  }, [selectedPhase, phaseTaskIds]);
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     e.dataTransfer.setData('text/plain', taskId);
