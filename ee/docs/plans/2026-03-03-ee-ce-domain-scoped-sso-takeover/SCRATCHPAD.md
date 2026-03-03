@@ -179,3 +179,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `F033`: expanded action-level unit coverage for lifecycle endpoints and permission guards in `mspSsoDomainActions.test.ts` (forbidden checks across request/refresh/verify/revoke plus validation contracts).
 - (2026-03-03) Validation run for `F033`:
   - `cd server && npx vitest run ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
+- (2026-03-03) Completed `F034`: expanded discovery/resolver matrix coverage with explicit EE verified/pending/revoked/ambiguous cases and CE advisory routing case in `mspSsoResolution.test.ts`, plus endpoint contract suites for discover/resolve.
+- (2026-03-03) Validation run for `F034`:
+  - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoResolution.test.ts src/app/api/auth/msp/sso/discover/route.test.ts src/app/api/auth/msp/sso/resolve/route.test.ts`

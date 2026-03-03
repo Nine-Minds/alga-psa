@@ -297,7 +297,7 @@
   {
     "id": "F034",
     "description": "Add discovery/resolver matrix test coverage for EE verified/unverified/ambiguous and CE advisory/unregistered paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria #3",
       "Acceptance Criteria #4",

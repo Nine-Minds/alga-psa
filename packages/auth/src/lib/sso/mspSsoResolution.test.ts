@@ -70,6 +70,8 @@ import {
 
 describe('mspSsoResolution helpers', () => {
   beforeEach(() => {
+    delete process.env.EDITION;
+    delete process.env.NEXT_PUBLIC_EDITION;
     tenantSecrets.clear();
     appSecrets.clear();
     domainRows.length = 0;
@@ -116,6 +118,105 @@ describe('mspSsoResolution helpers', () => {
       tenantId: 'tenant-1',
       providers: ['azure-ad'],
       domain: 'acme.com',
+      ambiguous: false,
+    });
+  });
+
+  it('T055: EE verified claim uses tenant provider source', async () => {
+    process.env.EDITION = 'ee';
+    domainRows.push({
+      tenant: 'tenant-1',
+      domain: 'acme.com',
+      is_active: true,
+      claim_status: 'verified',
+    });
+    tenantSecrets.set('tenant-1:microsoft_client_id', 'ms-id');
+    tenantSecrets.set('tenant-1:microsoft_client_secret', 'ms-secret');
+
+    await expect(discoverMspSsoProviderOptions('person@acme.com')).resolves.toEqual({
+      source: 'tenant',
+      tenantId: 'tenant-1',
+      providers: ['azure-ad'],
+      domain: 'acme.com',
+      ambiguous: false,
+    });
+  });
+
+  it('T056: EE pending claim falls back to app provider routing', async () => {
+    process.env.EDITION = 'ee';
+    domainRows.push({
+      tenant: 'tenant-1',
+      domain: 'acme.com',
+      is_active: true,
+      claim_status: 'pending',
+    });
+    tenantSecrets.set('tenant-1:google_client_id', 'tenant-google-id');
+    tenantSecrets.set('tenant-1:google_client_secret', 'tenant-google-secret');
+    appSecrets.set('GOOGLE_OAUTH_CLIENT_ID', 'app-google-id');
+    appSecrets.set('GOOGLE_OAUTH_CLIENT_SECRET', 'app-google-secret');
+
+    await expect(discoverMspSsoProviderOptions('person@acme.com')).resolves.toEqual({
+      source: 'app',
+      providers: ['google'],
+      domain: 'acme.com',
+      ambiguous: false,
+    });
+  });
+
+  it('T058: EE revoked claim no longer allows tenant takeover routing', async () => {
+    process.env.EDITION = 'ee';
+    domainRows.push({
+      tenant: 'tenant-1',
+      domain: 'acme.com',
+      is_active: true,
+      claim_status: 'revoked',
+    });
+    tenantSecrets.set('tenant-1:google_client_id', 'tenant-google-id');
+    tenantSecrets.set('tenant-1:google_client_secret', 'tenant-google-secret');
+    appSecrets.set('GOOGLE_OAUTH_CLIENT_ID', 'app-google-id');
+    appSecrets.set('GOOGLE_OAUTH_CLIENT_SECRET', 'app-google-secret');
+
+    await expect(discoverMspSsoProviderOptions('person@acme.com')).resolves.toEqual({
+      source: 'app',
+      providers: ['google'],
+      domain: 'acme.com',
+      ambiguous: false,
+    });
+  });
+
+  it('T030/T057: EE ambiguous ownership falls back to app source', async () => {
+    process.env.EDITION = 'ee';
+    domainRows.push(
+      { tenant: 'tenant-1', domain: 'shared.com', is_active: true, claim_status: 'verified' },
+      { tenant: 'tenant-2', domain: 'shared.com', is_active: true, claim_status: 'verified' }
+    );
+    appSecrets.set('GOOGLE_OAUTH_CLIENT_ID', 'app-google-id');
+    appSecrets.set('GOOGLE_OAUTH_CLIENT_SECRET', 'app-google-secret');
+
+    await expect(discoverMspSsoProviderOptions('person@shared.com')).resolves.toEqual({
+      source: 'app',
+      providers: ['google'],
+      domain: 'shared.com',
+      ambiguous: true,
+    });
+  });
+
+  it('T059: CE advisory claim can route to tenant provider source', async () => {
+    process.env.EDITION = 'ce';
+    domainRows.push({
+      tenant: 'tenant-1',
+      domain: 'advisory.io',
+      is_active: true,
+      claim_status: 'advisory',
+    });
+    tenantSecrets.set('tenant-1:google_client_id', 'tenant-google-id');
+    tenantSecrets.set('tenant-1:google_client_secret', 'tenant-google-secret');
+
+    await expect(discoverMspSsoProviderOptions('person@advisory.io')).resolves.toEqual({
+      source: 'tenant',
+      tenantId: 'tenant-1',
+      providers: ['google'],
+      domain: 'advisory.io',
       ambiguous: false,
     });
   });
