@@ -458,7 +458,7 @@
   {
     "id": "T057",
     "description": "DB-backed integration guard: second EE tenant cannot verify takeover for already-verified domain.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034",
       "F011"

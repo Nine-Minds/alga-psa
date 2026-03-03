@@ -319,3 +319,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `T056`: DB-backed integration guard: EE pending claim with tenant credentials still returns app fallback source.
 - (2026-03-03) Validation run for `T056`:
   - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T057`: DB-backed integration guard: second EE tenant cannot verify takeover for already-verified domain.
+- (2026-03-03) Validation run for `T057`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
