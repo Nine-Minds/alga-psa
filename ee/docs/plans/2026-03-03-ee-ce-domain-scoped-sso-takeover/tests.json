@@ -336,7 +336,7 @@
   {
     "id": "T042",
     "description": "Discovery cookie payload remains signed, short-lived, and free of provider secrets.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]

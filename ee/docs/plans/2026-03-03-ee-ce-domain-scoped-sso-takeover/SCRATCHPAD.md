@@ -274,3 +274,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `T041`: Resolver invalid payload, rate-limit, and source-failure responses remain externally indistinguishable.
 - (2026-03-03) Validation run for `T041`:
   - `cd server && npx vitest run --coverage.enabled=false src/app/api/auth/msp/sso/resolve/route.test.ts`
+- (2026-03-03) Completed `T042`: Discovery cookie payload remains signed, short-lived, and free of provider secrets.
+- (2026-03-03) Validation run for `T042`:
+  - `cd server && npx vitest run --coverage.enabled=false src/app/api/auth/msp/sso/discover/route.test.ts`
