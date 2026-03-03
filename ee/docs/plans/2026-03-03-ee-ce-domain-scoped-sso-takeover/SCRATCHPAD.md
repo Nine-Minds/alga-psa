@@ -250,3 +250,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `T033`: Unresolved domain in both editions returns app-level fallback provider set.
 - (2026-03-03) Validation run for `T033`:
   - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T034`: Discover endpoint invalid-email path returns invariant neutral schema.
+- (2026-03-03) Validation run for `T034`:
+  - `cd server && npx vitest run --coverage.enabled=false src/app/api/auth/msp/sso/discover/route.test.ts`
