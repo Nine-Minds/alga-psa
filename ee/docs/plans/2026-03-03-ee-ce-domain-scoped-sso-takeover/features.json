@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "Add EE action to request domain claim and create verification challenge.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #2", "Functional Requirements #3"]
   },
   {
