@@ -310,3 +310,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `T053`: Docs describe CE advisory registration behavior and non-blocking ownership model.
 - (2026-03-03) Validation run for `T053`:
   - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoDocsContract.test.ts`
+- (2026-03-03) Completed `T054`: Docs describe Nine Minds fallback provider prerequisites and unmanaged-domain behavior.
+- (2026-03-03) Validation run for `T054`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoDocsContract.test.ts`

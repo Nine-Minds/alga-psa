@@ -432,7 +432,7 @@
   {
     "id": "T054",
     "description": "Docs describe Nine Minds fallback provider prerequisites and unmanaged-domain behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
