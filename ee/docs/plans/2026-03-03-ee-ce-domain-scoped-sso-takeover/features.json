@@ -234,7 +234,7 @@
   {
     "id": "F027",
     "description": "Wire CE MSP login to use discovery-enabled SSO button implementation instead of null/stub behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements #10",
       "Goal #1"

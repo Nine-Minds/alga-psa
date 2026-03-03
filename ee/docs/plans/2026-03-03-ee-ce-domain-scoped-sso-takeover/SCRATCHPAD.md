@@ -160,3 +160,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Note: `src/test/unit/app/auth/client-portal/signin/page.test.ts` currently fails in isolation due an existing import/mocking path mismatch (`@alga-psa/db/models/UserSession`), so validation used package-level contract tests instead.
 - (2026-03-03) Validation run for `F026`:
   - `cd server && npx vitest run ../packages/auth/src/components/ClientLoginForm.ssoGuard.test.ts ../packages/auth/src/components/ClientPortalAuthUnchanged.contract.test.ts`
+- (2026-03-03) Completed `F027`: CE/EE parity contract confirms MSP SSO entry wiring uses discovery-enabled provider buttons implementation (no null/stub path).
+- (2026-03-03) Validation run for `F027`:
+  - `cd server && npx vitest run ../packages/auth/src/components/ssoProviderButtonsImport.test.ts ../packages/auth/src/components/ssoProviderButtons.ceEeParity.test.ts`
