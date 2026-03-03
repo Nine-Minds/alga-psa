@@ -110,17 +110,20 @@ export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[]
             return await ProjectModel.getAll(trx, tenant, true);
         });
 
-        // Fetch assigned user details for each project
-        const projectsWithUsers = await Promise.all(projects.map(async (project): Promise<IProject> => {
-            if (project.assigned_to) {
-                const assignedUser = await findUserById(project.assigned_to);
+        // Use assigned user data already available from the JOIN in ProjectModel.getAll()
+        const projectsWithUsers = projects.map((project): IProject => {
+            if (project.assigned_to && (project as any).assigned_to_first_name) {
                 return {
                     ...project,
-                    assigned_user: assignedUser || null
+                    assigned_user: {
+                        user_id: project.assigned_to,
+                        first_name: (project as any).assigned_to_first_name,
+                        last_name: (project as any).assigned_to_last_name,
+                    } as any
                 };
             }
             return project;
-        }));
+        });
 
         return projectsWithUsers;
     } catch (error) {
@@ -955,50 +958,65 @@ async function getProjectTaskStatusesInternal(trx: Knex.Transaction, tenant: str
         return [];
     }
 
-    const statuses = await Promise.all(statusMappings.map(async (mapping: IProjectStatusMapping): Promise<ProjectStatus | null> => {
-        try {
-            if (mapping.is_standard && mapping.standard_status_id) {
-                const standardStatus = await ProjectModel.getStandardStatus(trx, tenant, mapping.standard_status_id);
-                if (!standardStatus) {
-                    console.warn(`Standard status not found for mapping ${mapping.project_status_mapping_id}`);
-                    return null;
-                }
-                return {
-                    ...standardStatus,
-                    project_status_mapping_id: mapping.project_status_mapping_id,
-                    status_id: standardStatus.standard_status_id,
-                    custom_name: mapping.custom_name,
-                    display_order: mapping.display_order,
-                    is_visible: mapping.is_visible,
-                    is_standard: true,
-                    is_closed: standardStatus.is_closed
-                } as ProjectStatus;
-            } else if (mapping.status_id) {
-                const customStatus = await ProjectModel.getCustomStatus(trx, tenant, mapping.status_id);
-                if (!customStatus) {
-                    console.warn(`Custom status not found for mapping ${mapping.project_status_mapping_id}`);
-                    return null;
-                }
-                return {
-                    ...customStatus,
-                    project_status_mapping_id: mapping.project_status_mapping_id,
-                    status_id: customStatus.status_id,
-                    custom_name: mapping.custom_name,
-                    display_order: mapping.display_order,
-                    is_visible: mapping.is_visible,
-                    is_standard: false,
-                    is_closed: customStatus.is_closed,
-                    color: customStatus.color,
-                    icon: customStatus.icon
-                } as ProjectStatus;
+    // Batch-fetch all standard and custom statuses in 2 queries instead of 1 per mapping
+    const standardIds = statusMappings
+        .filter(m => m.is_standard && m.standard_status_id)
+        .map(m => m.standard_status_id!);
+    const customIds = statusMappings
+        .filter(m => !m.is_standard && m.status_id)
+        .map(m => m.status_id!);
+
+    const [standardStatusRows, customStatusRows] = await Promise.all([
+        standardIds.length > 0
+            ? trx<IStandardStatus>('standard_statuses').whereIn('standard_status_id', standardIds)
+            : [],
+        customIds.length > 0
+            ? trx<IStatus>('statuses').whereIn('status_id', customIds).andWhere('tenant', tenant)
+            : []
+    ]);
+
+    const standardMap = new Map((standardStatusRows as IStandardStatus[]).map(s => [s.standard_status_id, s]));
+    const customMap = new Map((customStatusRows as IStatus[]).map(s => [s.status_id, s]));
+
+    const statuses = statusMappings.map((mapping: IProjectStatusMapping): ProjectStatus | null => {
+        if (mapping.is_standard && mapping.standard_status_id) {
+            const standardStatus = standardMap.get(mapping.standard_status_id);
+            if (!standardStatus) {
+                console.warn(`Standard status not found for mapping ${mapping.project_status_mapping_id}`);
+                return null;
             }
-            console.warn(`Invalid status mapping ${mapping.project_status_mapping_id}: missing both standard_status_id and status_id`);
-            return null;
-        } catch (error) {
-            console.error(`Error processing status mapping ${mapping.project_status_mapping_id}:`, error);
-            return null;
+            return {
+                ...standardStatus,
+                project_status_mapping_id: mapping.project_status_mapping_id,
+                status_id: standardStatus.standard_status_id,
+                custom_name: mapping.custom_name,
+                display_order: mapping.display_order,
+                is_visible: mapping.is_visible,
+                is_standard: true,
+                is_closed: standardStatus.is_closed
+            } as ProjectStatus;
+        } else if (mapping.status_id) {
+            const customStatus = customMap.get(mapping.status_id);
+            if (!customStatus) {
+                console.warn(`Custom status not found for mapping ${mapping.project_status_mapping_id}`);
+                return null;
+            }
+            return {
+                ...customStatus,
+                project_status_mapping_id: mapping.project_status_mapping_id,
+                status_id: customStatus.status_id,
+                custom_name: mapping.custom_name,
+                display_order: mapping.display_order,
+                is_visible: mapping.is_visible,
+                is_standard: false,
+                is_closed: customStatus.is_closed,
+                color: customStatus.color,
+                icon: customStatus.icon
+            } as ProjectStatus;
         }
-    }));
+        console.warn(`Invalid status mapping ${mapping.project_status_mapping_id}: missing both standard_status_id and status_id`);
+        return null;
+    });
 
     return statuses.filter((status): status is ProjectStatus => status !== null);
 }

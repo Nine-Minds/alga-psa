@@ -674,6 +674,35 @@ export const getUserPreference = withAuth(async (
   }
 });
 
+export const getUserPreferencesBatch = withAuth(async (
+  _user,
+  _ctx,
+  userId: string,
+  settingNames: string[]
+): Promise<Record<string, any>> => {
+  try {
+    const {knex} = await createTenantKnex();
+    const allPrefs = await UserPreferences.getAllForUser(knex, userId);
+    const result: Record<string, any> = {};
+    const nameSet = new Set(settingNames);
+    for (const pref of allPrefs) {
+      if (nameSet.has(pref.setting_name)) {
+        if (pref.setting_value) {
+          try {
+            result[pref.setting_name] = JSON.parse(pref.setting_value);
+          } catch {
+            result[pref.setting_name] = pref.setting_value;
+          }
+        }
+      }
+    }
+    return result;
+  } catch (error) {
+    logger.error('Failed to get user preferences batch:', error);
+    throw new Error('Failed to get user preferences batch');
+  }
+});
+
 export const setUserPreference = withAuth(async (
   _user,
   _ctx,

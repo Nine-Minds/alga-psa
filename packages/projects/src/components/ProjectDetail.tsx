@@ -9,7 +9,7 @@ import { ITaskResource } from '@alga-psa/types';
 import { useDrawer } from "@alga-psa/ui";
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTaskTypes } from '../actions/projectTaskActions';
-import { findTagsByEntityId, findTagsByEntityIds } from '@alga-psa/tags/actions';
+import { findTagsByEntityId } from '@alga-psa/tags/actions';
 import { getDocumentCountsForEntities } from '@alga-psa/documents/actions/documentActions';
 import { TagFilter } from '@alga-psa/ui/components';
 import { TagManager } from '@alga-psa/tags/components';
@@ -24,7 +24,7 @@ import PhaseQuickAdd from './PhaseQuickAdd';
 import TaskListView from './TaskListView';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { getProjectTaskStatuses, updatePhase, deletePhase, getProjectTreeData, reorderPhase } from '../actions/projectActions';
-import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getAllProjectTasksForListView, getPhaseTaskCounts } from '../actions/projectTaskActions';
+import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getProjectTaskData } from '../actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { Toaster, toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -42,9 +42,9 @@ import { ChevronRight, HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, Ch
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
-import { useUserPreference } from '@alga-psa/users/hooks';
+import { useUserPreferencesBatch } from '@alga-psa/users/hooks';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
-import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { getTeamsBasic, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTheme } from 'next-themes';
 
@@ -158,72 +158,20 @@ export default function ProjectDetail({
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
 
-  // View mode state with persistence
+  // Batch-load all user preferences in a single server action (instead of 5 separate calls)
   type ProjectViewMode = 'kanban' | 'list';
-  const {
-    value: viewMode,
-    setValue: setViewMode,
-    isLoading: isViewModeLoading
-  } = useUserPreference<ProjectViewMode>(
-    PROJECT_VIEW_MODE_SETTING,
-    {
-      defaultValue: 'kanban',
-      localStorageKey: PROJECT_VIEW_MODE_SETTING,
-      debounceMs: 300
-    }
-  );
-
-  // Phases panel visibility state with persistence (default: visible)
-  const {
-    value: isPhasesPanelVisible,
-    setValue: setIsPhasesPanelVisible,
-  } = useUserPreference<boolean>(
-    PROJECT_PHASES_PANEL_VISIBLE_SETTING,
-    {
-      defaultValue: true,
-      localStorageKey: PROJECT_PHASES_PANEL_VISIBLE_SETTING,
-      debounceMs: 300
-    }
-  );
-
-  // Kanban zoom level state with persistence (default: 50 = 350px columns)
-  const {
-    value: kanbanZoomLevel,
-    setValue: setKanbanZoomLevel,
-  } = useUserPreference<number>(
-    PROJECT_KANBAN_ZOOM_LEVEL_SETTING,
-    {
-      defaultValue: 50,
-      localStorageKey: PROJECT_KANBAN_ZOOM_LEVEL_SETTING,
-      debounceMs: 300
-    }
-  );
-
-  // Header pinned state with persistence (default: false - not pinned/sticky)
-  const {
-    value: isHeaderPinned,
-    setValue: setIsHeaderPinned,
-  } = useUserPreference<boolean>(
-    PROJECT_HEADER_PINNED_SETTING,
-    {
-      defaultValue: false,
-      localStorageKey: PROJECT_HEADER_PINNED_SETTING,
-      debounceMs: 300
-    }
-  );
-
-  // Sticky status names strip visibility (default: off)
-  const {
-    value: showStickyStatusNames,
-    setValue: setShowStickyStatusNames,
-  } = useUserPreference<boolean>(
-    PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING,
-    {
-      defaultValue: false,
-      localStorageKey: PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING,
-      debounceMs: 300
-    }
-  );
+  const prefs = useUserPreferencesBatch([
+    { key: PROJECT_VIEW_MODE_SETTING, defaultValue: 'kanban' as ProjectViewMode, debounceMs: 300 },
+    { key: PROJECT_PHASES_PANEL_VISIBLE_SETTING, defaultValue: true, debounceMs: 300 },
+    { key: PROJECT_KANBAN_ZOOM_LEVEL_SETTING, defaultValue: 50, debounceMs: 300 },
+    { key: PROJECT_HEADER_PINNED_SETTING, defaultValue: false, debounceMs: 300 },
+    { key: PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING, defaultValue: false, debounceMs: 300 },
+  ]);
+  const { value: viewMode, setValue: setViewMode, isLoading: isViewModeLoading } = prefs[PROJECT_VIEW_MODE_SETTING];
+  const { value: isPhasesPanelVisible, setValue: setIsPhasesPanelVisible } = prefs[PROJECT_PHASES_PANEL_VISIBLE_SETTING];
+  const { value: kanbanZoomLevel, setValue: setKanbanZoomLevel } = prefs[PROJECT_KANBAN_ZOOM_LEVEL_SETTING];
+  const { value: isHeaderPinned, setValue: setIsHeaderPinned } = prefs[PROJECT_HEADER_PINNED_SETTING];
+  const { value: showStickyStatusNames, setValue: setShowStickyStatusNames } = prefs[PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING];
 
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
 
@@ -236,18 +184,8 @@ export default function ProjectDetail({
   const [currentPhase, setCurrentPhase] = useState<IProjectPhase | null>(null);
   const [selectedPhase, setSelectedPhase] = useState<IProjectPhase | null>(null);
 
-  // List view state (separate - project-scoped)
-  const [listViewData, setListViewData] = useState<{
-    phases: IProjectPhase[];
-    tasks: IProjectTask[];
-    statuses: ProjectStatus[];
-    ticketLinks: Record<string, IProjectTicketLinkWithDetails[]>;
-    taskResources: Record<string, ITaskResource[]>;
-    checklistItems: Record<string, any[]>;
-    taskTags: Record<string, ITag[]>;
-    taskDependencies: Record<string, { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] }>;
-  } | null>(null);
-  const [listViewLoading, setListViewLoading] = useState(false);
+  // Shared project-wide task data (used by list view, sidebar counts, and filtering)
+  const [projectTaskDataLoaded, setProjectTaskDataLoaded] = useState(false);
   const { openDrawer: _openDrawer, closeDrawer: _closeDrawer } = useDrawer();
   const [projectTasks, setProjectTasks] = useState<IProjectTask[]>([]);
   const [phaseTicketLinks, setPhaseTicketLinks] = useState<{ [taskId: string]: IProjectTicketLinkWithDetails[] }>({});
@@ -299,10 +237,12 @@ export default function ProjectDetail({
   const [animatingPhases, setAnimatingPhases] = useState<Set<string>>(new Set());
   const [taskDraggingOverPhaseId, setTaskDraggingOverPhaseId] = useState<string | null>(null); // Added state
 
-  // All project tasks for phase count filtering (like list view)
+  // All project tasks — shared by sidebar counts, list view, and filtering
   const [allProjectTasks, setAllProjectTasks] = useState<IProjectTask[]>([]);
   const [allProjectTaskResources, setAllProjectTaskResources] = useState<Record<string, ITaskResource[]>>({});
   const [allProjectTaskTags, setAllProjectTaskTags] = useState<Record<string, ITag[]>>({});
+  const [allChecklistItems, setAllChecklistItems] = useState<Record<string, any[]>>({});
+  const [allTaskDependencies, setAllTaskDependencies] = useState<Record<string, { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] }>>({});
 
   // Tag-related state
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
@@ -345,6 +285,7 @@ export default function ProjectDetail({
 
   // Fetch tags when component mounts
   useEffect(() => {
+    let stale = false;
     const fetchTags = async () => {
       if (!project.project_id) return;
 
@@ -353,6 +294,7 @@ export default function ProjectDetail({
           console.warn('Failed to fetch project tags, continuing without tags:', error);
           return [];
         });
+        if (stale) return;
 
         setProjectTags(tags);
 
@@ -363,11 +305,12 @@ export default function ProjectDetail({
           hasNotifiedParent.current = true;
         }
       } catch (error) {
-        console.error('Error fetching project tags:', error);
+        if (!stale) console.error('Error fetching project tags:', error);
       }
     };
     fetchTags();
-  }, [project.project_id]); // Remove onTagsUpdate from dependencies to prevent infinite loop
+    return () => { stale = true; };
+  }, [project.project_id]);
   const [duplicateTaskToggleDetails, setDuplicateTaskToggleDetails] = useState<{
       hasChecklist: boolean;
       hasPrimaryAssignee: boolean;
@@ -486,35 +429,25 @@ export default function ProjectDetail({
     ).length;
   }, [filteredTasks, projectStatuses]);
 
-  // Task counts per phase for the phase sidebar (fetched from server)
-  const [phaseTaskCounts, setPhaseTaskCounts] = useState<Record<string, number>>({});
-
-  // Fetch task counts for all phases when component loads
+  // Fetch all project task data on mount (shared by list view, sidebar counts, and filtering)
   useEffect(() => {
-    const fetchTaskCounts = async () => {
+    let stale = false;
+    const fetchAllTaskData = async () => {
       try {
-        const counts = await getPhaseTaskCounts(project.project_id);
-        setPhaseTaskCounts(counts);
-      } catch (error) {
-        console.error('Error fetching phase task counts:', error);
-      }
-    };
-    fetchTaskCounts();
-  }, [project.project_id]);
-
-  // Load all project tasks for phase count filtering (like list view does)
-  useEffect(() => {
-    const fetchAllProjectTasks = async () => {
-      try {
-        const data = await getAllProjectTasksForListView(project.project_id);
+        const data = await getProjectTaskData(project.project_id);
+        if (stale) return;
         setAllProjectTasks(data.tasks);
         setAllProjectTaskResources(data.taskResources);
         setAllProjectTaskTags(data.taskTags);
+        setAllChecklistItems(data.checklistItems);
+        setAllTaskDependencies(data.taskDependencies);
+        setProjectTaskDataLoaded(true);
       } catch (error) {
-        console.error('Error fetching all project tasks:', error);
+        if (!stale) handleError(error, 'Failed to load project tasks');
       }
     };
-    fetchAllProjectTasks();
+    fetchAllTaskData();
+    return () => { stale = true; };
   }, [project.project_id]);
 
   // Filter all project tasks (same logic as list view) for phase count calculation
@@ -594,10 +527,7 @@ export default function ProjectDetail({
   // Calculate filtered phase task counts (like list view's phaseGroups)
   // Falls back to server-fetched counts while allProjectTasks is loading
   const filteredPhaseTaskCounts = useMemo(() => {
-    // If allProjectTasks hasn't loaded yet, use server-fetched counts
-    if (allProjectTasks.length === 0 && Object.keys(phaseTaskCounts).length > 0) {
-      return phaseTaskCounts;
-    }
+    if (allProjectTasks.length === 0) return {};
     const counts: Record<string, number> = {};
     allFilteredTasks.forEach(task => {
       if (task.phase_id) {
@@ -605,7 +535,7 @@ export default function ProjectDetail({
       }
     });
     return counts;
-  }, [allFilteredTasks, allProjectTasks, phaseTaskCounts]);
+  }, [allFilteredTasks, allProjectTasks]);
 
   const [projectTreeData, setProjectTreeData] = useState<any[]>([]);
   const kanbanBoardRef = useRef<HTMLDivElement>(null);
@@ -784,35 +714,10 @@ export default function ProjectDetail({
     return () => ro.disconnect();
   }, [viewMode]);
 
-  // Lazy load list view data when switching to list mode
-  const loadListViewData = useCallback(async () => {
-    if (listViewLoading || listViewData) return;
-    setListViewLoading(true);
-    try {
-      const data = await getAllProjectTasksForListView(project.project_id);
-      setListViewData(data);
-    } catch (error) {
-      handleError(error, 'Failed to load list view data');
-    } finally {
-      setListViewLoading(false);
-    }
-  }, [project.project_id, listViewData, listViewLoading]);
-
-  useEffect(() => {
-    if (viewMode === 'list') {
-      loadListViewData();
-    }
-  }, [viewMode, loadListViewData]);
-
   // Keep selectedTaskIdRef in sync with selectedTask for reliable access in callbacks
   useEffect(() => {
     selectedTaskIdRef.current = selectedTask?.task_id ?? null;
   }, [selectedTask]);
-
-  // Refresh list view after task mutations
-  const refreshListView = useCallback(() => {
-    setListViewData(null); // Force reload on next render
-  }, []);
 
   // Handle task move in list view (drag-and-drop)
   const handleListViewTaskMove = useCallback(async (
@@ -823,7 +728,7 @@ export default function ProjectDetail({
     afterTaskId: string | null
   ) => {
     try {
-      const task = listViewData?.tasks.find(t => t.task_id === taskId);
+      const task = allProjectTasks.find(t => t.task_id === taskId);
       if (!task) {
         console.error('Task not found');
         return;
@@ -833,7 +738,6 @@ export default function ProjectDetail({
       if (task.phase_id !== newPhaseId) {
         // Move to different phase with new status
         await moveTaskToPhase(taskId, newPhaseId, newStatusMappingId);
-        // Update allProjectTasks for filtered counts
         setAllProjectTasks(prev => prev.map(t =>
           t.task_id === taskId ? { ...t, phase_id: newPhaseId, project_status_mapping_id: newStatusMappingId } : t
         ));
@@ -841,19 +745,19 @@ export default function ProjectDetail({
       } else if (task.project_status_mapping_id !== newStatusMappingId) {
         // Same phase, different status
         await updateTaskStatus(taskId, newStatusMappingId, beforeTaskId, afterTaskId);
+        setAllProjectTasks(prev => prev.map(t =>
+          t.task_id === taskId ? { ...t, project_status_mapping_id: newStatusMappingId } : t
+        ));
         toast.success('Task status updated');
       } else {
         // Same phase and status - just reorder
         await reorderTask(taskId, beforeTaskId, afterTaskId);
         toast.success('Task reordered');
       }
-
-      // Refresh list view to show updated data
-      refreshListView();
     } catch (error) {
       handleError(error, 'Failed to move task');
     }
-  }, [listViewData, refreshListView]);
+  }, [allProjectTasks]);
   
   // Handle tag changes
   const handleProjectTagsChange = (tags: ITag[]) => {
@@ -879,24 +783,26 @@ export default function ProjectDetail({
       return [...current, ...newTags];
     });
 
-    // Update list view data if it exists
-    if (listViewData) {
-      setListViewData(prev => prev ? {
-        ...prev,
-        taskTags: {
-          ...prev.taskTags,
-          [taskId]: tags
-        }
-      } : null);
-    }
+    // Update shared project-wide tags
+    setAllProjectTaskTags(prev => ({
+      ...prev,
+      [taskId]: tags
+    }));
   };
   
-  // Fetch project completion metrics and project tree data
+  // Fetch project completion metrics, tree data, priorities, and task types in parallel
   useEffect(() => {
+    let stale = false;
     const fetchInitialData = async () => {
       try {
-        // Fetch project metrics
-        const metrics = await calculateProjectCompletion(project.project_id);
+        const [metrics, treeData, allPriorities, types] = await Promise.all([
+          calculateProjectCompletion(project.project_id),
+          getProjectTreeData(),
+          getAllPriorities('project_task'),
+          getTaskTypes(),
+        ]);
+        if (stale) return;
+
         setProjectMetrics({
           taskCompletionPercentage: metrics.taskCompletionPercentage,
           hoursCompletionPercentage: metrics.hoursCompletionPercentage,
@@ -904,71 +810,40 @@ export default function ProjectDetail({
           spentHours: metrics.spentHours,
           remainingHours: metrics.remainingHours
         });
-        
-        // Fetch project tree data once
-        const treeData = await getProjectTreeData();
-        if (isActionPermissionError(treeData)) {
-          handleError(treeData.permissionError);
-          return;
-        }
-        setProjectTreeData(treeData);
-        
-        // Fetch priorities for project tasks
-        const allPriorities = await getAllPriorities('project_task');
-        setPriorities(allPriorities);
 
-        // Fetch task types
-        const types = await getTaskTypes();
+        if (!isActionPermissionError(treeData)) {
+          setProjectTreeData(treeData);
+        }
+
+        setPriorities(allPriorities);
         setTaskTypes(types);
       } catch (error) {
-        handleError(error, 'Failed to load initial data');
+        if (!stale) handleError(error, 'Failed to load initial data');
       }
     };
-    
+
     fetchInitialData();
+    return () => { stale = true; };
   }, [project.project_id]);
   
-  // Fetch tags for all tasks
+  // When project-wide tags load, merge them into kanban tags (covers all phases)
   useEffect(() => {
-    const fetchTaskTags = async () => {
-      if (projectTasks.length === 0) return;
-      
-      try {
-        const taskIds = projectTasks.map(task => task.task_id);
-        // Add error handling for the server action call
-        const tags = await findTagsByEntityIds(taskIds, 'project_task').catch((error) => {
-          console.warn('Failed to fetch task tags, continuing without tags:', error);
-          return [];
-        });
-        
-        // Group tags by task
-        const tagsByTask: Record<string, ITag[]> = {};
-        tags.forEach((tag: ITag) => {
-          if (!tagsByTask[tag.tagged_id]) {
-            tagsByTask[tag.tagged_id] = [];
-          }
-          tagsByTask[tag.tagged_id].push(tag);
-        });
-        
-        setTaskTags(tagsByTask);
-        // Get unique task tags by tag_text to prevent duplicates
-        const taskTagsMap = new Map<string, ITag>();
-        allTags
-          .filter(tag => tag.tagged_type === 'project_task')
-          .forEach(tag => {
-            // Only keep the first occurrence of each tag text
-            if (!taskTagsMap.has(tag.tag_text)) {
-              taskTagsMap.set(tag.tag_text, tag);
-            }
-          });
-        setAllTaskTags(Array.from(taskTagsMap.values()));
-      } catch (error) {
-        console.error('Error fetching task tags:', error);
-      }
-    };
-    
-    fetchTaskTags();
-  }, [projectTasks, allTags]);
+    if (Object.keys(allProjectTaskTags).length === 0) return;
+    setTaskTags(prev => ({ ...allProjectTaskTags, ...prev }));
+  }, [allProjectTaskTags]);
+
+  // Derive unique task tag options for the filter dropdown from allTags
+  useEffect(() => {
+    const taskTagsMap = new Map<string, ITag>();
+    allTags
+      .filter(tag => tag.tagged_type === 'project_task')
+      .forEach(tag => {
+        if (!taskTagsMap.has(tag.tag_text)) {
+          taskTagsMap.set(tag.tag_text, tag);
+        }
+      });
+    setAllTaskTags(Array.from(taskTagsMap.values()));
+  }, [allTags]);
 
   // Update task tags when global tags change (for color updates)
   useEffect(() => {
@@ -996,6 +871,7 @@ export default function ProjectDetail({
 
   // Fetch tasks when phase is selected
   useEffect(() => {
+    let stale = false;
     const fetchPhaseTasks = async () => {
       if (!selectedPhase) {
         setProjectTasks([]);
@@ -1007,7 +883,8 @@ export default function ProjectDetail({
 
       setIsLoadingTasks(true);
       try {
-        const { tasks, ticketLinks, taskResources, taskDependencies, checklistItems } = await getTasksForPhase(selectedPhase.phase_id);
+        const { tasks, ticketLinks, taskResources, taskDependencies, checklistItems, taskTags: phaseTags } = await getTasksForPhase(selectedPhase.phase_id);
+        if (stale) return;
 
         // Add checklist items to tasks from batch-loaded data
         const tasksWithChecklists = tasks.map((task) => ({
@@ -1019,18 +896,23 @@ export default function ProjectDetail({
         setPhaseTicketLinks(ticketLinks);
         setPhaseTaskResources(taskResources);
         setPhaseTaskDependencies(taskDependencies);
+
+        // Merge phase tags into kanban tags
+        setTaskTags(prev => ({ ...prev, ...phaseTags }));
       } catch (error) {
-        handleError(error, 'Failed to load tasks for the selected phase');
+        if (!stale) handleError(error, 'Failed to load tasks for the selected phase');
       } finally {
-        setIsLoadingTasks(false);
+        if (!stale) setIsLoadingTasks(false);
       }
     };
 
     fetchPhaseTasks();
+    return () => { stale = true; };
   }, [selectedPhase]);
 
   // Fetch avatar URLs for task resources (additional agents)
   useEffect(() => {
+    let stale = false;
     const fetchAvatarUrls = async () => {
       const userIds = new Set<string>();
 
@@ -1045,35 +927,38 @@ export default function ProjectDetail({
 
       if (userIds.size === 0) return;
 
-      // Get tenant from project
       const tenant = project.tenant;
       if (!tenant) return;
 
       try {
         const avatarUrlsMap = await getUserAvatarUrlsBatchAction(Array.from(userIds), tenant);
+        if (stale) return;
         const urlsRecord: Record<string, string | null> = {};
         avatarUrlsMap.forEach((url, id) => {
           urlsRecord[id] = url;
         });
         setAvatarUrls(urlsRecord);
       } catch (error) {
-        console.error('Failed to fetch avatar URLs:', error);
+        if (!stale) console.error('Failed to fetch avatar URLs:', error);
       }
     };
 
     fetchAvatarUrls();
+    return () => { stale = true; };
   }, [phaseTaskResources, project.tenant]);
 
   // Fetch team names and avatar URLs for tasks with assigned teams
   useEffect(() => {
     if (!teamsV2Enabled) return;
+    let stale = false;
 
     const fetchTeamData = async () => {
       const tenant = project.tenant;
       if (!tenant) return;
 
       try {
-        const allTeams = await getTeams();
+        const allTeams = await getTeamsBasic();
+        if (stale) return;
         const namesMap: Record<string, string> = {};
         allTeams.forEach(team => {
           namesMap[team.team_id] = team.team_name;
@@ -1083,6 +968,7 @@ export default function ProjectDetail({
         const teamIds = allTeams.map(t => t.team_id);
         if (teamIds.length > 0) {
           const avatarUrlsMap = await getTeamAvatarUrlsBatchAction(teamIds, tenant);
+          if (stale) return;
           const urlsRecord: Record<string, string | null> = {};
           if (avatarUrlsMap instanceof Map) {
             avatarUrlsMap.forEach((url, id) => { urlsRecord[id] = url; });
@@ -1092,11 +978,12 @@ export default function ProjectDetail({
           setTeamAvatarUrls(urlsRecord);
         }
       } catch (error) {
-        console.error('Failed to fetch team data:', error);
+        if (!stale) console.error('Failed to fetch team data:', error);
       }
     };
 
     fetchTeamData();
+    return () => { stale = true; };
   }, [teamsV2Enabled, project.tenant]);
 
   // Handle opening task from URL parameter (e.g., from notifications)
@@ -1156,36 +1043,31 @@ export default function ProjectDetail({
     }
   }, [initialTaskId, projectTasks, showQuickAdd]);
 
-  // Fetch document counts for tasks in the selected phase
+  // Fetch document counts once when phase tasks load (not on filter changes)
+  const phaseTaskIds = useMemo(() => projectTasks.map(t => t.task_id).sort().join(','), [projectTasks]);
   useEffect(() => {
+    let stale = false;
     const fetchDocumentCounts = async () => {
-      if (!selectedPhase || filteredTasks.length === 0) {
+      if (!selectedPhase || projectTasks.length === 0) {
         setTaskDocumentCounts(new Map());
         return;
       }
-      
+
       try {
-        // Get task IDs for bulk fetch
-        const taskIds = filteredTasks.map(task => task.task_id);
-        
-        // Fetch all document counts in one query
+        const taskIds = projectTasks.map(task => task.task_id);
         const countMap = await getDocumentCountsForEntities(taskIds, 'project_task');
-        
-        // Set the Map directly
-        setTaskDocumentCounts(countMap);
+        if (!stale) setTaskDocumentCounts(countMap);
       } catch (error) {
-        console.error('Error fetching document counts:', error);
-        // Set empty counts on error
-        const emptyMap = new Map<string, number>();
-        filteredTasks.forEach(task => {
-          emptyMap.set(task.task_id, 0);
-        });
-        setTaskDocumentCounts(emptyMap);
+        if (!stale) {
+          console.error('Error fetching document counts:', error);
+          setTaskDocumentCounts(new Map());
+        }
       }
     };
-    
+
     fetchDocumentCounts();
-  }, [selectedPhase, filteredTasks]);
+    return () => { stale = true; };
+  }, [selectedPhase, phaseTaskIds]);
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     e.dataTransfer.setData('text/plain', taskId);
@@ -1589,32 +1471,25 @@ export default function ProjectDetail({
 
         setProjectTasks((prevTasks) => [...prevTasks, taskWithChecklist]);
 
-        // Also update list view data if it exists
-        if (listViewData) {
-          setListViewData(prev => prev ? {
-            ...prev,
-            tasks: [...prev.tasks, taskWithChecklist],
-            checklistItems: {
-              ...prev.checklistItems,
-              [newTask.task_id]: checklistItems
-            },
-            taskTags: {
-              ...prev.taskTags,
-              [newTask.task_id]: newTask.tags || []
-            },
-            taskResources: {
-              ...prev.taskResources,
-              [newTask.task_id]: []
-            },
-            taskDependencies: {
-              ...prev.taskDependencies,
-              [newTask.task_id]: { predecessors: [], successors: [] }
-            }
-          } : null);
-        }
-
-        // Add to allProjectTasks for filtered counts
+        // Update shared project-wide state
         setAllProjectTasks(prev => [...prev, taskWithChecklist]);
+        setAllChecklistItems(prev => ({
+          ...prev,
+          [newTask.task_id]: checklistItems
+        }));
+        setAllProjectTaskTags(prev => ({
+          ...prev,
+          [newTask.task_id]: newTask.tags || []
+        }));
+        setAllProjectTaskResources(prev => ({
+          ...prev,
+          [newTask.task_id]: []
+        }));
+        setAllTaskDependencies(prev => ({
+          ...prev,
+          [newTask.task_id]: { predecessors: [], successors: [] }
+        }));
+
         setShowQuickAdd(false);
         toast.success('New task added successfully!');
       } else {
@@ -1626,7 +1501,7 @@ export default function ProjectDetail({
     } finally {
       setIsAddingTask(false);
     }
-  }, [selectedPhase, currentPhase, listViewData]);
+  }, [selectedPhase, currentPhase]);
 
   const handleCloseQuickAdd = useCallback(() => {
     setShowQuickAdd(false);
@@ -1692,25 +1567,21 @@ export default function ProjectDetail({
           [updatedTask.task_id]: taskResources
         }));
 
-        // Update list view data if it exists
-        setListViewData(prev => {
-          if (!prev) return null;
-          const taskExists = prev.tasks.some(t => t.task_id === updatedTask.task_id);
-          return {
-            ...prev,
-            tasks: taskExists
-              ? prev.tasks.map(t => t.task_id === updatedTask.task_id ? taskWithChecklist : t)
-              : [...prev.tasks, taskWithChecklist],
-            checklistItems: {
-              ...prev.checklistItems,
-              [updatedTask.task_id]: checklistItems
-            },
-            taskResources: {
-              ...prev.taskResources,
-              [updatedTask.task_id]: taskResources
-            }
-          };
+        // Update shared project-wide state
+        setAllProjectTasks(prev => {
+          const exists = prev.some(t => t.task_id === updatedTask.task_id);
+          return exists
+            ? prev.map(t => t.task_id === updatedTask.task_id ? taskWithChecklist : t)
+            : [...prev, taskWithChecklist];
         });
+        setAllChecklistItems(prev => ({
+          ...prev,
+          [updatedTask.task_id]: checklistItems
+        }));
+        setAllProjectTaskResources(prev => ({
+          ...prev,
+          [updatedTask.task_id]: taskResources
+        }));
 
         toast.success(taskWithChecklist.task_id ? 'Task updated successfully!' : 'Task added successfully!');
       } catch (error) {
@@ -1724,11 +1595,8 @@ export default function ProjectDetail({
           prevTasks.filter((task) => task.task_id !== deletedTaskId)
         );
 
-        // Also remove from list view data
-        setListViewData(prev => prev ? {
-          ...prev,
-          tasks: prev.tasks.filter(t => t.task_id !== deletedTaskId)
-        } : null);
+        // Remove from shared project-wide state
+        setAllProjectTasks(prev => prev.filter(t => t.task_id !== deletedTaskId));
 
         toast.success('Task deleted successfully!');
       }
@@ -1755,7 +1623,7 @@ export default function ProjectDetail({
   const handleAssigneeChange = async (taskId: string, newAssigneeId: string | null, newTaskName?: string) => {
     try {
       // Find task in either kanban data or list view data
-      const task = projectTasks.find(t => t.task_id === taskId) || listViewData?.tasks.find(t => t.task_id === taskId);
+      const task = projectTasks.find(t => t.task_id === taskId) || allProjectTasks.find(t => t.task_id === taskId);
       if (!task) {
         throw new Error('Task not found');
       }
@@ -1780,15 +1648,10 @@ export default function ProjectDetail({
           )
         );
 
-        // Update list view data if it exists
-        if (listViewData) {
-          setListViewData(prev => prev ? {
-            ...prev,
-            tasks: prev.tasks.map(t =>
-              t.task_id === taskId ? taskWithChecklist : t
-            )
-          } : null);
-        }
+        // Update shared project-wide state
+        setAllProjectTasks(prev => prev.map(t =>
+          t.task_id === taskId ? taskWithChecklist : t
+        ));
 
         toast.success('Task assignee updated successfully!');
       }
@@ -2440,7 +2303,7 @@ export default function ProjectDetail({
   const renderContent = () => {
     // List view rendering
     if (viewMode === 'list') {
-      if (listViewLoading) {
+      if (!projectTaskDataLoaded) {
         return (
           <div className="flex items-center justify-center h-64">
             <div className="text-gray-500">Loading list view...</div>
@@ -2448,27 +2311,19 @@ export default function ProjectDetail({
         );
       }
 
-      if (!listViewData) {
-        return (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-gray-500">No data available</div>
-          </div>
-        );
-      }
-
       return (
         <TaskListView
-          phases={listViewData.phases}
-          tasks={listViewData.tasks}
-          statuses={listViewData.statuses}
-          taskResources={listViewData.taskResources}
-          taskTags={listViewData.taskTags}
-          taskDependencies={listViewData.taskDependencies}
-          checklistItems={Object.entries(listViewData.checklistItems).reduce((acc, [taskId, items]) => {
+          phases={projectPhases}
+          tasks={allProjectTasks}
+          statuses={projectStatuses}
+          taskResources={allProjectTaskResources}
+          taskTags={allProjectTaskTags}
+          taskDependencies={allTaskDependencies}
+          checklistItems={Object.entries(allChecklistItems).reduce((acc, [taskId, items]) => {
             acc[taskId] = {
               total: items.length,
-              completed: items.filter(item => item.completed).length,
-              items: items.map(item => ({ item_name: item.item_name, completed: item.completed }))
+              completed: items.filter((item: any) => item.completed).length,
+              items: items.map((item: any) => ({ item_name: item.item_name, completed: item.completed }))
             };
             return acc;
           }, {} as Record<string, { total: number; completed: number; items?: Array<{ item_name: string; completed: boolean }> }>)}
@@ -2479,7 +2334,7 @@ export default function ProjectDetail({
           onTaskMove={handleListViewTaskMove}
           onAddPhase={() => setShowPhaseQuickAdd(true)}
           onAddTask={(phaseId) => {
-            const phase = listViewData.phases.find(p => p.phase_id === phaseId);
+            const phase = projectPhases.find(p => p.phase_id === phaseId);
             if (phase) {
               setCurrentPhase(phase);
               setShowQuickAdd(true);

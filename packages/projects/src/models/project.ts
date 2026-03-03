@@ -711,38 +711,58 @@ const ProjectModel = {
   ): Promise<(IStatus | IStandardStatus)[]> => {
     try {
       const mappings = await ProjectModel.getProjectStatusMappings(knexOrTrx, tenant, projectId);
-      const statuses = await Promise.all(
-        mappings.map(async (mapping: IProjectStatusMapping): Promise<IStatus | IStandardStatus | null> => {
-          if (mapping.is_standard && mapping.standard_status_id) {
-            const standardStatus = await ProjectModel.getStandardStatus(knexOrTrx, tenant, mapping.standard_status_id);
-            return standardStatus
-              ? ({
-                  ...standardStatus,
-                  project_status_mapping_id: mapping.project_status_mapping_id,
-                  custom_name: mapping.custom_name,
-                  display_order: mapping.display_order,
-                  is_visible: mapping.is_visible,
-                  is_standard: true,
-                } as IStandardStatus)
-              : null;
-          } else if (mapping.status_id) {
-            const customStatus = await ProjectModel.getCustomStatus(knexOrTrx, tenant, mapping.status_id);
-            return customStatus
-              ? ({
-                  ...customStatus,
-                  project_status_mapping_id: mapping.project_status_mapping_id,
-                  custom_name: mapping.custom_name,
-                  display_order: mapping.display_order,
-                  is_visible: mapping.is_visible,
-                  is_standard: false,
-                } as IStatus)
-              : null;
-          } else {
-            console.error('Invalid project status mapping: missing both standard_status_id and status_id');
-            return null;
-          }
-        })
-      );
+      if (!mappings || mappings.length === 0) return [];
+
+      // Batch-fetch all standard and custom statuses in 2 queries instead of 1 per mapping
+      const standardIds = mappings
+        .filter(m => m.is_standard && m.standard_status_id)
+        .map(m => m.standard_status_id!);
+      const customIds = mappings
+        .filter(m => !m.is_standard && m.status_id)
+        .map(m => m.status_id!);
+
+      const [standardStatusRows, customStatusRows] = await Promise.all([
+        standardIds.length > 0
+          ? knexOrTrx<IStandardStatus>('standard_statuses').whereIn('standard_status_id', standardIds)
+          : [],
+        customIds.length > 0
+          ? knexOrTrx<IStatus>('statuses').whereIn('status_id', customIds).andWhere('tenant', tenant)
+          : []
+      ]);
+
+      const standardMap = new Map((standardStatusRows as IStandardStatus[]).map(s => [s.standard_status_id, s]));
+      const customMap = new Map((customStatusRows as IStatus[]).map(s => [s.status_id, s]));
+
+      const statuses = mappings.map((mapping: IProjectStatusMapping): IStatus | IStandardStatus | null => {
+        if (mapping.is_standard && mapping.standard_status_id) {
+          const standardStatus = standardMap.get(mapping.standard_status_id);
+          return standardStatus
+            ? ({
+                ...standardStatus,
+                project_status_mapping_id: mapping.project_status_mapping_id,
+                custom_name: mapping.custom_name,
+                display_order: mapping.display_order,
+                is_visible: mapping.is_visible,
+                is_standard: true,
+              } as IStandardStatus)
+            : null;
+        } else if (mapping.status_id) {
+          const customStatus = customMap.get(mapping.status_id);
+          return customStatus
+            ? ({
+                ...customStatus,
+                project_status_mapping_id: mapping.project_status_mapping_id,
+                custom_name: mapping.custom_name,
+                display_order: mapping.display_order,
+                is_visible: mapping.is_visible,
+                is_standard: false,
+              } as IStatus)
+            : null;
+        } else {
+          console.error('Invalid project status mapping: missing both standard_status_id and status_id');
+          return null;
+        }
+      });
       return statuses.filter((status): status is IStatus | IStandardStatus => status !== null);
     } catch (error) {
       console.error('Error getting project statuses:', error);
