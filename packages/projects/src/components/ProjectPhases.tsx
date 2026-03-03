@@ -268,6 +268,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
             variant="outline"
             size="sm"
             onClick={onCancelEdit}
+            title="Cancel editing"
           >
             Cancel
           </Button>
@@ -279,6 +280,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
               const editingPhase = phases.find(p => p.phase_id === editingPhaseId);
               if (editingPhase) onSavePhase(editingPhase);
             }}
+            title="Save changes"
           >
             Save
           </Button>
