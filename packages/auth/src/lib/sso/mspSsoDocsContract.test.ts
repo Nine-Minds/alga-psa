@@ -39,4 +39,33 @@ describe('MSP SSO docs and comments contracts', () => {
     expect(doc).toContain('Google');
     expect(doc).toContain('Microsoft');
   });
+
+  it('T052: docs describe EE request/verify/revoke lifecycle with DNS challenge guidance', () => {
+    const doc = read(path.resolve(repoRoot, 'docs/integrations/msp-sso-domain-claims.md'));
+
+    expect(doc).toContain('EE Domain Takeover Lifecycle');
+    expect(doc).toContain('request a claim');
+    expect(doc).toContain('DNS TXT challenge');
+    expect(doc).toContain('run Verify');
+    expect(doc).toContain('use Revoke');
+  });
+
+  it('T053: docs describe CE advisory behavior as non-blocking ownership model', () => {
+    const doc = read(path.resolve(repoRoot, 'docs/integrations/msp-sso-domain-claims.md'));
+
+    expect(doc).toContain('CE Advisory Domain Registration');
+    expect(doc).toContain('does not require ownership proof');
+    expect(doc).toContain('Ownership verification is intentionally non-blocking in CE');
+  });
+
+  it('T054: docs describe unmanaged-domain fallback prerequisites and behavior', () => {
+    const doc = read(path.resolve(repoRoot, 'docs/integrations/msp-sso-domain-claims.md'));
+
+    expect(doc).toContain('App-Level Fallback');
+    expect(doc).toContain('GOOGLE_OAUTH_CLIENT_ID');
+    expect(doc).toContain('GOOGLE_OAUTH_CLIENT_SECRET');
+    expect(doc).toContain('MICROSOFT_OAUTH_CLIENT_ID');
+    expect(doc).toContain('MICROSOFT_OAUTH_CLIENT_SECRET');
+    expect(doc).toContain('unmanaged/unregistered');
+  });
 });

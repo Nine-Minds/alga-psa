@@ -169,3 +169,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `F029`: existing MSP SSO button behavior suite continues to validate disabled state rules, in-flight discovery behavior, provider eligibility gating, disabled-click no-op, and remembered provider preference handling.
 - (2026-03-03) Validation run for `F029`:
   - `cd server && npx vitest run ../packages/auth/src/components/SsoProviderButtons.msp.test.tsx`
+- (2026-03-03) Completed `F030`: added tenant-admin runbook doc for EE domain takeover lifecycle (request -> DNS TXT verification -> verified -> revoke) at `docs/integrations/msp-sso-domain-claims.md`.
+- (2026-03-03) Validation run for `F030`:
+  - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoDocsContract.test.ts`

@@ -261,7 +261,7 @@
   {
     "id": "F030",
     "description": "Document EE domain takeover lifecycle and verification runbook for tenant admins.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goal #2",
       "Acceptance Criteria #1"
