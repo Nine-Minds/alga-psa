@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "Add CE advisory domain registration save/remove path without mandatory ownership proof.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #8", "Goal #3"]
   },
   {

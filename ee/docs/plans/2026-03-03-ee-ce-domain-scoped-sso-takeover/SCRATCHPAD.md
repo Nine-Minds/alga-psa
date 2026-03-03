@@ -25,6 +25,7 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Added `refreshMspSsoDomainClaimChallenge` action that always rotates active challenge material for an existing claim and reasserts `pending` claim status.
 - (2026-03-03) Added `verifyMspSsoDomainClaimOwnership` action that resolves DNS TXT records for the stored challenge label/value and promotes claim status to `verified` only on exact match.
 - (2026-03-03) Added `revokeMspSsoDomainClaim` action to transition active claims to `revoked` and invalidate any still-active verification challenges.
+- (2026-03-03) CE advisory save/remove path now explicitly sets/retains `claim_status='advisory'` on active registrations without any ownership proof gate.
 
 ## Discoveries / Constraints
 
@@ -43,6 +44,7 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Refresh semantics are intentionally non-idempotent: each refresh deactivates previous active challenge rows and creates a new DNS TXT value for the same claim id.
 - (2026-03-03) Verification action keeps neutral admin-safe failure messaging for DNS mismatch/missing challenge and does not expose sensitive internals.
 - (2026-03-03) Revoke flow updates lifecycle metadata (`claim_status_updated_at`, `revoked_at`) and keeps the claim row for historical/audit purposes instead of deleting it.
+- (2026-03-03) CE advisory remove remains non-destructive (`is_active=false`) so historical rows stay available for later reactivation/audit.
 
 ## Commands / Runbooks
 
@@ -71,6 +73,8 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) F008 implementation checks:
   - `cd server && npx vitest run ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
 - (2026-03-03) F009 implementation checks:
+  - `cd server && npx vitest run ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
+- (2026-03-03) F010 implementation checks:
   - `cd server && npx vitest run ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
 
 ## Links / References

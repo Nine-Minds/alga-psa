@@ -821,6 +821,11 @@ export const saveMspSsoLoginDomains = withAuth(async (
             .update({
               domain,
               is_active: true,
+              claim_status: 'advisory',
+              claim_status_updated_at: trx.fn.now(),
+              claim_status_updated_by: (user as { user_id?: string })?.user_id ?? null,
+              rejected_at: null,
+              revoked_at: null,
               updated_by: (user as { user_id?: string })?.user_id ?? null,
               updated_at: trx.fn.now(),
             });
@@ -832,6 +837,10 @@ export const saveMspSsoLoginDomains = withAuth(async (
           id: uuidv4(),
           domain,
           is_active: true,
+          claim_status: 'advisory',
+          claim_status_updated_at: trx.fn.now(),
+          claim_status_updated_by: (user as { user_id?: string })?.user_id ?? null,
+          claimed_at: trx.fn.now(),
           created_by: (user as { user_id?: string })?.user_id ?? null,
           updated_by: (user as { user_id?: string })?.user_id ?? null,
           created_at: trx.fn.now(),
