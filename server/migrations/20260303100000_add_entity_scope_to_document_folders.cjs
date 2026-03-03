@@ -1,4 +1,11 @@
 /**
+ * Adds entity_id/entity_type columns to document_folders, fixes PK for CitusDB,
+ * and replaces uniqueness constraint to allow entity-scoped folder paths.
+ *
+ * Combines:
+ *  - add_entity_scope_to_document_folders
+ *  - expand_document_folder_uniqueness_to_entity_scope
+ *
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
@@ -29,6 +36,7 @@ exports.up = async function up(knex) {
     return;
   }
 
+  // --- Step 1: Add entity_id and entity_type columns ---
   const hasEntityId = await knex.schema.hasColumn('document_folders', 'entity_id');
   const hasEntityType = await knex.schema.hasColumn('document_folders', 'entity_type');
 
@@ -44,7 +52,7 @@ exports.up = async function up(knex) {
     });
   }
 
-  // Fix primary key for CitusDB: distribution column (tenant) must be in PK
+  // --- Step 2: Fix primary key for CitusDB (distribution column must be in PK) ---
   const pkResult = await knex.raw(`
     SELECT conname FROM pg_constraint
     WHERE conrelid = 'document_folders'::regclass AND contype = 'p'
@@ -52,7 +60,6 @@ exports.up = async function up(knex) {
   const pkName = pkResult.rows?.[0]?.conname;
 
   if (pkName) {
-    // Check if tenant is already in the PK
     const pkCols = await knex.raw(`
       SELECT a.attname FROM pg_constraint c
       JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY(c.conkey)
@@ -80,6 +87,26 @@ exports.up = async function up(knex) {
   }
 
   await distributeIfCitus(knex, 'document_folders');
+
+  // --- Step 3: Replace uniqueness constraint with entity-scoped version ---
+  await knex.raw(`
+    ALTER TABLE document_folders
+    DROP CONSTRAINT IF EXISTS uq_document_folders_tenant_path;
+  `);
+
+  await knex.raw(`
+    DROP INDEX IF EXISTS uq_document_folders_tenant_path;
+  `);
+
+  await knex.raw(`
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_document_folders_tenant_path_entity_scope
+    ON document_folders (
+      tenant,
+      folder_path,
+      COALESCE(entity_id, '00000000-0000-0000-0000-000000000000'::uuid),
+      COALESCE(entity_type, '')
+    );
+  `);
 };
 
 exports.config = { transaction: false };
@@ -90,6 +117,34 @@ exports.down = async function down(knex) {
     return;
   }
 
+  // Reverse step 3: restore original uniqueness constraint
+  await knex.raw(`
+    DROP INDEX IF EXISTS uq_document_folders_tenant_path_entity_scope;
+  `);
+
+  const duplicatePaths = await knex.raw(`
+    SELECT EXISTS (
+      SELECT 1
+      FROM document_folders
+      GROUP BY tenant, folder_path
+      HAVING COUNT(*) > 1
+    ) AS has_duplicates;
+  `);
+
+  if (duplicatePaths.rows?.[0]?.has_duplicates) {
+    throw new Error(
+      'Cannot rollback: duplicate (tenant, folder_path) rows exist due to entity-scoped folders. ' +
+      'Remove entity-scoped duplicate rows before retrying rollback.'
+    );
+  }
+
+  await knex.raw(`
+    ALTER TABLE document_folders
+    ADD CONSTRAINT uq_document_folders_tenant_path
+    UNIQUE (tenant, folder_path);
+  `);
+
+  // Reverse step 1: drop entity columns
   const hasEntityId = await knex.schema.hasColumn('document_folders', 'entity_id');
   const hasEntityType = await knex.schema.hasColumn('document_folders', 'entity_type');
 
