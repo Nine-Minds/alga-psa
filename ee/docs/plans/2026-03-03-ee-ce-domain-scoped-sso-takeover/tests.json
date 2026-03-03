@@ -246,7 +246,7 @@
   {
     "id": "T031",
     "description": "CE discovery with advisory registered domain can return tenant-scoped provider eligibility.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
