@@ -1768,6 +1768,26 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     [definitions, activeWorkflowId]
   );
 
+  const hasUnsavedMetadataChanges = useMemo(() => {
+    if (!metadataDraft || !activeWorkflowRecord) return false;
+
+    const savedVisible = activeWorkflowRecord.is_visible ?? true;
+    const savedPaused = activeWorkflowRecord.is_paused ?? false;
+    const savedConcurrency = activeWorkflowRecord.concurrency_limit != null ? String(activeWorkflowRecord.concurrency_limit) : '';
+    const savedAutoPause = activeWorkflowRecord.auto_pause_on_failure ?? false;
+    const savedFailureThreshold = activeWorkflowRecord.failure_rate_threshold != null ? String(activeWorkflowRecord.failure_rate_threshold) : '';
+    const savedFailureMinRuns = activeWorkflowRecord.failure_rate_min_runs != null ? String(activeWorkflowRecord.failure_rate_min_runs) : '';
+
+    return (
+      metadataDraft.isVisible !== savedVisible ||
+      metadataDraft.isPaused !== savedPaused ||
+      metadataDraft.concurrencyLimit !== savedConcurrency ||
+      metadataDraft.autoPauseOnFailure !== savedAutoPause ||
+      metadataDraft.failureRateThreshold !== savedFailureThreshold ||
+      metadataDraft.failureRateMinRuns !== savedFailureMinRuns
+    );
+  }, [activeWorkflowRecord, metadataDraft]);
+
   const hasUnsavedDesignerChanges = useMemo(() => {
     if (!activeDefinition) return false;
 
@@ -2558,6 +2578,40 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     setActiveDefinition({ ...activeDefinition, ...changes });
   };
 
+  const persistMetadataDraft = useCallback(async (
+    workflowId: string,
+    options?: { force?: boolean; showSuccessToast?: boolean }
+  ) => {
+    const force = options?.force ?? false;
+    const showSuccessToast = options?.showSuccessToast ?? false;
+    if (!metadataDraft) return false;
+    if (!force && !hasUnsavedMetadataChanges) return false;
+
+    setIsSavingMetadata(true);
+    try {
+      const overrides = getWorkflowPlaywrightOverrides();
+      await delayIfNeeded(overrides?.saveSettingsDelayMs);
+      if (overrides?.failSaveSettings) {
+        throw new Error('Failed to update workflow settings');
+      }
+      await updateWorkflowDefinitionMetadataAction({
+        workflowId,
+        isVisible: metadataDraft.isVisible,
+        isPaused: metadataDraft.isPaused,
+        concurrencyLimit: metadataDraft.concurrencyLimit ? Number(metadataDraft.concurrencyLimit) : null,
+        autoPauseOnFailure: metadataDraft.autoPauseOnFailure,
+        failureRateThreshold: metadataDraft.failureRateThreshold ? Number(metadataDraft.failureRateThreshold) : null,
+        failureRateMinRuns: metadataDraft.failureRateMinRuns ? Number(metadataDraft.failureRateMinRuns) : null
+      });
+      if (showSuccessToast) {
+        toast.success('Workflow settings updated');
+      }
+      return true;
+    } finally {
+      setIsSavingMetadata(false);
+    }
+  }, [hasUnsavedMetadataChanges, metadataDraft]);
+
   const handleSaveDefinition = async () => {
     if (!activeDefinition) return;
     setIsSaving(true);
@@ -2579,6 +2633,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         router.replace(`/msp/workflow-editor/${encodeURIComponent(data.workflowId)}`, { scroll: false });
         toast.success('Workflow created');
       } else {
+        await persistMetadataDraft(activeWorkflowId);
         await updateWorkflowDefinitionDraftAction({
           workflowId: activeWorkflowId,
           definition: activeDefinition,
@@ -2602,28 +2657,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
   const handleSaveMetadata = async () => {
     if (!activeWorkflowId || !metadataDraft) return;
-    setIsSavingMetadata(true);
     try {
-      const overrides = getWorkflowPlaywrightOverrides();
-      await delayIfNeeded(overrides?.saveSettingsDelayMs);
-      if (overrides?.failSaveSettings) {
-        throw new Error('Failed to update workflow settings');
-      }
-      await updateWorkflowDefinitionMetadataAction({
-        workflowId: activeWorkflowId,
-        isVisible: metadataDraft.isVisible,
-        isPaused: metadataDraft.isPaused,
-        concurrencyLimit: metadataDraft.concurrencyLimit ? Number(metadataDraft.concurrencyLimit) : null,
-        autoPauseOnFailure: metadataDraft.autoPauseOnFailure,
-        failureRateThreshold: metadataDraft.failureRateThreshold ? Number(metadataDraft.failureRateThreshold) : null,
-        failureRateMinRuns: metadataDraft.failureRateMinRuns ? Number(metadataDraft.failureRateMinRuns) : null
-      });
-      toast.success('Workflow settings updated');
+      await persistMetadataDraft(activeWorkflowId, { force: true, showSuccessToast: true });
       void loadDefinitions();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to update workflow settings');
-    } finally {
-      setIsSavingMetadata(false);
     }
   };
 
@@ -2639,6 +2677,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       if (overrides?.failPublish) {
         throw new Error('Failed to publish workflow');
       }
+      await persistMetadataDraft(activeWorkflowId);
       const data = await publishWorkflowDefinitionAction({
         workflowId: activeWorkflowId,
         version: activeDefinition.version,
@@ -2676,7 +2715,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       }
       void loadDefinitions();
     } catch (error) {
-      toast.error('Failed to publish workflow');
+      toast.error(error instanceof Error ? error.message : 'Failed to publish workflow');
     } finally {
       setIsPublishing(false);
     }

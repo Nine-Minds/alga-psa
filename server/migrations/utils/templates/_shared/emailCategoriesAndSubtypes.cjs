@@ -24,6 +24,7 @@ const SUBTYPES = [
   { category: 'Tickets', name: 'Ticket Closed', description: 'When a ticket is closed' },
   { category: 'Tickets', name: 'Ticket Assigned', description: 'When a ticket is assigned to a user' },
   { category: 'Tickets', name: 'Ticket Comment Added', description: 'When a comment is added to a ticket' },
+  { category: 'Tickets', name: 'Ticket Team Assigned', description: 'When a team is assigned to a ticket' },
   // Surveys
   { category: 'Surveys', name: 'survey-ticket-closed', description: 'When a customer satisfaction survey invitation is sent after a ticket is closed' },
   // Invoices

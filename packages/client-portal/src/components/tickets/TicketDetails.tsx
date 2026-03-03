@@ -724,6 +724,7 @@ export function TicketDetails({
                 onContentChange={handleContentChange}
                 overrides={commentOverrides}
                 onClipboardImageUploaded={refreshTicketDocuments}
+                defaultNewestFirst
               />
             </div>
           )}

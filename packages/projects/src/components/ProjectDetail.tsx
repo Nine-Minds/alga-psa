@@ -556,9 +556,11 @@ export default function ProjectDetail({
 
   const [projectTreeData, setProjectTreeData] = useState<any[]>([]);
   const kanbanBoardRef = useRef<HTMLDivElement>(null);
+  const kanbanHeaderRef = useRef<HTMLDivElement>(null);
   const scrollbarProxyRef = useRef<HTMLDivElement>(null);
   const stickyStatusStripRef = useRef<HTMLDivElement>(null);
   const [boardScrollWidth, setBoardScrollWidth] = useState(0);
+  const [kanbanHeaderHeight, setKanbanHeaderHeight] = useState(0);
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const scrollSpeedsRef = useRef<{ horizontal: number; vertical: number; column: HTMLElement | null }>({
     horizontal: 0,
@@ -586,6 +588,75 @@ export default function ProjectDetail({
       return counts;
     }, {});
   }, [filteredTasks]);
+
+  const getStatusStripStyles = useCallback((status: ProjectStatus, index: number) => {
+    if (status.color) {
+      const base = status.color;
+      if (isDark) {
+        const itemBgHex = darkenHexColor(base, 0.75) ?? base;
+        const itemBorderHex = darkenHexColor(base, 0.55) ?? base;
+        const badgeBgHex = darkenHexColor(base, 0.65) ?? base;
+        const textColor = lightenHexColor(base, 0.40) ?? base;
+
+        return {
+          itemStyle: {
+            backgroundColor: hexToRgba(itemBgHex, 0.72) ?? itemBgHex,
+            borderColor: hexToRgba(itemBorderHex, 0.8) ?? itemBorderHex,
+            color: textColor,
+          } as React.CSSProperties,
+          countStyle: {
+            backgroundColor: hexToRgba(badgeBgHex, 0.82) ?? badgeBgHex,
+            color: textColor,
+          } as React.CSSProperties,
+        };
+      }
+      const itemBgHex = lightenHexColor(base, 0.72) ?? base;
+      const itemBorderHex = lightenHexColor(base, 0.45) ?? base;
+      const badgeBgHex = lightenHexColor(base, 0.62) ?? base;
+
+      return {
+        itemStyle: {
+          backgroundColor: hexToRgba(itemBgHex, 0.72) ?? itemBgHex,
+          borderColor: hexToRgba(itemBorderHex, 0.8) ?? itemBorderHex,
+          color: base,
+        } as React.CSSProperties,
+        countStyle: {
+          backgroundColor: hexToRgba(badgeBgHex, 0.82) ?? badgeBgHex,
+          color: base,
+        } as React.CSSProperties,
+      };
+    }
+
+    if (isDark) {
+      return {
+        itemStyle: {
+          backgroundColor: 'rgb(var(--color-border-100))',
+          borderColor: 'rgb(var(--color-border-200))',
+          color: 'rgb(var(--color-text-700))',
+        } as React.CSSProperties,
+        countStyle: {
+          backgroundColor: 'rgb(var(--color-border-200))',
+          color: 'rgb(var(--color-text-700))',
+        } as React.CSSProperties,
+      };
+    }
+
+    const paletteIndex = index % STATUS_FALLBACK_BACKGROUNDS.length;
+    const itemBg = STATUS_FALLBACK_BACKGROUNDS[paletteIndex];
+    const badgeBg = STATUS_FALLBACK_BADGES[paletteIndex];
+    const border = STATUS_FALLBACK_BORDERS[paletteIndex];
+    return {
+      itemStyle: {
+        backgroundColor: hexToRgba(itemBg, 0.72) ?? itemBg,
+        borderColor: hexToRgba(border, 0.85) ?? border,
+        color: 'rgb(var(--color-text-700))',
+      } as React.CSSProperties,
+      countStyle: {
+        backgroundColor: hexToRgba(badgeBg, 0.82) ?? badgeBg,
+        color: 'rgb(var(--color-text-700))',
+      } as React.CSSProperties,
+    };
+  }, [isDark]);
 
   // Proxy scrollbar and sticky status strip: keep horizontal scroll positions in sync.
   useEffect(() => {
@@ -644,6 +715,21 @@ export default function ProjectDetail({
       ro.disconnect();
     };
   }, [showStickyStatusNames, viewMode]);
+
+  // Track header height so the sticky status strip can stack below it when both are active
+  useEffect(() => {
+    const header = kanbanHeaderRef.current;
+    if (!header) return;
+
+    const updateHeight = () => {
+      setKanbanHeaderHeight(header.getBoundingClientRect().height);
+    };
+    updateHeight();
+
+    const ro = new ResizeObserver(updateHeight);
+    ro.observe(header);
+    return () => ro.disconnect();
+  }, [viewMode]);
 
   // Fetch list view data only when in list view mode or when explicitly invalidated while in list view
   useEffect(() => {
@@ -1866,74 +1952,6 @@ export default function ProjectDetail({
   // Render the sticky header with title, view switcher, search, and filters
   const renderHeader = () => {
     const completionPercentage = (completedTasksCount / filteredTasks.length) * 100 || 0;
-    const getStatusStripStyles = (status: ProjectStatus, index: number) => {
-      if (status.color) {
-        const base = status.color;
-        if (isDark) {
-          const itemBgHex = darkenHexColor(base, 0.75) ?? base;
-          const itemBorderHex = darkenHexColor(base, 0.55) ?? base;
-          const badgeBgHex = darkenHexColor(base, 0.65) ?? base;
-          const textColor = lightenHexColor(base, 0.40) ?? base;
-
-          return {
-            itemStyle: {
-              backgroundColor: hexToRgba(itemBgHex, 0.72) ?? itemBgHex,
-              borderColor: hexToRgba(itemBorderHex, 0.8) ?? itemBorderHex,
-              color: textColor,
-            } as React.CSSProperties,
-            countStyle: {
-              backgroundColor: hexToRgba(badgeBgHex, 0.82) ?? badgeBgHex,
-              color: textColor,
-            } as React.CSSProperties,
-          };
-        }
-        const itemBgHex = lightenHexColor(base, 0.72) ?? base;
-        const itemBorderHex = lightenHexColor(base, 0.45) ?? base;
-        const badgeBgHex = lightenHexColor(base, 0.62) ?? base;
-
-        return {
-          itemStyle: {
-            backgroundColor: hexToRgba(itemBgHex, 0.72) ?? itemBgHex,
-            borderColor: hexToRgba(itemBorderHex, 0.8) ?? itemBorderHex,
-            color: base,
-          } as React.CSSProperties,
-          countStyle: {
-            backgroundColor: hexToRgba(badgeBgHex, 0.82) ?? badgeBgHex,
-            color: base,
-          } as React.CSSProperties,
-        };
-      }
-
-      if (isDark) {
-        return {
-          itemStyle: {
-            backgroundColor: 'rgb(var(--color-border-100))',
-            borderColor: 'rgb(var(--color-border-200))',
-            color: 'rgb(var(--color-text-700))',
-          } as React.CSSProperties,
-          countStyle: {
-            backgroundColor: 'rgb(var(--color-border-200))',
-            color: 'rgb(var(--color-text-700))',
-          } as React.CSSProperties,
-        };
-      }
-
-      const paletteIndex = index % STATUS_FALLBACK_BACKGROUNDS.length;
-      const itemBg = STATUS_FALLBACK_BACKGROUNDS[paletteIndex];
-      const badgeBg = STATUS_FALLBACK_BADGES[paletteIndex];
-      const border = STATUS_FALLBACK_BORDERS[paletteIndex];
-      return {
-        itemStyle: {
-          backgroundColor: hexToRgba(itemBg, 0.72) ?? itemBg,
-          borderColor: hexToRgba(border, 0.85) ?? border,
-          color: 'rgb(var(--color-text-700))',
-        } as React.CSSProperties,
-        countStyle: {
-          backgroundColor: hexToRgba(badgeBg, 0.82) ?? badgeBg,
-          color: 'rgb(var(--color-text-700))',
-        } as React.CSSProperties,
-      };
-    };
 
     if (viewMode === 'list') {
       return (
@@ -2144,13 +2162,7 @@ export default function ProjectDetail({
             <Tooltip content={showStickyStatusNames ? "Hide sticky status names" : "Show sticky status names"}>
               <button
                 id="sticky-status-names-toggle-kanban"
-                onClick={() => {
-                  const nextValue = !showStickyStatusNames;
-                  setShowStickyStatusNames(nextValue);
-                  if (nextValue && !isHeaderPinned) {
-                    setIsHeaderPinned(true);
-                  }
-                }}
+                onClick={() => setShowStickyStatusNames(!showStickyStatusNames)}
                 className={`p-1.5 rounded-md transition-colors ${
                   showStickyStatusNames
                     ? 'bg-primary-100 text-primary-600'
@@ -2354,37 +2366,6 @@ export default function ProjectDetail({
           )}
         </div>
 
-        {showStickyStatusNames && (
-          <div className={styles.kanbanStatusStrip}>
-            <div className={styles.kanbanStatusStripScroller} ref={stickyStatusStripRef}>
-              <div className={styles.kanbanStatusStripTrack}>
-                {visibleKanbanStatuses.map((status, index) => {
-                  const { itemStyle, countStyle } = getStatusStripStyles(status, index);
-                  return (
-                    <div
-                      key={status.project_status_mapping_id}
-                      className={styles.kanbanStatusStripItem}
-                      style={{
-                        ...itemStyle,
-                        width: `${kanbanColumnWidth}px`,
-                        minWidth: `${kanbanColumnWidth}px`,
-                        maxWidth: `${kanbanColumnWidth}px`,
-                      }}
-                      title={status.custom_name || status.name}
-                    >
-                      <span className={styles.kanbanStatusStripName}>
-                        {status.custom_name || status.name}
-                      </span>
-                      <span className={styles.kanbanStatusStripCount} style={countStyle}>
-                        {statusTaskCounts[status.project_status_mapping_id] ?? 0}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   };
@@ -2584,13 +2565,51 @@ export default function ProjectDetail({
             </div>
           )}
           <div className={styles.kanbanArea}>
-            <div className={`${styles.kanbanHeader} ${isHeaderPinned ? styles.kanbanHeaderPinned : ''}`}>
+            <div
+              ref={kanbanHeaderRef}
+              className={`${styles.kanbanHeader} ${isHeaderPinned ? styles.kanbanHeaderPinned : ''}`}
+            >
               {renderHeader()}
               {/* Proxy scrollbar — sits at the bottom edge of the header */}
               <div className={styles.kanbanScrollbarProxy} ref={scrollbarProxyRef}>
                 <div className={styles.kanbanScrollbarProxyInner} style={{ width: boardScrollWidth }} />
               </div>
             </div>
+            {/* Independent sticky status strip */}
+            {showStickyStatusNames && (
+              <div
+                className={styles.kanbanStatusStripSticky}
+                style={{ top: isHeaderPinned ? `${kanbanHeaderHeight}px` : 0 }}
+              >
+                <div className={styles.kanbanStatusStripScroller} ref={stickyStatusStripRef}>
+                  <div className={styles.kanbanStatusStripTrack}>
+                    {visibleKanbanStatuses.map((status, index) => {
+                      const { itemStyle, countStyle } = getStatusStripStyles(status, index);
+                      return (
+                        <div
+                          key={status.project_status_mapping_id}
+                          className={styles.kanbanStatusStripItem}
+                          style={{
+                            ...itemStyle,
+                            width: `${kanbanColumnWidth}px`,
+                            minWidth: `${kanbanColumnWidth}px`,
+                            maxWidth: `${kanbanColumnWidth}px`,
+                          }}
+                          title={status.custom_name || status.name}
+                        >
+                          <span className={styles.kanbanStatusStripName}>
+                            {status.custom_name || status.name}
+                          </span>
+                          <span className={styles.kanbanStatusStripCount} style={countStyle}>
+                            {statusTaskCounts[status.project_status_mapping_id] ?? 0}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Scrollable content area */}
             <div className={styles.kanbanContainer} ref={kanbanBoardRef} data-kanban-container="true">
               {renderContent()}

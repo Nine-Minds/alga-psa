@@ -209,6 +209,11 @@ export const deleteUser = withAuth(async (
     }
 
     const result = await deleteEntityWithValidation('user', userId, db, tenant, async (trx, tenantId) => {
+      // Clear reports_to references so subordinates don't point to a deleted user
+      await trx('users')
+        .where({ reports_to: userId, tenant: tenantId || undefined })
+        .update({ reports_to: null });
+
       await trx('workflow_tasks')
         .where({ completed_by: userId, tenant: tenantId || undefined })
         .update({ completed_by: null });
@@ -354,26 +359,15 @@ export const getReportsToSubordinates = withAuth(async (
         throw new Error('Permission denied: Cannot read other users reporting chains');
       }
 
-      const { rows } = await trx.raw(
-        `
-          WITH RECURSIVE reports_to_chain AS (
-            SELECT u.user_id
-            FROM users u
-            WHERE u.reports_to = ?
-              AND u.tenant = ?
-            UNION ALL
-            SELECT u2.user_id
-            FROM users u2
-            JOIN reports_to_chain rtc ON u2.reports_to = rtc.user_id
-            WHERE u2.tenant = ?
-          )
-          SELECT u.*
-          FROM users u
-          JOIN reports_to_chain rtc ON u.user_id = rtc.user_id
-          WHERE u.tenant = ?
-        `,
-        [targetManagerId, tenant, tenant, tenant]
-      );
+      const subordinateIds = await User.getReportsToSubordinateIds(trx, targetManagerId);
+      if (subordinateIds.length === 0) {
+        return [] as IUser[];
+      }
+
+      const rows = await trx('users')
+        .whereIn('user_id', subordinateIds)
+        .where({ tenant })
+        .select('*');
 
       return rows as IUser[];
     });

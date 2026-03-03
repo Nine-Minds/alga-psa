@@ -299,12 +299,14 @@ export function QuickAddTicket({
         if (defaultBoard?.board_id) {
           setBoardId(defaultBoard.board_id);
 
-          // If no prefilled assignee was provided, prefer board-level default assignee.
-          if (!prefilledAssignedTo && defaultBoard.default_assigned_to) {
-            setAssignedTo(defaultBoard.default_assigned_to);
-          }
-          if (defaultBoard.default_assigned_team_id) {
-            setAssignedTeamId(defaultBoard.default_assigned_team_id);
+          // If no prefilled assignee was provided, prefer board-level defaults.
+          if (!prefilledAssignedTo) {
+            if (defaultBoard.default_assigned_team_id) {
+              setAssignedTeamId(defaultBoard.default_assigned_team_id);
+            }
+            if (defaultBoard.default_assigned_to) {
+              setAssignedTo(defaultBoard.default_assigned_to);
+            }
           }
         }
 
@@ -510,13 +512,21 @@ export function QuickAddTicket({
 
     const selectedBoard = boards.find(b => b.board_id === newBoardId);
 
-    // Pre-fill assigned agent and team from board's defaults if current assignedTo is empty
+    // Pre-fill assigned agent and team from board's defaults if not already set
     if (!assignedTo && newBoardId) {
-      if (selectedBoard?.default_assigned_to) {
+      if (selectedBoard?.default_assigned_team_id) {
+        // Resolve current team lead dynamically
+        const defaultTeam = teams.find(t => t.team_id === selectedBoard.default_assigned_team_id);
+        if (defaultTeam?.manager_id) {
+          setAssignedTo(defaultTeam.manager_id);
+        } else if (selectedBoard.default_assigned_to) {
+          setAssignedTo(selectedBoard.default_assigned_to);
+        }
+      } else if (selectedBoard?.default_assigned_to) {
         setAssignedTo(selectedBoard.default_assigned_to);
       }
     }
-    if (selectedBoard?.default_assigned_team_id) {
+    if (!assignedTeamId && selectedBoard?.default_assigned_team_id) {
       setAssignedTeamId(selectedBoard.default_assigned_team_id);
     }
 
@@ -692,6 +702,7 @@ export function QuickAddTicket({
           await assignTeamToTicket(newTicket.ticket_id, assignedTeamId);
         } catch (teamError) {
           console.error('Failed to assign team:', teamError);
+          toast.error('Ticket created but team assignment failed');
         }
       }
 
