@@ -425,12 +425,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const isFirstRender = useRef(true);
 
   useEffect(() => {
-    // Skip the effect on initial render to prevent unnecessary fetch
+    // Always skip the effect on initial render — the RSC page already fetched
+    // tickets with the correct filters, so re-fetching is redundant and causes
+    // a cascade of state updates (especially when storedPageSize also triggers).
     if (isFirstRender.current) {
       isFirstRender.current = false;
-      if (!filtersHaveInitialValues) {
-        return;
-      }
+      return;
     }
 
     const currentFilters: Partial<ITicketListFilters> = {
@@ -476,7 +476,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     selectedSlaStatus,
     teamsV2Enabled,
     // onFiltersChanged intentionally omitted - we want to trigger only when filter values change, not when the callback changes
-    filtersHaveInitialValues
   ]);
 
   const resetDeleteState = () => {

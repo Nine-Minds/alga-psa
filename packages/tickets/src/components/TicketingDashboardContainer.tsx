@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import TicketingDashboard from './TicketingDashboard';
 import { fetchTicketsWithPagination } from '../actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
@@ -229,9 +229,9 @@ export default function TicketingDashboardContainer({
       if (result.metadata) {
         setTicketMetadata(result.metadata);
       }
-      setActiveFilters(currentFiltersWithDefaults);
-      setSortBy(effectiveSortBy);
-      setSortDirection(effectiveSortDirection);
+      // Note: callers are responsible for setting activeFilters, sortBy, sortDirection
+      // before calling fetchTickets. Setting them here would create new object references
+      // that cascade through dependencies and cause re-render loops.
 
     } catch (error) {
       handleError(error, 'Failed to fetch tickets');
@@ -241,7 +241,14 @@ export default function TicketingDashboardContainer({
       console.log('[Container] Setting isLoading to false');
       setIsLoading(false);
     }
-  }, [currentUser, sortBy, sortDirection]);
+  }, [currentUser]);
+
+  // Refs to avoid putting activeFilters/fetchTickets in the storedPageSize effect deps.
+  // These values are needed when the effect fires, but changes to them should NOT re-trigger it.
+  const activeFiltersRef = useRef(activeFilters);
+  activeFiltersRef.current = activeFilters;
+  const fetchTicketsRef = useRef(fetchTickets);
+  fetchTicketsRef.current = fetchTickets;
 
   useEffect(() => {
     if (!hasLoadedPageSizePreference) {
@@ -255,16 +262,14 @@ export default function TicketingDashboardContainer({
 
     setCurrentPage(1);
     setPageSize(normalizedPageSize);
-    updateURLWithFilters(activeFilters, 1, normalizedPageSize);
-    void fetchTickets(activeFilters, 1, normalizedPageSize);
+    updateURLWithFilters(activeFiltersRef.current, 1, normalizedPageSize);
+    void fetchTicketsRef.current(activeFiltersRef.current, 1, normalizedPageSize);
   }, [
     hasLoadedPageSizePreference,
     storedPageSize,
     pageSize,
     initialPageSize,
-    activeFilters,
     updateURLWithFilters,
-    fetchTickets
   ]);
 
   const handlePageChange = useCallback(async (newPage: number) => {
