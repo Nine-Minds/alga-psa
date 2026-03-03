@@ -124,7 +124,7 @@
   {
     "id": "T016",
     "description": "EE conflict policy blocks second tenant from becoming verified owner of the same domain.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
