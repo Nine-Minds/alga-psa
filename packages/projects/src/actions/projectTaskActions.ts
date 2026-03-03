@@ -1953,3 +1953,125 @@ export const getPhaseTaskCounts = withAuth(async (
         return result;
     });
 });
+
+// Lightweight fetch of all project tasks with auxiliary data (no phases/statuses — use props)
+// Replaces both getPhaseTaskCounts and getAllProjectTasksForListView
+export const getProjectTaskData = withAuth(async (
+    user,
+    { tenant },
+    projectId: string
+): Promise<{
+    tasks: IProjectTask[];
+    taskResources: Record<string, any[]>;
+    taskTags: Record<string, ITag[]>;
+    checklistItems: Record<string, ITaskChecklistItem[]>;
+    taskDependencies: Record<string, { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] }>;
+}> => {
+    const { knex: db } = await createTenantKnex();
+
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+        await checkPermission(user, 'project', 'read', trx);
+
+        // 1. Get all tasks across all phases for this project
+        const phases = await trx('project_phases')
+            .where({ project_id: projectId, tenant })
+            .select('phase_id');
+        const phaseIds = phases.map(p => p.phase_id);
+
+        const tasks: IProjectTask[] = phaseIds.length > 0
+            ? await trx('project_tasks')
+                .whereIn('phase_id', phaseIds)
+                .andWhere('tenant', tenant)
+                .orderBy(['phase_id', 'order_key'])
+            : [];
+
+        const taskIds = tasks.map(t => t.task_id);
+
+        // 2. Parallel fetch auxiliary data
+        const [taskResourcesArray, checklistItemsArray, tagsArray, predecessorDeps, successorDeps] = await Promise.all([
+            taskIds.length > 0
+                ? ProjectTaskModel.getTaskResourcesForTasks(trx, tenant, taskIds)
+                : [],
+            taskIds.length > 0
+                ? trx('task_checklist_items')
+                    .whereIn('task_id', taskIds)
+                    .andWhere('tenant', tenant)
+                    .orderBy('order_number')
+                : [],
+            taskIds.length > 0
+                ? findTagsByEntityIds(taskIds, 'project_task').catch(() => [])
+                : [],
+            taskIds.length > 0
+                ? trx('project_task_dependencies as ptd')
+                    .whereIn('ptd.successor_task_id', taskIds)
+                    .andWhere('ptd.tenant', tenant)
+                    .leftJoin('project_tasks as pt', function() {
+                        this.on('ptd.predecessor_task_id', '=', 'pt.task_id')
+                            .andOn('ptd.tenant', '=', 'pt.tenant');
+                    })
+                    .select('ptd.*', 'pt.task_name as predecessor_task_name', 'pt.wbs_code as predecessor_wbs_code')
+                : [],
+            taskIds.length > 0
+                ? trx('project_task_dependencies as ptd')
+                    .whereIn('ptd.predecessor_task_id', taskIds)
+                    .andWhere('ptd.tenant', tenant)
+                    .leftJoin('project_tasks as pt', function() {
+                        this.on('ptd.successor_task_id', '=', 'pt.task_id')
+                            .andOn('ptd.tenant', '=', 'pt.tenant');
+                    })
+                    .select('ptd.*', 'pt.task_name as successor_task_name', 'pt.wbs_code as successor_wbs_code')
+                : []
+        ]);
+
+        // 3. Convert arrays to maps keyed by task_id
+        const taskResources: Record<string, any[]> = {};
+        const checklistItems: Record<string, ITaskChecklistItem[]> = {};
+        const taskTags: Record<string, ITag[]> = {};
+        const taskDependencies: Record<string, { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] }> = {};
+
+        for (const resource of taskResourcesArray) {
+            if (resource.task_id) {
+                (taskResources[resource.task_id] ??= []).push(resource);
+            }
+        }
+        for (const item of checklistItemsArray) {
+            (checklistItems[item.task_id] ??= []).push(item);
+        }
+        for (const tag of tagsArray) {
+            if (tag.tagged_id) {
+                (taskTags[tag.tagged_id] ??= []).push(tag);
+            }
+        }
+
+        for (const dep of predecessorDeps) {
+            const taskId = dep.successor_task_id;
+            if (!taskDependencies[taskId]) {
+                taskDependencies[taskId] = { predecessors: [], successors: [] };
+            }
+            taskDependencies[taskId].predecessors.push({
+                ...dep,
+                predecessor_task: {
+                    task_id: dep.predecessor_task_id,
+                    task_name: dep.predecessor_task_name,
+                    wbs_code: dep.predecessor_wbs_code
+                }
+            });
+        }
+        for (const dep of successorDeps) {
+            const taskId = dep.predecessor_task_id;
+            if (!taskDependencies[taskId]) {
+                taskDependencies[taskId] = { predecessors: [], successors: [] };
+            }
+            taskDependencies[taskId].successors.push({
+                ...dep,
+                successor_task: {
+                    task_id: dep.successor_task_id,
+                    task_name: dep.successor_task_name,
+                    wbs_code: dep.successor_wbs_code
+                }
+            });
+        }
+
+        return { tasks, taskResources, taskTags, checklistItems, taskDependencies };
+    });
+});
