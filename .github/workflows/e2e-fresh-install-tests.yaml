@@ -30,7 +30,7 @@ jobs:
       #--------------------------------------------------------------
       - name: Check for relevant file changes
         id: changed_files_check
-        uses: tj-actions/changed-files@v42 # Using a specific version
+        uses: tj-actions/changed-files@v46 # Updated from v42 to fix CVE-2025-30066
         with:
           # List of paths that, when modified, SHOULD trigger the heavy
           # E2E job. Paths NOT listed here (helm/, docs/, scripts/, sdk/)
