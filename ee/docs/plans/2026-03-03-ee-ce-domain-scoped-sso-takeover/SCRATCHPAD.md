@@ -182,3 +182,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `F034`: expanded discovery/resolver matrix coverage with explicit EE verified/pending/revoked/ambiguous cases and CE advisory routing case in `mspSsoResolution.test.ts`, plus endpoint contract suites for discover/resolve.
 - (2026-03-03) Validation run for `F034`:
   - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoResolution.test.ts src/app/api/auth/msp/sso/discover/route.test.ts src/app/api/auth/msp/sso/resolve/route.test.ts`
+- (2026-03-03) Completed `F035`: route contract tests verify `/auth/msp/signin` entry path and callbackUrl passthrough/default behavior remain unchanged under lifecycle integration.
+- (2026-03-03) Validation run for `F035`:
+  - `cd server && npx vitest run ../packages/auth/src/components/MspSignInRoute.contract.test.ts`

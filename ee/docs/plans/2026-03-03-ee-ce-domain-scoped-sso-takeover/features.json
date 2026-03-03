@@ -308,7 +308,7 @@
   {
     "id": "F035",
     "description": "Preserve `/auth/msp/signin` and callbackUrl passthrough contracts under the new takeover lifecycle behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements #14",
       "Acceptance Criteria #9"
