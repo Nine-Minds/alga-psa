@@ -265,3 +265,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `T038`: Resolver in EE with non-verified claim context uses app fallback or generic failure per eligibility.
 - (2026-03-03) Validation run for `T038`:
   - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T039`: Resolver denies provider attempts outside discovered allow-list with generic response.
+- (2026-03-03) Validation run for `T039`:
+  - `cd server && npx vitest run --coverage.enabled=false src/app/api/auth/msp/sso/resolve/route.test.ts`

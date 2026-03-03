@@ -311,7 +311,7 @@
   {
     "id": "T039",
     "description": "Resolver denies provider attempts outside discovered allow-list with generic response.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
