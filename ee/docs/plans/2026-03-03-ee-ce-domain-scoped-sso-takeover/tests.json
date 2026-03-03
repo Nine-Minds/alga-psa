@@ -221,7 +221,7 @@
   {
     "id": "T028",
     "description": "EE discovery with pending claim returns app-level fallback providers only.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
