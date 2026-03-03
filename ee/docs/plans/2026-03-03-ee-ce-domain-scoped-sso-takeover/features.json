@@ -80,7 +80,7 @@
   {
     "id": "F014",
     "description": "Update CE settings UI to expose advisory domain registration with explicit advisory copy.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes #5", "Functional Requirements #8"]
   },
   {

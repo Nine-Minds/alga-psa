@@ -251,7 +251,9 @@ export function MspSsoLoginDomainsSettings() {
       <CardHeader>
         <CardTitle>MSP SSO Login Domains</CardTitle>
         <CardDescription>
-          Configure domains used to scope MSP login SSO provider discovery before user authentication.
+          {isEnterprise
+            ? 'Manage domain claim lifecycle for MSP login SSO provider discovery before user authentication.'
+            : 'Register advisory domains for MSP login SSO discovery. Ownership verification is not enforced in Community Edition.'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -389,6 +391,12 @@ export function MspSsoLoginDomainsSettings() {
           </>
         ) : (
           <>
+            <Alert variant="info">
+              <AlertDescription>
+                Advisory mode: domain registration helps route MSP SSO discovery but does not require ownership
+                verification in Community Edition.
+              </AlertDescription>
+            </Alert>
             <div className="space-y-2">
               <Label htmlFor="msp-sso-domain-add-input">Add login domain</Label>
               <div className="flex items-center gap-2">

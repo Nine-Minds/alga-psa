@@ -29,6 +29,7 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Verified ownership conflict guard is now enforced twice: app-layer check during verify action and DB-layer partial unique index on `lower(domain)` for active `verified|verified_legacy` rows.
 - (2026-03-03) EE settings UI now renders lifecycle-aware claim rows with status badges and per-claim actions (`request`, `verify`, `refresh challenge`, `revoke`) instead of only a plain editable domain list.
 - (2026-03-03) Pending EE claims now render inline DNS TXT instructions in settings (host + value) sourced from the active challenge row.
+- (2026-03-03) CE UI copy now explicitly labels domain registration as advisory and clarifies that ownership verification is not enforced in Community Edition.
 
 ## Discoveries / Constraints
 
@@ -51,6 +52,7 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Conflict is resolved at verify time (not request time), matching PRD recommendation and preserving neutral request behavior.
 - (2026-03-03) CE and EE UX now branch in the same component using edition detection: CE keeps advisory save/remove list; EE uses immediate claim workflow actions.
 - (2026-03-03) Verification status feedback is surfaced through inline/error alert state and action-specific toasts (verify/refresh/request/revoke outcomes).
+- (2026-03-03) Header/description messaging now diverges by edition so EE focuses on claim lifecycle actions while CE emphasizes advisory registration semantics.
 
 ## Commands / Runbooks
 
@@ -90,6 +92,8 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
   - `cd server && npx vitest run ../packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.providers.test.ts`
 - (2026-03-03) F013 implementation checks:
   - `cd server && npx vitest run ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
+  - `cd server && npx vitest run ../packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.providers.test.ts`
+- (2026-03-03) F014 implementation checks:
   - `cd server && npx vitest run ../packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.providers.test.ts`
 
 ## Links / References
