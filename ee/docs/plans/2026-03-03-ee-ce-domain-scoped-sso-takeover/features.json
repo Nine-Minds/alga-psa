@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "In both editions, unresolved/unregistered domains return app-level fallback provider set.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #9", "Primary Flow D"]
   },
   {

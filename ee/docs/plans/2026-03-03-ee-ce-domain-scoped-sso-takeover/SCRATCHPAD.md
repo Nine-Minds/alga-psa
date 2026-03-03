@@ -35,6 +35,7 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) EE routing gate is now strict: only `verified`/`verified_legacy` claims can produce tenant-scoped provider discovery; all other statuses bypass tenant takeover.
 - (2026-03-03) EE fallback behavior now explicitly routes `pending`, `rejected`, `revoked`, and ambiguous domain claims to app-level provider discovery.
 - (2026-03-03) CE routing now treats advisory claims as takeover-eligible, enabling tenant-scoped provider discovery without ownership verification requirements.
+- (2026-03-03) Unregistered/unresolved domains in both editions now consistently return app-level discovery output, preserving fallback behavior independent of tenant claim state.
 
 ## Discoveries / Constraints
 
@@ -63,6 +64,7 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Ambiguous multi-tenant mappings remain fail-closed and are never eligible for EE tenant takeover.
 - (2026-03-03) EE non-eligible statuses preserve anti-enumerating behavior by returning normal app-source provider readiness (including empty set when app providers are not configured).
 - (2026-03-03) CE still blocks `revoked`/`rejected` claims from tenant routing, preventing stale/deactivated claims from taking over discovery.
+- (2026-03-03) Discovery still returns valid neutral payloads when fallback providers are empty, avoiding auth-flow branching on domain existence.
 
 ## Commands / Runbooks
 
@@ -114,6 +116,8 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) F018 implementation checks:
   - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
 - (2026-03-03) F019 implementation checks:
+  - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) F020 implementation checks:
   - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
 
 ## Links / References
