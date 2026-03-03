@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment } from 'react';
+import { Fragment, useEffect, useRef } from 'react';
 import type { IProjectPhase } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Upload } from 'lucide-react';
@@ -73,6 +73,33 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
   onDragEnd,
   onImport,
 }) => {
+  const phasesScrollRef = useRef<HTMLUListElement>(null);
+
+  useEffect(() => {
+    const el = phasesScrollRef.current;
+    if (!el) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      const { deltaY } = event;
+      if (deltaY === 0) return;
+
+      const atTop = el.scrollTop <= 0;
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+      const scrollingDown = deltaY > 0;
+      const canScroll = (scrollingDown && !atBottom) || (!scrollingDown && !atTop);
+
+      if (canScroll) {
+        event.preventDefault();
+        event.stopPropagation();
+        el.scrollTop += deltaY;
+      }
+    };
+
+    // Non-passive to reliably prevent board/page scroll while list can still scroll.
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, []);
+
   const handleContainerDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     
@@ -179,9 +206,15 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
         </div>
       </div>
       {/* Scrollable phases list */}
-      <ul className={`${styles.phasesScrollArea} ${editingPhaseId ? styles.phasesScrollAreaEditing : ''}`} onDragOver={handleContainerDragOver} onDrop={handleContainerDrop}>
+      <ul
+        ref={phasesScrollRef}
+        data-phase-scroll-area="true"
+        className={styles.phasesScrollArea}
+        onDragOver={handleContainerDragOver}
+        onDrop={handleContainerDrop}
+      >
         {(() => {
-          const sortedPhases = phases
+          const sortedPhases = [...phases]
             .sort((a, b) => {
               // Sort by order_key if available, otherwise fall back to end_date
               if (a.order_key || b.order_key) {
@@ -234,6 +267,8 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
               taskDraggingOverPhaseId={taskDraggingOverPhaseId} // Pass prop to PhaseListItem
               onSelect={onPhaseSelect}
               onEdit={onEditPhase}
+              onSave={onSavePhase}
+              onCancel={onCancelEdit}
               onDelete={onDeletePhase}
               onNameChange={onEditingPhaseNameChange}
               onDescriptionChange={onEditingPhaseDescriptionChange}
@@ -260,32 +295,6 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
           );
         })()}
       </ul>
-      {/* Fixed footer with Save/Cancel when editing a phase */}
-      {editingPhaseId && (
-        <div className={styles.phasesPanelFooter}>
-          <Button
-            id={`cancel-edit-phase-${editingPhaseId}`}
-            variant="outline"
-            size="sm"
-            onClick={onCancelEdit}
-            title="Cancel editing"
-          >
-            Cancel
-          </Button>
-          <Button
-            id={`save-edit-phase-${editingPhaseId}`}
-            variant="default"
-            size="sm"
-            onClick={() => {
-              const editingPhase = phases.find(p => p.phase_id === editingPhaseId);
-              if (editingPhase) onSavePhase(editingPhase);
-            }}
-            title="Save changes"
-          >
-            Save
-          </Button>
-        </div>
-      )}
     </div>
   );
 };

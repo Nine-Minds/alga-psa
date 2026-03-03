@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { IProjectPhase } from '@alga-psa/types';
 import { Pencil, Trash2, GripVertical } from 'lucide-react';
+import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import styles from './ProjectDetail.module.css';
@@ -19,6 +20,8 @@ interface PhaseListItemProps {
   taskCount?: number;
   onSelect: (phase: IProjectPhase) => void;
   onEdit: (phase: IProjectPhase) => void;
+  onSave: (phase: IProjectPhase) => void;
+  onCancel: () => void;
   onDelete: (phase: IProjectPhase) => void;
   onNameChange: (name: string) => void;
   onDescriptionChange: (description: string | null) => void;
@@ -45,6 +48,8 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   taskCount,
   onSelect,
   onEdit,
+  onSave,
+  onCancel,
   onDelete,
   onNameChange,
   onDescriptionChange,
@@ -60,6 +65,8 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const itemRef = useRef<HTMLLIElement>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-scroll the editing form into view when editing starts
   useEffect(() => {
@@ -67,7 +74,41 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
       const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       const scrollBehavior = prefersReducedMotion ? 'auto' : 'smooth';
       requestAnimationFrame(() => {
-        itemRef.current?.scrollIntoView({ behavior: scrollBehavior, block: 'nearest' });
+        const item = itemRef.current;
+        if (!item) return;
+        const target = actionsRef.current ?? item;
+
+        const scrollArea = item.closest('[data-phase-scroll-area="true"]') as HTMLElement | null;
+        if (scrollArea) {
+          const margin = 8;
+          const scrollRect = scrollArea.getBoundingClientRect();
+          const targetRect = target.getBoundingClientRect();
+          const itemTop = targetRect.top - scrollRect.top + scrollArea.scrollTop;
+          const itemBottom = targetRect.bottom - scrollRect.top + scrollArea.scrollTop;
+          const viewTop = scrollArea.scrollTop;
+          const visibleHeight = scrollArea.clientHeight;
+          const viewBottom = viewTop + visibleHeight;
+
+          let nextScrollTop = viewTop;
+          if (itemTop < viewTop + margin) {
+            nextScrollTop = Math.max(itemTop - margin, 0);
+          } else if (itemBottom > viewBottom - margin) {
+            nextScrollTop = Math.max(itemBottom - visibleHeight + margin, 0);
+          }
+
+          if (nextScrollTop !== viewTop) {
+            scrollArea.scrollTo({ top: nextScrollTop, behavior: scrollBehavior });
+          }
+        }
+
+        const nameInput = nameInputRef.current;
+        if (nameInput) {
+          try {
+            nameInput.focus({ preventScroll: true });
+          } catch {
+            nameInput.focus();
+          }
+        }
       });
     }
   }, [isEditing]);
@@ -122,16 +163,10 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    console.log('PhaseListItem handleDrop called for phase:', phase.phase_name);
-    
+
     const draggedPhaseId = e.dataTransfer.getData('text/plain');
-    const dropData = e.dataTransfer.getData('application/json');
-    
-    console.log('PhaseListItem drop data:', { draggedPhaseId, dropData });
-    
+
     if (draggedPhaseId === phase.phase_id) {
-      console.log('Cannot drop phase on itself');
       return; // Can't drop on itself
     }
     
@@ -243,11 +278,11 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phase Name</label>
               <TextArea
+                ref={nameInputRef}
                 value={editingName}
                 onChange={(e) => onNameChange(e.target.value)}
                 className="w-full px-3 py-1 border border-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
                 onClick={(e) => e.stopPropagation()}
-                autoFocus
               />
             </div>
             {/* Description Input */}
@@ -283,6 +318,32 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                 className="w-full"
                 clearable={true}
               />
+            </div>
+            <div ref={actionsRef} className={styles.phaseEditActions}>
+              <Button
+                id={`cancel-edit-phase-${phase.phase_id}`}
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCancel();
+                }}
+                title="Cancel editing"
+              >
+                Cancel
+              </Button>
+              <Button
+                id={`save-edit-phase-${phase.phase_id}`}
+                variant="default"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSave(phase);
+                }}
+                title="Save changes"
+              >
+                Save
+              </Button>
             </div>
           </div>
         </div>

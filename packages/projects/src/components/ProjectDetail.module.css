@@ -67,10 +67,19 @@
   position: sticky;
   top: 1rem;
   align-self: flex-start;
-  max-height: calc(100vh - 2rem);
+  height: calc(100dvh - 2rem);
+  max-height: calc(100dvh - 2rem);
+  min-height: 0;
   display: flex;
   flex-direction: row;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@supports not (height: 100dvh) {
+  .phasesContainer {
+    height: calc(100vh - 2rem);
+    max-height: calc(100vh - 2rem);
+  }
 }
 
 .phasesContainerExpanded {
@@ -115,7 +124,10 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
   overflow: hidden;
+  position: relative;
+  overscroll-behavior: contain;
 }
 
 /* Fixed header section */
@@ -128,14 +140,24 @@
 /* Scrollable phases list area */
 .phasesScrollArea {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0.5rem 1rem 1rem 1rem;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 0.5rem 1rem 5rem 1rem;
   margin: 0;
   list-style: none;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.phasesScrollArea::after {
+  content: '';
+  display: block;
+  height: 2.5rem;
+  flex-shrink: 0;
 }
 
 /* Scrollbar styling for phases scroll area */
@@ -162,27 +184,28 @@
   background: rgb(var(--color-border-300));
 }
 
-/* Reduce bottom padding when editing so footer sits closer to content */
-.phasesScrollAreaEditing {
-  padding-bottom: 0.5rem;
-}
-
-/* Fixed footer for Save/Cancel when editing a phase */
-.phasesPanelFooter {
-  flex-shrink: 0;
+.phaseEditActions {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
-  padding: 0.75rem 1rem;
+  flex-wrap: nowrap;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
   border-top: 1px solid rgb(var(--color-border-100));
+  flex-shrink: 0;
 }
 
 .phasesList {
   width: 250px;
   min-width: 250px;
   max-width: 250px;
+  height: 100%;
   max-height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow: hidden; /* Let the inner phasesScrollArea handle scrolling */
+  overscroll-behavior: contain;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
