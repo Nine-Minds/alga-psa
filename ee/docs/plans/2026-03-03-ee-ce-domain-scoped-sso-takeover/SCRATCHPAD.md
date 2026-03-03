@@ -156,3 +156,7 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `F025`: MSP credentials sign-in path remains unchanged and isolated from resolver-cookie logic (`MspCredentialsFlow.contract.test.ts`).
 - (2026-03-03) Validation run for `F025`:
   - `cd server && npx vitest run ../packages/auth/src/components/MspCredentialsFlow.contract.test.ts`
+- (2026-03-03) Completed `F026`: added explicit client-portal auth contract coverage to assert no MSP SSO discovery/resolve endpoint wiring in client-portal sign-in code paths.
+- (2026-03-03) Note: `src/test/unit/app/auth/client-portal/signin/page.test.ts` currently fails in isolation due an existing import/mocking path mismatch (`@alga-psa/db/models/UserSession`), so validation used package-level contract tests instead.
+- (2026-03-03) Validation run for `F026`:
+  - `cd server && npx vitest run ../packages/auth/src/components/ClientLoginForm.ssoGuard.test.ts ../packages/auth/src/components/ClientPortalAuthUnchanged.contract.test.ts`

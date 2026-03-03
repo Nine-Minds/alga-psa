@@ -225,7 +225,7 @@
   {
     "id": "F026",
     "description": "Keep client portal login and auth affordances unchanged.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Non-goals #1",
       "Functional Requirements #13"
