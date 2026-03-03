@@ -189,3 +189,4 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Validation run for `T001`:
   - `cd server && npx vitest run src/test/unit/migrations/mspSsoDomainLifecycle.migrations.test.ts`
 - (2026-03-03) Completed \: Migration contract suite covers challenge table creation/index contract in mspSsoDomainLifecycle.migrations.test.ts.
+- (2026-03-03) Completed \: Migration contract suite verifies rollback drops lifecycle columns and challenge table.

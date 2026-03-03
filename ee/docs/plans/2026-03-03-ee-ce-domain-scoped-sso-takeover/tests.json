@@ -18,7 +18,7 @@
   {
     "id": "T003",
     "description": "Migration rollback removes lifecycle/challenge schema changes cleanly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002"
