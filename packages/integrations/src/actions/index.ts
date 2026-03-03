@@ -105,7 +105,12 @@ export {
 } from './integrations/microsoftActions';
 export {
   listMspSsoLoginDomains,
+  listMspSsoDomainClaims,
   saveMspSsoLoginDomains,
+  requestMspSsoDomainClaim,
+  refreshMspSsoDomainClaimChallenge,
+  verifyMspSsoDomainClaimOwnership,
+  revokeMspSsoDomainClaim,
 } from './integrations/mspSsoDomainActions';
 export {
   initiateEntraDirectOAuth,

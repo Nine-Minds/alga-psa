@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "Update EE provider settings UI to show domain claim lifecycle states and available actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes #4", "Functional Requirements #3"]
   },
   {
