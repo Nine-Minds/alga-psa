@@ -51,11 +51,16 @@ exports.down = async function down(knex) {
     ) AS has_duplicates;
   `);
 
-  if (!duplicatePaths.rows?.[0]?.has_duplicates) {
-    await knex.raw(`
-      ALTER TABLE document_folders
-      ADD CONSTRAINT uq_document_folders_tenant_path
-      UNIQUE (tenant, folder_path);
-    `);
+  if (duplicatePaths.rows?.[0]?.has_duplicates) {
+    throw new Error(
+      'Cannot rollback: duplicate (tenant, folder_path) rows exist due to entity-scoped folders. ' +
+      'Remove entity-scoped duplicate rows before retrying rollback.'
+    );
   }
+
+  await knex.raw(`
+    ALTER TABLE document_folders
+    ADD CONSTRAINT uq_document_folders_tenant_path
+    UNIQUE (tenant, folder_path);
+  `);
 };

@@ -1,11 +1,11 @@
 'use server';
 
-import { randomBytes } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, getConnection } from '@alga-psa/db';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 export type ShareType = 'public' | 'password' | 'portal_authenticated';
 
@@ -140,8 +140,7 @@ export const createShareLink = withAuth(
       passwordHash = await hashPassword(input.password);
     }
 
-    const shareId = await knex.raw('SELECT gen_random_uuid() as id');
-    const shareIdValue = shareId.rows[0].id;
+    const shareIdValue = randomUUID();
 
     await knex('document_share_links').insert({
       tenant,
@@ -296,13 +295,15 @@ export async function validateShareToken(
  */
 export async function verifySharePassword(
   token: string,
-  password: string
+  password: string,
+  tenant: string
 ): Promise<boolean> {
   const knex = await getConnection();
 
   const shareLink = await knex('document_share_links')
     .select('password_hash')
     .where('token', token)
+    .andWhere('tenant', tenant)
     .first();
 
   if (!shareLink || !shareLink.password_hash) {
@@ -328,6 +329,11 @@ export async function logShareAccess(
     failureReason?: string;
   }
 ): Promise<void> {
+  // Cannot log with invalid FK values — skip when share is unknown
+  if (!shareId || !tenant || shareId === 'unknown' || tenant === 'unknown') {
+    return;
+  }
+
   const knex = await getConnection();
 
   await knex('document_share_access_log').insert({
@@ -347,19 +353,13 @@ export async function logShareAccess(
  * Does not require authentication.
  */
 export async function incrementDownloadCount(
-  token: string
+  token: string,
+  tenant: string
 ): Promise<void> {
   const knex = await getConnection();
 
   await knex('document_share_links')
     .where('token', token)
+    .andWhere('tenant', tenant)
     .increment('download_count', 1);
-}
-
-/**
- * Gets the share URL for a given token.
- */
-export function getShareUrl(token: string, baseUrl?: string): string {
-  const base = baseUrl || process.env.NEXT_PUBLIC_APP_URL || '';
-  return `${base}/share/${token}`;
 }

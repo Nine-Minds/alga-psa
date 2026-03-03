@@ -52,7 +52,7 @@ export async function GET(
 
         if (tenantLogoAssoc) {
           isTenantLogo = true;
-          console.log(`Public access granted for tenant logo (file ${fileId}) from tenant ${fileTenant}`);
+          // Public access granted for tenant logo
         }
       }
     }
@@ -101,7 +101,7 @@ export async function GET(
     // 1. Check if user is internal - they have full access
     else if (user && user.user_type === 'internal') {
         hasPermission = true;
-        console.log(`Internal user ${user.user_id} granted access to file ${fileId}`);
+        // Internal user has full access
     } else if (user) {
         // 2. Find the document record linked to this file_id
         const documentRecord = await knex('documents')
@@ -144,17 +144,17 @@ export async function GET(
           // Check if this is a tenant logo - all users in the tenant can view it
           if (associatedTenantId === user.tenant) {
             hasPermission = true;
-            console.log(`User ${user.user_id} accessing tenant logo (file ${fileId})`);
+            // User accessing tenant logo
           }
           // Check if this is the user's own avatar
           else if (associatedUserId === user.user_id) {
             hasPermission = true;
-            console.log(`User ${user.user_id} accessing their own avatar (file ${fileId})`);
+            // User accessing their own avatar
           }
           // Check if this is the user's own contact avatar
           else if (associatedContactId === user.contact_id) {
             hasPermission = true;
-            console.log(`User ${user.user_id} accessing their linked contact avatar (file ${fileId})`);
+            // User accessing their linked contact avatar
           }
           // Check client association
           else if (associatedClientId && user.contact_id) {
@@ -171,9 +171,7 @@ export async function GET(
             if (userClientId === associatedClientId) {
               if (!isClientUser || documentRecord.is_client_visible) {
                 hasPermission = true;
-                console.log(`User ${user.user_id} granted access to client ${associatedClientId} file ${fileId}`);
-              } else {
-                console.log(`Client user ${user.user_id} denied access to file ${fileId} (is_client_visible=false)`);
+                // Access granted via client association
               }
             }
           }
@@ -187,7 +185,7 @@ export async function GET(
 
               if (associatedUser && associatedUser.tenant === user.tenant) {
                   hasPermission = true;
-                  console.log(`User ${user.user_id} granted access to user avatar ${fileId} within the same tenant`);
+                  // Access granted for user avatar within same tenant
               }
           }
 
@@ -238,9 +236,7 @@ export async function GET(
                       // For client users, also require is_client_visible = true
                       if (!isClientUser || documentRecord.is_client_visible) {
                           hasPermission = true;
-                          console.log(`User ${user.user_id} granted access to project task document ${fileId} (client ${userClientId})`);
-                      } else {
-                          console.log(`Client user ${user.user_id} denied access to project task document ${fileId} (is_client_visible=false)`);
+                          // Access granted via project task association
                       }
                   }
               }
@@ -271,9 +267,7 @@ export async function GET(
                       // For client users, also require is_client_visible = true
                       if (!isClientUser || documentRecord.is_client_visible) {
                           hasPermission = true;
-                          console.log(`User ${user.user_id} granted access to contract document ${fileId} (client ${userClientId})`);
-                      } else {
-                          console.log(`Client user ${user.user_id} denied access to contract document ${fileId} (is_client_visible=false)`);
+                          // Access granted via contract association
                       }
                   }
               }
@@ -307,50 +301,10 @@ export async function GET(
                   hasPermission = true;
               }
           }
-
-          // Check ticket association - allow contact/client users when ticket belongs to them
-          if (!hasPermission && associatedTicketIds.size > 0 && user.contact_id) {
-              // Get user's client_id if not already fetched
-              if (!userClientId) {
-                  const contactRecord = await knex('contacts')
-                      .select('client_id')
-                      .where({ contact_name_id: user.contact_id, tenant })
-                      .first();
-                  userClientId = contactRecord?.client_id ?? null;
-              }
-
-              const ticketAccessQuery = knex('tickets')
-                .where({ tenant })
-                .whereIn('ticket_id', Array.from(associatedTicketIds))
-                .andWhere(function ticketPermissionScope() {
-                  this.where('contact_name_id', user.contact_id);
-                  if (userClientId) {
-                    this.orWhere('client_id', userClientId);
-                  }
-                })
-                .first('ticket_id');
-
-              const ticketAccess = await ticketAccessQuery;
-              if (ticketAccess?.ticket_id) {
-                  hasPermission = true;
-                  console.log(`User ${user.user_id} granted access to ticket-associated file ${fileId} (ticket ${ticketAccess.ticket_id})`);
-              }
-          }
         }
     }
 
     if (!hasPermission) {
-      if (user) {
-        console.warn(`User ${user.user_id} (type: ${user.user_type}) does not have permission to view file ${fileId}.`);
-        console.warn(`AssociatedClient: ${associatedClientId}, UserClient: ${userClientId}`);
-        console.warn(`AssociatedContact: ${associatedContactId}, UserContact: ${user.contact_id}`);
-        console.warn(`AssociatedUser: ${associatedUserId}, UserId: ${user.user_id}`);
-        console.warn(`AssociatedProjectTask: ${associatedProjectTaskId}, AssociatedContract: ${associatedContractId}`);
-        console.warn(`AssociatedTickets: ${Array.from(associatedTicketIds).join(',')}`);
-
-      } else {
-        console.warn(`Unauthenticated user does not have permission to view file ${fileId}.`);
-      }
       return new NextResponse('Forbidden', { status: 403 });
     }
 
@@ -361,7 +315,6 @@ export async function GET(
                           fileRecord.mime_type === 'image/svg+xml';
     
     if (!isViewableType) {
-        console.warn(`Attempted to view non-viewable file: ${fileId}, MIME: ${fileRecord.mime_type}`);
         return new NextResponse('File type not supported for viewing', { status: 400 });
     }
 

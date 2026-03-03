@@ -121,7 +121,9 @@ export default function DocumentListView({
                   <FileIcon className={`w-4 h-4 text-gray-400 ${doc.thumbnail_file_id ? 'hidden' : ''}`} />
                   <span className="text-sm font-medium">{doc.document_name}</span>
                   {documentsWithShareLinks?.has(doc.document_id) && (
-                    <Link2 className="w-3 h-3 text-blue-500" title={t('documents.hasShareLinks', 'Has active share links')} />
+                    <span title={t('documents.hasShareLinks', 'Has active share links')}>
+                      <Link2 className="w-3 h-3 text-blue-500" />
+                    </span>
                   )}
                 </div>
               </TableCell>

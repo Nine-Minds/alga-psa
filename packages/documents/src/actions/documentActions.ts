@@ -2433,18 +2433,16 @@ export const getDistinctEntityTypes = withAuth(async (user, { tenant }): Promise
  *
  * @returns Promise<IFolderNode[]> - Root level folders with nested children
  */
-export const getFolderTree = withAuth(async (
-  user,
-  { tenant },
+/**
+ * Internal helper for building a folder tree. Not wrapped in withAuth —
+ * intended to be called from already-authenticated contexts.
+ */
+async function _getFolderTreeInternal(
+  knex: Knex,
+  tenant: string,
   entityId?: string | null,
   entityType?: string | null
-): Promise<IFolderNode[] | ActionPermissionError> => {
-  if (!(await hasPermission(user, 'document', 'read'))) {
-    return permissionError('Permission denied');
-  }
-
-  const { knex } = await createTenantKnex();
-
+): Promise<IFolderNode[]> {
   const hasEntityScope = Boolean(entityId && entityType);
 
   // Get explicit folders from document_folders table
@@ -2519,6 +2517,21 @@ export const getFolderTree = withAuth(async (
   await enrichFolderTreeWithCounts(tree, knex, tenant, entityId, entityType);
 
   return tree;
+}
+
+export const getFolderTree = withAuth(async (
+  user,
+  { tenant },
+  entityId?: string | null,
+  entityType?: string | null
+): Promise<IFolderNode[] | ActionPermissionError> => {
+  if (!(await hasPermission(user, 'document', 'read'))) {
+    return permissionError('Permission denied');
+  }
+
+  const { knex } = await createTenantKnex();
+
+  return _getFolderTreeInternal(knex, tenant, entityId, entityType);
 });
 
 /**
@@ -2887,11 +2900,13 @@ export const toggleFolderVisibility = withAuth(async (
   let updatedDocuments = 0;
 
   if (cascade) {
+    // Escape SQL LIKE wildcards in folder path before using in pattern
+    const escapedPath = folder.folder_path.replace(/%/g, '\\%').replace(/_/g, '\\_');
     let documentsQuery = knex('documents as d')
       .where('d.tenant', tenant)
       .where(function() {
         this.where('d.folder_path', folder.folder_path)
-          .orWhere('d.folder_path', 'like', `${folder.folder_path}/%`);
+          .orWhere('d.folder_path', 'like', `${escapedPath}/%`);
       });
 
     if (folder.entity_id && folder.entity_type) {
@@ -2962,11 +2977,7 @@ export const ensureEntityFolders = withAuth(async (
 
   if (initRecord) {
     // Already initialized — return current folder tree
-    const result = await getFolderTree(entityId, entityType);
-    if (result && 'permissionError' in (result as object)) {
-      return result as ActionPermissionError;
-    }
-    return result as IFolderNode[];
+    return _getFolderTreeInternal(knex, tenant, entityId, entityType);
   }
 
   // Find the default template for this entity type
@@ -2989,17 +3000,23 @@ export const ensureEntityFolders = withAuth(async (
       .orderBy('folder_path', 'asc');
 
     if (templateItems.length > 0) {
-      // Fetch existing entity-scoped folders to avoid duplicates
+      // Fetch existing entity-scoped folders with IDs to avoid N+1 queries
       const existingFolders = await knex('document_folders')
         .where('tenant', tenant)
         .andWhere('entity_id', entityId)
         .andWhere('entity_type', entityType)
-        .select('folder_path');
+        .select('folder_path', 'folder_id');
 
       const existingPaths = new Set(existingFolders.map((f: { folder_path: string }) => f.folder_path));
 
       // Build folder rows to insert, skipping existing paths
       const pathToFolderId = new Map<string, string>();
+
+      // Pre-populate path-to-id map from existing folders
+      for (const f of existingFolders as Array<{ folder_path: string; folder_id: string }>) {
+        pathToFolderId.set(f.folder_path, f.folder_id);
+      }
+
       const foldersToInsert: Array<{
         tenant: string;
         folder_id: string;
@@ -3014,17 +3031,6 @@ export const ensureEntityFolders = withAuth(async (
 
       for (const item of templateItems) {
         if (existingPaths.has(item.folder_path)) {
-          // Skip existing folder but record its ID for parent lookups
-          const existing = await knex('document_folders')
-            .where('tenant', tenant)
-            .andWhere('entity_id', entityId)
-            .andWhere('entity_type', entityType)
-            .andWhere('folder_path', item.folder_path)
-            .select('folder_id')
-            .first();
-          if (existing) {
-            pathToFolderId.set(item.folder_path, existing.folder_id);
-          }
           continue;
         }
 
@@ -3069,11 +3075,7 @@ export const ensureEntityFolders = withAuth(async (
   });
 
   // Return current folder tree
-  const result = await getFolderTree(entityId, entityType);
-  if (result && 'permissionError' in (result as object)) {
-    return result as ActionPermissionError;
-  }
-  return result as IFolderNode[];
+  return _getFolderTreeInternal(knex, tenant, entityId, entityType);
 });
 
 /**
@@ -3328,6 +3330,7 @@ async function enrichFolderTreeWithCounts(
     .whereIn('d.folder_path', allPaths);
 
   if (entityId && entityType) {
+    // Entity-scoped: only count documents associated with this specific entity
     countsQuery.whereExists(function() {
       this.select('*')
         .from('document_associations as da')
@@ -3337,15 +3340,8 @@ async function enrichFolderTreeWithCounts(
         .andWhere('da.entity_type', entityType);
     });
   } else {
-    countsQuery.whereNotExists(function() {
-      this.select('*')
-        .from('document_associations as da')
-        .whereRaw('da.document_id = d.document_id')
-        .andWhere('da.tenant', tenant);
-    });
-  }
-
-  const counts = await countsQuery.where(function() {
+    // Tenant-level: count unassociated docs + docs with allowed entity types
+    countsQuery.where(function() {
       // Option 1: Document has no associations (tenant-level doc)
       this.whereNotExists(function() {
         this.select('*')
@@ -3361,7 +3357,10 @@ async function enrichFolderTreeWithCounts(
           .andWhere('da.tenant', tenant)
           .whereIn('da.entity_type', allowedEntityTypes);
       });
-    })
+    });
+  }
+
+  const counts = await countsQuery
     .groupBy('d.folder_path')
     .select('d.folder_path')
     .count('* as count');

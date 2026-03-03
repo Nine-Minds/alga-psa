@@ -120,20 +120,19 @@ export default function ClientKBArticleView({
               {node.content?.map((child: any, i: number) => renderText(child, i)) || ''}
             </p>
           );
-        case 'heading':
+        case 'heading': {
           const level = node.attrs?.level || node.props?.level || 2;
-          const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements;
+          const headingElements = { 1: 'h1', 2: 'h2', 3: 'h3', 4: 'h4', 5: 'h5', 6: 'h6' } as const;
+          const tag = headingElements[level as keyof typeof headingElements] || 'h2';
           const headingClasses: Record<number, string> = {
             1: 'text-2xl font-bold mb-4 mt-6',
             2: 'text-xl font-semibold mb-3 mt-5',
             3: 'text-lg font-medium mb-2 mt-4',
             4: 'text-base font-medium mb-2 mt-3',
           };
-          return (
-            <HeadingTag key={key} className={headingClasses[level] || headingClasses[2]}>
-              {node.content?.map((child: any, i: number) => renderText(child, i)) || ''}
-            </HeadingTag>
-          );
+          const children = node.content?.map((child: any, i: number) => renderText(child, i)) || '';
+          return React.createElement(tag, { key, className: headingClasses[level] || headingClasses[2] }, children);
+        }
         case 'bulletList':
           return (
             <ul key={key} className="list-disc list-inside mb-4 space-y-1">
@@ -223,11 +222,13 @@ export default function ClientKBArticleView({
                   </code>
                 );
                 break;
-              case 'link':
+              case 'link': {
+                const rawHref = mark.attrs?.href || '';
+                const safeHref = /^(https?:|mailto:)/i.test(rawHref) ? rawHref : '#';
                 text = (
                   <a
                     key={`link-${index}`}
-                    href={mark.attrs?.href || '#'}
+                    href={safeHref}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary hover:underline"
@@ -236,6 +237,7 @@ export default function ClientKBArticleView({
                   </a>
                 );
                 break;
+              }
             }
           }
         }
@@ -270,7 +272,7 @@ export default function ClientKBArticleView({
           {t('kb.articleNotFound', 'Article not found')}
         </p>
         {onBack && (
-          <Button variant="outline" onClick={onBack}>
+          <Button id="kb-article-back" variant="outline" onClick={onBack}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             {t('kb.backToArticles', 'Back to Articles')}
           </Button>
@@ -283,7 +285,7 @@ export default function ClientKBArticleView({
     <div className="max-w-4xl mx-auto">
       {/* Back Button */}
       {onBack && (
-        <Button variant="ghost" size="sm" onClick={onBack} className="mb-4">
+        <Button id="kb-article-back-mobile" variant="ghost" size="sm" onClick={onBack} className="mb-4">
           <ArrowLeft className="w-4 h-4 mr-2" />
           {t('kb.backToArticles', 'Back to Articles')}
         </Button>
@@ -323,7 +325,7 @@ export default function ClientKBArticleView({
       {/* Article Content */}
       <Card className="mb-6">
         <CardContent className="p-6">
-          {renderBlockContent(article.block_content)}
+          {renderBlockContent((article as any).block_content)}
         </CardContent>
       </Card>
 
@@ -342,6 +344,7 @@ export default function ClientKBArticleView({
             ) : (
               <div className="flex items-center justify-center gap-4">
                 <Button
+                  id="kb-article-helpful"
                   variant="outline"
                   onClick={() => handleFeedback(true)}
                   disabled={isSubmittingFeedback}
@@ -354,6 +357,7 @@ export default function ClientKBArticleView({
                   </span>
                 </Button>
                 <Button
+                  id="kb-article-not-helpful"
                   variant="outline"
                   onClick={() => handleFeedback(false)}
                   disabled={isSubmittingFeedback}

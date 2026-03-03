@@ -1,7 +1,9 @@
 /**
  * @vitest-environment jsdom
  */
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import React from 'react';
+import '@testing-library/jest-dom';
 import { cleanup, render, screen, waitFor, fireEvent } from '@testing-library/react';
 import ShareLandingPage from './page';
 

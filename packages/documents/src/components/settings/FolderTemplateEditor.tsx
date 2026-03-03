@@ -1,18 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@alga-psa/ui/components/Select';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
   Plus,
   Trash2,
@@ -118,11 +112,6 @@ function flattenTree(nodes: TemplateItemNode[], result: { folderPath: string; so
   return result;
 }
 
-let nextId = 1;
-function generateTempId(): string {
-  return `temp-${nextId++}`;
-}
-
 export default function FolderTemplateEditor({
   templateId = null,
   onSave,
@@ -137,6 +126,10 @@ export default function FolderTemplateEditor({
   const [newFolderName, setNewFolderName] = useState('');
   const [addingToPath, setAddingToPath] = useState<string | null>(null);
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
+  const nextIdRef = useRef(1);
+  const generateTempId = useCallback((): string => {
+    return `temp-${nextIdRef.current++}`;
+  }, []);
 
   const loadTemplate = useCallback(async () => {
     if (!templateId) return;
@@ -206,7 +199,7 @@ export default function FolderTemplateEditor({
       }
 
       if (typeof result === 'object' && 'code' in result) {
-        toast.error(result.message || 'Failed to save template');
+        toast.error('Failed to save template');
         return;
       }
 
@@ -353,10 +346,17 @@ export default function FolderTemplateEditor({
       return;
     }
 
-    // Find the dragged node
-    const flatItems = flattenTree(items);
-    const draggedNodeData = flatItems.find((i) => i.folderPath === draggedItem);
-    if (!draggedNodeData) {
+    // Find the dragged node in the tree (preserving children)
+    const findNode = (nodes: TemplateItemNode[], path: string): TemplateItemNode | null => {
+      for (const node of nodes) {
+        if (node.folderPath === path) return node;
+        const found = findNode(node.children, path);
+        if (found) return found;
+      }
+      return null;
+    };
+    const draggedNodeFull = findNode(items, draggedItem);
+    if (!draggedNodeFull) {
       setDraggedItem(null);
       return;
     }
@@ -388,14 +388,26 @@ export default function FolderTemplateEditor({
       return;
     }
 
+    // Remap children paths from old base to new base
+    const remapChildren = (children: TemplateItemNode[], oldBase: string, newBase: string): TemplateItemNode[] => {
+      return children.map((child) => {
+        const newChildPath = newBase + child.folderPath.slice(oldBase.length);
+        return {
+          ...child,
+          folderPath: newChildPath,
+          children: remapChildren(child.children, oldBase, newBase),
+        };
+      });
+    };
+
     const newNode: TemplateItemNode = {
       id: generateTempId(),
       folderName: newPath.split('/').filter(Boolean).pop() || 'folder',
       folderPath: newPath,
-      isClientVisible: draggedNodeData.isClientVisible,
+      isClientVisible: draggedNodeFull.isClientVisible,
       sortOrder: 0,
-      children: [],
-      isExpanded: true,
+      children: remapChildren(draggedNodeFull.children, draggedNodeFull.folderPath, newPath),
+      isExpanded: draggedNodeFull.isExpanded,
     };
 
     if (position === 'inside') {
@@ -499,6 +511,7 @@ export default function FolderTemplateEditor({
           </button>
 
           <Button
+            id={`template-add-subfolder-${node.id}`}
             variant="ghost"
             size="sm"
             className="h-6 w-6 p-0"
@@ -508,6 +521,7 @@ export default function FolderTemplateEditor({
           </Button>
 
           <Button
+            id={`template-delete-${node.id}`}
             variant="ghost"
             size="sm"
             className="h-6 w-6 p-0 text-destructive hover:text-destructive"
@@ -536,10 +550,11 @@ export default function FolderTemplateEditor({
                 }
               }}
             />
-            <Button size="sm" className="h-7" onClick={() => addFolder(node.folderPath)}>
+            <Button id={`template-confirm-add-${node.id}`} size="sm" className="h-7" onClick={() => addFolder(node.folderPath)}>
               Add
             </Button>
             <Button
+              id={`template-cancel-add-${node.id}`}
               size="sm"
               variant="ghost"
               className="h-7"
@@ -576,11 +591,11 @@ export default function FolderTemplateEditor({
         </h3>
         <div className="flex items-center gap-2">
           {onCancel && (
-            <Button variant="outline" onClick={onCancel} disabled={isSaving}>
+            <Button id="template-cancel" variant="outline" onClick={onCancel} disabled={isSaving}>
               Cancel
             </Button>
           )}
-          <Button onClick={handleSave} disabled={isSaving}>
+          <Button id="template-save" onClick={handleSave} disabled={isSaving}>
             <Save className="w-4 h-4 mr-2" />
             {isSaving ? 'Saving...' : 'Save'}
           </Button>
@@ -601,19 +616,14 @@ export default function FolderTemplateEditor({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="entityType">Entity Type</Label>
-              <Select value={entityType} onValueChange={setEntityType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select entity type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ENTITY_TYPES.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CustomSelect
+                id="template-entity-type"
+                label="Entity Type"
+                options={ENTITY_TYPES}
+                value={entityType}
+                onValueChange={setEntityType}
+                placeholder="Select entity type"
+              />
             </div>
           </div>
 
@@ -652,7 +662,7 @@ export default function FolderTemplateEditor({
                   if (e.key === 'Enter') addFolder(null);
                 }}
               />
-              <Button onClick={() => addFolder(null)} disabled={!newFolderName.trim()}>
+              <Button id="template-add-folder" onClick={() => addFolder(null)} disabled={!newFolderName.trim()}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Root Folder
               </Button>

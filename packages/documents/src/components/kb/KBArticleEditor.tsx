@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
-import { TextInput } from '@alga-psa/ui/components/TextInput';
+import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { toast } from 'react-hot-toast';
@@ -211,7 +211,7 @@ export default function KBArticleEditor({
       <div className="text-center py-12">
         <p className="text-muted-foreground">{t('kb.notFound', 'Article not found')}</p>
         {onBack && (
-          <Button variant="outline" onClick={onBack} className="mt-4">
+          <Button id="kb-editor-back" variant="outline" onClick={onBack} className="mt-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
             {t('kb.back', 'Back')}
           </Button>
@@ -228,7 +228,7 @@ export default function KBArticleEditor({
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             {onBack && (
-              <Button variant="ghost" size="sm" onClick={onBack}>
+              <Button id="kb-editor-back-nav" variant="ghost" size="sm" onClick={onBack}>
                 <ArrowLeft className="w-4 h-4" />
               </Button>
             )}
@@ -310,7 +310,7 @@ export default function KBArticleEditor({
               <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
                 {t('kb.title', 'Title')}
               </label>
-              <TextInput
+              <Input
                 type="text"
                 value={title}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -325,7 +325,7 @@ export default function KBArticleEditor({
               <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
                 {t('kb.slug', 'URL Slug')}
               </label>
-              <TextInput
+              <Input
                 type="text"
                 value={slug}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -404,6 +404,7 @@ export default function KBArticleEditor({
 
             {/* Save Button */}
             <Button
+              id="kb-editor-save"
               onClick={handleSaveMetadata}
               disabled={!hasUnsavedMetadata || isSaving}
               className="w-full"

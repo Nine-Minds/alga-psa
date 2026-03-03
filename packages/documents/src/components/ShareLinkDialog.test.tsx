@@ -75,9 +75,12 @@ vi.mock('@alga-psa/documents/actions', async () => {
     getShareLinksForDocument: vi.fn().mockResolvedValue(mockExistingLinks),
     createShareLink: mockCreateShareLink,
     revokeShareLink: vi.fn().mockResolvedValue({}),
-    getShareUrl: vi.fn((token: string) => `https://example.com/share/${token}`),
   };
 });
+
+vi.mock('../lib/documentUtils', () => ({
+  getShareUrl: vi.fn((token: string) => `https://example.com/share/${token}`),
+}));
 
 vi.mock('@alga-psa/ui/components/Button', () => ({
   Button: ({ children, onClick, disabled, variant, ...props }: any) => (
@@ -122,17 +125,20 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
   DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock('@alga-psa/ui/components/Select', () => ({
-  Select: ({ children, value, onValueChange }: any) => (
+vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
+  default: ({ options, value, onValueChange, label, placeholder }: any) => (
     <div data-testid="select" data-value={value}>
-      {children}
+      {label && <label>{label}</label>}
+      <select
+        value={value}
+        onChange={(e) => onValueChange(e.target.value)}
+        aria-label={placeholder}
+      >
+        {options?.map((opt: any) => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </select>
     </div>
-  ),
-  SelectTrigger: ({ children }: any) => <div data-testid="select-trigger">{children}</div>,
-  SelectValue: ({ placeholder }: any) => <span>{placeholder}</span>,
-  SelectContent: ({ children }: any) => <div data-testid="select-content">{children}</div>,
-  SelectItem: ({ children, value }: any) => (
-    <div data-testid={`select-item-${value}`} data-value={value}>{children}</div>
   ),
 }));
 

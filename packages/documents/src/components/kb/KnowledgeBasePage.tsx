@@ -4,7 +4,7 @@ import React, { useState, useCallback } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
-import { getCurrentUser } from '@alga-psa/auth/actions/action';
+import { getCurrentUser } from '@alga-psa/users/actions';
 import {
   BookOpen,
   Clock,
@@ -32,6 +32,7 @@ export default function KnowledgeBasePage() {
   const [filters, setFilters] = useState<IArticleFilters>({});
   const [listKey, setListKey] = useState(0);
   const [userId, setUserId] = useState<string>('');
+  const [userLoadError, setUserLoadError] = useState<string | null>(null);
 
   // Load user ID on mount
   React.useEffect(() => {
@@ -40,13 +41,16 @@ export default function KnowledgeBasePage() {
         const user = await getCurrentUser();
         if (user?.user_id) {
           setUserId(user.user_id);
+        } else {
+          setUserLoadError(t('kb.userLoadError', 'Failed to load user. Article editing is unavailable.'));
         }
       } catch (error) {
         console.error('Failed to get user:', error);
+        setUserLoadError(t('kb.userLoadError', 'Failed to load user. Article editing is unavailable.'));
       }
     };
     loadUser();
-  }, []);
+  }, [t]);
 
   const handleCreateNew = useCallback(async () => {
     try {
@@ -115,11 +119,17 @@ export default function KnowledgeBasePage() {
             </p>
           </div>
         </div>
-        <Button onClick={handleCreateNew}>
+        <Button id="kb-new-article" onClick={handleCreateNew} disabled={!userId}>
           <Plus className="w-4 h-4 mr-2" />
           {t('kb.newArticle', 'New Article')}
         </Button>
       </div>
+
+      {userLoadError && (
+        <div className="mb-4 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
+          {userLoadError}
+        </div>
+      )}
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>

@@ -13,10 +13,10 @@ exports.up = async function up(knex) {
     return;
   }
 
+  // Plain index (no WHERE predicate) — partial indexes unsupported on CitusDB distributed tables
   await knex.raw(`
     CREATE INDEX IF NOT EXISTS idx_documents_tenant_client_visible_true
     ON documents (tenant, is_client_visible)
-    WHERE is_client_visible = true
   `);
 };
 

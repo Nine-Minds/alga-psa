@@ -5,6 +5,7 @@ import { IUser } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { hasPermission, withAuth } from '@alga-psa/auth';
 import { getConnection, withTransaction } from '@alga-psa/db';
+import { getAuthenticatedClientId } from '../../lib/clientAuth';
 
 export interface ClientDocumentFilters {
   search?: string;
@@ -20,40 +21,6 @@ export interface PaginatedClientDocuments {
   page: number;
   pageSize: number;
   totalPages: number;
-}
-
-/**
- * Get the authenticated client user's client_id.
- * Reusable helper for all client document actions.
- */
-async function getAuthenticatedClientId(
-  trx: Knex.Transaction,
-  userId: string,
-  tenant: string
-): Promise<string> {
-  const userRecord = await trx('users')
-    .where({
-      user_id: userId,
-      tenant: tenant,
-    })
-    .first();
-
-  if (!userRecord?.contact_id) {
-    throw new Error('User not associated with a contact');
-  }
-
-  const contact = await trx('contacts')
-    .where({
-      contact_name_id: userRecord.contact_id,
-      tenant: tenant,
-    })
-    .first();
-
-  if (!contact?.client_id) {
-    throw new Error('Contact not associated with a client');
-  }
-
-  return contact.client_id;
 }
 
 /**
@@ -74,13 +41,29 @@ export const getClientDocuments = withAuth(
       throw new Error('Access denied: Client portal actions are restricted to client users');
     }
 
+    // Cap pageSize to prevent excessive queries
+    const effectivePageSize = Math.min(Math.max(pageSize, 1), 100);
+
+    // Validate date formats if provided
+    if (filters.startDate && isNaN(Date.parse(filters.startDate))) {
+      throw new Error('Invalid startDate format. Use ISO 8601 (e.g. 2026-01-15)');
+    }
+    if (filters.endDate && isNaN(Date.parse(filters.endDate))) {
+      throw new Error('Invalid endDate format. Use ISO 8601 (e.g. 2026-01-15)');
+    }
+
     const db = await getConnection(tenant);
 
+    // Fetch real user record for permission check instead of hardcoding is_inactive
+    const userRecord = await db('users')
+      .select('user_id', 'email', 'user_type', 'is_inactive')
+      .where({ user_id: user.user_id, tenant })
+      .first();
     const userForPermission = {
       user_id: user.user_id,
       email: user.email,
       user_type: user.user_type,
-      is_inactive: false,
+      is_inactive: userRecord?.is_inactive ?? false,
       tenant,
     } as IUser;
     const canRead = await hasPermission(userForPermission, 'document', 'read', db);
@@ -91,54 +74,80 @@ export const getClientDocuments = withAuth(
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const clientId = await getAuthenticatedClientId(trx, user.user_id, tenant);
 
-      // Build base query for client-visible documents associated with this client
-      // UNION of four sources: direct client association, tickets, project_tasks, contracts
+      // Build source-type-specific EXISTS clauses based on filter
+      const sourceType = filters.sourceType || 'all';
+      const sourceClauses: string[] = [];
+      const sourceParams: string[] = [];
+
+      if (sourceType === 'all' || sourceType === 'direct') {
+        sourceClauses.push(`
+          EXISTS (
+            SELECT 1 FROM document_associations da
+            WHERE da.document_id = d.document_id
+              AND da.tenant = d.tenant
+              AND da.entity_type = 'client'
+              AND da.entity_id = ?
+          )
+        `);
+        sourceParams.push(clientId);
+      }
+
+      if (sourceType === 'all' || sourceType === 'ticket') {
+        sourceClauses.push(`
+          EXISTS (
+            SELECT 1 FROM document_associations da
+            JOIN tickets t ON t.ticket_id = da.entity_id AND t.tenant = da.tenant
+            WHERE da.document_id = d.document_id
+              AND da.tenant = d.tenant
+              AND da.entity_type = 'ticket'
+              AND t.client_id = ?
+          )
+        `);
+        sourceParams.push(clientId);
+      }
+
+      if (sourceType === 'all' || sourceType === 'project') {
+        sourceClauses.push(`
+          EXISTS (
+            SELECT 1 FROM document_associations da
+            JOIN project_tasks pt ON pt.project_task_id = da.entity_id AND pt.tenant = da.tenant
+            JOIN projects p ON p.project_id = pt.project_id AND p.tenant = pt.tenant
+            WHERE da.document_id = d.document_id
+              AND da.tenant = d.tenant
+              AND da.entity_type = 'project_task'
+              AND p.client_id = ?
+          )
+        `);
+        sourceParams.push(clientId);
+      }
+
+      if (sourceType === 'all' || sourceType === 'contract') {
+        sourceClauses.push(`
+          EXISTS (
+            SELECT 1 FROM document_associations da
+            JOIN billing_plans bp ON bp.plan_id = da.entity_id AND bp.tenant = da.tenant
+            WHERE da.document_id = d.document_id
+              AND da.tenant = d.tenant
+              AND da.entity_type = 'contract'
+              AND bp.company_id = ?
+          )
+        `);
+        sourceParams.push(clientId);
+      }
+
+      const sourceFilter = sourceClauses.length > 0
+        ? `(${sourceClauses.join(' OR ')})`
+        : 'FALSE';
+
       const baseQuery = trx.raw(
         `
         SELECT DISTINCT d.*
         FROM documents d
         WHERE d.tenant = ?
           AND d.is_client_visible = true
-          AND (
-            -- Direct client association
-            EXISTS (
-              SELECT 1 FROM document_associations da
-              WHERE da.document_id = d.document_id
-                AND da.tenant = d.tenant
-                AND da.entity_type = 'client'
-                AND da.entity_id = ?
-            )
-            -- Client's tickets
-            OR EXISTS (
-              SELECT 1 FROM document_associations da
-              JOIN tickets t ON t.ticket_id = da.entity_id AND t.tenant = da.tenant
-              WHERE da.document_id = d.document_id
-                AND da.tenant = d.tenant
-                AND da.entity_type = 'ticket'
-                AND t.client_id = ?
-            )
-            -- Client's project tasks
-            OR EXISTS (
-              SELECT 1 FROM document_associations da
-              JOIN project_tasks pt ON pt.project_task_id = da.entity_id AND pt.tenant = da.tenant
-              JOIN projects p ON p.project_id = pt.project_id AND p.tenant = pt.tenant
-              WHERE da.document_id = d.document_id
-                AND da.tenant = d.tenant
-                AND da.entity_type = 'project_task'
-                AND p.client_id = ?
-            )
-            -- Client's contracts
-            OR EXISTS (
-              SELECT 1 FROM document_associations da
-              JOIN billing_plans bp ON bp.plan_id = da.entity_id AND bp.tenant = da.tenant
-              WHERE da.document_id = d.document_id
-                AND da.tenant = d.tenant
-                AND da.entity_type = 'contract'
-                AND bp.company_id = ?
-            )
-          )
+          AND ${sourceFilter}
         `,
-        [tenant, clientId, clientId, clientId, clientId]
+        [tenant, ...sourceParams]
       );
 
       // Wrap in subquery for filtering and pagination
@@ -169,18 +178,18 @@ export const getClientDocuments = withAuth(
       const total = parseInt(countResult?.count ?? '0', 10);
 
       // Apply pagination
-      const offset = (page - 1) * pageSize;
+      const offset = (page - 1) * effectivePageSize;
       const documents = await query
         .orderBy('created_at', 'desc')
-        .limit(pageSize)
+        .limit(effectivePageSize)
         .offset(offset);
 
       return {
         documents: documents as IDocument[],
         total,
         page,
-        pageSize,
-        totalPages: Math.ceil(total / pageSize),
+        pageSize: effectivePageSize,
+        totalPages: Math.ceil(total / effectivePageSize),
       };
     });
   }
@@ -199,11 +208,15 @@ export const getClientDocumentFolders = withAuth(
 
     const db = await getConnection(tenant);
 
+    const userRecord = await db('users')
+      .select('user_id', 'email', 'user_type', 'is_inactive')
+      .where({ user_id: user.user_id, tenant })
+      .first();
     const userForPermission = {
       user_id: user.user_id,
       email: user.email,
       user_type: user.user_type,
-      is_inactive: false,
+      is_inactive: userRecord?.is_inactive ?? false,
       tenant,
     } as IUser;
     const canRead = await hasPermission(userForPermission, 'document', 'read', db);
@@ -286,11 +299,15 @@ export const downloadClientDocument = withAuth(
 
     const db = await getConnection(tenant);
 
+    const userRecord = await db('users')
+      .select('user_id', 'email', 'user_type', 'is_inactive')
+      .where({ user_id: user.user_id, tenant })
+      .first();
     const userForPermission = {
       user_id: user.user_id,
       email: user.email,
       user_type: user.user_type,
-      is_inactive: false,
+      is_inactive: userRecord?.is_inactive ?? false,
       tenant,
     } as IUser;
     const canRead = await hasPermission(userForPermission, 'document', 'read', db);

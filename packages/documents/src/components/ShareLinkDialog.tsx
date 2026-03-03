@@ -14,13 +14,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@alga-psa/ui/components/Dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@alga-psa/ui/components/Select';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
   Copy,
   Link2,
@@ -38,11 +32,11 @@ import {
   createShareLink,
   getShareLinksForDocument,
   revokeShareLink,
-  getShareUrl,
   IDocumentShareLink,
   ICreateShareLinkInput,
   ShareType,
 } from '@alga-psa/documents/actions';
+import { getShareUrl } from '../lib/documentUtils';
 
 interface ShareLinkDialogProps {
   isOpen: boolean;
@@ -52,9 +46,9 @@ interface ShareLinkDialogProps {
 }
 
 const SHARE_TYPE_OPTIONS = [
-  { value: 'public', label: 'Public', icon: Globe, description: 'Anyone with the link can download' },
-  { value: 'password', label: 'Password Protected', icon: Lock, description: 'Requires a password to download' },
-  { value: 'portal_authenticated', label: 'Portal Users', icon: Users, description: 'Requires client portal login' },
+  { value: 'public', label: 'Public' },
+  { value: 'password', label: 'Password Protected' },
+  { value: 'portal_authenticated', label: 'Portal Users' },
 ];
 
 export default function ShareLinkDialog({
@@ -125,7 +119,7 @@ export default function ShareLinkDialog({
 
       const result = await createShareLink(input);
       if ('code' in result) {
-        toast.error(result.message || 'Failed to create share link');
+        toast.error('Failed to create share link');
         return;
       }
 
@@ -134,7 +128,8 @@ export default function ShareLinkDialog({
       await loadLinks();
 
       // Copy the new link to clipboard
-      const url = getShareUrl(result.token);
+      const shareLink = result as IDocumentShareLink;
+      const url = getShareUrl(shareLink.token);
       await navigator.clipboard.writeText(url);
       toast.success('Link copied to clipboard');
     } catch (error) {
@@ -191,12 +186,14 @@ export default function ShareLinkDialog({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog isOpen={isOpen} onClose={onClose}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Link2 className="w-5 h-5" />
-            Share Link
+          <DialogTitle>
+            <div className="flex items-center gap-2">
+              <Link2 className="w-5 h-5" />
+              Share Link
+            </div>
           </DialogTitle>
           <DialogDescription>
             Create and manage share links for "{documentName}"
@@ -241,6 +238,7 @@ export default function ShareLinkDialog({
                         </div>
                         <div className="flex items-center gap-1">
                           <Button
+                            id={`share-copy-${link.share_id}`}
                             variant="ghost"
                             size="sm"
                             className="h-8 w-8 p-0"
@@ -253,6 +251,7 @@ export default function ShareLinkDialog({
                             )}
                           </Button>
                           <Button
+                            id={`share-open-${link.share_id}`}
                             variant="ghost"
                             size="sm"
                             className="h-8 w-8 p-0"
@@ -261,6 +260,7 @@ export default function ShareLinkDialog({
                             <ExternalLink className="w-4 h-4" />
                           </Button>
                           <Button
+                            id={`share-revoke-${link.share_id}`}
                             variant="ghost"
                             size="sm"
                             className="h-8 w-8 p-0 text-destructive hover:text-destructive"
@@ -278,27 +278,13 @@ export default function ShareLinkDialog({
               {/* Create New Link Form */}
               {showCreateForm ? (
                 <div className="space-y-4 border rounded-lg p-4">
-                  <div className="space-y-2">
-                    <Label>Share Type</Label>
-                    <Select value={shareType} onValueChange={(v) => setShareType(v as ShareType)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SHARE_TYPE_OPTIONS.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            <div className="flex items-center gap-2">
-                              <option.icon className="w-4 h-4" />
-                              <div>
-                                <span>{option.label}</span>
-                                <p className="text-xs text-muted-foreground">{option.description}</p>
-                              </div>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <CustomSelect
+                    label="Share Type"
+                    options={SHARE_TYPE_OPTIONS}
+                    value={shareType}
+                    onValueChange={(v) => setShareType(v as ShareType)}
+                    placeholder="Select share type"
+                  />
 
                   {shareType === 'password' && (
                     <div className="space-y-2">
@@ -350,6 +336,7 @@ export default function ShareLinkDialog({
 
                   <div className="flex gap-2">
                     <Button
+                      id="share-cancel"
                       variant="outline"
                       className="flex-1"
                       onClick={resetForm}
@@ -358,6 +345,7 @@ export default function ShareLinkDialog({
                       Cancel
                     </Button>
                     <Button
+                      id="share-create"
                       className="flex-1"
                       onClick={handleCreate}
                       disabled={isCreating || (shareType === 'password' && !password)}
@@ -368,6 +356,7 @@ export default function ShareLinkDialog({
                 </div>
               ) : (
                 <Button
+                  id="share-new-link"
                   variant="outline"
                   className="w-full"
                   onClick={() => setShowCreateForm(true)}
@@ -381,7 +370,7 @@ export default function ShareLinkDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button id="share-close" variant="outline" onClick={onClose}>
             Close
           </Button>
         </DialogFooter>

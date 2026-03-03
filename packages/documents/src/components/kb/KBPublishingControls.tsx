@@ -216,6 +216,7 @@ export default function KBPublishingControls({
         <div className="space-y-2">
           {transitions.map((transition) => (
             <Button
+              id={`kb-publish-${transition.action}`}
               key={transition.action}
               variant={transition.variant}
               className="w-full"

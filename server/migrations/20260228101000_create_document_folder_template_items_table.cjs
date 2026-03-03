@@ -52,11 +52,8 @@ exports.up = async function up(knex) {
         .inTable('document_folder_templates')
         .onDelete('CASCADE');
 
-      table
-        .foreign(['tenant', 'parent_template_item_id'])
-        .references(['tenant', 'template_item_id'])
-        .inTable('document_folder_template_items')
-        .onDelete('CASCADE');
+      // No self-referential FK for parent_template_item_id — unsupported on CitusDB distributed tables.
+      // Parent-child tree relationship enforced at application level.
 
       table.index(['tenant', 'template_id'], 'idx_doc_folder_template_items_tenant_template_id');
       table.index(['tenant', 'parent_template_item_id'], 'idx_doc_folder_template_items_tenant_parent_item_id');
@@ -70,3 +67,6 @@ exports.up = async function up(knex) {
 exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('document_folder_template_items');
 };
+
+// CitusDB: create_distributed_table cannot run inside a transaction
+exports.config = { transaction: false };

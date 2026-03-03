@@ -196,7 +196,7 @@ export default function KBArticleList({
           </p>
         </div>
         {onCreateNew && (
-          <Button onClick={onCreateNew} size="sm">
+          <Button id="kb-list-create" onClick={onCreateNew} size="sm">
             <Plus className="w-4 h-4 mr-2" />
             {t('kb.newArticle', 'New Article')}
           </Button>
@@ -210,7 +210,7 @@ export default function KBArticleList({
             <BookOpen className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
             <p className="text-muted-foreground mb-4">{t('kb.empty', 'No articles found')}</p>
             {onCreateNew && (
-              <Button onClick={onCreateNew} variant="outline">
+              <Button id="kb-list-create-empty" onClick={onCreateNew} variant="outline">
                 <Plus className="w-4 h-4 mr-2" />
                 {t('kb.createFirst', 'Create Your First Article')}
               </Button>
@@ -257,10 +257,9 @@ export default function KBArticleList({
                       <BookOpen className="w-4 h-4 text-gray-400" />
                       <span className="font-medium">{article.document_name || article.slug}</span>
                       {isStale(article) && (
-                        <AlertCircle
-                          className="w-4 h-4 text-orange-500"
-                          title={t('kb.reviewOverdue', 'Review overdue')}
-                        />
+                        <span title={t('kb.reviewOverdue', 'Review overdue')}>
+                          <AlertCircle className="w-4 h-4 text-orange-500" />
+                        </span>
                       )}
                     </div>
                   </TableCell>
@@ -301,7 +300,7 @@ export default function KBArticleList({
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Button id={`kb-article-menu-${article.article_id}`} variant="ghost" size="sm" className="h-8 w-8 p-0">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -352,6 +351,7 @@ export default function KBArticleList({
           </p>
           <div className="flex gap-2">
             <Button
+              id="kb-list-previous-page"
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
@@ -360,6 +360,7 @@ export default function KBArticleList({
               {t('kb.previous', 'Previous')}
             </Button>
             <Button
+              id="kb-list-next-page"
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}

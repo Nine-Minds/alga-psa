@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
-import { TextInput } from '@alga-psa/ui/components/TextInput';
+import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { X, Search, Tags } from 'lucide-react';
@@ -95,6 +95,7 @@ export default function KBArticleFilters({
           <CardTitle className="text-sm font-medium">{t('kb.filters', 'Filters')}</CardTitle>
           {hasFilters && onClearFilters && (
             <Button
+              id="kb-filters-clear"
               variant="ghost"
               size="sm"
               onClick={onClearFilters}
@@ -114,7 +115,7 @@ export default function KBArticleFilters({
           </label>
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <TextInput
+            <Input
               type="text"
               placeholder={t('kb.searchPlaceholder', 'Search articles...')}
               value={filters.search || ''}

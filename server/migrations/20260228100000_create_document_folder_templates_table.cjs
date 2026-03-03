@@ -51,3 +51,6 @@ exports.up = async function up(knex) {
 exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('document_folder_templates');
 };
+
+// CitusDB: create_distributed_table cannot run inside a transaction
+exports.config = { transaction: false };
