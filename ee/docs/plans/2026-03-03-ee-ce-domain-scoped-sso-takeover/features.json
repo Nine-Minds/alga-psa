@@ -270,7 +270,7 @@
   {
     "id": "F031",
     "description": "Document CE advisory mode behavior and limitations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goal #3",
       "Acceptance Criteria #2"

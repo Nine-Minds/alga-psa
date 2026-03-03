@@ -172,3 +172,5 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `F030`: added tenant-admin runbook doc for EE domain takeover lifecycle (request -> DNS TXT verification -> verified -> revoke) at `docs/integrations/msp-sso-domain-claims.md`.
 - (2026-03-03) Validation run for `F030`:
   - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoDocsContract.test.ts`
+- (2026-03-03) Completed `F031`: documentation now includes CE advisory mode behavior, explicitly stating non-blocking ownership verification and advisory routing limitations.
+- (2026-03-03) Validation source: `docs/integrations/msp-sso-domain-claims.md` (section `CE Advisory Domain Registration`) and docs contract assertions.
