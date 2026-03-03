@@ -153,3 +153,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `F024`: discovery payload now includes normalized domain and parsing rejects signed payloads with invalid domain values; resolve/discover cookie tests assert `httpOnly`/`sameSite=lax`/short TTL (`maxAge=300`).
 - (2026-03-03) Validation run for `F024`:
   - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoResolution.test.ts src/app/api/auth/msp/sso/discover/route.test.ts src/app/api/auth/msp/sso/resolve/route.test.ts`
+- (2026-03-03) Completed `F025`: MSP credentials sign-in path remains unchanged and isolated from resolver-cookie logic (`MspCredentialsFlow.contract.test.ts`).
+- (2026-03-03) Validation run for `F025`:
+  - `cd server && npx vitest run ../packages/auth/src/components/MspCredentialsFlow.contract.test.ts`

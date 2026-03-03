@@ -216,7 +216,7 @@
   {
     "id": "F025",
     "description": "Keep MSP credentials login flow unchanged after takeover lifecycle integration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements #13",
       "Primary Flow E"
