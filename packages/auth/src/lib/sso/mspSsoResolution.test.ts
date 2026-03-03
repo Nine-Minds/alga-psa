@@ -142,6 +142,26 @@ describe('mspSsoResolution helpers', () => {
     });
   });
 
+  it('T026: EE verified claim with tenant Google credentials returns tenant source and google provider', async () => {
+    process.env.EDITION = 'ee';
+    domainRows.push({
+      tenant: 'tenant-1',
+      domain: 'acme.com',
+      is_active: true,
+      claim_status: 'verified',
+    });
+    tenantSecrets.set('tenant-1:google_client_id', 'google-id');
+    tenantSecrets.set('tenant-1:google_client_secret', 'google-secret');
+
+    await expect(discoverMspSsoProviderOptions('person@acme.com')).resolves.toEqual({
+      source: 'tenant',
+      tenantId: 'tenant-1',
+      providers: ['google'],
+      domain: 'acme.com',
+      ambiguous: false,
+    });
+  });
+
   it('T056: EE pending claim falls back to app provider routing', async () => {
     process.env.EDITION = 'ee';
     domainRows.push({
@@ -219,6 +239,34 @@ describe('mspSsoResolution helpers', () => {
       domain: 'advisory.io',
       ambiguous: false,
     });
+  });
+
+  it('T032: CE unregistered domain returns app-level fallback providers', async () => {
+    process.env.EDITION = 'ce';
+    appSecrets.set('MICROSOFT_OAUTH_CLIENT_ID', 'app-ms-id');
+    appSecrets.set('MICROSOFT_OAUTH_CLIENT_SECRET', 'app-ms-secret');
+
+    await expect(discoverMspSsoProviderOptions('person@unregistered.com')).resolves.toEqual({
+      source: 'app',
+      providers: ['azure-ad'],
+      domain: 'unregistered.com',
+      ambiguous: false,
+    });
+  });
+
+  it('T033: unresolved domain in both editions returns app-level fallback provider set', async () => {
+    appSecrets.set('GOOGLE_OAUTH_CLIENT_ID', 'app-google-id');
+    appSecrets.set('GOOGLE_OAUTH_CLIENT_SECRET', 'app-google-secret');
+
+    for (const edition of ['ce', 'ee'] as const) {
+      process.env.EDITION = edition;
+      await expect(discoverMspSsoProviderOptions(`person@unknown-${edition}.com`)).resolves.toEqual({
+        source: 'app',
+        providers: ['google'],
+        domain: `unknown-${edition}.com`,
+        ambiguous: false,
+      });
+    }
   });
 
   it('T021: known mapped domain with both tenant providers configured returns google and azure-ad', async () => {
@@ -391,6 +439,38 @@ describe('mspSsoResolution helpers', () => {
     });
   });
 
+  it('T037: resolver in EE with verified claim context selects tenant credential source', async () => {
+    process.env.EDITION = 'ee';
+    domainRows.push({
+      tenant: 'tenant-1',
+      domain: 'acme.com',
+      is_active: true,
+      claim_status: 'verified',
+    });
+    tenantSecrets.set('tenant-1:microsoft_client_id', 'tenant-ms-id');
+    tenantSecrets.set('tenant-1:microsoft_client_secret', 'tenant-ms-secret');
+
+    await expect(
+      resolveMspSsoCredentialSource({
+        provider: 'azure-ad',
+        email: 'person@acme.com',
+        discovery: {
+          source: 'tenant',
+          tenantId: 'tenant-1',
+          domain: 'acme.com',
+          providers: ['azure-ad'],
+          issuedAt: 1,
+          expiresAt: Number.MAX_SAFE_INTEGER,
+          nonce: 'nonce-verified-1',
+        },
+      })
+    ).resolves.toEqual({
+      resolved: true,
+      source: 'tenant',
+      tenantId: 'tenant-1',
+    });
+  });
+
   it('T028/T029: signs/verifies discovery cookies and enforces expiry with secret-safe payloads', () => {
     const discovery = createSignedMspSsoDiscoveryCookie({
       source: 'tenant',
@@ -459,8 +539,40 @@ describe('mspSsoResolution helpers', () => {
       })
     ).toMatchObject({
       provider: 'azure-ad',
-      source: 'tenant',
-      tenantId: 'tenant-1',
+        source: 'tenant',
+        tenantId: 'tenant-1',
+      });
+  });
+
+  it('T043: resolution cookie payload remains signed, short-lived, and free of provider secrets', () => {
+    const resolution = createSignedMspSsoResolutionCookie({
+      provider: 'google',
+      source: 'app',
+      secret: 'unit-secret',
+      now: 1_700_000_000_000,
+      ttlSeconds: 300,
     });
+
+    expect(resolution.value).toContain('.');
+    expect(resolution.value).not.toContain('client_secret');
+
+    expect(
+      parseAndVerifyMspSsoResolutionCookie({
+        value: resolution.value,
+        secret: 'unit-secret',
+        now: 1_700_000_050_000,
+      })
+    ).toMatchObject({
+      provider: 'google',
+      source: 'app',
+    });
+
+    expect(
+      parseAndVerifyMspSsoResolutionCookie({
+        value: resolution.value,
+        secret: 'unit-secret',
+        now: 1_700_000_400_001,
+      })
+    ).toBeNull();
   });
 });

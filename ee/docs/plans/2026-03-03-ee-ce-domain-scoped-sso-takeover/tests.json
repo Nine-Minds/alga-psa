@@ -197,7 +197,7 @@
   {
     "id": "T025",
     "description": "Discovery helper evaluates edition and claim lifecycle before selecting tenant/app source.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]

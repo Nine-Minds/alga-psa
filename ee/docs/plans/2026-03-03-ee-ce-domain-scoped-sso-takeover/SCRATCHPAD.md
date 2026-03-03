@@ -223,3 +223,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `T024`: CE settings copy contract now explicitly asserts unmanaged-domain fallback to Nine Minds app-level providers.
 - (2026-03-03) Validation run for `T024`:
   - `cd server && npx vitest run --coverage.enabled=false src/test/unit/components/integrations/MspSsoLoginDomainsSettings.test.tsx`
+- (2026-03-03) Completed `T025`: discovery helper matrix tests now assert edition + claim lifecycle decisions drive `tenant` vs `app` source selection.
+- (2026-03-03) Validation run for `T025`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
