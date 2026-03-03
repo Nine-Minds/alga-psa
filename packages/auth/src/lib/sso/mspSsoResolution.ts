@@ -4,6 +4,13 @@ import { getAdminConnection } from '@alga-psa/db/admin';
 
 export type MspSsoProviderId = 'google' | 'azure-ad';
 export type MspSsoSource = 'tenant' | 'app';
+export type MspSsoDomainClaimStatus =
+  | 'advisory'
+  | 'pending'
+  | 'verified'
+  | 'verified_legacy'
+  | 'rejected'
+  | 'revoked';
 
 export const MSP_SSO_RESOLUTION_COOKIE = 'msp_sso_resolution';
 export const MSP_SSO_DISCOVERY_COOKIE = 'msp_sso_discovery';
@@ -12,8 +19,18 @@ export const MSP_SSO_DISCOVERY_TTL_SECONDS = 5 * 60;
 export const MSP_SSO_GENERIC_FAILURE_MESSAGE =
   "We couldn't start SSO sign-in. Please verify provider setup and try again.";
 export const MSP_SSO_LOGIN_DOMAIN_TABLE = 'msp_sso_tenant_login_domains';
+export const MSP_SSO_CLAIM_STATUS_VALUES: MspSsoDomainClaimStatus[] = [
+  'advisory',
+  'pending',
+  'verified',
+  'verified_legacy',
+  'rejected',
+  'revoked',
+];
 
 const PROVIDER_ORDER: MspSsoProviderId[] = ['google', 'azure-ad'];
+const DOMAIN_PATTERN =
+  /^(?=.{1,255}$)(?!-)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 
 export interface MspSsoResolutionPayload {
   provider: MspSsoProviderId;
@@ -99,13 +116,54 @@ export function normalizeResolverEmail(value: string): string {
   return value.trim().toLowerCase();
 }
 
+export function normalizeMspSsoDomain(value: string): string {
+  const normalized = String(value ?? '')
+    .normalize('NFKC')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .trim()
+    .toLowerCase();
+
+  const withoutPrefix = normalized.startsWith('@') ? normalized.slice(1) : normalized;
+  const withoutMailto = withoutPrefix.startsWith('mailto:')
+    ? withoutPrefix.slice('mailto:'.length)
+    : withoutPrefix;
+  const hostCandidate = withoutMailto.includes('://')
+    ? (() => {
+        try {
+          return new URL(withoutMailto).hostname;
+        } catch {
+          return withoutMailto;
+        }
+      })()
+    : withoutMailto;
+
+  const strippedPath = hostCandidate.split('/')[0] ?? hostCandidate;
+  return strippedPath.endsWith('.') ? strippedPath.slice(0, -1) : strippedPath;
+}
+
+export function validateMspSsoDomain(value: string): string | null {
+  const domain = normalizeMspSsoDomain(value);
+  if (!domain) return 'Domain is required.';
+  if (domain.includes('@')) return 'Enter domains only (for example, example.com).';
+  if (!DOMAIN_PATTERN.test(domain)) return `Invalid domain "${domain}". Enter a valid domain like example.com.`;
+  return null;
+}
+
+export function normalizeMspSsoDomainClaimStatus(value: unknown): MspSsoDomainClaimStatus {
+  if (typeof value !== 'string') return 'advisory';
+  const normalized = value.trim().toLowerCase();
+  return MSP_SSO_CLAIM_STATUS_VALUES.includes(normalized as MspSsoDomainClaimStatus)
+    ? (normalized as MspSsoDomainClaimStatus)
+    : 'advisory';
+}
+
 export function extractDomainFromEmail(value: string): string | null {
   const normalized = normalizeResolverEmail(value);
   const atIndex = normalized.lastIndexOf('@');
   if (atIndex <= 0 || atIndex >= normalized.length - 1) return null;
 
-  const domain = normalized.slice(atIndex + 1).trim();
-  if (!domain || domain.includes('@') || !domain.includes('.')) return null;
+  const domain = normalizeMspSsoDomain(normalized.slice(atIndex + 1));
+  if (validateMspSsoDomain(domain)) return null;
   return domain;
 }
 
@@ -183,8 +241,8 @@ export async function hasAppFallbackProviderCredentials(
 export async function resolveTenantForMspSsoDomain(
   domain: string
 ): Promise<DomainTenantResolution> {
-  const normalizedDomain = domain.trim().toLowerCase();
-  if (!normalizedDomain) {
+  const normalizedDomain = normalizeMspSsoDomain(domain);
+  if (validateMspSsoDomain(normalizedDomain)) {
     return { ambiguous: false };
   }
 

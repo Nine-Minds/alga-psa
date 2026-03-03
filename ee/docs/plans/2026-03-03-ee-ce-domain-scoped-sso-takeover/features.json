@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "Add shared domain lifecycle normalization/validation helpers used by settings actions and discovery logic.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #4"]
   },
   {

@@ -4,12 +4,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { normalizeMspSsoDomain, validateMspSsoDomain } from '@alga-psa/auth/lib/sso/mspSsoResolution';
 import type { Knex } from 'knex';
 
 export const MSP_SSO_LOGIN_DOMAIN_TABLE = 'msp_sso_tenant_login_domains';
-
-const DOMAIN_PATTERN =
-  /^(?=.{1,255}$)(?!-)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 
 export interface MspSsoLoginDomain {
   id: string;
@@ -31,20 +29,11 @@ export interface SaveMspSsoLoginDomainsResult {
 }
 
 function normalizeDomain(value: string): string {
-  const normalized = String(value ?? '')
-    .normalize('NFKC')
-    .replace(/[\u200B-\u200D\uFEFF]/g, '')
-    .trim()
-    .toLowerCase();
-
-  return normalized.startsWith('@') ? normalized.slice(1) : normalized;
+  return normalizeMspSsoDomain(value);
 }
 
 function validateDomain(domain: string): string | null {
-  if (!domain) return 'Domain is required.';
-  if (domain.includes('@')) return 'Enter domains only (for example, example.com).';
-  if (!DOMAIN_PATTERN.test(domain)) return `Invalid domain "${domain}". Enter a valid domain like example.com.`;
-  return null;
+  return validateMspSsoDomain(domain);
 }
 
 function uniqueSorted(values: string[]): string[] {
