@@ -294,7 +294,7 @@
   {
     "id": "T037",
     "description": "Resolver in EE with verified claim context selects tenant credential source.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
