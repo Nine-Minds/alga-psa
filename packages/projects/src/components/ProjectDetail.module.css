@@ -228,9 +228,15 @@
   z-index: 30;
 }
 
-.kanbanStatusStrip {
-  border-top: 1px solid rgb(var(--color-border-100));
-  padding-top: 0.5rem;
+/* Independent sticky status strip — sits between header and kanban content */
+.kanbanStatusStripSticky {
+  position: sticky;
+  z-index: 29; /* below header (z-index: 30) */
+  background-color: rgb(var(--color-card));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem 0.25rem;
+  margin-bottom: 0.25rem;
 }
 
 .kanbanStatusStripScroller {

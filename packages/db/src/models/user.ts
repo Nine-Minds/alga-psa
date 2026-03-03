@@ -231,6 +231,32 @@ const User = {
     return rows.length > 0;
   },
 
+  getReportsToSubordinateIds: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    managerUserId: string
+  ): Promise<string[]> => {
+    const tenant = await requireTenantId(knexOrTrx);
+    const { rows } = await knexOrTrx.raw(
+      `
+        WITH RECURSIVE reports_to_chain AS (
+          SELECT u.user_id, 1 AS depth
+          FROM users u
+          WHERE u.reports_to = ?
+            AND u.tenant = ?
+          UNION ALL
+          SELECT u2.user_id, rtc.depth + 1
+          FROM users u2
+          JOIN reports_to_chain rtc ON u2.reports_to = rtc.user_id
+          WHERE u2.tenant = ?
+            AND rtc.depth < 20
+        )
+        SELECT user_id FROM reports_to_chain
+      `,
+      [managerUserId, tenant, tenant]
+    );
+    return rows.map((row: { user_id: string }) => row.user_id);
+  },
+
   updatePassword: async (email: string, hashed_password: string): Promise<void> => {
     const db = await getAdminConnection();
     try {

@@ -21,7 +21,7 @@ export interface ProcessInboundEmailInAppInput {
 export type ProcessInboundEmailInAppResult =
   | {
       outcome: 'skipped';
-      reason: 'missing_defaults' | 'invalid_email_data';
+      reason: 'missing_defaults' | 'invalid_email_data' | 'self_notification';
     }
   | {
       outcome: 'deduped';
@@ -52,6 +52,26 @@ function extractConversationToken(parsedEmail: any): string | undefined {
     return nested.trim();
   }
   return undefined;
+}
+
+function stripAutomatedReplyMarkers(text: string): string {
+  return text
+    .replace(/\\?\[ALGA-REPLY-TOKEN[^\]\n\r]*(?:\])?/gi, ' ')
+    .replace(/ALGA-REPLY-TOKEN:[^\n\r]*/gi, ' ')
+    .replace(/ALGA-(?:TICKET|PROJECT|COMMENT|THREAD)-ID:[^\n\r]*/gi, ' ')
+    .replace(/---\s*Please reply above this line\s*---/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function hasSubstantiveReplyContent(parsedEmail: any, emailData: EmailMessageDetails): boolean {
+  const candidateText =
+    parsedEmail?.sanitizedText ??
+    parsedEmail?.text ??
+    emailData.body?.text ??
+    '';
+
+  return stripAutomatedReplyMarkers(String(candidateText)).length > 0;
 }
 
 function buildDedupeKey(input: ProcessInboundEmailInAppInput): string {
@@ -304,9 +324,20 @@ export async function processInboundEmailInApp(
     return findContactByEmail(senderEmail, tenantId, context);
   };
 
+  let providerMailboxEmail: string | null = null;
+  try {
+    providerMailboxEmail = await findEmailProviderMailboxAddress(providerId, tenantId);
+  } catch (error) {
+    console.warn('processInboundEmailInApp: failed to resolve provider mailbox address (continuing)', {
+      tenantId,
+      providerId,
+      emailId: emailData.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
   let inboundWatchListRecipients: TicketWatchListRecipientInput[] = [];
   try {
-    const providerMailboxEmail = await findEmailProviderMailboxAddress(providerId, tenantId);
     inboundWatchListRecipients = buildInboundWatchListRecipients({
       to: emailData.to,
       cc: emailData.cc,
@@ -320,6 +351,41 @@ export async function processInboundEmailInApp(
       emailId: emailData.id,
       error: error instanceof Error ? error.message : String(error),
     });
+  }
+
+  const conversationToken = extractConversationToken(parsedEmail);
+
+  if (conversationToken && !hasSubstantiveReplyContent(parsedEmail, emailData)) {
+    console.info('processInboundEmailInApp: skipping token-only inbound email with no reply content', {
+      tenantId,
+      providerId,
+      emailId: emailData.id,
+      hasConversationToken: true,
+    });
+    return { outcome: 'skipped', reason: 'self_notification' };
+  }
+
+  const senderIsProviderMailbox =
+    Boolean(senderEmail) && Boolean(providerMailboxEmail) && senderEmail === providerMailboxEmail;
+  const hasReplySignals =
+    Boolean(conversationToken) ||
+    Boolean(emailData.inReplyTo) ||
+    Boolean(emailData.threadId) ||
+    Boolean(emailData.references?.length);
+
+  if (senderIsProviderMailbox && hasReplySignals) {
+    console.info('processInboundEmailInApp: skipping self-sent notification email', {
+      tenantId,
+      providerId,
+      emailId: emailData.id,
+      senderEmail,
+      providerMailboxEmail,
+      hasConversationToken: Boolean(conversationToken),
+      hasInReplyTo: Boolean(emailData.inReplyTo),
+      hasThreadId: Boolean(emailData.threadId),
+      hasReferences: Boolean(emailData.references?.length),
+    });
+    return { outcome: 'skipped', reason: 'self_notification' };
   }
 
   const upsertWatchListBestEffort = async (ticketId: string) => {
@@ -347,7 +413,7 @@ export async function processInboundEmailInApp(
     }
   };
 
-  const token = extractConversationToken(parsedEmail);
+  const token = conversationToken;
   if (token) {
     try {
       const match = await findTicketByReplyToken(String(token), tenantId);

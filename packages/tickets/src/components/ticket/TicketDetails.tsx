@@ -2001,6 +2001,7 @@ const handleClose = () => {
                                     hideInternalTab={false}
                                     externalComments={bundle?.isBundleMaster ? aggregatedChildClientComments : []}
                                     onClipboardImageUploaded={refreshTicketDocuments}
+                                    defaultNewestFirst
                                 />
                             </div>
                         </Suspense>

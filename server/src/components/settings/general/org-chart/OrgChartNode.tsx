@@ -9,14 +9,15 @@ export interface OrgChartNodeData {
   user: IUser;
   avatarUrl: string | null;
   roleLabel: string;
+  isHighlighted?: boolean;
 }
 
 const OrgChartNode = ({ data }: NodeProps<OrgChartNodeData>) => {
-  const { user, avatarUrl, roleLabel } = data;
+  const { user, avatarUrl, roleLabel, isHighlighted } = data;
   const displayName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
 
   return (
-    <div className="rounded-lg border border-border-200 bg-white px-4 py-3 shadow-sm min-w-[220px]">
+    <div className={`rounded-lg border px-4 py-3 shadow-sm min-w-[220px] ${isHighlighted ? 'border-primary-500 ring-2 ring-primary-500 bg-primary-50' : 'border-border-200 bg-white'}`}>
       <Handle type="target" position={Position.Top} className="!bg-border-300" />
       <div className="flex items-center gap-3">
         <UserAvatar

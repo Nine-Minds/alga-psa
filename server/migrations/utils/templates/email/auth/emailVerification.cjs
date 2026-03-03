@@ -24,7 +24,7 @@ const EMAIL_VERIFICATION_CSS = `
       background-color: #f8fafc;
     }
     .header {
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      background: linear-gradient(135deg, #8A4DEA, #40CFF9);
       color: white;
       padding: 32px 24px;
       border-radius: 12px 12px 0 0;
@@ -69,11 +69,11 @@ const EMAIL_VERIFICATION_CSS = `
       margin-top: 16px;
     }
     .verification-box {
-      background: #eff6ff;
+      background: #f8f5ff;
       padding: 24px;
       border-radius: 8px;
-      border: 1px solid #bfdbfe;
-      border-left: 4px solid #3b82f6;
+      border: 1px solid #e6deff;
+      border-left: 4px solid #8A4DEA;
       margin: 24px 0;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
@@ -89,7 +89,7 @@ const EMAIL_VERIFICATION_CSS = `
     }
     .action-button {
       display: inline-block;
-      background: #3b82f6;
+      background: #8A4DEA;
       color: #ffffff !important;
       padding: 14px 32px;
       text-decoration: none;
@@ -102,7 +102,7 @@ const EMAIL_VERIFICATION_CSS = `
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
     .action-button:hover {
-      background: #2563eb;
+      background: #7c3aed;
       color: #ffffff !important;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
       transform: translateY(-1px);
@@ -136,11 +136,11 @@ const EMAIL_VERIFICATION_CSS = `
       margin: 0 0 16px 0;
     }
     a {
-      color: #3b82f6;
+      color: #8A4DEA;
       text-decoration: underline;
     }
     a:hover {
-      color: #2563eb;
+      color: #7c3aed;
     }
     .divider {
       height: 1px;
@@ -396,11 +396,11 @@ function buildPolishHtml() {
   <title>Weryfikacja adresu email</title>
   <style>
     body { font-family: Inter, system-ui, sans-serif; line-height: 1.6; color: #0f172a; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc; }
-    .header { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 32px 24px; border-radius: 12px 12px 0 0; text-align: center; }
+    .header { background: linear-gradient(135deg, #8A4DEA, #40CFF9); color: white; padding: 32px 24px; border-radius: 12px 12px 0 0; text-align: center; }
     .header h1 { font-family: Poppins, system-ui, sans-serif; font-weight: 700; font-size: 28px; margin: 0 0 8px 0; color: white; }
     .content { background: #ffffff; padding: 32px; border: 1px solid #e2e8f0; border-top: none; border-bottom: none; }
     .footer { background: #1e293b; color: #cbd5e1; padding: 24px; border-radius: 0 0 12px 12px; text-align: center; font-size: 14px; }
-    .action-button { display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 20px 0; }
+    .action-button { display: inline-block; background: #8A4DEA; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px; margin: 20px 0; }
     .warning { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 16px; margin: 24px 0; }
     .link-text { background: #f1f5f9; padding: 12px 16px; border-radius: 6px; font-family: monospace; font-size: 13px; word-break: break-all; color: #475569; margin: 16px 0; }
   </style>

@@ -22,7 +22,7 @@ import {
 import { AccountingExportValidation } from './accountingExportValidation';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { AppError } from '@alga-psa/core';
-import { getXeroCsvSettings } from '@alga-psa/integrations/actions/integrations/xeroCsvActions';
+import { getXeroCsvSettingsForTenant } from '@alga-psa/integrations/runtime';
 import logger from '@alga-psa/core/logger';
 
 export interface ExternalTaxImporter {
@@ -49,6 +49,17 @@ export class AccountingExportService {
   static async create(taxImporter?: ExternalTaxImporter): Promise<AccountingExportService> {
     const [repository, registry] = await Promise.all([
       AccountingExportRepository.create(),
+      AccountingAdapterRegistry.createDefault()
+    ]);
+    return new AccountingExportService(repository, registry, taxImporter);
+  }
+
+  static async createForTenant(
+    tenantId: string,
+    taxImporter?: ExternalTaxImporter
+  ): Promise<AccountingExportService> {
+    const [repository, registry] = await Promise.all([
+      AccountingExportRepository.createForTenant(tenantId),
       AccountingAdapterRegistry.createDefault()
     ]);
     return new AccountingExportService(repository, registry, taxImporter);
@@ -207,9 +218,9 @@ export class AccountingExportService {
 
     // Load adapter-specific settings
     let adapterSettings: Record<string, unknown> | undefined;
-    if (normalizedBatch.adapter_type === 'xero_csv') {
+    if (normalizedBatch.adapter_type === 'xero_csv' && normalizedBatch.tenant) {
       try {
-        const xeroCsvSettings = await getXeroCsvSettings();
+        const xeroCsvSettings = await getXeroCsvSettingsForTenant(normalizedBatch.tenant);
         adapterSettings = {
           dateFormat: xeroCsvSettings.dateFormat,
           defaultCurrency: xeroCsvSettings.defaultCurrency

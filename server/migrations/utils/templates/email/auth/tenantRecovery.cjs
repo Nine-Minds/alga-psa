@@ -19,7 +19,7 @@ const LANGS = {
     subject: '{{platformName}} - Your Login Links',
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -366,7 +366,7 @@ Questo \u00e8 un messaggio automatico. Non rispondere a questa email.`,
     subject: '{{platformName}} - Twoje linki do logowania',
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">

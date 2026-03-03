@@ -319,4 +319,35 @@ test.describe('Workflow Designer UI - publish', () => {
       await db.destroy();
     }
   });
+
+  test('publish persists paused setting without explicit settings save', async ({ page }) => {
+    test.setTimeout(150000);
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    const workflowName = `UI Publish Pause ${uuidv4().slice(0, 6)}`;
+
+    try {
+      await workflowPage.clickNewWorkflow();
+      await workflowPage.nameInput.fill(workflowName);
+      await workflowPage.saveDraft();
+      await page.getByRole('button', { name: workflowName }).waitFor({ state: 'visible' });
+
+      const pausedToggle = page.locator('[data-automation-id="workflow-settings-paused"]');
+      if ((await pausedToggle.getAttribute('data-state')) !== 'checked') {
+        await pausedToggle.click();
+      }
+      await expect(pausedToggle).toHaveAttribute('data-state', 'checked');
+
+      await workflowPage.publishButton.click();
+      await expect(page.getByText('Workflow published')).toBeVisible();
+
+      const record = await db('workflow_definitions').where({ name: workflowName }).first();
+      expect(record).toBeTruthy();
+      expect(record.is_paused).toBe(true);
+    } finally {
+      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
+      await db.destroy();
+    }
+  });
 });

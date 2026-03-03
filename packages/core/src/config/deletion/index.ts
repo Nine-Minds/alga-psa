@@ -322,7 +322,10 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     supportsArchive: false,
     dependencies: [
       { type: 'member', table: 'team_members', foreignKey: 'team_id', label: 'team member' },
-      { type: 'ticket', table: 'tickets', foreignKey: 'assigned_team_id', label: 'assigned ticket' }
+      { type: 'ticket', table: 'tickets', foreignKey: 'assigned_team_id', label: 'assigned ticket' },
+      { type: 'project_task', table: 'project_tasks', foreignKey: 'assigned_team_id', label: 'assigned project task' },
+      { type: 'project_template_task', table: 'project_template_tasks', foreignKey: 'assigned_team_id', label: 'project template task' },
+      { type: 'board', table: 'boards', foreignKey: 'default_assigned_team_id', label: 'board default team' }
     ]
   },
   user: {

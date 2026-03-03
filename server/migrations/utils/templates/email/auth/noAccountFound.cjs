@@ -19,7 +19,7 @@ const LANGS = {
     subject: '{{platformName}} - Access Request',
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -100,7 +100,7 @@ This is an automated message. Please do not reply to this email.`,
               <li>L\u2019e-mail peut avoir \u00e9t\u00e9 filtr\u00e9 vers votre dossier spam</li>
             </ul>
 
-            <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 25px 0;">
+            <div style="background-color: #f8f5ff; border-left: 4px solid #8A4DEA; padding: 15px; margin: 25px 0;">
               <p style="color: #1e40af; font-size: 14px; margin: 0;">
                 <strong>Besoin d\u2019aide ?</strong>
               </p>
@@ -172,7 +172,7 @@ Ceci est un message automatis\u00e9. Veuillez ne pas r\u00e9pondre \u00e0 cet e-
               <li>El correo puede haber sido filtrado a tu carpeta de spam</li>
             </ul>
 
-            <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 25px 0;">
+            <div style="background-color: #f8f5ff; border-left: 4px solid #8A4DEA; padding: 15px; margin: 25px 0;">
               <p style="color: #1e40af; font-size: 14px; margin: 0;">
                 <strong>\u00bfNecesitas ayuda?</strong>
               </p>
@@ -244,7 +244,7 @@ Este es un mensaje autom\u00e1tico. Por favor no respondas a este correo.`,
               <li>Die E-Mail k\u00f6nnte in Ihrem Spam-Ordner gefiltert worden sein</li>
             </ul>
 
-            <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 25px 0;">
+            <div style="background-color: #f8f5ff; border-left: 4px solid #8A4DEA; padding: 15px; margin: 25px 0;">
               <p style="color: #1e40af; font-size: 14px; margin: 0;">
                 <strong>Ben\u00f6tigen Sie Hilfe?</strong>
               </p>
@@ -316,7 +316,7 @@ Dies ist eine automatisierte Nachricht. Bitte antworten Sie nicht auf diese E-Ma
               <li>De e-mail kan zijn gefilterd naar uw spam-map</li>
             </ul>
 
-            <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 25px 0;">
+            <div style="background-color: #f8f5ff; border-left: 4px solid #8A4DEA; padding: 15px; margin: 25px 0;">
               <p style="color: #1e40af; font-size: 14px; margin: 0;">
                 <strong>Hulp nodig?</strong>
               </p>
@@ -388,7 +388,7 @@ Dit is een geautomatiseerd bericht. Reageer alstublieft niet op deze e-mail.`,
               <li>L'email potrebbe essere stata filtrata nella cartella spam</li>
             </ul>
 
-            <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 25px 0;">
+            <div style="background-color: #f8f5ff; border-left: 4px solid #8A4DEA; padding: 15px; margin: 25px 0;">
               <p style="color: #1e40af; font-size: 14px; margin: 0;">
                 <strong>Hai bisogno di aiuto?</strong>
               </p>
@@ -440,7 +440,7 @@ Questo \u00e8 un messaggio automatico. Non rispondere a questa email.`,
     subject: '{{platformName}} - Pro\u015bba o dost\u0119p',
     html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; margin: 0;">
+          <h2 style="background: linear-gradient(135deg,#8A4DEA,#40CFF9); color: white; padding: 30px; text-align: center; margin: 0;">
             {{platformName}}
           </h2>
           <div style="padding: 40px 30px;">
@@ -460,7 +460,7 @@ Questo \u00e8 un messaggio automatico. Non rispondere a questa email.`,
               <li>Wiadomo\u015b\u0107 mog\u0142a trafi\u0107 do folderu spam</li>
             </ul>
 
-            <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 25px 0;">
+            <div style="background-color: #f8f5ff; border-left: 4px solid #8A4DEA; padding: 15px; margin: 25px 0;">
               <p style="color: #1e40af; font-size: 14px; margin: 0;">
                 <strong>Potrzebujesz pomocy?</strong>
               </p>

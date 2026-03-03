@@ -40,6 +40,29 @@ type CommentMetadata = Record<string, unknown> & {
   };
 };
 
+const TSVECTOR_OVERFLOW_ERROR_FRAGMENT = 'string is too long for tsvector';
+const DATA_IMAGE_BASE64_PATTERN = /data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=\r\n]+/gi;
+const OVERSIZED_WORD_PATTERN = /\b\w{200,}\b/g;
+const FALLBACK_INDEX_SAFE_COMMENT_MAX_CHARS = 500_000;
+const EMPTY_FALLBACK_COMMENT =
+  '[Inbound email content trimmed due to indexing limits. See attachments for full message content.]';
+
+function isTsvectorOverflowError(error: unknown): boolean {
+  const message =
+    typeof error === 'object' && error && 'message' in error
+      ? String((error as { message?: unknown }).message ?? '')
+      : '';
+  return message.toLowerCase().includes(TSVECTOR_OVERFLOW_ERROR_FRAGMENT);
+}
+
+function sanitizeCommentContentForIndexRetry(content: string): string {
+  const withoutDataImages = content.replace(DATA_IMAGE_BASE64_PATTERN, '[inline-image]');
+  const withoutOversizedWords = withoutDataImages.replace(OVERSIZED_WORD_PATTERN, '');
+  const condensed = withoutOversizedWords.replace(/\s+/g, ' ').trim();
+  const truncated = condensed.slice(0, FALLBACK_INDEX_SAFE_COMMENT_MAX_CHARS).trim();
+  return truncated.length > 0 ? truncated : EMPTY_FALLBACK_COMMENT;
+}
+
 // =============================================================================
 // INTERFACES
 // =============================================================================
@@ -1288,7 +1311,8 @@ export async function createCommentFromEmail(
         ? 'internal'
         : 'system';
 
-  const commentId = await withAdminTransaction(async (trx: Knex.Transaction) => {
+  const createCommentInTransaction = async (content: string): Promise<string> =>
+    withAdminTransaction(async (trx: Knex.Transaction) => {
       // Create adapters for workflow context
       const eventPublisher = new WorkflowEventPublisher();
       const analyticsTracker = new WorkflowAnalyticsTracker();
@@ -1296,7 +1320,7 @@ export async function createCommentFromEmail(
       // Use enhanced TicketModel with events and analytics
       const result = await TicketModel.createComment({
         ticket_id: commentData.ticket_id,
-        content: commentData.content,
+        content,
         is_internal: false,
         is_resolution: false,
         author_type: ticketModelAuthorType,
@@ -1333,6 +1357,40 @@ export async function createCommentFromEmail(
 
       return result.comment_id;
     });
+
+  let commentId: string;
+  try {
+    commentId = await createCommentInTransaction(commentData.content);
+  } catch (error) {
+    if (!isTsvectorOverflowError(error)) {
+      throw error;
+    }
+
+    const sanitizedContent = sanitizeCommentContentForIndexRetry(commentData.content);
+    console.warn('createCommentFromEmail: tsvector overflow during comment insert; retrying with sanitized body', {
+      ticketId: commentData.ticket_id,
+      tenant,
+      originalLength: commentData.content.length,
+      sanitizedLength: sanitizedContent.length,
+    });
+
+    try {
+      commentId = await createCommentInTransaction(sanitizedContent);
+    } catch (retryError) {
+      if (!isTsvectorOverflowError(retryError)) {
+        throw retryError;
+      }
+
+      console.warn(
+        'createCommentFromEmail: sanitized retry still overflowed; persisting minimal fallback comment body',
+        {
+          ticketId: commentData.ticket_id,
+          tenant,
+        }
+      );
+      commentId = await createCommentInTransaction(EMPTY_FALLBACK_COMMENT);
+    }
+  }
 
   if (commentData.inboundReplyEvent) {
     try {

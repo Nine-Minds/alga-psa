@@ -57,6 +57,14 @@ export class AccountingExportInvoiceSelector {
     return new AccountingExportInvoiceSelector(knex, tenant);
   }
 
+  static async createForTenant(tenantId: string): Promise<AccountingExportInvoiceSelector> {
+    const { knex, tenant } = await createTenantKnex(tenantId);
+    if (!tenant) {
+      throw new Error('AccountingExportInvoiceSelector requires tenant context');
+    }
+    return new AccountingExportInvoiceSelector(knex, tenant);
+  }
+
   async previewInvoiceLines(filters: InvoiceSelectionFilters): Promise<InvoicePreviewLine[]> {
     const tenantId = this.tenantId;
     const adapterType = filters.adapterType?.trim() ?? '';

@@ -223,6 +223,21 @@ const TEMPLATES = [
     },
   },
 
+  // ── ticket-team-assigned ────────────────────────────────────────────
+  {
+    templateName: 'ticket-team-assigned',
+    subtypeName: 'ticket-team-assigned',
+    translations: {
+      en: { title: 'Team Assigned to Ticket', message: "Team '{{teamName}}' has been assigned to ticket #{{ticketId}} '{{ticketTitle}}' by {{performedByName}}" },
+      fr: { title: 'Équipe assignée au ticket', message: "L'équipe '{{teamName}}' a été assignée au ticket #{{ticketId}} '{{ticketTitle}}' par {{performedByName}}" },
+      es: { title: 'Equipo asignado al ticket', message: "El equipo '{{teamName}}' ha sido asignado al ticket #{{ticketId}} '{{ticketTitle}}' por {{performedByName}}" },
+      de: { title: 'Team dem Ticket zugewiesen', message: "Team '{{teamName}}' wurde dem Ticket #{{ticketId}} '{{ticketTitle}}' von {{performedByName}} zugewiesen" },
+      nl: { title: 'Team toegewezen aan ticket', message: "Team '{{teamName}}' is toegewezen aan ticket #{{ticketId}} '{{ticketTitle}}' door {{performedByName}}" },
+      it: { title: 'Team assegnato al ticket', message: "Il team '{{teamName}}' è stato assegnato al ticket #{{ticketId}} '{{ticketTitle}}' da {{performedByName}}" },
+      pl: { title: 'Zespół przypisany do zgłoszenia', message: "Zespół '{{teamName}}' został przypisany do zgłoszenia #{{ticketId}} '{{ticketTitle}}' przez {{performedByName}}" },
+    },
+  },
+
   // ── ticket-additional-agent-added-client ─────────────────────────────
   {
     templateName: 'ticket-additional-agent-added-client',

@@ -1875,17 +1875,49 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     const primaryContactId =
       safeString(ticket.contact_email) && ticket.contact_name_id ? String(ticket.contact_name_id).trim() : undefined;
 
+    // Detect team assignment via event payload changes
+    const assignedTeamId = (payload as any).changes?.assigned_team_id as string | undefined;
+    let teamName: string | undefined;
+    if (assignedTeamId) {
+      const team = await db('teams')
+        .select('team_name')
+        .where({ team_id: assignedTeamId, tenant: tenantId })
+        .first();
+      teamName = team?.team_name;
+    }
+
     if (isValidEmail(primaryEmail)) {
-      await sendIfUnique({
-        tenantId,
-        ...emailEntityContext,
-        contactId: primaryContactId,
-        to: primaryEmail,
-        subject: `Ticket Assigned: ${ticket.title}`,
-        template: 'ticket-assigned',
-        context: buildContext(portalUrl),
-        replyContext
-      }, 'Ticket Assigned');
+      if (teamName) {
+        // Team assignment: use team-specific template for client
+        const teamContext = {
+          ticket: {
+            ...baseTicketContext,
+            teamName,
+            url: portalUrl
+          }
+        };
+        await sendIfUnique({
+          tenantId,
+          ...emailEntityContext,
+          contactId: primaryContactId,
+          to: primaryEmail,
+          subject: `Team Assigned to Your Ticket: ${ticket.title}`,
+          template: 'ticket-team-assigned',
+          context: teamContext,
+          replyContext
+        }, 'Ticket Team Assigned');
+      } else {
+        await sendIfUnique({
+          tenantId,
+          ...emailEntityContext,
+          contactId: primaryContactId,
+          to: primaryEmail,
+          subject: `Ticket Assigned: ${ticket.title}`,
+          template: 'ticket-assigned',
+          context: buildContext(portalUrl),
+          replyContext
+        }, 'Ticket Assigned');
+      }
     }
 
     // Get all additional resources

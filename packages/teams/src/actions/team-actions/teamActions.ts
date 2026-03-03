@@ -201,11 +201,17 @@ export const removeUserFromTeam = withAuth(async (user, { tenant }, teamId: stri
   }
 
   try {
+    // Prevent removing the team manager without reassigning
+    const team = await Team.get(knex, tenant, teamId);
+    if (team && team.manager_id === userId) {
+      throw new Error('Cannot remove the team lead. Please assign a new team lead first.');
+    }
+
     await Team.removeMember(knex, tenant, teamId, userId);
     return await getTeamByIdInternal(knex, tenant, teamId);
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
-    throw new Error('Failed to remove user from team');
+    throw error.message?.includes('team lead') ? error : new Error('Failed to remove user from team');
   }
 });
 
@@ -221,6 +227,25 @@ export const getTeamById = withAuth(async (user, { tenant }, teamId: string): Pr
   } catch (error) {
     console.error(error);
     throw new Error('Failed to fetch team');
+  }
+});
+
+/**
+ * Lightweight version of getTeams — returns team rows without loading members.
+ * Use when you only need team_id, team_name, manager_id (e.g., for display badges).
+ */
+export const getTeamsBasic = withAuth(async (user, { tenant }): Promise<Omit<ITeam, 'members'>[]> => {
+  const { knex } = await createTenantKnex();
+  const canRead = await hasPermission(user, 'user_settings', 'read', knex);
+  if (!canRead) {
+    throw new Error('Permission denied: cannot view teams.');
+  }
+
+  try {
+    return await Team.getAll(knex, tenant);
+  } catch (error) {
+    console.error(error);
+    throw new Error('Failed to fetch teams');
   }
 });
 
@@ -284,6 +309,17 @@ export const saveTeamChanges = withAuth(async (user, { tenant }, teamId: string,
 
       // Batch remove members
       if (changes.removeUserIds.length > 0) {
+        // Prevent removing the current manager unless a new manager is being assigned
+        const currentTeam = await Team.get(trx, tenant, teamId);
+        if (
+          currentTeam &&
+          currentTeam.manager_id &&
+          changes.removeUserIds.includes(currentTeam.manager_id) &&
+          !changes.managerId
+        ) {
+          throw new Error('Cannot remove the team lead. Please assign a new team lead first.');
+        }
+
         await trx('team_members')
           .where({ team_id: teamId, tenant })
           .whereIn('user_id', changes.removeUserIds)

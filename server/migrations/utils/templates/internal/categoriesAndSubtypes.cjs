@@ -27,6 +27,7 @@ const SUBTYPES = [
   { category: 'tickets', name: 'ticket-reassigned', description: 'Ticket reassigned to different user' },
   { category: 'tickets', name: 'ticket-additional-agent-assigned', description: 'User assigned as additional agent on ticket' },
   { category: 'tickets', name: 'ticket-additional-agent-added', description: 'Additional agent added to ticket (for primary assignee)' },
+  { category: 'tickets', name: 'ticket-team-assigned', description: 'Team assigned to ticket' },
   // Projects
   { category: 'projects', name: 'project-assigned', description: 'Project assigned to user' },
   { category: 'projects', name: 'project-created', description: 'New project created' },
@@ -35,6 +36,7 @@ const SUBTYPES = [
   { category: 'projects', name: 'milestone-completed', description: 'Project milestone completed' },
   { category: 'projects', name: 'task-additional-agent-assigned', description: 'User assigned as additional agent on task' },
   { category: 'projects', name: 'task-additional-agent-added', description: 'Additional agent added to task (for primary assignee)' },
+  { category: 'projects', name: 'task-team-assigned', description: 'Team assigned to project task' },
   // Invoices
   { category: 'invoices', name: 'invoice-generated', description: 'New invoice generated' },
   { category: 'invoices', name: 'payment-received', description: 'Payment received for invoice' },

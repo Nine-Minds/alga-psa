@@ -1,15 +1,22 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { AlertCircle, X, Eye } from 'lucide-react';
+import { AlertCircle, Eye, Trash2 } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { ContentCard } from '@alga-psa/ui/components';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Tabs, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import type { GetUserAvatarUrlsBatch } from '@alga-psa/ui/components/UserPicker';
+import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
+import type { GetTeamAvatarUrlsBatch } from '@alga-psa/ui/components/UserAndTeamPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
-import { ToggleGroup, ToggleGroupItem } from '@alga-psa/ui/components/ToggleGroup';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import type { IContact, IUser } from '@alga-psa/types';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import type { IContact, ITeam, IUser } from '@alga-psa/types';
 import { normalizeEmailAddress } from '@shared/lib/email/addressUtils';
 import {
   mergeTicketWatchListRecipients,
@@ -28,6 +35,9 @@ interface TicketWatchListCardProps {
   allContacts?: IContact[];
   allContactsLoading?: boolean;
   onLoadAllContacts?: () => Promise<void>;
+  teams?: ITeam[];
+  getUserAvatarUrlsBatch?: GetUserAvatarUrlsBatch;
+  getTeamAvatarUrlsBatch?: GetTeamAvatarUrlsBatch;
 }
 
 type WatcherAddMode = 'client-contact' | 'internal-user' | 'email';
@@ -43,7 +53,11 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
   allContacts = [],
   allContactsLoading = false,
   onLoadAllContacts,
+  teams = [],
+  getUserAvatarUrlsBatch,
+  getTeamAvatarUrlsBatch,
 }) => {
+  const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const [watchListInput, setWatchListInput] = useState('');
   const [watcherAddMode, setWatcherAddMode] = useState<WatcherAddMode>('client-contact');
   const [contactScope, setContactScope] = useState<ContactScope>('client');
@@ -55,8 +69,37 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
   const watchList = useMemo(() => parseTicketWatchListAttributes(attributes), [attributes]);
   const isWatchListSaving = watchListSaving || watchListSavingInternal;
 
+  const watchListEmails = useMemo(
+    () => new Set(watchList.map((entry) => entry.email.toLowerCase())),
+    [watchList]
+  );
+
+  const filteredInternalUsers = useMemo(
+    () => internalUsers.filter((user) => {
+      const normalized = normalizeEmailAddress(user.email);
+      return !normalized || !watchListEmails.has(normalized.toLowerCase());
+    }),
+    [internalUsers, watchListEmails]
+  );
+
+  const filteredClientContacts = useMemo(
+    () => clientContacts.filter((contact) => {
+      const normalized = normalizeEmailAddress(contact.email);
+      return !normalized || !watchListEmails.has(normalized.toLowerCase());
+    }),
+    [clientContacts, watchListEmails]
+  );
+
+  const filteredAllContacts = useMemo(
+    () => allContacts.filter((contact) => {
+      const normalized = normalizeEmailAddress(contact.email);
+      return !normalized || !watchListEmails.has(normalized.toLowerCase());
+    }),
+    [allContacts, watchListEmails]
+  );
+
   const selectedContactId = contactScope === 'all' ? selectedAllContactId : selectedClientContactId;
-  const availableContacts = contactScope === 'all' ? allContacts : clientContacts;
+  const availableContacts = contactScope === 'all' ? filteredAllContacts : filteredClientContacts;
   const isContactScopeLoading = contactScope === 'all' && allContactsLoading;
 
   const persistWatchList = async (nextWatchList: TicketWatchListEntry[]): Promise<boolean> => {
@@ -180,6 +223,39 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
     await persistWatchList(nextWatchList);
   };
 
+  const handleAddTeamMembers = async (teamId: string) => {
+    const team = teams.find((t) => t.team_id === teamId);
+    if (!team || !team.members || team.members.length === 0) {
+      setWatchListError('Team has no members.');
+      return;
+    }
+
+    const recipients: TicketWatchListRecipientInput[] = [];
+    for (const member of team.members) {
+      if (member.is_inactive) continue;
+      const normalizedEmail = normalizeEmailAddress(member.email);
+      if (!normalizedEmail) continue;
+      const displayName = `${member.first_name || ''} ${member.last_name || ''}`.trim();
+      recipients.push({
+        email: normalizedEmail,
+        source: 'manual',
+        name: displayName || undefined,
+        entity_type: 'user',
+        entity_id: member.user_id,
+      });
+    }
+
+    if (recipients.length === 0) {
+      setWatchListError('No team members with valid email addresses.');
+      return;
+    }
+
+    const mergedWatchList = mergeTicketWatchListRecipients(watchList, recipients);
+    if (JSON.stringify(mergedWatchList) !== JSON.stringify(watchList)) {
+      await persistWatchList(mergedWatchList);
+    }
+  };
+
   const handleAddContact = async () => {
     if (!selectedContactId) {
       setWatchListError('Select a contact to add.');
@@ -261,180 +337,168 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
       title="Watch List"
       headerIcon={<Eye className="w-5 h-5" />}
       count={watchList.length}
-      addButton={{ id: `${id}-add-btn-header`, onClick: () => {} }}
     >
       <div className="space-y-3">
-        <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-3 space-y-3">
-          <p className="text-xs font-medium text-[rgb(var(--color-text-600))]">Add by</p>
-          <ToggleGroup
-            type="single"
-            value={watcherAddMode}
-            onValueChange={handleModeChange}
-            aria-label="Choose watcher source"
-            className="w-full grid grid-cols-3"
-          >
-            <ToggleGroupItem
-              value="client-contact"
-              className="min-w-0 px-2 text-xs"
-              disabled={isWatchListSaving}
-            >
-              Client
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              value="internal-user"
-              className="min-w-0 px-2 text-xs"
-              disabled={isWatchListSaving}
-            >
-              Internal
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              value="email"
-              className="min-w-0 px-2 text-xs"
-              disabled={isWatchListSaving}
-            >
-              Email
-            </ToggleGroupItem>
-          </ToggleGroup>
-
-          {watcherAddMode === 'client-contact' ? (
-            <div className="space-y-2">
-              <ToggleGroup
-                type="single"
-                value={contactScope}
-                onValueChange={(value) => void handleContactScopeChange(value)}
-                aria-label="Choose contact scope"
-                className="w-full grid grid-cols-2"
-              >
-                <ToggleGroupItem
-                  {...withDataAutomationId({ id: `${id}-use-ticket-client-contacts-btn` })}
-                  value="client"
-                  className="min-w-0 px-2 text-xs"
-                  disabled={isWatchListSaving}
-                >
-                  Ticket Client
-                </ToggleGroupItem>
-                <ToggleGroupItem
-                  {...withDataAutomationId({ id: `${id}-search-all-contacts-btn` })}
-                  value="all"
-                  className="min-w-0 px-2 text-xs"
-                  disabled={isWatchListSaving || allContactsLoading}
-                >
-                  All Contacts
-                </ToggleGroupItem>
-              </ToggleGroup>
-              <ContactPicker
-                id={contactScope === 'all' ? `${id}-all-contacts-picker` : `${id}-contact-picker`}
-                contacts={availableContacts}
-                value={selectedContactId}
-                onValueChange={(value) => {
-                  if (contactScope === 'all') {
-                    setSelectedAllContactId(value);
-                  } else {
-                    setSelectedClientContactId(value);
-                  }
-                }}
-                placeholder={
-                  contactScope === 'all'
-                    ? allContactsLoading
-                      ? 'Loading contacts...'
-                      : 'Search all contacts'
-                    : 'Select client contact'
-                }
-                disabled={isWatchListSaving || isContactScopeLoading}
+        {/* Add watcher section */}
+        <Tabs value={watcherAddMode} onValueChange={(value) => handleModeChange(value)}>
+          <div className="flex items-center -mx-6 px-6">
+            <TabsList className="gap-0 w-full">
+              <TabsTrigger value="client-contact" className="px-2 py-1 text-sm" disabled={isWatchListSaving}>Contact</TabsTrigger>
+              <TabsTrigger value="internal-user" className="px-2 py-1 text-sm" disabled={isWatchListSaving}>Internal</TabsTrigger>
+              <TabsTrigger value="email" className="px-2 py-1 text-sm" disabled={isWatchListSaving}>Email</TabsTrigger>
+            </TabsList>
+            {watcherAddMode === 'client-contact' ? (
+              <ViewSwitcher
+                currentView={contactScope}
+                onChange={(view) => void handleContactScopeChange(view)}
+                options={[
+                  { value: 'client' as ContactScope, label: 'Ticket client' },
+                  { value: 'all' as ContactScope, label: 'All contacts' },
+                ]}
+                className="ml-auto h-7 text-xs flex-shrink-0"
               />
-            </div>
-          ) : null}
+            ) : null}
+          </div>
 
-          {watcherAddMode === 'internal-user' ? (
-            <UserPicker
-              id={`${id}-user-picker`}
-              value={selectedUserId}
-              onValueChange={setSelectedUserId}
-              users={internalUsers}
-              placeholder="Select internal user"
-              size="sm"
-              disabled={isWatchListSaving}
-            />
-          ) : null}
+          <div className="flex items-center gap-2 mt-2">
+              {watcherAddMode === 'client-contact' ? (
+                <ContactPicker
+                  id={contactScope === 'all' ? `${id}-all-contacts-picker` : `${id}-contact-picker`}
+                  contacts={availableContacts}
+                  value={selectedContactId}
+                  onValueChange={(value) => {
+                    if (contactScope === 'all') {
+                      setSelectedAllContactId(value);
+                    } else {
+                      setSelectedClientContactId(value);
+                    }
+                  }}
+                  placeholder={
+                    contactScope === 'all'
+                      ? allContactsLoading
+                        ? 'Loading...'
+                        : 'Search all contacts'
+                      : 'Select contact'
+                  }
+                  disabled={isWatchListSaving || isContactScopeLoading}
+                  buttonWidth="fit"
+                  size="sm"
+                />
+              ) : null}
 
-          {watcherAddMode === 'email' ? (
-            <Input
-              {...withDataAutomationId({ id: `${id}-email-input` })}
-              value={watchListInput}
-              onChange={(event) => setWatchListInput(event.target.value)}
-              placeholder="name@example.com"
-              disabled={isWatchListSaving}
-              onKeyDown={async (event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault();
-                  await handleAddEmailWatcher();
-                }
-              }}
-            />
-          ) : null}
+              {watcherAddMode === 'internal-user' ? (
+                teamsV2Enabled && teams.length > 0 ? (
+                  <UserAndTeamPicker
+                    id={`${id}-user-picker`}
+                    value={selectedUserId}
+                    onValueChange={setSelectedUserId}
+                    onTeamSelect={handleAddTeamMembers}
+                    users={filteredInternalUsers}
+                    teams={teams}
+                    getUserAvatarUrlsBatch={getUserAvatarUrlsBatch}
+                    getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatch}
+                    placeholder="Select user or team"
+                    size="sm"
+                    labelStyle="none"
+                    buttonWidth="fit"
+                    disabled={isWatchListSaving}
+                  />
+                ) : (
+                  <UserPicker
+                    id={`${id}-user-picker`}
+                    value={selectedUserId}
+                    onValueChange={setSelectedUserId}
+                    users={filteredInternalUsers}
+                    placeholder="Select user"
+                    size="sm"
+                    buttonWidth="fit"
+                    disabled={isWatchListSaving}
+                  />
+                )
+              ) : null}
 
-          <div className="flex justify-end">
+              {watcherAddMode === 'email' ? (
+                <Input
+                  {...withDataAutomationId({ id: `${id}-email-input` })}
+                  value={watchListInput}
+                  onChange={(event) => setWatchListInput(event.target.value)}
+                  placeholder="name@example.com"
+                  disabled={isWatchListSaving}
+                  className="w-auto"
+                  onKeyDown={async (event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      await handleAddEmailWatcher();
+                    }
+                  }}
+                />
+              ) : null}
+
             <Button
-              {...withDataAutomationId({ id: addButtonAutomationId })}
+              id={addButtonAutomationId}
               type="button"
               onClick={handleAddCurrentMode}
               disabled={addButtonDisabled}
               size="sm"
+              variant="default"
+              className="flex-shrink-0 ml-auto"
             >
               {addButtonLabel}
             </Button>
           </div>
-        </div>
+        </Tabs>
 
         {watchListError ? (
-          <p className="text-sm text-red-600 flex items-center gap-1">
-            <AlertCircle className="h-4 w-4" />
+          <p className="text-xs text-red-600 flex items-center gap-1">
+            <AlertCircle className="h-3 w-3 flex-shrink-0" />
             {watchListError}
           </p>
         ) : null}
 
+        {/* Watch list entries */}
         {watchList.length === 0 ? (
-          <p className="text-sm text-gray-500">No watchers added.</p>
+          <p className="text-sm text-[rgb(var(--color-text-500))]">No watchers added.</p>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1">
             {watchList.map((entry) => (
               <div
                 key={entry.email}
-                className="flex items-center justify-between gap-3 border border-gray-200 rounded px-3 py-2"
+                className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-[rgb(var(--color-border-50))] transition-colors"
               >
-                <label className="flex items-center gap-2 min-w-0">
-                  <input
-                    type="checkbox"
-                    checked={entry.active}
-                    disabled={isWatchListSaving}
-                    onChange={(event) => void handleToggleWatcher(entry.email, event.target.checked)}
-                  />
-                  <div className="min-w-0">
-                    <div className={`text-sm truncate ${entry.active ? 'text-gray-900' : 'text-gray-500'}`}>
-                      {entry.email}
-                    </div>
-                    {(entry.name || entry.entity_type) ? (
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        {entry.name ? <span className="truncate">{entry.name}</span> : null}
-                        {entry.entity_type ? (
-                          <span className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-gray-600">
-                            {entry.entity_type}
-                          </span>
-                        ) : null}
-                      </div>
+                <Checkbox
+                  checked={entry.active}
+                  disabled={isWatchListSaving}
+                  onChange={(event) => void handleToggleWatcher(entry.email, event.target.checked)}
+                  size="sm"
+                  containerClassName=""
+                  skipRegistration
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-sm truncate ${entry.active ? 'text-[rgb(var(--color-text-900))]' : 'text-[rgb(var(--color-text-500))] line-through'}`}>
+                      {entry.name || entry.email}
+                    </span>
+                    {entry.entity_type ? (
+                      <Badge variant={entry.entity_type === 'user' ? 'info' : 'secondary'} size="sm">
+                        {entry.entity_type}
+                      </Badge>
                     ) : null}
                   </div>
-                </label>
+                  {entry.name ? (
+                    <span className="text-xs text-[rgb(var(--color-text-400))] truncate block">
+                      {entry.email}
+                    </span>
+                  ) : null}
+                </div>
                 <Button
-                  {...withDataAutomationId({ id: `${id}-remove-btn-${entry.email}` })}
-                  type="button"
-                  variant="outline"
-                  size="sm"
+                  id={`${id}-remove-btn-${entry.email}`}
+                  variant="ghost"
+                  size="icon"
                   disabled={isWatchListSaving}
                   onClick={() => void handleRemoveWatcher(entry.email)}
+                  className="hover:bg-red-50 hover:text-red-600 text-[rgb(var(--color-text-400))]"
                 >
-                  <X className="h-3 w-3 mr-1" />
-                  Remove
+                  <Trash2 className="w-3.5 h-3.5" />
                 </Button>
               </div>
             ))}

@@ -17,9 +17,23 @@ COPY package.json package-lock.json ./
 COPY shared/package.json ./shared/
 COPY services/email-service/package.json ./services/email-service/
 COPY server/package.json ./server/
+COPY packages/core/package.json ./packages/core/
+COPY packages/db/package.json ./packages/db/
+COPY packages/event-bus/package.json ./packages/event-bus/
+COPY packages/event-schemas/package.json ./packages/event-schemas/
 COPY packages/storage/package.json ./packages/storage/
+COPY packages/types/package.json ./packages/types/
 
-RUN npm config set legacy-peer-deps true && npm install --workspace=shared --workspace=services/email-service --workspace=server --workspace=packages/storage
+RUN npm config set legacy-peer-deps true && npm install --include-workspace-root \
+  --workspace=@alga-psa/shared \
+  --workspace=email-service \
+  --workspace=server \
+  --workspace=@alga-psa/core \
+  --workspace=@alga-psa/db \
+  --workspace=@alga-psa/event-bus \
+  --workspace=@alga-psa/event-schemas \
+  --workspace=@alga-psa/storage \
+  --workspace=@alga-psa/types
 
 COPY shared/ ./shared/
 COPY server/ ./server/
@@ -32,6 +46,9 @@ WORKDIR /app/packages/db
 RUN npm run build && tsc-alias -p tsconfig.json -f --resolve-full-paths
 
 WORKDIR /app/packages/event-schemas
+RUN npm run build
+
+WORKDIR /app/packages/event-bus
 RUN npm run build
 
 WORKDIR /app/shared
