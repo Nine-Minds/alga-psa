@@ -476,7 +476,7 @@
   {
     "id": "T059",
     "description": "DB-backed integration CE advisory path: registered advisory domain can route to tenant source when tenant credentials exist.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034",
       "F019"

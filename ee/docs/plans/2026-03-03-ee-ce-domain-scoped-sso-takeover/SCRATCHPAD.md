@@ -325,3 +325,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `T058`: DB-backed integration guard: revoked EE claim no longer enables tenant takeover routing.
 - (2026-03-03) Validation run for `T058`:
   - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T059`: DB-backed integration CE advisory path: registered advisory domain can route to tenant source when tenant credentials exist.
+- (2026-03-03) Validation run for `T059`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
