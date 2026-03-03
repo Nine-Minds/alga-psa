@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Add optional domain verification challenge storage for EE ownership checks.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #2", "Data model"]
   },
   {

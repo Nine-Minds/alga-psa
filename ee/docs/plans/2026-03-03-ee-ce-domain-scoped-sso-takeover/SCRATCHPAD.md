@@ -17,6 +17,7 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Unmanaged/unapproved domains should route to Nine Minds app-level SSO providers.
 - (2026-03-03) Keep `/auth/msp/signin` UX and anti-enumeration response contracts intact.
 - (2026-03-03) Lifecycle status model for MSP SSO domain claims uses `advisory | pending | verified | verified_legacy | rejected | revoked` with per-status timestamps to preserve backward compatibility while enabling EE verification workflows.
+- (2026-03-03) Verification challenges are stored as tenant-scoped records keyed to domain claim rows so challenge rotation can invalidate prior material while preserving audit timestamps.
 
 ## Discoveries / Constraints
 
@@ -27,6 +28,7 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Existing managed email-domain flow (Resend-style) provides a useful pattern for async domain verification lifecycle in EE settings.
 - (2026-03-03) Existing `msp_sso_tenant_login_domains` table is already deployed in this branch and uses only `is_active`; lifecycle behavior must be introduced as additive columns to avoid breaking current discovery.
 - (2026-03-03) There is no tenant-level CE/EE column in the database schema; edition-aware defaults/backfill must rely on deployment edition context (env) rather than per-tenant data.
+- (2026-03-03) Challenge persistence needs composite tenant+claim foreign key (`tenant`, `claim_id`) because login-domain claims use composite primary key (`tenant`, `id`) for Citus compatibility.
 
 ## Commands / Runbooks
 
@@ -37,6 +39,9 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) F001 implementation checks:
   - `node -c server/migrations/20260303100000_add_msp_sso_domain_claim_lifecycle.cjs`
   - `npx vitest run server/src/test/unit/migrations/mspSsoTenantLoginDomainsMigration.test.ts`
+- (2026-03-03) F002 implementation checks:
+  - `node -c server/migrations/20260303101000_create_msp_sso_domain_verification_challenges.cjs`
+  - `cd server && npx vitest run src/test/unit/migrations/mspSsoTenantLoginDomainsMigration.test.ts`
 
 ## Links / References
 
