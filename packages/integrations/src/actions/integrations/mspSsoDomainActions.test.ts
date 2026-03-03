@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-type Row = {
+type DomainRow = {
   tenant: string;
   id: string;
   domain: string;
@@ -13,12 +13,36 @@ type Row = {
   revoked_at?: string | null;
   created_by?: string | null;
   updated_by?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+type ChallengeRow = {
+  tenant: string;
+  id: string;
+  claim_id: string;
+  challenge_type: string;
+  challenge_label: string;
+  challenge_value: string;
+  challenge_token_hash: string;
+  is_active: boolean;
+  expires_at?: string | null;
+  verified_at?: string | null;
+  invalidated_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
 };
 
 let mockUser: { user_id: string; user_type: string } = { user_id: 'user-1', user_type: 'internal' };
 let mockCtx: { tenant: string } = { tenant: 'tenant-1' };
 let hasPermissionValue = true;
-let rows: Row[] = [];
+let rows: DomainRow[] = [];
+let challengeRows: ChallengeRow[] = [];
+let hasChallengeTable = false;
+
+const resolveTxtMock = vi.hoisted(() => vi.fn(async () => []));
 
 function normalize(value: string): string {
   const trimmed = value.trim().toLowerCase();
@@ -28,10 +52,15 @@ function normalize(value: string): string {
 class QueryBuilder {
   private table: string;
   private selected: string[] = [];
-  private whereClauses: Array<(row: Row) => boolean> = [];
-  private whereNotClauses: Array<(row: Row) => boolean> = [];
+  private whereClauses: Array<(row: Record<string, unknown>) => boolean> = [];
+  private whereNotClauses: Array<(row: Record<string, unknown>) => boolean> = [];
   private whereInValues: string[] | null = null;
   private whereNotInValues: string[] | null = null;
+  private whereInColumn: string | null = null;
+  private whereNotInColumn: string | null = null;
+  private whereRawDomain: string | null = null;
+  private orderByColumn: string | null = null;
+  private orderDirection: 'asc' | 'desc' = 'asc';
 
   constructor(table: string) {
     this.table = table;
@@ -44,29 +73,48 @@ class QueryBuilder {
 
   where(conditions: Record<string, unknown>): QueryBuilder {
     this.whereClauses.push((row) =>
-      Object.entries(conditions).every(([key, value]) => (row as unknown as Record<string, unknown>)[key] === value)
+      Object.entries(conditions).every(([key, value]) => row[key] === value)
     );
     return this;
   }
 
   whereNot(conditions: Record<string, unknown>): QueryBuilder {
     this.whereNotClauses.push((row) =>
-      Object.entries(conditions).every(([key, value]) => (row as unknown as Record<string, unknown>)[key] === value)
+      Object.entries(conditions).every(([key, value]) => row[key] === value)
     );
     return this;
   }
 
-  whereIn(_column: unknown, values: string[]): QueryBuilder {
-    this.whereInValues = values.map(normalize);
+  whereIn(column: unknown, values: string[]): QueryBuilder {
+    this.whereInColumn = String(column ?? '');
+    this.whereInValues = values.map((value) =>
+      this.whereInColumn.includes('claim_status') ? String(value) : normalize(String(value))
+    );
     return this;
   }
 
-  whereNotIn(_column: unknown, values: string[]): QueryBuilder {
-    this.whereNotInValues = values.map(normalize);
+  whereNotIn(column: unknown, values: string[]): QueryBuilder {
+    this.whereNotInColumn = String(column ?? '');
+    this.whereNotInValues = values.map((value) =>
+      this.whereNotInColumn.includes('claim_status') ? String(value) : normalize(String(value))
+    );
+    return this;
+  }
+
+  whereRaw(_sql: string, bindings: unknown[]): QueryBuilder {
+    this.whereRawDomain = normalize(String(bindings[0] ?? ''));
+    return this;
+  }
+
+  orderBy(column: string, direction: 'asc' | 'desc' = 'asc'): QueryBuilder {
+    this.orderByColumn = column;
+    this.orderDirection = direction;
     return this;
   }
 
   orderByRaw(_raw: string): QueryBuilder {
+    this.orderByColumn = 'domain';
+    this.orderDirection = 'asc';
     return this;
   }
 
@@ -80,7 +128,17 @@ class QueryBuilder {
   }
 
   async insert(payload: Record<string, unknown>): Promise<void> {
-    rows.push(payload as Row);
+    if (this.table === 'msp_sso_tenant_login_domains') {
+      rows.push(payload as DomainRow);
+      return;
+    }
+    if (this.table === 'msp_sso_domain_verification_challenges') {
+      challengeRows.push(payload as ChallengeRow);
+    }
+  }
+
+  first(): Promise<Record<string, unknown> | undefined> {
+    return this.then((result) => (result as Record<string, unknown>[])[0]);
   }
 
   then<TResult1 = unknown, TResult2 = never>(
@@ -91,21 +149,43 @@ class QueryBuilder {
       if (!this.selected.length) return row;
       const projection: Record<string, unknown> = {};
       for (const key of this.selected) {
-        projection[key] = (row as unknown as Record<string, unknown>)[key];
+        projection[key] = row[key];
       }
       return projection;
     });
-    selectedRows.sort((a, b) => String((a as Record<string, unknown>).domain ?? '').localeCompare(String((b as Record<string, unknown>).domain ?? '')));
-    return Promise.resolve(selectedRows).then(onfulfilled, onrejected);
+    const sorted = selectedRows.sort((a, b) => {
+      if (!this.orderByColumn && this.table !== 'msp_sso_tenant_login_domains') return 0;
+      const column = this.orderByColumn ?? 'domain';
+      const left = String((a as Record<string, unknown>)[column] ?? '');
+      const right = String((b as Record<string, unknown>)[column] ?? '');
+      const comparison = left.localeCompare(right);
+      return this.orderDirection === 'desc' ? comparison * -1 : comparison;
+    });
+    return Promise.resolve(sorted).then(onfulfilled, onrejected);
   }
 
-  private filterRows(): Row[] {
-    return rows.filter((row) => {
-      if (this.table !== 'msp_sso_tenant_login_domains') return false;
+  private filterRows(): Array<Record<string, unknown>> {
+    const source: Array<Record<string, unknown>> =
+      this.table === 'msp_sso_tenant_login_domains'
+        ? (rows as Array<Record<string, unknown>>)
+        : this.table === 'msp_sso_domain_verification_challenges'
+          ? (challengeRows as Array<Record<string, unknown>>)
+          : [];
+
+    return source.filter((row) => {
       if (this.whereClauses.some((clause) => !clause(row))) return false;
       if (this.whereNotClauses.some((clause) => clause(row))) return false;
-      if (this.whereInValues && !this.whereInValues.includes(normalize(row.domain))) return false;
-      if (this.whereNotInValues && this.whereNotInValues.includes(normalize(row.domain))) return false;
+      if (this.whereRawDomain && normalize(String(row.domain ?? '')) !== this.whereRawDomain) return false;
+      if (this.whereInValues) {
+        const column = this.whereInColumn?.includes('claim_status') ? 'claim_status' : 'domain';
+        const rowValue = column === 'claim_status' ? String(row[column] ?? '') : normalize(String(row[column] ?? ''));
+        if (!this.whereInValues.includes(rowValue)) return false;
+      }
+      if (this.whereNotInValues) {
+        const column = this.whereNotInColumn?.includes('claim_status') ? 'claim_status' : 'domain';
+        const rowValue = column === 'claim_status' ? String(row[column] ?? '') : normalize(String(row[column] ?? ''));
+        if (this.whereNotInValues.includes(rowValue)) return false;
+      }
       return true;
     });
   }
@@ -116,14 +196,18 @@ knexMock.raw = (value: string) => value;
 knexMock.fn = { now: () => 'now()' };
 knexMock.schema = {
   hasColumn: async (_table: string, _column: string) => true,
-  hasTable: async (_table: string) => false,
+  hasTable: async (table: string) => {
+    if (table === 'msp_sso_tenant_login_domains') return true;
+    if (table === 'msp_sso_domain_verification_challenges') return hasChallengeTable;
+    return false;
+  },
 };
-knexMock.transaction = async (handler: (trx: any) => Promise<void>) => {
+knexMock.transaction = async (handler: (trx: any) => Promise<unknown>) => {
   const trx = (table: string) => new QueryBuilder(table);
   trx.raw = knexMock.raw;
   trx.fn = knexMock.fn;
   trx.schema = knexMock.schema;
-  await handler(trx);
+  return handler(trx);
 };
 
 vi.mock('@alga-psa/auth/withAuth', () => ({
@@ -139,6 +223,10 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: knexMock })),
+}));
+
+vi.mock('node:dns/promises', () => ({
+  resolveTxt: (...args: unknown[]) => resolveTxtMock(...args),
 }));
 
 import {
@@ -157,6 +245,10 @@ describe('msp sso domain actions', () => {
     mockCtx = { tenant: 'tenant-1' };
     hasPermissionValue = true;
     rows = [];
+    challengeRows = [];
+    hasChallengeTable = true;
+    resolveTxtMock.mockReset();
+    resolveTxtMock.mockResolvedValue([]);
   });
 
   it('T004: list action denies unauthorized users and client users', async () => {
@@ -248,6 +340,8 @@ describe('msp sso domain actions', () => {
           verified_at: '2026-03-03T00:00:00.000Z',
           rejected_at: null,
           revoked_at: null,
+          active_challenge_label: null,
+          active_challenge_value: null,
         },
       ],
     });
@@ -333,5 +427,212 @@ describe('msp sso domain actions', () => {
       success: false,
       error: 'Claim id is required.',
     });
+  });
+
+  it('T010: request action creates pending claim and active dns challenge', async () => {
+    const result = await requestMspSsoDomainClaim({ domain: 'Acme.com' });
+
+    expect(result.success).toBe(true);
+    expect(result.idempotent).toBe(false);
+    expect(result.claim).toMatchObject({
+      domain: 'acme.com',
+      claim_status: 'pending',
+      is_active: true,
+    });
+    expect(result.challenge).toMatchObject({
+      claim_id: result.claim?.id,
+      challenge_type: 'dns_txt',
+      challenge_label: '_alga-msp-sso.acme.com',
+      is_active: true,
+    });
+    expect(challengeRows).toHaveLength(1);
+  });
+
+  it('T011: request action is idempotent for existing pending claim with active challenge', async () => {
+    rows.push({
+      tenant: 'tenant-1',
+      id: 'claim-1',
+      domain: 'acme.com',
+      is_active: true,
+      claim_status: 'pending',
+      claim_status_updated_at: '2026-03-03T00:00:00.000Z',
+      claimed_at: '2026-03-03T00:00:00.000Z',
+    });
+    challengeRows.push({
+      tenant: 'tenant-1',
+      id: 'challenge-1',
+      claim_id: 'claim-1',
+      challenge_type: 'dns_txt',
+      challenge_label: '_alga-msp-sso.acme.com',
+      challenge_value: 'alga-sso-verification=existing-token',
+      challenge_token_hash: 'hash',
+      is_active: true,
+      created_at: '2026-03-03T00:00:00.000Z',
+      updated_at: '2026-03-03T00:00:00.000Z',
+    });
+
+    const result = await requestMspSsoDomainClaim({ domain: 'acme.com' });
+    expect(result.success).toBe(true);
+    expect(result.idempotent).toBe(true);
+    expect(result.claim?.id).toBe('claim-1');
+    expect(result.challenge?.id).toBe('challenge-1');
+    expect(challengeRows).toHaveLength(1);
+  });
+
+  it('T012: refresh action rotates challenge material and invalidates prior challenge', async () => {
+    rows.push({
+      tenant: 'tenant-1',
+      id: 'claim-1',
+      domain: 'acme.com',
+      is_active: true,
+      claim_status: 'pending',
+      claim_status_updated_at: '2026-03-03T00:00:00.000Z',
+      claimed_at: '2026-03-03T00:00:00.000Z',
+    });
+    challengeRows.push({
+      tenant: 'tenant-1',
+      id: 'challenge-1',
+      claim_id: 'claim-1',
+      challenge_type: 'dns_txt',
+      challenge_label: '_alga-msp-sso.acme.com',
+      challenge_value: 'alga-sso-verification=old-token',
+      challenge_token_hash: 'old-hash',
+      is_active: true,
+      created_at: '2026-03-03T00:00:00.000Z',
+      updated_at: '2026-03-03T00:00:00.000Z',
+    });
+
+    const result = await refreshMspSsoDomainClaimChallenge({ claimId: 'claim-1' });
+    expect(result.success).toBe(true);
+    expect(result.challenge?.challenge_value).not.toBe('alga-sso-verification=old-token');
+    expect(challengeRows.find((row) => row.id === 'challenge-1')?.is_active).toBe(false);
+    expect(challengeRows.filter((row) => row.claim_id === 'claim-1' && row.is_active)).toHaveLength(1);
+  });
+
+  it('T013/T016: verify action promotes claim when dns challenge matches and blocks verified conflicts', async () => {
+    rows.push(
+      {
+        tenant: 'tenant-1',
+        id: 'claim-1',
+        domain: 'acme.com',
+        is_active: true,
+        claim_status: 'pending',
+        claim_status_updated_at: '2026-03-03T00:00:00.000Z',
+        claimed_at: '2026-03-03T00:00:00.000Z',
+      },
+      {
+        tenant: 'tenant-2',
+        id: 'claim-2',
+        domain: 'shared.com',
+        is_active: true,
+        claim_status: 'verified',
+        claim_status_updated_at: '2026-03-03T00:00:00.000Z',
+        verified_at: '2026-03-03T00:00:00.000Z',
+      },
+      {
+        tenant: 'tenant-1',
+        id: 'claim-3',
+        domain: 'shared.com',
+        is_active: true,
+        claim_status: 'pending',
+        claim_status_updated_at: '2026-03-03T00:00:00.000Z',
+        claimed_at: '2026-03-03T00:00:00.000Z',
+      }
+    );
+    challengeRows.push(
+      {
+        tenant: 'tenant-1',
+        id: 'challenge-1',
+        claim_id: 'claim-1',
+        challenge_type: 'dns_txt',
+        challenge_label: '_alga-msp-sso.acme.com',
+        challenge_value: 'alga-sso-verification=match-token',
+        challenge_token_hash: 'hash',
+        is_active: true,
+        created_at: '2026-03-03T00:00:00.000Z',
+        updated_at: '2026-03-03T00:00:00.000Z',
+      },
+      {
+        tenant: 'tenant-1',
+        id: 'challenge-3',
+        claim_id: 'claim-3',
+        challenge_type: 'dns_txt',
+        challenge_label: '_alga-msp-sso.shared.com',
+        challenge_value: 'alga-sso-verification=conflict-token',
+        challenge_token_hash: 'hash',
+        is_active: true,
+        created_at: '2026-03-03T00:00:00.000Z',
+        updated_at: '2026-03-03T00:00:00.000Z',
+      }
+    );
+
+    resolveTxtMock.mockResolvedValueOnce([['alga-sso-verification=match-token']]);
+    const verifyResult = await verifyMspSsoDomainClaimOwnership({ claimId: 'claim-1' });
+    expect(verifyResult.success).toBe(true);
+    expect(verifyResult.claim?.claim_status).toBe('verified');
+    expect(challengeRows.find((row) => row.id === 'challenge-1')?.is_active).toBe(false);
+
+    resolveTxtMock.mockResolvedValueOnce([['alga-sso-verification=conflict-token']]);
+    const conflictResult = await verifyMspSsoDomainClaimOwnership({ claimId: 'claim-3' });
+    expect(conflictResult.success).toBe(false);
+    expect(conflictResult.error).toContain('another tenant already has an active verified claim');
+    expect(rows.find((row) => row.id === 'claim-3')?.claim_status).toBe('pending');
+  });
+
+  it('T014/T015: verify mismatch returns neutral error and revoke transitions claim to revoked', async () => {
+    rows.push({
+      tenant: 'tenant-1',
+      id: 'claim-1',
+      domain: 'acme.com',
+      is_active: true,
+      claim_status: 'verified',
+      claim_status_updated_at: '2026-03-03T00:00:00.000Z',
+      verified_at: '2026-03-03T00:00:00.000Z',
+    });
+    challengeRows.push({
+      tenant: 'tenant-1',
+      id: 'challenge-1',
+      claim_id: 'claim-1',
+      challenge_type: 'dns_txt',
+      challenge_label: '_alga-msp-sso.acme.com',
+      challenge_value: 'alga-sso-verification=expected-token',
+      challenge_token_hash: 'hash',
+      is_active: true,
+      created_at: '2026-03-03T00:00:00.000Z',
+      updated_at: '2026-03-03T00:00:00.000Z',
+    });
+
+    rows.push({
+      tenant: 'tenant-1',
+      id: 'claim-2',
+      domain: 'beta.com',
+      is_active: true,
+      claim_status: 'pending',
+      claim_status_updated_at: '2026-03-03T00:00:00.000Z',
+      claimed_at: '2026-03-03T00:00:00.000Z',
+    });
+    challengeRows.push({
+      tenant: 'tenant-1',
+      id: 'challenge-2',
+      claim_id: 'claim-2',
+      challenge_type: 'dns_txt',
+      challenge_label: '_alga-msp-sso.beta.com',
+      challenge_value: 'alga-sso-verification=expected-beta',
+      challenge_token_hash: 'hash',
+      is_active: true,
+      created_at: '2026-03-03T00:00:00.000Z',
+      updated_at: '2026-03-03T00:00:00.000Z',
+    });
+
+    resolveTxtMock.mockResolvedValueOnce([['not-a-match']]);
+    const mismatch = await verifyMspSsoDomainClaimOwnership({ claimId: 'claim-2' });
+    expect(mismatch.success).toBe(false);
+    expect(mismatch.error).toContain('Unable to verify domain ownership');
+    expect(rows.find((row) => row.id === 'claim-2')?.claim_status).toBe('pending');
+
+    const revokeResult = await revokeMspSsoDomainClaim({ claimId: 'claim-1' });
+    expect(revokeResult.success).toBe(true);
+    expect(revokeResult.claim?.claim_status).toBe('revoked');
+    expect(challengeRows.find((row) => row.id === 'challenge-1')?.is_active).toBe(false);
   });
 });

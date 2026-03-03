@@ -185,3 +185,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `F035`: route contract tests verify `/auth/msp/signin` entry path and callbackUrl passthrough/default behavior remain unchanged under lifecycle integration.
 - (2026-03-03) Validation run for `F035`:
   - `cd server && npx vitest run ../packages/auth/src/components/MspSignInRoute.contract.test.ts`
+- (2026-03-03) Completed `T001`: added migration contract suite `server/src/test/unit/migrations/mspSsoDomainLifecycle.migrations.test.ts` validating lifecycle schema additions (`claim_status` + lifecycle metadata columns/check constraint).
+- (2026-03-03) Validation run for `T001`:
+  - `cd server && npx vitest run src/test/unit/migrations/mspSsoDomainLifecycle.migrations.test.ts`
