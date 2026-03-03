@@ -26,6 +26,7 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Added `verifyMspSsoDomainClaimOwnership` action that resolves DNS TXT records for the stored challenge label/value and promotes claim status to `verified` only on exact match.
 - (2026-03-03) Added `revokeMspSsoDomainClaim` action to transition active claims to `revoked` and invalidate any still-active verification challenges.
 - (2026-03-03) CE advisory save/remove path now explicitly sets/retains `claim_status='advisory'` on active registrations without any ownership proof gate.
+- (2026-03-03) Verified ownership conflict guard is now enforced twice: app-layer check during verify action and DB-layer partial unique index on `lower(domain)` for active `verified|verified_legacy` rows.
 
 ## Discoveries / Constraints
 
@@ -45,6 +46,7 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Verification action keeps neutral admin-safe failure messaging for DNS mismatch/missing challenge and does not expose sensitive internals.
 - (2026-03-03) Revoke flow updates lifecycle metadata (`claim_status_updated_at`, `revoked_at`) and keeps the claim row for historical/audit purposes instead of deleting it.
 - (2026-03-03) CE advisory remove remains non-destructive (`is_active=false`) so historical rows stay available for later reactivation/audit.
+- (2026-03-03) Conflict is resolved at verify time (not request time), matching PRD recommendation and preserving neutral request behavior.
 
 ## Commands / Runbooks
 
@@ -75,6 +77,9 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) F009 implementation checks:
   - `cd server && npx vitest run ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
 - (2026-03-03) F010 implementation checks:
+  - `cd server && npx vitest run ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
+- (2026-03-03) F011 implementation checks:
+  - `node -c server/migrations/20260303103000_enforce_verified_msp_sso_domain_ownership.cjs`
   - `cd server && npx vitest run ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
 
 ## Links / References

@@ -623,6 +623,17 @@ export const verifyMspSsoDomainClaimOwnership = withAuth(async (
         return { claim, verified: false, reason: 'dns_mismatch' as const };
       }
 
+      const conflictingOwner = await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
+        .select('tenant')
+        .whereNot({ tenant })
+        .where({ is_active: true })
+        .whereIn('claim_status', ['verified', 'verified_legacy'])
+        .whereRaw('lower(domain) = ?', [claim.domain])
+        .first();
+      if (conflictingOwner) {
+        return { claim, verified: false, reason: 'verified_conflict' as const };
+      }
+
       const now = trx.fn.now();
       await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
         .where({ tenant, id: claimId })
@@ -653,6 +664,15 @@ export const verifyMspSsoDomainClaimOwnership = withAuth(async (
 
     if (result.verified && result.claim) {
       return { success: true, claim: result.claim };
+    }
+
+    if (result.reason === 'verified_conflict') {
+      return {
+        success: false,
+        error:
+          'Unable to verify domain ownership because another tenant already has an active verified claim for this domain.',
+        claim: result.claim ?? undefined,
+      };
     }
 
     const missing = result.reason === 'missing_claim' || result.reason === 'missing_challenge';
