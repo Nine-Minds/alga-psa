@@ -132,7 +132,7 @@
   {
     "id": "T017",
     "description": "CE advisory add-domain action persists active advisory registration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]

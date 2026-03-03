@@ -203,3 +203,4 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed \: Verify-claim mismatch coverage added with neutral actionable error and pending-state preservation.
 - (2026-03-03) Completed \: Revoke coverage added: verified claim transitions to revoked and active challenge invalidates.
 - (2026-03-03) Completed \: Conflict coverage added: verification blocked when another tenant already holds verified claim.
+- (2026-03-03) Completed \: CE advisory add-domain behavior covered by save action persistence + normalized active domain assertions.
