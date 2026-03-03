@@ -92,7 +92,7 @@
   {
     "id": "T012",
     "description": "EE challenge refresh action rotates challenge token material and invalidates previous challenge.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ]
