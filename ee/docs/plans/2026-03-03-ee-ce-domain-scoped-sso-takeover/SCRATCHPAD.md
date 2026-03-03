@@ -163,3 +163,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `F027`: CE/EE parity contract confirms MSP SSO entry wiring uses discovery-enabled provider buttons implementation (no null/stub path).
 - (2026-03-03) Validation run for `F027`:
   - `cd server && npx vitest run ../packages/auth/src/components/ssoProviderButtonsImport.test.ts ../packages/auth/src/components/ssoProviderButtons.ceEeParity.test.ts`
+- (2026-03-03) Completed `F028`: added contract assertion that `MspLoginForm` passes the live typed email state into `SsoProviderButtons` (`email={email}`), preserving discovery input propagation for CE/EE builds via shared entry wiring.
+- (2026-03-03) Validation run for `F028`:
+  - `cd server && npx vitest run ../packages/auth/src/components/ssoProviderButtonsImport.test.ts`

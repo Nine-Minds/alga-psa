@@ -243,7 +243,7 @@
   {
     "id": "F028",
     "description": "Ensure MSP login forms pass typed email into SSO discovery component in both CE and EE builds.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements #10",
       "UX / UI Notes #2"

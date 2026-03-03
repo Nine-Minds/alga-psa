@@ -17,4 +17,13 @@ describe('SsoProviderButtons wiring', () => {
       expect(contents).not.toContain("from './SsoProviderButtons'");
     }
   });
+
+  it('T047: MSP login form passes typed email into SSO discovery component', () => {
+    const filePath = path.join(__dirname, 'MspLoginForm.tsx');
+    const contents = fs.readFileSync(filePath, 'utf8');
+
+    expect(contents).toContain('<SsoProviderButtons');
+    expect(contents).toContain('email={email}');
+    expect(contents).toContain('onChange={(e) => setEmail(e.target.value)}');
+  });
 });
