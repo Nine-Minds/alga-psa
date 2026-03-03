@@ -1,5 +1,6 @@
 import { createClient } from 'redis';
 import { v4 as uuidv4 } from 'uuid';
+import { ZodError } from 'zod';
 import logger from '@alga-psa/core/logger';
 import { getRedisConfig, getEventStream, getConsumerName, DEFAULT_EVENT_CHANNEL } from './config/redisConfig';
 import { getSecret } from '@alga-psa/core/secrets';
@@ -513,11 +514,23 @@ export class EventBus {
 
       await client.xAck(stream, config.eventBus.consumerGroup, message.id);
     } catch (error) {
-      logger.error('[EventBus] Error processing message:', {
-        error,
-        stream,
-        messageId: message.id
-      });
+      if (error instanceof ZodError) {
+        // Schema validation failures are permanent — the message can never be processed
+        // successfully, so ACK it to prevent infinite retries (poison pill).
+        logger.error('[EventBus] Permanently unprocessable message (schema validation failed), acknowledging to prevent infinite retries:', {
+          error,
+          stream,
+          messageId: message.id,
+          rawEvent: message.message.event?.substring(0, 1000),
+        });
+        await client.xAck(stream, config.eventBus.consumerGroup, message.id);
+      } else {
+        logger.error('[EventBus] Error processing message:', {
+          error,
+          stream,
+          messageId: message.id
+        });
+      }
     }
   }
 
