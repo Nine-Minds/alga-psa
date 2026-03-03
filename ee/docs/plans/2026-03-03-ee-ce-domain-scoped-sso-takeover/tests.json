@@ -213,7 +213,7 @@
   {
     "id": "T027",
     "description": "EE discovery with verified claim and tenant Microsoft credentials returns tenant source + azure-ad provider.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]

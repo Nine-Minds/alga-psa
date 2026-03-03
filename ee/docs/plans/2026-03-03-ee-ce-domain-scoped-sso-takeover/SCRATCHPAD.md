@@ -229,3 +229,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `T026`: EE discovery with verified claim and tenant Google credentials returns tenant source + google provider.
 - (2026-03-03) Validation run for `T026`:
   - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T027`: EE discovery with verified claim and tenant Microsoft credentials returns tenant source + azure-ad provider.
+- (2026-03-03) Validation run for `T027`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
