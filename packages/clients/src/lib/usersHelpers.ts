@@ -6,21 +6,21 @@
  */
 
 export async function getCurrentUserAsync() {
-  const module = await import('@alga-psa/users/actions');
+  const module = await import('@alga-psa/user-composition/actions');
   return module.getCurrentUser();
 }
 
 export async function getAllUsersBasicAsync(includeInactive?: boolean, userType?: string) {
-  const module = await import('@alga-psa/users/actions');
+  const module = await import('@alga-psa/user-composition/actions');
   return module.getAllUsersBasic(includeInactive, userType);
 }
 
 export async function findUserByIdAsync(id: string) {
-  const module = await import('@alga-psa/users/actions');
+  const module = await import('@alga-psa/user-composition/actions');
   return module.findUserById(id);
 }
 
 export async function getContactAvatarUrlActionAsync(contactId: string, tenant: string) {
-  const module = await import('@alga-psa/users/actions');
+  const module = await import('@alga-psa/user-composition/actions');
   return module.getContactAvatarUrlAction(contactId, tenant);
 }

@@ -25,6 +25,10 @@
     "./hooks/*": {
       "import": "./src/hooks/*.ts",
       "types": "./src/hooks/*.ts"
+    },
+    "./lib/*": {
+      "import": "./src/lib/*.ts",
+      "types": "./src/lib/*.ts"
     }
   },
   "dependencies": {
