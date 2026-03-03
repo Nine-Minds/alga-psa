@@ -31,6 +31,7 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Pending EE claims now render inline DNS TXT instructions in settings (host + value) sourced from the active challenge row.
 - (2026-03-03) CE UI copy now explicitly labels domain registration as advisory and clarifies that ownership verification is not enforced in Community Edition.
 - (2026-03-03) Settings copy now consistently states fallback behavior: domains without eligible claims route to Nine Minds app-level SSO providers.
+- (2026-03-03) Discovery helper now resolves domain ownership with both edition and claim lifecycle context (`eligibleForTakeover`) before selecting `tenant` vs `app` source.
 
 ## Discoveries / Constraints
 
@@ -55,6 +56,7 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Verification status feedback is surfaced through inline/error alert state and action-specific toasts (verify/refresh/request/revoke outcomes).
 - (2026-03-03) Header/description messaging now diverges by edition so EE focuses on claim lifecycle actions while CE emphasizes advisory registration semantics.
 - (2026-03-03) Added a persistent informational alert in the settings panel to reinforce fallback behavior independently of edition-specific controls.
+- (2026-03-03) Claim status precedence normalization (`verified > verified_legacy > pending > advisory > rejected > revoked`) prevents duplicate-row drift from producing unstable routing decisions.
 
 ## Commands / Runbooks
 
@@ -99,6 +101,8 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
   - `cd server && npx vitest run ../packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.providers.test.ts`
 - (2026-03-03) F015 implementation checks:
   - `cd server && npx vitest run ../packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.providers.test.ts`
+- (2026-03-03) F016 implementation checks:
+  - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
 
 ## Links / References
 

@@ -2,7 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const tenantSecrets = new Map<string, string>();
 const appSecrets = new Map<string, string>();
-const domainRows: Array<{ tenant: string; domain: string; is_active: boolean }> = [];
+const domainRows: Array<{
+  tenant: string;
+  domain: string;
+  is_active: boolean;
+  claim_status?: string;
+}> = [];
 
 const getTenantSecretMock = vi.fn(async (tenant: string, key: string) => {
   return tenantSecrets.get(`${tenant}:${key}`) ?? null;
@@ -22,7 +27,7 @@ const dbMock = vi.fn((table: string) => {
   } = {};
 
   return {
-    distinct: () => ({
+    select: () => ({
       where: (conditions: { is_active?: boolean }) => {
         state.isActive = conditions?.is_active;
         return {
@@ -31,7 +36,7 @@ const dbMock = vi.fn((table: string) => {
             const rows = domainRows
               .filter((row) => (state.isActive === undefined ? true : row.is_active === state.isActive))
               .filter((row) => row.domain.toLowerCase() === state.domain)
-              .map((row) => ({ tenant: row.tenant }));
+              .map((row) => ({ tenant: row.tenant, claim_status: row.claim_status }));
             return Promise.resolve(rows);
           },
         };
@@ -86,9 +91,11 @@ describe('mspSsoResolution helpers', () => {
       { tenant: 'tenant-3', domain: 'shared.com', is_active: true }
     );
 
-    await expect(resolveTenantForMspSsoDomain('acme.com')).resolves.toEqual({
+    await expect(resolveTenantForMspSsoDomain('acme.com')).resolves.toMatchObject({
       tenantId: 'tenant-1',
       ambiguous: false,
+      claimStatus: 'advisory',
+      eligibleForTakeover: true,
     });
     await expect(resolveTenantForMspSsoDomain('shared.com')).resolves.toEqual({
       ambiguous: true,

@@ -11,6 +11,7 @@ export type MspSsoDomainClaimStatus =
   | 'verified_legacy'
   | 'rejected'
   | 'revoked';
+export type MspSsoEdition = 'ee' | 'ce';
 
 export const MSP_SSO_RESOLUTION_COOKIE = 'msp_sso_resolution';
 export const MSP_SSO_DISCOVERY_COOKIE = 'msp_sso_discovery';
@@ -73,6 +74,8 @@ export interface MspSsoDiscoveryOutcome {
 interface DomainTenantResolution {
   tenantId?: string;
   ambiguous: boolean;
+  claimStatus?: MspSsoDomainClaimStatus;
+  eligibleForTakeover?: boolean;
 }
 
 function isConfigured(value: string | null | undefined): boolean {
@@ -155,6 +158,35 @@ export function normalizeMspSsoDomainClaimStatus(value: unknown): MspSsoDomainCl
   return MSP_SSO_CLAIM_STATUS_VALUES.includes(normalized as MspSsoDomainClaimStatus)
     ? (normalized as MspSsoDomainClaimStatus)
     : 'advisory';
+}
+
+export function getMspSsoEdition(): MspSsoEdition {
+  const edition = (process.env.EDITION ?? '').trim().toLowerCase();
+  const publicEdition = (process.env.NEXT_PUBLIC_EDITION ?? '').trim().toLowerCase();
+  if (edition === 'ee' || edition === 'enterprise' || publicEdition === 'enterprise') {
+    return 'ee';
+  }
+  return 'ce';
+}
+
+export function isClaimStatusEligibleForTenantTakeover(
+  edition: MspSsoEdition,
+  claimStatus: MspSsoDomainClaimStatus
+): boolean {
+  if (edition === 'ee') {
+    return claimStatus === 'verified' || claimStatus === 'verified_legacy';
+  }
+
+  return claimStatus !== 'revoked' && claimStatus !== 'rejected';
+}
+
+function claimStatusPriority(status: MspSsoDomainClaimStatus): number {
+  if (status === 'verified') return 6;
+  if (status === 'verified_legacy') return 5;
+  if (status === 'pending') return 4;
+  if (status === 'advisory') return 3;
+  if (status === 'rejected') return 2;
+  return 1;
 }
 
 export function extractDomainFromEmail(value: string): string | null {
@@ -248,22 +280,31 @@ export async function resolveTenantForMspSsoDomain(
 
   const db = await getAdminConnection();
   const rows = await db(MSP_SSO_LOGIN_DOMAIN_TABLE)
-    .distinct('tenant')
+    .select('tenant', 'claim_status')
     .where({ is_active: true })
     .whereRaw('lower(domain) = ?', [normalizedDomain]);
 
-  const tenants = Array.from(
-    new Set(
-      rows
-        .map((row: Record<string, unknown>) => row.tenant)
-        .filter((tenant): tenant is string => typeof tenant === 'string' && tenant.length > 0)
-    )
-  );
+  const tenantStatusMap = new Map<string, MspSsoDomainClaimStatus>();
+  for (const row of rows as Array<Record<string, unknown>>) {
+    const tenant = row.tenant;
+    if (typeof tenant !== 'string' || tenant.length === 0) continue;
+    const status = normalizeMspSsoDomainClaimStatus(row.claim_status);
+    const current = tenantStatusMap.get(tenant);
+    if (!current || claimStatusPriority(status) > claimStatusPriority(current)) {
+      tenantStatusMap.set(tenant, status);
+    }
+  }
+
+  const tenants = Array.from(tenantStatusMap.keys());
 
   if (tenants.length === 1) {
+    const edition = getMspSsoEdition();
+    const claimStatus = tenantStatusMap.get(tenants[0]) ?? 'advisory';
     return {
       tenantId: tenants[0],
       ambiguous: false,
+      claimStatus,
+      eligibleForTakeover: isClaimStatusEligibleForTenantTakeover(edition, claimStatus),
     };
   }
 
@@ -283,7 +324,11 @@ export async function discoverMspSsoProviderOptions(
   if (!domain) return null;
 
   const domainResolution = await resolveTenantForMspSsoDomain(domain);
-  if (domainResolution.tenantId && !domainResolution.ambiguous) {
+  if (
+    domainResolution.tenantId &&
+    !domainResolution.ambiguous &&
+    domainResolution.eligibleForTakeover
+  ) {
     const [googleReady, microsoftReady] = await Promise.all([
       hasTenantProviderCredentials(domainResolution.tenantId, 'google'),
       hasTenantProviderCredentials(domainResolution.tenantId, 'azure-ad'),

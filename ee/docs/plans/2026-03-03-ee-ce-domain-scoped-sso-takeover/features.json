@@ -92,7 +92,7 @@
   {
     "id": "F016",
     "description": "Update discovery helper to evaluate edition + domain claim lifecycle before selecting tenant/app source.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #6", "Provider routing policy"]
   },
   {
