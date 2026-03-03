@@ -278,7 +278,7 @@
   {
     "id": "T035",
     "description": "Discover endpoint rate-limit path returns same neutral schema and behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
