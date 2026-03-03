@@ -424,7 +424,7 @@
   {
     "id": "T053",
     "description": "Docs describe CE advisory registration behavior and non-blocking ownership model.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
