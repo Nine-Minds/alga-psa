@@ -292,3 +292,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `T047`: MSP login form passes normalized email prop into SSO discovery component in both editions.
 - (2026-03-03) Validation run for `T047`:
   - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/components/ssoProviderButtonsImport.test.ts`
+- (2026-03-03) Completed `T048`: SSO buttons remain disabled for invalid email and while discovery is in flight.
+- (2026-03-03) Validation run for `T048`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/components/SsoProviderButtons.msp.test.tsx`

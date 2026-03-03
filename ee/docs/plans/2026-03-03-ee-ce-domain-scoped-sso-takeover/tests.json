@@ -384,7 +384,7 @@
   {
     "id": "T048",
     "description": "SSO buttons remain disabled for invalid email and while discovery is in flight.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
