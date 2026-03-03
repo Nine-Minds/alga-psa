@@ -256,3 +256,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `T035`: Discover endpoint rate-limit path returns same neutral schema and behavior.
 - (2026-03-03) Validation run for `T035`:
   - `cd server && npx vitest run --coverage.enabled=false src/app/api/auth/msp/sso/discover/route.test.ts`
+- (2026-03-03) Completed `T036`: Discover endpoint logging excludes raw email and keeps only safe metadata.
+- (2026-03-03) Validation run for `T036`:
+  - `cd server && npx vitest run --coverage.enabled=false src/app/api/auth/msp/sso/discover/route.test.ts`

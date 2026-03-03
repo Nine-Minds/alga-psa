@@ -286,7 +286,7 @@
   {
     "id": "T036",
     "description": "Discover endpoint logging excludes raw email and keeps only safe metadata.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
