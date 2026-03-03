@@ -156,7 +156,7 @@
   {
     "id": "T020",
     "description": "EE settings UI renders verification instructions for pending claims.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
