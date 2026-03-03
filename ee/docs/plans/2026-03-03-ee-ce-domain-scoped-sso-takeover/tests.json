@@ -148,7 +148,7 @@
   {
     "id": "T019",
     "description": "EE settings UI renders domain claim lifecycle table with status badges.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]

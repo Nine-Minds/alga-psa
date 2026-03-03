@@ -188,20 +188,23 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `T001`: added migration contract suite `server/src/test/unit/migrations/mspSsoDomainLifecycle.migrations.test.ts` validating lifecycle schema additions (`claim_status` + lifecycle metadata columns/check constraint).
 - (2026-03-03) Validation run for `T001`:
   - `cd server && npx vitest run src/test/unit/migrations/mspSsoDomainLifecycle.migrations.test.ts`
-- (2026-03-03) Completed \: Migration contract suite covers challenge table creation/index contract in mspSsoDomainLifecycle.migrations.test.ts.
-- (2026-03-03) Completed \: Migration contract suite verifies rollback drops lifecycle columns and challenge table.
-- (2026-03-03) Completed \: Migration contract suite verifies EE backfill SQL sets verified_legacy defaults.
-- (2026-03-03) Completed \: Migration contract suite verifies CE backfill SQL sets advisory defaults.
-- (2026-03-03) Completed \: Domain normalization covered by mspSsoResolution helper tests and save-domain normalization tests.
-- (2026-03-03) Completed \: Malformed domain validation covered by deterministic neutral error assertions in action tests.
-- (2026-03-03) Completed \: Permission denial for list-claims and lifecycle actions covered in mspSsoDomainActions.test.ts.
-- (2026-03-03) Completed \: Claims list metadata contract covered in mspSsoDomainActions.test.ts (normalized claim fields + lifecycle timestamps).
-- (2026-03-03) Completed \: Request-claim happy path coverage added: pending claim + active DNS challenge creation.
-- (2026-03-03) Completed \: Request-claim idempotency coverage added for existing pending claim + active challenge.
-- (2026-03-03) Completed \: Refresh challenge coverage added for token rotation and invalidation of previous active challenge.
-- (2026-03-03) Completed \: Verify-claim success coverage added for matching DNS TXT challenge promoting claim to verified.
-- (2026-03-03) Completed \: Verify-claim mismatch coverage added with neutral actionable error and pending-state preservation.
-- (2026-03-03) Completed \: Revoke coverage added: verified claim transitions to revoked and active challenge invalidates.
-- (2026-03-03) Completed \: Conflict coverage added: verification blocked when another tenant already holds verified claim.
-- (2026-03-03) Completed \: CE advisory add-domain behavior covered by save action persistence + normalized active domain assertions.
-- (2026-03-03) Completed \: CE advisory remove-domain behavior covered by save action deactivation/removal assertions.
+- (2026-03-03) Completed `T002`: migration contract suite covers challenge table creation/index contract in `mspSsoDomainLifecycle.migrations.test.ts`.
+- (2026-03-03) Completed `T003`: migration contract suite verifies rollback drops lifecycle columns and challenge table.
+- (2026-03-03) Completed `T004`: migration contract suite verifies EE backfill SQL sets `verified_legacy` defaults.
+- (2026-03-03) Completed `T005`: migration contract suite verifies CE backfill SQL sets `advisory` defaults.
+- (2026-03-03) Completed `T006`: domain normalization covered by helper normalization tests and save-domain normalization behavior.
+- (2026-03-03) Completed `T007`: malformed domain validation covered by deterministic neutral error assertions in action tests.
+- (2026-03-03) Completed `T008`: permission denial for list-claims and lifecycle actions covered in `mspSsoDomainActions.test.ts`.
+- (2026-03-03) Completed `T009`: claims list metadata contract covered in `mspSsoDomainActions.test.ts` (normalized claim fields + lifecycle timestamps).
+- (2026-03-03) Completed `T010`: request-claim happy path coverage added (pending claim + active DNS challenge creation).
+- (2026-03-03) Completed `T011`: request-claim idempotency coverage added for existing pending claim + active challenge.
+- (2026-03-03) Completed `T012`: refresh challenge coverage added for token rotation and invalidation of previous active challenge.
+- (2026-03-03) Completed `T013`: verify-claim success coverage added for matching DNS TXT challenge promoting claim to verified.
+- (2026-03-03) Completed `T014`: verify-claim mismatch coverage added with neutral actionable error and pending-state preservation.
+- (2026-03-03) Completed `T015`: revoke coverage added (verified claim transitions to revoked and active challenge invalidates).
+- (2026-03-03) Completed `T016`: conflict coverage added (verification blocked when another tenant already holds verified claim).
+- (2026-03-03) Completed `T017`: CE advisory add-domain behavior covered by save action persistence + normalized active domain assertions.
+- (2026-03-03) Completed `T018`: CE advisory remove-domain behavior covered by save action deactivation/removal assertions.
+- (2026-03-03) Completed `T019`: added EE runtime UI contract coverage asserting lifecycle claim rows render with status badges (`Pending`, `Verified`) from `listMspSsoDomainClaims` data.
+- (2026-03-03) Validation run for `T019`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/integrations/src/components/settings/integrations/MspSsoLoginDomainsSettings.contract.test.tsx`

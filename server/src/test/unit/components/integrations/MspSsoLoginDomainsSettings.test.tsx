@@ -128,4 +128,59 @@ describe('MspSsoLoginDomainsSettings', () => {
     expect(await screen.findByText(/already in use\./i)).toBeInTheDocument();
     expect(await screen.findByText(/conflicts: acme\.com\./i)).toBeInTheDocument();
   });
+
+  it('T022: renders CE advisory copy and guidance', async () => {
+    render(<MspSsoLoginDomainsSettings />);
+
+    expect(
+      await screen.findByText(
+        /advisory mode: domain registration helps route msp sso discovery but does not require ownership verification in community edition\./i,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('T023: CE advisory controls persist add/remove domain registrations', async () => {
+    const user = userEvent.setup();
+    listMspSsoLoginDomainsMock.mockResolvedValueOnce({
+      success: true,
+      domains: ['acme.com', 'old.example'],
+    });
+    saveMspSsoLoginDomainsMock.mockResolvedValueOnce({
+      success: true,
+      domains: ['acme.com', 'beta.com'],
+    });
+
+    render(<MspSsoLoginDomainsSettings />);
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('acme.com')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('old.example')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByLabelText('Remove domain 2'));
+    await user.type(screen.getAllByRole('textbox')[0], 'beta.com');
+    await user.click(screen.getByRole('button', { name: 'Add' }));
+    await user.click(screen.getByRole('button', { name: 'Save Domains' }));
+
+    expect(saveMspSsoLoginDomainsMock).toHaveBeenCalledWith({
+      domains: ['acme.com', 'beta.com'],
+    });
+    expect(await screen.findByDisplayValue('beta.com')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('old.example')).not.toBeInTheDocument();
+  });
+
+  it('T024: CE settings copy states unmanaged domain fallback to Nine Minds app-level providers', async () => {
+    render(<MspSsoLoginDomainsSettings />);
+
+    expect(
+      await screen.findByText(
+        /register advisory domains for msp login sso discovery\. ownership verification is not enforced in community edition, and unmanaged domains fall back to nine minds app-level providers\./i,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /domains without an eligible tenant claim use the nine minds app-level sso provider configuration\./i,
+      ),
+    ).toBeInTheDocument();
+  });
 });
