@@ -91,6 +91,12 @@ export interface VerifyMspSsoDomainClaimResult {
   error?: string;
 }
 
+export interface RevokeMspSsoDomainClaimResult {
+  success: boolean;
+  claim?: MspSsoDomainClaim;
+  error?: string;
+}
+
 function normalizeDomain(value: string): string {
   return normalizeMspSsoDomain(value);
 }
@@ -661,6 +667,70 @@ export const verifyMspSsoDomainClaimOwnership = withAuth(async (
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to verify MSP SSO domain claim',
+    };
+  }
+});
+
+export const revokeMspSsoDomainClaim = withAuth(async (
+  user,
+  { tenant },
+  input: { claimId: string }
+): Promise<RevokeMspSsoDomainClaimResult> => {
+  try {
+    if (!(await canManageDomains(user))) {
+      return { success: false, error: 'Forbidden' };
+    }
+
+    const claimId = String(input?.claimId ?? '').trim();
+    if (!claimId) {
+      return { success: false, error: 'Claim id is required.' };
+    }
+
+    const { knex } = await createTenantKnex();
+    const actorId = (user as { user_id?: string })?.user_id ?? null;
+
+    const result = await knex.transaction(async (trx: Knex.Transaction) => {
+      const existingClaim = await toDomainClaim(trx, tenant, claimId);
+      if (!existingClaim || !existingClaim.is_active) {
+        return null;
+      }
+
+      const now = trx.fn.now();
+      await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
+        .where({ tenant, id: claimId })
+        .update({
+          claim_status: 'revoked',
+          claim_status_updated_at: now,
+          claim_status_updated_by: actorId,
+          revoked_at: now,
+          updated_by: actorId,
+          updated_at: now,
+        });
+
+      await trx(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
+        .where({ tenant, claim_id: claimId, is_active: true })
+        .update({
+          is_active: false,
+          invalidated_at: now,
+          updated_by: actorId,
+          updated_at: now,
+        });
+
+      return toDomainClaim(trx, tenant, claimId);
+    });
+
+    if (!result) {
+      return { success: false, error: 'Unable to find an active claim to revoke.' };
+    }
+
+    return {
+      success: true,
+      claim: result,
+    };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to revoke MSP SSO domain claim',
     };
   }
 });
