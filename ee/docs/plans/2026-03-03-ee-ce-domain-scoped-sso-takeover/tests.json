@@ -440,7 +440,7 @@
   {
     "id": "T055",
     "description": "DB-backed integration happy path: EE verified claim + tenant Microsoft credentials returns tenant source and [\"azure-ad\"].",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034",
       "F017"
