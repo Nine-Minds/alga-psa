@@ -1,6 +1,7 @@
 import { getConsolidatedTicketListData } from '@alga-psa/tickets/actions/optimizedTicketActions';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
+import { getTeams } from '@alga-psa/teams/actions';
 import type { ITicketListFilters } from '@alga-psa/types';
 import { MspTicketsPageClient } from '@alga-psa/msp-composition/tickets';
 
@@ -172,20 +173,27 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     };
 
     // Fetch consolidated data for the ticket list with initial filters and pagination
-    const [consolidatedData, displaySettings] = await Promise.all([
+    const [consolidatedData, displaySettings, teams, userPermissions] = await Promise.all([
       getConsolidatedTicketListData(fetchFilters, page, pageSize),
-      getTicketingDisplaySettings()
+      getTicketingDisplaySettings(),
+      getTeams().catch(() => []),
+      getCurrentUserPermissions().catch(() => [] as string[])
     ]);
+
+    const canUpdateTickets = userPermissions.includes('ticket:update');
 
     return (
       <div id="tickets-page-container" className="bg-gray-100">
         <MspTicketsPageClient
           consolidatedData={consolidatedData}
+          initialFormOptions={consolidatedData.options}
           currentUser={user!}
           initialFilters={initialFilters}
           initialPage={page}
           initialPageSize={pageSize}
           displaySettings={displaySettings}
+          initialTeams={teams}
+          canUpdateTickets={canUpdateTickets}
         />
       </div>
     );
