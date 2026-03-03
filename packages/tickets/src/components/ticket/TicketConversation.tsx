@@ -78,6 +78,7 @@ interface TicketConversationProps {
   externalComments?: Array<IComment & { child_ticket_id?: string; child_ticket_number?: string; child_ticket_title?: string; child_client_name?: string }>;
   closedStatusOptions?: { value: string; label: string }[];
   onClipboardImageUploaded?: () => Promise<void> | void;
+  defaultNewestFirst?: boolean;
 }
 
 const TicketConversation: React.FC<TicketConversationProps> = ({
@@ -106,13 +107,14 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   externalComments = [],
   closedStatusOptions = [],
   onClipboardImageUploaded,
+  defaultNewestFirst = false,
 }) => {
   const { t } = useTranslation('features/tickets');
   const { t: tCore } = useTranslation('common');
   // Ensure we have a stable id for interactive element ids
   const compId = id || `ticket-${ticket.ticket_id || 'unknown'}-conversation`;
   const [showEditor, setShowEditor] = useState(false);
-  const [reverseOrder, setReverseOrder] = useState(false);
+  const [reverseOrder, setReverseOrder] = useState(defaultNewestFirst);
   const [isInternalToggle, setIsInternalToggle] = useState(false);
   const [isResolutionToggle, setIsResolutionToggle] = useState(false);
   const NO_STATUS_CHANGE = '__no_status_change__';
