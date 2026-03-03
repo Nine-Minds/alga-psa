@@ -2,10 +2,10 @@
 
 import { randomUUID } from 'crypto';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import { Knex } from 'knex';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import { uploadDocument } from './documentActions';
 import type { IDocument } from '@alga-psa/types';
 
 export type ArticleType = 'how_to' | 'faq' | 'troubleshooting' | 'reference';
@@ -128,57 +128,65 @@ function generateSlug(title: string): string {
 }
 
 /**
- * Creates a new KB article with its underlying document.
- * F081: Creates both document and kb_articles record in transaction.
+ * Internal helper for creating a KB article. Not wrapped in withAuth —
+ * intended to be called from already-authenticated contexts.
  */
-export const createArticle = withAuth(
-  async (
-    user,
-    { tenant },
-    input: ICreateArticleInput
-  ): Promise<IKBArticleWithDocument | ActionPermissionError> => {
-    const { knex } = await createTenantKnex();
+async function _createArticleInternal(
+  knex: Knex,
+  user: { user_id: string },
+  tenant: string,
+  input: ICreateArticleInput
+): Promise<IKBArticleWithDocument> {
+  if (!input.title?.trim()) {
+    throw new Error('Title is required');
+  }
 
-    if (!(await hasPermission(user, 'document', 'create'))) {
-      return permissionError('Permission denied');
-    }
+  const slug = input.slug?.trim() || generateSlug(input.title);
+  const articleType = input.articleType || 'how_to';
+  const audience = input.audience || 'internal';
 
-    if (!input.title?.trim()) {
-      throw new Error('Title is required');
-    }
+  // Check slug uniqueness
+  const existingSlug = await knex('kb_articles')
+    .where({ tenant, slug })
+    .first();
+  if (existingSlug) {
+    throw new Error('An article with this slug already exists');
+  }
 
-    const slug = input.slug?.trim() || generateSlug(input.title);
-    const articleType = input.articleType || 'how_to';
-    const audience = input.audience || 'internal';
+  // Create the underlying document directly via knex
+  const documentId = randomUUID();
+  const now = new Date();
 
-    // Check slug uniqueness
-    const existingSlug = await knex('kb_articles')
-      .where({ tenant, slug })
-      .first();
-    if (existingSlug) {
-      throw new Error('An article with this slug already exists');
-    }
+  await knex('documents').insert({
+    tenant,
+    document_id: documentId,
+    document_name: input.title.trim(),
+    user_id: user.user_id,
+    created_by: user.user_id,
+    order_number: 0,
+    folder_path: '/Knowledge Base',
+    entered_at: now,
+    updated_at: now,
+  });
 
-    // Create the underlying document
-    const documentResult = await uploadDocument({
-      documentName: input.title.trim(),
-      documentType: 'knowledge_base',
-      blockContent: input.content || [],
-      folder_path: '/Knowledge Base',
-    });
+  // Store block content if provided
+  if (input.content && Array.isArray(input.content) && input.content.length > 0) {
+    await knex('documents')
+      .where({ tenant, document_id: documentId })
+      .update({ block_content: JSON.stringify(input.content) });
+  }
 
-    if ('code' in documentResult) {
-      throw new Error(documentResult.message || 'Failed to create document');
-    }
+  const document = await knex('documents')
+    .where({ tenant, document_id: documentId })
+    .first() as IDocument;
 
-    const document = documentResult as IDocument;
+  // Create the KB article record — clean up document on failure
+  const articleId = randomUUID();
+  const nextReviewDue = input.reviewCycleDays
+    ? new Date(Date.now() + input.reviewCycleDays * 24 * 60 * 60 * 1000)
+    : null;
 
-    // Create the KB article record
-    const articleId = randomUUID();
-    const nextReviewDue = input.reviewCycleDays
-      ? new Date(Date.now() + input.reviewCycleDays * 24 * 60 * 60 * 1000)
-      : null;
-
+  try {
     await knex('kb_articles').insert({
       tenant,
       article_id: articleId,
@@ -193,17 +201,44 @@ export const createArticle = withAuth(
       created_by: user.user_id,
       updated_by: user.user_id,
     });
+  } catch (err) {
+    // Clean up orphaned document if kb_articles insert fails
+    await knex('documents')
+      .where({ tenant, document_id: document.document_id })
+      .del()
+      .catch(() => {}); // best effort cleanup
+    throw err;
+  }
 
-    const article = await knex('kb_articles')
-      .select(KB_ARTICLE_SELECT_COLUMNS)
-      .where({ tenant, article_id: articleId })
-      .first();
+  const article = await knex('kb_articles')
+    .select(KB_ARTICLE_SELECT_COLUMNS)
+    .where({ tenant, article_id: articleId })
+    .first();
 
-    return {
-      ...article,
-      document,
-      document_name: document.document_name,
-    } as IKBArticleWithDocument;
+  return {
+    ...article,
+    document,
+    document_name: document.document_name,
+  } as IKBArticleWithDocument;
+}
+
+/**
+ * Creates a new KB article with its underlying document.
+ * F081: Creates both document and kb_articles record atomically.
+ */
+export const createArticle = withAuth(
+  async (
+    user,
+    { tenant },
+    input: ICreateArticleInput
+  ): Promise<IKBArticleWithDocument | ActionPermissionError> => {
+    const { knex } = await createTenantKnex();
+
+    if (!(await hasPermission(user, 'document', 'create'))) {
+      return permissionError('Permission denied');
+    }
+
+    return _createArticleInternal(knex, user, tenant, input);
   }
 );
 
@@ -228,72 +263,74 @@ export const updateArticle = withAuth(
       throw new Error('articleId is required');
     }
 
-    const existing = await knex('kb_articles')
-      .where({ tenant, article_id: articleId })
-      .first();
-
-    if (!existing) {
-      throw new Error('Article not found');
-    }
-
-    const updates: Record<string, any> = {
-      updated_at: knex.fn.now(),
-      updated_by: user.user_id,
-    };
-
-    if (input.title !== undefined) {
-      // Also update the document name
-      await knex('documents')
-        .where({ tenant, document_id: existing.document_id })
-        .update({
-          document_name: input.title.trim(),
-          updated_at: knex.fn.now(),
-        });
-    }
-
-    if (input.slug !== undefined) {
-      const newSlug = input.slug.trim();
-      const existingSlug = await knex('kb_articles')
-        .where({ tenant, slug: newSlug })
-        .whereNot('article_id', articleId)
+    return withTransaction(knex, async (trx) => {
+      const existing = await trx('kb_articles')
+        .where({ tenant, article_id: articleId })
         .first();
-      if (existingSlug) {
-        throw new Error('An article with this slug already exists');
+
+      if (!existing) {
+        throw new Error('Article not found');
       }
-      updates.slug = newSlug;
-    }
 
-    if (input.articleType !== undefined) {
-      updates.article_type = input.articleType;
-    }
+      const updates: Record<string, any> = {
+        updated_at: trx.fn.now(),
+        updated_by: user.user_id,
+      };
 
-    if (input.audience !== undefined) {
-      updates.audience = input.audience;
-    }
-
-    if (input.categoryId !== undefined) {
-      updates.category_id = input.categoryId;
-    }
-
-    if (input.reviewCycleDays !== undefined) {
-      updates.review_cycle_days = input.reviewCycleDays;
-      if (input.reviewCycleDays) {
-        updates.next_review_due = new Date(
-          Date.now() + input.reviewCycleDays * 24 * 60 * 60 * 1000
-        );
+      if (input.title !== undefined) {
+        // Also update the document name
+        await trx('documents')
+          .where({ tenant, document_id: existing.document_id })
+          .update({
+            document_name: input.title.trim(),
+            updated_at: trx.fn.now(),
+          });
       }
-    }
 
-    await knex('kb_articles')
-      .where({ tenant, article_id: articleId })
-      .update(updates);
+      if (input.slug !== undefined) {
+        const newSlug = input.slug.trim();
+        const existingSlug = await trx('kb_articles')
+          .where({ tenant, slug: newSlug })
+          .whereNot('article_id', articleId)
+          .first();
+        if (existingSlug) {
+          throw new Error('An article with this slug already exists');
+        }
+        updates.slug = newSlug;
+      }
 
-    const article = await knex('kb_articles')
-      .select(KB_ARTICLE_SELECT_COLUMNS)
-      .where({ tenant, article_id: articleId })
-      .first();
+      if (input.articleType !== undefined) {
+        updates.article_type = input.articleType;
+      }
 
-    return article as IKBArticle;
+      if (input.audience !== undefined) {
+        updates.audience = input.audience;
+      }
+
+      if (input.categoryId !== undefined) {
+        updates.category_id = input.categoryId;
+      }
+
+      if (input.reviewCycleDays !== undefined) {
+        updates.review_cycle_days = input.reviewCycleDays;
+        if (input.reviewCycleDays) {
+          updates.next_review_due = new Date(
+            Date.now() + input.reviewCycleDays * 24 * 60 * 60 * 1000
+          );
+        }
+      }
+
+      await trx('kb_articles')
+        .where({ tenant, article_id: articleId })
+        .update(updates);
+
+      const article = await trx('kb_articles')
+        .select(KB_ARTICLE_SELECT_COLUMNS)
+        .where({ tenant, article_id: articleId })
+        .first();
+
+      return article as IKBArticle;
+    });
   }
 );
 
@@ -317,41 +354,43 @@ export const publishArticle = withAuth(
       throw new Error('articleId is required');
     }
 
-    const existing = await knex('kb_articles')
-      .where({ tenant, article_id: articleId })
-      .first();
+    return withTransaction(knex, async (trx) => {
+      const existing = await trx('kb_articles')
+        .where({ tenant, article_id: articleId })
+        .first();
 
-    if (!existing) {
-      throw new Error('Article not found');
-    }
+      if (!existing) {
+        throw new Error('Article not found');
+      }
 
-    // Update article status
-    await knex('kb_articles')
-      .where({ tenant, article_id: articleId })
-      .update({
-        status: 'published',
-        published_at: knex.fn.now(),
-        published_by: user.user_id,
-        updated_at: knex.fn.now(),
-        updated_by: user.user_id,
-      });
-
-    // Auto-set is_client_visible for client/public audience
-    if (existing.audience === 'client' || existing.audience === 'public') {
-      await knex('documents')
-        .where({ tenant, document_id: existing.document_id })
+      // Update article status
+      await trx('kb_articles')
+        .where({ tenant, article_id: articleId })
         .update({
-          is_client_visible: true,
-          updated_at: knex.fn.now(),
+          status: 'published',
+          published_at: trx.fn.now(),
+          published_by: user.user_id,
+          updated_at: trx.fn.now(),
+          updated_by: user.user_id,
         });
-    }
 
-    const article = await knex('kb_articles')
-      .select(KB_ARTICLE_SELECT_COLUMNS)
-      .where({ tenant, article_id: articleId })
-      .first();
+      // Auto-set is_client_visible for client/public audience
+      if (existing.audience === 'client' || existing.audience === 'public') {
+        await trx('documents')
+          .where({ tenant, document_id: existing.document_id })
+          .update({
+            is_client_visible: true,
+            updated_at: trx.fn.now(),
+          });
+      }
 
-    return article as IKBArticle;
+      const article = await trx('kb_articles')
+        .select(KB_ARTICLE_SELECT_COLUMNS)
+        .where({ tenant, article_id: articleId })
+        .first();
+
+      return article as IKBArticle;
+    });
   }
 );
 
@@ -375,37 +414,39 @@ export const archiveArticle = withAuth(
       throw new Error('articleId is required');
     }
 
-    const existing = await knex('kb_articles')
-      .where({ tenant, article_id: articleId })
-      .first();
+    return withTransaction(knex, async (trx) => {
+      const existing = await trx('kb_articles')
+        .where({ tenant, article_id: articleId })
+        .first();
 
-    if (!existing) {
-      throw new Error('Article not found');
-    }
+      if (!existing) {
+        throw new Error('Article not found');
+      }
 
-    // Update article status
-    await knex('kb_articles')
-      .where({ tenant, article_id: articleId })
-      .update({
-        status: 'archived',
-        updated_at: knex.fn.now(),
-        updated_by: user.user_id,
-      });
+      // Update article status
+      await trx('kb_articles')
+        .where({ tenant, article_id: articleId })
+        .update({
+          status: 'archived',
+          updated_at: trx.fn.now(),
+          updated_by: user.user_id,
+        });
 
-    // Clear is_client_visible
-    await knex('documents')
-      .where({ tenant, document_id: existing.document_id })
-      .update({
-        is_client_visible: false,
-        updated_at: knex.fn.now(),
-      });
+      // Clear is_client_visible
+      await trx('documents')
+        .where({ tenant, document_id: existing.document_id })
+        .update({
+          is_client_visible: false,
+          updated_at: trx.fn.now(),
+        });
 
-    const article = await knex('kb_articles')
-      .select(KB_ARTICLE_SELECT_COLUMNS)
-      .where({ tenant, article_id: articleId })
-      .first();
+      const article = await trx('kb_articles')
+        .select(KB_ARTICLE_SELECT_COLUMNS)
+        .where({ tenant, article_id: articleId })
+        .first();
 
-    return article as IKBArticle;
+      return article as IKBArticle;
+    });
   }
 );
 
@@ -450,6 +491,17 @@ export const submitForReview = withAuth(
         updated_at: knex.fn.now(),
         updated_by: user.user_id,
       });
+
+    // Validate all reviewer user IDs belong to this tenant
+    const validUsers = await knex('users')
+      .select('user_id')
+      .where('tenant', tenant)
+      .whereIn('user_id', reviewerUserIds);
+    const validUserIds = new Set(validUsers.map((u: { user_id: string }) => u.user_id));
+    const invalidIds = reviewerUserIds.filter((id) => !validUserIds.has(id));
+    if (invalidIds.length > 0) {
+      throw new Error(`Invalid reviewer user IDs: ${invalidIds.join(', ')}`);
+    }
 
     // Create reviewer assignments (remove existing pending ones first)
     await knex('kb_article_reviewers')
@@ -536,6 +588,9 @@ export const getArticles = withAuth(
     pageSize: number = 20,
     filters: IArticleFilters = {}
   ): Promise<{ articles: IKBArticleWithDocument[]; total: number; totalPages: number } | ActionPermissionError> => {
+    // Cap pageSize to prevent excessive queries
+    const effectivePageSize = Math.min(Math.max(pageSize, 1), 100);
+
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'read'))) {
@@ -592,16 +647,16 @@ export const getArticles = withAuth(
     const total = parseInt((countResult as any)?.count || '0', 10);
 
     // Get paginated results
-    const offset = (page - 1) * pageSize;
+    const offset = (page - 1) * effectivePageSize;
     const articles = await query
       .orderBy('ka.updated_at', 'desc')
-      .limit(pageSize)
+      .limit(effectivePageSize)
       .offset(offset);
 
     return {
       articles: articles as IKBArticleWithDocument[],
       total,
-      totalPages: Math.ceil(total / pageSize),
+      totalPages: Math.ceil(total / effectivePageSize),
     };
   }
 );
@@ -752,7 +807,10 @@ export const getArticleTemplates = withAuth(
     }
 
     let query = knex('kb_article_templates')
-      .select('*')
+      .select([
+        'template_id', 'tenant', 'name', 'description',
+        'article_type', 'is_default', 'created_at', 'updated_at',
+      ])
       .where('tenant', tenant);
 
     if (articleType) {
@@ -817,8 +875,8 @@ export const createArticleFromTicket = withAuth(
       },
     ];
 
-    // Create the article
-    return createArticle({
+    // Create the article using internal helper (avoids nested withAuth calls)
+    return _createArticleInternal(knex, user, tenant, {
       title,
       articleType: 'troubleshooting',
       audience: 'internal',

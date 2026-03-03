@@ -8,6 +8,7 @@ import type {
   IKBArticleWithDocument,
   ArticleType,
 } from '@alga-psa/documents/actions';
+import { getAuthenticatedClientId } from '../../lib/clientAuth';
 
 export interface ClientKBFilters {
   search?: string;
@@ -30,39 +31,6 @@ export interface ClientKBCategory {
 }
 
 /**
- * Get the authenticated client user's client_id.
- */
-async function getAuthenticatedClientId(
-  trx: Knex.Transaction,
-  userId: string,
-  tenant: string
-): Promise<string> {
-  const userRecord = await trx('users')
-    .where({
-      user_id: userId,
-      tenant: tenant,
-    })
-    .first();
-
-  if (!userRecord?.contact_id) {
-    throw new Error('User not associated with a contact');
-  }
-
-  const contact = await trx('contacts')
-    .where({
-      contact_name_id: userRecord.contact_id,
-      tenant: tenant,
-    })
-    .first();
-
-  if (!contact?.client_id) {
-    throw new Error('Contact not associated with a client');
-  }
-
-  return contact.client_id;
-}
-
-/**
  * Returns paginated KB articles visible to client portal users.
  * Only shows published articles with audience='client' or 'public'.
  */
@@ -79,13 +47,21 @@ export const getClientKBArticles = withAuth(
       throw new Error('Access denied: Client portal actions are restricted to client users');
     }
 
+    // Cap pageSize to prevent excessive queries
+    const effectivePageSize = Math.min(Math.max(pageSize, 1), 100);
+
     const db = await getConnection(tenant);
 
+    // Fetch real user record for permission check instead of hardcoding is_inactive
+    const userRecord = await db('users')
+      .select('user_id', 'email', 'user_type', 'is_inactive')
+      .where({ user_id: user.user_id, tenant })
+      .first();
     const userForPermission = {
       user_id: user.user_id,
       email: user.email,
       user_type: user.user_type,
-      is_inactive: false,
+      is_inactive: userRecord?.is_inactive ?? false,
       tenant,
     } as IUser;
     const canRead = await hasPermission(userForPermission, 'document', 'read', db);
@@ -139,18 +115,18 @@ export const getClientKBArticles = withAuth(
       const total = parseInt((countResult as any)?.count || '0', 10);
 
       // Get paginated results
-      const offset = (page - 1) * pageSize;
+      const offset = (page - 1) * effectivePageSize;
       const articles = await query
         .orderBy('ka.published_at', 'desc')
-        .limit(pageSize)
+        .limit(effectivePageSize)
         .offset(offset);
 
       return {
         articles: articles as IKBArticleWithDocument[],
         total,
         page,
-        pageSize,
-        totalPages: Math.ceil(total / pageSize),
+        pageSize: effectivePageSize,
+        totalPages: Math.ceil(total / effectivePageSize),
       };
     });
   }
@@ -174,11 +150,16 @@ export const getClientKBArticle = withAuth(
 
     const db = await getConnection(tenant);
 
+    // Fetch real user record for permission check instead of hardcoding is_inactive
+    const userRecord = await db('users')
+      .select('user_id', 'email', 'user_type', 'is_inactive')
+      .where({ user_id: user.user_id, tenant })
+      .first();
     const userForPermission = {
       user_id: user.user_id,
       email: user.email,
       user_type: user.user_type,
-      is_inactive: false,
+      is_inactive: userRecord?.is_inactive ?? false,
       tenant,
     } as IUser;
     const canRead = await hasPermission(userForPermission, 'document', 'read', db);
@@ -293,7 +274,8 @@ export const getClientKBCategories = withAuth(
     const db = await getConnection(tenant);
 
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      // Get categories that have at least one published client/public article
+      // standard_categories is a global reference table (no tenant column) — no tenant filter needed.
+      // Tenant scoping comes from the kb_articles subquery which filters by tenant.
       const categoriesWithArticles = await trx('standard_categories as sc')
         .select([
           'sc.id',

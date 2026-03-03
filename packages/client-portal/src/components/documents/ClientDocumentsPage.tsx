@@ -8,7 +8,7 @@ import { Search, ChevronRight, Download, FileText, Image, File, Video, ChevronDo
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import type { IDocument, IFolderNode } from '@alga-psa/types';
 import { getClientDocuments, getClientDocumentFolders, downloadClientDocument, ClientDocumentFilters, PaginatedClientDocuments } from '@alga-psa/client-portal/actions/client-portal-actions/client-documents';
-import { downloadDocument } from '@alga-psa/documents/lib/documentUtils';
+import { downloadDocument, getDocumentDownloadUrl } from '@alga-psa/documents/lib/documentUtils';
 
 function getDocumentIcon(mimeType: string | undefined): React.ReactNode {
   if (!mimeType) return <File className="w-5 h-5" />;
@@ -135,10 +135,11 @@ function DocumentCard({ document, onDownload, isDownloading }: DocumentCardProps
             <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
               <span>{formatFileSize(document.file_size)}</span>
               <span>·</span>
-              <span>{formatDate(document.created_at)}</span>
+              <span>{formatDate(document.entered_at)}</span>
             </div>
           </div>
           <Button
+            id="client-docs-download-document"
             variant="ghost"
             size="sm"
             onClick={() => onDownload(document)}
@@ -166,11 +167,13 @@ export default function ClientDocumentsPage() {
   const [total, setTotal] = useState(0);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [isFolderSidebarCollapsed, setIsFolderSidebarCollapsed] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const pageSize = 20;
 
   const loadDocuments = useCallback(async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const filters: ClientDocumentFilters = {};
       if (searchTerm) {
@@ -186,10 +189,11 @@ export default function ClientDocumentsPage() {
       setTotal(result.total);
     } catch (error) {
       console.error('Failed to load documents:', error);
+      setLoadError(t('documents.loadError', 'Failed to load documents. Please try again.'));
     } finally {
       setIsLoading(false);
     }
-  }, [page, pageSize, searchTerm, selectedFolder]);
+  }, [page, pageSize, searchTerm, selectedFolder, t]);
 
   const loadFolders = useCallback(async () => {
     try {
@@ -224,7 +228,7 @@ export default function ClientDocumentsPage() {
       // Verify access before downloading
       await downloadClientDocument(doc.document_id);
       // Use the standard download utility
-      await downloadDocument(doc);
+      await downloadDocument(getDocumentDownloadUrl(doc.file_id || ''), doc.document_name);
     } catch (error) {
       console.error('Failed to download document:', error);
     } finally {
@@ -252,6 +256,7 @@ export default function ClientDocumentsPage() {
               <CardContent className="p-2 h-full overflow-auto">
                 {isFolderSidebarCollapsed ? (
                   <Button
+                    id="client-docs-expand-sidebar"
                     variant="ghost"
                     size="sm"
                     onClick={() => setIsFolderSidebarCollapsed(false)}
@@ -264,6 +269,7 @@ export default function ClientDocumentsPage() {
                     <div className="flex items-center justify-between px-2 py-1 mb-2">
                       <span className="text-sm font-medium">{t('documents.folders', 'Folders')}</span>
                       <Button
+                        id="client-docs-collapse-sidebar"
                         variant="ghost"
                         size="sm"
                         onClick={() => setIsFolderSidebarCollapsed(true)}
@@ -315,6 +321,13 @@ export default function ClientDocumentsPage() {
             </span>
           </div>
 
+          {/* Error State */}
+          {loadError && (
+            <div className="mb-4 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
+              {loadError}
+            </div>
+          )}
+
           {/* Document Grid */}
           <div className="flex-1 overflow-auto">
             {isLoading ? (
@@ -344,6 +357,7 @@ export default function ClientDocumentsPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t">
               <Button
+                id="client-docs-previous-page"
                 variant="outline"
                 size="sm"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -355,6 +369,7 @@ export default function ClientDocumentsPage() {
                 {t('common.pageOf', 'Page {{current}} of {{total}}', { current: page, total: totalPages })}
               </span>
               <Button
+                id="client-docs-next-page"
                 variant="outline"
                 size="sm"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}

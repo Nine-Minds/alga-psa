@@ -147,13 +147,13 @@ export default function KBReviewDashboard({
                   </div>
                   <div className="flex items-center gap-2">
                     {onEditArticle && (
-                      <Button variant="ghost" size="sm" onClick={() => onEditArticle(article)}>
+                      <Button id={`kb-review-edit-${article.article_id}`} variant="ghost" size="sm" onClick={() => onEditArticle(article)}>
                         <Eye className="w-4 h-4 mr-1" />
                         {t('kb.view', 'View')}
                       </Button>
                     )}
                     {onReviewArticle && (
-                      <Button variant="default" size="sm" onClick={() => onReviewArticle(article)}>
+                      <Button id={`kb-review-review-${article.article_id}`} variant="default" size="sm" onClick={() => onReviewArticle(article)}>
                         <CheckCircle className="w-4 h-4 mr-1" />
                         {t('kb.review', 'Review')}
                       </Button>
@@ -173,7 +173,7 @@ export default function KBReviewDashboard({
             <CardTitle className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-orange-500" />
               {t('kb.overdueReviewsTitle', 'Overdue for Review')}
-              <Badge variant="destructive">{staleArticles.length}</Badge>
+              <Badge variant="error">{staleArticles.length}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -196,7 +196,7 @@ export default function KBReviewDashboard({
                   </div>
                   <div className="flex items-center gap-2">
                     {onEditArticle && (
-                      <Button variant="outline" size="sm" onClick={() => onEditArticle(article)}>
+                      <Button id={`kb-stale-edit-${article.article_id}`} variant="outline" size="sm" onClick={() => onEditArticle(article)}>
                         <Eye className="w-4 h-4 mr-1" />
                         {t('kb.reviewNow', 'Review Now')}
                       </Button>

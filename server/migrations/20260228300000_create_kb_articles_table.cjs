@@ -47,7 +47,8 @@ exports.up = async function up(knex) {
       table.integer('helpful_count').notNullable().defaultTo(0);
       table.integer('not_helpful_count').notNullable().defaultTo(0);
 
-      // Category (references standard_categories for Knowledge Base)
+      // Category — no FK to standard_categories; intentional for CitusDB cross-table compatibility.
+      // Referential integrity enforced at application level.
       table.uuid('category_id');
 
       // Audit columns
@@ -82,3 +83,6 @@ exports.up = async function up(knex) {
 exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('kb_articles');
 };
+
+// CitusDB: create_distributed_table cannot run inside a transaction
+exports.config = { transaction: false };

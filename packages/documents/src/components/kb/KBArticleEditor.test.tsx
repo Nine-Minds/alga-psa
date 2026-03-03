@@ -85,8 +85,8 @@ vi.mock('@alga-psa/ui/components/Card', () => ({
   ),
 }));
 
-vi.mock('@alga-psa/ui/components/TextInput', () => ({
-  TextInput: (props: any) => <input {...props} />,
+vi.mock('@alga-psa/ui/components/Input', () => ({
+  Input: (props: any) => <input {...props} />,
 }));
 
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({

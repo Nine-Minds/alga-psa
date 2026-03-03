@@ -2,7 +2,7 @@
 
 import { randomUUID } from 'crypto';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -353,7 +353,7 @@ export const createFolderTemplate = withAuth(async (
   const isDefault = Boolean(data.isDefault);
   const now = new Date();
 
-  return knex.transaction(async (trx) => {
+  return withTransaction(knex, async (trx) => {
     if (isDefault) {
       await trx('document_folder_templates')
         .where('tenant', tenant)
@@ -438,7 +438,7 @@ export const updateFolderTemplate = withAuth(async (
   const { knex } = await createTenantKnex();
   const now = new Date();
 
-  return knex.transaction(async (trx) => {
+  return withTransaction(knex, async (trx) => {
     const existingTemplate = await trx('document_folder_templates')
       .where('tenant', tenant)
       .andWhere('template_id', templateId)
@@ -574,7 +574,7 @@ export const setDefaultTemplate = withAuth(async (
   const { knex } = await createTenantKnex();
   const now = new Date();
 
-  return knex.transaction(async (trx) => {
+  return withTransaction(knex, async (trx) => {
     // Fetch the template to get its entity_type
     const template = await trx('document_folder_templates')
       .where('tenant', tenant)
@@ -662,17 +662,23 @@ export const applyTemplateToEntity = withAuth(async (
     return 0;
   }
 
-  // Fetch existing entity-scoped folders to avoid duplicates
+  // Fetch existing entity-scoped folders with IDs to avoid N+1 queries
   const existingFolders = await knex('document_folders')
     .where('tenant', tenant)
     .andWhere('entity_id', entityId)
     .andWhere('entity_type', entityType)
-    .select('folder_path');
+    .select('folder_path', 'folder_id');
 
   const existingPaths = new Set(existingFolders.map((f: { folder_path: string }) => f.folder_path));
 
   // Build folder rows to insert, skipping existing paths
   const pathToFolderId = new Map<string, string>();
+
+  // Pre-populate path-to-id map from existing folders
+  for (const f of existingFolders as Array<{ folder_path: string; folder_id: string }>) {
+    pathToFolderId.set(f.folder_path, f.folder_id);
+  }
+
   const foldersToInsert: Array<{
     tenant: string;
     folder_id: string;
@@ -687,17 +693,6 @@ export const applyTemplateToEntity = withAuth(async (
 
   for (const item of templateItems) {
     if (existingPaths.has(item.folder_path)) {
-      // Skip existing folder but record its ID for parent lookups
-      const existing = await knex('document_folders')
-        .where('tenant', tenant)
-        .andWhere('entity_id', entityId)
-        .andWhere('entity_type', entityType)
-        .andWhere('folder_path', item.folder_path)
-        .select('folder_id')
-        .first();
-      if (existing) {
-        pathToFolderId.set(item.folder_path, existing.folder_id);
-      }
       continue;
     }
 

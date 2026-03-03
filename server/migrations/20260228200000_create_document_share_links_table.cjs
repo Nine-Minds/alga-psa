@@ -61,8 +61,8 @@ exports.up = async function up(knex) {
       table.index(['token'], 'idx_doc_share_links_token');
       // Index for listing shares per document
       table.index(['tenant', 'document_id', 'is_revoked'], 'idx_doc_share_links_tenant_document_revoked');
-      // Unique constraint on token
-      table.unique(['token'], 'uq_doc_share_links_token');
+      // Unique constraint on token (includes tenant for CitusDB distribution compatibility)
+      table.unique(['tenant', 'token'], 'uq_doc_share_links_token');
     });
   }
 
@@ -72,3 +72,6 @@ exports.up = async function up(knex) {
 exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('document_share_links');
 };
+
+// CitusDB: create_distributed_table cannot run inside a transaction
+exports.config = { transaction: false };

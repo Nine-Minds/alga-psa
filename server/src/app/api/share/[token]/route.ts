@@ -59,9 +59,8 @@ export async function GET(
 
     // F064: Verify password for password-protected shares
     if (share.share_type === 'password') {
-      const passwordHeader = request.headers.get('x-share-password');
-      const passwordQuery = request.nextUrl.searchParams.get('password');
-      const password = passwordHeader || passwordQuery;
+      // Only accept password via header — never via query string (avoids logging in access/proxy logs)
+      const password = request.headers.get('x-share-password');
 
       if (!password) {
         await logShareAccess(
@@ -82,7 +81,7 @@ export async function GET(
         });
       }
 
-      const passwordValid = await verifySharePassword(token, password);
+      const passwordValid = await verifySharePassword(token, password, share.tenant);
       if (!passwordValid) {
         await logShareAccess(
           share.share_id,
@@ -120,8 +119,22 @@ export async function GET(
         return new NextResponse('Authentication required', { status: 401 });
       }
 
-      // Optionally verify user is in the same tenant or has portal access
-      // For now, just verify they are authenticated
+      // Verify user belongs to the same tenant as the share link
+      if (user.tenant !== share.tenant) {
+        await logShareAccess(
+          share.share_id,
+          share.tenant,
+          {
+            ipAddress,
+            userAgent,
+            accessType: 'download',
+            wasSuccessful: false,
+            failureReason: 'Tenant mismatch',
+          }
+        ).catch(() => {});
+
+        return new NextResponse('Access denied', { status: 403 });
+      }
     }
 
     // Get the file record
@@ -160,10 +173,13 @@ export async function GET(
       }
     ).catch(() => {}); // Best effort
 
-    await incrementDownloadCount(token).catch(() => {}); // Best effort
+    await incrementDownloadCount(token, share.tenant).catch(() => {}); // Best effort
 
     // Get the storage provider and stream the file
     const provider = await StorageProviderFactory.createProvider();
+
+    // Use no-store for sensitive share types to prevent local caching
+    const cacheControl = share.share_type === 'public' ? 'private, no-cache' : 'private, no-store';
 
     // Handle HTTP Range requests for video files
     const range = request.headers.get('range');
@@ -194,7 +210,7 @@ export async function GET(
       headers.set('Content-Range', `bytes ${start}-${end}/${fileSize}`);
       headers.set('Content-Length', contentLength.toString());
       headers.set('Content-Disposition', `attachment; filename="${encodeURIComponent(share.document_name || 'file')}"`);
-      headers.set('Cache-Control', 'private, no-cache');
+      headers.set('Cache-Control', cacheControl);
 
       return new NextResponse(stream as any, {
         status: 206,
@@ -212,7 +228,7 @@ export async function GET(
         headers.set('Accept-Ranges', 'bytes');
       }
 
-      headers.set('Cache-Control', 'private, no-cache');
+      headers.set('Cache-Control', cacheControl);
 
       return new NextResponse(stream as any, {
         status: 200,

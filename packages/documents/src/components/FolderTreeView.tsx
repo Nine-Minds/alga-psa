@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { IFolderNode } from '@alga-psa/types';
 import { getFolderTree, deleteFolder } from '../actions/documentActions';
 import { ChevronRight, ChevronDown, Folder, FolderOpen, Trash2, ChevronLeft } from 'lucide-react';
@@ -35,9 +35,24 @@ export default function FolderTreeView({
   const [loading, setLoading] = useState(true);
   const { t } = useTranslation('common');
 
+  const loadFolderTree = useCallback(async function loadFolderTree() {
+    try {
+      const tree = await getFolderTree(entityId ?? null, entityType ?? null);
+      if (isActionPermissionError(tree)) {
+        handleError(tree.permissionError);
+        return;
+      }
+      setFolderTree(tree);
+    } catch (error) {
+      handleError(error, t('documents.folders.loadFailed', 'Failed to load folder tree'));
+    } finally {
+      setLoading(false);
+    }
+  }, [entityId, entityType, t]);
+
   useEffect(() => {
     loadFolderTree();
-  }, [entityId, entityType]);
+  }, [loadFolderTree]);
 
   // Auto-expand parent folders when a folder is selected
   useEffect(() => {
@@ -54,21 +69,6 @@ export default function FolderTreeView({
       setExpandedFolders(newExpanded);
     }
   }, [selectedFolder]);
-
-  async function loadFolderTree() {
-    try {
-      const tree = await getFolderTree(entityId ?? null, entityType ?? null);
-      if (isActionPermissionError(tree)) {
-        handleError(tree.permissionError);
-        return;
-      }
-      setFolderTree(tree);
-    } catch (error) {
-      handleError(error, t('documents.folders.loadFailed', 'Failed to load folder tree'));
-    } finally {
-      setLoading(false);
-    }
-  }
 
   function toggleFolder(path: string) {
     const newExpanded = new Set(expandedFolders);

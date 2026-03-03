@@ -73,6 +73,7 @@ function CategoryTreeNode({
       >
         {hasChildren && (
           <button
+            id={`kb-category-toggle-${category.id}`}
             onClick={(e) => {
               e.stopPropagation();
               setIsExpanded(!isExpanded);
@@ -170,11 +171,13 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [isCategorySidebarCollapsed, setIsCategorySidebarCollapsed] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const pageSize = 20;
 
   const loadArticles = useCallback(async () => {
     setIsLoading(true);
+    setLoadError(null);
     try {
       const filters: ClientKBFilters = {};
       if (searchTerm) {
@@ -190,10 +193,11 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
       setTotal(result.total);
     } catch (error) {
       console.error('Failed to load articles:', error);
+      setLoadError(t('kb.loadError', 'Failed to load articles. Please try again.'));
     } finally {
       setIsLoading(false);
     }
-  }, [page, pageSize, searchTerm, selectedCategory]);
+  }, [page, pageSize, searchTerm, selectedCategory, t]);
 
   const loadCategories = useCallback(async () => {
     try {
@@ -263,6 +267,7 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
               <CardContent className="p-2 h-full overflow-auto">
                 {isCategorySidebarCollapsed ? (
                   <Button
+                    id="kb-expand-categories"
                     variant="ghost"
                     size="sm"
                     onClick={() => setIsCategorySidebarCollapsed(false)}
@@ -277,6 +282,7 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
                         {t('kb.categories', 'Categories')}
                       </span>
                       <Button
+                        id="kb-collapse-categories"
                         variant="ghost"
                         size="sm"
                         onClick={() => setIsCategorySidebarCollapsed(true)}
@@ -331,6 +337,13 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
             </span>
           </div>
 
+          {/* Error State */}
+          {loadError && (
+            <div className="mb-4 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
+              {loadError}
+            </div>
+          )}
+
           {/* Article Grid */}
           <div className="flex-1 overflow-auto">
             {isLoading ? (
@@ -359,6 +372,7 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t">
               <Button
+                id="kb-previous-page"
                 variant="outline"
                 size="sm"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -373,6 +387,7 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
                 })}
               </span>
               <Button
+                id="kb-next-page"
                 variant="outline"
                 size="sm"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}

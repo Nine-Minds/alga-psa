@@ -108,7 +108,7 @@ export default function FolderTemplateList({
     setIsSettingDefault(template.template_id);
     try {
       const result = await setDefaultTemplate(template.template_id);
-      if (typeof result === 'object' && 'code' in result) {
+      if (result && typeof result === 'object' && 'code' in result) {
         toast.error('Failed to set default template');
         return;
       }
@@ -165,7 +165,7 @@ export default function FolderTemplateList({
           </p>
         </div>
         {onCreateNew && (
-          <Button onClick={onCreateNew} size="sm">
+          <Button id="template-list-create" onClick={onCreateNew} size="sm">
             <Plus className="w-4 h-4 mr-2" />
             New Template
           </Button>
@@ -178,7 +178,7 @@ export default function FolderTemplateList({
             <FolderTree className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
             <p className="text-muted-foreground mb-4">No folder templates defined yet</p>
             {onCreateNew && (
-              <Button onClick={onCreateNew} variant="outline">
+              <Button id="template-list-create-empty" onClick={onCreateNew} variant="outline">
                 <Plus className="w-4 h-4 mr-2" />
                 Create Your First Template
               </Button>
@@ -223,7 +223,7 @@ export default function FolderTemplateList({
 
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Button id={`template-actions-${template.template_id}`} variant="ghost" size="sm" className="h-8 w-8 p-0">
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>

@@ -99,8 +99,7 @@ export default function ShareLandingPage() {
         } else if (response.status === 403) {
           setDownloadError('Invalid password');
         } else {
-          const text = await response.text();
-          setDownloadError(text || 'Download failed');
+          setDownloadError('Download failed. Please try again.');
         }
         return;
       }
@@ -113,8 +112,9 @@ export default function ShareLandingPage() {
       a.download = shareInfo?.documentName || 'download';
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      // Delay revocation to ensure download starts
+      setTimeout(() => window.URL.revokeObjectURL(url), 100);
 
       setDownloadSuccess(true);
 
@@ -238,6 +238,7 @@ export default function ShareLandingPage() {
           )}
 
           <Button
+            id="share-download"
             className="w-full"
             onClick={handleDownload}
             disabled={
