@@ -113,7 +113,7 @@ const ContractLineMapping = {
         .first();
 
       if (!contract) {
-        throw new Error(`Contract ${contractId} not found or belongs to a different tenant`);
+        throw new Error(`Contract ${contractId} not found`);
       }
 
       const contractLine = await db('contract_lines')
@@ -124,7 +124,7 @@ const ContractLineMapping = {
         .first();
 
       if (!contractLine) {
-        throw new Error(`Contract line ${contractLineId} not found or belongs to a different tenant`);
+        throw new Error(`Contract line ${contractLineId} not found`);
       }
 
       const alreadyLinked = await ContractLineMapping.isContractLineAttached(contractId, contractLineId);
