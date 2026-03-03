@@ -408,7 +408,7 @@
   {
     "id": "T051",
     "description": "Remembered provider preference is only applied when provider remains eligible after discovery.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
