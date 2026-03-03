@@ -198,7 +198,7 @@
   {
     "id": "F023",
     "description": "Maintain resolver generic failure response contract for invalid, disallowed, or stale-eligibility scenarios.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements #11",
       "Functional Requirements #12"

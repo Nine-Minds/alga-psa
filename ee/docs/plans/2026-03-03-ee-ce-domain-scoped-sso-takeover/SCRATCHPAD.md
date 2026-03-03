@@ -147,3 +147,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Security hardening tied to resolver revalidation: discovery cookie now carries normalized domain, and tenant discovery context is only used when resolver email domain matches cookie domain.
 - (2026-03-03) Validation run for `F022`:
   - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoResolution.test.ts src/app/api/auth/msp/sso/discover/route.test.ts src/app/api/auth/msp/sso/resolve/route.test.ts`
+- (2026-03-03) Completed `F023`: resolver generic failure contract remains invariant for invalid/disallowed/rate-limited resolution paths while lifecycle checks are applied internally.
+- (2026-03-03) Validation run for `F023`:
+  - `cd server && npx vitest run src/app/api/auth/msp/sso/resolve/route.test.ts`
