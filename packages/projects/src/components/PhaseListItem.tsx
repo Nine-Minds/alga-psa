@@ -72,7 +72,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
       const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       // Small delay to let the form expand before scrolling
       requestAnimationFrame(() => {
-        itemRef.current?.scrollIntoView({ behavior: prefersReducedMotion ? 'instant' : 'smooth', block: 'nearest' });
+        itemRef.current?.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'nearest' });
       });
     }
   }, [isEditing]);
