@@ -328,7 +328,7 @@
   {
     "id": "T041",
     "description": "Resolver invalid payload, rate-limit, and source-failure responses remain externally indistinguishable.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
