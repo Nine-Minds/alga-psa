@@ -51,7 +51,7 @@
   {
     "id": "T007",
     "description": "Domain validation rejects malformed values with deterministic neutral errors.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]

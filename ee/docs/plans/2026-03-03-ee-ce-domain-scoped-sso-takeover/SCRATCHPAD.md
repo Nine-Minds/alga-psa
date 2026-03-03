@@ -193,3 +193,4 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed \: Migration contract suite verifies EE backfill SQL sets verified_legacy defaults.
 - (2026-03-03) Completed \: Migration contract suite verifies CE backfill SQL sets advisory defaults.
 - (2026-03-03) Completed \: Domain normalization covered by mspSsoResolution helper tests and save-domain normalization tests.
+- (2026-03-03) Completed \: Malformed domain validation covered by deterministic neutral error assertions in action tests.
