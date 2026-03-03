@@ -214,3 +214,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `T021`: EE settings verification-failure path now checks neutral actionable error messaging and destructive feedback toast.
 - (2026-03-03) Validation run for `T021`:
   - `cd server && npx vitest run --coverage.enabled=false ../packages/integrations/src/components/settings/integrations/MspSsoLoginDomainsSettings.contract.test.tsx`
+- (2026-03-03) Completed `T022`: CE settings suite now asserts advisory-mode guidance copy is rendered for community deployments.
+- (2026-03-03) Validation run for `T022`:
+  - `cd server && npx vitest run --coverage.enabled=false src/test/unit/components/integrations/MspSsoLoginDomainsSettings.test.tsx`

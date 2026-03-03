@@ -172,7 +172,7 @@
   {
     "id": "T022",
     "description": "CE settings UI renders advisory registration copy and guidance.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
