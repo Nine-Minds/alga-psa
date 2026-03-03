@@ -280,3 +280,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `T043`: Resolution cookie payload remains signed, short-lived, and free of provider secrets.
 - (2026-03-03) Validation run for `T043`:
   - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T044`: MSP credentials login succeeds unchanged when domain claim states vary.
+- (2026-03-03) Validation run for `T044`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/components/MspCredentialsFlow.contract.test.ts`

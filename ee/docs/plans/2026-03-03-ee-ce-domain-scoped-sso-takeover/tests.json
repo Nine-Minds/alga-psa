@@ -352,7 +352,7 @@
   {
     "id": "T044",
     "description": "MSP credentials login succeeds unchanged when domain claim states vary.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
