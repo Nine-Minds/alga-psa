@@ -12,6 +12,7 @@ import type {
   ITicketCategory,
   ITicketResource,
   IDocument,
+  ITag,
   TicketResponseState,
 } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
@@ -25,7 +26,7 @@ import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishe
 import { getEventBus } from '@alga-psa/event-bus';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { getImageUrl } from '@alga-psa/documents/actions/documentActions';
-import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
+import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch, getEntityImageUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import {
   ticketFormSchema,
   ticketSchema,
@@ -1086,7 +1087,7 @@ export const getTicketsForList = withAuth(async (
   filters: ITicketListFilters,
   page: number = 1,
   pageSize: number = 10
-): Promise<{ tickets: ITicketListItem[], totalCount: number }> => {
+): Promise<{ tickets: ITicketListItem[], totalCount: number, metadata: { agentAvatarUrls: Record<string, string | null>, teamAvatarUrls: Record<string, string | null>, ticketTags: Record<string, ITag[]> } }> => {
   const {knex: db} = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
@@ -1222,9 +1223,87 @@ export const getTicketsForList = withAuth(async (
       };
     });
 
+    // Fetch metadata in parallel: avatar URLs, team avatar URLs, ticket tags
+    const ticketIds = ticketListItems
+      .map((t: ITicketListItem) => t.ticket_id)
+      .filter((id: string | undefined): id is string => id !== undefined);
+
+    const agentUserIds = new Set<string>();
+    ticketListItems.forEach((ticket: ITicketListItem) => {
+      ticket.additional_agents?.forEach((agent: { user_id: string }) => {
+        agentUserIds.add(agent.user_id);
+      });
+    });
+
+    const teamIds = new Set<string>();
+    ticketListItems.forEach((ticket: ITicketListItem) => {
+      if (ticket.assigned_team_id) {
+        teamIds.add(ticket.assigned_team_id);
+      }
+    });
+
+    const [agentAvatarUrlsMap, teamAvatarUrlsMap, ticketTagRows] = await Promise.all([
+      agentUserIds.size > 0
+        ? getEntityImageUrlsBatch('user', Array.from(agentUserIds), tenant)
+        : Promise.resolve(new Map<string, string | null>()),
+      teamIds.size > 0
+        ? getEntityImageUrlsBatch('team', Array.from(teamIds), tenant)
+        : Promise.resolve(new Map<string, string | null>()),
+      ticketIds.length > 0
+        ? trx('tag_mappings as tm')
+            .join('tag_definitions as td', function() {
+              this.on('tm.tenant', '=', 'td.tenant')
+                .andOn('tm.tag_id', '=', 'td.tag_id');
+            })
+            .where('tm.tenant', tenant)
+            .whereIn('tm.tagged_id', ticketIds)
+            .where('tm.tagged_type', 'ticket')
+            .select(
+              'tm.mapping_id',
+              'td.tag_id',
+              'td.tag_text',
+              'tm.tagged_id',
+              'tm.tagged_type',
+              'td.board_id',
+              'td.background_color',
+              'td.text_color'
+            )
+        : Promise.resolve([]),
+    ]);
+
+    // Convert Maps to Records for serialization
+    const agentAvatarUrls: Record<string, string | null> = {};
+    agentAvatarUrlsMap.forEach((url, id) => { agentAvatarUrls[id] = url; });
+
+    const teamAvatarUrls: Record<string, string | null> = {};
+    teamAvatarUrlsMap.forEach((url, id) => { teamAvatarUrls[id] = url; });
+
+    // Group tags by ticket ID
+    const ticketTags: Record<string, ITag[]> = {};
+    ticketTagRows.forEach((tag: any) => {
+      const tagObj: ITag = {
+        tag_id: tag.mapping_id,
+        tenant,
+        tag_text: tag.tag_text,
+        tagged_id: tag.tagged_id,
+        tagged_type: tag.tagged_type,
+        background_color: tag.background_color,
+        text_color: tag.text_color,
+      };
+      if (!ticketTags[tag.tagged_id]) {
+        ticketTags[tag.tagged_id] = [];
+      }
+      ticketTags[tag.tagged_id].push(tagObj);
+    });
+
     return {
       tickets: ticketListItems as ITicketListItem[],
-      totalCount
+      totalCount,
+      metadata: {
+        agentAvatarUrls,
+        teamAvatarUrls,
+        ticketTags,
+      }
     };
     } catch (error) {
       console.error('Failed to fetch tickets:', error);
@@ -2025,7 +2104,8 @@ export const getConsolidatedTicketListData = withAuth(async (
       return {
         options: formOptions,
         tickets: ticketsData.tickets,
-        totalCount: ticketsData.totalCount
+        totalCount: ticketsData.totalCount,
+        metadata: ticketsData.metadata
       };
     } catch (error) {
       console.error('Failed to fetch consolidated ticket list data:', error);
