@@ -44,7 +44,7 @@
   {
     "id": "F008",
     "description": "Add EE action to verify domain ownership and promote claim to verified.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #2", "Functional Requirements #7"]
   },
   {

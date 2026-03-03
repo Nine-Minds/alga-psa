@@ -1,6 +1,7 @@
 'use server';
 
 import { createHash, randomBytes } from 'node:crypto';
+import { resolveTxt } from 'node:dns/promises';
 import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth/withAuth';
@@ -84,6 +85,12 @@ export interface RefreshMspSsoDomainClaimChallengeResult {
   error?: string;
 }
 
+export interface VerifyMspSsoDomainClaimResult {
+  success: boolean;
+  claim?: MspSsoDomainClaim;
+  error?: string;
+}
+
 function normalizeDomain(value: string): string {
   return normalizeMspSsoDomain(value);
 }
@@ -103,6 +110,18 @@ function toIsoOrNull(value: unknown): string | null {
 
 function hashChallengeValue(value: string): string {
   return createHash('sha256').update(value).digest('hex');
+}
+
+async function lookupDnsTxtValues(hostname: string): Promise<string[]> {
+  try {
+    const rows = await resolveTxt(hostname);
+    return rows
+      .map((record) => record.join(''))
+      .map((value) => value.trim())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
 }
 
 function buildDnsTxtChallenge(domain: string): {
@@ -559,6 +578,89 @@ export const refreshMspSsoDomainClaimChallenge = withAuth(async (
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to refresh MSP SSO claim challenge',
+    };
+  }
+});
+
+export const verifyMspSsoDomainClaimOwnership = withAuth(async (
+  user,
+  { tenant },
+  input: { claimId: string }
+): Promise<VerifyMspSsoDomainClaimResult> => {
+  try {
+    if (!(await canManageDomains(user))) {
+      return { success: false, error: 'Forbidden' };
+    }
+
+    const claimId = String(input?.claimId ?? '').trim();
+    if (!claimId) {
+      return { success: false, error: 'Claim id is required.' };
+    }
+
+    const { knex } = await createTenantKnex();
+    const actorId = (user as { user_id?: string })?.user_id ?? null;
+
+    const result = await knex.transaction(async (trx: Knex.Transaction) => {
+      const claim = await toDomainClaim(trx, tenant, claimId);
+      if (!claim || !claim.is_active) {
+        return { claim: null, verified: false, reason: 'missing_claim' as const };
+      }
+
+      const challenge = await toVerificationChallenge(trx, tenant, claimId);
+      if (!challenge || !challenge.is_active || challenge.challenge_type !== 'dns_txt') {
+        return { claim, verified: false, reason: 'missing_challenge' as const };
+      }
+
+      const txtValues = await lookupDnsTxtValues(challenge.challenge_label);
+      const challengeMatched = txtValues.some((value) => value === challenge.challenge_value);
+      if (!challengeMatched) {
+        return { claim, verified: false, reason: 'dns_mismatch' as const };
+      }
+
+      const now = trx.fn.now();
+      await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
+        .where({ tenant, id: claimId })
+        .update({
+          claim_status: 'verified',
+          claim_status_updated_at: now,
+          claim_status_updated_by: actorId,
+          verified_at: now,
+          rejected_at: null,
+          revoked_at: null,
+          updated_by: actorId,
+          updated_at: now,
+        });
+
+      await trx(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
+        .where({ tenant, id: challenge.id })
+        .update({
+          verified_at: now,
+          is_active: false,
+          invalidated_at: now,
+          updated_by: actorId,
+          updated_at: now,
+        });
+
+      const verifiedClaim = await toDomainClaim(trx, tenant, claimId);
+      return { claim: verifiedClaim, verified: true, reason: null };
+    });
+
+    if (result.verified && result.claim) {
+      return { success: true, claim: result.claim };
+    }
+
+    const missing = result.reason === 'missing_claim' || result.reason === 'missing_challenge';
+    return {
+      success: false,
+      error: missing
+        ? 'Unable to find an active claim/challenge for verification.'
+        : 'Unable to verify domain ownership. Confirm DNS TXT challenge record and retry.',
+      claim: result.claim ?? undefined,
+    };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to verify MSP SSO domain claim',
     };
   }
 });

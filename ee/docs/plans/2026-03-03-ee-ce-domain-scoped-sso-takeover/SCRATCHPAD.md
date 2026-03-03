@@ -23,6 +23,7 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Added `listMspSsoDomainClaims` action with permission gate parity to existing domain management checks; action returns lifecycle metadata for each active claim.
 - (2026-03-03) Added `requestMspSsoDomainClaim` action to create/reuse pending claims and provision DNS TXT challenge material with hashed verification values.
 - (2026-03-03) Added `refreshMspSsoDomainClaimChallenge` action that always rotates active challenge material for an existing claim and reasserts `pending` claim status.
+- (2026-03-03) Added `verifyMspSsoDomainClaimOwnership` action that resolves DNS TXT records for the stored challenge label/value and promotes claim status to `verified` only on exact match.
 
 ## Discoveries / Constraints
 
@@ -39,6 +40,7 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Claims listing tolerates rollout ordering by checking lifecycle column existence at runtime and defaulting unknown/missing statuses to `advisory`.
 - (2026-03-03) Claim request action is idempotent for existing same-tenant `pending` claims when an active challenge already exists; otherwise it rotates by deactivating old active challenges and creating a new one.
 - (2026-03-03) Refresh semantics are intentionally non-idempotent: each refresh deactivates previous active challenge rows and creates a new DNS TXT value for the same claim id.
+- (2026-03-03) Verification action keeps neutral admin-safe failure messaging for DNS mismatch/missing challenge and does not expose sensitive internals.
 
 ## Commands / Runbooks
 
@@ -63,6 +65,8 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) F006 implementation checks:
   - `cd server && npx vitest run ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
 - (2026-03-03) F007 implementation checks:
+  - `cd server && npx vitest run ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
+- (2026-03-03) F008 implementation checks:
   - `cd server && npx vitest run ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
 
 ## Links / References
