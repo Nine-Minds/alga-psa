@@ -1,0 +1,418 @@
+[
+  {
+    "id": "F001",
+    "description": "Create TENANT_TIERS const tuple ('basic', 'pro', 'premium') and TenantTier type",
+    "implemented": false,
+    "prdRefs": ["FR1"],
+    "phase": "A",
+    "file": "packages/types/src/constants/tenantTiers.ts"
+  },
+  {
+    "id": "F002",
+    "description": "Create TIER_LABELS record mapping each tier to display name",
+    "implemented": false,
+    "prdRefs": ["FR1"],
+    "phase": "A",
+    "file": "packages/types/src/constants/tenantTiers.ts"
+  },
+  {
+    "id": "F003",
+    "description": "Create isValidTier() type guard function",
+    "implemented": false,
+    "prdRefs": ["FR1"],
+    "phase": "A",
+    "file": "packages/types/src/constants/tenantTiers.ts"
+  },
+  {
+    "id": "F004",
+    "description": "Create resolveTier(plan) returning { tier, isMisconfigured } — NULL returns basic + misconfigured=true",
+    "implemented": false,
+    "prdRefs": ["FR1"],
+    "phase": "A",
+    "file": "packages/types/src/constants/tenantTiers.ts"
+  },
+  {
+    "id": "F005",
+    "description": "Export tier types and functions from packages/types/src/index.ts",
+    "implemented": false,
+    "prdRefs": ["FR1"],
+    "phase": "A",
+    "file": "packages/types/src/index.ts"
+  },
+  {
+    "id": "F006",
+    "description": "Create TIER_FEATURES enum with BILLING, PROJECTS, TECHNICIAN_DISPATCH, EXTENSIONS",
+    "implemented": false,
+    "prdRefs": ["FR2"],
+    "phase": "A",
+    "file": "packages/types/src/constants/tierFeatures.ts"
+  },
+  {
+    "id": "F007",
+    "description": "Create TIER_FEATURE_MAP: basic=[], pro=[BILLING,PROJECTS,TECHNICIAN_DISPATCH], premium=[...pro,EXTENSIONS]",
+    "implemented": false,
+    "prdRefs": ["FR2"],
+    "phase": "A",
+    "file": "packages/types/src/constants/tierFeatures.ts"
+  },
+  {
+    "id": "F008",
+    "description": "Create tierHasFeature(tier, feature) → boolean function",
+    "implemented": false,
+    "prdRefs": ["FR2"],
+    "phase": "A",
+    "file": "packages/types/src/constants/tierFeatures.ts"
+  },
+  {
+    "id": "F009",
+    "description": "Create FEATURE_MINIMUM_TIER reverse mapping (BILLING: 'pro', etc.)",
+    "implemented": false,
+    "prdRefs": ["FR2"],
+    "phase": "A",
+    "file": "packages/types/src/constants/tierFeatures.ts"
+  },
+  {
+    "id": "F010",
+    "description": "Narrow ITenant.plan from string to TenantTier in packages/types",
+    "implemented": false,
+    "prdRefs": ["FR3"],
+    "phase": "A",
+    "file": "packages/types/src/interfaces/tenant.interface.ts"
+  },
+  {
+    "id": "F011",
+    "description": "Narrow ITenant.plan from string to TenantTier in server duplicate",
+    "implemented": false,
+    "prdRefs": ["FR3"],
+    "phase": "A",
+    "file": "server/src/interfaces/tenant.interface.tsx"
+  },
+  {
+    "id": "F012",
+    "description": "Set plan: 'pro' in first Tenant.insert call in useRegister.tsx (~line 32)",
+    "implemented": false,
+    "prdRefs": ["FR4"],
+    "phase": "A",
+    "file": "packages/auth/src/actions/useRegister.tsx"
+  },
+  {
+    "id": "F013",
+    "description": "Set plan: 'pro' in second Tenant.insert call in useRegister.tsx (~line 237)",
+    "implemented": false,
+    "prdRefs": ["FR4"],
+    "phase": "A",
+    "file": "packages/auth/src/actions/useRegister.tsx"
+  },
+  {
+    "id": "F014",
+    "description": "Create backfill migration: all NULL/empty plan → 'pro'",
+    "implemented": false,
+    "prdRefs": ["FR5"],
+    "phase": "A",
+    "file": "server/migrations/2026030X_backfill_tenant_plan_to_pro.cjs"
+  },
+  {
+    "id": "F015",
+    "description": "Update testDataFactory.ts: plan 'test' → 'pro'",
+    "implemented": false,
+    "prdRefs": ["FR6"],
+    "phase": "A",
+    "file": "server/test-utils/testDataFactory.ts"
+  },
+  {
+    "id": "F016",
+    "description": "Add plan?: string to User interface in next-auth types",
+    "implemented": false,
+    "prdRefs": ["FR7"],
+    "phase": "A",
+    "file": "packages/auth/src/types/next-auth.ts"
+  },
+  {
+    "id": "F017",
+    "description": "Add plan?: string to Session.user interface in next-auth types",
+    "implemented": false,
+    "prdRefs": ["FR7"],
+    "phase": "A",
+    "file": "packages/auth/src/types/next-auth.ts"
+  },
+  {
+    "id": "F018",
+    "description": "Add plan?: string and last_plan_check?: number to JWT interface in next-auth types",
+    "implemented": false,
+    "prdRefs": ["FR7"],
+    "phase": "A",
+    "file": "packages/auth/src/types/next-auth.ts"
+  },
+  {
+    "id": "F019",
+    "description": "Add plan?: string to ExtendedUser interface (~line 282)",
+    "implemented": false,
+    "prdRefs": ["FR7"],
+    "phase": "A",
+    "file": "packages/auth/src/lib/nextAuthOptions.ts"
+  },
+  {
+    "id": "F020",
+    "description": "Fetch tenant plan in JWT callback on initial sign-in (first buildAuthOptions path, ~line 1366)",
+    "implemented": false,
+    "prdRefs": ["FR7"],
+    "phase": "A",
+    "file": "packages/auth/src/lib/nextAuthOptions.ts"
+  },
+  {
+    "id": "F021",
+    "description": "Fetch tenant plan in JWT callback on initial sign-in (second buildAuthOptions path, ~line 2069)",
+    "implemented": false,
+    "prdRefs": ["FR7"],
+    "phase": "A",
+    "file": "packages/auth/src/lib/nextAuthOptions.ts"
+  },
+  {
+    "id": "F022",
+    "description": "Add throttled plan refresh (5 min) in JWT callback for subsequent requests (first path, after ~line 1442)",
+    "implemented": false,
+    "prdRefs": ["FR7"],
+    "phase": "A",
+    "file": "packages/auth/src/lib/nextAuthOptions.ts"
+  },
+  {
+    "id": "F023",
+    "description": "Add throttled plan refresh (5 min) in JWT callback for subsequent requests (second path)",
+    "implemented": false,
+    "prdRefs": ["FR7"],
+    "phase": "A",
+    "file": "packages/auth/src/lib/nextAuthOptions.ts"
+  },
+  {
+    "id": "F024",
+    "description": "Propagate plan from JWT to session in session callback (first path, ~line 1526)",
+    "implemented": false,
+    "prdRefs": ["FR7"],
+    "phase": "A",
+    "file": "packages/auth/src/lib/nextAuthOptions.ts"
+  },
+  {
+    "id": "F025",
+    "description": "Propagate plan from JWT to session in session callback (second path, ~line 2236)",
+    "implemented": false,
+    "prdRefs": ["FR7"],
+    "phase": "A",
+    "file": "packages/auth/src/lib/nextAuthOptions.ts"
+  },
+  {
+    "id": "F026",
+    "description": "Create TierContext with TierProvider component reading tier from session",
+    "implemented": false,
+    "prdRefs": ["FR8"],
+    "phase": "A",
+    "file": "server/src/context/TierContext.tsx"
+  },
+  {
+    "id": "F027",
+    "description": "Create useTier() hook exposing tier, isMisconfigured, isBasic, isPro, isPremium, hasFeature(), refreshTier()",
+    "implemented": false,
+    "prdRefs": ["FR8"],
+    "phase": "A",
+    "file": "server/src/context/TierContext.tsx"
+  },
+  {
+    "id": "F028",
+    "description": "Wrap MspLayoutClient content with TierProvider inside AppSessionProvider",
+    "implemented": false,
+    "prdRefs": ["FR8"],
+    "phase": "A",
+    "file": "server/src/app/msp/MspLayoutClient.tsx"
+  },
+  {
+    "id": "F029",
+    "description": "Create STRIPE_PRODUCT_TIER_MAP with alga-psa-preview→pro and future product mappings",
+    "implemented": false,
+    "prdRefs": ["FR9"],
+    "phase": "A",
+    "file": "ee/server/src/lib/stripe/stripeTierMapping.ts"
+  },
+  {
+    "id": "F030",
+    "description": "Create tierFromStripeProduct() function (unknown products default to pro)",
+    "implemented": false,
+    "prdRefs": ["FR9"],
+    "phase": "A",
+    "file": "ee/server/src/lib/stripe/stripeTierMapping.ts"
+  },
+  {
+    "id": "F031",
+    "description": "Wire tier resolution from Stripe price into createTenantInDB() in tenant-operations.ts",
+    "implemented": false,
+    "prdRefs": ["FR10"],
+    "phase": "A",
+    "file": "ee/temporal-workflows/src/db/tenant-operations.ts"
+  },
+  {
+    "id": "F032",
+    "description": "Resolve product → tier and update tenants.plan in handleCheckoutCompleted()",
+    "implemented": false,
+    "prdRefs": ["FR11"],
+    "phase": "A",
+    "file": "ee/server/src/lib/stripe/StripeService.ts"
+  },
+  {
+    "id": "F033",
+    "description": "Resolve product → tier and update tenants.plan in handleSubscriptionUpdated()",
+    "implemented": false,
+    "prdRefs": ["FR11"],
+    "phase": "A",
+    "file": "ee/server/src/lib/stripe/StripeService.ts"
+  },
+  {
+    "id": "F034",
+    "description": "Create UpsellPlaceholder component with icon, heading, description, and CTA to /msp/account",
+    "implemented": false,
+    "prdRefs": ["FR12"],
+    "phase": "B",
+    "file": "packages/ui/src/components/tier-gating/UpsellPlaceholder.tsx"
+  },
+  {
+    "id": "F035",
+    "description": "Create client-side TierGate wrapper component using TierContext",
+    "implemented": false,
+    "prdRefs": ["FR13"],
+    "phase": "B",
+    "file": "packages/ui/src/components/tier-gating/TierGate.tsx"
+  },
+  {
+    "id": "F036",
+    "description": "Create server-side ServerTierGate component reading session directly",
+    "implemented": false,
+    "prdRefs": ["FR13"],
+    "phase": "B",
+    "file": "server/src/lib/tier-gating/ServerTierGate.tsx"
+  },
+  {
+    "id": "F037",
+    "description": "Add requiredFeature?: TierFeature to MenuItem interface",
+    "implemented": false,
+    "prdRefs": ["FR14"],
+    "phase": "B",
+    "file": "server/src/config/menuConfig.ts"
+  },
+  {
+    "id": "F038",
+    "description": "Tag Billing menu item with requiredFeature: BILLING",
+    "implemented": false,
+    "prdRefs": ["FR14"],
+    "phase": "B",
+    "file": "server/src/config/menuConfig.ts"
+  },
+  {
+    "id": "F039",
+    "description": "Tag Projects menu item with requiredFeature: PROJECTS",
+    "implemented": false,
+    "prdRefs": ["FR14"],
+    "phase": "B",
+    "file": "server/src/config/menuConfig.ts"
+  },
+  {
+    "id": "F040",
+    "description": "Tag Technician Dispatch menu item with requiredFeature: TECHNICIAN_DISPATCH",
+    "implemented": false,
+    "prdRefs": ["FR14"],
+    "phase": "B",
+    "file": "server/src/config/menuConfig.ts"
+  },
+  {
+    "id": "F041",
+    "description": "Filter sidebar items by tier in SidebarWithFeatureFlags.tsx",
+    "implemented": false,
+    "prdRefs": ["FR14"],
+    "phase": "B",
+    "file": "server/src/components/layout/SidebarWithFeatureFlags.tsx"
+  },
+  {
+    "id": "F042",
+    "description": "Gate /msp/billing page with tier check (BILLING feature)",
+    "implemented": false,
+    "prdRefs": ["FR15"],
+    "phase": "B",
+    "file": "server/src/app/msp/billing/"
+  },
+  {
+    "id": "F043",
+    "description": "Gate /msp/projects page with tier check (PROJECTS feature)",
+    "implemented": false,
+    "prdRefs": ["FR15"],
+    "phase": "B",
+    "file": "server/src/app/msp/projects/"
+  },
+  {
+    "id": "F044",
+    "description": "Gate /msp/technician-dispatch page with tier check (TECHNICIAN_DISPATCH feature)",
+    "implemented": false,
+    "prdRefs": ["FR15"],
+    "phase": "B",
+    "file": "server/src/app/msp/technician-dispatch/"
+  },
+  {
+    "id": "F045",
+    "description": "Create assertTierAccess(tenant, feature) utility that throws TierAccessError",
+    "implemented": false,
+    "prdRefs": ["FR16"],
+    "phase": "B",
+    "file": "server/src/lib/tier-gating/assertTierAccess.ts"
+  },
+  {
+    "id": "F046",
+    "description": "Apply assertTierAccess to billing server actions",
+    "implemented": false,
+    "prdRefs": ["FR16"],
+    "phase": "B",
+    "file": "server/src/lib/actions/"
+  },
+  {
+    "id": "F047",
+    "description": "Apply assertTierAccess to project server actions",
+    "implemented": false,
+    "prdRefs": ["FR16"],
+    "phase": "B",
+    "file": "server/src/lib/actions/"
+  },
+  {
+    "id": "F048",
+    "description": "Apply assertTierAccess to technician dispatch server actions",
+    "implemented": false,
+    "prdRefs": ["FR16"],
+    "phase": "B",
+    "file": "server/src/lib/actions/"
+  },
+  {
+    "id": "F049",
+    "description": "Replace hardcoded plan_name: 'Professional' with actual tier from tenant in AccountManagement",
+    "implemented": false,
+    "prdRefs": ["FR17"],
+    "phase": "B",
+    "file": "ee/server/src/components/settings/account/AccountManagement.tsx"
+  },
+  {
+    "id": "F050",
+    "description": "Add tier badge to account page",
+    "implemented": false,
+    "prdRefs": ["FR17"],
+    "phase": "B",
+    "file": "ee/server/src/components/settings/account/AccountManagement.tsx"
+  },
+  {
+    "id": "F051",
+    "description": "Add tier comparison card showing Basic/Pro/Premium features to account page",
+    "implemented": false,
+    "prdRefs": ["FR17"],
+    "phase": "B",
+    "file": "ee/server/src/components/settings/account/AccountManagement.tsx"
+  },
+  {
+    "id": "F052",
+    "description": "Phase C: Change useRegister.tsx plan from 'pro' to isEnterprise ? 'basic' : 'pro'",
+    "implemented": false,
+    "prdRefs": ["FR4"],
+    "phase": "C",
+    "file": "packages/auth/src/actions/useRegister.tsx"
+  }
+]
