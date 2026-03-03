@@ -116,7 +116,7 @@
   {
     "id": "T015",
     "description": "EE revoke action transitions verified claim to revoked and removes takeover eligibility.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ]
