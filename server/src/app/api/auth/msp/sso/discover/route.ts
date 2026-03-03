@@ -93,6 +93,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const cookie = createSignedMspSsoDiscoveryCookie({
       source: discovery?.source ?? 'app',
       tenantId: discovery?.tenantId,
+      domain,
       providers,
       secret: signingSecret,
       ttlSeconds: MSP_SSO_DISCOVERY_TTL_SECONDS,

@@ -143,3 +143,7 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 
 - Should EE verified-domain conflicts be blocked immediately at claim request time or at verification completion time?
 - Should EE verified claims support periodic re-verification in a future phase, or remain manual revoke/re-verify only?
+- (2026-03-03) Completed `F022`: resolver now revalidates tenant takeover eligibility at resolve-time using current domain lifecycle (`resolveTenantForMspSsoDomain`) before allowing tenant source, and safely falls back to app source only when allow-list permits and app credentials exist.
+- (2026-03-03) Security hardening tied to resolver revalidation: discovery cookie now carries normalized domain, and tenant discovery context is only used when resolver email domain matches cookie domain.
+- (2026-03-03) Validation run for `F022`:
+  - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoResolution.test.ts src/app/api/auth/msp/sso/discover/route.test.ts src/app/api/auth/msp/sso/resolve/route.test.ts`

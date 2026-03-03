@@ -113,6 +113,7 @@ describe('POST /api/auth/msp/sso/resolve', () => {
     parseDiscoveryCookieMock.mockReturnValueOnce({
       source: 'tenant',
       tenantId: 'tenant-1',
+      domain: 'acme.com',
       providers: ['azure-ad'],
       issuedAt: 1,
       expiresAt: Number.MAX_SAFE_INTEGER,
@@ -136,6 +137,7 @@ describe('POST /api/auth/msp/sso/resolve', () => {
     });
     expect(resolveSourceMock).toHaveBeenCalledWith({
       provider: 'azure-ad',
+      email: 'user@example.com',
       discovery: expect.objectContaining({ source: 'tenant', tenantId: 'tenant-1' }),
     });
   });
@@ -144,6 +146,7 @@ describe('POST /api/auth/msp/sso/resolve', () => {
     parseDiscoveryCookieMock.mockReturnValueOnce({
       source: 'tenant',
       tenantId: 'tenant-1',
+      domain: 'acme.com',
       providers: ['azure-ad'],
       issuedAt: 1,
       expiresAt: Number.MAX_SAFE_INTEGER,
@@ -177,6 +180,7 @@ describe('POST /api/auth/msp/sso/resolve', () => {
     await expect(response.json()).resolves.toEqual({ ok: true });
     expect(resolveSourceMock).toHaveBeenCalledWith({
       provider: 'google',
+      email: 'user@example.com',
       discovery: null,
     });
   });

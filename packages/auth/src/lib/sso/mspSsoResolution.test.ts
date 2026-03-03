@@ -211,6 +211,7 @@ describe('mspSsoResolution helpers', () => {
   });
 
   it('T026/T041: discovery contract avoids user lookup and resolver falls back when discovery is missing', async () => {
+    domainRows.push({ tenant: 'tenant-1', domain: 'acme.com', is_active: true, claim_status: 'advisory' });
     tenantSecrets.set('tenant-1:microsoft_client_id', 'ms-id');
     tenantSecrets.set('tenant-1:microsoft_client_secret', 'ms-secret');
     appSecrets.set('GOOGLE_OAUTH_CLIENT_ID', 'google-id');
@@ -222,6 +223,7 @@ describe('mspSsoResolution helpers', () => {
         discovery: {
           source: 'tenant',
           tenantId: 'tenant-1',
+          domain: 'acme.com',
           providers: ['azure-ad'],
           issuedAt: 1,
           expiresAt: Number.MAX_SAFE_INTEGER,
@@ -240,6 +242,7 @@ describe('mspSsoResolution helpers', () => {
         discovery: {
           source: 'tenant',
           tenantId: 'tenant-1',
+          domain: 'acme.com',
           providers: ['azure-ad'],
           issuedAt: 1,
           expiresAt: Number.MAX_SAFE_INTEGER,
@@ -248,17 +251,50 @@ describe('mspSsoResolution helpers', () => {
       })
     ).resolves.toEqual({ resolved: false });
 
-    await expect(resolveMspSsoCredentialSource({ provider: 'google' })).resolves.toEqual({
+    await expect(resolveMspSsoCredentialSource({ provider: 'google', email: 'user@unknown.com' })).resolves.toEqual({
       resolved: true,
       source: 'app',
     });
     expect(dbMock).not.toHaveBeenCalledWith('users');
   });
 
+  it('T038/T040: resolver revalidates tenant lifecycle and falls back to app source when claim is no longer eligible', async () => {
+    domainRows.push({
+      tenant: 'tenant-1',
+      domain: 'acme.com',
+      is_active: true,
+      claim_status: 'revoked',
+    });
+    tenantSecrets.set('tenant-1:google_client_id', 'google-id');
+    tenantSecrets.set('tenant-1:google_client_secret', 'google-secret');
+    appSecrets.set('GOOGLE_OAUTH_CLIENT_ID', 'app-google-id');
+    appSecrets.set('GOOGLE_OAUTH_CLIENT_SECRET', 'app-google-secret');
+
+    await expect(
+      resolveMspSsoCredentialSource({
+        provider: 'google',
+        email: 'person@acme.com',
+        discovery: {
+          source: 'tenant',
+          tenantId: 'tenant-1',
+          domain: 'acme.com',
+          providers: ['google'],
+          issuedAt: 1,
+          expiresAt: Number.MAX_SAFE_INTEGER,
+          nonce: 'nonce-stale-1',
+        },
+      })
+    ).resolves.toEqual({
+      resolved: true,
+      source: 'app',
+    });
+  });
+
   it('T028/T029: signs/verifies discovery cookies and enforces expiry with secret-safe payloads', () => {
     const discovery = createSignedMspSsoDiscoveryCookie({
       source: 'tenant',
       tenantId: 'tenant-1',
+      domain: 'acme.com',
       providers: ['google', 'azure-ad'],
       secret: 'unit-secret',
       now: 1_700_000_000_000,
@@ -278,6 +314,7 @@ describe('mspSsoResolution helpers', () => {
     ).toMatchObject({
       source: 'tenant',
       tenantId: 'tenant-1',
+      domain: 'acme.com',
       providers: ['google', 'azure-ad'],
     });
     expect(

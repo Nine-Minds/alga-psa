@@ -46,6 +46,7 @@ export interface MspSsoResolutionPayload {
 export interface MspSsoDiscoveryPayload {
   source: MspSsoSource;
   tenantId?: string;
+  domain: string;
   providers: MspSsoProviderId[];
   issuedAt: number;
   expiresAt: number;
@@ -54,6 +55,7 @@ export interface MspSsoDiscoveryPayload {
 
 interface ResolverInputs {
   provider: MspSsoProviderId;
+  email?: string;
   discovery?: MspSsoDiscoveryPayload | null;
 }
 
@@ -365,6 +367,8 @@ export async function discoverMspSsoProviderOptions(
 export async function resolveMspSsoCredentialSource(
   inputs: ResolverInputs
 ): Promise<ResolverOutcome> {
+  const normalizedEmail = typeof inputs.email === 'string' ? normalizeResolverEmail(inputs.email) : '';
+  const emailDomain = extractDomainFromEmail(normalizedEmail);
   const discovery = inputs.discovery;
   if (discovery) {
     const allowedProviders = normalizeProviders(discovery.providers);
@@ -373,11 +377,33 @@ export async function resolveMspSsoCredentialSource(
     }
 
     if (discovery.source === 'tenant' && discovery.tenantId) {
-      if (await hasTenantProviderCredentials(discovery.tenantId, inputs.provider)) {
+      const shouldEvaluateTenantSource = !emailDomain || discovery.domain === emailDomain;
+      let tenantTakeoverEligible = false;
+
+      if (shouldEvaluateTenantSource) {
+        const tenantResolution = await resolveTenantForMspSsoDomain(discovery.domain);
+        tenantTakeoverEligible =
+          Boolean(tenantResolution.tenantId) &&
+          !tenantResolution.ambiguous &&
+          tenantResolution.tenantId === discovery.tenantId &&
+          Boolean(tenantResolution.eligibleForTakeover);
+      }
+
+      if (
+        tenantTakeoverEligible &&
+        (await hasTenantProviderCredentials(discovery.tenantId, inputs.provider))
+      ) {
         return {
           resolved: true,
           source: 'tenant',
           tenantId: discovery.tenantId,
+        };
+      }
+
+      if (await hasAppFallbackProviderCredentials(inputs.provider)) {
+        return {
+          resolved: true,
+          source: 'app',
         };
       }
 
@@ -434,6 +460,7 @@ export function createSignedMspSsoResolutionCookie(params: {
 export function createSignedMspSsoDiscoveryCookie(params: {
   source: MspSsoSource;
   tenantId?: string;
+  domain: string;
   providers: MspSsoProviderId[];
   secret: string;
   ttlSeconds?: number;
@@ -444,6 +471,7 @@ export function createSignedMspSsoDiscoveryCookie(params: {
   const payload: MspSsoDiscoveryPayload = {
     source: params.source,
     tenantId: params.tenantId,
+    domain: normalizeMspSsoDomain(params.domain),
     providers: normalizeProviders(params.providers),
     issuedAt: now,
     expiresAt: now + ttl * 1000,
@@ -529,6 +557,7 @@ export function parseAndVerifyMspSsoDiscoveryCookie(params: {
   if (payload.source !== 'tenant' && payload.source !== 'app') return null;
   if (typeof payload.issuedAt !== 'number' || typeof payload.expiresAt !== 'number') return null;
   if (typeof payload.nonce !== 'string' || payload.nonce.length < 8) return null;
+  if (typeof payload.domain !== 'string' || Boolean(validateMspSsoDomain(payload.domain))) return null;
   if (!Array.isArray(payload.providers)) return null;
 
   const providers = normalizeProviders(payload.providers);

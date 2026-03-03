@@ -97,6 +97,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // Anti-enumeration rule: lookup outcomes only affect internal source selection, never external messaging.
     const outcome = await resolveMspSsoCredentialSource({
       provider,
+      email,
       discovery: discoveryContext,
     });
     if (!outcome.resolved || !outcome.source) {

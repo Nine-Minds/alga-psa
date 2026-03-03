@@ -132,6 +132,7 @@ describe('POST /api/auth/msp/sso/discover', () => {
       expect.objectContaining({
         source: 'tenant',
         tenantId: 'tenant-1',
+        domain: 'acme.com',
         providers: ['azure-ad'],
       })
     );

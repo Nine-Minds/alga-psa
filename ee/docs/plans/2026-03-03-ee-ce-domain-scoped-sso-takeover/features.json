@@ -3,210 +3,315 @@
     "id": "F001",
     "description": "Extend MSP SSO domain persistence model with lifecycle states supporting EE verification and CE advisory modes.",
     "implemented": true,
-    "prdRefs": ["Functional Requirements #1", "Data model"]
+    "prdRefs": [
+      "Functional Requirements #1",
+      "Data model"
+    ]
   },
   {
     "id": "F002",
     "description": "Add optional domain verification challenge storage for EE ownership checks.",
     "implemented": true,
-    "prdRefs": ["Functional Requirements #2", "Data model"]
+    "prdRefs": [
+      "Functional Requirements #2",
+      "Data model"
+    ]
   },
   {
     "id": "F003",
     "description": "Backfill existing domain rows to deterministic lifecycle defaults for EE and CE.",
     "implemented": true,
-    "prdRefs": ["Rollout / Migration #2", "Functional Requirements #4"]
+    "prdRefs": [
+      "Rollout / Migration #2",
+      "Functional Requirements #4"
+    ]
   },
   {
     "id": "F004",
     "description": "Add shared domain lifecycle normalization/validation helpers used by settings actions and discovery logic.",
     "implemented": true,
-    "prdRefs": ["Functional Requirements #4"]
+    "prdRefs": [
+      "Functional Requirements #4"
+    ]
   },
   {
     "id": "F005",
     "description": "Add EE permission-gated action to list SSO domain claims with lifecycle metadata.",
     "implemented": true,
-    "prdRefs": ["Functional Requirements #3"]
+    "prdRefs": [
+      "Functional Requirements #3"
+    ]
   },
   {
     "id": "F006",
     "description": "Add EE action to request domain claim and create verification challenge.",
     "implemented": true,
-    "prdRefs": ["Functional Requirements #2", "Functional Requirements #3"]
+    "prdRefs": [
+      "Functional Requirements #2",
+      "Functional Requirements #3"
+    ]
   },
   {
     "id": "F007",
     "description": "Add EE action to refresh/regenerate verification challenge material.",
     "implemented": true,
-    "prdRefs": ["Functional Requirements #2", "Functional Requirements #3"]
+    "prdRefs": [
+      "Functional Requirements #2",
+      "Functional Requirements #3"
+    ]
   },
   {
     "id": "F008",
     "description": "Add EE action to verify domain ownership and promote claim to verified.",
     "implemented": true,
-    "prdRefs": ["Functional Requirements #2", "Functional Requirements #7"]
+    "prdRefs": [
+      "Functional Requirements #2",
+      "Functional Requirements #7"
+    ]
   },
   {
     "id": "F009",
     "description": "Add EE action to revoke verified domain takeover.",
     "implemented": true,
-    "prdRefs": ["Functional Requirements #3", "Security / Permissions #2"]
+    "prdRefs": [
+      "Functional Requirements #3",
+      "Security / Permissions #2"
+    ]
   },
   {
     "id": "F010",
     "description": "Add CE advisory domain registration save/remove path without mandatory ownership proof.",
     "implemented": true,
-    "prdRefs": ["Functional Requirements #8", "Goal #3"]
+    "prdRefs": [
+      "Functional Requirements #8",
+      "Goal #3"
+    ]
   },
   {
     "id": "F011",
     "description": "Enforce conflict policy so only one EE tenant can hold a verified claim for a domain.",
     "implemented": true,
-    "prdRefs": ["Functional Requirements #5", "Security / Permissions #2"]
+    "prdRefs": [
+      "Functional Requirements #5",
+      "Security / Permissions #2"
+    ]
   },
   {
     "id": "F012",
     "description": "Update EE provider settings UI to show domain claim lifecycle states and available actions.",
     "implemented": true,
-    "prdRefs": ["UX / UI Notes #4", "Functional Requirements #3"]
+    "prdRefs": [
+      "UX / UI Notes #4",
+      "Functional Requirements #3"
+    ]
   },
   {
     "id": "F013",
     "description": "Show EE domain verification challenge instructions and status feedback in settings UI.",
     "implemented": true,
-    "prdRefs": ["UX / UI Notes #4", "Functional Requirements #2"]
+    "prdRefs": [
+      "UX / UI Notes #4",
+      "Functional Requirements #2"
+    ]
   },
   {
     "id": "F014",
     "description": "Update CE settings UI to expose advisory domain registration with explicit advisory copy.",
     "implemented": true,
-    "prdRefs": ["UX / UI Notes #5", "Functional Requirements #8"]
+    "prdRefs": [
+      "UX / UI Notes #5",
+      "Functional Requirements #8"
+    ]
   },
   {
     "id": "F015",
     "description": "Update settings copy to state that unmanaged domains use Nine Minds app-level fallback providers.",
     "implemented": true,
-    "prdRefs": ["Summary", "Functional Requirements #9"]
+    "prdRefs": [
+      "Summary",
+      "Functional Requirements #9"
+    ]
   },
   {
     "id": "F016",
     "description": "Update discovery helper to evaluate edition + domain claim lifecycle before selecting tenant/app source.",
     "implemented": true,
-    "prdRefs": ["Functional Requirements #6", "Provider routing policy"]
+    "prdRefs": [
+      "Functional Requirements #6",
+      "Provider routing policy"
+    ]
   },
   {
     "id": "F017",
     "description": "In EE discovery, allow tenant-scoped providers only for verified non-ambiguous domain claims.",
     "implemented": true,
-    "prdRefs": ["Functional Requirements #7", "Acceptance Criteria #4"]
+    "prdRefs": [
+      "Functional Requirements #7",
+      "Acceptance Criteria #4"
+    ]
   },
   {
     "id": "F018",
     "description": "In EE discovery, route pending/rejected/revoked/ambiguous claims to app-level fallback providers.",
     "implemented": true,
-    "prdRefs": ["Functional Requirements #9", "Primary Flow B"]
+    "prdRefs": [
+      "Functional Requirements #9",
+      "Primary Flow B"
+    ]
   },
   {
     "id": "F019",
     "description": "In CE discovery, treat advisory registrations as eligible for tenant routing without ownership verification gate.",
     "implemented": true,
-    "prdRefs": ["Functional Requirements #8", "Primary Flow C"]
+    "prdRefs": [
+      "Functional Requirements #8",
+      "Primary Flow C"
+    ]
   },
   {
     "id": "F020",
     "description": "In both editions, unresolved/unregistered domains return app-level fallback provider set.",
     "implemented": true,
-    "prdRefs": ["Functional Requirements #9", "Primary Flow D"]
+    "prdRefs": [
+      "Functional Requirements #9",
+      "Primary Flow D"
+    ]
   },
   {
     "id": "F021",
     "description": "Keep discover endpoint invariant response contract and anti-enumeration behavior while adding lifecycle checks.",
     "implemented": true,
-    "prdRefs": ["Functional Requirements #11", "Non-functional Requirements #1"]
+    "prdRefs": [
+      "Functional Requirements #11",
+      "Non-functional Requirements #1"
+    ]
   },
   {
     "id": "F022",
     "description": "Update resolver source selection to enforce lifecycle-aware eligibility at resolve time.",
-    "implemented": false,
-    "prdRefs": ["Functional Requirements #12", "Security / Permissions #3"]
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements #12",
+      "Security / Permissions #3"
+    ]
   },
   {
     "id": "F023",
     "description": "Maintain resolver generic failure response contract for invalid, disallowed, or stale-eligibility scenarios.",
     "implemented": false,
-    "prdRefs": ["Functional Requirements #11", "Functional Requirements #12"]
+    "prdRefs": [
+      "Functional Requirements #11",
+      "Functional Requirements #12"
+    ]
   },
   {
     "id": "F024",
     "description": "Preserve signed, secret-safe discovery/resolution cookie usage with lifecycle-aware payload consumption.",
     "implemented": false,
-    "prdRefs": ["Functional Requirements #12", "Security / Permissions #4"]
+    "prdRefs": [
+      "Functional Requirements #12",
+      "Security / Permissions #4"
+    ]
   },
   {
     "id": "F025",
     "description": "Keep MSP credentials login flow unchanged after takeover lifecycle integration.",
     "implemented": false,
-    "prdRefs": ["Functional Requirements #13", "Primary Flow E"]
+    "prdRefs": [
+      "Functional Requirements #13",
+      "Primary Flow E"
+    ]
   },
   {
     "id": "F026",
     "description": "Keep client portal login and auth affordances unchanged.",
     "implemented": false,
-    "prdRefs": ["Non-goals #1", "Functional Requirements #13"]
+    "prdRefs": [
+      "Non-goals #1",
+      "Functional Requirements #13"
+    ]
   },
   {
     "id": "F027",
     "description": "Wire CE MSP login to use discovery-enabled SSO button implementation instead of null/stub behavior.",
     "implemented": false,
-    "prdRefs": ["Functional Requirements #10", "Goal #1"]
+    "prdRefs": [
+      "Functional Requirements #10",
+      "Goal #1"
+    ]
   },
   {
     "id": "F028",
     "description": "Ensure MSP login forms pass typed email into SSO discovery component in both CE and EE builds.",
     "implemented": false,
-    "prdRefs": ["Functional Requirements #10", "UX / UI Notes #2"]
+    "prdRefs": [
+      "Functional Requirements #10",
+      "UX / UI Notes #2"
+    ]
   },
   {
     "id": "F029",
     "description": "Retain current SSO button interaction patterns (disabled states, in-flight behavior, remembered provider) with new routing matrix.",
     "implemented": false,
-    "prdRefs": ["UX / UI Notes #2", "UX / UI Notes #3"]
+    "prdRefs": [
+      "UX / UI Notes #2",
+      "UX / UI Notes #3"
+    ]
   },
   {
     "id": "F030",
     "description": "Document EE domain takeover lifecycle and verification runbook for tenant admins.",
     "implemented": false,
-    "prdRefs": ["Goal #2", "Acceptance Criteria #1"]
+    "prdRefs": [
+      "Goal #2",
+      "Acceptance Criteria #1"
+    ]
   },
   {
     "id": "F031",
     "description": "Document CE advisory mode behavior and limitations.",
     "implemented": false,
-    "prdRefs": ["Goal #3", "Acceptance Criteria #2"]
+    "prdRefs": [
+      "Goal #3",
+      "Acceptance Criteria #2"
+    ]
   },
   {
     "id": "F032",
     "description": "Document Nine Minds app-level fallback prerequisites and behavior for unmanaged/unapproved domains.",
     "implemented": false,
-    "prdRefs": ["Summary", "Acceptance Criteria #6"]
+    "prdRefs": [
+      "Summary",
+      "Acceptance Criteria #6"
+    ]
   },
   {
     "id": "F033",
     "description": "Add unit and contract coverage for EE/CE domain lifecycle actions and permission guards.",
     "implemented": false,
-    "prdRefs": ["Functional Requirements #3", "Functional Requirements #8"]
+    "prdRefs": [
+      "Functional Requirements #3",
+      "Functional Requirements #8"
+    ]
   },
   {
     "id": "F034",
     "description": "Add discovery/resolver matrix test coverage for EE verified/unverified/ambiguous and CE advisory/unregistered paths.",
     "implemented": false,
-    "prdRefs": ["Acceptance Criteria #3", "Acceptance Criteria #4", "Acceptance Criteria #5", "Acceptance Criteria #6"]
+    "prdRefs": [
+      "Acceptance Criteria #3",
+      "Acceptance Criteria #4",
+      "Acceptance Criteria #5",
+      "Acceptance Criteria #6"
+    ]
   },
   {
     "id": "F035",
     "description": "Preserve `/auth/msp/signin` and callbackUrl passthrough contracts under the new takeover lifecycle behavior.",
     "implemented": false,
-    "prdRefs": ["Functional Requirements #14", "Acceptance Criteria #9"]
+    "prdRefs": [
+      "Functional Requirements #14",
+      "Acceptance Criteria #9"
+    ]
   }
 ]
