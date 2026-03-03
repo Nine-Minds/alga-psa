@@ -288,7 +288,7 @@
   {
     "id": "F033",
     "description": "Add unit and contract coverage for EE/CE domain lifecycle actions and permission guards.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements #3",
       "Functional Requirements #8"

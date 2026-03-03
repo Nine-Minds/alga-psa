@@ -144,7 +144,11 @@ vi.mock('@alga-psa/db', () => ({
 import {
   listMspSsoDomainClaims,
   listMspSsoLoginDomains,
+  refreshMspSsoDomainClaimChallenge,
+  requestMspSsoDomainClaim,
+  revokeMspSsoDomainClaim,
   saveMspSsoLoginDomains,
+  verifyMspSsoDomainClaimOwnership,
 } from './mspSsoDomainActions';
 
 describe('msp sso domain actions', () => {
@@ -162,6 +166,45 @@ describe('msp sso domain actions', () => {
     mockUser = { user_id: 'user-1', user_type: 'internal' };
     hasPermissionValue = false;
     await expect(listMspSsoLoginDomains()).resolves.toEqual({ success: false, error: 'Forbidden' });
+  });
+
+  it('T004b: lifecycle actions deny unauthorized users and client users', async () => {
+    mockUser = { user_id: 'client-1', user_type: 'client' };
+    await expect(requestMspSsoDomainClaim({ domain: 'acme.com' })).resolves.toEqual({
+      success: false,
+      error: 'Forbidden',
+    });
+    await expect(refreshMspSsoDomainClaimChallenge({ claimId: 'claim-1' })).resolves.toEqual({
+      success: false,
+      error: 'Forbidden',
+    });
+    await expect(verifyMspSsoDomainClaimOwnership({ claimId: 'claim-1' })).resolves.toEqual({
+      success: false,
+      error: 'Forbidden',
+    });
+    await expect(revokeMspSsoDomainClaim({ claimId: 'claim-1' })).resolves.toEqual({
+      success: false,
+      error: 'Forbidden',
+    });
+
+    mockUser = { user_id: 'user-1', user_type: 'internal' };
+    hasPermissionValue = false;
+    await expect(requestMspSsoDomainClaim({ domain: 'acme.com' })).resolves.toEqual({
+      success: false,
+      error: 'Forbidden',
+    });
+    await expect(refreshMspSsoDomainClaimChallenge({ claimId: 'claim-1' })).resolves.toEqual({
+      success: false,
+      error: 'Forbidden',
+    });
+    await expect(verifyMspSsoDomainClaimOwnership({ claimId: 'claim-1' })).resolves.toEqual({
+      success: false,
+      error: 'Forbidden',
+    });
+    await expect(revokeMspSsoDomainClaim({ claimId: 'claim-1' })).resolves.toEqual({
+      success: false,
+      error: 'Forbidden',
+    });
   });
 
   it('T005: list action returns normalized, deduplicated tenant domains', async () => {
@@ -267,6 +310,28 @@ describe('msp sso domain actions', () => {
     await expect(listMspSsoLoginDomains()).resolves.toEqual({
       success: true,
       domains: ['acme.com'],
+    });
+  });
+
+  it('T012: request action validates malformed domains before db operations', async () => {
+    await expect(requestMspSsoDomainClaim({ domain: 'bad_domain' })).resolves.toEqual({
+      success: false,
+      error: 'Invalid domain "bad_domain". Enter a valid domain like example.com.',
+    });
+  });
+
+  it('T013/T014/T015: refresh/verify/revoke require claim id', async () => {
+    await expect(refreshMspSsoDomainClaimChallenge({ claimId: '' })).resolves.toEqual({
+      success: false,
+      error: 'Claim id is required.',
+    });
+    await expect(verifyMspSsoDomainClaimOwnership({ claimId: '   ' })).resolves.toEqual({
+      success: false,
+      error: 'Claim id is required.',
+    });
+    await expect(revokeMspSsoDomainClaim({ claimId: '' })).resolves.toEqual({
+      success: false,
+      error: 'Claim id is required.',
     });
   });
 });
