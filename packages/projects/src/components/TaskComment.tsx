@@ -12,7 +12,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { IProjectTaskCommentWithUser } from '@alga-psa/types';
 import { updateTaskComment, deleteTaskComment } from '../actions/projectTaskCommentActions';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { searchUsersForMentions } from '@alga-psa/users/actions';
+import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 
 interface TaskCommentProps {
   comment: IProjectTaskCommentWithUser;

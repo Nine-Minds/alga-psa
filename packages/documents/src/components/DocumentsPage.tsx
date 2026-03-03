@@ -7,7 +7,7 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { UnsavedChangesProvider } from '@alga-psa/ui/context';
 import { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { getDistinctEntityTypes } from '../actions/documentActions';
-import { getCurrentUser, getAllUsersBasic } from '@alga-psa/users/actions';
+import { getCurrentUser, getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import type { IUser } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
@@ -16,7 +16,7 @@ import DocumentsPageSkeleton from './DocumentsPageSkeleton';
 import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useUserPreference } from '@alga-psa/users/hooks';
+import { useUserPreference } from '@alga-psa/user-composition/hooks';
 
 const FILTERS_PANE_COLLAPSED_SETTING = 'documents_filters_pane_collapsed';
 

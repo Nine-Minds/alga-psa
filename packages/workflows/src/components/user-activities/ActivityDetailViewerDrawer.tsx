@@ -19,7 +19,7 @@ import { getTicketById } from "@alga-psa/tickets/actions/ticketActions";
 import { getTaskWithDetails } from "@alga-psa/projects/actions/projectTaskActions";
 import { getTaskDetails } from "@alga-psa/workflows/actions/workflow-actions/taskInboxActions";
 import { getScheduleEntries } from "@alga-psa/scheduling/actions";
-import { getCurrentUser, getAllUsersBasic } from "@alga-psa/users/actions";
+import { getCurrentUser, getAllUsersBasic } from "@alga-psa/user-composition/actions";
 import { getTimeEntryById, saveTimeEntry } from "@alga-psa/scheduling/actions/timeEntryActions";
 import TicketDetails from "@alga-psa/tickets/components/ticket/TicketDetails";
 import TaskEdit from "@alga-psa/projects/components/TaskEdit";

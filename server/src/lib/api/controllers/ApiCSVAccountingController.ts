@@ -14,7 +14,7 @@ import { BaseService, ListOptions } from './types';
 import { getCSVTaxImportService } from '@alga-psa/integrations/services';
 import { AccountingExportInvoiceSelector, AccountingExportService, QuickBooksCSVAdapter } from '@alga-psa/billing/services';
 import { getSession } from '@alga-psa/auth';
-import { findUserById } from '@alga-psa/users/actions';
+import { findUserById } from '@alga-psa/user-composition/actions';
 import logger from '@alga-psa/core/logger';
 import { AppError } from '@alga-psa/core';
 

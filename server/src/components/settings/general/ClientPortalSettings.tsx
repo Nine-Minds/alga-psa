@@ -23,7 +23,7 @@ import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { deleteTenantLogo, uploadTenantLogo } from '@alga-psa/tenancy/actions';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { useBranding } from '@alga-psa/tenancy/components';
 import ClientPortalDomainSettings from '@alga-psa/client-portal/domain-settings/entry';
 import SignInPagePreview from './SignInPagePreview';

@@ -22,7 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { useUserPreference } from '@alga-psa/users/hooks';
+import { useUserPreference } from '@alga-psa/user-composition/hooks';
 
 const PROJECT_TEMPLATES_PAGE_SIZE_KEY = 'project_templates_page_size';
 

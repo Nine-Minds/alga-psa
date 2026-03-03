@@ -24,7 +24,7 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getAllBoards } from '@alga-psa/tickets/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
-import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import type { IBoard, IPriority } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
 import type { ITicketCategory } from '@alga-psa/types';

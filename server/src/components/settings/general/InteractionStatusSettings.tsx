@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getStatuses, deleteStatus, updateStatus } from '@alga-psa/reference-data/actions';
 import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions';
 import { IStatus, IStandardStatus } from '@alga-psa/types';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';

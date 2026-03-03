@@ -9,7 +9,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import type { ColumnDefinition } from '@alga-psa/types';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import type { IUser } from '@alga-psa/types';
 import { Upload, AlertTriangle, Check, ChevronDown, ChevronRight } from 'lucide-react';
 import { parseCSV } from '@alga-psa/core';

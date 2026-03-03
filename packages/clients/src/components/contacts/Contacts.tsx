@@ -35,7 +35,7 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { useRouter } from 'next/navigation';
 import ContactsSkeleton from './ContactsSkeleton';
-import { useUserPreference } from '@alga-psa/users/hooks';
+import { useUserPreference } from '@alga-psa/user-composition/hooks';
 
 const CONTACTS_PAGE_SIZE_SETTING = 'contacts_page_size';
 

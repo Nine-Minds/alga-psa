@@ -11,7 +11,7 @@ import { IUserWithRoles } from '@alga-psa/types';
 import { fetchTimePeriods, fetchOrCreateTimeSheet } from '../../../actions/timeEntryActions';
 import { fetchEligibleTimeEntrySubjects } from '../../../actions/timeEntryDelegationActions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 

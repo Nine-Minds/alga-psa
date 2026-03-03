@@ -8,7 +8,7 @@ import { TaskCommentForm } from './TaskCommentForm';
 import { getTaskComments } from '../actions/projectTaskCommentActions';
 import { IProjectTaskCommentWithUser } from '@alga-psa/types';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { getCurrentUser, getCurrentUserAvatarUrl } from '@alga-psa/users/actions';
+import { getCurrentUser, getCurrentUserAvatarUrl } from '@alga-psa/user-composition/actions';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { Button } from '@alga-psa/ui/components/Button';
 

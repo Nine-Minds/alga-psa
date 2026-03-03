@@ -1,4 +1,4 @@
-import Extensions from '@/components/settings/extensions/Extensions';
+import { Extensions } from '@product/settings-extensions/ee/entry';
 
 export const metadata = { title: 'Extensions' };
 

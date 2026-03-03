@@ -13,7 +13,7 @@ import {
 } from '@alga-psa/tickets/actions';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
-import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getSlaPolicies } from '@alga-psa/sla/actions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { IUserWithRoles } from '../interfaces/auth.interfaces';
-import { getAllUsers } from '@alga-psa/users/actions';
+import { getAllUsers } from '@alga-psa/user-composition/actions';
 
 export function useUsers() {
   const [users, setUsers] = useState<IUserWithRoles[]>([]);

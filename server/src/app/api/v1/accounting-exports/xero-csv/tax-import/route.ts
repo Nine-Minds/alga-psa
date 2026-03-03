@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { getXeroCsvTaxImportService } from 'server/src/lib/services/xeroCsvTaxImportService';
 import logger from '@alga-psa/core/logger';

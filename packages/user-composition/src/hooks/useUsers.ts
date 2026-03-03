@@ -31,4 +31,3 @@ export function useUsers() {
 
   return { users, loading, error };
 }
-

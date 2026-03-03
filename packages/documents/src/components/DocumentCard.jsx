@@ -6,7 +6,7 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
 import { FileText, Link2, Trash2 } from 'lucide-react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
-import { searchUsersForMentions } from '@alga-psa/users/actions';
+import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 const DocumentCard = ({ id = 'document-card', document, onDelete, onDisassociate, showDisassociate = false, onClick, isContentDocument = false }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editedName, setEditedName] = useState(document.document_name);

@@ -7,7 +7,7 @@ import type {
   StorageGetRequest,
   StoragePutRequest,
 } from '@/lib/extensions/storage/v2/types';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import type { Knex } from 'knex';
 

@@ -1,0 +1,22 @@
+{
+  "name": "@alga-psa/user-composition",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/user-composition/src",
+  "projectType": "library",
+  "tags": ["scope:user-composition", "type:horizontal"],
+  "targets": {
+    "build": {
+      "executor": "nx:noop"
+    },
+    "test": {
+      "executor": "nx:noop"
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/user-composition/**/*.{ts,tsx}"]
+      }
+    }
+  }
+}

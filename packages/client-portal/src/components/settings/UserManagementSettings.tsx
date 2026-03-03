@@ -16,14 +16,13 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { Search, MoreVertical, Pencil, Trash2, Eye, EyeOff } from 'lucide-react';
 import ClientUserDetails from './ClientUserDetails';
-import { 
-  getCurrentUser, 
-  getUserRolesWithPermissions, 
-  getUserClientId, 
-  deleteUser,
-  updateUser,
+import {
+  getCurrentUser,
+  getUserRolesWithPermissions,
+  getUserClientId,
   getClientUsersForClient
-} from '@alga-psa/users/actions';
+} from '@alga-psa/user-composition/actions';
+import { deleteUser, updateUser } from '@alga-psa/users/actions';
 import { createOrFindContactByEmail } from '@alga-psa/clients/actions';
 import { createClientUser, getClientPortalRoles, getClientUserRoles } from '@alga-psa/client-portal/actions';
 import type { DeletionValidationResult, IUser, IPermission } from '@alga-psa/types';

@@ -27,7 +27,7 @@ import {
 } from '../middleware/apiMiddleware';
 import { BaseService, ListOptions } from './types';
 import { getSession } from '@alga-psa/auth';
-import { findUserById } from '@alga-psa/users/actions';
+import { findUserById } from '@alga-psa/user-composition/actions';
 import { UnauthorizedError } from '../middleware/apiMiddleware';
 
 const PREVIEW_LINE_LIMIT = 50;

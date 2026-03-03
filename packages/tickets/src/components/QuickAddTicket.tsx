@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { addTicket } from '../actions/ticketActions';
 import { addTicketResource } from '../actions/ticketResourceActions';
-import { getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getContactsByClient, getClientLocations } from '../actions/clientLookupActions';
 import { getTicketFormData } from '../actions/ticketFormActions';
 import { getTicketCategoriesByBoard, BoardCategoryData } from '@alga-psa/tickets/actions';

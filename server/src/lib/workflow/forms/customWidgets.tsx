@@ -4,7 +4,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { IClient } from '../../../interfaces/client.interfaces';
 import { IUserWithRoles } from '../../../interfaces/auth.interfaces';

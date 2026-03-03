@@ -1,0 +1,42 @@
+{
+  "name": "@alga-psa/user-composition",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./actions": {
+      "import": "./src/actions/index.ts",
+      "types": "./src/actions/index.ts"
+    },
+    "./actions/*": {
+      "import": "./src/actions/*.ts",
+      "types": "./src/actions/*.ts"
+    },
+    "./hooks": {
+      "import": "./src/hooks/index.ts",
+      "types": "./src/hooks/index.ts"
+    },
+    "./hooks/*": {
+      "import": "./src/hooks/*.ts",
+      "types": "./src/hooks/*.ts"
+    },
+    "./lib/*": {
+      "import": "./src/lib/*.ts",
+      "types": "./src/lib/*.ts"
+    }
+  },
+  "dependencies": {
+    "@alga-psa/auth": "*",
+    "@alga-psa/core": "*",
+    "@alga-psa/db": "*",
+    "@alga-psa/types": "*",
+    "@alga-psa/ui": "*",
+    "swr": "^2.3.0"
+  }
+}

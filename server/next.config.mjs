@@ -407,6 +407,7 @@ const nextConfig = {
     '@alga-psa/billing',
     '@alga-psa/assets',
     '@alga-psa/msp-composition',
+    '@alga-psa/user-composition',
     '@alga-psa/projects',
     '@alga-psa/surveys',
     // Product feature packages (only those needed in this app)

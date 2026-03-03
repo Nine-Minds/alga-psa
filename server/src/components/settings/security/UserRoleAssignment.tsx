@@ -9,7 +9,7 @@ import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@alga
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { assignRoleToUser, removeRoleFromUser, getRoles, getUserRoles } from '@alga-psa/auth/actions';
-import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import type { IRole, IUserWithRoles } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';

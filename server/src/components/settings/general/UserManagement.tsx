@@ -4,7 +4,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import UserList from './UserList';
-import { getAllUsers, addUser, getUserWithRoles, getMSPRoles, getClientPortalRoles, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getAllUsers, getUserWithRoles, getMSPRoles, getClientPortalRoles, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { addUser } from '@alga-psa/users/actions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { addContact, getContactsByClient, getAllContacts, getContactsEligibleForInvitation } from '@alga-psa/clients/actions';

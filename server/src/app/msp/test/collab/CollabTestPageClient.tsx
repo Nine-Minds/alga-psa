@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CollaborativeEditor } from '@alga-psa/documents/components';
 import { createBlockDocument, getBlockContent } from '@alga-psa/documents/actions/documentBlockContentActions';
-import { searchUsersForMentions } from '@alga-psa/users/actions/user-actions';
+import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';

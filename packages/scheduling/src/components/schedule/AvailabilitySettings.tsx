@@ -30,7 +30,7 @@ import {
   IAvailabilitySetting,
   IAvailabilityException
 } from '@alga-psa/scheduling/actions';
-import { getAllUsersBasic } from '@alga-psa/users/actions';
+import { getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { getServices } from '@alga-psa/scheduling/actions';
 import { IService } from '@alga-psa/types';

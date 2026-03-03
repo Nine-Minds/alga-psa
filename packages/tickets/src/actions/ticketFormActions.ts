@@ -1,7 +1,7 @@
 'use server'
 
 import type { IUser, IBoard, ITicketStatus, IPriority, IClient, IContact } from '@alga-psa/types';
-import { getAllUsers } from '@alga-psa/users/actions';
+import { getAllUsers } from '@alga-psa/user-composition/actions';
 import { getAllBoards } from './board-actions';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllPriorities, getPrioritiesByBoardType } from '@alga-psa/reference-data/actions';

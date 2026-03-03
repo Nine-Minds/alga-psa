@@ -30,7 +30,7 @@ import {
   resyncImapProvider,
   retryMicrosoftSubscriptionRenewal
 } from '../../actions/email-actions/emailProviderActions';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import {
   EmailProvider,
   GoogleEmailProviderConfig,

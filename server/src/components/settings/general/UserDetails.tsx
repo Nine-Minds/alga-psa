@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { IUser, IUserWithRoles, IRole } from '@alga-psa/types';
-import { findUserById, updateUser, adminChangeUserPassword, getCurrentUser, getAllUsers } from '@alga-psa/users/actions';
-import { getRoles, getUserRoles, assignRoleToUser, removeRoleFromUser, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { findUserById, getCurrentUser, getAllUsers, getUserRoles, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { updateUser, adminChangeUserPassword, getRoles, assignRoleToUser, removeRoleFromUser } from '@alga-psa/users/actions';
 import { useDrawer } from "@alga-psa/ui";
 import { Text, Flex } from '@radix-ui/themes';
 import { Input } from '@alga-psa/ui/components/Input';

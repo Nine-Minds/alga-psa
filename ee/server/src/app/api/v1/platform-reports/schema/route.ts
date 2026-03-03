@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import {

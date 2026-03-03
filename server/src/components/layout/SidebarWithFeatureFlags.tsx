@@ -9,7 +9,7 @@ import {
   navigationSections as originalSections,
   type NavigationSection
 } from '@/config/menuConfig';
-import { getCurrentUserPermissions } from '@alga-psa/users/actions';
+import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
 
 type SidebarWithFeatureFlagsProps = React.ComponentProps<typeof Sidebar>;
 

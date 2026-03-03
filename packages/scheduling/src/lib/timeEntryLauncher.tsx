@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { toast } from 'react-hot-toast';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getCurrentTimePeriod } from '../actions/timePeriodsActions';
 import { fetchOrCreateTimeSheet, saveTimeEntry } from '../actions/timeEntryActions';
 import type { IExtendedWorkItem, TimeEntryWorkItemContext } from '@alga-psa/types';
