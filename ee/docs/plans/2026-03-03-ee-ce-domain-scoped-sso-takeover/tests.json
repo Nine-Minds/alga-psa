@@ -400,7 +400,7 @@
   {
     "id": "T050",
     "description": "Disabled SSO button clicks never trigger resolver/start request.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
