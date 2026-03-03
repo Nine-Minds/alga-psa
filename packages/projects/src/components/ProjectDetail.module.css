@@ -162,6 +162,19 @@
   background: rgb(var(--color-border-300));
 }
 
+/* Sticky Save/Cancel buttons when editing a phase */
+.phaseEditActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.5rem 0;
+  position: sticky;
+  bottom: 0;
+  background-color: rgb(var(--color-card));
+  z-index: 1;
+}
+
 .phasesList {
   width: 250px;
   min-width: 250px;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { IProjectPhase } from '@alga-psa/types';
 import { Pencil, Trash2, GripVertical } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -65,6 +65,17 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const itemRef = useRef<HTMLLIElement>(null);
+
+  // Auto-scroll the phase into view when editing starts
+  useEffect(() => {
+    if (isEditing && itemRef.current) {
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      // Small delay to let the form expand before scrolling
+      requestAnimationFrame(() => {
+        itemRef.current?.scrollIntoView({ behavior: prefersReducedMotion ? 'instant' : 'smooth', block: 'nearest' });
+      });
+    }
+  }, [isEditing]);
 
   const handleDragStart = (e: React.DragEvent) => {
     setIsDragging(true);
@@ -279,8 +290,8 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
               />
             </div>
           </div>
-          {/* Action Buttons  */}
-          <div className="flex justify-end gap-2 mt-3">
+          {/* Action Buttons - sticky so they're always visible */}
+          <div className={styles.phaseEditActions}>
             <Button
               id={`cancel-edit-phase-${phase.phase_id}`}
               variant="outline"
