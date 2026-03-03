@@ -322,3 +322,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `T057`: DB-backed integration guard: second EE tenant cannot verify takeover for already-verified domain.
 - (2026-03-03) Validation run for `T057`:
   - `cd server && npx vitest run --coverage.enabled=false ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
+- (2026-03-03) Completed `T058`: DB-backed integration guard: revoked EE claim no longer enables tenant takeover routing.
+- (2026-03-03) Validation run for `T058`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`

@@ -467,7 +467,7 @@
   {
     "id": "T058",
     "description": "DB-backed integration guard: revoked EE claim no longer enables tenant takeover routing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034",
       "F018"
