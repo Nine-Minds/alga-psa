@@ -140,7 +140,7 @@
   {
     "id": "T018",
     "description": "CE advisory remove-domain action deactivates advisory registration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]
