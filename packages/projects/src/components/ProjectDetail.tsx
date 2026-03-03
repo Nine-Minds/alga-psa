@@ -2459,7 +2459,7 @@ export default function ProjectDetail({
             <div
                 ref={phasesContainerRef}
                 className={`${styles.phasesContainer} ${isPhasesPanelVisible ? styles.phasesContainerExpanded : styles.phasesContainerCollapsed}`}
-                style={phasesPanelHeight ? { height: `${phasesPanelHeight}px`, maxHeight: `${phasesPanelHeight}px` } : undefined}
+                style={phasesPanelHeight && isPhasesPanelVisible ? { height: `${phasesPanelHeight}px`, maxHeight: `${phasesPanelHeight}px` } : undefined}
               >
               {/* Toggle button */}
               <button
