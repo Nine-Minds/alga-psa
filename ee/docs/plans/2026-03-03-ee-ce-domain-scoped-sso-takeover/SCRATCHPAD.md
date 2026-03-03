@@ -217,3 +217,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `T022`: CE settings suite now asserts advisory-mode guidance copy is rendered for community deployments.
 - (2026-03-03) Validation run for `T022`:
   - `cd server && npx vitest run --coverage.enabled=false src/test/unit/components/integrations/MspSsoLoginDomainsSettings.test.tsx`
+- (2026-03-03) Completed `T023`: CE UI test now covers advisory add/remove controls end-to-end and asserts persisted payload ordering.
+- (2026-03-03) Validation run for `T023`:
+  - `cd server && npx vitest run --coverage.enabled=false src/test/unit/components/integrations/MspSsoLoginDomainsSettings.test.tsx`

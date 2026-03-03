@@ -180,7 +180,7 @@
   {
     "id": "T023",
     "description": "CE settings UI add/remove controls persist advisory registrations successfully.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014",
       "F010"
