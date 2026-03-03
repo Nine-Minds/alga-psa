@@ -98,7 +98,7 @@
   {
     "id": "F017",
     "description": "In EE discovery, allow tenant-scoped providers only for verified non-ambiguous domain claims.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #7", "Acceptance Criteria #4"]
   },
   {
