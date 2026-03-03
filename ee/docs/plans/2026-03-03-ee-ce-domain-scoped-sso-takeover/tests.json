@@ -416,7 +416,7 @@
   {
     "id": "T052",
     "description": "Docs describe EE request-verify-revoke lifecycle and DNS ownership verification steps.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
