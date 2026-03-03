@@ -75,7 +75,7 @@
   {
     "id": "T010",
     "description": "EE request-claim action creates pending claim and challenge material for a new domain.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F002"

@@ -196,3 +196,4 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed \: Malformed domain validation covered by deterministic neutral error assertions in action tests.
 - (2026-03-03) Completed \: Permission denial for list-claims and lifecycle actions covered in mspSsoDomainActions.test.ts.
 - (2026-03-03) Completed \: Claims list metadata contract covered in mspSsoDomainActions.test.ts (normalized claim fields + lifecycle timestamps).
+- (2026-03-03) Completed \: Request-claim happy path coverage added: pending claim + active DNS challenge creation.
