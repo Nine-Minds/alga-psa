@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "Add EE action to refresh/regenerate verification challenge material.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #2", "Functional Requirements #3"]
   },
   {

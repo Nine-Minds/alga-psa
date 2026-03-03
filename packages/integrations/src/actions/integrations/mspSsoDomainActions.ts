@@ -77,6 +77,13 @@ export interface RequestMspSsoDomainClaimResult {
   error?: string;
 }
 
+export interface RefreshMspSsoDomainClaimChallengeResult {
+  success: boolean;
+  claim?: MspSsoDomainClaim;
+  challenge?: MspSsoDomainVerificationChallenge;
+  error?: string;
+}
+
 function normalizeDomain(value: string): string {
   return normalizeMspSsoDomain(value);
 }
@@ -455,6 +462,103 @@ export const requestMspSsoDomainClaim = withAuth(async (
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to request MSP SSO domain claim',
+    };
+  }
+});
+
+export const refreshMspSsoDomainClaimChallenge = withAuth(async (
+  user,
+  { tenant },
+  input: { claimId: string }
+): Promise<RefreshMspSsoDomainClaimChallengeResult> => {
+  try {
+    if (!(await canManageDomains(user))) {
+      return { success: false, error: 'Forbidden' };
+    }
+
+    const claimId = String(input?.claimId ?? '').trim();
+    if (!claimId) {
+      return { success: false, error: 'Claim id is required.' };
+    }
+
+    const { knex } = await createTenantKnex();
+
+    const result = await knex.transaction(async (trx: Knex.Transaction) => {
+      const now = trx.fn.now();
+      const actorId = (user as { user_id?: string })?.user_id ?? null;
+
+      const claimRow = await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
+        .select('id', 'domain')
+        .where({ tenant, id: claimId, is_active: true })
+        .first();
+
+      if (!claimRow) {
+        return { claim: null, challenge: null };
+      }
+
+      const domain = normalizeDomain(String((claimRow as { domain?: string }).domain ?? ''));
+      if (!domain) {
+        return { claim: null, challenge: null };
+      }
+
+      await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
+        .where({ tenant, id: claimId })
+        .update({
+          claim_status: 'pending',
+          claim_status_updated_at: now,
+          claim_status_updated_by: actorId,
+          claimed_at: now,
+          rejected_at: null,
+          revoked_at: null,
+          updated_by: actorId,
+          updated_at: now,
+        });
+
+      await trx(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
+        .where({ tenant, claim_id: claimId, is_active: true })
+        .update({
+          is_active: false,
+          invalidated_at: now,
+          updated_by: actorId,
+          updated_at: now,
+        });
+
+      const challenge = buildDnsTxtChallenge(domain);
+      await trx(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE).insert({
+        tenant,
+        id: uuidv4(),
+        claim_id: claimId,
+        challenge_type: challenge.challengeType,
+        challenge_label: challenge.challengeLabel,
+        challenge_value: challenge.challengeValue,
+        challenge_token_hash: hashChallengeValue(challenge.challengeValue),
+        is_active: true,
+        created_by: actorId,
+        updated_by: actorId,
+        created_at: now,
+        updated_at: now,
+      });
+
+      const [claim, activeChallenge] = await Promise.all([
+        toDomainClaim(trx, tenant, claimId),
+        toVerificationChallenge(trx, tenant, claimId),
+      ]);
+      return { claim, challenge: activeChallenge };
+    });
+
+    if (!result.claim || !result.challenge) {
+      return { success: false, error: 'Unable to refresh challenge for that claim.' };
+    }
+
+    return {
+      success: true,
+      claim: result.claim,
+      challenge: result.challenge,
+    };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to refresh MSP SSO claim challenge',
     };
   }
 });
