@@ -86,7 +86,7 @@
   {
     "id": "F015",
     "description": "Update settings copy to state that unmanaged domains use Nine Minds app-level fallback providers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Summary", "Functional Requirements #9"]
   },
   {

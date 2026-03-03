@@ -252,11 +252,16 @@ export function MspSsoLoginDomainsSettings() {
         <CardTitle>MSP SSO Login Domains</CardTitle>
         <CardDescription>
           {isEnterprise
-            ? 'Manage domain claim lifecycle for MSP login SSO provider discovery before user authentication.'
-            : 'Register advisory domains for MSP login SSO discovery. Ownership verification is not enforced in Community Edition.'}
+            ? 'Manage domain claim lifecycle for MSP login SSO provider discovery. Unclaimed or ineligible domains fall back to Nine Minds app-level providers.'
+            : 'Register advisory domains for MSP login SSO discovery. Ownership verification is not enforced in Community Edition, and unmanaged domains fall back to Nine Minds app-level providers.'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <Alert variant="info">
+          <AlertDescription>
+            Domains without an eligible tenant claim use the Nine Minds app-level SSO provider configuration.
+          </AlertDescription>
+        </Alert>
         {error && (
           <Alert variant="info">
             <AlertDescription>{error}</AlertDescription>
