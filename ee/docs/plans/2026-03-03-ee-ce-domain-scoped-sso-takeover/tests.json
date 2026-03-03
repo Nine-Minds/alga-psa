@@ -27,7 +27,7 @@
   {
     "id": "T004",
     "description": "Backfill marks existing EE active domain rows with verified-compatible legacy status.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
