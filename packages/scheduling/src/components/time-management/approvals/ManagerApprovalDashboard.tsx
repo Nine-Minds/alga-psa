@@ -34,6 +34,8 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
   const [timeSheets, setTimeSheets] = useState<ITimeSheetApprovalView[]>([]);
   const [selectedTimeSheets, setSelectedTimeSheets] = useState<string[]>([]);
   const [showApproved, setShowApproved] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [reverseConfirmOpen, setReverseConfirmOpen] = useState(false);
   const [timeSheetToReverse, setTimeSheetToReverse] = useState<ITimeSheetApprovalView | null>(null);
   const { isManager } = useTeamAuth(currentUser);
@@ -265,7 +267,11 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
               ? 'bg-table-status-warning'
               : ''
         }
-        pagination={false}
+        pagination={true}
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        pageSize={pageSize}
+        onItemsPerPageChange={(newSize) => { setPageSize(newSize); setCurrentPage(1); }}
       />
 
       <ConfirmationDialog
