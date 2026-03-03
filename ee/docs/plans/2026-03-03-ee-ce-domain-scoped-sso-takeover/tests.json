@@ -360,7 +360,7 @@
   {
     "id": "T045",
     "description": "Client portal signin flow remains unchanged and does not call MSP discovery endpoints.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
