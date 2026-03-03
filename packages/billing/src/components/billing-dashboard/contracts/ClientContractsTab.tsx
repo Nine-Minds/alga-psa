@@ -254,6 +254,18 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       return '—';
     }
 
+    // Treat YYYY-MM-DD as a date-only value to avoid timezone shifts.
+    if (typeof value === 'string') {
+      const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (dateOnlyMatch) {
+        const year = Number(dateOnlyMatch[1]);
+        const month = Number(dateOnlyMatch[2]);
+        const day = Number(dateOnlyMatch[3]);
+        const dateOnly = new Date(Date.UTC(year, month - 1, day, 12));
+        return isNaN(dateOnly.getTime()) ? '—' : dateOnly.toLocaleDateString();
+      }
+    }
+
     const date = new Date(value);
     return isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
   };
@@ -483,7 +495,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     {
       title: 'Decision Due',
       dataIndex: 'decision_due_date',
-      render: (value: string | undefined) => value ?? '—',
+      render: (value: string | undefined) => formatDateValue(value),
     },
     {
       title: 'Days Until Due',
@@ -523,6 +535,15 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                data-testid="upcoming-renewals-action-edit"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  navigateToContract(row.contract_id, row.client_contract_id);
+                }}
+              >
+                Edit
+              </DropdownMenuItem>
               {hasMarkRenewing && (
                 <DropdownMenuItem
                   data-testid="upcoming-renewals-action-mark-renewing"
@@ -582,12 +603,14 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     }
 
     const search = renewalsSearchTerm.toLowerCase();
+    const formattedDecisionDueDate = formatDateValue(row.decision_due_date).toLowerCase();
     return (
       row.client_name?.toLowerCase().includes(search) ||
       row.contract_name?.toLowerCase().includes(search) ||
       row.client_id.toLowerCase().includes(search) ||
       row.contract_id.toLowerCase().includes(search) ||
-      row.decision_due_date?.toLowerCase().includes(search)
+      row.decision_due_date?.toLowerCase().includes(search) ||
+      formattedDecisionDueDate.includes(search)
     );
   });
 
@@ -748,6 +771,8 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                   data={filteredUpcomingRenewals}
                   columns={upcomingRenewalColumns}
                   pagination
+                  onRowClick={(record) => navigateToContract(record.contract_id, record.client_contract_id)}
+                  rowClassName={() => 'cursor-pointer'}
                 />
               )}
             </TabsContent>
