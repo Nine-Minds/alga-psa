@@ -67,7 +67,7 @@
   {
     "id": "T009",
     "description": "EE list-claims action returns normalized domains with lifecycle metadata.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
