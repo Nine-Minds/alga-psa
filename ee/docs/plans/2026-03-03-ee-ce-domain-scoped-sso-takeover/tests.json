@@ -229,7 +229,7 @@
   {
     "id": "T029",
     "description": "EE discovery with revoked claim returns app-level fallback providers only.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]

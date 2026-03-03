@@ -235,3 +235,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `T028`: EE discovery with pending claim returns app-level fallback providers only.
 - (2026-03-03) Validation run for `T028`:
   - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T029`: EE discovery with revoked claim returns app-level fallback providers only.
+- (2026-03-03) Validation run for `T029`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
