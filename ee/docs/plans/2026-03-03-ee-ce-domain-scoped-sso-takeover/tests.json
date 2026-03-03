@@ -205,7 +205,7 @@
   {
     "id": "T026",
     "description": "EE discovery with verified claim and tenant Google credentials returns tenant source + google provider.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
