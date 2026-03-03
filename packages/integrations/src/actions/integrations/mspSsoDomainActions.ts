@@ -655,6 +655,12 @@ export const verifyMspSsoDomainClaimOwnership = withAuth(async (
         return { claim, verified: false, reason: 'dns_mismatch' as const };
       }
 
+      // Serialize cross-tenant verified-owner decisions for the same domain when running on
+      // distributed tables where a global unique index on lower(domain) may be unavailable.
+      await trx.raw('SELECT pg_advisory_xact_lock(hashtext(?))', [
+        `msp_sso_verified_domain_owner:${claim.domain}`,
+      ]);
+
       const conflictingOwner = await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
         .select('tenant')
         .whereNot({ tenant })

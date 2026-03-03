@@ -18,6 +18,13 @@ const challengeMigration = require(
   )
 ) as { up: (knex: any) => Promise<void>; down: (knex: any) => Promise<void> };
 
+const installationMetadataMigration = require(
+  path.resolve(
+    repoRoot,
+    'server/migrations/20260303101500_create_installation_metadata_table.cjs'
+  )
+) as { up: (knex: any) => Promise<void>; down: (knex: any) => Promise<void> };
+
 const backfillMigration = require(
   path.resolve(
     repoRoot,
@@ -34,6 +41,7 @@ type MigrationKnexState = {
   droppedTables: string[];
   rawSql: string[];
   challengeTableColumns: string[];
+  installationMetadataRows: Array<{ key: string; value: string }>;
 };
 
 function createColumnBuilder() {
@@ -60,7 +68,36 @@ function createColumnBuilder() {
 }
 
 function createMigrationKnex(state: MigrationKnexState) {
-  return {
+  const knexTable = (tableName: string) => {
+    const builder: any = {
+      select: (..._columns: string[]) => builder,
+      where: (clause: Record<string, unknown>) => {
+        builder.__where = clause;
+        return builder;
+      },
+      first: async () => {
+        if (tableName === 'installation_metadata') {
+          const key = String((builder.__where as { key?: unknown } | undefined)?.key ?? '');
+          const row = state.installationMetadataRows.find((item) => item.key === key);
+          return row ? { ...row } : undefined;
+        }
+        return undefined;
+      },
+      del: async () => {
+        if (tableName === 'installation_metadata') {
+          const key = String((builder.__where as { key?: unknown } | undefined)?.key ?? '');
+          state.installationMetadataRows = state.installationMetadataRows.filter((item) => item.key !== key);
+        }
+        return 0;
+      },
+      count: (..._args: string[]) => ({
+        first: async () => ({ count: state.installationMetadataRows.length }),
+      }),
+    };
+    return builder;
+  };
+
+  return Object.assign(knexTable, {
     fn: {
       now: () => 'now()',
     },
@@ -126,7 +163,7 @@ function createMigrationKnex(state: MigrationKnexState) {
         state.droppedTables.push(table);
       },
     },
-  };
+  });
 }
 
 describe('MSP SSO domain lifecycle migrations', () => {
@@ -156,6 +193,7 @@ describe('MSP SSO domain lifecycle migrations', () => {
       droppedTables: [],
       rawSql: [],
       challengeTableColumns: [],
+      installationMetadataRows: [],
     };
     const knex = createMigrationKnex(state);
 
@@ -185,6 +223,7 @@ describe('MSP SSO domain lifecycle migrations', () => {
       droppedTables: [],
       rawSql: [],
       challengeTableColumns: [],
+      installationMetadataRows: [],
     };
     const knex = createMigrationKnex(state);
 
@@ -228,6 +267,7 @@ describe('MSP SSO domain lifecycle migrations', () => {
       droppedTables: [],
       rawSql: [],
       challengeTableColumns: [],
+      installationMetadataRows: [],
     };
     const knex = createMigrationKnex(state);
 
@@ -248,8 +288,7 @@ describe('MSP SSO domain lifecycle migrations', () => {
     expect(state.droppedTables).toContain('msp_sso_domain_verification_challenges');
   });
 
-  it('T004: backfill marks EE existing claims as verified_legacy by default', async () => {
-    process.env.EDITION = 'ee';
+  it('T004: backfill marks enterprise installation claims as verified_legacy by default', async () => {
     const state: MigrationKnexState = {
       hasTable: { msp_sso_tenant_login_domains: true },
       hasColumn: { 'msp_sso_tenant_login_domains.claim_status': true },
@@ -259,6 +298,7 @@ describe('MSP SSO domain lifecycle migrations', () => {
       droppedTables: [],
       rawSql: [],
       challengeTableColumns: [],
+      installationMetadataRows: [{ key: 'edition', value: 'enterprise' }],
     };
     const knex = createMigrationKnex(state);
 
@@ -267,8 +307,7 @@ describe('MSP SSO domain lifecycle migrations', () => {
     expect(state.rawSql.some((sql) => sql.includes("claim_status = 'verified_legacy'"))).toBe(true);
   });
 
-  it('T005: backfill marks CE existing claims as advisory by default', async () => {
-    process.env.EDITION = 'ce';
+  it('T005: backfill marks community installation claims as advisory by default', async () => {
     const state: MigrationKnexState = {
       hasTable: { msp_sso_tenant_login_domains: true },
       hasColumn: { 'msp_sso_tenant_login_domains.claim_status': true },
@@ -278,11 +317,51 @@ describe('MSP SSO domain lifecycle migrations', () => {
       droppedTables: [],
       rawSql: [],
       challengeTableColumns: [],
+      installationMetadataRows: [{ key: 'edition', value: 'community' }],
     };
     const knex = createMigrationKnex(state);
 
     await backfillMigration.up(knex);
 
     expect(state.rawSql.some((sql) => sql.includes("claim_status = 'advisory'"))).toBe(true);
+  });
+
+  it('T005: installation metadata migration creates table and seeds edition marker', async () => {
+    const state: MigrationKnexState = {
+      hasTable: { installation_metadata: false },
+      hasColumn: {},
+      addedColumns: [],
+      droppedColumns: [],
+      createdTables: [],
+      droppedTables: [],
+      rawSql: [],
+      challengeTableColumns: [],
+      installationMetadataRows: [],
+    };
+    const knex = createMigrationKnex(state);
+
+    await installationMetadataMigration.up(knex);
+
+    expect(state.createdTables).toContain('installation_metadata');
+    expect(state.rawSql.some((sql) => sql.includes("INSERT INTO installation_metadata"))).toBe(true);
+  });
+
+  it('T004/T005 guard: backfill falls back safely to verified_legacy when marker is missing', async () => {
+    const state: MigrationKnexState = {
+      hasTable: { msp_sso_tenant_login_domains: true, installation_metadata: true },
+      hasColumn: { 'msp_sso_tenant_login_domains.claim_status': true },
+      addedColumns: [],
+      droppedColumns: [],
+      createdTables: [],
+      droppedTables: [],
+      rawSql: [],
+      challengeTableColumns: [],
+      installationMetadataRows: [],
+    };
+    const knex = createMigrationKnex(state);
+
+    await backfillMigration.up(knex);
+
+    expect(state.rawSql.some((sql) => sql.includes("claim_status = 'verified_legacy'"))).toBe(true);
   });
 });
