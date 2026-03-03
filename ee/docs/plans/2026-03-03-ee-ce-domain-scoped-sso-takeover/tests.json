@@ -392,7 +392,7 @@
   {
     "id": "T049",
     "description": "SSO buttons enable only providers returned by discovery response and keep unsupported buttons disabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
