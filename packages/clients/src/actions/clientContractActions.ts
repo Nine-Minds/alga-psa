@@ -219,15 +219,18 @@ export const createClientContract = withAuth(async (
   const created = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const clientExists = await trx('clients').where({ client_id: input.client_id, tenant }).first();
     if (!clientExists) {
-      throw new Error(`Client ${input.client_id} not found or belongs to a different tenant`);
+      throw new Error(`Client ${input.client_id} not found`);
     }
 
-    const contractExists = await trx('contracts')
-      .where({ contract_id: input.contract_id, tenant, is_active: true })
-      .first();
+    const contractQuery = trx('contracts')
+      .where({ contract_id: input.contract_id, tenant });
+    if (input.is_active) {
+      contractQuery.andWhere({ is_active: true });
+    }
+    const contractExists = await contractQuery.first();
 
     if (!contractExists) {
-      throw new Error(`Contract ${input.contract_id} not found, inactive, or belongs to a different tenant`);
+      throw new Error(`Contract ${input.contract_id} not found or inactive`);
     }
 
     if (input.is_active) {

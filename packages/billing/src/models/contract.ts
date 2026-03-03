@@ -225,7 +225,7 @@ const Contract = {
         .delete();
 
       if (deleted === 0) {
-        throw new Error(`Contract ${contractId} not found or belongs to a different tenant`);
+        throw new Error(`Contract ${contractId} not found`);
       }
     } catch (error) {
       console.error(`Error deleting contract ${contractId}:`, error);
@@ -418,7 +418,7 @@ const Contract = {
         .returning('*');
 
       if (!updated) {
-        throw new Error(`Contract ${contractId} not found or belongs to a different tenant`);
+        throw new Error(`Contract ${contractId} not found`);
       }
 
       return updated;

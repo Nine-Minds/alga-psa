@@ -477,7 +477,7 @@ const ClientContract = {
         .first();
 
       if (!clientExists) {
-        throw new Error(`Client ${clientId} not found or belongs to a different tenant`);
+        throw new Error(`Client ${clientId} not found`);
       }
 
       const contractExists = await db('contracts')
@@ -485,7 +485,7 @@ const ClientContract = {
         .first();
 
       if (!contractExists) {
-        throw new Error(`Contract ${contractId} not found, inactive, or belongs to a different tenant`);
+        throw new Error(`Contract ${contractId} not found or inactive`);
       }
 
       if (startDate) {
