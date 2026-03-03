@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "Backfill existing domain rows to deterministic lifecycle defaults for EE and CE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Rollout / Migration #2", "Functional Requirements #4"]
   },
   {
