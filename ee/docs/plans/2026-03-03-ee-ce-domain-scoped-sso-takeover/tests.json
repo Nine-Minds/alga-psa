@@ -84,7 +84,7 @@
   {
     "id": "T011",
     "description": "EE request-claim action is idempotent for an existing pending claim by same tenant.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]
