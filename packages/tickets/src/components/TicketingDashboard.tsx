@@ -537,7 +537,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, [id, openDrawer, replaceDrawer, renderClientDetails]);
   
   // Use interval tracking hook to get interval count
-  const { intervalCount, isLoading: isLoadingIntervals } = useIntervalTracking(currentUser?.id);
+  const { intervalCount, isLoading: isLoadingIntervals } = useIntervalTracking(currentUser?.user_id);
 
   const confirmDeleteTicket = async () => {
     if (!ticketToDelete) return;

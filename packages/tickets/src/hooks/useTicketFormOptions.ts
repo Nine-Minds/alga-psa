@@ -7,7 +7,7 @@ const CACHE_KEY = 'ticket_form_options';
 const CACHE_TIMESTAMP_KEY = 'ticket_form_options_ts';
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-type TicketFormOptions = Awaited<ReturnType<typeof getTicketFormOptions>>;
+export type TicketFormOptions = Awaited<ReturnType<typeof getTicketFormOptions>>;
 
 interface UseTicketFormOptionsResult {
   options: TicketFormOptions | null;

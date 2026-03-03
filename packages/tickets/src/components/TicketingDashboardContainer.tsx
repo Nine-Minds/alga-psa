@@ -5,14 +5,12 @@ import TicketingDashboard from './TicketingDashboard';
 import { fetchTicketsWithPagination } from '../actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { ITicketListItem, ITicketCategory, ITicketListFilters, ITag, ITeam } from '@alga-psa/types';
-import { IClient } from '@alga-psa/types';
+import { ITicketListItem, ITicketListFilters, ITag, ITeam } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
-import { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { IBoard } from '@alga-psa/types';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
-import { useTicketFormOptions } from '../hooks/useTicketFormOptions';
+import { useTicketFormOptions, type TicketFormOptions } from '../hooks/useTicketFormOptions';
 
 const TICKETS_PAGE_SIZE_SETTING = 'tickets_list_page_size';
 
@@ -24,16 +22,7 @@ export interface TicketListMetadata {
 
 interface TicketingDashboardContainerProps {
   consolidatedData: {
-    options: {
-      statusOptions: SelectOption[];
-      priorityOptions: SelectOption[];
-      boardOptions: IBoard[];
-      agentOptions: SelectOption[];
-      categories: ITicketCategory[];
-      clients: IClient[];
-      users: IUser[];
-      tags?: ITag[];
-    };
+    options: TicketFormOptions;
     tickets: ITicketListItem[];
     totalCount: number;
     metadata?: TicketListMetadata;
@@ -44,16 +33,7 @@ interface TicketingDashboardContainerProps {
   initialPageSize?: number;
   displaySettings?: TicketingDisplaySettings;
   initialTeams?: ITeam[];
-  initialFormOptions?: {
-    statusOptions: SelectOption[];
-    priorityOptions: SelectOption[];
-    boardOptions: IBoard[];
-    agentOptions: SelectOption[];
-    categories: ITicketCategory[];
-    clients: IClient[];
-    users: IUser[];
-    tags?: ITag[];
-  } | null;
+  initialFormOptions?: TicketFormOptions | null;
   canUpdateTickets?: boolean;
   renderClientDetails?: React.ComponentProps<typeof TicketingDashboard>['renderClientDetails'];
 }
