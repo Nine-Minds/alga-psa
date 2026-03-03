@@ -200,3 +200,4 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed \: Request-claim idempotency coverage added for existing pending claim + active challenge.
 - (2026-03-03) Completed \: Refresh challenge coverage added for token rotation and invalidation of previous active challenge.
 - (2026-03-03) Completed \: Verify-claim success coverage added for matching DNS TXT challenge promoting claim to verified.
+- (2026-03-03) Completed \: Verify-claim mismatch coverage added with neutral actionable error and pending-state preservation.

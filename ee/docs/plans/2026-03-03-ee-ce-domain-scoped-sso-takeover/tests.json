@@ -108,7 +108,7 @@
   {
     "id": "T014",
     "description": "EE verify action with invalid/missing DNS challenge remains pending and returns neutral admin error.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
