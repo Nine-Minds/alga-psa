@@ -42,7 +42,7 @@ import { ChevronRight, HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, Ch
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
-import { useUserPreference } from '@alga-psa/users/hooks';
+import { useUserPreferencesBatch } from '@alga-psa/users/hooks';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { getTeamsBasic, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
@@ -158,72 +158,20 @@ export default function ProjectDetail({
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
 
-  // View mode state with persistence
+  // Batch-load all user preferences in a single server action (instead of 5 separate calls)
   type ProjectViewMode = 'kanban' | 'list';
-  const {
-    value: viewMode,
-    setValue: setViewMode,
-    isLoading: isViewModeLoading
-  } = useUserPreference<ProjectViewMode>(
-    PROJECT_VIEW_MODE_SETTING,
-    {
-      defaultValue: 'kanban',
-      localStorageKey: PROJECT_VIEW_MODE_SETTING,
-      debounceMs: 300
-    }
-  );
-
-  // Phases panel visibility state with persistence (default: visible)
-  const {
-    value: isPhasesPanelVisible,
-    setValue: setIsPhasesPanelVisible,
-  } = useUserPreference<boolean>(
-    PROJECT_PHASES_PANEL_VISIBLE_SETTING,
-    {
-      defaultValue: true,
-      localStorageKey: PROJECT_PHASES_PANEL_VISIBLE_SETTING,
-      debounceMs: 300
-    }
-  );
-
-  // Kanban zoom level state with persistence (default: 50 = 350px columns)
-  const {
-    value: kanbanZoomLevel,
-    setValue: setKanbanZoomLevel,
-  } = useUserPreference<number>(
-    PROJECT_KANBAN_ZOOM_LEVEL_SETTING,
-    {
-      defaultValue: 50,
-      localStorageKey: PROJECT_KANBAN_ZOOM_LEVEL_SETTING,
-      debounceMs: 300
-    }
-  );
-
-  // Header pinned state with persistence (default: false - not pinned/sticky)
-  const {
-    value: isHeaderPinned,
-    setValue: setIsHeaderPinned,
-  } = useUserPreference<boolean>(
-    PROJECT_HEADER_PINNED_SETTING,
-    {
-      defaultValue: false,
-      localStorageKey: PROJECT_HEADER_PINNED_SETTING,
-      debounceMs: 300
-    }
-  );
-
-  // Sticky status names strip visibility (default: off)
-  const {
-    value: showStickyStatusNames,
-    setValue: setShowStickyStatusNames,
-  } = useUserPreference<boolean>(
-    PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING,
-    {
-      defaultValue: false,
-      localStorageKey: PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING,
-      debounceMs: 300
-    }
-  );
+  const prefs = useUserPreferencesBatch([
+    { key: PROJECT_VIEW_MODE_SETTING, defaultValue: 'kanban' as ProjectViewMode, debounceMs: 300 },
+    { key: PROJECT_PHASES_PANEL_VISIBLE_SETTING, defaultValue: true, debounceMs: 300 },
+    { key: PROJECT_KANBAN_ZOOM_LEVEL_SETTING, defaultValue: 50, debounceMs: 300 },
+    { key: PROJECT_HEADER_PINNED_SETTING, defaultValue: false, debounceMs: 300 },
+    { key: PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING, defaultValue: false, debounceMs: 300 },
+  ]);
+  const { value: viewMode, setValue: setViewMode, isLoading: isViewModeLoading } = prefs[PROJECT_VIEW_MODE_SETTING];
+  const { value: isPhasesPanelVisible, setValue: setIsPhasesPanelVisible } = prefs[PROJECT_PHASES_PANEL_VISIBLE_SETTING];
+  const { value: kanbanZoomLevel, setValue: setKanbanZoomLevel } = prefs[PROJECT_KANBAN_ZOOM_LEVEL_SETTING];
+  const { value: isHeaderPinned, setValue: setIsHeaderPinned } = prefs[PROJECT_HEADER_PINNED_SETTING];
+  const { value: showStickyStatusNames, setValue: setShowStickyStatusNames } = prefs[PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING];
 
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
 
