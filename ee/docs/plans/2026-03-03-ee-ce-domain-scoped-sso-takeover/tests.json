@@ -59,7 +59,7 @@
   {
     "id": "T008",
     "description": "EE list-claims action denies client users and unauthorized internal users.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
