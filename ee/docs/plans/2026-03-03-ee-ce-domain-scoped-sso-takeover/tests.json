@@ -302,7 +302,7 @@
   {
     "id": "T038",
     "description": "Resolver in EE with non-verified claim context uses app fallback or generic failure per eligibility.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F018"
