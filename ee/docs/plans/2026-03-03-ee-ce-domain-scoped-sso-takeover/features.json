@@ -122,7 +122,7 @@
   {
     "id": "F021",
     "description": "Keep discover endpoint invariant response contract and anti-enumeration behavior while adding lifecycle checks.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #11", "Non-functional Requirements #1"]
   },
   {
