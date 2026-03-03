@@ -29,7 +29,7 @@ const SkeletonLine: React.FC<{
  * Skeleton card for a mapping field
  */
 const SkeletonField: React.FC = () => (
-  <div className="border border-gray-200 rounded-lg p-3 space-y-2 bg-white">
+  <div className="border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg p-3 space-y-2 bg-white dark:bg-[rgb(var(--color-card))]">
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-2">
         <SkeletonLine width="16px" height="16px" />
@@ -130,7 +130,7 @@ export const MappingEditorSkeleton: React.FC<MappingEditorSkeletonProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Source tree panel */}
         {showSourceTree && (
-          <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
+          <div className="border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg bg-white dark:bg-[rgb(var(--color-card))] overflow-hidden">
             <SkeletonTree />
           </div>
         )}

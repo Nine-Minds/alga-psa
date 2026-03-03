@@ -1,6 +1,6 @@
 import type { IDocument, PreviewResponse } from '@alga-psa/types';
 import { BaseDocumentHandler } from './BaseDocumentHandler';
-import { convertBlockNoteToHTML } from '@alga-psa/documents/lib/blocknoteUtils';
+import { convertBlockContentToHTML } from '@alga-psa/formatting/blocknoteUtils';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 
@@ -72,7 +72,7 @@ export class BlockNoteDocumentHandler extends BaseDocumentHandler {
       }
 
       // Convert BlockNote data to HTML
-      const htmlContent = convertBlockNoteToHTML(blockContent.block_data);
+      const htmlContent = convertBlockContentToHTML(blockContent.block_data);
 
       // Generate preview image
       const imageBuffer = await this.renderHtmlToPng(htmlContent);
@@ -118,7 +118,7 @@ export class BlockNoteDocumentHandler extends BaseDocumentHandler {
       }
 
       // Convert BlockNote data to HTML
-      return convertBlockNoteToHTML(blockContent.block_data);
+      return convertBlockContentToHTML(blockContent.block_data);
     } catch (error) {
       console.error(`[BlockNoteDocumentHandler] Error generating HTML for document ${document.document_id}:`, error);
       return '<p>Error generating document content</p>';

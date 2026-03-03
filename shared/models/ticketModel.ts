@@ -7,7 +7,14 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { TICKET_ORIGINS, type IEventPublisher } from '@alga-psa/types';
+import type { IEventPublisher } from '@alga-psa/types';
+
+const TICKET_ORIGINS = {
+  INTERNAL: 'internal',
+  CLIENT_PORTAL: 'client_portal',
+  INBOUND_EMAIL: 'inbound_email',
+  API: 'api',
+} as const;
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -60,6 +67,7 @@ export const ticketSchema = z.object({
   updated_by: z.string().uuid().nullable(),
   closed_by: z.string().uuid().nullable(),
   assigned_to: z.string().uuid().nullable(),
+  assigned_team_id: z.string().uuid().nullable().optional(),
   entered_at: z.string().nullable(),
   updated_at: z.string().nullable(),
   closed_at: z.string().nullable(),
@@ -110,6 +118,7 @@ export interface CreateTicketInput {
   location_id?: string;
   status_id?: string;
   assigned_to?: string;
+  assigned_team_id?: string;
   priority_id?: string;
   category_id?: string;
   subcategory_id?: string;
@@ -332,7 +341,7 @@ export function validateData<T>(schema: z.ZodSchema<T>, data: unknown): T {
  */
 export function cleanNullableFields(data: Record<string, any>): Record<string, any> {
   const cleaned = { ...data };
-  const nullableFields = ['contact_name_id', 'category_id', 'subcategory_id', 'location_id', 'assigned_to'];
+  const nullableFields = ['contact_name_id', 'category_id', 'subcategory_id', 'location_id', 'assigned_to', 'assigned_team_id'];
   
   for (const field of nullableFields) {
     if (cleaned[field] === '') {
@@ -619,6 +628,7 @@ export class TicketModel {
       location_id: cleanedInput.location_id || null,
       status_id: cleanedInput.status_id || null,
       assigned_to: cleanedInput.assigned_to || null,
+      assigned_team_id: cleanedInput.assigned_team_id || null,
       priority_id: cleanedInput.priority_id || null,
       category_id: cleanedInput.category_id || null,
       subcategory_id: cleanedInput.subcategory_id || null,
@@ -629,14 +639,9 @@ export class TicketModel {
       entered_at: now.toISOString(),
       updated_at: now.toISOString(),
       due_date: cleanedInput.due_date || null,
-      // ITIL-specific fields (for UI display only - not stored in DB)
+      // ITIL-specific fields (for priority calculation)
       itil_impact: cleanedInput.itil_impact || null,
       itil_urgency: cleanedInput.itil_urgency || null,
-      resolution_code: cleanedInput.resolution_code || null,
-      root_cause: cleanedInput.root_cause || null,
-      workaround: cleanedInput.workaround || null,
-      related_problem_id: cleanedInput.related_problem_id || null,
-      sla_target: cleanedInput.sla_target || null,
       // Store attributes and email_metadata as JSON
       attributes: Object.keys(attributes).length > 0 ? JSON.stringify(attributes) : null,
       email_metadata: cleanedInput.email_metadata ? JSON.stringify(cleanedInput.email_metadata) : null
@@ -1094,14 +1099,23 @@ export class TicketModel {
     await trx('comments').insert(baseCommentData);
 
     if (!validatedData.is_internal && validatedData.author_type === 'contact') {
-      await trx('tickets')
-        .where({
-          ticket_id: validatedData.ticket_id,
-          tenant,
-        })
-        .update({
-          response_state: 'awaiting_internal',
-        });
+      // Only update response state if tracking is enabled for this tenant
+      const tenantSettingsRow = await trx('tenant_settings')
+        .select('ticket_display_settings')
+        .where({ tenant })
+        .first();
+      const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
+
+      if (responseStateEnabled) {
+        await trx('tickets')
+          .where({
+            ticket_id: validatedData.ticket_id,
+            tenant,
+          })
+          .update({
+            response_state: 'awaiting_internal',
+          });
+      }
     }
 
     // Publish comment event if publisher provided

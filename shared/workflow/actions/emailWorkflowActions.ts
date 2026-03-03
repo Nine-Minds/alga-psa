@@ -7,14 +7,61 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import {
-  COMMENT_RESPONSE_SOURCES,
-  TICKET_ORIGINS,
-  type CommentMetadata,
-  type InboundEmailProviderType,
-} from '@alga-psa/types';
 import { buildInboundEmailReplyReceivedPayload } from '../streams/domainEventBuilders/inboundEmailReplyEventBuilders';
 import { normalizeEmailAddress } from '../../lib/email/addressUtils';
+import {
+  mergeTicketWatchListRecipients,
+  parseTicketWatchListAttributes,
+  setTicketWatchListOnAttributes,
+  type TicketWatchListRecipientInput,
+} from '../../lib/tickets/watchList';
+
+const COMMENT_RESPONSE_SOURCES = {
+  USER: 'user',
+  AUTOMATION: 'automation',
+  INBOUND_EMAIL: 'inbound_email',
+} as const;
+
+const TICKET_ORIGINS = {
+  INTERNAL: 'internal',
+  CLIENT_PORTAL: 'client_portal',
+  INBOUND_EMAIL: 'inbound_email',
+  API: 'api',
+} as const;
+
+type InboundEmailProviderType = 'google' | 'microsoft' | 'imap';
+
+type CommentMetadata = Record<string, unknown> & {
+  responseSource?: (typeof COMMENT_RESPONSE_SOURCES)[keyof typeof COMMENT_RESPONSE_SOURCES];
+  email?: {
+    provider?: InboundEmailProviderType;
+    providerType?: InboundEmailProviderType;
+    [key: string]: unknown;
+  };
+};
+
+const TSVECTOR_OVERFLOW_ERROR_FRAGMENT = 'string is too long for tsvector';
+const DATA_IMAGE_BASE64_PATTERN = /data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=\r\n]+/gi;
+const OVERSIZED_WORD_PATTERN = /\b\w{200,}\b/g;
+const FALLBACK_INDEX_SAFE_COMMENT_MAX_CHARS = 500_000;
+const EMPTY_FALLBACK_COMMENT =
+  '[Inbound email content trimmed due to indexing limits. See attachments for full message content.]';
+
+function isTsvectorOverflowError(error: unknown): boolean {
+  const message =
+    typeof error === 'object' && error && 'message' in error
+      ? String((error as { message?: unknown }).message ?? '')
+      : '';
+  return message.toLowerCase().includes(TSVECTOR_OVERFLOW_ERROR_FRAGMENT);
+}
+
+function sanitizeCommentContentForIndexRetry(content: string): string {
+  const withoutDataImages = content.replace(DATA_IMAGE_BASE64_PATTERN, '[inline-image]');
+  const withoutOversizedWords = withoutDataImages.replace(OVERSIZED_WORD_PATTERN, '');
+  const condensed = withoutOversizedWords.replace(/\s+/g, ' ').trim();
+  const truncated = condensed.slice(0, FALLBACK_INDEX_SAFE_COMMENT_MAX_CHARS).trim();
+  return truncated.length > 0 ? truncated : EMPTY_FALLBACK_COMMENT;
+}
 
 // =============================================================================
 // INTERFACES
@@ -112,6 +159,50 @@ export interface SaveEmailClientAssociationOutput {
   associationId: string;
   email: string;
   client_id: string;
+}
+
+function parseTicketAttributes(raw: unknown): Record<string, unknown> {
+  if (!raw) {
+    return {};
+  }
+
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      return {};
+    }
+  }
+
+  if (typeof raw === 'object' && !Array.isArray(raw)) {
+    return { ...(raw as Record<string, unknown>) };
+  }
+
+  return {};
+}
+
+export type InboundDestinationResolutionSource =
+  | 'contact_override'
+  | 'client_default_from_contact'
+  | 'client_default_from_domain'
+  | 'provider_default';
+
+export interface EffectiveInboundTicketDefaultsInput {
+  tenant: string;
+  providerId: string;
+  providerDefaults: any | null;
+  matchedContactId?: string | null;
+  matchedContactClientId?: string | null;
+  domainMatchedClientId?: string | null;
+}
+
+export interface EffectiveInboundTicketDefaultsResult {
+  defaults: any | null;
+  source: InboundDestinationResolutionSource | null;
+  fallbackReason?: string;
 }
 
 // =============================================================================
@@ -317,6 +408,216 @@ export async function findValidClientPrimaryContactId(
   });
 }
 
+const INBOUND_DEFAULTS_SELECT_COLUMNS = [
+  'board_id',
+  'status_id',
+  'priority_id',
+  'client_id',
+  'entered_by',
+  'category_id',
+  'subcategory_id',
+  'location_id',
+] as const;
+
+async function getActiveInboundTicketDefaultsById(
+  trx: Knex.Transaction,
+  tenant: string,
+  defaultsId: string
+): Promise<any | null> {
+  if (!defaultsId) return null;
+  return trx('inbound_ticket_defaults')
+    .where({ tenant, id: defaultsId, is_active: true })
+    .select(...INBOUND_DEFAULTS_SELECT_COLUMNS)
+    .first();
+}
+
+async function getContactInboundDestinationConfig(
+  trx: Knex.Transaction,
+  tenant: string,
+  contactId: string
+): Promise<{ inbound_ticket_defaults_id: string | null; client_id: string | null } | null> {
+  try {
+    const row = await trx('contacts')
+      .select('inbound_ticket_defaults_id', 'client_id')
+      .where({ tenant, contact_name_id: contactId })
+      .first();
+
+    if (!row) return null;
+    return {
+      inbound_ticket_defaults_id: (row as any).inbound_ticket_defaults_id ?? null,
+      client_id: (row as any).client_id ?? null,
+    };
+  } catch (error: any) {
+    const message = String(error?.message ?? '');
+    if (message.includes('inbound_ticket_defaults_id') && message.includes('contacts')) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+async function getClientInboundDestinationDefaultsId(
+  trx: Knex.Transaction,
+  tenant: string,
+  clientId: string
+): Promise<string | null> {
+  if (!clientId) return null;
+  try {
+    const row = await trx('clients')
+      .select('inbound_ticket_defaults_id')
+      .where({ tenant, client_id: clientId })
+      .first();
+
+    return (row as any)?.inbound_ticket_defaults_id ?? null;
+  } catch (error: any) {
+    const message = String(error?.message ?? '');
+    if (message.includes('inbound_ticket_defaults_id') && message.includes('clients')) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+export async function resolveEffectiveInboundTicketDefaults(
+  input: EffectiveInboundTicketDefaultsInput
+): Promise<EffectiveInboundTicketDefaultsResult> {
+  if (!input.providerDefaults) {
+    return { defaults: null, source: null };
+  }
+
+  const { withAdminTransaction } = await import('@alga-psa/db');
+  return withAdminTransaction(async (trx: Knex.Transaction) => {
+    let fallbackReason: string | undefined;
+
+    const logBase = {
+      tenant: input.tenant,
+      providerId: input.providerId,
+      matchedContactId: input.matchedContactId ?? null,
+      matchedContactClientId: input.matchedContactClientId ?? null,
+      domainMatchedClientId: input.domainMatchedClientId ?? null,
+    };
+
+    if (input.matchedContactId) {
+      const contactConfig = await getContactInboundDestinationConfig(
+        trx,
+        input.tenant,
+        input.matchedContactId
+      );
+
+      const contactOverrideDefaultsId = contactConfig?.inbound_ticket_defaults_id ?? null;
+      if (contactOverrideDefaultsId) {
+        const contactOverrideDefaults = await getActiveInboundTicketDefaultsById(
+          trx,
+          input.tenant,
+          contactOverrideDefaultsId
+        );
+        if (contactOverrideDefaults) {
+          console.debug('resolveEffectiveInboundTicketDefaults: resolved destination', {
+            ...logBase,
+            source: 'contact_override',
+          });
+          return {
+            defaults: contactOverrideDefaults,
+            source: 'contact_override',
+          };
+        }
+
+        fallbackReason = 'invalid_or_inactive_contact_override';
+        console.warn('resolveEffectiveInboundTicketDefaults: invalid contact override destination; using fallback', {
+          ...logBase,
+          source: 'contact_override',
+          configuredDefaultsId: contactOverrideDefaultsId,
+          fallback: 'provider_default',
+        });
+      }
+
+      const contactClientId = contactConfig?.client_id ?? input.matchedContactClientId ?? null;
+      if (contactClientId) {
+        const clientDefaultsId = await getClientInboundDestinationDefaultsId(
+          trx,
+          input.tenant,
+          contactClientId
+        );
+        if (clientDefaultsId) {
+          const clientDefaults = await getActiveInboundTicketDefaultsById(
+            trx,
+            input.tenant,
+            clientDefaultsId
+          );
+
+          if (clientDefaults) {
+            console.debug('resolveEffectiveInboundTicketDefaults: resolved destination', {
+              ...logBase,
+              source: 'client_default_from_contact',
+              resolvedClientId: contactClientId,
+            });
+            return {
+              defaults: clientDefaults,
+              source: 'client_default_from_contact',
+            };
+          }
+
+          fallbackReason = fallbackReason ?? 'invalid_or_inactive_client_default_from_contact';
+          console.warn('resolveEffectiveInboundTicketDefaults: invalid client default destination; using fallback', {
+            ...logBase,
+            source: 'client_default_from_contact',
+            resolvedClientId: contactClientId,
+            configuredDefaultsId: clientDefaultsId,
+            fallback: 'provider_default',
+          });
+        }
+      }
+    }
+
+    if (input.domainMatchedClientId) {
+      const domainClientDefaultsId = await getClientInboundDestinationDefaultsId(
+        trx,
+        input.tenant,
+        input.domainMatchedClientId
+      );
+      if (domainClientDefaultsId) {
+        const domainClientDefaults = await getActiveInboundTicketDefaultsById(
+          trx,
+          input.tenant,
+          domainClientDefaultsId
+        );
+
+        if (domainClientDefaults) {
+          console.debug('resolveEffectiveInboundTicketDefaults: resolved destination', {
+            ...logBase,
+            source: 'client_default_from_domain',
+            resolvedClientId: input.domainMatchedClientId,
+          });
+          return {
+            defaults: domainClientDefaults,
+            source: 'client_default_from_domain',
+          };
+        }
+
+        fallbackReason = fallbackReason ?? 'invalid_or_inactive_client_default_from_domain';
+        console.warn('resolveEffectiveInboundTicketDefaults: invalid domain client default destination; using fallback', {
+          ...logBase,
+          source: 'client_default_from_domain',
+          resolvedClientId: input.domainMatchedClientId,
+          configuredDefaultsId: domainClientDefaultsId,
+          fallback: 'provider_default',
+        });
+      }
+    }
+
+    console.debug('resolveEffectiveInboundTicketDefaults: resolved destination', {
+      ...logBase,
+      source: 'provider_default',
+      fallbackReason: fallbackReason ?? null,
+    });
+    return {
+      defaults: input.providerDefaults,
+      source: 'provider_default',
+      fallbackReason,
+    };
+  });
+}
+
 /**
  * Create or find contact by email and client
  */
@@ -387,6 +688,42 @@ export async function createOrFindContact(
 // EMAIL TICKET THREADING ACTIONS
 // =============================================================================
 
+function normalizeThreadLookupValue(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed === '<' || trimmed === '>' || trimmed === '<>') return null;
+  return trimmed;
+}
+
+function normalizeThreadLookupList(value: unknown): string[] {
+  const entries: string[] = Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string')
+    : typeof value === 'string'
+      ? [value]
+      : [];
+
+  const normalized = new Set<string>();
+  for (const entry of entries) {
+    const trimmed = entry.trim();
+    if (!trimmed) continue;
+
+    const matches = trimmed.match(/<[^<>]+>/g);
+    if (matches?.length) {
+      for (const match of matches) {
+        const cleaned = normalizeThreadLookupValue(match);
+        if (cleaned) normalized.add(cleaned);
+      }
+      continue;
+    }
+
+    const cleaned = normalizeThreadLookupValue(trimmed);
+    if (cleaned) normalized.add(cleaned);
+  }
+
+  return Array.from(normalized);
+}
+
 /**
  * Find existing ticket by email thread information
  */
@@ -397,29 +734,34 @@ export async function findTicketByEmailThread(
   const { withAdminTransaction } = await import('@alga-psa/db');
 
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
+      const threadId = normalizeThreadLookupValue(input.threadId);
+      const inReplyTo = normalizeThreadLookupValue(input.inReplyTo);
+      const references = normalizeThreadLookupList((input as any).references);
+      const originalMessageId = normalizeThreadLookupValue(input.originalMessageId);
+
       // Strategy 1: Search by thread ID if available
-      if (input.threadId) {
-        const ticket = await findTicketByThreadId(trx, tenant, input.threadId);
+      if (threadId) {
+        const ticket = await findTicketByThreadId(trx, tenant, threadId);
         if (ticket) return ticket;
       }
 
       // Strategy 2: Search by In-Reply-To header (most reliable)
-      if (input.inReplyTo) {
-        const ticket = await findTicketByOriginalMessageId(trx, tenant, input.inReplyTo);
+      if (inReplyTo) {
+        const ticket = await findTicketByOriginalMessageId(trx, tenant, inReplyTo);
         if (ticket) return ticket;
       }
 
       // Strategy 3: Search by References headers
-      if (input.references && input.references.length > 0) {
-        for (const messageId of input.references) {
+      if (references.length > 0) {
+        for (const messageId of references) {
           const ticket = await findTicketByOriginalMessageId(trx, tenant, messageId);
           if (ticket) return ticket;
         }
       }
 
       // Strategy 4: Search by original message ID directly
-      if (input.originalMessageId) {
-        const ticket = await findTicketByOriginalMessageId(trx, tenant, input.originalMessageId);
+      if (originalMessageId) {
+        const ticket = await findTicketByOriginalMessageId(trx, tenant, originalMessageId);
         if (ticket) return ticket;
       }
 
@@ -679,16 +1021,7 @@ export async function resolveInboundTicketDefaults(
 
       defaults = await trx('inbound_ticket_defaults')
         .where({ tenant, id: provider.inbound_ticket_defaults_id, is_active: true })
-        .select(
-          'board_id',
-          'status_id',
-          'priority_id',
-          'client_id',
-          'entered_by',
-          'category_id',
-          'subcategory_id',
-          'location_id'
-        )
+        .select(...INBOUND_DEFAULTS_SELECT_COLUMNS)
         .first();
 
       if (!defaults) {
@@ -696,7 +1029,7 @@ export async function resolveInboundTicketDefaults(
         const fallback = await trx('inbound_ticket_defaults')
           .where({ tenant, is_active: true })
           .orderBy('updated_at', 'desc')
-          .select('board_id','status_id','priority_id','client_id','entered_by','category_id','subcategory_id','location_id')
+          .select(...INBOUND_DEFAULTS_SELECT_COLUMNS)
           .first();
         if (!fallback) {
           console.warn(`resolveInboundTicketDefaults: no active tenant-level defaults found for tenant ${tenant}`);
@@ -742,6 +1075,7 @@ export async function createTicketFromEmail(
     entered_by?: string | null;
     assigned_to?: string;
     email_metadata?: any;
+    attributes?: Record<string, unknown> | null;
   },
   tenant: string,
   userId?: string
@@ -784,6 +1118,7 @@ export async function createTicketFromEmail(
         entered_by: ticketData.entered_by || undefined,
         assigned_to: assignedTo,
         email_metadata: ticketData.email_metadata,
+        attributes: ticketData.attributes ?? undefined,
         ticket_origin: TICKET_ORIGINS.INBOUND_EMAIL,
       }, tenant, trx, {}, eventPublisher, analyticsTracker, userId, 3);
 
@@ -808,6 +1143,67 @@ export async function createTicketFromEmail(
         ticket_number: result.ticket_number
       };
     });
+}
+
+export async function findEmailProviderMailboxAddress(
+  providerId: string,
+  tenant: string
+): Promise<string | null> {
+  const { withAdminTransaction } = await import('@alga-psa/db');
+
+  return withAdminTransaction(async (trx: Knex.Transaction) => {
+    const provider = await trx('email_providers')
+      .select('mailbox')
+      .where({ id: providerId, tenant })
+      .first<{ mailbox?: string | null }>();
+
+    return normalizeEmailAddress(provider?.mailbox ?? undefined);
+  });
+}
+
+export async function upsertTicketWatchListRecipients(
+  params: {
+    ticketId: string;
+    recipients: TicketWatchListRecipientInput[];
+  },
+  tenant: string
+): Promise<{ updated: boolean; watchList: ReturnType<typeof parseTicketWatchListAttributes> }> {
+  const { withAdminTransaction } = await import('@alga-psa/db');
+
+  return withAdminTransaction(async (trx: Knex.Transaction) => {
+    const ticket = await trx('tickets')
+      .select('attributes')
+      .where({
+        ticket_id: params.ticketId,
+        tenant,
+      })
+      .first<{ attributes?: unknown }>();
+
+    if (!ticket) {
+      return { updated: false, watchList: [] };
+    }
+
+    const currentAttributes = parseTicketAttributes(ticket.attributes);
+    const currentWatchList = parseTicketWatchListAttributes(currentAttributes);
+    const mergedWatchList = mergeTicketWatchListRecipients(currentWatchList, params.recipients ?? []);
+
+    if (JSON.stringify(currentWatchList) === JSON.stringify(mergedWatchList)) {
+      return { updated: false, watchList: currentWatchList };
+    }
+
+    const nextAttributes = setTicketWatchListOnAttributes(currentAttributes, mergedWatchList);
+    await trx('tickets')
+      .where({
+        ticket_id: params.ticketId,
+        tenant,
+      })
+      .update({
+        attributes: nextAttributes ? JSON.stringify(nextAttributes) : null,
+        updated_at: new Date(),
+      });
+
+    return { updated: true, watchList: mergedWatchList };
+  });
 }
 
 const INBOUND_PROVIDER_TYPES: ReadonlySet<InboundEmailProviderType> = new Set([
@@ -915,7 +1311,8 @@ export async function createCommentFromEmail(
         ? 'internal'
         : 'system';
 
-  const commentId = await withAdminTransaction(async (trx: Knex.Transaction) => {
+  const createCommentInTransaction = async (content: string): Promise<string> =>
+    withAdminTransaction(async (trx: Knex.Transaction) => {
       // Create adapters for workflow context
       const eventPublisher = new WorkflowEventPublisher();
       const analyticsTracker = new WorkflowAnalyticsTracker();
@@ -923,7 +1320,7 @@ export async function createCommentFromEmail(
       // Use enhanced TicketModel with events and analytics
       const result = await TicketModel.createComment({
         ticket_id: commentData.ticket_id,
-        content: commentData.content,
+        content,
         is_internal: false,
         is_resolution: false,
         author_type: ticketModelAuthorType,
@@ -939,18 +1336,61 @@ export async function createCommentFromEmail(
         )
       }, tenant, trx, eventPublisher, analyticsTracker, userId);
 
-      if (normalizedAuthorType === 'client') {
-        await trx('tickets')
-          .where({ ticket_id: commentData.ticket_id, tenant })
-          .update({ response_state: 'awaiting_internal' });
-      } else if (normalizedAuthorType === 'internal') {
-        await trx('tickets')
-          .where({ ticket_id: commentData.ticket_id, tenant })
-          .update({ response_state: 'awaiting_client' });
+      // Only update response state if tracking is enabled for this tenant
+      const tenantSettingsRow = await trx('tenant_settings')
+        .select('ticket_display_settings')
+        .where({ tenant })
+        .first();
+      const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
+
+      if (responseStateEnabled) {
+        if (normalizedAuthorType === 'client') {
+          await trx('tickets')
+            .where({ ticket_id: commentData.ticket_id, tenant })
+            .update({ response_state: 'awaiting_internal' });
+        } else if (normalizedAuthorType === 'internal') {
+          await trx('tickets')
+            .where({ ticket_id: commentData.ticket_id, tenant })
+            .update({ response_state: 'awaiting_client' });
+        }
       }
 
       return result.comment_id;
     });
+
+  let commentId: string;
+  try {
+    commentId = await createCommentInTransaction(commentData.content);
+  } catch (error) {
+    if (!isTsvectorOverflowError(error)) {
+      throw error;
+    }
+
+    const sanitizedContent = sanitizeCommentContentForIndexRetry(commentData.content);
+    console.warn('createCommentFromEmail: tsvector overflow during comment insert; retrying with sanitized body', {
+      ticketId: commentData.ticket_id,
+      tenant,
+      originalLength: commentData.content.length,
+      sanitizedLength: sanitizedContent.length,
+    });
+
+    try {
+      commentId = await createCommentInTransaction(sanitizedContent);
+    } catch (retryError) {
+      if (!isTsvectorOverflowError(retryError)) {
+        throw retryError;
+      }
+
+      console.warn(
+        'createCommentFromEmail: sanitized retry still overflowed; persisting minimal fallback comment body',
+        {
+          ticketId: commentData.ticket_id,
+          tenant,
+        }
+      );
+      commentId = await createCommentInTransaction(EMPTY_FALLBACK_COMMENT);
+    }
+  }
 
   if (commentData.inboundReplyEvent) {
     try {

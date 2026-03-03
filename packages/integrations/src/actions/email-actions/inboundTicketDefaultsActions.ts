@@ -218,21 +218,44 @@ export const deleteInboundTicketDefaults = withAuth(async (
   const { knex } = await createTenantKnex();
   
   try {
-    // Prevent delete if any email providers reference this defaults configuration
-    const providersUsing = await knex('email_providers')
-      .where({ tenant, inbound_ticket_defaults_id: id })
-      .count('* as count')
-      .first();
+    const deletedCount = await knex.transaction<number>(async (trx) => {
+      // Clear all known references before deleting the defaults row.
+      // This keeps delete behavior consistent with nullable destination references.
+      await trx('email_providers')
+        .where({ tenant, inbound_ticket_defaults_id: id })
+        .update({
+          inbound_ticket_defaults_id: null,
+          updated_at: trx.fn.now(),
+        });
 
-    if (providersUsing && Number(providersUsing.count) > 0) {
-      throw new Error('Cannot delete defaults configuration that is being used by email providers');
-    }
+      const hasClientDestinationColumn = await trx.schema.hasColumn('clients', 'inbound_ticket_defaults_id');
+      if (hasClientDestinationColumn) {
+        await trx('clients')
+          .where({ tenant, inbound_ticket_defaults_id: id })
+          .update({
+            inbound_ticket_defaults_id: null,
+            updated_at: trx.fn.now(),
+          });
+      }
 
-    const result = await knex('inbound_ticket_defaults')
-      .where({ id, tenant })
-      .delete();
+      const hasContactDestinationColumn = await trx.schema.hasColumn('contacts', 'inbound_ticket_defaults_id');
+      if (hasContactDestinationColumn) {
+        await trx('contacts')
+          .where({ tenant, inbound_ticket_defaults_id: id })
+          .update({
+            inbound_ticket_defaults_id: null,
+            updated_at: trx.fn.now(),
+          });
+      }
 
-    if (result === 0) {
+      const rowsDeleted = await trx('inbound_ticket_defaults')
+        .where({ id, tenant })
+        .delete();
+
+      return Number(rowsDeleted);
+    });
+
+    if (deletedCount === 0) {
       throw new Error('Defaults configuration not found');
     }
   } catch (error) {

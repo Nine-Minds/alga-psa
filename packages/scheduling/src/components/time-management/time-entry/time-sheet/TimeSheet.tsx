@@ -17,6 +17,7 @@ import { AddWorkItemDialog } from './AddWorkItemDialog';
 import { fetchTimeEntriesForTimeSheet, fetchWorkItemsForTimeSheet, saveTimeEntry, submitTimeSheet, deleteWorkItem } from '../../../../actions/timeEntryActions';
 import { updateScheduleEntry } from '@alga-psa/scheduling/actions';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { fetchTimeSheet, fetchTimeSheetComments, addCommentToTimeSheet } from '../../../../actions/timeSheetActions';
 import { useDrawer } from "@alga-psa/ui";
 import { formatISO, parseISO, format } from 'date-fns';
@@ -363,8 +364,7 @@ export function TimeSheet({
 
             toast.success('Time entry saved successfully');
         } catch (error) {
-            console.error('Error saving time entry:', error);
-            toast.error('Failed to save time entry');
+            handleError(error, 'Failed to save time entry');
             throw error;
         }
     };
@@ -459,8 +459,7 @@ export function TimeSheet({
             toast.success('Task updated successfully');
             closeDrawer();
         } catch (error) {
-            console.error('Error updating task:', error);
-            toast.error('Failed to update task');
+            handleError(error, 'Failed to update task');
         }
     }, [timeSheet.id, closeDrawer]); // Added useCallback and dependencies
 
@@ -493,8 +492,7 @@ export function TimeSheet({
             toast.success('Changes saved successfully');
             closeDrawer();
         } catch (error) {
-            console.error('Error updating schedule entry:', error);
-            toast.error('Failed to save changes');
+            handleError(error, 'Failed to save changes');
         }
     }, [timeSheet.id, closeDrawer]); // Added useCallback and dependencies
 
@@ -535,8 +533,7 @@ export function TimeSheet({
             setGroupedTimeEntries(grouped);
             toast.success('Work item deleted successfully');
         } catch (error) {
-            console.error('Error deleting work item:', error);
-            toast.error('Failed to delete work item');
+            handleError(error, 'Failed to delete work item');
         }
     }, [timeSheet.id]);
 

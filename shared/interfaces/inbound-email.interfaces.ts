@@ -78,6 +78,19 @@ export interface EmailProviderConfig {
   updated_at: string; // ISO date
 }
 
+export interface EmailIngressSkipReason {
+  type: 'attachment' | 'raw_mime';
+  reason:
+    | 'attachment_over_max_bytes'
+    | 'attachment_count_exceeded'
+    | 'attachment_total_bytes_exceeded'
+    | 'raw_mime_over_max_bytes';
+  attachmentId?: string;
+  attachmentName?: string;
+  size: number;
+  cap: number;
+}
+
 export interface EmailMessage {
   id: string;
   provider: 'microsoft' | 'google' | 'imap';
@@ -113,6 +126,11 @@ export interface EmailMessage {
   threadId?: string;
   references?: string[];
   inReplyTo?: string;
+  rawMime?: string;
+  rawMimeBase64?: string;
+  sourceMimeBase64?: string;
+  rawSourceBase64?: string;
+  ingressSkipReasons?: EmailIngressSkipReason[];
 }
 
 export interface EmailMessageDetails extends EmailMessage {
@@ -147,6 +165,54 @@ export interface EmailConnectionStatus {
   errorMessage?: string;
   lastConnectionTest?: string;
 }
+
+export type UnifiedInboundEmailProvider = 'microsoft' | 'google' | 'imap';
+
+export interface UnifiedInboundQueueJobBase {
+  jobId: string;
+  schemaVersion: 1;
+  tenantId: string;
+  providerId: string;
+  provider: UnifiedInboundEmailProvider;
+  enqueuedAt: string;
+  attempt: number;
+  maxAttempts: number;
+}
+
+export interface MicrosoftInboundEmailPointer {
+  subscriptionId: string;
+  messageId: string;
+  resource?: string;
+  changeType?: string;
+}
+
+export interface GoogleInboundEmailPointer {
+  historyId: string;
+  emailAddress: string;
+  pubsubMessageId?: string;
+  discoveredMessageIds?: string[];
+}
+
+export interface ImapInboundEmailPointer {
+  mailbox: string;
+  uid: string;
+  uidValidity?: string;
+  messageId?: string;
+}
+
+export type UnifiedInboundEmailQueueJob =
+  | (UnifiedInboundQueueJobBase & {
+      provider: 'microsoft';
+      pointer: MicrosoftInboundEmailPointer;
+    })
+  | (UnifiedInboundQueueJobBase & {
+      provider: 'google';
+      pointer: GoogleInboundEmailPointer;
+    })
+  | (UnifiedInboundQueueJobBase & {
+      provider: 'imap';
+      pointer: ImapInboundEmailPointer;
+    });
 
 export interface EmailQueueJob {
   id: string;

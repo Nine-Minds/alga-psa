@@ -21,6 +21,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { ColumnDefinition } from '@alga-psa/types';
 import { IContract, IContractWithClient } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   checkClientHasActiveContract,
   deleteContract,
@@ -136,7 +137,11 @@ const Contracts: React.FC = () => {
 
   const handleDeleteContract = async (contractId: string) => {
     try {
-      await deleteContract(contractId);
+      const result = await deleteContract(contractId);
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        return;
+      }
       await fetchContracts();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to delete contract';
@@ -148,6 +153,10 @@ const Contracts: React.FC = () => {
     try {
       setIsLoading(true);
       const draftData = await getDraftContractForResume(contractId);
+      if (isActionPermissionError(draftData)) {
+        handleError(draftData.permissionError);
+        return;
+      }
       setDraftToResume(draftData);
       setShowClientWizard(true);
     } catch (err) {
@@ -162,13 +171,16 @@ const Contracts: React.FC = () => {
     if (!draftToDiscard) return;
     setIsDiscardingDraft(true);
     try {
-      await deleteContract(draftToDiscard.contractId);
+      const result = await deleteContract(draftToDiscard.contractId);
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        return;
+      }
       await fetchContracts();
       toast.success('Draft discarded');
       setDraftToDiscard(null);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to discard draft';
-      toast.error(message);
+      handleError(err, 'Failed to discard draft');
     } finally {
       setIsDiscardingDraft(false);
     }

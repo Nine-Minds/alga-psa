@@ -6,6 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { getEventCatalogEntries, getEventCatalogEntryByEventType } from '@alga-psa/workflows/actions';
 import { IEventCatalogEntry } from '@alga-psa/shared/workflow';
@@ -131,8 +132,7 @@ export default function TestWorkflowModal({ isOpen, onClose, workflowCode, workf
           }
         }
       } catch (error) {
-        console.error("Error fetching event catalog:", error);
-        toast.error("Failed to load event catalog");
+        handleError(error, "Failed to load event catalog");
       } finally {
         setIsLoadingCatalog(false);
       }
@@ -248,8 +248,7 @@ export default function TestWorkflowModal({ isOpen, onClose, workflowCode, workf
           toast.error(result.message);
         }
       } catch (error) {
-        console.error('Error testing workflow:', error);
-        toast.error(error instanceof Error ? error.message : 'An error occurred while testing the workflow');
+        handleError(error, 'An error occurred while testing the workflow');
       } finally {
         setIsSubmitting(false);
       }

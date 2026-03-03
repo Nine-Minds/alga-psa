@@ -2,7 +2,7 @@ import { listAssets } from '@alga-psa/assets/actions/assetActions';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@alga-psa/users/actions';
 import type { AssetListResponse } from '@alga-psa/types';
-import AssetDashboard from '@alga-psa/assets/components/AssetDashboard';
+import { MspAssetDashboardClient } from '@alga-psa/msp-composition/assets';
 import { getSession } from '@alga-psa/auth';
 
 export default async function AssetsPage() {
@@ -21,7 +21,7 @@ export default async function AssetsPage() {
 
   try {
     const assets: AssetListResponse = await listAssets({});
-    return <AssetDashboard initialAssets={assets} />;
+    return <MspAssetDashboardClient initialAssets={assets} />;
   } catch (error) {
     console.error('Error fetching user or assets:', error);
     return <div>An error occurred. Please try again later.</div>;

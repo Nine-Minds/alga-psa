@@ -44,7 +44,7 @@ export default function PortalSwitchPrompt({
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F8FFFE] to-[#F0F9FF] dark:bg-none dark:bg-card p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#F8FFFE] to-[#F0F9FF] dark:from-blue-950 dark:to-indigo-950 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">

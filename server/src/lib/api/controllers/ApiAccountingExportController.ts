@@ -10,14 +10,15 @@ import {
   executeAccountingExportBatch
 } from '@alga-psa/billing/actions';
 import {
-  CreateExportBatchInput,
-  CreateExportLineInput,
-  CreateExportErrorInput,
-  UpdateExportBatchStatusInput
-} from '../../repositories/accountingExportRepository';
-import { AccountingExportValidation } from '../../validation/accountingExportValidation';
-import { AppError } from '../../errors';
-import { AccountingExportInvoiceSelector } from '../../services/accountingExportInvoiceSelector';
+  type CreateExportBatchInput,
+  type CreateExportLineInput,
+  type CreateExportErrorInput,
+  type UpdateExportBatchStatusInput,
+  AccountingExportValidation,
+  AccountingExportInvoiceSelector
+} from '@alga-psa/billing/services';
+import { AppError } from '@alga-psa/core';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { runWithTenant, createTenantKnex } from '../../db';
 import {
   AuthenticatedApiRequest,
@@ -160,6 +161,10 @@ export class ApiAccountingExportController extends ApiBaseController {
         await this.authorize(apiRequest, 'read');
 
         const data = await getAccountingExportBatch(params.batchId);
+
+        if (isActionPermissionError(data)) {
+          return NextResponse.json({ error: 'forbidden', message: data.permissionError }, { status: 403 });
+        }
 
         if (!data.batch) {
           return NextResponse.json({ error: 'not_found' }, { status: 404 });
@@ -491,6 +496,11 @@ export class ApiAccountingExportController extends ApiBaseController {
 
         try {
           const result = await executeAccountingExportBatch(params.batchId);
+
+          if (isActionPermissionError(result)) {
+            return NextResponse.json({ error: 'forbidden', message: result.permissionError }, { status: 403 });
+          }
+
           const files = (result.metadata as any)?.files ?? [];
 
           if (!Array.isArray(files) || files.length === 0) {

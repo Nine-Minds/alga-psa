@@ -38,13 +38,13 @@ export interface ExportTenantDataResult {
  */
 const TENANT_TABLES_EXPORT_ORDER: string[] = [
   // Core business data
-  'users',
+  'users', // includes reports_to
   'contacts',
   'companies',
   'clients',
 
   // Tickets and support
-  'tickets',
+  'tickets', // includes assigned_team_id
   'ticket_resources',
   'ticket_materials',
   'comments',
@@ -57,7 +57,7 @@ const TENANT_TABLES_EXPORT_ORDER: string[] = [
   // Projects
   'projects',
   'project_phases',
-  'project_tasks',
+  'project_tasks', // includes assigned_team_id
   'project_task_comments',
   'project_materials',
 
@@ -93,7 +93,7 @@ const TENANT_TABLES_EXPORT_ORDER: string[] = [
 
   // Teams and roles
   'teams',
-  'team_members',
+  'team_members', // includes role
   'roles',
   'user_roles',
 

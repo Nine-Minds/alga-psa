@@ -1,0 +1,152 @@
+[
+  {
+    "id": "F001",
+    "description": "Define a unified inbound queue job contract that supports provider-specific pointers for Microsoft, Google, and IMAP",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F002",
+    "description": "Refactor Microsoft webhook ingress to enqueue pointer jobs instead of running full email processing inline",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Requirements"]
+  },
+  {
+    "id": "F003",
+    "description": "Refactor Google webhook ingress to enqueue pointer jobs instead of running full email processing inline",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Requirements"]
+  },
+  {
+    "id": "F004",
+    "description": "Refactor IMAP listener ingress to enqueue pointer jobs instead of submitting full email payloads",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Requirements"]
+  },
+  {
+    "id": "F005",
+    "description": "Use Redis as the durable temporary inbound queue backing store for unified pointer jobs",
+    "implemented": true,
+    "prdRefs": ["Goals", "Data / API / Integrations"]
+  },
+  {
+    "id": "F006",
+    "description": "Ensure ingress endpoints/listeners return success only after durable enqueue succeeds",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F007",
+    "description": "Return non-2xx ingress responses when enqueue fails so upstream systems retry",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Users and Primary Flows"]
+  },
+  {
+    "id": "F008",
+    "description": "Implement unified queue consumer loop for claiming inbound jobs and executing processing",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Requirements"]
+  },
+  {
+    "id": "F009",
+    "description": "Implement consume-time provider fetch for full email payload based on pointer job data",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F010",
+    "description": "Apply consume-time idempotency guard keyed by normalized external message identity before processing",
+    "implemented": true,
+    "prdRefs": ["Goals", "Requirements"]
+  },
+  {
+    "id": "F011",
+    "description": "Wire consumer to execute existing processInboundEmailInApp pipeline after payload fetch",
+    "implemented": true,
+    "prdRefs": ["Goals", "Requirements"]
+  },
+  {
+    "id": "F012",
+    "description": "Acknowledge queue jobs only after successful processing completion",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F013",
+    "description": "Support resurfacing/reclaim of unacknowledged jobs for retry",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Users and Primary Flows"]
+  },
+  {
+    "id": "F014",
+    "description": "Implement bounded retry policy with attempt tracking for failed jobs",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Users and Primary Flows"]
+  },
+  {
+    "id": "F015",
+    "description": "Move jobs to dead-letter queue after max retry attempts",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F016",
+    "description": "Handle source-unavailable pointer jobs with deterministic skipped outcome instead of infinite retry",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Non-goals"]
+  },
+  {
+    "id": "F017",
+    "description": "Normalize provider-specific message identity fields into one idempotency key format",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F018",
+    "description": "Ensure queue payload contract remains pointer-only and excludes raw MIME or attachment bytes",
+    "implemented": true,
+    "prdRefs": ["Non-functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F019",
+    "description": "Retire or bypass legacy IMAP in-memory async queue path for production processing",
+    "implemented": true,
+    "prdRefs": ["Problem", "Requirements"]
+  },
+  {
+    "id": "F020",
+    "description": "Preserve existing webhook auth/verification behavior while moving to enqueue-only ingress",
+    "implemented": true,
+    "prdRefs": ["Security / Permissions", "Requirements"]
+  },
+  {
+    "id": "F021",
+    "description": "Add/align configuration flags for unified queue enablement and legacy-path disablement",
+    "implemented": true,
+    "prdRefs": ["Rollout / Migration", "Requirements"]
+  },
+  {
+    "id": "F022",
+    "description": "Add structured logs for enqueue, consume, retry, ack, skip, and DLQ events",
+    "implemented": true,
+    "prdRefs": ["Observability", "Requirements"]
+  },
+  {
+    "id": "F023",
+    "description": "Update provider-specific callback contracts so business processing is no longer performed inline",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F024",
+    "description": "Add queue consumer routing logic per provider type (Microsoft, Google, IMAP)",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F025",
+    "description": "Document the unified queue architecture and local validation runbook in the plan scratchpad/docs",
+    "implemented": true,
+    "prdRefs": ["Rollout / Migration", "Acceptance Criteria (Definition of Done)"]
+  }
+]

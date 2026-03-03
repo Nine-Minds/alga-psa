@@ -404,6 +404,43 @@ test.describe('Workflow Designer UI - permissions and selection', () => {
     }
   });
 
+  test('save draft persists paused setting without explicit settings save', async ({ page }) => {
+    test.setTimeout(120000);
+    const { db, tenantData } = await createWorkflowTenant(page, ADMIN_PERMISSIONS);
+    let workflowName = '';
+
+    try {
+      const workflowPage = new WorkflowDesignerPage(page);
+      await workflowPage.goto();
+      await workflowPage.waitForLoaded();
+
+      workflowName = await createSavedWorkflow(workflowPage);
+
+      const pausedToggle = page.locator('[data-automation-id="workflow-settings-paused"]');
+      if ((await pausedToggle.getAttribute('data-state')) !== 'checked') {
+        await pausedToggle.click();
+      }
+      await expect(pausedToggle).toHaveAttribute('data-state', 'checked');
+
+      await workflowPage.saveDraft();
+
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await workflowPage.waitForLoaded();
+      await workflowPage.selectWorkflowByName(workflowName);
+      await expect(pausedToggle).toHaveAttribute('data-state', 'checked');
+
+      const record = await db('workflow_definitions').where({ name: workflowName }).first();
+      expect(record).toBeTruthy();
+      expect(record.is_paused).toBe(true);
+    } finally {
+      if (workflowName) {
+        await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
+      }
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
+      await db.destroy();
+    }
+  });
+
   test('save settings error surfaces toast without losing draft values', async ({ page }) => {
     test.setTimeout(120000);
     await applyWorkflowOverrides(page, { failSaveSettings: true });

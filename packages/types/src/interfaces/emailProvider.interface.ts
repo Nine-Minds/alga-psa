@@ -48,6 +48,13 @@ export interface EmailProviderAdapter {
   getMessageDetails(messageId: string): Promise<EmailMessageDetails>;
 
   /**
+   * Download the full raw RFC822 source message bytes.
+   *  messageId - The provider-specific message ID
+   *  Raw MIME bytes suitable for a .eml file
+   */
+  downloadMessageSource(messageId: string): Promise<Buffer>;
+
+  /**
    * Test the connection to the email provider
    * This is used to verify that credentials are still valid
    * @returns Connection status information

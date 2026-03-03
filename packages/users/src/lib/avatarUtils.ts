@@ -1,7 +1,7 @@
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
-type EntityType = 'user' | 'contact' | 'client' | 'tenant';
+type EntityType = 'user' | 'contact' | 'client' | 'tenant' | 'team';
 
 async function getImageUrlInternalLite(
   trx: Knex.Transaction,
@@ -102,59 +102,60 @@ export async function getEntityImageUrlsBatch(
 
   try {
     const { knex } = await createTenantKnex(tenant);
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const associations = await trx('document_associations')
+        .select('entity_id', 'document_id')
+        .whereIn('entity_id', entityIds)
+        .andWhere({
+          entity_type: entityType,
+          is_entity_logo: true,
+          tenant,
+        });
 
-    const associations = await knex('document_associations')
-      .select('entity_id', 'document_id')
-      .whereIn('entity_id', entityIds)
-      .andWhere({
-        entity_type: entityType,
-        is_entity_logo: true,
-        tenant,
-      });
+      if (associations.length === 0) {
+        return result;
+      }
 
-    if (associations.length === 0) {
-      return result;
-    }
-
-    const documentIds = associations.map((a: any) => a.document_id);
-    const documents = await knex('documents')
-      .select('document_id', 'file_id', 'updated_at')
-      .whereIn('document_id', documentIds)
-      .andWhere({ tenant });
-
-    const docToInfo = new Map(
-      documents.map((d: any) => [
-        d.document_id,
-        { file_id: d.file_id as string | null, updated_at: d.updated_at as Date | null },
-      ]),
-    );
-
-    const fileIds = documents.map((d: any) => d.file_id).filter(Boolean);
-    const imageFileIds = new Set<string>();
-    if (fileIds.length > 0) {
-      const files = await knex('external_files')
-        .select('file_id', 'mime_type')
-        .whereIn('file_id', fileIds)
+      const documentIds = associations.map((a: any) => a.document_id);
+      const documents = await trx('documents')
+        .select('document_id', 'file_id', 'updated_at')
+        .whereIn('document_id', documentIds)
         .andWhere({ tenant });
-      for (const file of files) {
-        if (file?.mime_type?.startsWith('image/')) {
-          imageFileIds.add(file.file_id);
+
+      const docToInfo = new Map(
+        documents.map((d: any) => [
+          d.document_id,
+          { file_id: d.file_id as string | null, updated_at: d.updated_at as Date | null },
+        ]),
+      );
+
+      const fileIds = documents.map((d: any) => d.file_id).filter(Boolean);
+      const imageFileIds = new Set<string>();
+      if (fileIds.length > 0) {
+        const files = await trx('external_files')
+          .select('file_id', 'mime_type')
+          .whereIn('file_id', fileIds)
+          .andWhere({ tenant });
+        for (const file of files) {
+          if (file?.mime_type?.startsWith('image/')) {
+            imageFileIds.add(file.file_id);
+          }
         }
       }
-    }
 
-    for (const association of associations) {
-      const docInfo = docToInfo.get(association.document_id);
-      const fileId = docInfo?.file_id;
-      if (!fileId || !imageFileIds.has(fileId)) {
-        continue;
+      for (const association of associations) {
+        const docInfo = docToInfo.get(association.document_id);
+        const fileId = docInfo?.file_id;
+        if (!fileId || !imageFileIds.has(fileId)) {
+          continue;
+        }
+        const baseUrl = `/api/documents/view/${fileId}`;
+        const timestamp = docInfo?.updated_at ? new Date(docInfo.updated_at).getTime() : 0;
+        result.set(association.entity_id, `${baseUrl}?t=${timestamp}`);
       }
-      const baseUrl = `/api/documents/view/${fileId}`;
-      const timestamp = docInfo?.updated_at ? new Date(docInfo.updated_at).getTime() : 0;
-      result.set(association.entity_id, `${baseUrl}?t=${timestamp}`);
-    }
 
-    return result;
+      return result;
+    });
   } catch {
     return result;
   }

@@ -1,9 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { buildQboPrivateNoteForPurchaseOrder } from 'server/src/lib/adapters/accounting/quickBooksOnlineAdapter';
-import { buildQuickBooksCsvMemo } from 'server/src/lib/adapters/accounting/quickBooksCSVAdapter';
-import { buildXeroInvoiceReference } from 'server/src/lib/adapters/accounting/xeroAdapter';
-import { buildXeroCsvReference } from 'server/src/lib/adapters/accounting/xeroCsvAdapter';
+import { buildQboPrivateNoteForPurchaseOrder, buildQuickBooksCsvMemo, buildXeroInvoiceReference, buildXeroCsvReference } from '@alga-psa/billing/services';
 import { extractInvoiceIdFromReference } from 'server/src/lib/services/xeroCsvTaxImportService';
 
 describe('Contract PO accounting export references', () => {

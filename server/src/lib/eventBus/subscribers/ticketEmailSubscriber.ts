@@ -14,7 +14,7 @@ import logger from '@alga-psa/core/logger';
 import { getConnection } from '../../db/db';
 import { getSecret } from '../../utils/getSecret';
 import { createTenantKnex } from '../../db';
-import { formatBlockNoteContent } from '../../utils/blocknoteUtils';
+import { formatBlockNoteContent } from '@alga-psa/formatting/blocknoteUtils';
 import { getEmailEventChannel } from '@alga-psa/notifications';
 import type { Knex } from 'knex';
 import { getPortalDomain } from 'server/src/models/PortalDomainModel';
@@ -23,6 +23,12 @@ import { TenantEmailService } from '@alga-psa/email';
 import { NotificationAccumulator, PendingNotification, AccumulatedChange } from '../../notifications/NotificationAccumulator';
 import { isValidEmail } from '@alga-psa/core';
 import { resolveEffectiveTimeZone } from '../../utils/workDate';
+import { rewriteTicketCommentImagesToCid } from './ticketCommentInlineImageEmail';
+import {
+  normalizeRecipientEmail,
+  extractActiveWatcherEmails,
+  sendOneEmailPerWatcher,
+} from './watcherRecipients';
 
 /**
  * Get the base URL from NEXTAUTH_URL environment variable
@@ -740,10 +746,30 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     };
     const primaryContactId =
       safeString(ticket.contact_email) && ticket.contact_name_id ? String(ticket.contact_name_id).trim() : undefined;
+    const sentEmails = new Set<string>();
+    const sendIfUnique = async (
+      params: SendEmailParams,
+      subtypeName: string,
+      recipientUserId?: string | null
+    ) => {
+      const email = params.to?.trim();
+      if (!isValidEmail(email)) {
+        return;
+      }
+
+      const key = normalizeRecipientEmail(email);
+      if (sentEmails.has(key)) {
+        return;
+      }
+
+      sentEmails.add(key);
+      await sendNotificationIfEnabled(params, subtypeName, recipientUserId ?? undefined);
+    };
+    const activeWatcherEmails = extractActiveWatcherEmails(ticket.attributes);
 
     // Send to primary recipient (contact or client) - external user, no userId
     if (isValidEmail(primaryEmail)) {
-      await sendNotificationIfEnabled({
+      await sendIfUnique({
         tenantId,
         ...emailEntityContext,
         contactId: primaryContactId,
@@ -758,7 +784,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
 
     // Send to assigned user if different from primary recipient
     if (isValidEmail(assignedEmail) && assignedEmail !== primaryEmail) {
-      await sendNotificationIfEnabled({
+      await sendIfUnique({
         tenantId,
         ...emailEntityContext,
         to: assignedEmail,
@@ -769,6 +795,25 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         from: ticketingFromAddress
       }, 'Ticket Created', ticket.assigned_to);
     }
+
+    await sendOneEmailPerWatcher(
+      activeWatcherEmails,
+      async (watcherEmail) => {
+        await sendIfUnique({
+          tenantId,
+          ...emailEntityContext,
+          to: watcherEmail,
+          subject: emailSubject,
+          template: 'ticket-created',
+          context: buildContext(portalUrl),
+          replyContext,
+          from: ticketingFromAddress
+        }, 'Ticket Created');
+      },
+      {
+        excludeEmails: sentEmails,
+      }
+    );
 
   } catch (error) {
     logger.error('Error handling ticket created event:', {
@@ -1035,6 +1080,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     });
 
     const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
+    const activeWatcherEmails = extractActiveWatcherEmails(ticket.attributes);
 
     // Check if notification accumulator is initialized
     const accumulator = NotificationAccumulator.getInstance();
@@ -1046,30 +1092,39 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
         ticketId: payload.ticketId,
         tenantId
       });
+      const accumulatedRecipients = new Set<string>();
+      const accumulateIfUnique = async (params: {
+        recipientEmail: string;
+        recipientUserId?: string;
+        isInternal: boolean;
+      }) => {
+        const email = params.recipientEmail?.trim();
+        if (!isValidEmail(email)) {
+          return;
+        }
 
-      // Accumulate for primary recipient (contact or client) - external user
-      if (isValidEmail(primaryEmail)) {
+        const key = normalizeRecipientEmail(email);
+        if (accumulatedRecipients.has(key)) {
+          return;
+        }
+
+        accumulatedRecipients.add(key);
         await accumulator.accumulate({
           tenantId,
           ticketId: payload.ticketId,
-          recipientEmail: primaryEmail,
-          recipientUserId: undefined,
-          isInternal: false,
+          recipientEmail: email,
+          recipientUserId: params.recipientUserId,
+          isInternal: params.isInternal,
           userId: payload.userId,
           changes: payload.changes || {}
         });
-      }
+      };
 
-      // Accumulate for assigned user if different from primary recipient
-      if (isValidEmail(assignedEmail) && assignedEmail !== primaryEmail) {
-        await accumulator.accumulate({
-          tenantId,
-          ticketId: payload.ticketId,
-          recipientEmail: assignedEmail,
-          recipientUserId: ticket.assigned_to,
-          isInternal: true,
-          userId: payload.userId,
-          changes: payload.changes || {}
+      // Accumulate for primary recipient (contact or client) - external user
+      if (isValidEmail(primaryEmail)) {
+        await accumulateIfUnique({
+          recipientEmail: primaryEmail,
+          isInternal: false,
         });
       }
 
@@ -1085,18 +1140,30 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
           'tr.tenant': tenantId
         });
 
+      // Accumulate for assigned user if different from primary recipient
+      if (isValidEmail(assignedEmail) && assignedEmail !== primaryEmail) {
+        await accumulateIfUnique({
+          recipientEmail: assignedEmail,
+          recipientUserId: ticket.assigned_to,
+          isInternal: true,
+        });
+      }
+
       for (const resource of additionalResources) {
         if (isValidEmail(resource.email)) {
-          await accumulator.accumulate({
-            tenantId,
-            ticketId: payload.ticketId,
+          await accumulateIfUnique({
             recipientEmail: resource.email,
             recipientUserId: resource.user_id,
             isInternal: true,
-            userId: payload.userId,
-            changes: payload.changes || {}
           });
         }
+      }
+
+      for (const watcherEmail of activeWatcherEmails) {
+        await accumulateIfUnique({
+          recipientEmail: watcherEmail,
+          isInternal: false,
+        });
       }
 
     } else {
@@ -1105,10 +1172,29 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
         ticketId: payload.ticketId,
         tenantId
       });
+      const sentEmails = new Set<string>();
+      const sendIfUnique = async (
+        params: SendEmailParams,
+        subtypeName: string,
+        recipientUserId?: string | null
+      ) => {
+        const email = params.to?.trim();
+        if (!isValidEmail(email)) {
+          return;
+        }
+
+        const key = normalizeRecipientEmail(email);
+        if (sentEmails.has(key)) {
+          return;
+        }
+
+        sentEmails.add(key);
+        await sendNotificationIfEnabled(params, subtypeName, recipientUserId ?? undefined);
+      };
 
       // Send to primary recipient (contact or client) - external user, no userId
       if (isValidEmail(primaryEmail)) {
-        await sendNotificationIfEnabled({
+        await sendIfUnique({
           tenantId,
           ...emailEntityContext,
           contactId: primaryContactId,
@@ -1126,7 +1212,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
 
       // Send to assigned user if different from primary recipient
       if (isValidEmail(assignedEmail) && assignedEmail !== primaryEmail) {
-        await sendNotificationIfEnabled({
+        await sendIfUnique({
           tenantId,
           ...emailEntityContext,
           to: assignedEmail,
@@ -1156,7 +1242,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       // Send to all additional resources
       for (const resource of additionalResources) {
         if (isValidEmail(resource.email)) {
-          await sendNotificationIfEnabled({
+          await sendIfUnique({
             tenantId,
             ...emailEntityContext,
             to: resource.email,
@@ -1171,6 +1257,28 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
           }, 'Ticket Updated', resource.user_id);
         }
       }
+
+      await sendOneEmailPerWatcher(
+        activeWatcherEmails,
+        async (watcherEmail) => {
+          await sendIfUnique({
+            tenantId,
+            ...emailEntityContext,
+            to: watcherEmail,
+            subject: `Ticket Updated: ${ticket.title}`,
+            template: 'ticket-updated',
+            context: buildContext(portalUrl),
+            replyContext: {
+              ticketId: ticket.ticket_id || payload.ticketId,
+              threadId: ticket.email_metadata?.threadId
+            },
+            from: ticketingFromAddress
+          }, 'Ticket Updated');
+        },
+        {
+          excludeEmails: sentEmails,
+        }
+      );
     }
 
   } catch (error) {
@@ -1724,9 +1832,9 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       entityType: 'ticket',
       entityId: ticket.ticket_id || payload.ticketId
     };
+    const activeWatcherEmails = extractActiveWatcherEmails(ticket.attributes);
 
     const sentEmails = new Set<string>();
-    const normalizeEmail = (email: string) => email.trim().toLowerCase();
     const sendIfUnique = async (
       params: SendEmailParams,
       subtypeName: string,
@@ -1736,7 +1844,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       if (!isValidEmail(email)) {
         return;
       }
-      const key = normalizeEmail(email);
+      const key = normalizeRecipientEmail(email);
       if (sentEmails.has(key)) {
         return;
       }
@@ -1767,17 +1875,49 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     const primaryContactId =
       safeString(ticket.contact_email) && ticket.contact_name_id ? String(ticket.contact_name_id).trim() : undefined;
 
+    // Detect team assignment via event payload changes
+    const assignedTeamId = (payload as any).changes?.assigned_team_id as string | undefined;
+    let teamName: string | undefined;
+    if (assignedTeamId) {
+      const team = await db('teams')
+        .select('team_name')
+        .where({ team_id: assignedTeamId, tenant: tenantId })
+        .first();
+      teamName = team?.team_name;
+    }
+
     if (isValidEmail(primaryEmail)) {
-      await sendIfUnique({
-        tenantId,
-        ...emailEntityContext,
-        contactId: primaryContactId,
-        to: primaryEmail,
-        subject: `Ticket Assigned: ${ticket.title}`,
-        template: 'ticket-assigned',
-        context: buildContext(portalUrl),
-        replyContext
-      }, 'Ticket Assigned');
+      if (teamName) {
+        // Team assignment: use team-specific template for client
+        const teamContext = {
+          ticket: {
+            ...baseTicketContext,
+            teamName,
+            url: portalUrl
+          }
+        };
+        await sendIfUnique({
+          tenantId,
+          ...emailEntityContext,
+          contactId: primaryContactId,
+          to: primaryEmail,
+          subject: `Team Assigned to Your Ticket: ${ticket.title}`,
+          template: 'ticket-team-assigned',
+          context: teamContext,
+          replyContext
+        }, 'Ticket Team Assigned');
+      } else {
+        await sendIfUnique({
+          tenantId,
+          ...emailEntityContext,
+          contactId: primaryContactId,
+          to: primaryEmail,
+          subject: `Ticket Assigned: ${ticket.title}`,
+          template: 'ticket-assigned',
+          context: buildContext(portalUrl),
+          replyContext
+        }, 'Ticket Assigned');
+      }
     }
 
     // Get all additional resources
@@ -1806,6 +1946,24 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
         }, 'Ticket Assigned', resource.user_id);
       }
     }
+
+    await sendOneEmailPerWatcher(
+      activeWatcherEmails,
+      async (watcherEmail) => {
+        await sendIfUnique({
+          tenantId,
+          ...emailEntityContext,
+          to: watcherEmail,
+          subject: `Ticket Assigned: ${ticket.title}`,
+          template: 'ticket-assigned',
+          context: buildContext(portalUrl),
+          replyContext
+        }, 'Ticket Assigned');
+      },
+      {
+        excludeEmails: sentEmails,
+      }
+    );
 
   } catch (error) {
     logger.error('Error handling ticket assigned event:', {
@@ -1916,7 +2074,6 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       }
       return String(value).trim();
     };
-    const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
     let commentAuthorUserId: string | null = payload.userId || null;
     let commentAuthorContactId: string | null = null;
@@ -2051,14 +2208,34 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       });
 
     const commentFormatting = formatBlockNoteContent(payload.comment?.content);
+    const inlineCommentImageRewrite = await rewriteTicketCommentImagesToCid({
+      db,
+      tenantId,
+      ticketId: payload.ticketId,
+      html: commentFormatting.html,
+    });
+
+    inlineCommentImageRewrite.outcomes.forEach((outcome) => {
+      logger.info('[TicketEmailSubscriber] Comment inline image processing outcome', {
+        tenantId,
+        ticketId: payload.ticketId,
+        commentId: payload.comment?.id,
+        sourceUrl: outcome.sourceUrl,
+        resolvedFileId: outcome.resolvedFileId,
+        strategy: outcome.strategy,
+        reason: outcome.reason,
+      });
+    });
+
     const commentContext = {
       ...(payload.comment ?? {}),
-      content: commentFormatting.html,
-      html: commentFormatting.html,
+      content: inlineCommentImageRewrite.html,
+      html: inlineCommentImageRewrite.html,
       text: commentFormatting.text,
       plainText: commentFormatting.text,
       rawContent: payload.comment?.content ?? null
     };
+    const inlineCommentImageAttachments = inlineCommentImageRewrite.attachments;
 
     const { internalUrl, portalUrl } = await resolveTicketLinks(db, tenantId, ticket.ticket_id, ticket.ticket_number);
 
@@ -2110,6 +2287,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     const fromAddress = ticketingFromAddress
       ? { email: ticketingFromAddress.email, name: senderName }
       : undefined;
+    const activeWatcherEmails = extractActiveWatcherEmails(ticket.attributes);
 
     const sentEmails = new Set<string>();
     const sendIfUnique = async (
@@ -2121,8 +2299,8 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       if (!isValidEmail(email)) {
         return;
       }
-      const key = normalizeEmail(email);
-      if (commentAuthorEmail && key === normalizeEmail(commentAuthorEmail)) {
+      const key = normalizeRecipientEmail(email);
+      if (commentAuthorEmail && key === normalizeRecipientEmail(commentAuthorEmail)) {
         return;
       }
       if (sentEmails.has(key)) {
@@ -2178,6 +2356,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           commentId: payload.comment?.id,
           threadId: ticket.email_metadata?.threadId
         },
+        attachments: inlineCommentImageAttachments,
         headers: Object.keys(headers).length > 0 ? headers : undefined,
         from: fromAddress as any // Cast to satisfy type if needed (SendEmailParams expects EmailAddress)
       };
@@ -2269,12 +2448,36 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
               commentId: payload.comment?.id,
               threadId: childMeta.threadId
             },
+            attachments: inlineCommentImageAttachments,
             headers: Object.keys(headers).length > 0 ? headers : undefined,
             from: fromAddress as any,
             recipientClientId: child.client_id || undefined
           }, 'Ticket Comment Added (Bundled Child)');
         }
       }
+
+      await sendOneEmailPerWatcher(
+        activeWatcherEmails,
+        async (watcherEmail) => {
+          await sendIfUnique({
+            tenantId,
+            ...emailEntityContext,
+            to: watcherEmail,
+            subject: `New Comment on Ticket: ${ticket.title}`,
+            template: 'ticket-comment-added',
+            context: buildContext(portalUrl),
+            replyContext: {
+              ticketId: ticket.ticket_id || payload.ticketId,
+              commentId: payload.comment?.id,
+              threadId: ticket.email_metadata?.threadId
+            },
+            from: fromAddress as any
+          }, 'Ticket Comment Added');
+        },
+        {
+          excludeEmails: sentEmails,
+        }
+      );
     }
 
     // Send to assigned user if different from primary email AND not the comment author
@@ -2296,6 +2499,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           commentId: payload.comment?.id,
           threadId: ticket.email_metadata?.threadId
         },
+        attachments: inlineCommentImageAttachments,
         from: fromAddress as any
       }, 'Ticket Comment Added', ticket.assigned_to);
     }
@@ -2320,6 +2524,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
             commentId: payload.comment?.id,
             threadId: ticket.email_metadata?.threadId
           },
+          attachments: inlineCommentImageAttachments,
           from: fromAddress as any
         }, 'Ticket Comment Added', resource.user_id);
       }
@@ -2568,6 +2773,32 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
 
     // Send to contact email if available, otherwise client email
     const primaryEmail = safeString(ticket.contact_email) || safeString(ticket.client_email);
+    const primaryContactId =
+      safeString(ticket.contact_email) && ticket.contact_name_id ? String(ticket.contact_name_id).trim() : undefined;
+    const emailEntityContext = {
+      entityType: 'ticket',
+      entityId: ticket.ticket_id || payload.ticketId
+    };
+    const activeWatcherEmails = extractActiveWatcherEmails(ticket.attributes);
+    const sentEmails = new Set<string>();
+    const sendIfUnique = async (
+      params: SendEmailParams,
+      subtypeName: string,
+      recipientUserId?: string | null
+    ) => {
+      const email = params.to?.trim();
+      if (!isValidEmail(email)) {
+        return;
+      }
+
+      const key = normalizeRecipientEmail(email);
+      if (sentEmails.has(key)) {
+        return;
+      }
+
+      sentEmails.add(key);
+      await sendNotificationIfEnabled(params, subtypeName, recipientUserId ?? undefined);
+    };
 
     if (!primaryEmail) {
       logger.warn('Could not send ticket closed email - missing contact and client email:', {
@@ -2576,8 +2807,10 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       });
     } else {
       // Send to primary recipient - external user, no userId
-      await sendNotificationIfEnabled({
+      await sendIfUnique({
         tenantId,
+        ...emailEntityContext,
+        contactId: primaryContactId,
         to: primaryEmail,
         subject: `Ticket Closed: ${ticket.title}`,
         template: 'ticket-closed',
@@ -2620,16 +2853,9 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       .where({ 't.tenant': tenantId, 't.master_ticket_id': payload.ticketId });
 
     if (bundleChildren.length > 0) {
-      const sentTo = new Set<string>();
-      if (primaryEmail) sentTo.add(primaryEmail.toLowerCase());
-
       for (const child of bundleChildren) {
         const childPrimaryEmail = safeString(child.contact_email) || safeString(child.client_email);
         if (!childPrimaryEmail) continue;
-
-        const normalizedEmail = childPrimaryEmail.toLowerCase();
-        if (sentTo.has(normalizedEmail)) continue;
-        sentTo.add(normalizedEmail);
 
         const childMeta = child.email_metadata || {};
         const childMessageId = childMeta.messageId;
@@ -2642,8 +2868,10 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
 
         const { portalUrl: childPortalUrl } = await resolveTicketLinks(db, tenantId, child.ticket_id, child.ticket_number);
 
-        await sendNotificationIfEnabled({
+        await sendIfUnique({
           tenantId,
+          entityType: 'ticket',
+          entityId: child.ticket_id,
           to: childPrimaryEmail,
           subject: `Ticket Closed: ${ticket.title}`,
           template: 'ticket-closed',
@@ -2671,8 +2899,9 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
 
     // Send to assigned user if different from primary email
     if (assignedEmail && assignedEmail !== primaryEmail) {
-      await sendNotificationIfEnabled({
+      await sendIfUnique({
         tenantId,
+        ...emailEntityContext,
         to: assignedEmail,
         subject: `Ticket Closed: ${ticket.title}`,
         template: 'ticket-closed',
@@ -2700,8 +2929,9 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     // Send to all additional resources
     for (const resource of additionalResources) {
       if (isValidEmail(resource.email)) {
-        await sendNotificationIfEnabled({
+        await sendIfUnique({
           tenantId,
+          ...emailEntityContext,
           to: resource.email,
           subject: `Ticket Closed: ${ticket.title}`,
           template: 'ticket-closed',
@@ -2714,6 +2944,28 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         }, 'Ticket Closed', resource.user_id);
       }
     }
+
+    await sendOneEmailPerWatcher(
+      activeWatcherEmails,
+      async (watcherEmail) => {
+        await sendIfUnique({
+          tenantId,
+          ...emailEntityContext,
+          to: watcherEmail,
+          subject: `Ticket Closed: ${ticket.title}`,
+          template: 'ticket-closed',
+          context: externalContext,
+          replyContext: {
+            ticketId: ticket.ticket_id || payload.ticketId,
+            threadId: ticket.email_metadata?.threadId
+          },
+          from: fromAddress
+        }, 'Ticket Closed');
+      },
+      {
+        excludeEmails: sentEmails,
+      }
+    );
 
   } catch (error) {
     logger.error('Error handling ticket closed event:', {
@@ -2728,7 +2980,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
 /**
  * Handle all ticket events
  */
-async function handleTicketEvent(event: BaseEvent): Promise<void> {
+export async function handleTicketEvent(event: BaseEvent): Promise<void> {
   console.log('[TicketEmailSubscriber] Handling ticket event:', {
     eventId: event.id,
     eventType: event.eventType,
@@ -2769,6 +3021,15 @@ async function handleTicketEvent(event: BaseEvent): Promise<void> {
       });
   }
 }
+
+export const ticketEmailSubscriberTestHarness = {
+  handleTicketCreated,
+  handleTicketUpdated,
+  handleTicketAssigned,
+  handleTicketCommentAdded,
+  handleTicketClosed,
+  handleTicketEvent,
+};
 
 /**
  * Register email notification subscriber

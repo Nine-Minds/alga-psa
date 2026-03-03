@@ -14,6 +14,10 @@
       "import": "./src/actions/index.ts",
       "types": "./src/actions/index.ts"
     },
+    "./runtime": {
+      "import": "./src/runtime.ts",
+      "types": "./src/runtime.ts"
+    },
     "./actions/*": {
       "import": "./src/actions/*.ts",
       "types": "./src/actions/*.ts"
@@ -33,14 +37,6 @@
     "./handlers/*": {
       "import": "./src/handlers/*.ts",
       "types": "./src/handlers/*.ts"
-    },
-    "./lib/avatarUtils": {
-      "import": "./src/lib/avatarUtils.ts",
-      "types": "./src/lib/avatarUtils.ts"
-    },
-    "./lib/blocknoteUtils": {
-      "import": "./src/lib/blocknoteUtils.ts",
-      "types": "./src/lib/blocknoteUtils.ts"
     },
     "./lib/documentUtils": {
       "import": "./src/lib/documentUtils.ts",
@@ -76,6 +72,7 @@
   "dependencies": {
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/formatting": "*",
     "@alga-psa/storage": "*",
     "@alga-psa/types": "*",
     "@alga-psa/validation": "*",

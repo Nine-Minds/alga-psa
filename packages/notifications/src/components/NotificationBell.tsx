@@ -4,6 +4,7 @@
 import React, { useState } from 'react';
 import { Bell } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { Button } from '@alga-psa/ui/components/Button';
 import { NotificationDropdown } from './NotificationDropdown';
 import { useSession } from 'next-auth/react';
 import { useInternalNotifications } from '../hooks/useInternalNotifications';
@@ -35,9 +36,11 @@ function NotificationBellInner({ tenant, userId, className = '' }: { tenant: str
   return (
     <DropdownMenu.Root open={open} onOpenChange={setOpen}>
       <DropdownMenu.Trigger asChild>
-        <button
+        <Button
           id="notification-bell"
-          className={`relative p-2 text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-800))] transition-colors ${className}`}
+          variant="ghost"
+          size="icon"
+          className={`relative h-9 w-9 ${className}`}
           aria-label={`Notifications${unreadCount > 0 ? ` (${unreadCount} unread)` : ''}`}
         >
           <Bell className="w-5 h-5" />
@@ -49,7 +52,7 @@ function NotificationBellInner({ tenant, userId, className = '' }: { tenant: str
           {!isConnected && (
             <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-yellow-500 rounded-full border border-[rgb(var(--color-card))]" title="Reconnecting..." />
           )}
-        </button>
+        </Button>
       </DropdownMenu.Trigger>
 
       <DropdownMenu.Portal>

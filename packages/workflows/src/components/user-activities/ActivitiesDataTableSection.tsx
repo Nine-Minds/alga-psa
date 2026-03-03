@@ -6,7 +6,8 @@ import {
   Activity,
   ActivityFilters,
   ActivityType,
-  ActivityResponse
+  ActivityResponse,
+  IPriority
 } from '@alga-psa/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -18,6 +19,7 @@ import { useActivityDrawer } from './ActivityDrawerProvider';
 import { useActivitiesCache } from '../../hooks/useActivitiesCache';
 import { ScheduleActivity } from '@alga-psa/types';
 import { ActivitiesTableSkeleton } from './ActivitiesTableSkeleton';
+import { getAllPriorities } from '@alga-psa/reference-data/actions';
 
 interface ActivitiesDataTableSectionProps {
   title?: string;
@@ -45,10 +47,29 @@ export function ActivitiesDataTableSection({
     isInitialLoad
   } = useActivitiesCache();
 
+  // Priorities for the filter dropdown
+  const [priorities, setPriorities] = useState<IPriority[]>([]);
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
+
+  // Load priorities when a single prioritized activity type is selected
+  useEffect(() => {
+    const types = filters.types;
+    if (types?.length === 1) {
+      const type = types[0];
+      if (type === ActivityType.TICKET || type === ActivityType.PROJECT_TASK) {
+        const itemType = type === ActivityType.TICKET ? 'ticket' : 'project_task';
+        getAllPriorities(itemType)
+          .then(setPriorities)
+          .catch(err => console.error('Error loading priorities:', err));
+        return;
+      }
+    }
+    setPriorities([]);
+  }, [filters.types]);
 
   // Check if any filters are active - memoized
   const isFiltersActive = useCallback(() => {
@@ -56,11 +77,12 @@ export function ActivitiesDataTableSection({
     const hasTypes = filters.types && filters.types.length > 0;
     const hasStatus = filters.status && filters.status.length > 0;
     const hasPriority = filters.priority && filters.priority.length > 0;
+    const hasPriorityIds = filters.priorityIds && filters.priorityIds.length > 0;
     const hasAssignedTo = filters.assignedTo && filters.assignedTo.length > 0;
     const hasDateRange = filters.dueDateStart || filters.dueDateEnd;
     const isClosed = filters.isClosed === true; // Default is false
-    
-    return hasTypes || hasStatus || hasPriority || hasAssignedTo || hasDateRange || isClosed;
+
+    return hasTypes || hasStatus || hasPriority || hasPriorityIds || hasAssignedTo || hasDateRange || isClosed;
   }, [filters]);
 
   // Handle reset filters - memoized
@@ -204,6 +226,7 @@ export function ActivitiesDataTableSection({
           ref={filtersRef}
           filters={filters}
           onChange={handleFilterChange}
+          priorities={priorities}
         />
         {isInitialLoad || (isLoading && activities.length === 0) ? (
           <ActivitiesTableSkeleton rowCount={pageSize} />

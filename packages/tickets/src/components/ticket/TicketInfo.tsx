@@ -11,9 +11,11 @@ import { ITag } from '@alga-psa/types';
 import { TicketResponseState } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { PrioritySelect } from '../PrioritySelect';
+import { PrioritySelect } from '@alga-psa/ui/components';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { CategoryPicker } from '../CategoryPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
@@ -23,12 +25,20 @@ import { ResponseStateDisplay } from '../ResponseStateSelect';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from '@alga-psa/tickets/actions';
 import { ItilLabels, calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
-import { Pencil, Check, X, HelpCircle, Save, AlertCircle } from 'lucide-react';
+import { Pencil, Check, X, HelpCircle, Save, AlertCircle, PauseCircle, Users } from 'lucide-react';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import UserAvatar from '@alga-psa/ui/components/UserAvatar';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { SlaStatusBadge } from '@alga-psa/sla/components';
+import type { SlaTimerStatus } from '@alga-psa/sla/types';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import type { ITeam } from '@alga-psa/types';
 
 
 interface TicketInfoProps {
@@ -59,6 +69,9 @@ interface TicketInfoProps {
   itilSubcategory?: string;
   renderProjectTaskActions?: (args: { ticket: ITicket; additionalAgents?: { user_id: string; name: string }[] }) => React.ReactNode;
   additionalAgents?: { user_id: string; name: string }[];
+  responseStateTrackingEnabled?: boolean;
+  teams?: ITeam[];
+  onAssignTeam?: (teamId: string) => Promise<void>;
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
@@ -86,7 +99,11 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   itilSubcategory,
   renderProjectTaskActions,
   additionalAgents,
+  responseStateTrackingEnabled = true,
+  teams = [],
+  onAssignTeam,
 }) => {
+  const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   // Use initialCategories from server to avoid timing issues on first render
   const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
   const [boardConfig, setBoardConfig] = useState<BoardCategoryData['boardConfig']>({
@@ -108,6 +125,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [isFormInitialized, setIsFormInitialized] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
+  const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
+  const [pendingTeamId, setPendingTeamId] = useState<string | null>(null);
 
   // Capture original ticket values when form is initialized
   const [originalTicketValues, setOriginalTicketValues] = useState<Partial<ITicket>>(() => ({
@@ -202,8 +222,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     const hasTitleChange = titleValue !== ticket.title;
     const hasDescriptionChange = hasDescriptionContentChanged;
 
-    return hasPendingTicketChanges || hasPendingItilChanges || hasTitleChange || hasDescriptionChange;
-  }, [isFormInitialized, pendingChanges, pendingItilChanges, titleValue, ticket.title, hasDescriptionContentChanged]);
+    return hasPendingTicketChanges || hasPendingItilChanges || hasTitleChange || hasDescriptionChange || pendingTeamId !== null;
+  }, [isFormInitialized, pendingChanges, pendingItilChanges, titleValue, ticket.title, hasDescriptionContentChanged, pendingTeamId]);
 
   // Register unsaved changes with the context
   useRegisterUnsavedChanges(`ticket-info-${id}`, hasUnsavedChanges);
@@ -233,6 +253,51 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       }
     };
   }, []);
+
+  // Fetch avatar URLs for additional agents
+  useEffect(() => {
+    if (!additionalAgents?.length || !ticket.tenant) {
+      setAdditionalAgentAvatarUrls({});
+      return;
+    }
+    const fetchAvatars = async () => {
+      try {
+        const userIds = additionalAgents.map(a => a.user_id);
+        const result = await getUserAvatarUrlsBatchAction(userIds, ticket.tenant);
+        const urls: Record<string, string | null> = {};
+        if (result && typeof (result as Map<string, string | null>).forEach === 'function') {
+          (result as Map<string, string | null>).forEach((v, k) => { urls[k] = v; });
+        } else {
+          Object.assign(urls, result);
+        }
+        setAdditionalAgentAvatarUrls(urls);
+      } catch {
+        setAdditionalAgentAvatarUrls({});
+      }
+    };
+    fetchAvatars();
+  }, [additionalAgents, ticket.tenant]);
+
+  // Fetch team avatar
+  useEffect(() => {
+    if (!ticket.assigned_team_id || !ticket.tenant) {
+      setTeamAvatarUrl(null);
+      return;
+    }
+    const fetchTeamAvatar = async () => {
+      try {
+        const result = await getTeamAvatarUrlsBatchAction([ticket.assigned_team_id!], ticket.tenant);
+        if (result && typeof (result as Map<string, string | null>).get === 'function') {
+          setTeamAvatarUrl((result as Map<string, string | null>).get(ticket.assigned_team_id!) ?? null);
+        } else {
+          setTeamAvatarUrl((result as unknown as Record<string, string | null>)[ticket.assigned_team_id!] ?? null);
+        }
+      } catch {
+        setTeamAvatarUrl(null);
+      }
+    };
+    fetchTeamAvatar();
+  }, [ticket.assigned_team_id, ticket.tenant]);
 
   // Track current board's priority type in a ref
   const currentPriorityTypeRef = useRef(boardConfig.priority_type);
@@ -491,6 +556,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         }
       }
 
+      // Assign team if pending (fires server action for member expansion)
+      if (pendingTeamId && onAssignTeam) {
+        await onAssignTeam(pendingTeamId);
+        setPendingTeamId(null);
+      }
+
       if (onSaveChanges) {
         const success = await onSaveChanges(allChanges);
         if (success) {
@@ -551,7 +622,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [hasUnsavedChanges, pendingChanges, pendingItilChanges, titleValue, ticket.title, onSaveChanges, onSelectChange, onItilFieldChange, isEditingDescription, onUpdateDescription, descriptionContent]);
+  }, [hasUnsavedChanges, pendingChanges, pendingItilChanges, titleValue, ticket.title, onSaveChanges, onSelectChange, onItilFieldChange, isEditingDescription, onUpdateDescription, descriptionContent, pendingTeamId, onAssignTeam]);
 
   // Handler for discarding all pending changes
   const handleDiscardChanges = useCallback(() => {
@@ -560,6 +631,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     setPendingItilChanges({});
     setPendingBoardConfig(null);
     setPendingCategories(null);
+    setPendingTeamId(null);
     if (originalDescriptionRef.current) {
       setDescriptionContent(originalDescriptionRef.current);
     }
@@ -634,6 +706,72 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     item: "text-gray-900 cursor-default select-none relative py-2 pl-3 pr-9 hover:bg-primary-100",
     itemIndicator: "absolute inset-y-0 right-0 flex items-center pr-4 text-primary-600",
   };
+
+  // Calculate SLA status from ticket data
+  const slaStatus = useMemo((): {
+    status: SlaTimerStatus;
+    responseRemainingMinutes?: number;
+    resolutionRemainingMinutes?: number;
+    isPaused: boolean;
+  } | null => {
+    if (!ticket.sla_policy_id) {
+      return null;
+    }
+
+    const now = new Date();
+    const isPaused = ticket.sla_paused_at !== null && ticket.sla_paused_at !== undefined;
+
+    let responseRemainingMinutes: number | undefined;
+    let resolutionRemainingMinutes: number | undefined;
+    let status: SlaTimerStatus = 'on_track';
+
+    // Calculate response remaining time
+    if (!ticket.sla_response_at && ticket.sla_response_due_at) {
+      const responseDue = new Date(ticket.sla_response_due_at);
+      responseRemainingMinutes = Math.round((responseDue.getTime() - now.getTime()) / 60000);
+
+      if (responseRemainingMinutes < 0) {
+        status = 'response_breached';
+      } else {
+        const totalMs = responseDue.getTime() - new Date(ticket.sla_started_at || ticket.entered_at || '').getTime();
+        const remainingMs = responseDue.getTime() - now.getTime();
+        const elapsedPercent = totalMs > 0 ? ((totalMs - remainingMs) / totalMs) * 100 : 0;
+        if (elapsedPercent >= 80) {
+          status = 'at_risk';
+        }
+      }
+    }
+
+    // Calculate resolution remaining time
+    if (!ticket.sla_resolution_at && ticket.sla_resolution_due_at) {
+      const resolutionDue = new Date(ticket.sla_resolution_due_at);
+      resolutionRemainingMinutes = Math.round((resolutionDue.getTime() - now.getTime()) / 60000);
+
+      if (resolutionRemainingMinutes < 0 && status !== 'response_breached') {
+        status = 'resolution_breached';
+      } else if (status === 'on_track') {
+        const totalMs = resolutionDue.getTime() - new Date(ticket.sla_started_at || ticket.entered_at || '').getTime();
+        const remainingMs = resolutionDue.getTime() - now.getTime();
+        const elapsedPercent = totalMs > 0 ? ((totalMs - remainingMs) / totalMs) * 100 : 0;
+        if (elapsedPercent >= 80) {
+          status = 'at_risk';
+        }
+      }
+    }
+
+    if (isPaused) {
+      status = 'paused';
+    }
+
+    return {
+      status,
+      responseRemainingMinutes,
+      resolutionRemainingMinutes,
+      isPaused
+    };
+  }, [ticket.sla_policy_id, ticket.sla_response_at, ticket.sla_response_due_at,
+      ticket.sla_resolution_at, ticket.sla_resolution_due_at, ticket.sla_paused_at,
+      ticket.sla_started_at, ticket.entered_at]);
 
   // If we don't have users data but have agentOptions, convert agentOptions to users format
   const usersList: IUserWithRoles[] = users.length > 0
@@ -744,18 +882,84 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             </div>
             <div>
               <h5 className="font-bold mb-2">Assigned To</h5>
-              <UserPicker
-                value={pendingChanges.assigned_to ?? originalTicketValues.assigned_to ?? ''}
-                onValueChange={(value) => handlePendingChange('assigned_to', value)}
-                users={usersList}
-                getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                labelStyle="none"
-                buttonWidth="fit"
-                size="sm"
-                className="!w-fit"
-                placeholder="Not assigned"
-                disabled={workflowLocked}
-              />
+              <div className="flex items-center gap-1.5">
+                {teamsV2Enabled ? (
+                  <UserAndTeamPicker
+                    value={pendingChanges.assigned_to ?? originalTicketValues.assigned_to ?? ''}
+                    onValueChange={(value) => handlePendingChange('assigned_to', value)}
+                    onTeamSelect={async (teamId) => {
+                      // Defer team assignment to Save Changes (consistent with assigned_to)
+                      setPendingTeamId(teamId);
+                      // Also set assigned_to to the team lead as a pending change
+                      const selectedTeam = teams.find(t => t.team_id === teamId);
+                      const leadId = selectedTeam?.manager_id || selectedTeam?.members?.find(m => m.role === 'lead')?.user_id;
+                      if (leadId) {
+                        handlePendingChange('assigned_to', leadId);
+                      }
+                    }}
+                    users={usersList}
+                    teams={teams}
+                    getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                    getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                    labelStyle="none"
+                    buttonWidth="fit"
+                    size="sm"
+                    className="!w-fit"
+                    placeholder="Not assigned"
+                    disabled={workflowLocked}
+                  />
+                ) : (
+                  <UserPicker
+                    value={pendingChanges.assigned_to ?? originalTicketValues.assigned_to ?? ''}
+                    onValueChange={(value) => handlePendingChange('assigned_to', value)}
+                    users={usersList}
+                    getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                    labelStyle="none"
+                    buttonWidth="fit"
+                    size="sm"
+                    className="!w-fit"
+                    placeholder="Not assigned"
+                    disabled={workflowLocked}
+                  />
+                )}
+                {teamsV2Enabled && ticket.assigned_team_id && (() => {
+                  const assignedTeam = teams.find(t => t.team_id === ticket.assigned_team_id);
+                  return assignedTeam ? (
+                    <Tooltip content={assignedTeam.team_name}>
+                      <Badge variant="info" size="sm" className="gap-1 cursor-help">
+                        <TeamAvatar
+                          teamId={assignedTeam.team_id}
+                          teamName={assignedTeam.team_name}
+                          avatarUrl={teamAvatarUrl}
+                          size="xs"
+                        />
+                      </Badge>
+                    </Tooltip>
+                  ) : null;
+                })()}
+                {(additionalAgents?.length ?? 0) > 0 && (
+                  <Tooltip content={
+                    <div className="text-xs space-y-1.5">
+                      <div className="font-medium text-gray-300 mb-1">Additional Agents:</div>
+                      {additionalAgents!.map((agent, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <UserAvatar
+                            userId={agent.user_id}
+                            userName={agent.name}
+                            avatarUrl={additionalAgentAvatarUrls[agent.user_id] ?? null}
+                            size="xs"
+                          />
+                          <span>{agent.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  }>
+                    <Badge variant="info" size="sm" className="cursor-help">
+                      +{additionalAgents!.length}
+                    </Badge>
+                  </Tooltip>
+                )}
+              </div>
             </div>
 
             {/* Row 2: Board + Category */}
@@ -942,13 +1146,15 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             </div>
 
             {/* Row 4: Response State + Due Date (future SLA area) */}
-            <div>
-              <ResponseStateDisplay
-                value={((pendingChanges.response_state ?? originalTicketValues.response_state) || null) as TicketResponseState}
-                onValueChange={(value) => handlePendingChange('response_state', value)}
-                editable={true}
-              />
-            </div>
+            {responseStateTrackingEnabled && (
+              <div>
+                <ResponseStateDisplay
+                  value={((pendingChanges.response_state ?? originalTicketValues.response_state) || null) as TicketResponseState}
+                  onValueChange={(value) => handlePendingChange('response_state', value)}
+                  editable={true}
+                />
+              </div>
+            )}
             <div>
               <h5 className="font-bold mb-2">Due Date</h5>
               {(() => {
@@ -958,8 +1164,15 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 const existingTime = effectiveDueDate ? format(effectiveDueDate, 'HH:mm') : undefined;
                 const isMidnight = existingTime === '00:00';
 
+                // Check if due date is SLA-driven (matches sla_resolution_due_at within 60s)
+                const isSlaDriven = effectiveDueDate && ticket.sla_resolution_due_at &&
+                  Math.abs(effectiveDueDate.getTime() - new Date(ticket.sla_resolution_due_at).getTime()) < 60000;
+                const isDueDatePaused = isSlaDriven && slaStatus?.isPaused;
+
                 let containerClass = '';
-                if (effectiveDueDate) {
+                if (isDueDatePaused) {
+                  containerClass = '[&_button]:border-gray-300 [&_button]:text-gray-400 dark:[&_button]:text-gray-500 [&_button]:bg-gray-500/5';
+                } else if (effectiveDueDate) {
                   const now = new Date();
                   const hoursUntilDue = (effectiveDueDate.getTime() - now.getTime()) / (1000 * 60 * 60);
                   if (hoursUntilDue < 0) {
@@ -1026,6 +1239,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                           ✕
                         </Button>
                       )}
+                      {isDueDatePaused && (
+                        <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 dark:text-gray-400 px-2 py-1 rounded-full">
+                          <PauseCircle className="w-3 h-3" />
+                          Paused
+                        </span>
+                      )}
                     </div>
                     {effectiveDueDate && isMidnight && (
                       <p className="text-xs text-gray-500 mt-1">No time set - defaults to 12:00 AM</p>
@@ -1035,7 +1254,34 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               })()}
             </div>
 
-            {/* Row 5: Tags */}
+            {/* Row 5: SLA Status */}
+            {slaStatus && (
+              <div className="col-span-2">
+                <h5 className="font-bold mb-2">SLA Status</h5>
+                <div className="flex items-center gap-3">
+                  <SlaStatusBadge
+                    status={slaStatus.status}
+                    responseRemainingMinutes={slaStatus.responseRemainingMinutes}
+                    resolutionRemainingMinutes={slaStatus.resolutionRemainingMinutes}
+                    isPaused={slaStatus.isPaused}
+                    size="md"
+                    showIcon={true}
+                  />
+                  {ticket.sla_response_met === false && (
+                    <span className="text-xs text-[rgb(var(--badge-error-text))] bg-[rgb(var(--badge-error-bg))] border border-[rgb(var(--badge-error-border))] px-2 py-1 rounded-full">
+                      Response SLA breached
+                    </span>
+                  )}
+                  {ticket.sla_resolution_met === false && (
+                    <span className="text-xs text-[rgb(var(--badge-error-text))] bg-[rgb(var(--badge-error-bg))] border border-[rgb(var(--badge-error-border))] px-2 py-1 rounded-full">
+                      Resolution SLA breached
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Row 6: Tags */}
             <div className="col-span-2">
               <h5 className="font-bold mb-2">Tags</h5>
               {onTagsChange && ticket.ticket_id ? (

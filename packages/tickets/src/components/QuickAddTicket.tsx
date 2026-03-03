@@ -22,6 +22,7 @@ import { CategoryPicker } from './CategoryPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { toast } from 'react-hot-toast';
@@ -36,6 +37,10 @@ import type { PendingTag } from '@alga-psa/types';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
 import { createTagsForEntity } from '@alga-psa/tags/actions';
+import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { assignTeamToTicket } from '@alga-psa/tickets/actions';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import type { ITeam } from '@alga-psa/types';
 import { useRouter } from 'next/navigation';
 
 /** Renders a <form> normally, or a plain <div> when embedded to avoid nested form tags. */
@@ -168,6 +173,7 @@ export function QuickAddTicket({
   renderBeforeFooter
 }: QuickAddTicketProps) {
   const router = useRouter();
+  const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -175,6 +181,8 @@ export function QuickAddTicket({
   const [title, setTitle] = useState(prefilledTitle || '');
   const [description, setDescription] = useState(prefilledDescription || '');
   const [assignedTo, setAssignedTo] = useState(prefilledAssignedTo || '');
+  const [assignedTeamId, setAssignedTeamId] = useState<string | null>(null);
+  const [teams, setTeams] = useState<ITeam[]>([]);
   const [boardId, setBoardId] = useState('');
   const [statusId, setStatusId] = useState('');
   const [priorityId, setPriorityId] = useState('');
@@ -291,9 +299,14 @@ export function QuickAddTicket({
         if (defaultBoard?.board_id) {
           setBoardId(defaultBoard.board_id);
 
-          // If no prefilled assignee was provided, prefer board-level default assignee.
-          if (!prefilledAssignedTo && defaultBoard.default_assigned_to) {
-            setAssignedTo(defaultBoard.default_assigned_to);
+          // If no prefilled assignee was provided, prefer board-level defaults.
+          if (!prefilledAssignedTo) {
+            if (defaultBoard.default_assigned_team_id) {
+              setAssignedTeamId(defaultBoard.default_assigned_team_id);
+            }
+            if (defaultBoard.default_assigned_to) {
+              setAssignedTo(defaultBoard.default_assigned_to);
+            }
           }
         }
 
@@ -349,6 +362,22 @@ export function QuickAddTicket({
 
     fetchData();
   }, [open, prefilledClient?.id]);
+
+  useEffect(() => {
+    if (!open || !teamsV2Enabled) {
+      setTeams([]);
+      return;
+    }
+    const fetchTeamsData = async () => {
+      try {
+        const fetchedTeams = await getTeams();
+        setTeams(fetchedTeams);
+      } catch (err) {
+        console.error('Error fetching teams:', err);
+      }
+    };
+    fetchTeamsData();
+  }, [open, teamsV2Enabled]);
 
   useEffect(() => {
     const fetchClientData = async () => {
@@ -483,11 +512,22 @@ export function QuickAddTicket({
 
     const selectedBoard = boards.find(b => b.board_id === newBoardId);
 
-    // Pre-fill assigned agent from board's default if current assignedTo is empty
+    // Pre-fill assigned agent and team from board's defaults if not already set
     if (!assignedTo && newBoardId) {
-      if (selectedBoard?.default_assigned_to) {
+      if (selectedBoard?.default_assigned_team_id) {
+        // Resolve current team lead dynamically
+        const defaultTeam = teams.find(t => t.team_id === selectedBoard.default_assigned_team_id);
+        if (defaultTeam?.manager_id) {
+          setAssignedTo(defaultTeam.manager_id);
+        } else if (selectedBoard.default_assigned_to) {
+          setAssignedTo(selectedBoard.default_assigned_to);
+        }
+      } else if (selectedBoard?.default_assigned_to) {
         setAssignedTo(selectedBoard.default_assigned_to);
       }
+    }
+    if (!assignedTeamId && selectedBoard?.default_assigned_team_id) {
+      setAssignedTeamId(selectedBoard.default_assigned_team_id);
     }
 
     const priorityType = selectedBoard?.priority_type || 'custom';
@@ -509,6 +549,7 @@ export function QuickAddTicket({
     setTitle(prefilledTitle || '');
     setDescription(prefilledDescription || '');
     setAssignedTo(prefilledAssignedTo || '');
+    setAssignedTeamId(null);
     setBoardId('');
     setStatusId('');
     setPriorityId('');
@@ -653,6 +694,16 @@ export function QuickAddTicket({
       const newTicket = await addTicket(formData);
       if (!newTicket) {
         throw new Error('Failed to create ticket');
+      }
+
+      // Assign team if selected
+      if (assignedTeamId && newTicket.ticket_id) {
+        try {
+          await assignTeamToTicket(newTicket.ticket_id, assignedTeamId);
+        } catch (teamError) {
+          console.error('Failed to assign team:', teamError);
+          toast.error('Ticket created but team assignment failed');
+        }
       }
 
       // Add additional agents as ticket resources
@@ -847,21 +898,50 @@ export function QuickAddTicket({
                       showPlaceholderInDropdown={false}
                     />
                   )}
-                  <UserPicker
-                    value={assignedTo}
-                    onValueChange={(value) => {
-                      setAssignedTo(value);
-                      clearErrorIfSubmitted();
-                    }}
-                    users={users.map(user => ({
-                      ...user,
-                      roles: []
-                    }))}
-                    getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                    buttonWidth="full"
-                    size="sm"
-                    placeholder="Assign To"
-                  />
+                  {teamsV2Enabled ? (
+                    <UserAndTeamPicker
+                      value={assignedTo}
+                      onValueChange={(value) => {
+                        setAssignedTo(value);
+                        setAssignedTeamId(null);
+                        clearErrorIfSubmitted();
+                      }}
+                      onTeamSelect={(teamId) => {
+                        const team = teams.find(t => t.team_id === teamId);
+                        if (team?.manager_id) {
+                          setAssignedTo(team.manager_id);
+                        }
+                        setAssignedTeamId(teamId);
+                        clearErrorIfSubmitted();
+                      }}
+                      users={users.map(user => ({
+                        ...user,
+                        roles: []
+                      }))}
+                      teams={teams}
+                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                      getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                      buttonWidth="full"
+                      size="sm"
+                      placeholder="Assign To"
+                    />
+                  ) : (
+                    <UserPicker
+                      value={assignedTo}
+                      onValueChange={(value) => {
+                        setAssignedTo(value);
+                        clearErrorIfSubmitted();
+                      }}
+                      users={users.map(user => ({
+                        ...user,
+                        roles: []
+                      }))}
+                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                      buttonWidth="full"
+                      size="sm"
+                      placeholder="Assign To"
+                    />
+                  )}
 
                   <div className={hasAttemptedSubmit && !boardId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
                     <BoardPicker

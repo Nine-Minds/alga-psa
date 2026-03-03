@@ -3,6 +3,7 @@ export interface TenantEntity {
 }
 
 export * from './accountingExport.interfaces';
+export * from './accountingExportAdapter.interfaces';
 export * from './activity.interfaces';
 export * from './asset.interfaces';
 export type {
@@ -11,6 +12,7 @@ export type {
   IPermission,
   IUserWithRoles,
   ITeam,
+  ITeamMember,
   IRoleWithPermissions,
   IPolicy,
   ICondition,
@@ -68,3 +70,6 @@ export * from './emailProvider.interface';
 
 // Selectively export portal user types without re-exporting IUser/IRole/etc. (which would collide with auth.interfaces).
 export type { CreatePortalUserInput, CreatePortalUserResult, PortalRoleOptions, PortalUserWithContext } from './user.interfaces';
+
+// SLA backend interface types (used by both @alga-psa/sla and @alga-psa/ee-stubs)
+export * from './sla.interfaces';

@@ -15,7 +15,7 @@ import { Checkbox } from "@alga-psa/ui/components/Checkbox";
 import { Label } from "@alga-psa/ui/components/Label";
 import { Input } from "@alga-psa/ui/components/Input";
 import { StringDateRangePicker } from "@alga-psa/ui/components/DateRangePicker";
-import { ActivityFilters, ActivityPriority } from "@alga-psa/types";
+import { ActivityFilters, IPriority } from "@alga-psa/types";
 import { IStatus } from "@alga-psa/types";
 import { IClient } from "@alga-psa/types";
 import { IContact } from "@alga-psa/types";
@@ -33,6 +33,7 @@ interface TicketSectionFiltersDialogProps {
   clients: IClient[];
   contacts: IContact[];
   statuses: IStatus[];
+  priorities: IPriority[];
 }
 
 export function TicketSectionFiltersDialog({
@@ -43,6 +44,7 @@ export function TicketSectionFiltersDialog({
   clients = [],
   contacts = [],
   statuses = [],
+  priorities = [],
 }: TicketSectionFiltersDialogProps) {
   // Local state excluding status, which is handled separately
   const [localFilters, setLocalFilters] = useState<Omit<Partial<ActivityFilters>, 'status'>>(() => {
@@ -57,36 +59,13 @@ export function TicketSectionFiltersDialog({
 
   // Sync local state when initial filters change from parent
   useEffect(() => {
-    const { status, ...rest } = initialFilters;
+    const { status, priorityIds, ...rest } = initialFilters;
     setLocalFilters(rest);
     setSelectedStatus(status?.[0] || 'all');
+    setSelectedPriorityId(priorityIds?.[0] || 'all');
   }, [initialFilters]);
 
-  const toggleArrayFilter = <K extends keyof ActivityFilters>(
-    key: K,
-    value: string,
-  ) => {
-    // Ensure we only toggle array types like 'priority' here
-    if (key === 'priority') {
-        setLocalFilters((prev) => {
-            const currentValues = (prev[key] as string[] | undefined) || [];
-            const newValues = [...currentValues];
-            const index = newValues.indexOf(value);
-
-            if (index >= 0) {
-                newValues.splice(index, 1);
-            } else {
-                newValues.push(value);
-            }
-            return { ...prev, [key]: newValues };
-        });
-    }
-  };
-
-  const isPrioritySelected = (value: ActivityPriority): boolean => {
-    const currentValues = localFilters.priority || [];
-    return currentValues.includes(value);
-  };
+  const [selectedPriorityId, setSelectedPriorityId] = useState<string>(initialFilters.priorityIds?.[0] || 'all');
 
   const handleSingleFilterChange = <K extends keyof Omit<ActivityFilters, 'status' | 'priority'>>( // Exclude array types
     key: K,
@@ -117,34 +96,34 @@ export function TicketSectionFiltersDialog({
   };
 
   const handleApply = () => {
-    // Construct the final filters object, converting single status back to array
+    // Construct the final filters object, converting single selects back to arrays
     const filtersToApply: Partial<ActivityFilters> = {
         ...localFilters,
         status: selectedStatus && selectedStatus !== 'all' ? [selectedStatus] : undefined,
+        priorityIds: selectedPriorityId && selectedPriorityId !== 'all' ? [selectedPriorityId] : undefined,
     };
 
-    if (filtersToApply.priority?.length === 0) delete filtersToApply.priority;
     if (!filtersToApply.clientId) delete filtersToApply.clientId;
     if (!filtersToApply.contactId) delete filtersToApply.contactId;
-    if (!filtersToApply.status) delete filtersToApply.status; // Remove if undefined/empty array
+    if (!filtersToApply.status) delete filtersToApply.status;
+    if (!filtersToApply.priorityIds) delete filtersToApply.priorityIds;
 
     onApplyFilters(filtersToApply);
     onOpenChange(false);
   };
 
   const handleClear = () => {
-    const clearedFilters: Omit<Partial<ActivityFilters>, 'status'> = {
-      priority: [],
+    const clearedFilters: Omit<Partial<ActivityFilters>, 'status' | 'priorityIds'> = {
       isClosed: undefined,
       dueDateStart: undefined,
       dueDateEnd: undefined,
       clientId: undefined,
       contactId: undefined,
-      // ticketNumber: undefined,
       search: undefined,
     };
     setLocalFilters(clearedFilters);
     setSelectedStatus('all');
+    setSelectedPriorityId('all');
   };
 
 
@@ -214,26 +193,34 @@ export function TicketSectionFiltersDialog({
                 placeholder="Select Status..."
               />
             </div>
-          </div>
-
-          {/* Priority Filters */}
-          <div>
-            <Label className="text-base font-semibold">Priority</Label>
-            <div className="flex items-center space-x-4 pt-1">
-              {[
-                { value: ActivityPriority.LOW, label: 'Low' },
-                { value: ActivityPriority.MEDIUM, label: 'Medium' },
-                { value: ActivityPriority.HIGH, label: 'High' }
-              ].map((option) => (
-                 <Checkbox
-                    key={option.value}
-                    id={`priority-${option.value}`}
-                    label={option.label}
-                    checked={isPrioritySelected(option.value)}
-                    onChange={() => toggleArrayFilter('priority', option.value)}
-                  />
-              ))}
-            </div>
+            {/* Priority Filter */}
+            {priorities.length > 0 && (
+              <div className="space-y-1">
+                <Label htmlFor="ticket-priority-select" className="text-base font-semibold">Priority</Label>
+                <CustomSelect
+                  id="ticket-priority-select"
+                  value={selectedPriorityId}
+                  onValueChange={(value) => setSelectedPriorityId(value)}
+                  options={[
+                    { value: 'all', label: 'All Priorities' },
+                    ...priorities.map(p => ({
+                      value: p.priority_id,
+                      label: (
+                        <span className="flex items-center gap-2">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: p.color || '#94a3b8' }}
+                          />
+                          {p.priority_name}
+                        </span>
+                      ),
+                      textValue: p.priority_name,
+                    }))
+                  ]}
+                  placeholder="Select Priority..."
+                />
+              </div>
+            )}
           </div>
 
           {/* Due Date Range */}

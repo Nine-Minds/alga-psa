@@ -1,0 +1,403 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: HTML parser extracts data:image base64 payloads from single <img> tag",
+    "implemented": true,
+    "featureIds": [
+      "F181",
+      "F182"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: HTML parser extracts multiple data:image payloads and preserves deterministic ordering",
+    "implemented": true,
+    "featureIds": [
+      "F182",
+      "F186"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: malformed data:image payload is skipped and does not throw processing-failing error",
+    "implemented": true,
+    "featureIds": [
+      "F183",
+      "F200"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: non-image data URLs are rejected by embedded extraction rules",
+    "implemented": true,
+    "featureIds": [
+      "F183",
+      "F204"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: oversized embedded image payload is skipped by existing max-size policy",
+    "implemented": true,
+    "featureIds": [
+      "F183",
+      "F204"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: cid references in HTML map only to matching inline MIME parts",
+    "implemented": true,
+    "featureIds": [
+      "F184"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: unreferenced inline CID MIME parts are skipped",
+    "implemented": true,
+    "featureIds": [
+      "F185"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Unit: deterministic synthetic embedded attachment ID generation is stable across retries",
+    "implemented": true,
+    "featureIds": [
+      "F186",
+      "F191"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Unit: deterministic embedded filename generation produces sanitized, extension-appropriate names",
+    "implemented": true,
+    "featureIds": [
+      "F186",
+      "F204"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "In-app integration: new-ticket inbound path invokes embedded-image processing for extracted images",
+    "implemented": true,
+    "featureIds": [
+      "F187",
+      "F189"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "In-app integration: reply path invokes embedded-image processing for extracted images",
+    "implemented": true,
+    "featureIds": [
+      "F188",
+      "F189"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "DB integration happy-path: embedded image processing creates external_files row with expected mime and size",
+    "implemented": true,
+    "featureIds": [
+      "F189",
+      "F190",
+      "F202"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "DB integration happy-path: embedded image processing creates documents row with expected metadata",
+    "implemented": true,
+    "featureIds": [
+      "F190",
+      "F202"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "DB integration happy-path: embedded image processing creates ticket document_associations row",
+    "implemented": true,
+    "featureIds": [
+      "F190"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "DB integration guard: duplicate embedded-image processing does not create duplicate file/document/association rows",
+    "implemented": true,
+    "featureIds": [
+      "F191"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "DB integration guard: embedded-image failure is recorded and ticket/comment flow remains successful",
+    "implemented": true,
+    "featureIds": [
+      "F200",
+      "F191"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Unit: Gmail source-message method returns raw MIME bytes for valid message id",
+    "implemented": true,
+    "featureIds": [
+      "F193"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Unit: Microsoft source-message method returns raw MIME bytes for valid message id",
+    "implemented": true,
+    "featureIds": [
+      "F194"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Unit: MailHog source-message path returns MIME bytes when raw source is available",
+    "implemented": true,
+    "featureIds": [
+      "F195"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Unit: MailHog source-message fallback generates deterministic RFC822 payload when raw source is absent",
+    "implemented": true,
+    "featureIds": [
+      "F195"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Action integration happy-path: process_original_email_attachment uploads .eml and creates external_files/documents rows",
+    "implemented": true,
+    "featureIds": [
+      "F192",
+      "F196",
+      "F202"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Action integration happy-path: process_original_email_attachment associates .eml document to ticket",
+    "implemented": true,
+    "featureIds": [
+      "F196"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Action integration guard: duplicate process_original_email_attachment invocation is idempotent",
+    "implemented": true,
+    "featureIds": [
+      "F197"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Action integration guard: provider source-message retrieval failure records failed status without duplicate artifacts",
+    "implemented": true,
+    "featureIds": [
+      "F197",
+      "F201"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "In-app integration: new-ticket path persists original .eml exactly once per email",
+    "implemented": true,
+    "featureIds": [
+      "F198"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "In-app integration: reply path persists original .eml exactly once per email",
+    "implemented": true,
+    "featureIds": [
+      "F199"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "In-app integration guard: .eml persistence failure does not block ticket creation in new-ticket flow",
+    "implemented": true,
+    "featureIds": [
+      "F201"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "In-app integration guard: .eml persistence failure does not block comment creation in reply flow",
+    "implemented": true,
+    "featureIds": [
+      "F201"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Schema contract test: inbound email payload schema accepts isInline/content fields needed by inline-image processing",
+    "implemented": true,
+    "featureIds": [
+      "F203"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Schema contract test: inbound payload schema changes remain backward compatible with existing provider payloads",
+    "implemented": true,
+    "featureIds": [
+      "F203"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "E2E: inbound email with HTML data:image results in image document visible in Ticket Documents",
+    "implemented": true,
+    "featureIds": [
+      "F187",
+      "F190",
+      "F205"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "E2E: inbound email with CID-referenced inline image results in image document visible in Ticket Documents",
+    "implemented": true,
+    "featureIds": [
+      "F188",
+      "F190",
+      "F205"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "E2E: inbound email creates .eml document visible in Ticket Documents for both new and reply paths",
+    "implemented": true,
+    "featureIds": [
+      "F196",
+      "F198",
+      "F199",
+      "F205"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "E2E guard: duplicate inbound deliveries/retries do not duplicate embedded image or .eml documents",
+    "implemented": true,
+    "featureIds": [
+      "F191",
+      "F197",
+      "F205"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Integration: IMAP webhook route returns success quickly after auth/validation and lightweight in-app dispatch (direct or app-local in-process worker) without performing byte persistence inline",
+    "implemented": true,
+    "featureIds": [
+      "F206"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Integration guard: IMAP webhook request with invalid/missing secret is rejected before any in-app dispatch work",
+    "implemented": true,
+    "featureIds": [
+      "F206"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Integration: per-attachment cap enforcement skips oversized attachment payloads at IMAP ingress with structured skip reason",
+    "implemented": true,
+    "featureIds": [
+      "F207",
+      "F213"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Integration: total attachment byte cap enforcement truncates/skips excess artifacts while keeping message processing active",
+    "implemented": true,
+    "featureIds": [
+      "F207",
+      "F213"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Integration: attachment-count cap enforcement limits processed artifacts per message and records deterministic skip reasons",
+    "implemented": true,
+    "featureIds": [
+      "F207",
+      "F213"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Integration: raw MIME cap enforcement skips .eml persistence when raw source exceeds limit without failing ticket/comment flow",
+    "implemented": true,
+    "featureIds": [
+      "F207",
+      "F211",
+      "F213"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Schema contract: IMAP webhook payload includes rawMimeBase64 and attachment content/isInline/contentId/id/name/contentType/size fields",
+    "implemented": true,
+    "featureIds": [
+      "F208"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "E2E: IMAP inbound with regular attachment bytes in payload creates storage-backed ticket document",
+    "implemented": true,
+    "featureIds": [
+      "F208",
+      "F209"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "E2E: IMAP inbound with referenced CID and data:image payload creates image documents only for referenced embedded images",
+    "implemented": true,
+    "featureIds": [
+      "F208",
+      "F210"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "E2E: IMAP inbound with rawMimeBase64 persists one deterministic original-email-*.eml document on ticket",
+    "implemented": true,
+    "featureIds": [
+      "F208",
+      "F211"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "Integration: async per-message artifact handling runs sequentially (or configured bounded concurrency) and does not fan out unbounded attachment work",
+    "implemented": true,
+    "featureIds": [
+      "F212"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "E2E guard: over-limit artifacts are skipped with recorded reasons while ticket/comment creation still succeeds",
+    "implemented": true,
+    "featureIds": [
+      "F213"
+    ]
+  }
+]

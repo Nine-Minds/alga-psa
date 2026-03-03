@@ -596,6 +596,25 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   }
 
   /**
+   * Download full RFC822 source bytes for a message.
+   */
+  async downloadMessageSource(messageId: string): Promise<Buffer> {
+    try {
+      const mailboxBase = this.getMailboxBasePath();
+      const response = await this.httpClient.get(`${mailboxBase}/messages/${messageId}/$value`, {
+        responseType: 'arraybuffer',
+        headers: {
+          Accept: 'message/rfc822',
+        },
+      });
+
+      return Buffer.from(response.data);
+    } catch (error) {
+      throw this.handleError(error, 'downloadMessageSource');
+    }
+  }
+
+  /**
    * Test the connection to Microsoft Graph
    */
   async testConnection(): Promise<{ success: boolean; error?: string }> {

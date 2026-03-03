@@ -3,6 +3,7 @@
  */
 
 export { DocumentEditor } from './DocumentEditor';
+export { CollaborativeEditor } from './CollaborativeEditor';
 
 export { default as DocumentCard } from './DocumentCard';
 export { default as DocumentDownload } from './DocumentDownload';

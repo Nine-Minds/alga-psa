@@ -364,7 +364,15 @@ def "main cleanup" [
 
         # Appointment
         "appointment_requests"
-        
+
+        # SLA leaf tables (must be before tickets, statuses, priorities, boards)
+        "sla_notifications_sent" "sla_audit_log"
+        "sla_notification_thresholds" "sla_policy_targets"
+        "status_sla_pause_config"
+        "business_hours_entries" "holidays"
+        "escalation_managers"
+        "sla_settings"
+
         # === LEVEL 2: Tables that depend on level 3+ ===
         # Payment/Stripe
         "stripe_webhook_events" "stripe_subscriptions" "stripe_prices" "stripe_products"
@@ -485,7 +493,12 @@ def "main cleanup" [
         "clients"  # Delete clients FIRST (after NULLing account_manager references)
         "contacts"   # Delete contacts SECOND (after clients, before users that have NOT NULL contact_id)
         "users"      # Delete users LAST (they have NOT NULL contact_id → contacts)
-        
+
+        # SLA policies (referenced by clients.sla_policy_id and boards.sla_policy_id - must come after both)
+        "sla_policies"
+        # Business hours (referenced by sla_policies.business_hours_schedule_id - must come after sla_policies)
+        "business_hours_schedules"
+
         # === LEVEL 7: Configuration and settings ===
         # API and auth
         "mobile_auth_otts" "mobile_refresh_tokens"

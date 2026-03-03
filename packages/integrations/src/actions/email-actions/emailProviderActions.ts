@@ -26,6 +26,39 @@ function throwPermissionError(action: string): never {
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import type { Microsoft365DiagnosticsReport } from '@alga-psa/shared/interfaces/microsoft365-diagnostics.interfaces';
 
+function applyOauthMechanismOverride(client: ImapFlow, mechanism: 'XOAUTH2' | 'OAUTHBEARER'): void {
+  if (mechanism !== 'XOAUTH2') return;
+
+  const anyClient = client as any;
+  const commands: Map<string, any> | undefined = anyClient.commands;
+  if (!commands?.get) return;
+
+  const originalAuthenticate = commands.get('AUTHENTICATE');
+  if (typeof originalAuthenticate !== 'function') return;
+
+  const patchedCommands = new Map(commands);
+  patchedCommands.set('AUTHENTICATE', async (connection: any, username: string, authOpts: any) => {
+    if (authOpts?.accessToken) {
+      const caps = connection?.capabilities;
+      const hadOauthBearer = Boolean(caps?.has?.('AUTH=OAUTHBEARER'));
+      const hasXoauth = Boolean(caps?.has?.('AUTH=XOAUTH') || caps?.has?.('AUTH=XOAUTH2'));
+
+      if (hadOauthBearer && hasXoauth && caps?.delete && caps?.set) {
+        caps.delete('AUTH=OAUTHBEARER');
+        try {
+          return await originalAuthenticate(connection, username, authOpts);
+        } finally {
+          caps.set('AUTH=OAUTHBEARER', true);
+        }
+      }
+    }
+
+    return await originalAuthenticate(connection, username, authOpts);
+  });
+
+  anyClient.commands = patchedCommands;
+}
+
 export interface EmailProviderSetupResult {
   provider: EmailProvider;
   setupError?: string;
@@ -1013,9 +1046,12 @@ export const testEmailProviderConnection = withAuth(async (
         }
       }
 
+      const oauthMechanism = process.env.IMAP_OAUTH_AUTH_MECHANISM === 'OAUTHBEARER' ? 'OAUTHBEARER' : 'XOAUTH2';
+
       const auth: any = { user: config.username };
       if (config.auth_type === 'oauth2') {
         auth.accessToken = accessToken;
+        auth.method = oauthMechanism;
       } else {
         const passwordSecret = await secretProvider.getTenantSecret(tenant, `imap_password_${providerId}` as string);
         const password = passwordSecret || undefined;
@@ -1036,6 +1072,8 @@ export const testEmailProviderConnection = withAuth(async (
         disableAutoIdle: true,
         logger: false,
       });
+
+      applyOauthMechanismOverride(client, oauthMechanism);
 
       await client.connect();
       await client.logout();

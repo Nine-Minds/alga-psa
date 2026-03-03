@@ -8,6 +8,7 @@ import { Input } from "@alga-psa/ui/components/Input";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
 import { createWorkflowFromTemplate } from "@alga-psa/workflows/actions";
 import { toast } from "react-hot-toast";
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useRouter } from "next/navigation";
 import { Code2 } from "lucide-react";
 import Editor from "@monaco-editor/react";
@@ -56,8 +57,7 @@ export default function TemplatePreview({ isOpen, onClose, template, mode }: Tem
       onClose();
       router.push(`/msp/workflow-editor/${workflowId}`);
     } catch (error) {
-      console.error("Error creating workflow from template:", error);
-      toast.error("Failed to create workflow from template");
+      handleError(error, "Failed to create workflow from template");
     } finally {
       setIsCreating(false);
     }

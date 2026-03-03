@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import TicketingDashboard from './TicketingDashboard';
 import { fetchTicketsWithPagination } from '../actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { ITicketListItem, ITicketCategory, ITicketListFilters, ITag } from '@alga-psa/types';
 import { IClient } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
@@ -57,7 +57,6 @@ export default function TicketingDashboardContainer({
   const [pageSize, setPageSize] = useState(initialPageSize);
   const [sortBy, setSortBy] = useState<string>(defaultSortBy);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(defaultSortDirection);
-  const router = useRouter();
 
   const [activeFilters, setActiveFilters] = useState<Partial<ITicketListFilters>>(() => {
     return {
@@ -71,6 +70,7 @@ export default function TicketingDashboardContainer({
       categoryId: undefined,
       clientId: undefined,
       assignedToIds: undefined,
+      assignedTeamIds: undefined,
       includeUnassigned: false,
       dueDateFilter: undefined,
       sortBy: defaultSortBy,
@@ -130,6 +130,9 @@ export default function TicketingDashboardContainer({
     if (filters.assignedToIds && Array.isArray(filters.assignedToIds) && filters.assignedToIds.length > 0) {
       params.set('assignedToIds', filters.assignedToIds.join(','));
     }
+    if (filters.assignedTeamIds && Array.isArray(filters.assignedTeamIds) && filters.assignedTeamIds.length > 0) {
+      params.set('assignedTeamIds', filters.assignedTeamIds.join(','));
+    }
     if (filters.includeUnassigned) {
       params.set('includeUnassigned', 'true');
     }
@@ -145,14 +148,17 @@ export default function TicketingDashboardContainer({
     if (filters.responseState && filters.responseState !== 'all') {
       params.set('responseState', filters.responseState);
     }
+    if (filters.slaStatusFilter && filters.slaStatusFilter !== 'all') {
+      params.set('slaStatusFilter', filters.slaStatusFilter);
+    }
     if (filters.bundleView && filters.bundleView !== 'bundled') {
       params.set('bundleView', filters.bundleView);
     }
 
-    // Update URL without causing a page refresh
+    // Update URL without triggering a server-side re-render
     const newURL = params.toString() ? `/msp/tickets?${params.toString()}` : '/msp/tickets';
-    router.replace(newURL, { scroll: false });
-  }, [router]);
+    window.history.replaceState(null, '', newURL);
+  }, []);
 
   const fetchTickets = useCallback(async (
     filters: Partial<ITicketListFilters>,
@@ -182,11 +188,13 @@ export default function TicketingDashboardContainer({
         showOpenOnly: (filters.statusId === 'open') || (filters.showOpenOnly === true),
         tags: filters.tags && filters.tags.length > 0 ? Array.from(new Set(filters.tags)) : undefined,
         assignedToIds: filters.assignedToIds && filters.assignedToIds.length > 0 ? filters.assignedToIds : undefined,
+        assignedTeamIds: filters.assignedTeamIds && filters.assignedTeamIds.length > 0 ? filters.assignedTeamIds : undefined,
         includeUnassigned: filters.includeUnassigned || undefined,
         dueDateFilter: filters.dueDateFilter || undefined,
         dueDateFrom: filters.dueDateFrom || undefined,
         dueDateTo: filters.dueDateTo || undefined,
         responseState: filters.responseState || undefined,
+        slaStatusFilter: filters.slaStatusFilter || undefined,
         sortBy: effectiveSortBy,
         sortDirection: effectiveSortDirection,
         bundleView: filters.bundleView || 'bundled'
@@ -207,8 +215,7 @@ export default function TicketingDashboardContainer({
       setSortDirection(effectiveSortDirection);
 
     } catch (error) {
-      console.error('[Container] Error fetching tickets:', error);
-      toast.error('Failed to fetch tickets');
+      handleError(error, 'Failed to fetch tickets');
       setTickets([]);
       setTotalCount(0);
     } finally {

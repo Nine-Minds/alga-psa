@@ -1,0 +1,104 @@
+import { describe, expect, it } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const conversationPath = path.resolve(__dirname, './TicketConversation.tsx');
+
+function getTicketConversationSource(): string {
+  return fs.readFileSync(conversationPath, 'utf-8');
+}
+
+describe('TicketConversation clipboard upload wiring', () => {
+  it('T003: starts upload flow from editor upload callback independent of submit action', () => {
+    const source = getTicketConversationSource();
+
+    expect(source).toContain('const handleSubmitComment = async () =>');
+    expect(source).toContain('const uploadClipboardImage = React.useCallback(');
+    expect(source).toContain('const handleClipboardImageUpload = React.useCallback(');
+    expect(source).toContain('const handleClipboardImageUploadForExistingComment = React.useCallback(');
+    expect(source).toContain('uploadFile={handleClipboardImageUpload}');
+    expect(source).toContain('uploadFile={handleClipboardImageUploadForExistingComment}');
+
+    const submitHandlerMatch = source.match(
+      /const handleSubmitComment = async \(\) => \{([\s\S]*?)\n\s*\};/
+    );
+    expect(submitHandlerMatch?.[1]).toBeTruthy();
+    expect(submitHandlerMatch?.[1]).not.toContain('uploadDocument(');
+  });
+
+  it('T004: uploads pasted image through ticket document pipeline with ticket scoping', () => {
+    const source = getTicketConversationSource();
+
+    expect(source).toContain('const formData = new FormData()');
+    expect(source).toContain("formData.append('file', renamedFile)");
+    expect(source).toContain('const uploadResult = await uploadDocument(formData, {');
+    expect(source).toContain('ticketId: ticket.ticket_id');
+  });
+
+  it('T006/T007: returns attachment-backed image payload on success and surfaces upload failures', () => {
+    const source = getTicketConversationSource();
+
+    expect(source).toContain('uploadFile={handleClipboardImageUpload}');
+    expect(source).toContain('const viewUrl = uploadedDocument.file_id');
+    expect(source).toContain("const reason = uploadResult.error || 'Clipboard image upload failed.'");
+    expect(source).toContain('toast.error(reason);');
+    expect(source).toContain('return viewUrl;');
+    expect(source).toContain('throw new Error(reason);');
+    expect(source).toContain("throw new Error(validation.error)");
+  });
+
+  it('T008/T009: preserves editor-managed retry/remove affordances by throwing upload errors', () => {
+    const source = getTicketConversationSource();
+
+    expect(source).toContain("throw new Error('Ticket ID is required for clipboard image upload.')");
+    expect(source).toContain("throw new Error('User session is required for clipboard image upload.')");
+    expect(source).toContain("throw new Error(validation.error)");
+    expect(source).toContain('throw new Error(reason);');
+  });
+
+  it('T010: persists attachment-backed image reference URLs rather than raw image data payloads', () => {
+    const source = getTicketConversationSource();
+
+    expect(source).toContain("const viewUrl = uploadedDocument.file_id");
+    expect(source).toContain('`/api/documents/view/${uploadedDocument.file_id}`');
+    expect(source).toContain('url: viewUrl');
+    expect(source).not.toContain('data:image');
+  });
+
+  it('T019: tracks uploaded clipboard draft images in compose state for cancel-flow actions', () => {
+    const source = getTicketConversationSource();
+
+    expect(source).toContain('const [draftClipboardImages, setDraftClipboardImages] = useState<');
+    expect(source).toContain('setDraftClipboardImages((previous) => {');
+    expect(source).toContain('documentId: uploadedDocument.document_id');
+    expect(source).toContain('fileId: uploadedDocument.file_id ||');
+  });
+
+  it('T020/T021: prompts keep-vs-delete on cancel and allows keep path without deletion', () => {
+    const source = getTicketConversationSource();
+
+    expect(source).toContain('if (draftClipboardImages.length > 0)');
+    expect(source).toContain('setShowDraftCancelDialog(true)');
+    expect(source).toContain('const handleKeepDraftClipboardImages = () => {');
+    expect(source).toContain('setDraftClipboardImages([])');
+    expect(source).toContain('setShowEditor(false)');
+    expect(source).toContain('<ConfirmationDialog');
+    expect(source).toContain('onCancel={handleKeepDraftClipboardImages}');
+  });
+
+  it('T029/T030: logs upload and cancel-delete outcomes with ticket/user/artifact context', () => {
+    const source = getTicketConversationSource();
+
+    expect(source).toContain("console.info('[TicketConversation] Clipboard image uploaded'");
+    expect(source).toContain('ticketId: ticket.ticket_id');
+    expect(source).toContain('userId: currentUser.id');
+    expect(source).toContain('documentId: uploadedDocument.document_id');
+    expect(source).toContain('fileId: uploadedDocument.file_id');
+
+    expect(source).toContain("console.info('[TicketConversation] Draft cancel action: keep uploaded clipboard images'");
+    expect(source).toContain("console.info('[TicketConversation] Draft cancel action: delete uploaded clipboard images'");
+    expect(source).toContain('requestedCount: draftClipboardImages.length');
+    expect(source).toContain('deletedCount');
+    expect(source).toContain('failedCount');
+  });
+});

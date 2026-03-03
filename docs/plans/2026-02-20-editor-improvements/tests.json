@@ -1,0 +1,726 @@
+[
+  {
+    "id": "T001",
+    "description": "Feature flag 'collaborative_editing' exists in DEFAULT_BOOLEAN_FLAGS and defaults to false",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ],
+    "testType": "integration",
+    "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
+    "vitestName": "should have collaborative_editing flag defaulting to false"
+  },
+  {
+    "id": "T002",
+    "description": "/msp/collab-test returns 'Feature not available' message when collaborative_editing flag is disabled",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/app/msp/collab-test/page.test.tsx",
+    "vitestName": "renders a feature unavailable message when collaborative editing is disabled"
+  },
+  {
+    "id": "T003",
+    "description": "/msp/collab-test renders the test page UI when collaborative_editing flag is enabled",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/app/msp/collab-test/page.test.tsx",
+    "vitestName": "renders the collab test client when collaborative editing is enabled"
+  },
+  {
+    "id": "T004",
+    "description": "CollaborativeEditor mounts and initializes TipTap with Collaboration and CollaborationCaret extensions without errors",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "initializes TipTap with collaboration extensions"
+  },
+  {
+    "id": "T005",
+    "description": "CollaborativeEditor creates HocuspocusProvider with correct room name format 'document:<tenant>:<documentId>'",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "constructs the collab room name as document:<tenant>:<documentId>"
+  },
+  {
+    "id": "T006",
+    "description": "CollaborativeEditor connects to Hocuspocus server successfully (connection status shows 'connected')",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F008"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "renders a connected status when the provider is connected"
+  },
+  {
+    "id": "T007",
+    "description": "EditorToolbar (BubbleMenu) appears when text is selected in CollaborativeEditor",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/EditorToolbar.test.tsx",
+    "vitestName": "renders the bubble menu toolbar container"
+  },
+  {
+    "id": "T008",
+    "description": "Bold, italic, underline, strikethrough, code formatting works in collaborative mode",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/EditorToolbar.test.tsx",
+    "vitestName": "wires inline formatting buttons to editor commands"
+  },
+  {
+    "id": "T009",
+    "description": "Heading 1, Heading 2, bullet list, ordered list, blockquote work in collaborative mode",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/EditorToolbar.test.tsx",
+    "vitestName": "wires block formatting buttons to editor commands"
+  },
+  {
+    "id": "T010",
+    "description": "Link insertion/editing works via toolbar in collaborative mode",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/EditorToolbar.test.tsx",
+    "vitestName": "wires the link button to setLink with prompt input"
+  },
+  {
+    "id": "T011",
+    "description": "Two users editing the same document see each other's cursor with name label and distinct color",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "sets awareness user state for collaboration cursors"
+  },
+  {
+    "id": "T012",
+    "description": "Cursor color assignment is deterministic per user (same user always gets same color)",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "assigns deterministic cursor colors per user"
+  },
+  {
+    "id": "T013",
+    "description": "Presence bar shows both users' names when two users are connected to the same document",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "shows connected users in the presence bar"
+  },
+  {
+    "id": "T014",
+    "description": "Presence bar updates when a user disconnects (name disappears)",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "updates presence bar when a user disconnects"
+  },
+  {
+    "id": "T015",
+    "description": "Connection status shows 'connected' (green) when WebSocket is open",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "renders a connected status when the provider is connected"
+  },
+  {
+    "id": "T016",
+    "description": "Connection status shows 'disconnected' (red) when WebSocket drops",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "renders a disconnected status when the provider disconnects"
+  },
+  {
+    "id": "T017",
+    "description": "Auto-save indicator shows 'All changes saved' after edits sync to Hocuspocus",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "shows all changes saved when there are no unsynced changes"
+  },
+  {
+    "id": "T018",
+    "description": "No manual 'Save' button exists in CollaborativeEditor",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "does not render a manual save button"
+  },
+  {
+    "id": "T019",
+    "description": "Pasting markdown text converts to rich text in collaborative editor",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/markdownPaste.test.ts",
+    "vitestName": "converts markdown plain text into HTML via marked"
+  },
+  {
+    "id": "T020",
+    "description": "Hocuspocus onConnect rejects connection when room name tenant does not match user tenant",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/hocuspocus/tenantValidation.test.ts",
+    "vitestName": "rejects room names with mismatched tenant"
+  },
+  {
+    "id": "T021",
+    "description": "Hocuspocus onConnect allows connection when room name tenant matches user tenant",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/hocuspocus/tenantValidation.test.ts",
+    "vitestName": "allows room names with matching tenant"
+  },
+  {
+    "id": "T022",
+    "description": "Hocuspocus onConnect allows notification rooms (notifications:*) to pass through without document validation",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/hocuspocus/tenantValidation.test.ts",
+    "vitestName": "bypasses validation for notification rooms"
+  },
+  {
+    "id": "T023",
+    "description": "Content typed in the editor persists across full page refresh (Hocuspocus DB persistence)",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ],
+    "testType": "integration",
+    "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
+    "vitestName": "should persist content across a disconnect/reconnect cycle",
+    "notes": "Requires RUN_HOCUSPOCUS_TESTS=true and Hocuspocus on ws://localhost:1234"
+  },
+  {
+    "id": "T024",
+    "description": "Changes made by user A appear in real-time for user B without page refresh",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ],
+    "testType": "integration",
+    "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
+    "vitestName": "should sync content between two providers connected to the same room",
+    "notes": "Requires RUN_HOCUSPOCUS_TESTS=true and Hocuspocus on ws://localhost:1234"
+  },
+  {
+    "id": "T025",
+    "description": "syncCollabSnapshot writes correct TipTap JSON to document_block_content.block_data for the given documentId",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/collaborativeEditingActions.test.ts",
+    "vitestName": "writes TipTap JSON snapshot to document_block_content"
+  },
+  {
+    "id": "T026",
+    "description": "syncCollabSnapshot returns error if documentId does not exist",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/collaborativeEditingActions.test.ts",
+    "vitestName": "returns a not found error when the document is missing"
+  },
+  {
+    "id": "T027",
+    "description": "'Create New Document' button on test page creates a document and navigates to ?doc=<newId>",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/app/msp/collab-test/CollabTestPageClient.test.tsx",
+    "vitestName": "creates a document and navigates to the new doc id"
+  },
+  {
+    "id": "T028",
+    "description": "Opening /msp/collab-test?doc=<existingId> loads the collaborative editor for that document",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/app/msp/collab-test/CollabTestPageClient.test.tsx",
+    "vitestName": "loads an existing document from the query string"
+  },
+  {
+    "id": "T029",
+    "description": "Opening /msp/collab-test?doc=<nonExistentId> shows an error message",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/app/msp/collab-test/CollabTestPageClient.test.tsx",
+    "vitestName": "shows an error when the document does not exist"
+  },
+  {
+    "id": "T030",
+    "description": "'Snapshot to DB' button calls syncCollabSnapshot and shows success toast",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/app/msp/collab-test/CollabTestPageClient.test.tsx",
+    "vitestName": "calls syncCollabSnapshot and shows success message"
+  },
+  {
+    "id": "T031",
+    "description": "Debug panel shows connection status, connected user count, and room name",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/app/msp/collab-test/CollabTestPageClient.test.tsx",
+    "vitestName": "shows debug panel values for room and connection status"
+  },
+  {
+    "id": "T032",
+    "description": "When Hocuspocus document is empty and document_block_content has existing content, the Y.js document is initialized from block_data",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "initializes the Y.js document from existing block content when empty"
+  },
+  {
+    "id": "T033",
+    "description": "When Hocuspocus document already has Y.js state, existing block_data is NOT used (Y.js state takes precedence)",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "does not reinitialize Y.js content when the fragment already has data"
+  },
+  {
+    "id": "T034",
+    "description": "CollaborativeEditor is exported from packages/documents/src/components/index.ts",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/componentsExports.test.ts",
+    "vitestName": "exports CollaborativeEditor"
+  },
+  {
+    "id": "T035",
+    "description": "Collaboration cursor labels use design system CSS variables (--color-*) and are readable in both light and dark themes",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/collaborativeEditorStyles.test.ts",
+    "vitestName": "uses design system color variables for cursor labels"
+  },
+  {
+    "id": "T036",
+    "description": "Two users from different tenants connecting to the same document ID are routed to different Hocuspocus rooms (tenant isolation)",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/CollaborativeEditor.extensions.test.tsx",
+    "vitestName": "uses distinct room names for the same document across tenants"
+  },
+  {
+    "id": "T037",
+    "description": "Concurrent formatting operations from two users do not corrupt the document (Y.js CRDT conflict resolution)",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F013"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/yjs/collaborationFormatting.test.ts",
+    "vitestName": "merges concurrent formatting updates without corrupting content"
+  },
+  {
+    "id": "T038",
+    "description": "Emoticon extension converts text emoticons to emoji in collaborative mode (e.g., ':) ' becomes emoji)",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/collaborativeEditorConfig.test.ts",
+    "vitestName": "includes the Emoticon extension"
+  },
+  {
+    "id": "T039",
+    "description": "Link auto-detection works in collaborative mode (typing a URL auto-links it)",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/documents/collaborativeEditorConfig.test.ts",
+    "vitestName": "configures Link with autolink and safe target attributes"
+  },
+  {
+    "id": "T040",
+    "description": "Two HocuspocusProviders connecting to the same room sync Y.js document content within 3 seconds",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F013"
+    ],
+    "testType": "integration",
+    "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
+    "vitestName": "should sync content between two providers connected to the same room",
+    "notes": "Requires Hocuspocus running on localhost:1234. Creates two HocuspocusProvider instances, writes via provider A, asserts content arrives at provider B."
+  },
+  {
+    "id": "T041",
+    "description": "Awareness state (user name, cursor color) broadcasts between two providers in the same room",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ],
+    "testType": "integration",
+    "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
+    "vitestName": "should broadcast awareness state between providers",
+    "notes": "Requires Hocuspocus running. Set awareness on provider A, verify provider B receives it via awareness.on('change')."
+  },
+  {
+    "id": "T042",
+    "description": "Hocuspocus onConnect rejects WebSocket connection when room tenant does not match connecting user's tenant",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ],
+    "testType": "integration",
+    "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
+    "vitestName": "should reject WebSocket connection with mismatched tenant",
+    "notes": "Requires Hocuspocus running with onConnect hook deployed. Connect a real HocuspocusProvider with wrong tenant in room name, verify onClose/onDisconnect fires."
+  },
+  {
+    "id": "T043",
+    "description": "Content written via HocuspocusProvider persists across full disconnect/reconnect cycle",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ],
+    "testType": "integration",
+    "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
+    "vitestName": "should persist content across a disconnect/reconnect cycle",
+    "notes": "Requires Hocuspocus running. Write content, destroy provider, create new provider to same room, verify content loads from Hocuspocus DB."
+  },
+  {
+    "id": "T044",
+    "description": "syncCollabSnapshot end-to-end: write content via provider, call syncCollabSnapshot, verify document_block_content updated",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ],
+    "testType": "integration",
+    "testFile": "server/src/test/integration/collaborativeEditing.integration.test.ts",
+    "vitestName": "should sync Y.js content to document_block_content via syncCollabSnapshot",
+    "notes": "Requires Hocuspocus running. Write via provider, call the actual server action, query DB to verify."
+  },
+  {
+    "id": "T045",
+    "description": "Playwright: two browser contexts editing same document see each other's changes in real-time",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F006",
+      "F007"
+    ],
+    "testType": "e2e",
+    "testFile": "server/src/test/e2e/collaborativeEditing.e2e.test.ts",
+    "vitestName": "two browser contexts see real-time changes and presence",
+    "notes": "Requires full app + Hocuspocus. Two browser contexts (different users), same doc URL. Type in context A, assert content in context B within 3s. Verify cursor labels and presence bar."
+  },
+  {
+    "id": "T046",
+    "description": "EmojiSuggestionExtension ProseMirror plugin detects ':query' with 2+ chars and sets active state with correct from/to positions",
+    "implemented": false,
+    "featureIds": ["F025"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/EmojiSuggestion.test.ts"
+  },
+  {
+    "id": "T047",
+    "description": "EmojiSuggestionExtension does not activate for ':' followed by fewer than 2 characters",
+    "implemented": false,
+    "featureIds": ["F025"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/EmojiSuggestion.test.ts"
+  },
+  {
+    "id": "T048",
+    "description": "EmojiSuggestionPopup searches emoji-mart and renders up to 30 results in a 10-column grid",
+    "implemented": false,
+    "featureIds": ["F025"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/EmojiSuggestion.test.ts"
+  },
+  {
+    "id": "T049",
+    "description": "EmojiSuggestionPopup keyboard navigation: ArrowRight/Left moves selection, Enter inserts emoji, Escape dismisses",
+    "implemented": false,
+    "featureIds": ["F025"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/EmojiSuggestion.test.ts"
+  },
+  {
+    "id": "T050",
+    "description": "EmojiSuggestionPopup inserts selected emoji by replacing the ':query' range and appending the native character",
+    "implemented": false,
+    "featureIds": ["F025"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/EmojiSuggestion.test.ts"
+  },
+  {
+    "id": "T051",
+    "description": "MentionSuggestionExtension ProseMirror plugin detects '@query' after space or at start of text and sets active state",
+    "implemented": false,
+    "featureIds": ["F028"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/MentionSuggestion.test.ts"
+  },
+  {
+    "id": "T052",
+    "description": "MentionSuggestionExtension does not activate for '@' inside an email address (e.g., 'user@domain')",
+    "implemented": false,
+    "featureIds": ["F028"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/MentionSuggestion.test.ts"
+  },
+  {
+    "id": "T053",
+    "description": "MentionSuggestionPopup shows @everyone option when query matches 'everyone' or is empty",
+    "implemented": false,
+    "featureIds": ["F028"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/MentionSuggestion.test.ts"
+  },
+  {
+    "id": "T054",
+    "description": "MentionSuggestionPopup calls searchMentions with query and renders matching users with display_name and @username",
+    "implemented": false,
+    "featureIds": ["F028"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/MentionSuggestion.test.ts"
+  },
+  {
+    "id": "T055",
+    "description": "MentionSuggestionPopup inserts MentionNode with correct userId/username/displayName attrs and trailing space",
+    "implemented": false,
+    "featureIds": ["F027", "F028"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/MentionSuggestion.test.ts"
+  },
+  {
+    "id": "T056",
+    "description": "MentionNode renders as styled inline badge with @username or @displayName text",
+    "implemented": false,
+    "featureIds": ["F027"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/MentionSuggestion.test.ts"
+  },
+  {
+    "id": "T057",
+    "description": "getHocuspocusUrl returns wss://<host>/hocuspocus when window.location is https",
+    "implemented": false,
+    "featureIds": ["F030"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/yjsConfig.test.ts"
+  },
+  {
+    "id": "T058",
+    "description": "getHocuspocusUrl returns ws://localhost:1234 when window is undefined (server-side)",
+    "implemented": false,
+    "featureIds": ["F030"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/yjsConfig.test.ts"
+  },
+  {
+    "id": "T059",
+    "description": "getHocuspocusUrl returns NEXT_PUBLIC_HOCUSPOCUS_URL when env var is set",
+    "implemented": false,
+    "featureIds": ["F030"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/yjsConfig.test.ts"
+  },
+  {
+    "id": "T060",
+    "description": "sanitizeBlocks converts blocks with unknown types to paragraphs extracting text content",
+    "implemented": false,
+    "featureIds": ["F031"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/RichTextViewer.test.ts"
+  },
+  {
+    "id": "T061",
+    "description": "sanitizeBlocks coerces non-string .text fields to strings instead of crashing",
+    "implemented": false,
+    "featureIds": ["F031"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/RichTextViewer.test.ts"
+  },
+  {
+    "id": "T062",
+    "description": "RichTextViewer handles ProseMirror JSON format {type:'doc', content:[...]} by extracting text into paragraphs",
+    "implemented": false,
+    "featureIds": ["F031"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/RichTextViewer.test.ts"
+  },
+  {
+    "id": "T063",
+    "description": "RichTextErrorBoundary catches BlockNote render error and shows plain text fallback",
+    "implemented": false,
+    "featureIds": ["F031"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/RichTextViewer.test.ts"
+  },
+  {
+    "id": "T064",
+    "description": "TextEditor isTextContent guard returns false for content items where .text is a number or object",
+    "implemented": false,
+    "featureIds": ["F032"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/editor/TextEditor.test.ts"
+  },
+  {
+    "id": "T065",
+    "description": "resolveEveryoneMention with single user ID returns that ID without querying the DB",
+    "implemented": false,
+    "featureIds": ["F033"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/internal-notifications/resolveEveryoneMention.test.ts"
+  },
+  {
+    "id": "T066",
+    "description": "resolveEveryoneMention with @everyone does a single DB query and returns all internal user IDs",
+    "implemented": false,
+    "featureIds": ["F033"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/internal-notifications/resolveEveryoneMention.test.ts"
+  },
+  {
+    "id": "T067",
+    "description": "resolveEveryoneMention with both @everyone and individual IDs deduplicates the result",
+    "implemented": false,
+    "featureIds": ["F033"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/internal-notifications/resolveEveryoneMention.test.ts"
+  },
+  {
+    "id": "T068",
+    "description": "handleUserMentionedInDocument early-exits without DB queries when document edit has no new mentions",
+    "implemented": false,
+    "featureIds": ["F033"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/internal-notifications/mentionNotifications.test.ts"
+  },
+  {
+    "id": "T069",
+    "description": "handleUserMentionedInDocument creates notifications in parallel via Promise.all for multiple mentioned users",
+    "implemented": false,
+    "featureIds": ["F033"],
+    "testType": "unit",
+    "testFile": "server/src/test/unit/internal-notifications/mentionNotifications.test.ts"
+  },
+  {
+    "id": "T070",
+    "description": "After Phase 2 migration: grep -r 'DocumentEditor' across *.ts and *.tsx files returns zero results (no remaining imports or references)",
+    "implemented": false,
+    "featureIds": ["F035"],
+    "testType": "manual",
+    "notes": "Run before deleting files. Verify comments (TextEditor.tsx) and RichTextViewer.tsx are unaffected."
+  },
+  {
+    "id": "T071",
+    "description": "After deleting DocumentEditor.jsx, BlockEditor.jsx, DocumentEditor.tsx: TypeScript build succeeds with zero errors",
+    "implemented": false,
+    "featureIds": ["F035"],
+    "testType": "manual",
+    "notes": "Run npx tsc --noEmit across all packages after deletion."
+  },
+  {
+    "id": "T072",
+    "description": "After cleanup: ticket comments and task comments still render and accept input using TextEditor (BlockNote)",
+    "implemented": false,
+    "featureIds": ["F035"],
+    "testType": "manual",
+    "notes": "Smoke test: create a ticket comment and a task comment, verify editor loads and saves."
+  }
+]

@@ -2,10 +2,11 @@
 // TODO: Model argument count issues
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, User } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
+import { isFeatureFlagEnabled } from '@alga-psa/core';
 import { v4 as uuidv4 } from 'uuid';
 import {
   approveAppointmentRequestSchema,
@@ -185,6 +186,17 @@ export const getAppointmentRequests = withAuth(async (
             .select('user_id');
 
           scopedUserIds.push(...teamMembers.map(tm => tm.user_id));
+        }
+
+        // Include reports_to subordinates when teams-v2 is enabled
+        const reportsToEnabled = await isFeatureFlagEnabled('teams-v2', {
+          userId: user.user_id,
+          tenantId: tenant
+        });
+
+        if (reportsToEnabled) {
+          const subordinateIds = await User.getReportsToSubordinateIds(trx, user.user_id);
+          scopedUserIds.push(...subordinateIds);
         }
 
         // Check if user is designated as an approver in availability settings

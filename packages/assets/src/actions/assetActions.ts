@@ -340,9 +340,10 @@ function formatAssetForOutput(asset: any): Asset {
         serial_number: asset.serial_number || undefined,
         location: asset.location || undefined,
         // Ensure client data is properly structured
-        client: asset.client ? {
-            client_id: asset.client.client_id,
-            client_name: asset.client.client_name || ''
+        // The SQL JOIN returns client_name as a flat field; build the nested object from it
+        client: asset.client_id ? {
+            client_id: asset.client_id,
+            client_name: asset.client_name || ''
         } : undefined,
         // Ensure relationships is always an array
         relationships: Array.isArray(asset.relationships) ? asset.relationships : [],

@@ -89,7 +89,13 @@ const TeamModel = {
     }
   },
 
-  addMember: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, team_id: string, user_id: string): Promise<void> => {
+  addMember: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    team_id: string,
+    user_id: string,
+    role: 'member' | 'lead' = 'member'
+  ): Promise<void> => {
     const user = await knexOrTrx('users')
       .select('is_inactive')
       .whereNotNull('tenant')
@@ -101,7 +107,7 @@ const TeamModel = {
       throw new Error(`Cannot add inactive user to team in tenant ${tenant}`);
     }
 
-    await knexOrTrx('team_members').insert({ team_id, user_id, tenant });
+    await knexOrTrx('team_members').insert({ team_id, user_id, tenant, role });
   },
 
   removeMember: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, team_id: string, user_id: string): Promise<void> => {
@@ -113,9 +119,13 @@ const TeamModel = {
       .del();
   },
 
-  getMembers: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, team_id: string): Promise<string[]> => {
+  getMembers: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    team_id: string
+  ): Promise<Array<{ user_id: string; role: 'member' | 'lead' }>> => {
     const members = await knexOrTrx('team_members')
-      .select('team_members.user_id')
+      .select('team_members.user_id', 'team_members.role')
       .join('users', function() {
         this.on('team_members.user_id', '=', 'users.user_id')
           .andOn('team_members.tenant', '=', 'users.tenant');
@@ -124,9 +134,11 @@ const TeamModel = {
       .andWhere('team_members.tenant', tenant)
       .andWhere('team_members.team_id', team_id)
       .andWhere('users.is_inactive', false);
-    return members.map((member): string => member.user_id);
+    return members.map((member): { user_id: string; role: 'member' | 'lead' } => ({
+      user_id: member.user_id,
+      role: member.role
+    }));
   }
 };
 
 export default TeamModel;
-

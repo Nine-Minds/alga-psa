@@ -120,7 +120,7 @@ export const ExpressionAutocomplete: React.FC<ExpressionAutocompleteProps> = ({
 
   return (
     <div
-      className="absolute z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-64 overflow-auto min-w-[200px] max-w-[400px]"
+      className="absolute z-50 bg-white dark:bg-[rgb(var(--color-card))] border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-md shadow-lg max-h-64 overflow-auto min-w-[200px] max-w-[400px]"
       style={{
         top: position?.top ?? 0,
         left: position?.left ?? 0

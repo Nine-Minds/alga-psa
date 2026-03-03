@@ -1,3 +1,10 @@
 export { default as RichTextViewer } from './RichTextViewer';
 export type { RichTextViewerProps } from './RichTextViewer';
 export { default as TextEditor, DEFAULT_BLOCK } from './TextEditor';
+export { Emoticon } from './EmoticonExtension';
+export type { EmoticonOptions } from './EmoticonExtension';
+export { createYjsProvider } from './yjs-config';
+export { EmojiSuggestionExtension, EmojiSuggestionPopup } from './EmojiSuggestion';
+export type { EmojiSuggestionState } from './EmojiSuggestion';
+export { MentionNode, MentionSuggestionExtension, MentionSuggestionPopup } from './MentionSuggestion';
+export type { MentionSuggestionState, MentionUser as MentionSuggestionUser } from './MentionSuggestion';

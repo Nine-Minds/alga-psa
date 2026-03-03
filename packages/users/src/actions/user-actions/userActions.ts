@@ -64,6 +64,7 @@ export const addUser = withAuth(async (
     roleId?: string;
     userType?: 'internal' | 'client';
     contactId?: string;
+    reportsTo?: string;
   }
 ): Promise<IUser> => {
   try {
@@ -139,7 +140,8 @@ export const addUser = withAuth(async (
           hashed_password: await hashPassword(userData.password),
           tenant: tenant || undefined,
           user_type: userData.userType || 'internal', // Default to 'internal' for backward compatibility
-          contact_id: userData.contactId || undefined
+          contact_id: userData.contactId || undefined,
+          reports_to: userData.reportsTo || undefined
         }).returning('*');
 
       await trx('user_roles').insert({
@@ -207,6 +209,11 @@ export const deleteUser = withAuth(async (
     }
 
     const result = await deleteEntityWithValidation('user', userId, db, tenant, async (trx, tenantId) => {
+      // Clear reports_to references so subordinates don't point to a deleted user
+      await trx('users')
+        .where({ reports_to: userId, tenant: tenantId || undefined })
+        .update({ reports_to: null });
+
       await trx('workflow_tasks')
         .where({ completed_by: userId, tenant: tenantId || undefined })
         .update({ completed_by: null });
@@ -337,6 +344,39 @@ export const getAllUsers = withAuth(async (
   }
 });
 
+export const getReportsToSubordinates = withAuth(async (
+  currentUser,
+  { tenant },
+  managerUserId?: string
+): Promise<IUser[]> => {
+  try {
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx) => {
+      const targetManagerId = managerUserId || currentUser.user_id;
+      const canReadUsers = await hasPermission(currentUser, 'user', 'read', trx);
+
+      if (targetManagerId !== currentUser.user_id && !canReadUsers) {
+        throw new Error('Permission denied: Cannot read other users reporting chains');
+      }
+
+      const subordinateIds = await User.getReportsToSubordinateIds(trx, targetManagerId);
+      if (subordinateIds.length === 0) {
+        return [] as IUser[];
+      }
+
+      const rows = await trx('users')
+        .whereIn('user_id', subordinateIds)
+        .where({ tenant })
+        .select('*');
+
+      return rows as IUser[];
+    });
+  } catch (error) {
+    logger.error('Failed to fetch reports_to subordinates:', error);
+    throw new Error('Failed to fetch reports_to subordinates');
+  }
+});
+
 export const updateUser = withAuth(async (
   currentUser,
   { tenant },
@@ -360,6 +400,19 @@ export const updateUser = withAuth(async (
         await trx('boards')
           .where({ default_assigned_to: userId, tenant })
           .update({ default_assigned_to: null });
+      }
+
+      if (userData.reports_to !== undefined) {
+        if (userData.reports_to === userId) {
+          throw new Error('reports_to cannot reference the user itself');
+        }
+
+        if (userData.reports_to) {
+          const wouldCreateCycle = await User.isInReportsToChain(trx, userId, userData.reports_to);
+          if (wouldCreateCycle) {
+            throw new Error('reports_to would create a circular reporting chain');
+          }
+        }
       }
 
       await User.update(trx, userId, userData);
@@ -618,6 +671,35 @@ export const getUserPreference = withAuth(async (
   } catch (error) {
     logger.error('Failed to get user preference:', error);
     throw new Error('Failed to get user preference');
+  }
+});
+
+export const getUserPreferencesBatch = withAuth(async (
+  _user,
+  _ctx,
+  userId: string,
+  settingNames: string[]
+): Promise<Record<string, any>> => {
+  try {
+    const {knex} = await createTenantKnex();
+    const allPrefs = await UserPreferences.getAllForUser(knex, userId);
+    const result: Record<string, any> = {};
+    const nameSet = new Set(settingNames);
+    for (const pref of allPrefs) {
+      if (nameSet.has(pref.setting_name)) {
+        if (pref.setting_value) {
+          try {
+            result[pref.setting_name] = JSON.parse(pref.setting_value);
+          } catch {
+            result[pref.setting_name] = pref.setting_value;
+          }
+        }
+      }
+    }
+    return result;
+  } catch (error) {
+    logger.error('Failed to get user preferences batch:', error);
+    throw new Error('Failed to get user preferences batch');
   }
 });
 

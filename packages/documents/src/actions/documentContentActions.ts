@@ -7,6 +7,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import type { IDocumentContent, UpdateDocumentContentInput } from '@alga-psa/types';
 import { addDocument } from './documentActions';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 // Create a new content document
 export const createContentDocument = withAuth(async (
@@ -31,6 +32,10 @@ export const createContentDocument = withAuth(async (
             order_number: 0,
             // No file_id since this is a content document
         });
+
+        if (isActionPermissionError(documentResult)) {
+            throw new Error(documentResult.permissionError);
+        }
 
         // Create the document content
         await withTransaction(knex, async (trx: Knex.Transaction) => {

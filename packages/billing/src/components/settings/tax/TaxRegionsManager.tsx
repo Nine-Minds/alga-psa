@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod'; // Assuming this is installed, will verify later if needed
 import * as z from 'zod';
 import toast from 'react-hot-toast'; // Use react-hot-toast
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { MoreVertical, PlusCircle } from 'lucide-react';
 
 import { Button } from '@alga-psa/ui/components/Button';
@@ -77,8 +78,7 @@ export function TaxRegionsManager() {
       const fetchedRegions = await getTaxRegions();
       setRegions(fetchedRegions);
     } catch (error) {
-      console.error('Failed to fetch tax regions:', error);
-      toast.error('Failed to load tax regions.');
+      handleError(error, 'Failed to load tax regions.');
     } finally {
       setIsLoading(false);
     }
@@ -138,8 +138,7 @@ export function TaxRegionsManager() {
       await fetchRegions(); // Refresh data
       handleCloseDialog();
     } catch (error: any) {
-      console.error(`${errorMessage}:`, error);
-      toast.error(`${errorMessage} ${error?.message ? `(${error.message})` : ''}`);
+      handleError(error, errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -156,8 +155,7 @@ export function TaxRegionsManager() {
       toast.success(`Tax region ${region.region_name} ${actionText}d successfully.`);
       await fetchRegions(); // Refresh data
     } catch (error: any) {
-      console.error(`Failed to ${actionText} tax region:`, error);
-      toast.error(`Failed to ${actionText} tax region. ${error?.message ? `(${error.message})` : ''}`);
+      handleError(error, `Failed to ${actionText} tax region.`);
     } finally {
       setIsSubmitting(false);
     }

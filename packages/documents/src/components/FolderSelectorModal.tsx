@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { getFolders, createFolder } from '../actions/documentActions';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { Folder, Home, ChevronRight, FolderPlus, X } from 'lucide-react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -62,6 +63,11 @@ export default function FolderSelectorModal({
     setLoading(true);
     try {
       const folderList = await getFolders();
+      if (isActionPermissionError(folderList)) {
+        handleError(folderList.permissionError);
+        setFolders([]);
+        return;
+      }
       setFolders(folderList);
     } catch (error) {
       console.error('Error loading folders:', error);
@@ -96,7 +102,11 @@ export default function FolderSelectorModal({
         ? `${newFolderParent}/${newFolderName.trim()}`
         : `/${newFolderName.trim()}`;
 
-      await createFolder(folderPath);
+      const createResult = await createFolder(folderPath);
+      if (isActionPermissionError(createResult)) {
+        handleError(createResult.permissionError);
+        return;
+      }
 
       // Reload folders to show the new one
       await loadFolders();

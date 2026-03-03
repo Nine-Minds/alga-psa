@@ -214,16 +214,24 @@ export async function fetchScheduleActivities(
     }
     
     // Convert to activities
-    // Convert to activities
     const activities = userEntries.map(entry => scheduleEntryToActivity(entry));
-    
-    // Cache individual activity type results
-    if (activities.length > 0) {
-      const cacheKey = `schedule-activities:${userId}:${JSON.stringify(filters)}`;
-      await cache.set(cacheKey, JSON.stringify(activities), cache.ttl.LIST, [`user:${userId}`, `type:${ActivityType.SCHEDULE}`]);
+
+    // Apply priority filter post-mapping (schedule entries default to Medium priority)
+    let filteredActivities = activities;
+    if (filters.priority && filters.priority.length > 0) {
+      const normalizedFilterPriorities = filters.priority.map(p => p.toLowerCase());
+      filteredActivities = activities.filter(activity =>
+        normalizedFilterPriorities.includes(activity.priority.toLowerCase())
+      );
     }
-    
-    return activities;
+
+    // Cache individual activity type results
+    if (filteredActivities.length > 0) {
+      const cacheKey = `schedule-activities:${userId}:${JSON.stringify(filters)}`;
+      await cache.set(cacheKey, JSON.stringify(filteredActivities), cache.ttl.LIST, [`user:${userId}`, `type:${ActivityType.SCHEDULE}`]);
+    }
+
+    return filteredActivities;
   } catch (error) {
     console.error("Error fetching schedule activities:", error);
     return [];
@@ -253,6 +261,8 @@ export async function fetchProjectActivities(
         "project_phases.project_id",
         "projects.project_name",
         "standard_statuses.name as status_name",
+        "priorities.priority_name",
+        "priorities.color as priority_color",
         db.raw("'#3b82f6' as status_color") // Blue color for consistency
       )
       .leftJoin("project_phases", function() {
@@ -262,6 +272,10 @@ export async function fetchProjectActivities(
       .leftJoin("projects", function() {
         this.on("project_phases.project_id", "projects.project_id")
             .andOn("project_phases.tenant", "projects.tenant");
+      })
+      .leftJoin("priorities", function() {
+        this.on("project_tasks.priority_id", "priorities.priority_id")
+            .andOn("project_tasks.tenant", "priorities.tenant");
       })
       .leftJoin("project_status_mappings", function() {
         this.on("project_tasks.project_status_mapping_id", "project_status_mappings.project_status_mapping_id")
@@ -316,15 +330,19 @@ export async function fetchProjectActivities(
         // Apply closed filter if provided
         if (filters.isClosed === false) {
           // If isClosed is false, only show open tasks
-          queryBuilder.whereIn("project_tasks.project_status_mapping_id", function() {
-            this.select("project_status_mappings.project_status_mapping_id")
-              .from("project_status_mappings")
-              .join("standard_statuses", function() {
-                this.on("project_status_mappings.standard_status_id", "standard_statuses.standard_status_id")
-                    .andOn("project_status_mappings.tenant", "standard_statuses.tenant");
-              })
-              .where("project_status_mappings.tenant", tenant)
-              .where("standard_statuses.is_closed", false);
+          // Tasks with NULL project_status_mapping_id are treated as open
+          queryBuilder.where(function() {
+            this.whereNull("project_tasks.project_status_mapping_id")
+              .orWhereIn("project_tasks.project_status_mapping_id", function() {
+                this.select("project_status_mappings.project_status_mapping_id")
+                  .from("project_status_mappings")
+                  .join("standard_statuses", function() {
+                    this.on("project_status_mappings.standard_status_id", "standard_statuses.standard_status_id")
+                        .andOn("project_status_mappings.tenant", "standard_statuses.tenant");
+                  })
+                  .where("project_status_mappings.tenant", tenant)
+                  .where("standard_statuses.is_closed", false);
+              });
           });
         }
         
@@ -344,9 +362,11 @@ export async function fetchProjectActivities(
           queryBuilder.where("project_tasks.phase_id", filters.phaseId);
         }
         
-        // Priority filter for project tasks is handled by processActivities
-        // We don't filter at DB level because tasks without priority_id default to Medium
-        
+        // Apply priority filter by priority IDs if provided
+        if (filters.priorityIds && filters.priorityIds.length > 0) {
+          queryBuilder.whereIn("project_tasks.priority_id", filters.priorityIds);
+        }
+
         // Apply search filter if provided
         if (filters.search) {
           const searchTerm = `%${filters.search}%`;
@@ -360,6 +380,22 @@ export async function fetchProjectActivities(
 
     // Convert to activities
     const activities = tasks.map((task: any) => {
+      // Map priority from project task to ActivityPriority
+      let priority: ActivityPriority;
+      switch (task.priority_name?.toLowerCase()) {
+        case 'high':
+        case 'urgent':
+        case 'critical':
+          priority = ActivityPriority.HIGH;
+          break;
+        case 'low':
+        case 'minor':
+          priority = ActivityPriority.LOW;
+          break;
+        default:
+          priority = ActivityPriority.MEDIUM;
+      }
+
       return {
         id: task.task_id,
         title: task.task_name,
@@ -367,7 +403,9 @@ export async function fetchProjectActivities(
         type: ActivityType.PROJECT_TASK,
         status: task.status_name || 'To Do', // Use the status name from standard_statuses
         statusColor: task.status_color || '#3b82f6', // Use the blue color for consistency
-        priority: ActivityPriority.MEDIUM, // Default priority for project tasks
+        priority,
+        priorityName: task.priority_name || undefined,
+        priorityColor: task.priority_color || undefined,
         dueDate: task.due_date ? new Date(task.due_date).toISOString() : undefined,
         assignedTo: task.assigned_to ? [task.assigned_to] : [],
         sourceId: task.task_id,
@@ -388,14 +426,23 @@ export async function fetchProjectActivities(
         updatedAt: task.updated_at ? new Date(task.updated_at).toISOString() : new Date().toISOString()
       };
     });
-    
-    // Cache individual activity type results
-    if (activities.length > 0) {
-      const cacheKey = `project-activities:${userId}:${JSON.stringify(filters)}`;
-      await cache.set(cacheKey, JSON.stringify(activities), cache.ttl.LIST, [`user:${userId}`, `type:${ActivityType.PROJECT_TASK}`]);
+
+    // Apply priority filter post-mapping (priority is derived from priority_name, defaulting to Medium)
+    let filteredActivities = activities;
+    if (filters.priority && filters.priority.length > 0) {
+      const normalizedFilterPriorities = filters.priority.map(p => p.toLowerCase());
+      filteredActivities = activities.filter(activity =>
+        normalizedFilterPriorities.includes(activity.priority.toLowerCase())
+      );
     }
-    
-    return activities;
+
+    // Cache individual activity type results
+    if (filteredActivities.length > 0) {
+      const cacheKey = `project-activities:${userId}:${JSON.stringify(filters)}`;
+      await cache.set(cacheKey, JSON.stringify(filteredActivities), cache.ttl.LIST, [`user:${userId}`, `type:${ActivityType.PROJECT_TASK}`]);
+    }
+
+    return filteredActivities;
   } catch (error) {
     console.error("Error fetching project activities:", error);
     return [];
@@ -425,7 +472,8 @@ export async function fetchTicketActivities(
         "contacts.full_name as contact_name",
         "statuses.name as status_name",
         "statuses.is_closed",
-        "priorities.priority_name"
+        "priorities.priority_name",
+        "priorities.color as priority_color"
       )
       .leftJoin("clients", function() {
         this.on("tickets.client_id", "clients.client_id")
@@ -466,8 +514,10 @@ export async function fetchTicketActivities(
           queryBuilder.whereIn("tickets.status_id", filters.status);
         }
 
-        // Priority filter for tickets is handled by processActivities
-        // We don't filter at DB level because tickets without priority_id default to Medium
+        // Apply priority filter by priority IDs if provided
+        if (filters.priorityIds && filters.priorityIds.length > 0) {
+          queryBuilder.whereIn("tickets.priority_id", filters.priorityIds);
+        }
 
         // Due date filter (existing)
         if (filters.dueDateStart) {
@@ -539,6 +589,8 @@ export async function fetchTicketActivities(
         type: ActivityType.TICKET,
         status: ticket.status_name || 'Unknown',
         priority,
+        priorityName: ticket.priority_name || undefined,
+        priorityColor: ticket.priority_color || undefined,
         dueDate: ticket.due_date ? (new Date(ticket.due_date).toString() !== 'Invalid Date' ? new Date(ticket.due_date).toISOString() : undefined) : undefined,
         assignedTo: ticket.assigned_to ? [ticket.assigned_to] : [],
         sourceId: ticket.ticket_id,
@@ -559,14 +611,23 @@ export async function fetchTicketActivities(
         updatedAt: ticket.updated_at ? (new Date(ticket.updated_at).toString() !== 'Invalid Date' ? new Date(ticket.updated_at).toISOString() : new Date().toISOString()) as ISO8601String : new Date().toISOString() as ISO8601String
       };
     });
-    
-    // Cache individual activity type results
-    if (tickets.length > 0) {
-      const cacheKey = `ticket-activities:${userId}:${JSON.stringify(filters)}`;
-      await cache.set(cacheKey, JSON.stringify(activities), cache.ttl.LIST, [`user:${userId}`, `type:${ActivityType.TICKET}`]);
+
+    // Apply priority filter post-mapping (priority is derived from priority_name, defaulting to Medium)
+    let filteredActivities = activities;
+    if (filters.priority && filters.priority.length > 0) {
+      const normalizedFilterPriorities = filters.priority.map(p => p.toLowerCase());
+      filteredActivities = activities.filter(activity =>
+        normalizedFilterPriorities.includes(activity.priority.toLowerCase())
+      );
     }
-    
-    return activities;
+
+    // Cache individual activity type results
+    if (filteredActivities.length > 0) {
+      const cacheKey = `ticket-activities:${userId}:${JSON.stringify(filters)}`;
+      await cache.set(cacheKey, JSON.stringify(filteredActivities), cache.ttl.LIST, [`user:${userId}`, `type:${ActivityType.TICKET}`]);
+    }
+
+    return filteredActivities;
   } catch (error) {
     console.error("Error fetching ticket activities:", error);
     return [];
@@ -610,16 +671,24 @@ export async function fetchTimeEntryActivities(
     });
 
     // Convert to activities
-    // Convert to activities
     const activities = timeEntries.map((entry: any) => timeEntryToActivity(entry));
-    
-    // Cache individual activity type results
-    if (activities.length > 0) {
-      const cacheKey = `time-entry-activities:${userId}:${JSON.stringify(filters)}`;
-      await cache.set(cacheKey, JSON.stringify(activities), cache.ttl.LIST, [`user:${userId}`, `type:${ActivityType.TIME_ENTRY}`]);
+
+    // Apply priority filter post-mapping (time entries default to Medium priority)
+    let filteredActivities = activities;
+    if (filters.priority && filters.priority.length > 0) {
+      const normalizedFilterPriorities = filters.priority.map(p => p.toLowerCase());
+      filteredActivities = activities.filter(activity =>
+        normalizedFilterPriorities.includes(activity.priority.toLowerCase())
+      );
     }
-    
-    return activities;
+
+    // Cache individual activity type results
+    if (filteredActivities.length > 0) {
+      const cacheKey = `time-entry-activities:${userId}:${JSON.stringify(filters)}`;
+      await cache.set(cacheKey, JSON.stringify(filteredActivities), cache.ttl.LIST, [`user:${userId}`, `type:${ActivityType.TIME_ENTRY}`]);
+    }
+
+    return filteredActivities;
   } catch (error) {
     console.error("Error fetching time entry activities:", error);
     return [];
@@ -708,11 +777,14 @@ export async function fetchWorkflowTaskActivities(
           queryBuilder.whereIn("wt.status", filters.status);
         }
         
-        // Apply priority filter if provided
+        // Apply priority filter if provided (case-insensitive comparison)
         if (filters.priority && filters.priority.length > 0) {
-          queryBuilder.whereIn("wt.priority",
-            filters.priority.map(p => p.charAt(0).toUpperCase() + p.slice(1))
-          );
+          queryBuilder.where(function() {
+            this.whereRaw(
+              "LOWER(wt.priority) IN (" + filters.priority!.map(() => "?").join(", ") + ")",
+              filters.priority!.map(p => p.toLowerCase())
+            );
+          });
         }
         
         // Apply due date filter if provided
@@ -1025,13 +1097,22 @@ export async function fetchNotificationActivities(
       };
     });
 
-    // Cache individual activity type results
-    if (notifications.length > 0) {
-      const cacheKey = `notification-activities:${userId}:${JSON.stringify(filters)}`;
-      await cache.set(cacheKey, JSON.stringify(activities), cache.ttl.LIST, [`user:${userId}`, `type:${ActivityType.NOTIFICATION}`]);
+    // Apply priority filter post-mapping (priority is derived from notification type)
+    let filteredActivities: NotificationActivity[] = activities;
+    if (filters.priority && filters.priority.length > 0) {
+      const normalizedFilterPriorities = filters.priority.map(p => p.toLowerCase());
+      filteredActivities = activities.filter(activity =>
+        normalizedFilterPriorities.includes(activity.priority.toLowerCase())
+      );
     }
 
-    return activities;
+    // Cache individual activity type results
+    if (filteredActivities.length > 0) {
+      const cacheKey = `notification-activities:${userId}:${JSON.stringify(filters)}`;
+      await cache.set(cacheKey, JSON.stringify(filteredActivities), cache.ttl.LIST, [`user:${userId}`, `type:${ActivityType.NOTIFICATION}`]);
+    }
+
+    return filteredActivities;
   } catch (error) {
     console.error("Error fetching notification activities:", error);
     return [];

@@ -70,6 +70,12 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
         filtersFromURL.assignedToIds = assignedToIds;
       }
     }
+    if (params?.assignedTeamIds && typeof params.assignedTeamIds === 'string') {
+      const assignedTeamIds = params.assignedTeamIds.split(',').filter(id => id.trim().length > 0);
+      if (assignedTeamIds.length > 0) {
+        filtersFromURL.assignedTeamIds = assignedTeamIds;
+      }
+    }
     if (params?.includeUnassigned === 'true') {
       filtersFromURL.includeUnassigned = true;
     }
@@ -91,6 +97,12 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       const allowedResponseStates = ['all', 'awaiting_client', 'awaiting_internal', 'none'] as const;
       if ((allowedResponseStates as readonly string[]).includes(params.responseState)) {
         filtersFromURL.responseState = params.responseState as ITicketListFilters['responseState'];
+      }
+    }
+    if (params?.slaStatusFilter && typeof params.slaStatusFilter === 'string') {
+      const allowedSlaStatuses = ['all', 'has_sla', 'no_sla', 'on_track', 'breached', 'paused'] as const;
+      if ((allowedSlaStatuses as readonly string[]).includes(params.slaStatusFilter)) {
+        filtersFromURL.slaStatusFilter = params.slaStatusFilter as ITicketListFilters['slaStatusFilter'];
       }
     }
     const allowedSortKeys = [
@@ -147,11 +159,13 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       showOpenOnly: (initialFilters.statusId === 'open') || false,
       tags: initialFilters.tags || undefined,
       assignedToIds: initialFilters.assignedToIds || undefined,
+      assignedTeamIds: initialFilters.assignedTeamIds || undefined,
       includeUnassigned: initialFilters.includeUnassigned || undefined,
       dueDateFilter: initialFilters.dueDateFilter || undefined,
       dueDateFrom: initialFilters.dueDateFrom || undefined,
       dueDateTo: initialFilters.dueDateTo || undefined,
       responseState: initialFilters.responseState || undefined,
+      slaStatusFilter: initialFilters.slaStatusFilter || undefined,
       sortBy: initialFilters.sortBy || 'entered_at',
       sortDirection: initialFilters.sortDirection || 'desc',
       bundleView: initialFilters.bundleView || 'bundled'

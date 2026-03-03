@@ -25,6 +25,7 @@ import { createClientContact } from '@alga-psa/clients/actions';
 import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import ClientCreatedDialog from './ClientCreatedDialog';
 import { QuickAddTagPicker } from '@alga-psa/tags/components';
 import type { PendingTag } from '@alga-psa/types';
@@ -150,8 +151,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
           const users = await getAllUsersBasicAsync();
           setInternalUsers(users);
         } catch (error: any) {
-          console.error("Error fetching MSP users:", error);
-          toast.error("Failed to load users for Account Manager selection.");
+          handleError(error, "Failed to load users for Account Manager selection.");
         } finally {
           setIsLoadingUsers(false);
         }
@@ -164,8 +164,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
           const countriesData = await getAllCountries();
           setCountries(countriesData);
         } catch (error: any) {
-          console.error("Error fetching countries:", error);
-          toast.error("Failed to load countries.");
+          handleError(error, "Failed to load countries.");
         } finally {
           setIsLoadingCountries(false);
         }
@@ -417,8 +416,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         try {
           await createClientLocation(newClient.client_id, locationData);
         } catch (locationError) {
-          console.error("Error creating client location:", locationError);
-          toast.error("Client created but failed to add location.");
+          handleError(locationError, "Client created but failed to add location.");
         }
       }
 
@@ -433,8 +431,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
             jobTitle: contactData.role,
           });
         } catch (contactError) {
-          console.error("Error creating client contact:", contactError);
-          toast.error("Client created but failed to add contact.");
+          handleError(contactError, "Client created but failed to add contact.");
         }
       }
 

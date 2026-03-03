@@ -2,19 +2,21 @@ import { beforeAll, afterAll, beforeEach, afterEach, describe, it, expect, vi, t
 import { v4 as uuidv4 } from 'uuid';
 
 import { TestContext } from '../../../../test-utils/testContext';
-import { AccountingExportInvoiceSelector } from 'server/src/lib/services/accountingExportInvoiceSelector';
-import { AccountingExportRepository } from 'server/src/lib/repositories/accountingExportRepository';
-import { AccountingExportService } from 'server/src/lib/services/accountingExportService';
-import { AccountingAdapterRegistry } from 'server/src/lib/adapters/accounting/registry';
-import { AccountingExportBatch } from 'server/src/interfaces/accountingExport.interfaces';
-import { createTestService } from '../../../../test-utils/billingTestHelpers';
 import {
+  AccountingExportInvoiceSelector,
+  AccountingExportRepository,
+  AccountingExportService,
+  AccountingAdapterRegistry
+} from '@alga-psa/billing/services';
+import {
+  AccountingExportBatch,
   AccountingExportAdapter,
   AccountingExportAdapterCapabilities,
   AccountingExportAdapterContext,
   AccountingExportDeliveryResult,
   AccountingExportTransformResult
-} from 'server/src/lib/adapters/accounting/accountingExportAdapter';
+} from '@alga-psa/types';
+import { createTestService } from '../../../../test-utils/billingTestHelpers';
 
 const helpers = TestContext.createHelpers();
 const HOOK_TIMEOUT = 240_000;

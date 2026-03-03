@@ -129,6 +129,9 @@ COPY --from=builder /app/server/node_modules ./server/node_modules
 
 RUN npm install -g tsx
 
+# Copy core package.json for version info
+COPY packages/core/package.json /app/packages/core/package.json
+
 COPY server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 

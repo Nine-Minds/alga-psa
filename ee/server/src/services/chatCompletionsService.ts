@@ -8,9 +8,13 @@ import {
   ChatApiRegistryEntry,
 } from '../chat/registry/apiRegistry.schema';
 import { TemporaryApiKeyService } from './temporaryApiKeyService';
-import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { parseAssistantContent, ParsedAssistantContent } from '../utils/chatContent';
 import { reprovisionExtension } from '../lib/actions/extensionDomainActions';
+import {
+  resolveChatProvider,
+  type ChatProviderId,
+  type ResolvedChatProvider,
+} from './chatProviderResolver';
 
 const isEnterpriseEdition = () =>
   process.env.NEXT_PUBLIC_EDITION === 'enterprise' ||
@@ -20,6 +24,10 @@ const isEnterpriseEdition = () =>
 const EMPTY_RESPONSE_ERROR = 'EMPTY_MODEL_RESPONSE';
 const NO_MODEL_CHOICES_ERROR = 'NO_MODEL_CHOICES';
 const MAX_MODEL_RETRIES = 2;
+const MAX_RATE_LIMIT_RETRIES = 3;
+const RATE_LIMIT_BASE_DELAY_MS = 500;
+const RATE_LIMIT_MAX_DELAY_MS = 5000;
+const MIN_RATE_LIMIT_DELAY_MS = 100;
 const SEARCH_TOOL_NAME = 'search_api_registry';
 const EXECUTE_TOOL_NAME = 'call_api_endpoint';
 const MAX_TOOL_ITERATIONS = 6;
@@ -28,6 +36,7 @@ export type ChatCompletionMessage = {
   role: 'user' | 'assistant' | 'function';
   content?: string;
   reasoning?: string;
+  reasoning_content?: string;
   name?: string;
   function_call?: {
     name: string;
@@ -70,6 +79,7 @@ export interface AssistantMessageResponse {
     role: 'assistant';
     content: string;
     reasoning?: string;
+    reasoning_content?: string;
   };
   functionCall?: {
     name: string;
@@ -91,6 +101,22 @@ export type CompletionResponse =
   | AssistantMessageResponse
   | ErrorResponse;
 
+export type ChatCompletionStreamEvent =
+  | {
+      type: 'content_delta';
+      delta: string;
+    }
+  | {
+      type: 'reasoning_delta';
+      delta: string;
+    }
+  | ({
+      type: 'function_proposed';
+    } & FunctionProposedResponse)
+  | {
+      type: 'done';
+    };
+
 interface InitialCompletionParams {
   messages: ChatCompletionMessage[];
   chatId?: string | null;
@@ -110,12 +136,169 @@ interface ExecuteCompletionParams {
   cookieHeader?: string;
 }
 
+type StreamedToolCallState = {
+  id?: string;
+  name?: string;
+  argumentsText: string;
+};
+
 export class ChatCompletionsService {
   static async createRawCompletionStream(
     conversation: ChatCompletionMessage[],
   ): Promise<AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>> {
-    const client = await this.getOpenRouterClient();
-    return this.generateStreamingCompletion(client, conversation);
+    const provider = await resolveChatProvider();
+    return this.generateStreamingCompletion(provider, conversation);
+  }
+
+  static async *createStructuredCompletionStream(
+    messages: ChatCompletionMessage[],
+    options: { signal?: AbortSignal } = {},
+  ): AsyncGenerator<ChatCompletionStreamEvent> {
+    const provider = await resolveChatProvider();
+    let conversation = this.normalizeConversationHistory(messages);
+
+    for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
+      if (options.signal?.aborted) {
+        return;
+      }
+
+      const completionStream = await this.generateStreamingCompletion(provider, conversation);
+      const streamedToolCalls = new Map<number, StreamedToolCallState>();
+      let streamedContent = '';
+      let streamedReasoning = '';
+
+      for await (const chunk of completionStream) {
+        if (options.signal?.aborted) {
+          return;
+        }
+
+        const choice = chunk?.choices?.[0] as
+          | OpenAI.Chat.Completions.ChatCompletionChunk.Choice
+          | undefined;
+        const delta = choice?.delta as Record<string, unknown> | undefined;
+        if (!delta) {
+          continue;
+        }
+
+        const reasoningDelta = this.readReasoningDelta(delta);
+        if (reasoningDelta) {
+          streamedReasoning += reasoningDelta;
+          yield {
+            type: 'reasoning_delta',
+            delta: reasoningDelta,
+          };
+        }
+
+        const contentDelta = this.readContentDelta(delta);
+        if (contentDelta) {
+          streamedContent += contentDelta;
+          yield {
+            type: 'content_delta',
+            delta: contentDelta,
+          };
+        }
+
+        this.mergeStreamedToolCalls(streamedToolCalls, delta.tool_calls);
+      }
+
+      const parsedContent = parseAssistantContent(streamedContent, streamedReasoning);
+      const toolCalls = this.materializeStreamedToolCalls(streamedToolCalls);
+
+      if (toolCalls.length > 0) {
+        const toolCall = toolCalls[0];
+        const functionName = toolCall.function?.name;
+        const parsedArgs = this.ensureArguments(toolCall.function?.arguments);
+        const toolCallId = toolCall.id ?? uuid();
+
+        if (!functionName) {
+          yield { type: 'done' };
+          return;
+        }
+
+        const assistantMessage: ChatCompletionMessage = {
+          role: 'assistant',
+          content: parsedContent.raw || undefined,
+          reasoning: parsedContent.reasoning,
+          reasoning_content: parsedContent.reasoning,
+          function_call: {
+            name: functionName,
+            arguments: parsedArgs,
+          },
+          tool_call_id: toolCallId,
+        };
+        conversation = [...conversation, assistantMessage];
+
+        if (functionName === SEARCH_TOOL_NAME) {
+          const results = this.searchRegistry(parsedArgs.query, parsedArgs.limit);
+          conversation = [
+            ...conversation,
+            {
+              role: 'function',
+              name: SEARCH_TOOL_NAME,
+              content: JSON.stringify({ results }),
+              tool_call_id: toolCallId,
+            },
+          ];
+          continue;
+        }
+
+        if (functionName === EXECUTE_TOOL_NAME) {
+          const entry = this.resolveRegistryEntry(
+            parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name,
+            parsedArgs,
+          );
+          if (!entry) {
+            yield {
+              type: 'content_delta',
+              delta: this.buildUnavailableFunctionMessage(
+                functionName,
+                parsedArgs.entryId ?? parsedArgs.id ?? parsedArgs.name,
+              ),
+            };
+            yield { type: 'done' };
+            return;
+          }
+
+          const preparedArgs = { ...parsedArgs };
+          this.populatePathParameters(entry, preparedArgs);
+          assistantMessage.function_call!.arguments = preparedArgs;
+          const metadata = this.buildFunctionMetadata(entry, preparedArgs);
+          const assistantPreview = this.buildFunctionPreview(parsedContent, entry);
+          yield {
+            type: 'function_proposed',
+            function: metadata,
+            assistantPreview,
+            assistantReasoning: parsedContent.reasoning,
+            functionCall: {
+              name: functionName,
+              arguments: preparedArgs,
+              toolCallId,
+              entryId: entry.id,
+            },
+            nextMessages: this.sanitizeMessagesForClient(conversation),
+            modelMessages: conversation,
+          };
+          yield { type: 'done' };
+          return;
+        }
+
+        yield {
+          type: 'content_delta',
+          delta: this.buildUnavailableFunctionMessage(functionName),
+        };
+        yield { type: 'done' };
+        return;
+      }
+
+      if (!this.hasMeaningfulContent(parsedContent)) {
+        continue;
+      }
+
+      yield { type: 'done' };
+      return;
+    }
+
+    yield { type: 'done' };
   }
 
   static async handleRequest(req: NextRequest): Promise<Response> {
@@ -341,7 +524,9 @@ export class ChatCompletionsService {
     return response;
   }
 
-  private static buildToolDefinitions() {
+  private static buildToolDefinitions(providerId: ChatProviderId) {
+    const isVertex = providerId === 'vertex';
+
     return [
       {
         type: 'function' as const,
@@ -357,9 +542,7 @@ export class ChatCompletionsService {
                 description: 'Natural language description of what you want to do (e.g., "list active service categories").',
               },
               limit: {
-                type: 'integer',
-                minimum: 1,
-                maximum: 25,
+                type: isVertex ? 'number' : 'integer',
                 description: 'Maximum number of results to return (default 5).',
               },
             },
@@ -384,57 +567,63 @@ export class ChatCompletionsService {
               method: {
                 type: 'string',
                 description: 'HTTP method to use when invoking the endpoint (defaults to the documented method).',
-                enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+                ...(isVertex ? {} : { enum: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] }),
               },
               path: {
                 type: 'object',
                 description: 'Values for path parameters, keyed by parameter name.',
-                additionalProperties: true,
+                ...(isVertex ? {} : { additionalProperties: true }),
               },
               query: {
                 type: 'object',
                 description: 'Values for query string parameters.',
-                additionalProperties: true,
+                ...(isVertex ? {} : { additionalProperties: true }),
               },
               headers: {
                 type: 'object',
                 description: 'Additional headers required by the endpoint.',
-                additionalProperties: true,
+                ...(isVertex ? {} : { additionalProperties: true }),
               },
-              body: {
-                description: 'JSON payload for POST/PUT/PATCH requests.',
-                oneOf: [
-                  {
-                    type: 'object',
-                    description: 'Structured JSON object payload.',
-                    additionalProperties: true,
-                  },
-                  {
-                    type: 'array',
-                    description: 'Array payload (e.g., bulk operations).',
-                    items: {},
-                  },
-                  {
-                    type: 'string',
-                    description: 'Raw string payload.',
-                  },
-                  {
-                    type: 'number',
-                    description: 'Numeric payload.',
-                  },
-                  {
-                    type: 'boolean',
-                    description: 'Boolean payload.',
-                  },
-                  {
-                    type: 'null',
-                    description: 'Explicit null payload.',
-                  },
-                ],
-              },
+              body:
+                isVertex
+                  ? {
+                      type: 'object',
+                      description: 'JSON object payload for POST/PUT/PATCH requests.',
+                    }
+                  : {
+                      description: 'JSON payload for POST/PUT/PATCH requests.',
+                      oneOf: [
+                        {
+                          type: 'object',
+                          description: 'Structured JSON object payload.',
+                          additionalProperties: true,
+                        },
+                        {
+                          type: 'array',
+                          description: 'Array payload (e.g., bulk operations).',
+                          items: {},
+                        },
+                        {
+                          type: 'string',
+                          description: 'Raw string payload.',
+                        },
+                        {
+                          type: 'number',
+                          description: 'Numeric payload.',
+                        },
+                        {
+                          type: 'boolean',
+                          description: 'Boolean payload.',
+                        },
+                        {
+                          type: 'null',
+                          description: 'Explicit null payload.',
+                        },
+                      ],
+                    },
             },
             required: ['entryId'],
-            additionalProperties: true,
+            ...(isVertex ? {} : { additionalProperties: true }),
           },
         },
       },
@@ -518,7 +707,7 @@ export class ChatCompletionsService {
     userId: string;
   }): Promise<CompletionResponse> {
     const { messages, chatId, baseUrl, tenantId, userId } = params;
-    const client = await this.getOpenRouterClient();
+    const provider = await resolveChatProvider();
     let conversation = this.normalizeConversationHistory(messages);
 
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
@@ -529,7 +718,7 @@ export class ChatCompletionsService {
 
       try {
         ({ completion, choice, parsedContent, toolCalls } =
-          await this.generateCompletionWithRetry(client, conversation));
+          await this.generateCompletionWithRetry(provider, conversation));
       } catch (error) {
         if (error instanceof Error) {
           if (error.message === EMPTY_RESPONSE_ERROR) {
@@ -565,6 +754,7 @@ export class ChatCompletionsService {
           role: 'assistant',
           content: parsedContent.raw || undefined,
           reasoning: parsedContent.reasoning,
+          reasoning_content: parsedContent.reasoning,
           function_call: {
             name: functionName,
             arguments: parsedArgs,
@@ -629,6 +819,7 @@ export class ChatCompletionsService {
         role: 'assistant',
         content: parsedContent.raw || undefined,
         reasoning: parsedContent.reasoning,
+        reasoning_content: parsedContent.reasoning,
       };
 
       const nextMessages = [...conversation, assistantMessage];
@@ -639,6 +830,7 @@ export class ChatCompletionsService {
           role: 'assistant',
           content: this.buildUserFacingContent(parsedContent),
           reasoning: parsedContent.reasoning,
+          reasoning_content: parsedContent.reasoning,
         },
         nextMessages: this.sanitizeMessagesForClient(nextMessages),
         modelMessages: nextMessages,
@@ -657,11 +849,12 @@ export class ChatCompletionsService {
     }
 
     return raw.map((item) => {
-      if (!item || typeof item !== 'object') {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
         throw new Error('Invalid messages payload');
       }
 
-      const role = (item as any).role;
+      const messageRecord = item as Record<string, unknown>;
+      const role = messageRecord.role;
       if (role !== 'user' && role !== 'assistant' && role !== 'function') {
         throw new Error('Invalid messages payload');
       }
@@ -671,22 +864,38 @@ export class ChatCompletionsService {
       };
 
       if (role === 'function') {
-        message.name = typeof (item as any).name === 'string' ? (item as any).name : undefined;
-        message.content = typeof (item as any).content === 'string' ? (item as any).content : undefined;
-        message.tool_call_id =
-          typeof (item as any).tool_call_id === 'string' ? (item as any).tool_call_id : undefined;
+        message.name = this.readOptionalStringField(messageRecord, 'name');
+        message.content = this.readOptionalStringField(messageRecord, 'content');
+        message.tool_call_id = this.readOptionalStringField(messageRecord, 'tool_call_id');
         if (!message.name) {
           throw new Error('Invalid messages payload');
         }
         return message;
       }
 
-      if ((item as any).content && typeof (item as any).content === 'string') {
-        message.content = (item as any).content;
+      message.content = this.readOptionalStringField(messageRecord, 'content');
+      message.reasoning = this.readOptionalStringField(messageRecord, 'reasoning');
+      message.reasoning_content = this.readOptionalStringField(
+        messageRecord,
+        'reasoning_content',
+      );
+      if (!message.reasoning_content && message.reasoning) {
+        message.reasoning_content = message.reasoning;
+      }
+      if (!message.reasoning && message.reasoning_content) {
+        message.reasoning = message.reasoning_content;
       }
 
-      if ((item as any).function_call) {
-        const fn = (item as any).function_call;
+      if (messageRecord.function_call !== undefined) {
+        if (
+          !messageRecord.function_call ||
+          typeof messageRecord.function_call !== 'object' ||
+          Array.isArray(messageRecord.function_call)
+        ) {
+          throw new Error('Invalid messages payload');
+        }
+
+        const fn = messageRecord.function_call as Record<string, unknown>;
         if (typeof fn.name !== 'string') {
           throw new Error('Invalid messages payload');
         }
@@ -694,12 +903,24 @@ export class ChatCompletionsService {
           name: fn.name,
           arguments: this.ensureArguments(fn.arguments),
         };
-        message.tool_call_id =
-          typeof (item as any).tool_call_id === 'string' ? (item as any).tool_call_id : undefined;
+        message.tool_call_id = this.readOptionalStringField(messageRecord, 'tool_call_id');
       }
 
       return message;
     });
+  }
+
+  private static readOptionalStringField(
+    record: Record<string, unknown>,
+    key: string,
+  ): string | undefined {
+    if (!(key in record) || record[key] === undefined) {
+      return undefined;
+    }
+    if (typeof record[key] !== 'string') {
+      throw new Error('Invalid messages payload');
+    }
+    return record[key] as string;
   }
 
   private static ensureArguments(args: unknown): Record<string, unknown> {
@@ -790,7 +1011,10 @@ export class ChatCompletionsService {
     });
   }
 
-  private static buildOpenAiMessages(messages: ChatCompletionMessage[]) {
+  private static buildOpenAiMessages(
+    messages: ChatCompletionMessage[],
+    providerId: ChatProviderId,
+  ) {
     const systemPrompt = {
       role: 'system' as const,
       content:
@@ -801,6 +1025,7 @@ export class ChatCompletionsService {
         'Clearly explain the plan before each tool call, execute the necessary lookup calls to satisfy all requirements, then call the target endpoint once the inputs are ready. ' +
         'Use the documented request schemas exactly as written—populate *_id fields with the UUIDs you retrieved (never human-friendly names), and skip optional fields when you do not have authoritative values. ' +
         'Never include properties that are not defined for the selected endpoint; if the user mentions data that cannot be expressed with the documented schema (for example a project name when the ticket create payload does not accept project_id), acknowledge it in the natural-language response but leave it out of the API request. ' +
+        'When handling documents, do not assume null file_id means empty content; in-app documents may store content in document_block_content or document_content. Call GET /api/documents/{documentId}/content to retrieve readable content before concluding the document has no data. ' +
         'Do not create or modify unrelated master data (such as categories, boards, or projects) unless the user explicitly asks for that; prefer reusing existing records you just looked up. ' +
         'After a function result is provided, summarize the outcome for the user and outline any follow-up you will handle automatically.',
     };
@@ -815,7 +1040,7 @@ export class ChatCompletionsService {
       }
 
       if (message.role === 'assistant' && message.function_call) {
-        return {
+        const assistantMessage: Record<string, unknown> = {
           role: 'assistant' as const,
           content: message.content ?? '',
           tool_calls: [
@@ -829,6 +1054,29 @@ export class ChatCompletionsService {
             },
           ],
         };
+        if (
+          providerId === 'vertex' &&
+          typeof message.reasoning_content === 'string' &&
+          message.reasoning_content.trim().length > 0
+        ) {
+          assistantMessage.reasoning_content = message.reasoning_content;
+        }
+        return assistantMessage;
+      }
+
+      if (message.role === 'assistant') {
+        const assistantMessage: Record<string, unknown> = {
+          role: message.role,
+          content: message.content ?? '',
+        };
+        if (
+          providerId === 'vertex' &&
+          typeof message.reasoning_content === 'string' &&
+          message.reasoning_content.trim().length > 0
+        ) {
+          assistantMessage.reasoning_content = message.reasoning_content;
+        }
+        return assistantMessage;
       }
 
       return {
@@ -838,6 +1086,87 @@ export class ChatCompletionsService {
     });
 
     return [systemPrompt, ...converted];
+  }
+
+  private static readReasoningDelta(delta: Record<string, unknown>): string {
+    const parsed = parseAssistantContent(
+      '',
+      delta.reasoning_content ?? delta.reasoning,
+    );
+    return parsed.reasoning ?? '';
+  }
+
+  private static readContentDelta(delta: Record<string, unknown>): string {
+    const content = delta.content;
+    if (typeof content === 'string') {
+      return content;
+    }
+    if (content === undefined || content === null) {
+      return '';
+    }
+    return parseAssistantContent(content, undefined).display;
+  }
+
+  private static mergeStreamedToolCalls(
+    streamedToolCalls: Map<number, StreamedToolCallState>,
+    toolCallsDelta: unknown,
+  ) {
+    if (!Array.isArray(toolCallsDelta)) {
+      return;
+    }
+
+    toolCallsDelta.forEach((candidate, fallbackIndex) => {
+      if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
+        return;
+      }
+      const toolCall = candidate as Record<string, unknown>;
+      const index = typeof toolCall.index === 'number' ? toolCall.index : fallbackIndex;
+      const existing = streamedToolCalls.get(index) ?? {
+        argumentsText: '',
+      };
+
+      if (typeof toolCall.id === 'string') {
+        existing.id = toolCall.id;
+      }
+
+      if (
+        toolCall.function &&
+        typeof toolCall.function === 'object' &&
+        !Array.isArray(toolCall.function)
+      ) {
+        const fn = toolCall.function as Record<string, unknown>;
+        if (typeof fn.name === 'string') {
+          existing.name = fn.name;
+        }
+        if (typeof fn.arguments === 'string') {
+          existing.argumentsText += fn.arguments;
+        }
+      }
+
+      streamedToolCalls.set(index, existing);
+    });
+  }
+
+  private static materializeStreamedToolCalls(
+    streamedToolCalls: Map<number, StreamedToolCallState>,
+  ): OpenAI.Chat.Completions.ChatCompletionMessageToolCall[] {
+    return Array.from(streamedToolCalls.entries())
+      .sort(([left], [right]) => left - right)
+      .flatMap(([, entry]) => {
+        if (!entry.name) {
+          return [];
+        }
+        return [
+          {
+            id: entry.id ?? uuid(),
+            type: 'function',
+            function: {
+              name: entry.name,
+              arguments: entry.argumentsText || '{}',
+            },
+          } as OpenAI.Chat.Completions.ChatCompletionMessageToolCall,
+        ];
+      });
   }
 
   private static extractContent(choice: OpenAI.Chat.Completions.ChatCompletion.Choice): ParsedAssistantContent {
@@ -850,22 +1179,171 @@ export class ChatCompletionsService {
       };
     }
 
-    return parseAssistantContent(message.content, (message as any)?.reasoning);
+    return parseAssistantContent(
+      message.content,
+      (message as any)?.reasoning_content ?? (message as any)?.reasoning,
+    );
+  }
+
+  private static buildCompletionCreateRequest(
+    provider: ResolvedChatProvider,
+    conversation: ChatCompletionMessage[],
+    stream: boolean,
+  ): Record<string, unknown> {
+    const request: Record<string, unknown> = {
+      model: provider.model,
+      messages: this.buildOpenAiMessages(conversation, provider.providerId),
+      tools: this.buildToolDefinitions(provider.providerId),
+      ...provider.requestOverrides.resolveTurnOverrides(),
+      stream,
+    };
+
+    if (provider.providerId !== 'vertex') {
+      request.tool_choice = 'auto';
+    }
+
+    // Vertex OpenAPI is stricter than OpenRouter; omit optional sampling params
+    // unless we explicitly tune them for that provider.
+    if (provider.providerId !== 'vertex') {
+      request.temperature = 1.0;
+      request.top_p = 0.95;
+    }
+
+    return request;
+  }
+
+  private static async sleep(ms: number): Promise<void> {
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, ms);
+    });
+  }
+
+  private static isRateLimitError(error: unknown): boolean {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      (error as { status?: unknown }).status === 429
+    );
+  }
+
+  private static readHeader(
+    headers: unknown,
+    headerName: string,
+  ): string | undefined {
+    if (!headers) {
+      return undefined;
+    }
+    const normalizedName = headerName.toLowerCase();
+
+    if (headers instanceof Headers) {
+      return headers.get(headerName) ?? headers.get(normalizedName) ?? undefined;
+    }
+
+    if (
+      typeof headers === 'object' &&
+      headers !== null &&
+      'get' in headers &&
+      typeof (headers as { get?: unknown }).get === 'function'
+    ) {
+      const value = (headers as { get: (name: string) => unknown }).get(headerName)
+        ?? (headers as { get: (name: string) => unknown }).get(normalizedName);
+      return typeof value === 'string' ? value : undefined;
+    }
+
+    if (Array.isArray(headers)) {
+      for (const item of headers) {
+        if (!Array.isArray(item) || item.length < 2) {
+          continue;
+        }
+        const [name, value] = item;
+        if (
+          typeof name === 'string' &&
+          name.toLowerCase() === normalizedName &&
+          typeof value === 'string'
+        ) {
+          return value;
+        }
+      }
+      return undefined;
+    }
+
+    if (typeof headers === 'object' && headers !== null) {
+      for (const [name, value] of Object.entries(headers as Record<string, unknown>)) {
+        if (name.toLowerCase() !== normalizedName) {
+          continue;
+        }
+        if (typeof value === 'string') {
+          return value;
+        }
+        if (typeof value === 'number') {
+          return String(value);
+        }
+      }
+    }
+
+    return undefined;
+  }
+
+  private static resolveRateLimitDelayMs(error: unknown, attempt: number): number {
+    const headers =
+      typeof error === 'object' && error !== null
+        ? (error as { headers?: unknown }).headers
+        : undefined;
+    const retryAfterRaw = this.readHeader(headers, 'retry-after');
+    if (retryAfterRaw) {
+      const numericSeconds = Number(retryAfterRaw);
+      if (Number.isFinite(numericSeconds) && numericSeconds >= 0) {
+        return Math.max(MIN_RATE_LIMIT_DELAY_MS, Math.ceil(numericSeconds * 1000));
+      }
+
+      const retryAt = Date.parse(retryAfterRaw);
+      if (Number.isFinite(retryAt)) {
+        return Math.max(MIN_RATE_LIMIT_DELAY_MS, retryAt - Date.now());
+      }
+    }
+
+    const exponential = Math.min(
+      RATE_LIMIT_BASE_DELAY_MS * 2 ** attempt,
+      RATE_LIMIT_MAX_DELAY_MS,
+    );
+    return Math.max(MIN_RATE_LIMIT_DELAY_MS, exponential);
+  }
+
+  private static async createWithRateLimitRetry<T>(
+    createRequest: () => Promise<T>,
+    contextLabel: string,
+  ): Promise<T> {
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await createRequest();
+      } catch (error) {
+        if (!this.isRateLimitError(error) || attempt >= MAX_RATE_LIMIT_RETRIES) {
+          throw error;
+        }
+
+        const delayMs = this.resolveRateLimitDelayMs(error, attempt);
+        console.warn(
+          '[ChatCompletionsService] Received 429 from %s; retrying in %dms (attempt %d/%d).',
+          contextLabel,
+          delayMs,
+          attempt + 1,
+          MAX_RATE_LIMIT_RETRIES,
+        );
+        await this.sleep(delayMs);
+      }
+    }
   }
 
   private static async generateCompletionWithRetry(
-    client: OpenAI,
+    provider: ResolvedChatProvider,
     conversation: ChatCompletionMessage[],
   ) {
     for (let attempt = 0; attempt < MAX_MODEL_RETRIES; attempt += 1) {
-      const completion = await client.chat.completions.create({
-        model: process.env.OPENROUTER_CHAT_MODEL ?? 'minimax/minimax-m2',
-        messages: this.buildOpenAiMessages(conversation),
-        tools: this.buildToolDefinitions(),
-        tool_choice: 'auto',
-        temperature: 1.0,
-        top_p: 0.95,
-      });
+      const request = this.buildCompletionCreateRequest(provider, conversation, false);
+      const completion = await this.createWithRateLimitRetry(
+        () => provider.client.chat.completions.create(request as any),
+        `${provider.providerId} completion`,
+      );
 
       const choice = completion.choices[0];
       if (!choice) {
@@ -873,7 +1351,8 @@ export class ChatCompletionsService {
       }
 
       console.info(
-        '[ChatCompletionsService] OpenRouter raw completion\n%s',
+        '[ChatCompletionsService] Raw completion (%s)\n%s',
+        provider.providerId,
         JSON.stringify(
           {
             finishReason: choice.finish_reason,
@@ -885,7 +1364,7 @@ export class ChatCompletionsService {
       );
 
       const parsedContent = this.extractContent(choice);
-      console.info('[ChatCompletionsService] OpenRouter parsed content', {
+      console.info('[ChatCompletionsService] Parsed content (%s)', provider.providerId, {
         raw: parsedContent.raw,
         display: parsedContent.display,
         reasoning: parsedContent.reasoning,
@@ -913,18 +1392,15 @@ export class ChatCompletionsService {
   }
 
   private static async generateStreamingCompletion(
-    client: OpenAI,
+    provider: ResolvedChatProvider,
     conversation: ChatCompletionMessage[],
-  ) {
-    return client.chat.completions.create({
-      model: process.env.OPENROUTER_CHAT_MODEL ?? 'minimax/minimax-m2',
-      messages: this.buildOpenAiMessages(conversation),
-      tools: this.buildToolDefinitions(),
-      tool_choice: 'auto',
-      temperature: 1.0,
-      top_p: 0.95,
-      stream: true,
-    });
+  ): Promise<AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>> {
+    const request = this.buildCompletionCreateRequest(provider, conversation, true);
+    const stream = await this.createWithRateLimitRetry(
+      () => provider.client.chat.completions.create(request as any),
+      `${provider.providerId} stream`,
+    );
+    return stream as unknown as AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>;
   }
 
   private static hasMeaningfulContent(content: ParsedAssistantContent): boolean {
@@ -983,6 +1459,14 @@ export class ChatCompletionsService {
     }
 
     return 'I need to run an API call to continue.';
+  }
+
+  private static buildUnavailableFunctionMessage(functionName: string, entryId?: unknown): string {
+    const target =
+      typeof entryId === 'string' && entryId.trim().length > 0
+        ? entryId.trim()
+        : functionName;
+    return `I couldn't run "${target}" because that function is not available.`;
   }
 
   private static buildFunctionMetadata(entry: ChatApiRegistryEntry, args: Record<string, unknown>): FunctionMetadata {
@@ -1048,7 +1532,7 @@ export class ChatCompletionsService {
       //   headers: requestHeadersForLog,
       //   args,
       // });
-      const response = await fetch(url, init);
+      const response = await this.fetchWithProtocolFallback(url, init, baseUrl);
       const durationMs = Date.now() - requestStarted;
 
       const text = await response.text();
@@ -1082,6 +1566,53 @@ export class ChatCompletionsService {
       });
       throw error;
     }
+  }
+
+  private static async fetchWithProtocolFallback(
+    url: string,
+    init: RequestInit,
+    baseUrl: string,
+  ): Promise<Response> {
+    if (!this.shouldTryHttpFirst(url, baseUrl)) {
+      return fetch(url, init);
+    }
+
+    const httpUrl = this.toHttpUrl(url);
+    try {
+      return await fetch(httpUrl, init);
+    } catch (error) {
+      console.warn(
+        '[ChatCompletionsService] HTTP-first API tool call failed; retrying with HTTPS.',
+        {
+          httpUrl,
+          httpsUrl: url,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      );
+      return fetch(url, init);
+    }
+  }
+
+  private static shouldTryHttpFirst(
+    requestUrl: string,
+    baseUrl: string,
+  ): boolean {
+    if (!requestUrl.startsWith('https://')) {
+      return false;
+    }
+    try {
+      const request = new URL(requestUrl);
+      const base = new URL(baseUrl);
+      return request.host === base.host;
+    } catch {
+      return false;
+    }
+  }
+
+  private static toHttpUrl(url: string): string {
+    const parsed = new URL(url);
+    parsed.protocol = 'http:';
+    return parsed.toString();
   }
 
   private static buildFetchRequest(
@@ -1237,22 +1768,6 @@ export class ChatCompletionsService {
 
   private static shouldRedactHeader(headerName: string) {
     return /^(authorization|cookie|x-api-key|x-openai-api-key|proxy-authorization)$/i.test(headerName);
-  }
-
-  private static async getOpenRouterClient() {
-    const secretProvider = await getSecretProviderInstance();
-    const apiKey =
-      (await secretProvider.getAppSecret('OPENROUTER_API_KEY')) ||
-      process.env.OPENROUTER_API_KEY;
-
-    if (!apiKey) {
-      throw new Error('OpenRouter API key is not configured');
-    }
-
-    return new OpenAI({
-      apiKey,
-      baseURL: 'https://openrouter.ai/api/v1',
-    });
   }
 
   private static populatePathParameters(entry: ChatApiRegistryEntry, args: Record<string, unknown>) {

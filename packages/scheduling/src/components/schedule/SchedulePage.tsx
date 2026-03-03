@@ -9,8 +9,9 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Calendar, Settings } from 'lucide-react';
 import { getAppointmentRequests } from '@alga-psa/scheduling/actions';
-import { getCurrentUserPermissions, getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUserPermissions, getCurrentUser, getReportsToSubordinates } from '@alga-psa/users/actions';
 import { getTeams } from '@alga-psa/teams/actions';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 export default function SchedulePage() {
   const searchParams = useSearchParams();
@@ -22,6 +23,7 @@ export default function SchedulePage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [canConfigureAvailability, setCanConfigureAvailability] = useState(false);
   const [highlightedRequestId, setHighlightedRequestId] = useState<string | null>(null);
+  const { enabled: isTeamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
 
   const fetchPendingCount = async () => {
     const result = await getAppointmentRequests({ status: 'pending' });
@@ -46,7 +48,18 @@ export default function SchedulePage() {
       if (currentUser) {
         const teams = await getTeams();
         const isManager = teams.some(team => team.manager_id === currentUser.user_id);
-        setCanConfigureAvailability(isManager);
+        if (isManager) {
+          setCanConfigureAvailability(true);
+          return;
+        }
+
+        if (isTeamsV2Enabled) {
+          const subordinates = await getReportsToSubordinates(currentUser.user_id);
+          setCanConfigureAvailability(subordinates.length > 0);
+          return;
+        }
+
+        setCanConfigureAvailability(false);
       }
     } catch (error) {
       console.error('Failed to check team manager status:', error);

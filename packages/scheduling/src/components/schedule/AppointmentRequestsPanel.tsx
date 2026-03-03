@@ -12,6 +12,7 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Check, X, Calendar, Clock, User, FileText, Briefcase, Ticket } from 'lucide-react';
 import { getAllUsersBasic, getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
@@ -82,8 +83,7 @@ export default function AppointmentRequestsPanel({
         toast.error(result.error || 'Failed to load appointment requests');
       }
     } catch (error) {
-      console.error('Failed to load appointment requests:', error);
-      toast.error('Failed to load appointment requests');
+      handleError(error, 'Failed to load appointment requests');
     } finally {
       setIsLoading(false);
     }
@@ -200,9 +200,7 @@ export default function AppointmentRequestsPanel({
         toast.error('Ticket not found');
       }
     } catch (error) {
-      console.error('Error loading ticket:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load ticket';
-      toast.error(errorMessage);
+      handleError(error, 'Failed to load ticket');
     }
   };
 
@@ -245,8 +243,7 @@ export default function AppointmentRequestsPanel({
         toast.error(result.error || 'Failed to approve request');
       }
     } catch (error) {
-      console.error('Failed to approve request:', error);
-      toast.error('Failed to approve request');
+      handleError(error, 'Failed to approve request');
     }
   };
 
@@ -274,8 +271,7 @@ export default function AppointmentRequestsPanel({
         toast.error(result.error || 'Failed to decline request');
       }
     } catch (error) {
-      console.error('Failed to decline request:', error);
-      toast.error('Failed to decline request');
+      handleError(error, 'Failed to decline request');
     }
   };
 

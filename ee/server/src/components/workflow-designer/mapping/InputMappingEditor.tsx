@@ -358,6 +358,17 @@ export interface ActionInputField {
   required?: boolean;
   enum?: Array<string | number | boolean | null>;
   default?: unknown;
+  constraints?: {
+    format?: string;
+    minItems?: number;
+    maxItems?: number;
+    minLength?: number;
+    maxLength?: number;
+    minimum?: number;
+    maximum?: number;
+    pattern?: string;
+    itemType?: string;
+  };
   children?: ActionInputField[];
 }
 
@@ -769,6 +780,8 @@ const MappingFieldEditor: React.FC<{
               onChange={handleLiteralChange}
               fieldType={field.type}
               fieldEnum={field.enum}
+              fieldChildren={field.children}
+              fieldConstraints={field.constraints}
               idPrefix={idPrefix}
               disabled={disabled}
             />
@@ -782,21 +795,193 @@ const MappingFieldEditor: React.FC<{
 /**
  * Editor for literal values based on field type
  */
+const isRecordLiteral = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const normalizeJsonLiteral = (value: MappingValue | undefined, fieldType: string): unknown => {
+  if (fieldType === 'array') {
+    return Array.isArray(value) ? value : [];
+  }
+  if (fieldType === 'object') {
+    return isRecordLiteral(value) ? value : {};
+  }
+  return value ?? null;
+};
+
+const buildDefaultLiteralValue = (field: ActionInputField): MappingValue => {
+  if (field.default !== undefined) return field.default as MappingValue;
+  if (field.type === 'boolean') return false;
+  if (field.type === 'number' || field.type === 'integer') return 0;
+  if (field.type === 'array') return [];
+  if (field.type === 'object') {
+    if (!field.children?.length) return {};
+    const next: Record<string, MappingValue> = {};
+    for (const child of field.children) {
+      if (child.required || child.default !== undefined) {
+        next[child.name] = buildDefaultLiteralValue(child);
+      }
+    }
+    return next;
+  }
+  return '';
+};
+
+const looksLikeEmail = (value: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+const formatPrimitiveList = (value: MappingValue | undefined): string => {
+  if (!Array.isArray(value)) return '';
+  return value.map((item) => String(item ?? '')).join('\n');
+};
+
+const parsePrimitiveList = (
+  text: string,
+  itemType: string,
+  constraints?: ActionInputField['constraints']
+): { values: MappingValue[]; errors: string[] } => {
+  const tokens = text
+    .split(/[\n,;]+/g)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0);
+
+  const errors: string[] = [];
+  const values: MappingValue[] = [];
+
+  tokens.forEach((token, index) => {
+    if (itemType === 'number' || itemType === 'integer') {
+      const parsed = Number(token);
+      if (Number.isNaN(parsed)) {
+        errors.push(`Item ${index + 1} is not a valid number`);
+        return;
+      }
+      if (itemType === 'integer' && !Number.isInteger(parsed)) {
+        errors.push(`Item ${index + 1} must be an integer`);
+        return;
+      }
+      if (typeof constraints?.minimum === 'number' && parsed < constraints.minimum) {
+        errors.push(`Item ${index + 1} must be >= ${constraints.minimum}`);
+        return;
+      }
+      if (typeof constraints?.maximum === 'number' && parsed > constraints.maximum) {
+        errors.push(`Item ${index + 1} must be <= ${constraints.maximum}`);
+        return;
+      }
+      values.push(parsed);
+      return;
+    }
+
+    if (itemType === 'boolean') {
+      const normalized = token.toLowerCase();
+      if (['true', '1', 'yes'].includes(normalized)) {
+        values.push(true);
+        return;
+      }
+      if (['false', '0', 'no'].includes(normalized)) {
+        values.push(false);
+        return;
+      }
+      errors.push(`Item ${index + 1} must be true/false`);
+      return;
+    }
+
+    if (constraints?.format === 'email' && !looksLikeEmail(token)) {
+      errors.push(`Item ${index + 1} is not a valid email address`);
+      return;
+    }
+
+    if (typeof constraints?.minLength === 'number' && token.length < constraints.minLength) {
+      errors.push(`Item ${index + 1} must be at least ${constraints.minLength} characters`);
+      return;
+    }
+    if (typeof constraints?.maxLength === 'number' && token.length > constraints.maxLength) {
+      errors.push(`Item ${index + 1} must be at most ${constraints.maxLength} characters`);
+      return;
+    }
+    if (constraints?.pattern) {
+      try {
+        const regex = new RegExp(constraints.pattern);
+        if (!regex.test(token)) {
+          errors.push(`Item ${index + 1} does not match required format`);
+          return;
+        }
+      } catch {
+        // Ignore malformed patterns from schema metadata.
+      }
+    }
+    values.push(token);
+  });
+
+  if (typeof constraints?.minItems === 'number' && values.length < constraints.minItems) {
+    errors.push(`At least ${constraints.minItems} value(s) required`);
+  }
+  if (typeof constraints?.maxItems === 'number' && values.length > constraints.maxItems) {
+    errors.push(`At most ${constraints.maxItems} value(s) allowed`);
+  }
+
+  return { values, errors };
+};
+
 const LiteralValueEditor: React.FC<{
   value: MappingValue | undefined;
   onChange: (value: MappingValue) => void;
   fieldType: string;
   fieldEnum?: Array<string | number | boolean | null>;
+  fieldChildren?: ActionInputField[];
+  fieldConstraints?: ActionInputField['constraints'];
   idPrefix: string;
   disabled?: boolean;
-}> = ({ value, onChange, fieldType, fieldEnum, idPrefix, disabled }) => {
+}> = ({
+  value,
+  onChange,
+  fieldType,
+  fieldEnum,
+  fieldChildren,
+  fieldConstraints,
+  idPrefix,
+  disabled
+}) => {
+  const hasStructuredObjectEditor = fieldType === 'object' && (fieldChildren?.length ?? 0) > 0;
+  const hasStructuredArrayObjectEditor = fieldType === 'array' && (fieldChildren?.length ?? 0) > 0;
+  const hasStructuredPrimitiveArrayEditor =
+    fieldType === 'array' &&
+    (fieldChildren?.length ?? 0) === 0 &&
+    Boolean(fieldConstraints?.itemType) &&
+    fieldConstraints?.itemType !== 'object' &&
+    fieldConstraints?.itemType !== 'array';
+  const supportsStructuredEditor =
+    hasStructuredObjectEditor || hasStructuredArrayObjectEditor || hasStructuredPrimitiveArrayEditor;
+
+  const [editorMode, setEditorMode] = useState<'structured' | 'json'>(
+    supportsStructuredEditor ? 'structured' : 'json'
+  );
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [jsonText, setJsonText] = useState(() => {
     if (fieldType === 'object' || fieldType === 'array') {
-      return JSON.stringify(value ?? (fieldType === 'array' ? [] : {}), null, 2);
+      return JSON.stringify(normalizeJsonLiteral(value, fieldType), null, 2);
     }
     return '';
   });
+  const [listError, setListError] = useState<string | null>(null);
+  const [listText, setListText] = useState(() => formatPrimitiveList(value));
+
+  useEffect(() => {
+    if (!supportsStructuredEditor) {
+      setEditorMode('json');
+    }
+  }, [supportsStructuredEditor]);
+
+  useEffect(() => {
+    if (fieldType === 'array' || fieldType === 'object') {
+      setJsonText(JSON.stringify(normalizeJsonLiteral(value, fieldType), null, 2));
+      setJsonError(null);
+    }
+  }, [value, fieldType]);
+
+  useEffect(() => {
+    if (hasStructuredPrimitiveArrayEditor) {
+      setListText(formatPrimitiveList(value));
+      setListError(null);
+    }
+  }, [value, hasStructuredPrimitiveArrayEditor]);
 
   // Handle enum fields
   if (fieldEnum && fieldEnum.length > 0) {
@@ -842,8 +1027,12 @@ const LiteralValueEditor: React.FC<{
       <Input
         id={`${idPrefix}-literal-num`}
         type="number"
-        value={typeof value === 'number' ? value : 0}
-        onChange={(e) => onChange(Number(e.target.value))}
+        value={typeof value === 'number' ? value : Number(value ?? 0)}
+        onChange={(e) => {
+          const parsed = Number(e.target.value);
+          if (Number.isNaN(parsed)) return;
+          onChange(parsed);
+        }}
         disabled={disabled}
       />
     );
@@ -851,18 +1040,23 @@ const LiteralValueEditor: React.FC<{
 
   // Handle array/object
   if (fieldType === 'array' || fieldType === 'object') {
+    const modeOptions: SelectOption[] = [
+      { value: 'structured', label: 'Structured' },
+      { value: 'json', label: 'Raw JSON' }
+    ];
+
     const handleJsonChange = (text: string) => {
       setJsonText(text);
       try {
         const parsed = JSON.parse(text);
         setJsonError(null);
         onChange(parsed);
-      } catch (err) {
+      } catch {
         setJsonError('Invalid JSON');
       }
     };
 
-    return (
+    const renderJsonEditor = () => (
       <div className="space-y-2">
         <TextArea
           id={`${idPrefix}-literal-json`}
@@ -881,12 +1075,182 @@ const LiteralValueEditor: React.FC<{
         )}
       </div>
     );
+
+    const renderStructuredObjectEditor = () => {
+      const nextValue = isRecordLiteral(value) ? value : {};
+      return (
+        <div className="space-y-3 rounded-md border border-gray-200 p-3">
+          {fieldChildren?.map((child) => (
+            <div key={child.name} className="space-y-1.5">
+              <div className="flex items-center gap-1 text-xs font-medium text-gray-700">
+                <span>{child.name}</span>
+                {child.required && <span className="text-gray-500">*</span>}
+              </div>
+              <LiteralValueEditor
+                value={nextValue[child.name] as MappingValue | undefined}
+                onChange={(childValue) => {
+                  onChange({
+                    ...nextValue,
+                    [child.name]: childValue
+                  });
+                }}
+                fieldType={child.type}
+                fieldEnum={child.enum}
+                fieldChildren={child.children}
+                fieldConstraints={child.constraints}
+                idPrefix={`${idPrefix}-literal-${child.name}`}
+                disabled={disabled}
+              />
+              {child.description && (
+                <p className="text-[11px] text-gray-500">{child.description}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    };
+
+    const renderStructuredArrayObjectEditor = () => {
+      const rows = Array.isArray(value)
+        ? value.map((item) => (isRecordLiteral(item) ? item : {}))
+        : [];
+
+      const addRow = () => {
+        const newRow: Record<string, MappingValue> = {};
+        for (const child of fieldChildren ?? []) {
+          if (child.required || child.default !== undefined) {
+            newRow[child.name] = buildDefaultLiteralValue(child);
+          }
+        }
+        onChange([...rows, newRow]);
+      };
+
+      return (
+        <div className="space-y-3">
+          {rows.map((row, rowIndex) => (
+            <div key={`${idPrefix}-row-${rowIndex}`} className="rounded-md border border-gray-200 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="text-xs font-medium text-gray-600">Item {rowIndex + 1}</div>
+                <Button
+                  id={`${idPrefix}-literal-row-remove-${rowIndex}`}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onChange(rows.filter((_, idx) => idx !== rowIndex))}
+                  disabled={disabled}
+                  className="h-7 px-2 text-gray-500 hover:text-destructive"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <div className="space-y-3">
+                {fieldChildren?.map((child) => (
+                  <div key={`${idPrefix}-row-${rowIndex}-${child.name}`} className="space-y-1.5">
+                    <div className="flex items-center gap-1 text-xs font-medium text-gray-700">
+                      <span>{child.name}</span>
+                      {child.required && <span className="text-gray-500">*</span>}
+                    </div>
+                    <LiteralValueEditor
+                      value={row[child.name] as MappingValue | undefined}
+                      onChange={(childValue) => {
+                        const nextRows = [...rows];
+                        const nextRow = { ...row, [child.name]: childValue };
+                        nextRows[rowIndex] = nextRow;
+                        onChange(nextRows);
+                      }}
+                      fieldType={child.type}
+                      fieldEnum={child.enum}
+                      fieldChildren={child.children}
+                      fieldConstraints={child.constraints}
+                      idPrefix={`${idPrefix}-literal-row-${rowIndex}-${child.name}`}
+                      disabled={disabled}
+                    />
+                    {child.description && (
+                      <p className="text-[11px] text-gray-500">{child.description}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          <Button
+            id={`${idPrefix}-literal-array-add`}
+            variant="outline"
+            size="sm"
+            onClick={addRow}
+            disabled={disabled}
+            className="w-full justify-center"
+          >
+            <Plus className="mr-1 h-3.5 w-3.5" />
+            Add item
+          </Button>
+        </div>
+      );
+    };
+
+    const renderStructuredPrimitiveArrayEditor = () => {
+      const itemType = fieldConstraints?.itemType ?? 'string';
+      return (
+        <div className="space-y-2">
+          <TextArea
+            id={`${idPrefix}-literal-list`}
+            value={listText}
+            onChange={(e) => {
+              const nextText = e.target.value;
+              setListText(nextText);
+              const { values, errors } = parsePrimitiveList(nextText, itemType, fieldConstraints);
+              setListError(errors[0] ?? null);
+              if (errors.length === 0) {
+                onChange(values);
+              }
+            }}
+            rows={4}
+            placeholder="Enter one value per line, or comma-separated"
+            className={listError ? 'border-destructive focus:ring-destructive focus:border-destructive' : ''}
+            disabled={disabled}
+          />
+          <p className="text-[11px] text-gray-500">
+            Use newline, comma, or semicolon separators.
+          </p>
+          {listError && (
+            <div className="flex items-center gap-1 text-xs text-destructive">
+              <AlertTriangle className="w-3 h-3" />
+              {listError}
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    const showStructured = supportsStructuredEditor && editorMode === 'structured';
+
+    return (
+      <div className="space-y-2">
+        {supportsStructuredEditor && (
+          <CustomSelect
+            id={`${idPrefix}-literal-mode`}
+            options={modeOptions}
+            value={editorMode}
+            onValueChange={(mode) => setEditorMode(mode as 'structured' | 'json')}
+            disabled={disabled}
+            className="w-40"
+          />
+        )}
+
+        {showStructured && hasStructuredObjectEditor && renderStructuredObjectEditor()}
+        {showStructured && hasStructuredArrayObjectEditor && renderStructuredArrayObjectEditor()}
+        {showStructured && hasStructuredPrimitiveArrayEditor && renderStructuredPrimitiveArrayEditor()}
+        {!showStructured && renderJsonEditor()}
+      </div>
+    );
   }
 
   // Default to string
+  const stringInputType = fieldConstraints?.format === 'email' ? 'email' : 'text';
   return (
     <Input
       id={`${idPrefix}-literal-str`}
+      type={stringInputType}
       value={typeof value === 'string' ? value : ''}
       onChange={(e) => onChange(e.target.value)}
       placeholder="Enter value..."
@@ -1216,7 +1580,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                 />
                 <button
                   onClick={() => handleRemoveMapping(field.name)}
-                  className={`absolute -right-2 -top-2 p-1 bg-white border border-gray-200 rounded-full shadow-sm transition-opacity hover:bg-destructive/10 hover:border-destructive/30 ${
+                  className={`absolute -right-2 -top-2 p-1 bg-white dark:bg-[rgb(var(--color-card))] border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-full shadow-sm transition-opacity hover:bg-destructive/10 hover:border-destructive/30 ${
                     isFocused ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                   }`}
                   title="Remove mapping (Delete/Backspace)"

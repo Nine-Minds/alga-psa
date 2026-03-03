@@ -224,6 +224,14 @@ const nextConfig = {
       '@alga-psa/reference-data/': '../packages/reference-data/src/',
       '@alga-psa/reference-data/actions': '../packages/reference-data/src/actions/index.ts',
       '@alga-psa/reference-data/components': '../packages/reference-data/src/components/index.ts',
+      // Assets package
+      '@alga-psa/assets': '../packages/assets/src',
+      '@alga-psa/assets/': '../packages/assets/src/',
+      '@alga-psa/assets/actions': '../packages/assets/src/actions/index.ts',
+      '@alga-psa/assets/components': '../packages/assets/src/components/index.ts',
+      // MSP Composition package
+      '@alga-psa/msp-composition': '../packages/msp-composition/src',
+      '@alga-psa/msp-composition/': '../packages/msp-composition/src/',
       // Billing package
       '@alga-psa/billing': '../packages/billing/src',
       '@alga-psa/billing/': '../packages/billing/src/',
@@ -397,6 +405,8 @@ const nextConfig = {
     '@alga-psa/media',
     '@alga-psa/reference-data',
     '@alga-psa/billing',
+    '@alga-psa/assets',
+    '@alga-psa/msp-composition',
     '@alga-psa/projects',
     '@alga-psa/surveys',
     // Product feature packages (only those needed in this app)
@@ -404,6 +414,7 @@ const nextConfig = {
     '@product/settings-extensions',
     '@product/billing',
     '@alga-psa/workflows',
+    '@alga-psa/sla',
     // New aliasing packages
     '@alga-psa/product-extension-actions',
     '@alga-psa/product-auth-ee',

@@ -32,6 +32,7 @@ import {
   WorkflowDataWithSystemFlag // Import the type
 } from '@alga-psa/workflows/actions/workflow-editor-actions';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import WorkflowEditorComponent from '../workflow-editor/WorkflowEditorComponent';
 import TestWorkflowModal from '../workflow-editor/TestWorkflowModal';
 import WorkflowVersionsDialog from '../workflow-editor/WorkflowVersionsDialog';
@@ -123,8 +124,7 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
       
       setWorkflows(workflowsWithEvents);
     } catch (error) {
-      console.error('Error loading workflows:', error);
-      toast.error('Failed to load workflows');
+      handleError(error, 'Failed to load workflows');
     } finally {
       setLoading(false);
     }
@@ -429,8 +429,7 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
         }
       }
     } catch (error) {
-      console.error('Error loading workflow for testing:', error);
-      toast.error('Failed to load workflow for testing');
+      handleError(error, 'Failed to load workflow for testing');
     }
   };
   
@@ -460,8 +459,7 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
         toast.error(`Failed to ${newStatus ? 'activate' : 'deactivate'} workflow`);
       }
     } catch (error) {
-      console.error(`Error ${currentlyActive ? 'deactivating' : 'activating'} workflow:`, error);
-      toast.error(`An error occurred while ${currentlyActive ? 'deactivating' : 'activating'} the workflow`);
+      handleError(error, `An error occurred while ${currentlyActive ? 'deactivating' : 'activating'} the workflow`);
     }
   };
 

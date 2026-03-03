@@ -181,7 +181,7 @@ jobs:
           # Build all images needed for e2e tests upfront
           # Excludes: workflow-worker (EE only, not needed for CE e2e)
           docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml build --no-cache \
-            server setup imap-service hocuspocus
+            server setup email-service hocuspocus
         shell: bash
 
       - name: Start foundational services (postgres and redis)
@@ -360,7 +360,7 @@ jobs:
           # Use --no-deps to avoid waiting on setup dependency again
           docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.imap-test.yaml up -d \
             --no-recreate --no-deps \
-            server imap-service imap-test-server hocuspocus
+            server email-service imap-test-server hocuspocus
         shell: bash
 
       - name: Collect initial container logs
@@ -509,12 +509,40 @@ jobs:
           EOF
         shell: bash
 
-      - name: Install Playwright and dependencies
+      - name: Install Playwright npm packages
         if: steps.wait_for_setup.outputs.status == 'success'
         working-directory: ./e2e-tests
+        run: npm install
+        shell: bash
+
+      - name: Get Playwright version
+        if: steps.wait_for_setup.outputs.status == 'success'
+        id: playwright_version
+        working-directory: ./e2e-tests
         run: |
-          npm install
-          npx playwright install --with-deps # Install browsers
+          PLAYWRIGHT_VERSION=$(npx playwright --version | awk '{print $2}')
+          echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
+          echo "Playwright version: $PLAYWRIGHT_VERSION"
+        shell: bash
+
+      - name: Cache Playwright browsers
+        if: steps.wait_for_setup.outputs.status == 'success'
+        id: playwright_cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ steps.playwright_version.outputs.version }}
+
+      - name: Install Playwright browsers
+        if: steps.wait_for_setup.outputs.status == 'success' && steps.playwright_cache.outputs.cache-hit != 'true'
+        working-directory: ./e2e-tests
+        run: npx playwright install
+        shell: bash
+
+      - name: Install Playwright system dependencies
+        if: steps.wait_for_setup.outputs.status == 'success'
+        working-directory: ./e2e-tests
+        run: npx playwright install-deps
         shell: bash
 
       - name: Create Playwright config file

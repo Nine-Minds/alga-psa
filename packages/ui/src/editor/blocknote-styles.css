@@ -1,0 +1,20 @@
+/*
+ * BlockNote 0.47 style bundle.
+ *
+ * `@blocknote/mantine/style.css` internally chains:
+ *   mantineStyles.css  → Mantine component CSS (@mantine/core/styles/*)
+ *   blocknoteStyles.css → @import("@blocknote/react/style.css") + .bn-mantine theming
+ *
+ * postcss-import cannot resolve `@blocknote/react/style.css` because it does
+ * not follow Node.js package "exports" maps. The file lives at
+ * `@blocknote/react/dist/style.css` but the package.json exports entry
+ * `./style.css` -> `./dist/style.css` is invisible to postcss-import.
+ *
+ * Workaround:
+ * 1. Import pre-built @blocknote/react CSS via filesystem path (no @import chains)
+ * 2. Import the .bn-mantine theme CSS from a patched local copy (import line stripped)
+ * 3. Import Mantine component CSS via filesystem path
+ */
+@import "../../../../node_modules/@blocknote/react/dist/style.css";
+@import "./_blocknoteStyles-patched.css";
+@import "../../../../node_modules/@blocknote/mantine/src/mantineStyles.css";

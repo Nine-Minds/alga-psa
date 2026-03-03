@@ -5,6 +5,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { MoreVertical, PlusCircle, Info } from 'lucide-react';
 
 import { Button } from '@alga-psa/ui/components/Button';
@@ -86,8 +87,7 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
       const fetchedComponents = await getTaxComponentsByTaxRate(taxRateId);
       setComponents(fetchedComponents);
     } catch (error) {
-      console.error('Failed to fetch tax components:', error);
-      toast.error('Failed to load tax components.');
+      handleError(error, 'Failed to load tax components.');
     } finally {
       setIsLoading(false);
     }
@@ -173,8 +173,7 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
       await fetchComponents();
       handleCloseDialog();
     } catch (error: any) {
-      console.error(`${errorMessage}:`, error);
-      toast.error(`${errorMessage} ${error?.message ? `(${error.message})` : ''}`);
+      handleError(error, errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -190,8 +189,7 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
       await fetchComponents();
       handleCloseDeleteDialog();
     } catch (error: any) {
-      console.error('Failed to delete tax component:', error);
-      toast.error(`Failed to delete tax component. ${error?.message ? `(${error.message})` : ''}`);
+      handleError(error, 'Failed to delete tax component.');
     } finally {
       setIsSubmitting(false);
     }

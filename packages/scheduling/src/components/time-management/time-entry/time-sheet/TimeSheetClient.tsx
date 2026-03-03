@@ -9,6 +9,7 @@ import { fetchTimeSheet, reverseTimeSheetApproval } from '@alga-psa/scheduling/a
 import { TimeSheet } from './TimeSheet';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 interface TimeSheetClientProps {
@@ -86,8 +87,7 @@ export default function TimeSheetClient({ timeSheet: initialTimeSheet, currentUs
       setIsReopenDialogOpen(false);
       toast.success('Time sheet reopened for edits');
     } catch (error) {
-      console.error('Error reopening time sheet:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to reopen time sheet');
+      handleError(error, 'Failed to reopen time sheet');
     } finally {
       setIsReopening(false);
     }

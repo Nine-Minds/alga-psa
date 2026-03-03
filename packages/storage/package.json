@@ -2,28 +2,32 @@
   "name": "@alga-psa/storage",
   "version": "0.1.0",
   "private": true,
-  "main": "./dist/index.js",
+  "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": {
-      "import": "./src/index.ts",
+      "import": "./dist/index.mjs",
       "types": "./src/index.ts"
     },
     "./StorageService": {
-      "import": "./src/StorageService.ts",
+      "import": "./dist/StorageService.mjs",
       "types": "./src/StorageService.ts"
     },
+    "./StorageProviderFactory": {
+      "import": "./dist/StorageProviderFactory.mjs",
+      "types": "./src/StorageProviderFactory.ts"
+    },
     "./types/storage": {
-      "import": "./src/types/storage.ts",
+      "import": "./dist/types/storage.mjs",
       "types": "./src/types/storage.ts"
     },
     "./providers/StorageProvider": {
-      "import": "./src/providers/StorageProvider.ts",
+      "import": "./dist/providers/StorageProvider.mjs",
       "types": "./src/providers/StorageProvider.ts"
     },
     "./config/storage": {
-      "import": "./src/config/storage.ts",
+      "import": "./dist/config/storage.mjs",
       "types": "./src/config/storage.ts"
     }
   },
@@ -34,6 +38,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.985.0",
     "@alga-psa/auth": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",

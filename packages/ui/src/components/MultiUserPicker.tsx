@@ -313,7 +313,8 @@ const MultiUserPicker = ({
 
       // Multiple selections - compact
       const firstUser = selectedUsers[0];
-      const additionalCount = selectedUsers.length - 1 + (includeUnassigned ? 1 : 0);
+      const totalSelected = selectedUsers.length + (includeUnassigned ? 1 : 0);
+      const additionalCount = totalSelected > 0 ? totalSelected - 1 : 0;
 
       return (
         <div className="flex items-center gap-2">
@@ -455,7 +456,7 @@ const MultiUserPicker = ({
           </div>
         )}
 
-        {/* User List */}
+        {/* User + Team List */}
         <div
           className="overflow-y-auto p-1 pointer-events-auto"
           style={{
@@ -489,42 +490,48 @@ const MultiUserPicker = ({
             <div className="px-3 py-2 text-sm text-gray-500">Loading users...</div>
           ) : error ? (
             <div className="px-3 py-2 text-sm text-red-500">Error loading users</div>
-          ) : filteredUsers.length === 0 ? (
-            <div className="px-3 py-2 text-sm text-gray-500">
-              {searchQuery ? 'No users found' : 'No users available'}
-            </div>
           ) : (
-            filteredUsers.map((user): React.JSX.Element => {
-              const isSelected = values.includes(user.user_id);
-              const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User';
-
-              return (
-                <div
-                  key={user.user_id}
-                  className={`
-                    relative flex items-center px-3 py-2 text-sm rounded cursor-pointer
-                    hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${isSelected ? 'bg-gray-50 dark:bg-[rgb(var(--color-border-50))]' : ''}
-                  `}
-                  onClick={() => handleUserToggle(user.user_id)}
-                >
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      id={`user-${user.user_id}`}
-                      checked={isSelected}
-                      onChange={() => handleUserToggle(user.user_id)}
-                      className="mr-3"
-                    />
-                  </div>
-                  <UserAvatar
-                    userId={user.user_id}
-                    userName={userName}
-                    avatarUrl={avatarUrls[user.user_id] || null}
-                    size="sm"
-                  />
-                  <span className="ml-2">{userName}</span>
+            <>
+              {filteredUsers.length === 0 ? (
+                <div className="px-3 py-2 text-sm text-gray-500">
+                  {searchQuery ? 'No results found' : 'No users available'}
                 </div>
-              );
-            })
+              ) : (
+                <>
+                  {filteredUsers.map((user): React.JSX.Element => {
+                    const isSelected = values.includes(user.user_id);
+                    const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User';
+
+                    return (
+                      <div
+                        key={user.user_id}
+                        className={`
+                          relative flex items-center px-3 py-2 text-sm rounded cursor-pointer
+                          hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${isSelected ? 'bg-gray-50 dark:bg-[rgb(var(--color-border-50))]' : ''}
+                        `}
+                        onClick={() => handleUserToggle(user.user_id)}
+                      >
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            id={`user-${user.user_id}`}
+                            checked={isSelected}
+                            onChange={() => handleUserToggle(user.user_id)}
+                            className="mr-3"
+                          />
+                        </div>
+                        <UserAvatar
+                          userId={user.user_id}
+                          userName={userName}
+                          avatarUrl={avatarUrls[user.user_id] || null}
+                          size="sm"
+                        />
+                        <span className="ml-2">{userName}</span>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </>
           )}
         </div>
 

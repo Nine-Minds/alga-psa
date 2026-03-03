@@ -26,13 +26,17 @@ export interface IUserWithRoles extends IUser {
   avatarUrl?: string | null;
 }
 
+export interface ITeamMember extends IUserWithRoles {
+  role: 'member' | 'lead';
+}
+
 export interface ITeam extends TenantEntity {
   team_id: string;
   team_name: string;
   manager_id: string | null;
   created_at?: Date;
   updated_at?: Date;
-  members: IUserWithRoles[];
+  members: ITeamMember[];
 }
 
 export interface IRoleWithPermissions extends IRole {

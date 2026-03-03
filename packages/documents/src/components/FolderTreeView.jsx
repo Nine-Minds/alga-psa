@@ -4,6 +4,7 @@ import { getFolderTree, deleteFolder } from '../actions/documentActions';
 import { ChevronRight, ChevronDown, Folder, FolderOpen, Trash2, ChevronLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 export default function FolderTreeView({ onFolderSelect, selectedFolder, onFolderDeleted, isCollapsed = false, onToggleCollapse }) {
     const [folderTree, setFolderTree] = useState([]);
     const [expandedFolders, setExpandedFolders] = useState(new Set());
@@ -28,6 +29,10 @@ export default function FolderTreeView({ onFolderSelect, selectedFolder, onFolde
     async function loadFolderTree() {
         try {
             const tree = await getFolderTree();
+            if (isActionPermissionError(tree)) {
+                handleError(tree.permissionError);
+                return;
+            }
             setFolderTree(tree);
         }
         catch (error) {
@@ -57,7 +62,11 @@ export default function FolderTreeView({ onFolderSelect, selectedFolder, onFolde
             return;
         }
         try {
-            await deleteFolder(path);
+            const deleteResult = await deleteFolder(path);
+            if (isActionPermissionError(deleteResult)) {
+                handleError(deleteResult.permissionError);
+                return;
+            }
             toast.success(t('documents.folders.deleteSuccess', {
                 name: path,
                 defaultValue: `Folder "${path}" deleted successfully`

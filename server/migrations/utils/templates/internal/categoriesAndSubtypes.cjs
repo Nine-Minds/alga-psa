@@ -12,6 +12,7 @@ const CATEGORIES = [
   { name: 'system', description: 'System and administrative notifications', is_enabled: true, is_default_enabled: true },
   { name: 'messages', description: 'Direct messages and communication', is_enabled: true, is_default_enabled: true },
   { name: 'appointments', description: 'Appointment request and scheduling notifications', is_enabled: true, is_default_enabled: true },
+  { name: 'sla', description: 'SLA-related notifications', is_enabled: true, is_default_enabled: true },
 ];
 
 const SUBTYPES = [
@@ -26,6 +27,7 @@ const SUBTYPES = [
   { category: 'tickets', name: 'ticket-reassigned', description: 'Ticket reassigned to different user' },
   { category: 'tickets', name: 'ticket-additional-agent-assigned', description: 'User assigned as additional agent on ticket' },
   { category: 'tickets', name: 'ticket-additional-agent-added', description: 'Additional agent added to ticket (for primary assignee)' },
+  { category: 'tickets', name: 'ticket-team-assigned', description: 'Team assigned to ticket' },
   // Projects
   { category: 'projects', name: 'project-assigned', description: 'Project assigned to user' },
   { category: 'projects', name: 'project-created', description: 'New project created' },
@@ -34,6 +36,7 @@ const SUBTYPES = [
   { category: 'projects', name: 'milestone-completed', description: 'Project milestone completed' },
   { category: 'projects', name: 'task-additional-agent-assigned', description: 'User assigned as additional agent on task' },
   { category: 'projects', name: 'task-additional-agent-added', description: 'Additional agent added to task (for primary assignee)' },
+  { category: 'projects', name: 'task-team-assigned', description: 'Team assigned to project task' },
   // Invoices
   { category: 'invoices', name: 'invoice-generated', description: 'New invoice generated' },
   { category: 'invoices', name: 'payment-received', description: 'Payment received for invoice' },
@@ -49,6 +52,12 @@ const SUBTYPES = [
   { category: 'appointments', name: 'appointment-request-declined', description: 'Appointment request declined' },
   { category: 'appointments', name: 'appointment-request-cancelled', description: 'Appointment request cancelled' },
   { category: 'appointments', name: 'appointment-assigned-technician', description: 'Appointment assigned to technician' },
+  // SLA
+  { category: 'sla', name: 'sla-warning', description: 'SLA approaching breach threshold' },
+  { category: 'sla', name: 'sla-breach', description: 'SLA has been breached' },
+  { category: 'sla', name: 'sla-response-met', description: 'Response SLA was met' },
+  { category: 'sla', name: 'sla-resolution-met', description: 'Resolution SLA was met' },
+  { category: 'sla', name: 'sla-escalation', description: 'SLA escalation notification' },
 ];
 
 /**

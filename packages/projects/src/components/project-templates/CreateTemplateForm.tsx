@@ -8,6 +8,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { IProject } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { createTemplateFromProject } from '../../actions/projectTemplateActions';
 
 interface CreateTemplateFormProps {
@@ -46,8 +47,7 @@ export default function CreateTemplateForm({ projects, categories }: CreateTempl
       toast.success('Template created successfully');
       router.push(`/msp/projects/templates/${templateId}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create template');
-      console.error('Error creating template:', error);
+      handleError(error, 'Failed to create template');
     } finally {
       setLoading(false);
     }

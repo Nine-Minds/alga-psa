@@ -23,9 +23,9 @@ import { z } from 'zod';
 import { validateData } from '@alga-psa/validation';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { getEventBus } from '@alga-psa/event-bus';
-import { convertBlockNoteToMarkdown } from '@alga-psa/documents/lib/blocknoteUtils';
+import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { getImageUrl } from '@alga-psa/documents/actions/documentActions';
-import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch } from '@alga-psa/documents/lib/avatarUtils';
+import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import {
   ticketFormSchema,
   ticketSchema,
@@ -767,6 +767,10 @@ export const getTicketsForList = withAuth(async (
         this.on('t.assigned_to', 'au.user_id')
            .andOn('t.tenant', 'au.tenant')
       })
+      .leftJoin('teams as tm', function() {
+        this.on('t.assigned_team_id', 'tm.team_id')
+           .andOn('t.tenant', 'tm.tenant')
+      })
       .where({
         't.tenant': tenant
       });
@@ -883,16 +887,24 @@ export const getTicketsForList = withAuth(async (
     }
 
     // Apply assignee filter if provided
-    if (validatedFilters.assignedToIds?.length || validatedFilters.includeUnassigned) {
+    if (validatedFilters.assignedToIds?.length || validatedFilters.assignedTeamIds?.length || validatedFilters.includeUnassigned) {
       baseQuery = baseQuery.where(function(this: any) {
         // Handle specific assignee IDs
         if (validatedFilters.assignedToIds?.length) {
           this.whereIn('t.assigned_to', validatedFilters.assignedToIds);
         }
 
+        if (validatedFilters.assignedTeamIds?.length) {
+          if (validatedFilters.assignedToIds?.length) {
+            this.orWhereIn('t.assigned_team_id', validatedFilters.assignedTeamIds);
+          } else {
+            this.whereIn('t.assigned_team_id', validatedFilters.assignedTeamIds);
+          }
+        }
+
         // Handle unassigned (OR condition if both specified)
         if (validatedFilters.includeUnassigned) {
-          if (validatedFilters.assignedToIds?.length) {
+          if (validatedFilters.assignedToIds?.length || validatedFilters.assignedTeamIds?.length) {
             this.orWhereNull('t.assigned_to');
           } else {
             this.whereNull('t.assigned_to');
@@ -967,6 +979,66 @@ export const getTicketsForList = withAuth(async (
       }
     }
 
+    // Apply SLA status filter
+    if (validatedFilters.slaStatusFilter && validatedFilters.slaStatusFilter !== 'all') {
+      const nowIso = Temporal.Now.instant().toString();
+
+      switch (validatedFilters.slaStatusFilter) {
+        case 'has_sla':
+          baseQuery = baseQuery.whereNotNull('t.sla_policy_id');
+          break;
+
+        case 'no_sla':
+          baseQuery = baseQuery.whereNull('t.sla_policy_id');
+          break;
+
+        case 'on_track':
+          baseQuery = baseQuery
+            .whereNotNull('t.sla_policy_id')
+            .whereNull('t.sla_paused_at')
+            .where(function() {
+              this.whereNotNull('t.sla_response_at')
+                .orWhereNull('t.sla_response_due_at')
+                .orWhere('t.sla_response_due_at', '>=', nowIso);
+            })
+            .where(function() {
+              this.whereNotNull('t.sla_resolution_at')
+                .orWhereNull('t.sla_resolution_due_at')
+                .orWhere('t.sla_resolution_due_at', '>=', nowIso);
+            })
+            .where(function() {
+              this.whereNull('t.sla_response_met').orWhere('t.sla_response_met', true);
+            })
+            .where(function() {
+              this.whereNull('t.sla_resolution_met').orWhere('t.sla_resolution_met', true);
+            });
+          break;
+
+        case 'breached':
+          baseQuery = baseQuery
+            .whereNotNull('t.sla_policy_id')
+            .where(function() {
+              this.where(function() {
+                this.where('t.sla_response_due_at', '<', nowIso)
+                  .whereNull('t.sla_response_at');
+              })
+              .orWhere(function() {
+                this.where('t.sla_resolution_due_at', '<', nowIso)
+                  .whereNull('t.sla_resolution_at');
+              })
+              .orWhere('t.sla_response_met', false)
+              .orWhere('t.sla_resolution_met', false);
+            });
+          break;
+
+        case 'paused':
+          baseQuery = baseQuery
+            .whereNotNull('t.sla_policy_id')
+            .whereNotNull('t.sla_paused_at');
+          break;
+      }
+    }
+
     const sortBy = validatedFilters.sortBy ?? 'entered_at';
     const sortDirection: 'asc' | 'desc' = validatedFilters.sortDirection ?? 'desc';
     const sortColumnMap: Record<string, { column?: string; rawExpression?: string }> = {
@@ -1027,6 +1099,7 @@ export const getTicketsForList = withAuth(async (
         'comp.client_name',
         trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
         trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
+        'tm.team_name as assigned_team_name',
         trx.raw("(SELECT COUNT(*) FROM ticket_resources tr WHERE tr.ticket_id = t.ticket_id AND tr.tenant = t.tenant AND tr.additional_user_id IS NOT NULL)::int as additional_agent_count"),
         trx.raw(`(SELECT COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json) FROM ticket_resources tr2 JOIN users uu ON tr2.additional_user_id = uu.user_id AND tr2.tenant = uu.tenant WHERE tr2.ticket_id = t.ticket_id AND tr2.tenant = t.tenant) as additional_agents`)
       )
@@ -1061,6 +1134,7 @@ export const getTicketsForList = withAuth(async (
         client_name,
         entered_by_name,
         assigned_to_name,
+        assigned_team_name,
         additional_agent_count,
         additional_agents,
         bundle_child_count,
@@ -1099,6 +1173,7 @@ export const getTicketsForList = withAuth(async (
         client_name: client_name || 'Unknown',
         entered_by_name: entered_by_name || 'Unknown',
         assigned_to_name: assigned_to_name || null,
+        assigned_team_name: assigned_team_name || null,
         additional_agent_count: additional_agent_count || 0,
         additional_agents: additional_agents || [],
         bundle_child_count: typeof bundle_child_count === 'number' ? bundle_child_count : Number.parseInt(String(bundle_child_count ?? '0'), 10) || 0,
@@ -1535,6 +1610,21 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
       };
     }
 
+    // Record closed_at / closed_by when transitioning to/from closed status
+    if (newStatus?.is_closed && !oldStatus?.is_closed) {
+      await trx('tickets')
+        .where({ ticket_id: id, tenant: tenant })
+        .update({ closed_at: occurredAt, closed_by: user.user_id });
+      updatedTicket.closed_at = occurredAt;
+      updatedTicket.closed_by = user.user_id;
+    } else if (!newStatus?.is_closed && oldStatus?.is_closed) {
+      await trx('tickets')
+        .where({ ticket_id: id, tenant: tenant })
+        .update({ closed_at: null, closed_by: null });
+      updatedTicket.closed_at = null;
+      updatedTicket.closed_by = null;
+    }
+
     // Publish appropriate event based on the update
     if (newStatus?.is_closed && !oldStatus?.is_closed) {
       // Ticket was closed
@@ -1599,6 +1689,25 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
         ctx: workflowCtx,
         eventName: 'Ticket Updated',
       });
+    }
+
+    // Publish response state change event if response_state was explicitly changed
+    if ('response_state' in updateData && updateData.response_state !== currentTicket.response_state) {
+      try {
+        await publishEvent({
+          eventType: 'TICKET_RESPONSE_STATE_CHANGED',
+          payload: {
+            tenantId: tenant,
+            ticketId: id,
+            userId: user.user_id,
+            previousState: currentTicket.response_state || null,
+            newState: updateData.response_state || null,
+            trigger: 'manual',
+          },
+        });
+      } catch (error) {
+        console.warn('[updateTicketWithCache] Failed to publish TICKET_RESPONSE_STATE_CHANGED:', error);
+      }
     }
 
     // If this is a bundle master in sync_updates mode, propagate selected workflow updates to children.
@@ -1962,6 +2071,10 @@ export const fetchBundleChildrenForMaster = withAuth(async (
         this.on('t.assigned_to', 'au.user_id')
           .andOn('t.tenant', 'au.tenant');
       })
+      .leftJoin('teams as tm', function () {
+        this.on('t.assigned_team_id', 'tm.team_id')
+          .andOn('t.tenant', 'tm.tenant');
+      })
       .select(
         't.*',
         's.name as status_name',
@@ -1972,6 +2085,7 @@ export const fetchBundleChildrenForMaster = withAuth(async (
         'comp.client_name as client_name',
         trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
         trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
+        'tm.team_name as assigned_team_name',
         'mt.ticket_number as bundle_master_ticket_number'
       )
       .where({ 't.tenant': tenant, 't.master_ticket_id': masterTicketId })
@@ -1992,6 +2106,7 @@ export const fetchBundleChildrenForMaster = withAuth(async (
         client_name,
         entered_by_name,
         assigned_to_name,
+        assigned_team_name,
         bundle_master_ticket_number,
         ...rest
       } = ticket;
@@ -2011,6 +2126,7 @@ export const fetchBundleChildrenForMaster = withAuth(async (
         client_name: client_name || 'Unknown',
         entered_by_name: entered_by_name || 'Unknown',
         assigned_to_name: assigned_to_name || 'Unknown',
+        assigned_team_name: assigned_team_name || null,
         // Children are not masters; keep these fields stable for the list UI.
         bundle_child_count: 0,
         bundle_distinct_client_count: 0,

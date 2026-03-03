@@ -68,7 +68,7 @@ export async function broadcastNotification(notification: InternalNotification):
         tenantId: notification.tenant,
         occurredAt: now,
         actor: { actorType: 'SYSTEM' },
-        correlationId: `notification:${notification.internal_notification_id}`,
+        correlationId: notification.internal_notification_id,
       },
       idempotencyKey: `notification:${notification.internal_notification_id}:delivered`,
     });
@@ -94,7 +94,7 @@ export async function broadcastNotification(notification: InternalNotification):
         tenantId: notification.tenant,
         occurredAt: now,
         actor: { actorType: 'SYSTEM' },
-        correlationId: `notification:${notification.internal_notification_id}`,
+        correlationId: notification.internal_notification_id,
       },
       idempotencyKey: `notification:${notification.internal_notification_id}:failed`,
     });

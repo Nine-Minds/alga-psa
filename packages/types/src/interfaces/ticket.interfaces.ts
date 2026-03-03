@@ -42,6 +42,7 @@ export interface ITicket extends TenantEntity, ITaggable {
   updated_by: string | null;
   closed_by: string | null;
   assigned_to: string | null;
+  assigned_team_id?: string | null;
   entered_at: string | null; // Changed from Date to string
   updated_at: string | null; // Changed from Date to string
   closed_at: string | null;  // Changed from Date to string
@@ -58,6 +59,17 @@ export interface ITicket extends TenantEntity, ITaggable {
   response_state?: TicketResponseState;
   // Derived ticket creation origin signal for UI display.
   ticket_origin?: TicketOriginDisplay;
+  // SLA tracking fields
+  sla_policy_id?: string | null;           // The SLA policy applied to this ticket
+  sla_started_at?: string | null;          // When the SLA clock started
+  sla_response_due_at?: string | null;     // When first response is due
+  sla_response_at?: string | null;         // When first response was made
+  sla_response_met?: boolean | null;       // Whether response SLA was met
+  sla_resolution_due_at?: string | null;   // When resolution is due
+  sla_resolution_at?: string | null;       // When ticket was resolved
+  sla_resolution_met?: boolean | null;     // Whether resolution SLA was met
+  sla_paused_at?: string | null;           // When SLA was paused (null = not paused)
+  sla_total_pause_minutes?: number;        // Cumulative pause time in minutes
 }
 
 export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_id' | 'board_id' | 'entered_by' | 'category_id' | 'subcategory_id'> {
@@ -77,6 +89,7 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   assigned_to_name: string | null;
   additional_agent_count?: number;
   additional_agents?: { user_id: string; name: string }[];  // Additional agents for tooltip display with avatars
+  assigned_team_name?: string | null;
   bundle_child_count?: number;
   bundle_master_ticket_number?: string | null;
   bundle_distinct_client_count?: number;
@@ -94,6 +107,7 @@ export interface ITicketListFilters {
   showOpenOnly?: boolean;
   tags?: string[];
   assignedToIds?: string[];        // Array of user IDs to filter by
+  assignedTeamIds?: string[];      // Array of team IDs to filter by
   includeUnassigned?: boolean;     // Include tickets with no assignee
   // Due date filters
   dueDateFilter?: 'all' | 'overdue' | 'upcoming' | 'today' | 'no_due_date' | 'before' | 'after' | 'custom';
@@ -102,6 +116,7 @@ export interface ITicketListFilters {
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
   responseState?: 'awaiting_client' | 'awaiting_internal' | 'none' | 'all';
+  slaStatusFilter?: 'all' | 'has_sla' | 'no_sla' | 'on_track' | 'breached' | 'paused';
   bundleView?: 'bundled' | 'individual';
 }
 

@@ -11,7 +11,7 @@ Notes:
 | Event | When | Properties (non-exhaustive) |
 |---|---|---|
 | `app.startup.ready` | App boot is complete and navigation state is restored | `durationMs`, `signedIn` |
-| `auth.sign_in.blocked` | User attempted sign-in but CTA was gated | `reason` (`missing_base_url` \| `mobile_disabled` \| `host_not_allowlisted`) |
+| `auth.sign_in.blocked` | User attempted sign-in but CTA was gated | `reason` (`missing_base_url` \| `host_not_allowlisted`) |
 | `auth.sign_in.start` | User tapped Sign In and sign-in state was created | *(none)* |
 | `auth.sign_in.open_failed` | Failed to open the system browser for sign-in | `reason` (`cannot_open_url` \| `exception`) |
 | `auth.sign_in.opened_browser` | System browser opened successfully | *(none)* |

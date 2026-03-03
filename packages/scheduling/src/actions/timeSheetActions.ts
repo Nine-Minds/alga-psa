@@ -11,9 +11,9 @@ import {
   ITimeSheetApprovalView,
   ITimePeriodView
 } from '@alga-psa/types';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, User } from '@alga-psa/db';
 import { formatISO } from 'date-fns';
-import { toPlainDate } from '@alga-psa/core';
+import { toPlainDate, isFeatureFlagEnabled } from '@alga-psa/core';
 import {
   timeSheetApprovalViewSchema,
   timeSheetCommentSchema,
@@ -147,16 +147,31 @@ export const fetchTimeSheetsForApproval = withAuth(async (
       );
 
     if (!canReadAll) {
+      const reportsToEnabled = await isFeatureFlagEnabled('teams-v2', {
+        userId: user.user_id,
+        tenantId: tenant
+      });
+
+      const reportsToUserIds = reportsToEnabled
+        ? await User.getReportsToSubordinateIds(db, user.user_id)
+        : [];
+
       query = query
-        .join('team_members', function joinTeamMembers() {
-          this.on('users.user_id', '=', 'team_members.user_id').andOn('users.tenant', '=', 'team_members.tenant');
-        })
-        .join('teams', function joinTeams() {
-          this.on('team_members.team_id', '=', 'teams.team_id').andOn('team_members.tenant', '=', 'teams.tenant');
-        })
-        .where({
-          'teams.manager_id': user.user_id,
-          'teams.tenant': tenant
+        .where((builder) => {
+          builder.whereExists(function managerScope() {
+            this.select(1)
+              .from('team_members')
+              .join('teams', function joinTeams() {
+                this.on('team_members.team_id', '=', 'teams.team_id').andOn('team_members.tenant', '=', 'teams.tenant');
+              })
+              .where('team_members.user_id', db.ref('users.user_id'))
+              .andWhere('teams.manager_id', user.user_id)
+              .andWhere('teams.tenant', tenant);
+          });
+
+          if (reportsToEnabled && reportsToUserIds.length > 0) {
+            builder.orWhereIn('users.user_id', reportsToUserIds);
+          }
         })
         .distinct();
     }

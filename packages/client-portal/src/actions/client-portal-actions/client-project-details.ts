@@ -6,7 +6,7 @@ import { Knex } from 'knex';
 import { DEFAULT_CLIENT_PORTAL_CONFIG, IClientPortalConfig } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { v4 as uuidv4 } from 'uuid';
-import { getEntityImageUrlsBatch } from '@alga-psa/documents/lib/avatarUtils';
+import { getEntityImageUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 
@@ -169,9 +169,14 @@ export const getClientProjectTasks = withAuth(async (
       .leftJoin('users as u', function() {
         this.on('pt.assigned_to', 'u.user_id').andOn('pt.tenant', 'u.tenant');
       })
+      .leftJoin('teams as tm', function() {
+        this.on('pt.assigned_team_id', 'tm.team_id').andOn('pt.tenant', 'tm.tenant');
+      })
       .select(
         'pt.assigned_to as assigned_to_id',
-        knex.raw("CONCAT(u.first_name, ' ', u.last_name) as assigned_to_name")
+        knex.raw("CONCAT(u.first_name, ' ', u.last_name) as assigned_to_name"),
+        'pt.assigned_team_id',
+        'tm.team_name as assigned_team_name'
       );
   }
 
@@ -367,10 +372,24 @@ export const getClientProjectTasks = withAuth(async (
       ? await getEntityImageUrlsBatch('user', Array.from(allUserIds), tenant)
       : new Map<string, string | null>();
 
+    // Collect team IDs for avatar fetching
+    const allTeamIds = new Set<string>();
+    tasksWithResources.forEach((task: { assigned_team_id?: string }) => {
+      if (task.assigned_team_id) {
+        allTeamIds.add(task.assigned_team_id);
+      }
+    });
+
+    // Batch fetch team avatar URLs
+    const teamAvatarUrls = allTeamIds.size > 0 && tenant
+      ? await getEntityImageUrlsBatch('team', Array.from(allTeamIds), tenant)
+      : new Map<string, string | null>();
+
     // Attach avatar URLs to tasks
-    tasksWithAvatars = tasksWithResources.map((task: { assigned_to_id?: string; additional_agents?: Array<{ user_id: string; user_name: string; role: string | null }> }) => ({
+    tasksWithAvatars = tasksWithResources.map((task: { assigned_to_id?: string; assigned_team_id?: string; additional_agents?: Array<{ user_id: string; user_name: string; role: string | null }> }) => ({
       ...task,
       assigned_to_avatar: task.assigned_to_id ? avatarUrls.get(task.assigned_to_id) || null : null,
+      assigned_team_avatar: task.assigned_team_id ? teamAvatarUrls.get(task.assigned_team_id) || null : null,
       additional_agents: task.additional_agents?.map(agent => ({
         ...agent,
         avatar_url: avatarUrls.get(agent.user_id) || null

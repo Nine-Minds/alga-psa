@@ -27,6 +27,7 @@ import { getDefinition } from './constants/componentCatalog';
 import { getPresetById } from './constants/presets';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
 import { canNestWithinParent, getAllowedParentsForType } from './schema/componentSchema';
 import { invoiceDesignerCollisionDetection } from './utils/dndCollision';
@@ -789,8 +790,8 @@ export const DesignerShell: React.FC = () => {
       const removeItem = (itemId: string) => updateItems(items.filter((item) => item.id !== itemId), true);
 
       return (
-        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
-          <p className="text-xs font-semibold text-slate-700">Attachments</p>
+        <div className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2">
+          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Attachments</p>
           <div>
             <label className="text-xs text-slate-500 block mb-1">Title</label>
             <Input
@@ -851,8 +852,8 @@ export const DesignerShell: React.FC = () => {
           setNodeProp(selectedNode.id, 'style.aspectRatio', normalized, commit);
         };
 		      return (
-		        <div className="rounded border border-slate-200 bg-white px-3 py-2 space-y-2">
-		          <p className="text-xs font-semibold text-slate-700">Media</p>
+		        <div className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2">
+		          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Media</p>
 	          <div>
             <label className="text-xs text-slate-500 block mb-1">Source URL</label>
             <Input
@@ -873,23 +874,24 @@ export const DesignerShell: React.FC = () => {
 	          </div>
 	          <div>
 	            <label className="text-xs text-slate-500 block mb-1">Object fit</label>
-	            <select
-	              className="w-full border border-slate-300 rounded-md px-2 py-1 text-sm"
-		              value={objectFit}
-		              onChange={(event) => {
-	                  const next = event.target.value;
-	                  setNodeProp(selectedNode.id, 'style.objectFit', next, true);
-	                  if (next === 'contain' || next === 'cover' || next === 'fill') {
-	                    applyMetadata({ fitMode: next, fit: next }, true);
-	                  }
-	                }}
-		            >
-	              <option value="contain">Contain</option>
-	              <option value="cover">Cover</option>
-	              <option value="fill">Fill</option>
-                <option value="none">None</option>
-                <option value="scale-down">Scale Down</option>
-	            </select>
+	            <CustomSelect
+	              id="designer-media-object-fit"
+	              options={[
+	                { value: 'contain', label: 'Contain' },
+	                { value: 'cover', label: 'Cover' },
+	                { value: 'fill', label: 'Fill' },
+	                { value: 'none', label: 'None' },
+	                { value: 'scale-down', label: 'Scale Down' },
+	              ]}
+	              value={objectFit}
+	              onValueChange={(value: string) => {
+	                setNodeProp(selectedNode.id, 'style.objectFit', value, true);
+	                if (value === 'contain' || value === 'cover' || value === 'fill') {
+	                  applyMetadata({ fitMode: value, fit: value }, true);
+	                }
+	              }}
+	              size="sm"
+	            />
 	          </div>
             <div>
               <label className="text-xs text-slate-500 block mb-1">Aspect ratio</label>
@@ -1343,8 +1345,8 @@ export const DesignerShell: React.FC = () => {
         onRedo={redo}
         onGridSizeChange={setGridSize}
       />
-      <div className="border-b border-slate-200 bg-slate-50 px-4 py-1.5 text-xs text-slate-600">
-        <span className="font-semibold text-slate-700">Selected:</span>{' '}
+      <div className="border-b border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))] px-4 py-1.5 text-xs text-slate-600 dark:text-slate-400">
+        <span className="font-semibold text-slate-700 dark:text-slate-300">Selected:</span>{' '}
         {selectedNode ? (
           <span data-automation-id="designer-selected-context">
             {getNodeName(selectedNode)} <span className="text-slate-500">({selectedNode.type})</span>
@@ -1355,11 +1357,11 @@ export const DesignerShell: React.FC = () => {
               None
             </span>
             <span className="ml-2 text-slate-400" data-automation-id="designer-no-selection-help">
-              <span className="rounded-full border border-slate-300/70 bg-white/70 px-1.5 py-0.5 text-slate-500">
+              <span className="rounded-full border border-slate-300/70 dark:border-slate-600/70 bg-white/70 dark:bg-slate-800/70 px-1.5 py-0.5 text-slate-500 dark:text-slate-400">
                 Click a block on canvas
               </span>{' '}
               or use{' '}
-              <span className="rounded-full border border-slate-300/70 bg-white/70 px-1.5 py-0.5 text-slate-500">
+              <span className="rounded-full border border-slate-300/70 dark:border-slate-600/70 bg-white/70 dark:bg-slate-800/70 px-1.5 py-0.5 text-slate-500 dark:text-slate-400">
                 + in the left panel
               </span>
               .
@@ -1389,7 +1391,7 @@ export const DesignerShell: React.FC = () => {
           collisionDetection={collisionDetection}
           measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
         >
-	        <div className="flex flex-1 min-h-[560px] bg-white">
+	        <div className="flex flex-1 min-h-[560px] bg-white dark:bg-[rgb(var(--color-background))]">
 	          <div className="w-72">
 	            <ComponentPalette
 	              onInsertComponent={handleQuickInsertComponent}
@@ -1421,8 +1423,8 @@ export const DesignerShell: React.FC = () => {
 	            onDragEnd={handleDragEnd}
 	            onDragCancel={handleDragCancel}
 	          />
-          <aside className="w-72 border-l border-slate-200 bg-slate-50 p-4 space-y-4">
-            <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wide">Inspector</h3>
+          <aside className="w-72 border-l border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))] p-4 space-y-4">
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wide">Inspector</h3>
 		          {selectedNode ? (
 		            <div className="space-y-3">
               <div>
@@ -1435,7 +1437,7 @@ export const DesignerShell: React.FC = () => {
                 />
               </div>
               <div
-                className="rounded border border-slate-200 bg-white px-3 py-2 space-y-1"
+                className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-1"
                 data-automation-id="designer-selected-node-type-panel"
               >
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Type</p>
@@ -1445,7 +1447,7 @@ export const DesignerShell: React.FC = () => {
               </div>
               {selectedFieldType && (
                 <div
-                  className="rounded border border-slate-200 bg-white px-3 py-2 space-y-1"
+                  className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-1"
                   data-automation-id="designer-selected-field-type-panel"
                 >
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Field Type</p>
@@ -1474,9 +1476,9 @@ export const DesignerShell: React.FC = () => {
                 </div>
               </div>
               {selectedPreset && (
-                <div className="rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 space-y-1">
+                <div className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 text-xs text-slate-600 dark:text-slate-400 space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-slate-700">Layout Preset</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">Layout Preset</span>
 	                    <button
 	                      type="button"
 	                      className="text-blue-600 hover:underline"
@@ -1663,15 +1665,15 @@ const DesignerBreadcrumbs: React.FC<DesignerBreadcrumbsProps> = ({ nodes, select
 
   if (breadcrumbs.length === 0) {
     return (
-      <div className="border-t border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-500">
+      <div className="border-t border-b border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))] px-4 py-2 text-xs text-slate-500 dark:text-slate-400">
         Select a component on the canvas to view its hierarchy.
       </div>
     );
   }
 
   return (
-    <div className="border-t border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-600 flex items-center flex-wrap gap-1">
-      <span className="font-semibold text-slate-700 mr-1">Hierarchy</span>
+    <div className="border-t border-b border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-card))] px-4 py-2 text-xs text-slate-600 dark:text-slate-400 flex items-center flex-wrap gap-1">
+      <span className="font-semibold text-slate-700 dark:text-slate-300 mr-1">Hierarchy</span>
       {breadcrumbs.map((node, index) => {
         const isActive = index === breadcrumbs.length - 1;
         return (
@@ -1680,7 +1682,7 @@ const DesignerBreadcrumbs: React.FC<DesignerBreadcrumbsProps> = ({ nodes, select
             <button
               type="button"
               className={`px-1 py-0.5 rounded ${
-                isActive ? 'bg-blue-100 text-blue-700 cursor-default' : 'hover:underline text-slate-600'
+                isActive ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 cursor-default' : 'hover:underline text-slate-600 dark:text-slate-400'
               }`}
               onClick={() => {
                 if (!isActive) {

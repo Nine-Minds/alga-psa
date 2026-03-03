@@ -119,6 +119,9 @@ COPY --from=deps /app/server/node_modules ./server/node_modules
 # Copy EE migrations (they get merged during build-enterprise.sh)
 COPY --from=builder /app/ee/server/migrations/ ./server/migrations/
 
+# Copy core package.json for version info
+COPY packages/core/package.json /app/packages/core/package.json
+
 COPY server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 

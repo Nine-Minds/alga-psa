@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import type { DesignerNode } from '../../state/designerStore';
 import { useInvoiceDesignerStore } from '../../state/designerStore';
 import { getNodeMetadata } from '../../utils/nodeProps';
@@ -300,32 +301,34 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
         <div className="grid grid-cols-2 gap-2">
           <div>
             <label className="text-[10px] font-medium text-slate-500 block mb-0.5">Border preset</label>
-            <select
+            <CustomSelect
               id="designer-table-border-preset"
-              className="h-8 w-full border border-slate-200 rounded-md px-2 text-xs bg-white"
+              options={[
+                { value: 'list', label: 'List' },
+                { value: 'boxed', label: 'Boxed' },
+                { value: 'grid', label: 'Grid' },
+                { value: 'none', label: 'None' },
+                { value: 'custom', label: 'Custom' },
+              ]}
               value={resolvedBorderPreset}
-              onChange={(event) => applyTableBorderPreset(event.target.value as BorderPreset)}
-            >
-              <option value="list">List</option>
-              <option value="boxed">Boxed</option>
-              <option value="grid">Grid</option>
-              <option value="none">None</option>
-              <option value="custom">Custom</option>
-            </select>
+              onValueChange={(value: string) => applyTableBorderPreset(value as BorderPreset)}
+              size="sm"
+            />
           </div>
           <div>
             <label className="text-[10px] font-medium text-slate-500 block mb-0.5">Header weight</label>
-            <select
+            <CustomSelect
               id="designer-table-header-weight"
-              className="h-8 w-full border border-slate-200 rounded-md px-2 text-xs bg-white"
+              options={[
+                { value: 'normal', label: 'Normal' },
+                { value: 'medium', label: 'Medium' },
+                { value: 'semibold', label: 'Semibold' },
+                { value: 'bold', label: 'Bold' },
+              ]}
               value={resolvedHeaderWeight}
-              onChange={(event) => setNodeProp(node.id, 'metadata.tableHeaderFontWeight', event.target.value, true)}
-            >
-              <option value="normal">Normal</option>
-              <option value="medium">Medium</option>
-              <option value="semibold">Semibold</option>
-              <option value="bold">Bold</option>
-            </select>
+              onValueChange={(value: string) => setNodeProp(node.id, 'metadata.tableHeaderFontWeight', value, true)}
+              size="sm"
+            />
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -452,16 +455,18 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
             <div className="grid grid-cols-[minmax(0,1fr)_88px] gap-1.5">
               <div>
                 <label className="text-[10px] font-medium text-slate-500 block mb-0.5">Type</label>
-                <select
-                  className="h-8 w-full border border-slate-200 rounded-md px-1.5 text-xs bg-white"
+                <CustomSelect
+                  id={`column-type-${column.id}`}
+                  options={[
+                    { value: 'text', label: 'Text' },
+                    { value: 'number', label: 'Number' },
+                    { value: 'currency', label: 'Currency' },
+                    { value: 'date', label: 'Date' },
+                  ]}
                   value={column.type ?? 'text'}
-                  onChange={(event) => updateColumn(column.id, { type: event.target.value }, true)}
-                >
-                  <option value="text">Text</option>
-                  <option value="number">Number</option>
-                  <option value="currency">Currency</option>
-                  <option value="date">Date</option>
-                </select>
+                  onValueChange={(value: string) => updateColumn(column.id, { type: value }, true)}
+                  size="sm"
+                />
               </div>
               <div>
                 <label className="text-[10px] font-medium text-slate-500 block mb-0.5">Width</label>

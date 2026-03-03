@@ -3,7 +3,6 @@ import React from 'react';
 import {
   Activity,
   ScheduleActivity,
-  ActivityPriority,
   ActivityType
 } from "@alga-psa/types";
 import { useActivityDrawer } from "./ActivityDrawerProvider";
@@ -11,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import { Card } from "@alga-psa/ui/components/Card";
 import { Badge } from "@alga-psa/ui/components/Badge";
 import { ActivityActionMenu } from "./ActivityActionMenu";
+import { Tooltip } from "@alga-psa/ui/components/Tooltip";
 import { Repeat } from 'lucide-react';
 
 // Format date to a readable format
@@ -45,11 +45,21 @@ export function ActivityCard({ activity, onViewDetails, onActionComplete, render
     [ActivityType.DOCUMENT]: 'border-teal-500',
   };
 
-  // Priority indicator
-  const priorityIndicator = {
-    [ActivityPriority.LOW]: <div className="w-2 h-2 rounded-full bg-muted-foreground" />,
-    [ActivityPriority.MEDIUM]: <div className="w-2 h-2 rounded-full bg-warning" />,
-    [ActivityPriority.HIGH]: <div className="w-2 h-2 rounded-full bg-destructive" />,
+  // Priority indicator - only show when a real priority is set (has color from DB)
+  const getPriorityDot = () => {
+    if (!activity.priorityColor) return null;
+
+    const dot = (
+      <div
+        className="w-2 h-2 rounded-full flex-shrink-0"
+        style={{ backgroundColor: activity.priorityColor }}
+      />
+    );
+
+    if (activity.priorityName) {
+      return <Tooltip content={activity.priorityName}>{dot}</Tooltip>;
+    }
+    return dot;
   };
 
   const router = useRouter();
@@ -70,7 +80,7 @@ export function ActivityCard({ activity, onViewDetails, onActionComplete, render
           )}
         </div>
         <div className="flex items-center gap-2">
-          {priorityIndicator[activity.priority]}
+          {getPriorityDot()}
           <div onClick={(e) => e.stopPropagation()}>
             <ActivityActionMenu 
               activity={activity}

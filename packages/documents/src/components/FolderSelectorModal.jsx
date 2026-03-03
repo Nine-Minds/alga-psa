@@ -6,6 +6,7 @@ import { getFolders, createFolder } from '../actions/documentActions';
 import { Folder, Home, FolderPlus, X } from 'lucide-react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 export default function FolderSelectorModal({ isOpen, onClose, onSelectFolder, title: titleProp, description: descriptionProp, namespace = 'common' }) {
   const [selectedFolder, setSelectedFolder] = useState(null);
   const [folders, setFolders] = useState([]);
@@ -36,6 +37,11 @@ export default function FolderSelectorModal({ isOpen, onClose, onSelectFolder, t
         setLoading(true);
         try {
             const folderList = await getFolders();
+            if (isActionPermissionError(folderList)) {
+                handleError(folderList.permissionError);
+                setFolders([]);
+                return;
+            }
             setFolders(folderList);
         }
         catch (error) {
@@ -66,7 +72,11 @@ export default function FolderSelectorModal({ isOpen, onClose, onSelectFolder, t
             const folderPath = newFolderParent
                 ? `${newFolderParent}/${newFolderName.trim()}`
                 : `/${newFolderName.trim()}`;
-            await createFolder(folderPath);
+            const createResult = await createFolder(folderPath);
+            if (isActionPermissionError(createResult)) {
+                handleError(createResult.permissionError);
+                return;
+            }
             // Reload folders to show the new one
             await loadFolders();
             // Reset the new folder form

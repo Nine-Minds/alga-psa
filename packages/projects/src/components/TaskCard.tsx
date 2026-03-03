@@ -11,7 +11,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
-import { getTaskTicketLinksAction, getTaskResourcesAction } from '../actions/projectTaskActions';
+import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { TagList } from '@alga-psa/ui/components';
 import { TagManager } from '@alga-psa/tags/components';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -52,6 +52,8 @@ interface TaskCardProps {
   onDeleteTaskClick: (task: IProjectTask) => void;
   onTaskTagsChange?: (taskId: string, tags: ITag[]) => void;
   avatarUrls?: Record<string, string | null>;
+  teamNames?: Record<string, string>;
+  teamAvatarUrls?: Record<string, string | null>;
 }
 
 const taskTypeIcons: Record<string, React.ComponentType<any>> = {
@@ -90,17 +92,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onDeleteTaskClick,
   onTaskTagsChange,
   avatarUrls = {},
+  teamNames = {},
+  teamAvatarUrls = {},
 }) => {
-  // Initialize states based on whether data is already available (empty array) or not yet loaded (null)
-  const [taskTickets, setTaskTickets] = useState<IProjectTicketLinkWithDetails[] | null>(
-    task.ticket_links !== undefined ? task.ticket_links :
-    ticketLinks !== undefined ? ticketLinks :
-    [] // Start with empty array instead of null to show counter immediately
+  // Use data from props — parent (StatusColumn) always provides arrays from batch-loaded data
+  const [taskTickets, setTaskTickets] = useState<IProjectTicketLinkWithDetails[]>(
+    task.ticket_links ?? ticketLinks ?? []
   );
-  const [taskResources, setTaskResources] = useState<any[] | null>(
-    task.resources !== undefined ? task.resources :
-    providedTaskResources !== undefined ? providedTaskResources :
-    null
+  const [taskResources, setTaskResources] = useState<any[]>(
+    task.resources ?? providedTaskResources ?? []
   );
   const [isDragging, setIsDragging] = useState(false);
   const [documentCount, setDocumentCount] = useState<number>(providedDocumentCount ?? 0);
@@ -156,48 +156,21 @@ export const TaskCard: React.FC<TaskCardProps> = ({
 
   const Icon = taskTypeIcons[task.task_type_key || 'task'] || CheckSquare;
 
+  // Sync ticket links from props when they change
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Use data in the following priority order:
-        // 1. From task object directly
-        // 2. From props passed by parent component
-        // 3. Fetch from server if neither is available
-        
-        // Handle ticket links - null means we need to load the data
-        if (task.ticket_links !== undefined) {
-          setTaskTickets(task.ticket_links);
-        } else if (ticketLinks !== undefined) {
-          setTaskTickets(ticketLinks);
-        } else if (task.task_id && taskTickets !== null && taskTickets.length === 0 && task.ticket_links === undefined && ticketLinks === undefined) {
-          // Only fetch if we have an empty array and no data was provided
-          try {
-            const links = await getTaskTicketLinksAction(task.task_id);
-            setTaskTickets(links || []); // Ensure empty array if API returns null/undefined
-          } catch (error) {
-            console.error('Error fetching ticket links:', error);
-            setTaskTickets([]); // Set empty array on error
-          }
-        }
+    const data = task.ticket_links ?? ticketLinks;
+    if (data !== undefined) {
+      setTaskTickets(data);
+    }
+  }, [task.task_id, task.ticket_links, ticketLinks]);
 
-        // Handle task resources - null means we need to load the data
-        if (task.resources !== undefined) {
-          setTaskResources(task.resources);
-        } else if (providedTaskResources !== undefined) {
-          setTaskResources(providedTaskResources);
-        } else if (task.task_id && taskResources === null) {
-          // Only fetch if data hasn't been loaded yet (null) and we have a task ID
-          const resources = await getTaskResourcesAction(task.task_id);
-          setTaskResources(resources || []); // Ensure empty array if API returns null/undefined
-        }
-
-      } catch (error) {
-        console.error('Error fetching task data:', error);
-      }
-    };
-
-    fetchData();
-  }, [task.task_id, task.ticket_links, task.resources, ticketLinks, providedTaskResources, providedDocumentCount]);
+  // Sync task resources from props when they change
+  useEffect(() => {
+    const data = task.resources ?? providedTaskResources;
+    if (data !== undefined) {
+      setTaskResources(data);
+    }
+  }, [task.task_id, task.resources, providedTaskResources]);
 
   // Computed values - ensure we handle the loading state
   const checklistItems = task.checklist_items || [];
@@ -205,14 +178,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const hasChecklist = checklistItems.length > 0;
   const allCompleted = hasChecklist && completedItems === checklistItems.length;
 
-  // Use empty array when tickets are still loading (null)
-  const displayTickets = taskTickets || [];
+  const displayTickets = taskTickets;
   const completedTickets = displayTickets.filter(link => link.is_closed).length;
   const hasTickets = displayTickets.length > 0;
   const allTicketsCompleted = hasTickets && completedTickets === displayTickets.length;
   
-  // Use empty array when resources are still loading (null)
-  const displayResources = taskResources || [];
+  const displayResources = taskResources;
 
   const handleDragStart = (e: React.DragEvent) => {
     setIsDragging(true);
@@ -334,7 +305,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         <div className="flex items-center gap-2">
           <div
             ref={titleRef}
-            className={`font-semibold ${zoomScales.titleSize} flex-1 ${!isTitleExpanded ? 'line-clamp-2' : ''}`}
+            className={`font-semibold ${zoomScales.titleSize} flex-1 ${!isTitleExpanded ? 'line-clamp-4' : ''}`}
           >
             {highlightSearchMatch(task.task_name, searchQuery, searchCaseSensitive, searchWholeWord)}
           </div>
@@ -396,6 +367,18 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
           />
         </div>
+        {task.assigned_team_id && teamNames[task.assigned_team_id] && (
+          <Tooltip content={teamNames[task.assigned_team_id]}>
+            <span className="inline-flex items-center cursor-help">
+              <TeamAvatar
+                teamId={task.assigned_team_id}
+                teamName={teamNames[task.assigned_team_id]}
+                avatarUrl={teamAvatarUrls[task.assigned_team_id] ?? null}
+                size="xs"
+              />
+            </span>
+          </Tooltip>
+        )}
         {displayResources.length > 0 && (
           <Tooltip
             content={

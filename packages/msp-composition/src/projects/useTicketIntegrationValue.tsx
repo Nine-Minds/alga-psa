@@ -8,7 +8,7 @@ import { getTicketCategories, getAllBoards } from '@alga-psa/tickets/actions';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
-import { PrioritySelect } from '@alga-psa/tickets/components/PrioritySelect';
+import { PrioritySelect } from '@alga-psa/ui/components';
 import { getCurrentUser } from '@alga-psa/users/actions';
 import { useDrawer } from '@alga-psa/ui';
 import { toast } from 'react-hot-toast';

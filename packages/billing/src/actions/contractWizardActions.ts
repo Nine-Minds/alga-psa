@@ -7,6 +7,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildContractCreatedPayload,
@@ -245,21 +247,21 @@ export const createContractTemplateFromWizard = withAuth(async (
   { tenant },
   submission: ContractTemplateWizardSubmission,
   options?: { isDraft?: boolean }
-): Promise<ContractWizardResult> => {
+): Promise<ContractWizardResult | ActionPermissionError> => {
   const isDraft = options?.isDraft ?? false;
   const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
+
+  if (!isBypass) {
+    const canCreateBilling = await hasPermission(user, 'billing', 'create');
+    const canUpdateBilling = await hasPermission(user, 'billing', 'update');
+    if (!canCreateBilling || !canUpdateBilling) {
+      return permissionError('Permission denied: Cannot create billing templates');
+    }
+  }
 
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    if (!isBypass) {
-      const canCreateBilling = hasPermission(user, 'billing', 'create');
-      const canUpdateBilling = hasPermission(user, 'billing', 'update');
-      if (!canCreateBilling || !canUpdateBilling) {
-        throw new Error('Permission denied: Cannot create billing templates');
-      }
-    }
-
     const now = new Date();
     const nowIso = now.toISOString();
     const templateId = uuidv4();
@@ -678,9 +680,17 @@ export const createClientContractFromWizard = withAuth(async (
   { tenant },
   submission: ClientContractWizardSubmission,
   options?: { isDraft?: boolean }
-): Promise<ContractWizardResult> => {
+): Promise<ContractWizardResult | ActionPermissionError> => {
   const isDraft = options?.isDraft ?? false;
   const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
+
+  if (!isBypass) {
+    const canCreateBilling = await hasPermission(user, 'billing', 'create');
+    const canUpdateBilling = await hasPermission(user, 'billing', 'update');
+    if (!canCreateBilling || !canUpdateBilling) {
+      return permissionError('Permission denied: Cannot create billing contracts');
+    }
+  }
 
   const { knex } = await createTenantKnex();
 
@@ -696,14 +706,6 @@ export const createClientContractFromWizard = withAuth(async (
   let renewalForWorkflow: { renewalAt: string; daysUntilRenewal: number } | null = null;
 
   const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    if (!isBypass) {
-      const canCreateBilling = hasPermission(user, 'billing', 'create');
-      const canUpdateBilling = hasPermission(user, 'billing', 'update');
-      if (!canCreateBilling || !canUpdateBilling) {
-        throw new Error('Permission denied: Cannot create billing contracts');
-      }
-    }
-
     const startDate = normalizeDateOnly(submission.start_date);
     if (!startDate) {
       throw new Error('Contract start date is required');
@@ -1657,17 +1659,18 @@ export const getDraftContractForResume = withAuth(async (
   user,
   { tenant },
   contractId: string
-): Promise<DraftContractWizardData> => {
-  const { knex } = await createTenantKnex();
+): Promise<DraftContractWizardData | ActionPermissionError> => {
   const isBypass = process.env.E2E_AUTH_BYPASS === 'true';
 
   if (!isBypass) {
-    const canCreateBilling = hasPermission(user, 'billing', 'create');
-    const canUpdateBilling = hasPermission(user, 'billing', 'update');
+    const canCreateBilling = await hasPermission(user, 'billing', 'create');
+    const canUpdateBilling = await hasPermission(user, 'billing', 'update');
     if (!canCreateBilling || !canUpdateBilling) {
-      throw new Error('Permission denied: Cannot resume billing contracts');
+      return permissionError('Permission denied: Cannot resume billing contracts');
     }
   }
+
+  const { knex } = await createTenantKnex();
 
   const contract = await knex('contracts')
     .where({ tenant, contract_id: contractId })

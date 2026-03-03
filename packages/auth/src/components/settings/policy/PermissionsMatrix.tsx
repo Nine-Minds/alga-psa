@@ -23,6 +23,7 @@ import {
 } from '@alga-psa/auth/actions';
 import { IPermission, IRole } from '@alga-psa/types';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 type ViewMode = 'msp' | 'client';
 
@@ -361,9 +362,8 @@ export default function PermissionsMatrix() {
       
       toast.success("Permissions updated successfully");
     } catch (err) {
-      console.error('Error saving permissions:', err);
       setError('Failed to save permissions');
-      toast.error("Failed to save permissions");
+      handleError(err, 'Failed to save permissions');
     } finally {
       setIsSaving(false);
       setShowConfirmDialog(false);

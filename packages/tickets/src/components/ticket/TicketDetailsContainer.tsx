@@ -4,13 +4,13 @@ import React, { Suspense, useState, useRef, useCallback, useEffect } from 'react
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import {
   addTicketCommentWithCacheForCurrentUser,
   updateTicketWithCacheForCurrentUser,
 } from '../../actions/optimizedTicketActions';
 import TicketDetails from './TicketDetails';
 import { TicketDetailsSkeleton } from './TicketDetailsSkeleton';
-import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 import { UnsavedChangesProvider } from '@alga-psa/ui/context';
 
 interface TicketDetailsContainerProps {
@@ -58,7 +58,7 @@ interface TicketDetailsContainerProps {
     locations: any[];
     agentSchedules: any[];
   };
-  surveySummary?: SurveyTicketSatisfactionSummary | null;
+  surveySummaryCard?: React.ReactNode;
   associatedAssets?: React.ReactNode;
   renderContactDetails?: React.ComponentProps<typeof TicketDetails>['renderContactDetails'];
   renderCreateProjectTask?: React.ComponentProps<typeof TicketDetails>['renderCreateProjectTask'];
@@ -68,7 +68,7 @@ interface TicketDetailsContainerProps {
 
 export default function TicketDetailsContainer({
   ticketData,
-  surveySummary = null,
+  surveySummaryCard,
   associatedAssets = null,
   renderContactDetails,
   renderCreateProjectTask,
@@ -131,8 +131,7 @@ export default function TicketDetailsContainer({
       await updateTicketWithCacheForCurrentUser(ticketData.ticket.ticket_id, { [field]: value });
       toast.success(`${field} updated successfully`);
     } catch (error) {
-      console.error(`Error updating ${field}:`, error);
-      toast.error(`Failed to update ${field}`);
+      handleError(error, `Failed to update ${field}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -162,8 +161,7 @@ export default function TicketDetailsContainer({
 
         return true;
       } catch (error) {
-        console.error('Error saving changes:', error);
-        toast.error('Failed to save changes');
+        handleError(error, 'Failed to save changes');
         return false;
       }
     });
@@ -187,8 +185,7 @@ export default function TicketDetailsContainer({
       setComments(prev => [...prev, newComment]);
       toast.success('Comment added successfully');
     } catch (error) {
-      console.error('Error adding comment:', error);
-      toast.error('Failed to add comment');
+      handleError(error, 'Failed to add comment');
     } finally {
       setIsSubmitting(false);
     }
@@ -216,8 +213,7 @@ export default function TicketDetailsContainer({
       toast.success('Description updated successfully');
       return true;
     } catch (error) {
-      console.error('Error updating description:', error);
-      toast.error('Failed to update description');
+      handleError(error, 'Failed to update description');
       return false;
     } finally {
       setIsSubmitting(false);
@@ -257,7 +253,7 @@ export default function TicketDetailsContainer({
             onAddComment={handleAddComment}
             onUpdateDescription={handleUpdateDescription}
             isSubmitting={isSubmitting}
-          surveySummary={surveySummary}
+          surveySummaryCard={surveySummaryCard}
           associatedAssets={associatedAssets}
           renderContactDetails={renderContactDetails}
           renderCreateProjectTask={renderCreateProjectTask}

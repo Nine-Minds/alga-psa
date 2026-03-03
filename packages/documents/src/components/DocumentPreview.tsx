@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import type { IDocument } from '@alga-psa/types';
 import Image from 'next/image';
 import { getDocumentPreview } from '../actions/documentActions';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface DocumentPreviewProps {
     document: IDocument;
@@ -38,6 +39,9 @@ const DocumentPreview = ({ document, className }: DocumentPreviewProps): React.J
 
                 // Get preview for other file types
                 const result = await getDocumentPreview(document.file_id);
+                if (isActionPermissionError(result)) {
+                    throw new Error(result.permissionError);
+                }
                 if (result.success) {
                     setPreview({
                         content: result.content,

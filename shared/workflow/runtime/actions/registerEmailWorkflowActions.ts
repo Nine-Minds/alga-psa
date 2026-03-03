@@ -7,6 +7,7 @@ import {
   findTicketByEmailThread,
   findTicketByReplyToken,
   resolveInboundTicketDefaults,
+  resolveEffectiveInboundTicketDefaults,
   createTicketFromEmail,
   createCommentFromEmail,
   processEmailAttachment,
@@ -378,17 +379,54 @@ export function registerEmailWorkflowActionsV2(): void {
       const tenant = input.tenantId || ctx.tenantId || '';
       const providerId = input.providerId;
 
-      const ticketDefaults = await resolveInboundTicketDefaults(tenant, providerId);
+      const providerDefaults = await resolveInboundTicketDefaults(tenant, providerId);
 
       let matchedClient: any = null;
       try {
         matchedClient = await findContactByEmail(input.senderEmail, tenant, {
-          defaultClientId: ticketDefaults?.client_id ?? null,
+          defaultClientId: providerDefaults?.client_id ?? null,
         });
       } catch (error) {
         matchedClient = null;
       }
 
+      if (!providerDefaults) {
+        return {
+          ticketDefaults: null,
+          matchedClient,
+          targetClientId: null,
+          targetContactId: null,
+          targetAuthorUserId: null,
+          targetLocationId: null
+        };
+      }
+
+      let domainMatchedClientId: string | null = null;
+      let domainMatchedContactId: string | null = null;
+      if (!matchedClient?.contact_id) {
+        try {
+          const domain = extractEmailDomain(input.senderEmail);
+          if (domain) {
+            domainMatchedClientId = await findClientIdByInboundEmailDomain(domain, tenant);
+            if (domainMatchedClientId) {
+              domainMatchedContactId = await findValidClientPrimaryContactId(domainMatchedClientId, tenant);
+            }
+          }
+        } catch {
+          // Best-effort only; fall back to defaults.
+        }
+      }
+
+      const destinationResolution = await resolveEffectiveInboundTicketDefaults({
+        tenant,
+        providerId,
+        providerDefaults,
+        matchedContactId: matchedClient?.contact_id ?? null,
+        matchedContactClientId: matchedClient?.client_id ?? null,
+        domainMatchedClientId,
+      });
+
+      const ticketDefaults = destinationResolution.defaults;
       if (!ticketDefaults) {
         return {
           ticketDefaults: null,
@@ -400,24 +438,22 @@ export function registerEmailWorkflowActionsV2(): void {
         };
       }
 
+      console.debug('resolve_inbound_ticket_context: resolved inbound destination source', {
+        tenant,
+        providerId,
+        senderEmail: input.senderEmail,
+        source: destinationResolution.source,
+        fallbackReason: destinationResolution.fallbackReason ?? null,
+      });
+
       let targetClientId = matchedClient?.client_id ?? ticketDefaults.client_id ?? null;
       let targetContactId = matchedClient?.contact_id ?? null;
       const targetAuthorUserId = matchedClient?.user_id ?? null;
 
-      // Domain fallback: if no exact contact match, match a client via explicitly configured inbound domains.
-      if (!matchedClient?.contact_id) {
-        try {
-          const domain = extractEmailDomain(input.senderEmail);
-          if (domain) {
-            const domainMatchedClientId = await findClientIdByInboundEmailDomain(domain, tenant);
-            if (domainMatchedClientId) {
-              targetClientId = domainMatchedClientId;
-              targetContactId = await findValidClientPrimaryContactId(domainMatchedClientId, tenant);
-            }
-          }
-        } catch {
-          // Best-effort only; fall back to defaults.
-        }
+      // Domain fallback: if no exact contact match, use explicit domain-mapped client/contact.
+      if (!matchedClient?.contact_id && domainMatchedClientId) {
+        targetClientId = domainMatchedClientId;
+        targetContactId = domainMatchedContactId;
       }
 
       const targetLocationId =

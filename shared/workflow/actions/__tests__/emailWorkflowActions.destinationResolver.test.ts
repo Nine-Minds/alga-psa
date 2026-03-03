@@ -1,0 +1,379 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+type QueryPlanRow = {
+  table: string;
+  where: Record<string, unknown>;
+  row: any;
+};
+
+const withAdminTransactionMock = vi.fn();
+let trxImpl: any = null;
+
+vi.mock('@alga-psa/db', () => ({
+  withAdminTransaction: (callback: (trx: any) => Promise<any>) =>
+    withAdminTransactionMock(callback),
+}));
+
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: vi.fn(),
+}));
+
+function whereMatches(actual: Record<string, unknown>, expected: Record<string, unknown>): boolean {
+  return Object.entries(expected).every(([key, value]) => actual[key] === value);
+}
+
+function createTrxForQueryPlan(plan: QueryPlanRow[]) {
+  const tablesCalled: string[] = [];
+
+  const trx = (table: string) => {
+    tablesCalled.push(table);
+    let whereClause: Record<string, unknown> = {};
+    const builder: any = {
+      select: vi.fn(() => builder),
+      where: vi.fn((value: Record<string, unknown>) => {
+        whereClause = value ?? {};
+        return builder;
+      }),
+      first: vi.fn(async () => {
+        const match = plan.find((entry) => entry.table === table && whereMatches(whereClause, entry.where));
+        return match?.row ?? null;
+      }),
+    };
+
+    return builder;
+  };
+
+  return { trx, tablesCalled };
+}
+
+describe('resolveEffectiveInboundTicketDefaults precedence', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) =>
+      callback(trxImpl)
+    );
+  });
+
+  it('T005: exact sender contact with contact override selects contact destination', async () => {
+    const contactDefaults = {
+      board_id: 'board-contact-1',
+      status_id: 'status-1',
+      priority_id: 'priority-1',
+      client_id: 'client-contact',
+      entered_by: 'user-1',
+      category_id: null,
+      subcategory_id: null,
+      location_id: null,
+    };
+
+    const { trx, tablesCalled } = createTrxForQueryPlan([
+      {
+        table: 'contacts',
+        where: { tenant: 'tenant-1', contact_name_id: 'contact-1' },
+        row: { inbound_ticket_defaults_id: 'defaults-contact-1', client_id: 'client-contact' },
+      },
+      {
+        table: 'inbound_ticket_defaults',
+        where: { tenant: 'tenant-1', id: 'defaults-contact-1', is_active: true },
+        row: contactDefaults,
+      },
+    ]);
+    trxImpl = trx;
+
+    const { resolveEffectiveInboundTicketDefaults } = await import('../emailWorkflowActions');
+    const result = await resolveEffectiveInboundTicketDefaults({
+      tenant: 'tenant-1',
+      providerId: 'provider-1',
+      providerDefaults: {
+        board_id: 'board-provider',
+        status_id: 'status-provider',
+        priority_id: 'priority-provider',
+      },
+      matchedContactId: 'contact-1',
+      matchedContactClientId: 'client-contact',
+      domainMatchedClientId: null,
+    });
+
+    expect(result.source).toBe('contact_override');
+    expect(result.defaults).toEqual(contactDefaults);
+    expect(result.fallbackReason).toBeUndefined();
+    expect(tablesCalled).not.toContain('clients');
+  });
+
+  it("T006: exact sender contact without override selects contact's client destination", async () => {
+    const clientDefaults = {
+      board_id: 'board-client-1',
+      status_id: 'status-1',
+      priority_id: 'priority-1',
+      client_id: 'client-2',
+      entered_by: 'user-1',
+      category_id: null,
+      subcategory_id: null,
+      location_id: null,
+    };
+
+    const { trx, tablesCalled } = createTrxForQueryPlan([
+      {
+        table: 'contacts',
+        where: { tenant: 'tenant-1', contact_name_id: 'contact-2' },
+        row: { inbound_ticket_defaults_id: null, client_id: 'client-2' },
+      },
+      {
+        table: 'clients',
+        where: { tenant: 'tenant-1', client_id: 'client-2' },
+        row: { inbound_ticket_defaults_id: 'defaults-client-2' },
+      },
+      {
+        table: 'inbound_ticket_defaults',
+        where: { tenant: 'tenant-1', id: 'defaults-client-2', is_active: true },
+        row: clientDefaults,
+      },
+    ]);
+    trxImpl = trx;
+
+    const { resolveEffectiveInboundTicketDefaults } = await import('../emailWorkflowActions');
+    const result = await resolveEffectiveInboundTicketDefaults({
+      tenant: 'tenant-1',
+      providerId: 'provider-1',
+      providerDefaults: {
+        board_id: 'board-provider',
+        status_id: 'status-provider',
+        priority_id: 'priority-provider',
+      },
+      matchedContactId: 'contact-2',
+      matchedContactClientId: 'client-2',
+      domainMatchedClientId: null,
+    });
+
+    expect(result.source).toBe('client_default_from_contact');
+    expect(result.defaults).toEqual(clientDefaults);
+    expect(result.fallbackReason).toBeUndefined();
+    expect(tablesCalled).toContain('clients');
+  });
+
+  it('T007: no exact contact + domain-matched client selects domain client destination', async () => {
+    const domainClientDefaults = {
+      board_id: 'board-domain-1',
+      status_id: 'status-1',
+      priority_id: 'priority-1',
+      client_id: 'client-domain-1',
+      entered_by: 'user-1',
+      category_id: null,
+      subcategory_id: null,
+      location_id: null,
+    };
+
+    const { trx, tablesCalled } = createTrxForQueryPlan([
+      {
+        table: 'clients',
+        where: { tenant: 'tenant-1', client_id: 'client-domain-1' },
+        row: { inbound_ticket_defaults_id: 'defaults-domain-1' },
+      },
+      {
+        table: 'inbound_ticket_defaults',
+        where: { tenant: 'tenant-1', id: 'defaults-domain-1', is_active: true },
+        row: domainClientDefaults,
+      },
+    ]);
+    trxImpl = trx;
+
+    const { resolveEffectiveInboundTicketDefaults } = await import('../emailWorkflowActions');
+    const result = await resolveEffectiveInboundTicketDefaults({
+      tenant: 'tenant-1',
+      providerId: 'provider-1',
+      providerDefaults: {
+        board_id: 'board-provider',
+        status_id: 'status-provider',
+        priority_id: 'priority-provider',
+      },
+      matchedContactId: null,
+      matchedContactClientId: null,
+      domainMatchedClientId: 'client-domain-1',
+    });
+
+    expect(result.source).toBe('client_default_from_domain');
+    expect(result.defaults).toEqual(domainClientDefaults);
+    expect(result.fallbackReason).toBeUndefined();
+    expect(tablesCalled).not.toContain('contacts');
+  });
+
+  it('T008: no contact/domain destination falls back to provider default', async () => {
+    const providerDefaults = {
+      board_id: 'board-provider-default',
+      status_id: 'status-provider-default',
+      priority_id: 'priority-provider-default',
+      client_id: null,
+      entered_by: 'user-1',
+      category_id: null,
+      subcategory_id: null,
+      location_id: null,
+    };
+
+    const { trx, tablesCalled } = createTrxForQueryPlan([]);
+    trxImpl = trx;
+
+    const { resolveEffectiveInboundTicketDefaults } = await import('../emailWorkflowActions');
+    const result = await resolveEffectiveInboundTicketDefaults({
+      tenant: 'tenant-1',
+      providerId: 'provider-1',
+      providerDefaults,
+      matchedContactId: null,
+      matchedContactClientId: null,
+      domainMatchedClientId: null,
+    });
+
+    expect(result.source).toBe('provider_default');
+    expect(result.defaults).toEqual(providerDefaults);
+    expect(result.fallbackReason).toBeUndefined();
+    expect(tablesCalled).toHaveLength(0);
+  });
+
+  it('T009: falls back to provider default when contact override destination is inactive/invalid', async () => {
+    const providerDefaults = {
+      board_id: 'board-provider-default',
+      status_id: 'status-provider-default',
+      priority_id: 'priority-provider-default',
+      client_id: null,
+      entered_by: 'user-1',
+      category_id: null,
+      subcategory_id: null,
+      location_id: null,
+    };
+
+    const { trx } = createTrxForQueryPlan([
+      {
+        table: 'contacts',
+        where: { tenant: 'tenant-1', contact_name_id: 'contact-9' },
+        row: { inbound_ticket_defaults_id: 'defaults-contact-invalid', client_id: null },
+      },
+      {
+        table: 'inbound_ticket_defaults',
+        where: { tenant: 'tenant-1', id: 'defaults-contact-invalid', is_active: true },
+        row: null,
+      },
+    ]);
+    trxImpl = trx;
+
+    const { resolveEffectiveInboundTicketDefaults } = await import('../emailWorkflowActions');
+    const result = await resolveEffectiveInboundTicketDefaults({
+      tenant: 'tenant-1',
+      providerId: 'provider-1',
+      providerDefaults,
+      matchedContactId: 'contact-9',
+      matchedContactClientId: null,
+      domainMatchedClientId: null,
+    });
+
+    expect(result.source).toBe('provider_default');
+    expect(result.defaults).toEqual(providerDefaults);
+    expect(result.fallbackReason).toBe('invalid_or_inactive_contact_override');
+  });
+
+  it('T010: falls back to provider default when client destination is inactive/invalid', async () => {
+    const providerDefaults = {
+      board_id: 'board-provider-default',
+      status_id: 'status-provider-default',
+      priority_id: 'priority-provider-default',
+      client_id: null,
+      entered_by: 'user-1',
+      category_id: null,
+      subcategory_id: null,
+      location_id: null,
+    };
+
+    const { trx } = createTrxForQueryPlan([
+      {
+        table: 'contacts',
+        where: { tenant: 'tenant-1', contact_name_id: 'contact-10' },
+        row: { inbound_ticket_defaults_id: null, client_id: 'client-10' },
+      },
+      {
+        table: 'clients',
+        where: { tenant: 'tenant-1', client_id: 'client-10' },
+        row: { inbound_ticket_defaults_id: 'defaults-client-invalid' },
+      },
+      {
+        table: 'inbound_ticket_defaults',
+        where: { tenant: 'tenant-1', id: 'defaults-client-invalid', is_active: true },
+        row: null,
+      },
+    ]);
+    trxImpl = trx;
+
+    const { resolveEffectiveInboundTicketDefaults } = await import('../emailWorkflowActions');
+    const result = await resolveEffectiveInboundTicketDefaults({
+      tenant: 'tenant-1',
+      providerId: 'provider-1',
+      providerDefaults,
+      matchedContactId: 'contact-10',
+      matchedContactClientId: 'client-10',
+      domainMatchedClientId: null,
+    });
+
+    expect(result.source).toBe('provider_default');
+    expect(result.defaults).toEqual(providerDefaults);
+    expect(result.fallbackReason).toBe('invalid_or_inactive_client_default_from_contact');
+  });
+
+  it('T027: structured logs include destination source and fallback reason metadata', async () => {
+    const providerDefaults = {
+      board_id: 'board-provider-default',
+      status_id: 'status-provider-default',
+      priority_id: 'priority-provider-default',
+      client_id: null,
+      entered_by: 'user-1',
+      category_id: null,
+      subcategory_id: null,
+      location_id: null,
+    };
+
+    const { trx } = createTrxForQueryPlan([
+      {
+        table: 'contacts',
+        where: { tenant: 'tenant-1', contact_name_id: 'contact-27' },
+        row: { inbound_ticket_defaults_id: 'defaults-contact-invalid-27', client_id: null },
+      },
+      {
+        table: 'inbound_ticket_defaults',
+        where: { tenant: 'tenant-1', id: 'defaults-contact-invalid-27', is_active: true },
+        row: null,
+      },
+    ]);
+    trxImpl = trx;
+
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const { resolveEffectiveInboundTicketDefaults } = await import('../emailWorkflowActions');
+      await resolveEffectiveInboundTicketDefaults({
+        tenant: 'tenant-1',
+        providerId: 'provider-1',
+        providerDefaults,
+        matchedContactId: 'contact-27',
+        matchedContactClientId: null,
+        domainMatchedClientId: null,
+      });
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        'resolveEffectiveInboundTicketDefaults: invalid contact override destination; using fallback',
+        expect.objectContaining({
+          source: 'contact_override',
+          fallback: 'provider_default',
+          configuredDefaultsId: 'defaults-contact-invalid-27',
+        })
+      );
+
+      expect(debugSpy).toHaveBeenCalledWith(
+        'resolveEffectiveInboundTicketDefaults: resolved destination',
+        expect.objectContaining({
+          source: 'provider_default',
+          fallbackReason: 'invalid_or_inactive_contact_override',
+        })
+      );
+    } finally {
+      debugSpy.mockRestore();
+      warnSpy.mockRestore();
+    }
+  });
+});

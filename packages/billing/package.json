@@ -16,6 +16,11 @@
       "import": "./dist/actions/index.mjs",
       "require": "./dist/actions/index.js"
     },
+    "./runtime": {
+      "types": "./src/runtime.ts",
+      "import": "./dist/runtime.mjs",
+      "require": "./dist/runtime.js"
+    },
     "./components": {
       "types": "./src/components/index.ts",
       "import": "./dist/components/index.mjs",
@@ -47,6 +52,8 @@
     "@alga-psa/shared": "*",
     "@alga-psa/storage": "*",
     "@alga-psa/types": "*",
+    "@alga-psa/event-bus": "*",
+    "@alga-psa/integrations": "*",
     "@alga-psa/validation": "*",
     "zod": "^3.22.4"
   },

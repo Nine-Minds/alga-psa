@@ -4,18 +4,23 @@
 import React, { useState, useImperativeHandle, forwardRef } from 'react';
 import {
   ActivityFilters as ActivityFiltersType,
-  ActivityPriority,
-  ActivityType
+  ActivityType,
+  IPriority
 } from "@alga-psa/types";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@alga-psa/ui/components/Dialog";
 import { Label } from "@alga-psa/ui/components/Label";
 import { Checkbox } from "@alga-psa/ui/components/Checkbox";
 import { StringDateRangePicker } from "@alga-psa/ui/components/DateRangePicker";
+import CustomSelect from "@alga-psa/ui/components/CustomSelect";
+
+// Activity types that support priority filtering via the priorities table
+const PRIORITY_FILTERABLE_TYPES = new Set([ActivityType.TICKET, ActivityType.PROJECT_TASK]);
 
 interface ActivitiesTableFiltersProps {
   filters: ActivityFiltersType;
   onChange: (filters: ActivityFiltersType) => void;
+  priorities?: IPriority[];
 }
 
 export interface ActivitiesTableFiltersRef {
@@ -23,14 +28,20 @@ export interface ActivitiesTableFiltersRef {
 }
 
 export const ActivitiesTableFilters = forwardRef<ActivitiesTableFiltersRef, ActivitiesTableFiltersProps>(
-  ({ filters, onChange }, ref) => {
+  ({ filters, onChange, priorities = [] }, ref) => {
     const [open, setOpen] = useState(false);
     const [localFilters, setLocalFilters] = useState<ActivityFiltersType>(filters);
+    const [selectedPriorityId, setSelectedPriorityId] = useState<string>(filters.priorityIds?.[0] || 'all');
+
+    // Determine if priority filter should be enabled based on selected types
+    const isPriorityFilterAvailable = localFilters.types?.length === 1
+      && PRIORITY_FILTERABLE_TYPES.has(localFilters.types[0]);
 
     // Expose openDialog function via ref
     useImperativeHandle(ref, () => ({
       openDialog: () => {
         setLocalFilters(filters); // Ensure local state is synced with parent on open
+        setSelectedPriorityId(filters.priorityIds?.[0] || 'all');
         setOpen(true);
       }
     }));
@@ -45,13 +56,21 @@ export const ActivitiesTableFilters = forwardRef<ActivitiesTableFiltersRef, Acti
         isClosed: false
       };
       setLocalFilters(resetFilters);
-      // Optionally apply immediately or wait for Apply button
-      // onChange(resetFilters); 
+      setSelectedPriorityId('all');
     };
 
     // Apply filters and close dialog
     const handleApply = () => {
-      onChange(localFilters);
+      const filtersToApply: ActivityFiltersType = {
+        ...localFilters,
+        priorityIds: isPriorityFilterAvailable && selectedPriorityId && selectedPriorityId !== 'all'
+          ? [selectedPriorityId]
+          : undefined,
+      };
+      // Clean up priority enum filter (no longer used from this dialog)
+      delete filtersToApply.priority;
+      if (!filtersToApply.priorityIds) delete filtersToApply.priorityIds;
+      onChange(filtersToApply);
       setOpen(false);
     };
 
@@ -82,6 +101,17 @@ export const ActivitiesTableFilters = forwardRef<ActivitiesTableFiltersRef, Acti
       }
 
       handleFilterChange(key, newValues as any);
+
+      // Clear priority selection when activity types change and the result
+      // is no longer a single prioritized type
+      if (key === 'types') {
+        const newTypes = newValues as string[];
+        const stillFilterable = newTypes.length === 1
+          && PRIORITY_FILTERABLE_TYPES.has(newTypes[0] as ActivityType);
+        if (!stillFilterable) {
+          setSelectedPriorityId('all');
+        }
+      }
     };
 
     // Check if a value is selected in an array filter
@@ -130,24 +160,37 @@ export const ActivitiesTableFilters = forwardRef<ActivitiesTableFiltersRef, Acti
               </div>
             </div>
 
-            {/* Priority Filter */}
+            {/* Priority Filter - only available when a single prioritized type is selected */}
             <div className="mt-4">
-              <Label htmlFor="priority" className="text-lg font-semibold">Priority</Label>
-              <div className="flex space-x-4">
-                {[
-                  { value: ActivityPriority.LOW, label: 'Low' },
-                  { value: ActivityPriority.MEDIUM, label: 'Medium' },
-                  { value: ActivityPriority.HIGH, label: 'High' }
-                ].map(option => (
-                    <Checkbox
-                      key={option.value}
-                      id={`priority-${option.value}`}
-                      label={option.label}
-                      checked={isSelected(option.value, localFilters.priority)}
-                      onChange={() => toggleArrayFilter('priority', option.value, localFilters.priority)}
-                    />
-                ))}
-              </div>
+              <Label htmlFor="priority-select" className="text-lg font-semibold">Priority</Label>
+              {isPriorityFilterAvailable && priorities.length > 0 ? (
+                <CustomSelect
+                  id="priority-select"
+                  value={selectedPriorityId}
+                  onValueChange={(value) => setSelectedPriorityId(value)}
+                  options={[
+                    { value: 'all', label: 'All Priorities' },
+                    ...priorities.map(p => ({
+                      value: p.priority_id,
+                      label: (
+                        <span className="flex items-center gap-2">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: p.color || '#94a3b8' }}
+                          />
+                          {p.priority_name}
+                        </span>
+                      ),
+                      textValue: p.priority_name,
+                    }))
+                  ]}
+                  placeholder="Select Priority..."
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground mt-1">
+                  Select a single activity type (Tickets or Project Tasks) to filter by priority.
+                </p>
+              )}
             </div>
 
             {/* Date Range Filter */}
@@ -163,19 +206,19 @@ export const ActivitiesTableFilters = forwardRef<ActivitiesTableFiltersRef, Acti
                   // If date is empty string, set to undefined
                   const startDate = range.from ? new Date(range.from) : undefined;
                   const endDate = range.to ? new Date(range.to) : undefined;
-                  
+
                   // If we have an end date but no start date, set start date to today
                   const effectiveStartDate = !startDate && endDate ? new Date() : startDate;
-                  
+
                   // Set the time to the beginning of the day for start date and end of the day for end date
                   if (effectiveStartDate) {
                     effectiveStartDate.setHours(0, 0, 0, 0);
                   }
-                  
+
                   if (endDate) {
                     endDate.setHours(23, 59, 59, 999);
                   }
-                  
+
                   handleFilterChange('dueDateStart', effectiveStartDate ? effectiveStartDate.toISOString() as any : undefined);
                   handleFilterChange('dueDateEnd', endDate ? endDate.toISOString() as any : undefined);
                 }}
@@ -208,7 +251,7 @@ export const ActivitiesTableFilters = forwardRef<ActivitiesTableFiltersRef, Acti
               </Button>
               <Button
                 id="apply-filters-button"
-                type="button" 
+                type="button"
                 onClick={handleApply}
               >
                 Apply Filters

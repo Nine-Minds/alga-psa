@@ -22,8 +22,6 @@ export function ThemeBridge({ children }: ThemeBridgeProps) {
     const root = document.documentElement;
     root.setAttribute('data-theme', appearance);
     // Ensure the class on <html> matches the resolved theme.
-    // next-themes may not update the class when forcedTheme changes
-    // dynamically (e.g. client-side navigation to/from auth routes).
     root.classList.remove('light', 'dark');
     root.classList.add(appearance);
     root.style.colorScheme = appearance;

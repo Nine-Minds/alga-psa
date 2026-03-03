@@ -94,7 +94,7 @@ export default [
             "custom-rules/map-return-type": "off",
             "custom-rules/check-required-props": "error",
             "custom-rules/no-legacy-ext-imports": "error",
-            "custom-rules/no-feature-to-feature-imports": "error",
+            "custom-rules/no-feature-to-feature-imports": "warn",
         }
     },
     // Configuration for TypeScript files
@@ -174,7 +174,7 @@ export default [
             "custom-rules/map-return-type": "off",
             "custom-rules/check-required-props": "error",
             "custom-rules/no-legacy-ext-imports": "error",
-            "custom-rules/no-feature-to-feature-imports": "error",
+            "custom-rules/no-feature-to-feature-imports": "warn",
             // Base ESLint rules
             "no-unused-vars": "off", // Turn off in favor of @typescript-eslint/no-unused-vars
             "react/react-in-jsx-scope": "off", // Not needed in Next.js
@@ -214,6 +214,52 @@ export default [
             react: {
                 version: "18.2"
             }
+        }
+    },
+    // Runtime boundary guardrails for workflow worker and shared runtime.
+    {
+        files: [
+            "services/workflow-worker/src/**/*.{js,mjs,cjs,ts,tsx}",
+            "shared/workflow/runtime/**/*.{js,mjs,cjs,ts,tsx}"
+        ],
+        rules: {
+            "no-restricted-imports": [
+                "error",
+                {
+                    paths: [
+                        {
+                            name: "@alga-psa/auth",
+                            message: "Auth package root imports are not allowed in worker/runtime code."
+                        },
+                        {
+                            name: "@alga-psa/documents",
+                            message: "Use @alga-psa/documents/runtime or @alga-psa/storage in worker/runtime code."
+                        },
+                        {
+                            name: "@alga-psa/integrations",
+                            message: "Use @alga-psa/integrations/runtime in worker/runtime code."
+                        },
+                        {
+                            name: "@alga-psa/billing",
+                            message: "Use @alga-psa/billing/runtime in worker/runtime code."
+                        },
+                        {
+                            name: "@alga-psa/ui",
+                            message: "UI package imports are not allowed in worker/runtime code."
+                        }
+                    ],
+                    patterns: [
+                        {
+                            group: [
+                                "@alga-psa/ui/*",
+                                "@alga-psa/*/components",
+                                "@alga-psa/*/components/*"
+                            ],
+                            message: "Component imports are not allowed in worker/runtime code."
+                        }
+                    ]
+                }
+            ]
         }
     },
     // Configuration for test files

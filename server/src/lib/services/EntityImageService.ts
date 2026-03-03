@@ -1,12 +1,13 @@
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { deleteDocument, getDocumentTypeId } from '@alga-psa/documents/actions/documentActions';
-import { getEntityImageUrl } from 'server/src/lib/utils/avatarUtils';
+import { getEntityImageUrl } from '@alga-psa/formatting/avatarUtils';
 import Document from '@alga-psa/documents/models/document';
 import DocumentAssociation from '@alga-psa/documents/models/documentAssociation';
 import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 export type EntityType = 'user' | 'contact' | 'client' | 'tenant';
 
@@ -50,7 +51,11 @@ export async function uploadEntityImage(
       throw new Error('File storage failed');
     }
 
-    const { typeId, isShared } = await getDocumentTypeId(file.type);
+    const typeIdResult = await getDocumentTypeId(file.type);
+    if (isActionPermissionError(typeIdResult)) {
+      throw new Error(typeIdResult.permissionError);
+    }
+    const { typeId, isShared } = typeIdResult;
     const newDocumentId = uuidv4();
 
     const documentData = {

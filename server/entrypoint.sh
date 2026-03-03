@@ -24,9 +24,11 @@ get_secret() {
 
 # Function to print version banner
 print_version_banner() {
-    # Prefer env provided by Helm; fall back to package.json in the container
+    # Prefer env provided by Helm; fall back to packages/core/package.json, then server/package.json
     local pkg_version=""
-    if [ -f "/app/server/package.json" ]; then
+    if [ -f "/app/packages/core/package.json" ]; then
+        pkg_version=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]\+\)".*/\1/p' /app/packages/core/package.json | head -n1)
+    elif [ -f "/app/server/package.json" ]; then
         pkg_version=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]\+\)".*/\1/p' /app/server/package.json | head -n1)
     fi
 

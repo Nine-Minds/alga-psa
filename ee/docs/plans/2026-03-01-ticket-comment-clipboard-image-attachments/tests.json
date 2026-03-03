@@ -1,0 +1,298 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: paste handler identifies clipboard image MIME entries and ignores non-image entries",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F020"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: pasting multiple images produces one upload job per image in deterministic order",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: immediate upload starts without waiting for comment submit action",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Integration: successful clipboard upload creates file/document records tied to the target ticket",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: deterministic filename generator emits expected name pattern for pasted images",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "UI: uploading placeholder image block appears while upload request is in-flight",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "UI: placeholder is replaced by attachment-backed image node after upload success",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "UI: upload failure state renders clear error affordance with retry/remove actions",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "UI: retry action re-attempts failed image upload and transitions to success state",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Serialization: submitted BlockNote payload stores attachment references and excludes raw base64 image bytes",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Regression: non-image comment content serialization remains unchanged",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Render: saved comment image node resolves to attachment-serving URL and displays inline in ticket thread",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Render auth: unauthorized user cannot load comment image attachment URL",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Render auth: authorized user can load comment image attachment URL",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F010"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Outbound mapping: comment image attachment references are collected for email composition",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Outbound CID: one CID attachment is generated per inline comment image",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Outbound HTML: image src values are rewritten from internal attachment refs/URLs to matching cid references",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Outbound fallback: CID generation failure retains renderable attachment URL instead of broken image",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Compose state: pasted draft images are tracked for cancel-flow keep/delete behavior",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "UI: canceling draft with pasted images prompts keep-vs-delete decision",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "UI: cancel keep path closes draft without deleting uploaded pasted-image documents",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "API integration happy path: cancel delete action hard deletes selected pasted draft images from object storage and metadata tables",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "API integration guard path: delete attempt is rejected for image already referenced by a saved ticket comment",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "API integration guard path: user without permission cannot hard delete pasted draft image artifact",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F010"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Validation: unsupported clipboard MIME type is rejected before upload",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Validation: image larger than configured max size is rejected with user-visible error",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Feature flag off: clipboard image paste flow is disabled and existing editor behavior remains active",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F020"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Feature flag on: clipboard image paste flow is enabled for eligible tenants/users",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Observability: upload success/failure logs include ticket id, user id, and artifact identity",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Observability: cancel delete logs include chosen action (keep/delete) and hard-delete result",
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F017"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Observability: outbound email logs indicate CID generation path vs URL fallback for each image",
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F014"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "E2E: paste image to ticket comment, submit comment, and ticket thread displays inline image from attachment URL",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F006",
+      "F008",
+      "F009"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "E2E: paste image, cancel draft, choose delete, and uploaded artifact no longer exists in ticket documents",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F016",
+      "F017"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "E2E: pasted-image ticket comment sent via outbound email includes CID MIME image part and inline renderable HTML",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F012",
+      "F013"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "E2E: CID generation failure path still produces readable outbound email with attachment URL image source",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  }
+]

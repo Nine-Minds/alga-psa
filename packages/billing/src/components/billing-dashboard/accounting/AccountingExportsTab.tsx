@@ -8,6 +8,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import toast from 'react-hot-toast';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   createAccountingExportBatch,
   executeAccountingExportBatch,
@@ -103,11 +104,17 @@ export default function AccountingExportsTab(): React.JSX.Element {
   const loadBatches = useCallback(async () => {
     setLoading(true);
     try {
-      const data = (await listAccountingExportBatches()) as unknown as AccountingExportBatch[];
-      setBatches(Array.isArray(data) ? data : []);
+      const data = await listAccountingExportBatches();
+      if (isActionPermissionError(data)) {
+        handleError(data.permissionError);
+        setBatches([]);
+        return;
+      }
+      const typedData = data as unknown as AccountingExportBatch[];
+      setBatches(Array.isArray(typedData) ? typedData : []);
     } catch (e) {
       setBatches([]);
-      toast.error(e instanceof Error ? e.message : 'Failed to load accounting export batches');
+      handleError(e, 'Failed to load accounting export batches');
     } finally {
       setLoading(false);
     }
@@ -116,11 +123,16 @@ export default function AccountingExportsTab(): React.JSX.Element {
   const loadBatchDetail = useCallback(async (batchId: string) => {
     setDetailLoading(true);
     try {
-      const detail = (await getAccountingExportBatch(batchId)) as unknown as BatchDetail;
-      setSelectedDetail(detail);
+      const detail = await getAccountingExportBatch(batchId);
+      if (isActionPermissionError(detail)) {
+        handleError(detail.permissionError);
+        setSelectedDetail(null);
+        return;
+      }
+      setSelectedDetail(detail as unknown as BatchDetail);
     } catch (e) {
       setSelectedDetail(null);
-      toast.error(e instanceof Error ? e.message : 'Failed to load batch details');
+      handleError(e, 'Failed to load batch details');
     } finally {
       setDetailLoading(false);
     }
@@ -156,18 +168,23 @@ export default function AccountingExportsTab(): React.JSX.Element {
           .filter(Boolean);
       }
 
-      const batch = (await createAccountingExportBatch({
+      const batchResult = await createAccountingExportBatch({
         adapter_type: adapterType,
         export_type: 'invoice',
         filters,
         notes: notes.trim() || null
-      })) as unknown as AccountingExportBatch;
+      });
+      if (isActionPermissionError(batchResult)) {
+        handleError(batchResult.permissionError);
+        return;
+      }
+      const batch = batchResult as unknown as AccountingExportBatch;
       toast.success('Accounting export batch created');
       setCreateOpen(false);
       setSelectedBatchId(batch.batch_id);
       await loadBatches();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to create export batch');
+      handleError(e, 'Failed to create export batch');
     } finally {
       setCreating(false);
     }
@@ -175,12 +192,16 @@ export default function AccountingExportsTab(): React.JSX.Element {
 
   const onExecute = async (batchId: string) => {
     try {
-      await executeAccountingExportBatch(batchId);
+      const result = await executeAccountingExportBatch(batchId);
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        return;
+      }
       toast.success('Batch execution started');
       await loadBatches();
       await loadBatchDetail(batchId);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to execute batch');
+      handleError(e, 'Failed to execute batch');
     }
   };
 

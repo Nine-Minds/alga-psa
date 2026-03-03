@@ -135,5 +135,19 @@ describe('MicrosoftGraphAdapter.runMicrosoft365Diagnostics', () => {
     expect(claimsStep?.status).toBe('warn');
     expect(report.recommendations.join('\n')).toContain('Mail.Read.Shared');
   });
-});
 
+  it('returns raw MIME bytes from downloadMessageSource', async () => {
+    const adapter = makeAdapter();
+    (adapter as any).httpClient = {
+      get: async (path: string) => {
+        if (path.endsWith('/$value')) {
+          return { data: Buffer.from('From: sender@example.com\r\n\r\nhello', 'utf8') };
+        }
+        throw new Error(`Unexpected GET ${path}`);
+      },
+    };
+
+    const buffer = await adapter.downloadMessageSource('message-1');
+    expect(buffer.toString('utf8')).toContain('From: sender@example.com');
+  });
+});

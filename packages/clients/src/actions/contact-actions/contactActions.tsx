@@ -578,10 +578,30 @@ export const updateContact = withAuth(async (
       }
     }
 
+    const inboundDestinationIdRaw = (contactData as any).inbound_ticket_defaults_id;
+    if (
+      inboundDestinationIdRaw !== undefined &&
+      inboundDestinationIdRaw !== null &&
+      String(inboundDestinationIdRaw).trim() !== ''
+    ) {
+      const inboundDestinationId = String(inboundDestinationIdRaw).trim();
+      const destination = await withTransaction(db, async (trx: Knex.Transaction) => {
+        return await trx('inbound_ticket_defaults')
+          .where({ id: inboundDestinationId, tenant })
+          .first();
+      });
+
+      if (!destination) {
+        throw new Error('FOREIGN_KEY_ERROR: The selected inbound ticket destination no longer exists');
+      }
+
+      (contactData as any).inbound_ticket_defaults_id = inboundDestinationId;
+    }
+
     const validFields: (keyof IContact)[] = [
       'contact_name_id', 'full_name', 'client_id', 'phone_number',
       'email', 'created_at', 'updated_at', 'is_inactive',
-      'role', 'notes'
+      'role', 'notes', 'inbound_ticket_defaults_id' as keyof IContact
     ];
 
     const updateData: Partial<IContact> = {};
@@ -594,7 +614,7 @@ export const updateContact = withAuth(async (
             value = value.toLowerCase();
           }
         }
-        if (key === 'client_id' && value === '') {
+        if ((key === 'client_id' || key === 'inbound_ticket_defaults_id') && value === '') {
           (updateData as any)[key] = null;
         } else {
           (updateData as any)[key] = value;

@@ -14,6 +14,7 @@ import { useDrawer } from '@alga-psa/ui';
 import TaskQuickAdd from './TaskQuickAdd';
 import { IUserWithRoles } from '@alga-psa/types';
 import { useTicketIntegration, TicketIntegrationProvider } from '../context/TicketIntegrationContext';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface CreateTaskFromTicketDialogProps {
   ticket: {
@@ -50,6 +51,10 @@ export default function CreateTaskFromTicketDialog({
     const fetchProjects = async () => {
       try {
         const projectList = await getProjects();
+        if (isActionPermissionError(projectList)) {
+          handleError(projectList.permissionError);
+          return;
+        }
         if (ticket.client_id) {
           // Sort client-matching projects first
           const sorted = [...projectList].sort((a, b) => {
@@ -76,6 +81,10 @@ export default function CreateTaskFromTicketDialog({
         setPhases([]);
         setStatuses([]);
         const projectDetails = await getProjectDetails(selectedProjectId);
+        if (isActionPermissionError(projectDetails)) {
+          handleError(projectDetails.permissionError);
+          return;
+        }
         setPhases(projectDetails.phases || []);
         setStatuses(projectDetails.statuses || []);
         setUsers(projectDetails.users || []);

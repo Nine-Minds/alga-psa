@@ -3,7 +3,7 @@ import { getImageUrlInternalAsync } from './documentsHelpers';
 import { withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
-export type EntityType = 'user' | 'contact' | 'client' | 'tenant';
+export type EntityType = 'user' | 'contact' | 'client' | 'tenant' | 'team';
 
 export async function getEntityImageUrl(
   entityType: EntityType,
@@ -81,3 +81,6 @@ export async function getClientLogoUrl(clientId: string, tenant: string): Promis
   return getEntityImageUrl('client', clientId, tenant);
 }
 
+export async function getTeamAvatarUrl(teamId: string, tenant: string): Promise<string | null> {
+  return getEntityImageUrl('team', teamId, tenant);
+}

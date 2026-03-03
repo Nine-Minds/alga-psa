@@ -33,18 +33,20 @@ import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useDrawer } from "@alga-psa/ui";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { findUserById, getCurrentUser } from "@alga-psa/users/actions";
 import { findBoardById, getAllBoards } from "@alga-psa/tickets/actions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "@alga-psa/tickets/actions";
 import { getDocumentByTicketId } from "@alga-psa/documents/actions/documentActions";
-import { getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
+import { getAllActiveContacts, getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
 import { updateTicketWithCache } from "../../actions/optimizedTicketActions";
 import { updateTicket } from "../../actions/ticketActions";
 import { getTicketStatuses } from "@alga-psa/reference-data/actions";
 import { getAllPriorities } from "@alga-psa/reference-data/actions";
-import { addTicketResource, getTicketResources, removeTicketResource } from "@alga-psa/tickets/actions";
+import { addTicketResource, getTicketResources, removeTicketResource, assignTeamToTicket, removeTeamFromTicket } from "@alga-psa/tickets/actions";
+import { getTeamById, getTeams } from '@alga-psa/teams/actions';
 import AgentScheduleDrawer from "./AgentScheduleDrawer";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Input } from "@alga-psa/ui/components/Input";
@@ -54,14 +56,17 @@ import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContai
 import { PartialBlock, StyledText } from '@blocknote/core';
 import { useFeatureFlag, useTicketTimeTracking } from "@alga-psa/ui/hooks";
 import { IntervalTrackingService } from "@alga-psa/ui/services";
-import { convertBlockNoteToMarkdown } from "@alga-psa/documents/lib/blocknoteUtils";
+import { convertBlockNoteToMarkdown } from "@alga-psa/formatting/blocknoteUtils";
 import BackNav from '@alga-psa/ui/components/BackNav';
-import { ResponseStateBadge } from '../ResponseStateBadge';
+import { ResponseStateBadge } from '@alga-psa/ui/components';
 import TicketOriginBadge from '../TicketOriginBadge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { SurveyTicketSatisfactionSummary } from '@alga-psa/types';
 import { buildTicketTimeEntryContext, createTicketTimeEntryOnComplete } from '../../lib/timeEntryContext';
 import { getTicketOrigin } from '../../lib/ticketOrigin';
+import {
+    setTicketWatchListOnAttributes,
+    type TicketWatchListEntry,
+} from '@shared/lib/tickets/watchList';
 import {
     addChildrenToBundleAction,
     findTicketByNumberAction,
@@ -111,7 +116,11 @@ interface TicketDetailsProps {
     onAddComment?: (content: string, isInternal: boolean, isResolution: boolean) => Promise<void>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
     isSubmitting?: boolean;
-    surveySummary?: SurveyTicketSatisfactionSummary | null;
+    /**
+     * Optional injected UI for survey summary (e.g. @alga-psa/surveys TicketSurveySummaryCard).
+     * This keeps @alga-psa/tickets from importing other vertical slices directly.
+     */
+    surveySummaryCard?: React.ReactNode;
 
     /**
      * Optional injected UI for cross-slice composition (e.g. assets associations).
@@ -186,7 +195,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     onAddComment,
     onUpdateDescription,
     isSubmitting = false,
-    surveySummary = null,
+    surveySummaryCard,
     associatedAssets = null,
     renderContactDetails,
     renderCreateProjectTask,
@@ -197,6 +206,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
     const { enabled: emailLogsEnabled } = useFeatureFlag('email-logs', { defaultValue: false });
+    const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
 
     useEffect(() => {
         setHasHydrated(true);
@@ -205,13 +215,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // Use passed currentUser if available (for drawer), otherwise fallback to session
     const userId = currentUser?.user_id || session?.user?.id;
     const tenant = initialTicket.tenant;
-    if (!tenant) {
-        return (
-            <div id="ticket-error-message" className="p-4">
-                Error: tenant is not defined
-            </div>
-        );
-    }
 
     const [ticket, setTicket] = useState(initialTicket);
     const [bundle, setBundle] = useState<any>(initialBundle);
@@ -233,6 +236,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [contacts, setContacts] = useState<IContact[]>(initialContacts);
     const [locations, setLocations] = useState<IClientLocation[]>(initialLocations);
     const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
+    const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(true);
     const [createdRelativeTime, setCreatedRelativeTime] = useState<string>('');
     const [updatedRelativeTime, setUpdatedRelativeTime] = useState<string>('');
     const [addChildTicketNumber, setAddChildTicketNumber] = useState<string>('');
@@ -249,6 +253,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isUpdatingBundleSettings, setIsUpdatingBundleSettings] = useState(false);
     const [isAddChildMultiClientConfirmOpen, setIsAddChildMultiClientConfirmOpen] = useState(false);
     const [pendingChildToAdd, setPendingChildToAdd] = useState<{ ticket_id: string; ticket_number?: string | null; client_id?: string | null } | null>(null);
+    const [isWatchListSaving, setIsWatchListSaving] = useState(false);
+    const [allContactsForWatchList, setAllContactsForWatchList] = useState<IContact[]>([]);
+    const [allContactsForWatchListLoading, setAllContactsForWatchListLoading] = useState(false);
     const ticketOrigin = useMemo(() => getTicketOrigin(ticket as any), [ticket]);
     const ticketOriginLabels = useMemo(() => ({
         internal: t('origin.internal', 'Created Internally'),
@@ -295,6 +302,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [currentTimePeriod, setCurrentTimePeriod] = useState<ITimePeriodView | null>(null);
 
     const [team, setTeam] = useState<ITeam | null>(null);
+    const [teams, setTeams] = useState<ITeam[]>([]);
     const [isChangeContactDialogOpen, setIsChangeContactDialogOpen] = useState(false);
     const [isChangeClientDialogOpen, setIsChangeClientDialogOpen] = useState(false);
     const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
@@ -334,6 +342,50 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // Create a single instance of the service
     const intervalService = useMemo(() => new IntervalTrackingService(), []);
 
+    useEffect(() => {
+        if (!teamsV2Enabled) {
+            setTeams([]);
+            return;
+        }
+        const loadTeams = async () => {
+            try {
+                const fetchedTeams = await getTeams();
+                setTeams(fetchedTeams);
+            } catch (error) {
+                console.error('Failed to load teams:', error);
+            }
+        };
+        loadTeams();
+    }, [teamsV2Enabled]);
+
+    useEffect(() => {
+        if (!teamsV2Enabled) {
+            setTeam(null);
+            return;
+        }
+        if (!ticket.assigned_team_id) {
+            setTeam(null);
+            return;
+        }
+
+        const cached = teams.find(t => t.team_id === ticket.assigned_team_id);
+        if (cached) {
+            setTeam(cached);
+            return;
+        }
+
+        const loadTeam = async () => {
+            try {
+                const fetchedTeam = await getTeamById(ticket.assigned_team_id!);
+                setTeam(fetchedTeam);
+            } catch (error) {
+                console.error('Failed to load assigned team:', error);
+                setTeam(null);
+            }
+        };
+        loadTeam();
+    }, [teamsV2Enabled, ticket.assigned_team_id, teams]);
+
     // Timer logic
     const tick = useCallback(() => {
         setElapsedTime(prevTime => {
@@ -361,6 +413,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 if (settings?.dateTimeFormat) {
                     setDateTimeFormat(settings.dateTimeFormat);
                 }
+                setResponseStateTrackingEnabled(settings?.responseStateTrackingEnabled ?? true);
             } catch (error) {
                 console.error('Failed to load ticketing display settings:', error);
             }
@@ -696,8 +749,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 toast.success('Agent assigned successfully');
             }
         } catch (error) {
-            console.error('Error adding agent:', error);
-            toast.error('Failed to add agent');
+            handleError(error, 'Failed to add agent');
         }
     };  
     
@@ -707,8 +759,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             setAdditionalAgents(prev => prev.filter(agent => agent.assignment_id !== assignmentId));
             toast.success('Agent removed successfully');
         } catch (error) {
-            console.error('Error removing agent:', error);
-            toast.error('Failed to remove agent');
+            handleError(error, 'Failed to remove agent');
         }
     };
 
@@ -762,7 +813,75 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     };
 
+    const handleAssignTeam = useCallback(async (teamId: string) => {
+        try {
+            await assignTeamToTicket(ticket.ticket_id || '', teamId);
+
+            const teamDetails = teams.find(t => t.team_id === teamId) || await getTeamById(teamId);
+            const assignedTo = ticket.assigned_to || teamDetails?.manager_id || ticket.assigned_to;
+
+            setTicket(prevTicket => ({
+                ...prevTicket,
+                assigned_team_id: teamId,
+                assigned_to: assignedTo
+            }));
+            setTeam(teamDetails || null);
+
+            if (ticket.ticket_id) {
+                const resources = await getTicketResources(ticket.ticket_id);
+                setAdditionalAgents(resources);
+            }
+
+            toast.success('Team assigned successfully');
+        } catch (error) {
+            console.error('Error assigning team:', error);
+            toast.error('Failed to assign team');
+        }
+    }, [ticket.ticket_id, ticket.assigned_to, teams]);
+
+    const handleRemoveTeamAssignment = useCallback(async (
+        mode: 'remove_all' | 'keep_all' | 'selective',
+        keepUserIds?: string[]
+    ) => {
+        try {
+            await removeTeamFromTicket(ticket.ticket_id || '', { mode, keepUserIds });
+
+            setTicket(prevTicket => ({
+                ...prevTicket,
+                assigned_team_id: null
+            }));
+            setTeam(null);
+
+            if (ticket.ticket_id) {
+                const resources = await getTicketResources(ticket.ticket_id);
+                setAdditionalAgents(resources);
+            }
+
+            toast.success('Team removed successfully');
+        } catch (error) {
+            console.error('Error removing team assignment:', error);
+            toast.error('Failed to remove team assignment');
+        }
+    }, [ticket.ticket_id]);
+
     const [editorKey, setEditorKey] = useState(0);
+    const refreshTicketDocuments = useCallback(async () => {
+        if (!ticket.ticket_id) return;
+
+        try {
+            const docs = await getDocumentByTicketId(ticket.ticket_id);
+            if (isActionPermissionError(docs)) {
+                console.warn('Permission denied while refreshing ticket documents', {
+                    ticketId: ticket.ticket_id,
+                    reason: docs.permissionError,
+                });
+                return;
+            }
+            setDocuments(docs || []);
+        } catch (error) {
+            console.error('Failed to refresh ticket documents:', error);
+        }
+    }, [ticket.ticket_id]);
 
     const handleAddNewComment = async (
         isInternal: boolean,
@@ -811,7 +930,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 // Optimistically update the response state in UI to match server behavior:
                 // - Internal note: no change
                 // - Client-visible comment from internal user (MSP portal): awaiting client
-                if (!isInternal) {
+                if (!isInternal && responseStateTrackingEnabled) {
                     setTicket((prev: any) => ({
                         ...prev,
                         response_state: 'awaiting_client'
@@ -966,8 +1085,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             setIsEditing(false);
             setCurrentComment(null);
         } catch (error) {
-            console.error("Error saving comment:", error);
-            toast.error("Failed to save comment changes");
+            handleError(error, "Failed to save comment changes");
         }
     };
 const handleClose = () => {
@@ -992,11 +1110,11 @@ const handleClose = () => {
         }
     };
 
-    const handleContentChange = (blocks: PartialBlock[]) => {
-        if (currentComment) {
-            setCurrentComment({ ...currentComment, note: JSON.stringify(blocks) });
-        }
-    };
+    const handleContentChange = useCallback((_blocks: PartialBlock[]) => {
+        // Edit-mode comment content is owned by CommentItem local state and
+        // persisted through handleSave. Avoid mutating currentComment on each
+        // keystroke to prevent unnecessary TicketDetails rerenders.
+    }, []);
 
     const handleUpdateDescription = async (content: string) => {
         try {
@@ -1052,8 +1170,7 @@ const handleClose = () => {
                 return true;
             }
         } catch (error) {
-            console.error('Error updating description:', error);
-            toast.error('Failed to update description');
+            handleError(error, 'Failed to update description');
             return false;
         }
     };
@@ -1081,10 +1198,53 @@ const handleClose = () => {
                 }),
             });
         } catch (error) {
-            console.error('Error in handleAddTimeEntry:', error);
-            toast.error('An error occurred while preparing the time entry. Please try again.');
+            handleError(error, 'An error occurred while preparing the time entry. Please try again.');
         }
     };
+
+    const handleUpdateWatchList = async (watchList: TicketWatchListEntry[]): Promise<boolean> => {
+        if (!ticket.ticket_id || isWatchListSaving) {
+            return false;
+        }
+
+        setIsWatchListSaving(true);
+        try {
+            const updatedAttributes = setTicketWatchListOnAttributes(ticket.attributes, watchList);
+            await updateTicketWithCache(ticket.ticket_id, {
+                attributes: updatedAttributes ?? null,
+            });
+
+            setTicket((prevTicket) => ({
+                ...prevTicket,
+                attributes: updatedAttributes ?? null,
+                updated_at: new Date().toISOString(),
+            }));
+            return true;
+        } catch (error) {
+            console.error('Error updating watch list:', error);
+            toast.error('Failed to update watch list');
+            return false;
+        } finally {
+            setIsWatchListSaving(false);
+        }
+    };
+
+    const handleLoadAllContactsForWatchList = useCallback(async () => {
+        if (allContactsForWatchListLoading || allContactsForWatchList.length > 0) {
+            return;
+        }
+
+        setAllContactsForWatchListLoading(true);
+        try {
+            const allContacts = await getAllActiveContacts('asc');
+            setAllContactsForWatchList(allContacts || []);
+        } catch (error) {
+            console.error('Error loading all contacts for watch list:', error);
+            toast.error('Failed to load all contacts');
+        } finally {
+            setAllContactsForWatchListLoading(false);
+        }
+    }, [allContactsForWatchList.length, allContactsForWatchListLoading]);
 
     const handleChangeContact = () => {
         setIsChangeContactDialogOpen(true);
@@ -1112,8 +1272,7 @@ const handleClose = () => {
             setIsChangeContactDialogOpen(false);
             toast.success('Contact updated successfully');
         } catch (error) {
-            console.error('Error updating contact:', error);
-            toast.error('Failed to update contact');
+            handleError(error, 'Failed to update contact');
         }
     };
 
@@ -1155,8 +1314,7 @@ const handleClose = () => {
 
             toast.success(`ITIL ${field.replace('itil_', '').replace('_', ' ')} updated successfully`);
         } catch (error) {
-            console.error('Error updating ITIL field:', error);
-            toast.error(`Failed to update ITIL ${field.replace('itil_', '').replace('_', ' ')}`);
+            handleError(error, `Failed to update ITIL ${field.replace('itil_', '').replace('_', ' ')}`);
         }
     };
 
@@ -1218,8 +1376,7 @@ const handleClose = () => {
             setIsChangeClientDialogOpen(false);
             toast.success('Client updated successfully');
         } catch (error) {
-            console.error('Error updating client:', error);
-            toast.error('Failed to update client');
+            handleError(error, 'Failed to update client');
         }
     };
     
@@ -1238,8 +1395,7 @@ const handleClose = () => {
 
             toast.success('Location updated successfully');
         } catch (error) {
-            console.error('Error updating location:', error);
-            toast.error('Failed to update location');
+            handleError(error, 'Failed to update location');
         }
     };
 
@@ -1263,8 +1419,7 @@ const handleClose = () => {
             );
             toast.success('Comment deleted successfully');
         } catch (error) {
-            console.error("Error deleting comment:", error);
-            toast.error('Failed to delete comment');
+            handleError(error, 'Failed to delete comment');
         } finally {
             setIsDeleteDialogOpen(false);
             setCommentToDelete(null);
@@ -1284,8 +1439,7 @@ const handleClose = () => {
             toast.success('Removed ticket from bundle');
             router.refresh();
         } catch (error) {
-            console.error('Failed to remove child from bundle:', error);
-            toast.error(error instanceof Error ? error.message : 'Failed to remove ticket from bundle');
+            handleError(error, 'Failed to remove ticket from bundle');
         }
     }, [router]);
 
@@ -1296,8 +1450,7 @@ const handleClose = () => {
             toast.success('Bundle removed');
             router.refresh();
         } catch (error) {
-            console.error('Failed to unbundle master ticket:', error);
-            toast.error(error instanceof Error ? error.message : 'Failed to unbundle ticket');
+            handleError(error, 'Failed to unbundle ticket');
         }
     }, [ticket.ticket_id, router]);
 
@@ -1355,8 +1508,7 @@ const handleClose = () => {
 
             await performAddChildToBundle(found.ticket_id);
         } catch (error) {
-            console.error('Failed to add child to bundle:', error);
-            toast.error(error instanceof Error ? error.message : 'Failed to add ticket to bundle');
+            handleError(error, 'Failed to add ticket to bundle');
         }
     }, [ticket.ticket_id, ticket.client_id, addChildTicketNumber, selectedChildTicket, performAddChildToBundle]);
 
@@ -1472,8 +1624,7 @@ const handleClose = () => {
             router.push(`/msp/tickets/${childTicketId}`);
             router.refresh();
         } catch (error) {
-            console.error('Failed to promote master:', error);
-            toast.error(error instanceof Error ? error.message : 'Failed to promote master');
+            handleError(error, 'Failed to promote master');
         }
     }, [ticket.ticket_id, router]);
 
@@ -1486,12 +1637,19 @@ const handleClose = () => {
             toast.success('Bundle settings updated');
             router.refresh();
         } catch (error) {
-            console.error('Failed to update bundle settings:', error);
-            toast.error(error instanceof Error ? error.message : 'Failed to update bundle settings');
+            handleError(error, 'Failed to update bundle settings');
         } finally {
             setIsUpdatingBundleSettings(false);
         }
     }, [ticket.ticket_id, bundle?.isBundleMaster, bundle?.mode, router]);
+
+    if (!tenant) {
+        return (
+            <div id="ticket-error-message" className="p-4">
+                Error: tenant is not defined
+            </div>
+        );
+    }
 
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
@@ -1503,7 +1661,7 @@ const handleClose = () => {
                             <BackNav href="/msp/tickets">← Back to Tickets</BackNav>
                         )}
                         <h6 className="text-sm font-medium whitespace-nowrap">#{ticket.ticket_number}</h6>
-                        {ticket.response_state ? (
+                        {responseStateTrackingEnabled && ticket.response_state ? (
                             <ResponseStateBadge
                                 responseState={ticket.response_state}
                                 size="sm"
@@ -1600,8 +1758,7 @@ const handleClose = () => {
                         try {
                             await performAddChildToBundle(pendingChildToAdd.ticket_id);
                         } catch (error) {
-                            console.error('Failed to add child to bundle after confirmation:', error);
-                            toast.error(error instanceof Error ? error.message : 'Failed to add ticket to bundle');
+                            handleError(error, 'Failed to add ticket to bundle');
                         } finally {
                             setIsAddChildMultiClientConfirmOpen(false);
                             setPendingChildToAdd(null);
@@ -1799,7 +1956,10 @@ const handleClose = () => {
                                     itilImpact={itilImpact}
                                     itilUrgency={itilUrgency}
                                     isBundledChild={Boolean(bundle?.isBundleChild)}
+                                    responseStateTrackingEnabled={responseStateTrackingEnabled}
                                     renderProjectTaskActions={renderCreateProjectTask}
+                                    teams={teams}
+                                    onAssignTeam={handleAssignTeam}
                                     additionalAgents={additionalAgents.map(a => ({
                                         user_id: a.additional_user_id || a.assigned_to,
                                         name: availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))
@@ -1840,6 +2000,8 @@ const handleClose = () => {
                                     isSubmitting={isSubmitting}
                                     hideInternalTab={false}
                                     externalComments={bundle?.isBundleMaster ? aggregatedChildClientComments : []}
+                                    onClipboardImageUploaded={refreshTicketDocuments}
+                                    defaultNewestFirst
                                 />
                             </div>
                         </Suspense>
@@ -1867,9 +2029,9 @@ const handleClose = () => {
                     </div>
                     <div className={isInDrawer ? "w-96" : "w-1/4"} id="ticket-properties-container">
                         <Suspense fallback={<div id="ticket-properties-skeleton" className="animate-pulse bg-gray-200 h-96 rounded-lg mb-6"></div>}>
-                            <TicketProperties
-                                id={`${id}-properties`}
-                                ticket={ticket}
+                                <TicketProperties
+                                    id={`${id}-properties`}
+                                    ticket={ticket}
                                 client={client}
                                 contactInfo={contactInfo}
                                 createdByUser={createdByUser}
@@ -1886,6 +2048,7 @@ const handleClose = () => {
                                 onClientClick={handleClientClick}
                                 onContactClick={handleContactClick}
                                 team={team}
+                                teams={teams}
                                 additionalAgents={additionalAgents}
                                 availableAgents={availableAgents}
                                 onAgentClick={handleAgentClick}
@@ -1909,9 +2072,16 @@ const handleClose = () => {
                                 allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
                                 onTagsChange={handleTagsChange}
                                 onItilFieldChange={handleItilFieldChange}
-                                surveySummary={surveySummary}
-                                renderIntervalManagement={renderIntervalManagement}
-                            />
+                                onUpdateWatchList={handleUpdateWatchList}
+                                watchListSaving={isWatchListSaving}
+                                allContactsForWatchList={allContactsForWatchList}
+                                allContactsForWatchListLoading={allContactsForWatchListLoading}
+                                onLoadAllContactsForWatchList={handleLoadAllContactsForWatchList}
+                                surveySummaryCard={surveySummaryCard}
+                                    renderIntervalManagement={renderIntervalManagement}
+                                    onRemoveTeamAssignment={handleRemoveTeamAssignment}
+                                    onAssignTeam={handleAssignTeam}
+                                />
                         </Suspense>
                         
                         {associatedAssets ? <div className="mt-6" id="associated-assets-container">{associatedAssets}</div> : null}

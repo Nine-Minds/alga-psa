@@ -6,7 +6,7 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
-import { toast } from 'react-hot-toast';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { addProjectPhase } from '../actions/projectActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
@@ -51,11 +51,14 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
       };
 
       const newPhase = await addProjectPhase(phaseData);
+      if (isActionPermissionError(newPhase)) {
+        handleError(newPhase.permissionError);
+        return;
+      }
       onPhaseAdded(newPhase);
       onClose();
     } catch (error) {
-      console.error('Error adding phase:', error);
-      toast.error('Failed to add phase. Please try again.');
+      handleError(error, 'Failed to add phase. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

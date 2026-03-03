@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { IService } from '@alga-psa/types';
+import { IClient, IService } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 
@@ -34,13 +34,16 @@ interface BillingDashboardProps {
   currentUserId?: string | null;
   /** Snapshot of query params used for the initial server render (prevents hydration mismatch). */
   initialQuery?: Record<string, string | undefined>;
+  /** Optional injected UI for client quick view. */
+  renderClientDetails?: (args: { id: string; client: IClient }) => React.ReactNode;
 }
 
 const BillingDashboard: React.FC<BillingDashboardProps> = ({
   initialServices,
   contractDocuments,
   currentUserId,
-  initialQuery
+  initialQuery,
+  renderClientDetails
 }) => {
   const router = useRouter();
   const liveSearchParams = useSearchParams();
@@ -123,7 +126,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
         <Tabs.Content value="contract-templates">
           {searchParams?.has('contractId') ? (
-            <ContractDetailSwitcher />
+            <ContractDetailSwitcher renderClientDetails={renderClientDetails} />
           ) : (
             <TemplatesTab />
           )}
@@ -134,6 +137,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
             <ContractDetailSwitcher
               contractDocuments={contractDocuments}
               currentUserId={currentUserId}
+              renderClientDetails={renderClientDetails}
             />
           ) : (
             <ClientContractsTab />

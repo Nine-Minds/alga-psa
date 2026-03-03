@@ -16,6 +16,10 @@
       "import": "./dist/actions/index.mjs",
       "require": "./dist/actions/index.js"
     },
+    "./runtime": {
+      "types": "./src/runtime.ts",
+      "import": "./src/runtime.ts"
+    },
     "./components": {
       "types": "./dist/components/index.d.ts",
       "import": "./dist/components/index.mjs",

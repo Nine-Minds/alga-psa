@@ -28,6 +28,7 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { DeadlineFilter, DeadlineFilterValue } from './DeadlineFilter';
 import { IContact } from '@alga-psa/types';
@@ -291,6 +292,11 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
     try {
       setIsDeleteProcessing(true);
       const result = await deleteProject(projectToDelete.project_id);
+
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        return;
+      }
 
       if (!result.success) {
         setDeleteValidation(result);

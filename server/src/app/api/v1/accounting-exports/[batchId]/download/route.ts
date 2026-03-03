@@ -10,12 +10,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from '@alga-psa/users/actions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
-import { AccountingExportService } from 'server/src/lib/services/accountingExportService';
-import { AccountingAdapterRegistry } from 'server/src/lib/adapters/accounting/registry';
+import { AccountingExportService, AccountingAdapterRegistry } from '@alga-psa/billing/services';
 import {
   AccountingExportAdapterContext,
   TaxDelegationMode
-} from 'server/src/lib/adapters/accounting/accountingExportAdapter';
+} from '@alga-psa/types';
 import { getXeroCsvSettings } from '@alga-psa/integrations/actions/integrations/xeroCsvActions';
 import logger from '@alga-psa/core/logger';
 

@@ -18,6 +18,7 @@ import { useDrawer } from "@alga-psa/ui";
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { createTicketColumns } from '@alga-psa/tickets/lib';
 import { getTicketingDisplaySettings, type TicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
@@ -229,8 +230,7 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
         />
       );
     } catch (error) {
-      console.error('Error opening ticket:', error);
-      toast.error('Failed to open ticket');
+      handleError(error, 'Failed to open ticket');
     }
   }, [currentUser, openDrawer]);
 

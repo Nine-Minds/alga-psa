@@ -5,9 +5,12 @@ import { TestContext } from '../../../../test-utils/testContext';
 import { createTestService } from '../../../../test-utils/billingTestHelpers';
 import { createClient } from '../../../../test-utils/testDataFactory';
 
-import { AccountingExportInvoiceSelector, InvoiceSelectionFilters } from 'server/src/lib/services/accountingExportInvoiceSelector';
-import { AccountingExportRepository } from 'server/src/lib/repositories/accountingExportRepository';
-import { AccountingExportService } from 'server/src/lib/services/accountingExportService';
+import {
+  AccountingExportInvoiceSelector,
+  type InvoiceSelectionFilters,
+  AccountingExportRepository,
+  AccountingExportService
+} from '@alga-psa/billing/services';
 
 const helpers = TestContext.createHelpers();
 const HOOK_TIMEOUT = 240_000;

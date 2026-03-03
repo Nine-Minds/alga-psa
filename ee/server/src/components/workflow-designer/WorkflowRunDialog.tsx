@@ -884,7 +884,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
                     <div className="text-xs text-gray-500">No map entries added.</div>
                   )}
                   {dynamicEntries.map(([entryKey, entryValue]) => (
-                    <div key={`${fieldPath}.dynamic.${entryKey}`} className="rounded border border-gray-200 bg-white p-2 space-y-2">
+                    <div key={`${fieldPath}.dynamic.${entryKey}`} className="rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] p-2 space-y-2">
                       <div className="flex items-center justify-between gap-2">
                         <code className="text-xs bg-gray-100 px-1 py-0.5 rounded break-all">{entryKey}</code>
                         <Button
@@ -1095,7 +1095,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
             <Input id="run-dialog-status" label="Workflow status" value={isPaused ? 'paused' : 'active'} disabled />
           </div>
 
-          <div className="rounded border border-gray-200 bg-white p-3 space-y-3">
+          <div className="rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] p-3 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <div className="text-sm font-medium text-gray-800">Event catalog</div>

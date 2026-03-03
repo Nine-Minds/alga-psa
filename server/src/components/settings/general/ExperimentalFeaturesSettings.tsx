@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
@@ -59,9 +60,8 @@ export default function ExperimentalFeaturesSettings(): React.JSX.Element {
       setSavedFeatures(loaded);
       setAiAssistantAllowed(aiAllowed);
     } catch (error) {
-      console.error('Failed to load experimental features:', error);
       setLoadError('Failed to load experimental feature settings.');
-      toast.error('Failed to load experimental feature settings');
+      handleError(error, 'Failed to load experimental feature settings');
     } finally {
       setLoading(false);
     }
@@ -89,8 +89,7 @@ export default function ExperimentalFeaturesSettings(): React.JSX.Element {
       setSavedFeatures(features);
       toast.success('Experimental feature settings saved. Reload the page to apply changes.');
     } catch (error) {
-      console.error('Failed to save experimental features:', error);
-      toast.error('Failed to save experimental feature settings');
+      handleError(error, 'Failed to save experimental feature settings');
     } finally {
       setSaving(false);
     }

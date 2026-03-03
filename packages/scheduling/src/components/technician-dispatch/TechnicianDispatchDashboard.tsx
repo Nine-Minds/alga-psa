@@ -19,6 +19,7 @@ import { getWorkItemStatusOptions, StatusOption } from '@alga-psa/reference-data
 import { checkCurrentUserPermission, checkCurrentUserPermissions } from '@alga-psa/auth/actions';
 import { getCurrentUser } from '@alga-psa/users/actions';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { DragState } from '@alga-psa/types';
 import { HighlightedSlot } from '@alga-psa/types';
 import { DropEvent } from '@alga-psa/types';
@@ -158,8 +159,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         const options = await getWorkItemStatusOptions(['ticket']);
         setStatusFilterOptions(options);
       } catch (err) {
-        console.error("Failed to fetch status options:", err);
-        toast.error("Failed to load status filter options.");
+        handleError(err, 'Failed to load status filter options.');
         // Set default basic options as fallback
         setStatusFilterOptions([
           { value: 'all_open', label: 'All Open' },
@@ -185,8 +185,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
          toast.error('Failed to refresh schedule entries');
       }
     } catch (err) {
-      console.error('Error refreshing data:', err);
-      toast.error('Failed to refresh data');
+      handleError(err, 'Failed to refresh data');
     }
   }, [performSearch, searchQuery, date, viewMode]);
 
@@ -645,8 +644,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
             toast.success('Task updated successfully');
             closeDrawer();
           } catch (err) {
-            console.error('Error updating task:', err);
-            toast.error('Failed to update task');
+            handleError(err, 'Failed to update task');
           }
         }}
         onScheduleUpdate={async (entryData) => {
@@ -694,9 +692,8 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
               }
             }
           } catch (err) {
-            console.error('Error saving schedule entry:', err);
+            handleError(err, 'Failed to save schedule entry');
             setError('Failed to save schedule entry');
-            toast.error('Failed to save schedule entry');
           }
           closeDrawer();
         }}
@@ -776,8 +773,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
               toast.success('Task updated successfully');
               closeDrawer();
             } catch (err) {
-              console.error('Error updating task:', err);
-              toast.error('Failed to update task');
+              handleError(err, 'Failed to update task');
             }
           }}
           onScheduleUpdate={async (entryData) => {
@@ -807,17 +803,15 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
                 toast.error('Failed to update schedule entry');
               }
             } catch (err) {
-              console.error('Error saving schedule entry:', err);
+              handleError(err, 'Failed to save schedule entry');
               setError('Failed to save schedule entry');
-              toast.error('Failed to save schedule entry');
             }
             closeDrawer();
           }}
         />
       );
     } catch (err) {
-      console.error('Error opening work item details:', err);
-      toast.error('Failed to open work item details.');
+      handleError(err, 'Failed to open work item details.');
     }
   }, [openDrawer, closeDrawer, refreshAllData, getWorkItemById, updateScheduleEntry]);
 

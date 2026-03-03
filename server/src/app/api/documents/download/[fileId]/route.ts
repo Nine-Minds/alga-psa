@@ -3,7 +3,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import DocumentBlockContent from 'server/src/lib/models/documentBlockContent';
 import Document from '@alga-psa/documents/models/document';
 import { marked } from 'marked';
-import { convertBlockNoteToHTML } from 'server/src/lib/utils/blocknoteUtils';
+
 import logger from '@alga-psa/core/logger';
 import { downloadDocument } from '@alga-psa/documents/actions/documentActions';
 import { createPDFGenerationService } from 'server/src/services/pdf-generation.service';
@@ -68,9 +68,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
           const headers = new Headers();
           headers.set('Content-Type', 'application/pdf');
           headers.set('Content-Disposition', `attachment; filename="${document.document_name || 'document'}.pdf"`);
-          // PDFs can be cached since they're generated and stored
-          headers.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
-          headers.set('ETag', `"${fileRecord.file_id}"`);
+          // No browser caching — document content may change between exports
+          headers.set('Cache-Control', 'no-store');
 
           return new Response(result.buffer as any, { status: 200, headers });
         } catch (pdfError) {

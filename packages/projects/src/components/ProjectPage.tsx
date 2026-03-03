@@ -4,8 +4,9 @@ import { getProjectMetadata, updateProject } from '../actions/projectActions';
 import ProjectInfo from './ProjectInfo';
 import ProjectDetail from './ProjectDetail';
 import { useEffect, useState, useCallback } from 'react';
-import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { useSearchParams, usePathname } from 'next/navigation';
 import type { IClient, IProject, IProjectPhase, IProjectTask, IProjectTicketLinkWithDetails, ITag, IUserWithRoles, ProjectStatus } from '@alga-psa/types';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface ProjectMetadata {
   project: IProject;
@@ -19,7 +20,6 @@ interface ProjectMetadata {
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const pathname = usePathname();
   const taskIdFromUrl = searchParams?.get('taskId') ?? null;
   const phaseIdFromUrl = searchParams?.get('phaseId') ?? null;
@@ -41,6 +41,10 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
     const fetchProjectMetadata = async () => {
       const metadata = await getProjectMetadata(projectId);
+      if (isActionPermissionError(metadata)) {
+        handleError(metadata.permissionError);
+        return;
+      }
       setProjectMetadata(metadata);
     };
     fetchProjectMetadata();
@@ -48,13 +52,21 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
   const handleAssignedUserChange = async (userId: string | null) => {
     if (!projectId) return;
-    
+
     try {
-      await updateProject(projectId, {
+      const result = await updateProject(projectId, {
         assigned_to: userId
       });
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        return;
+      }
       // Refresh project metadata after update
       const updatedMetadata = await getProjectMetadata(projectId);
+      if (isActionPermissionError(updatedMetadata)) {
+        handleError(updatedMetadata.permissionError);
+        return;
+      }
       setProjectMetadata(updatedMetadata);
     } catch (error) {
       console.error('Error updating assigned user:', error);
@@ -63,13 +75,21 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
   const handleContactChange = async (contactId: string | null) => {
     if (!projectId) return;
-    
+
     try {
-      await updateProject(projectId, {
+      const result = await updateProject(projectId, {
         contact_name_id: contactId
       });
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        return;
+      }
       // Refresh project metadata after update
       const updatedMetadata = await getProjectMetadata(projectId);
+      if (isActionPermissionError(updatedMetadata)) {
+        handleError(updatedMetadata.permissionError);
+        return;
+      }
       setProjectMetadata(updatedMetadata);
     } catch (error) {
       console.error('Error updating contact:', error);
@@ -78,11 +98,19 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
   const handleProjectUpdate = async (updatedProject: IProject) => {
     if (!projectId) return;
-    
+
     try {
-      await updateProject(projectId, updatedProject);
+      const result = await updateProject(projectId, updatedProject);
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        return;
+      }
       // Refresh project metadata after update
       const updatedMetadata = await getProjectMetadata(projectId);
+      if (isActionPermissionError(updatedMetadata)) {
+        handleError(updatedMetadata.permissionError);
+        return;
+      }
       setProjectMetadata(updatedMetadata);
     } catch (error) {
       console.error('Error updating project:', error);
@@ -95,6 +123,8 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   };
 
   // Update URL when phase or task selection changes
+  // Uses history.replaceState to avoid triggering a Next.js soft navigation
+  // (which would re-fetch the RSC payload and potentially block state updates)
   const handleUrlUpdate = useCallback((phaseId: string | null, taskId: string | null) => {
     const params = new URLSearchParams();
     if (phaseId) {
@@ -105,9 +135,8 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     }
     const queryString = params.toString();
     const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
-    // Use replace to avoid adding to browser history for every phase click
-    router.replace(newUrl, { scroll: false });
-  }, [pathname, router]);
+    window.history.replaceState(null, '', newUrl);
+  }, [pathname]);
 
   if (!projectMetadata) {
     return <div>Loading...</div>;

@@ -8,7 +8,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { getAllTemplates, TemplateData } from '@alga-psa/workflows/actions';
 import TemplatePreview from '../template-library/TemplatePreview';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
-import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 export default function TemplateLibrary() {
   const [templates, setTemplates] = useState<TemplateData[]>([]);
@@ -40,8 +40,7 @@ export default function TemplateLibrary() {
         
         setCategories(uniqueCategories);
       } catch (error) {
-        console.error('Error loading templates:', error);
-        toast.error('Failed to load templates');
+        handleError(error, 'Failed to load templates');
       } finally {
         setIsLoading(false);
       }

@@ -13,6 +13,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -101,8 +102,7 @@ const InteractionStatusSettings = (): React.JSX.Element => {
       ));
       toast.success('Status updated successfully');
     } catch (error) {
-      console.error('Error updating status:', error);
-      toast.error('Failed to update status');
+      handleError(error, 'Failed to update status');
     }
   };
 
@@ -131,13 +131,7 @@ const InteractionStatusSettings = (): React.JSX.Element => {
       setStatuses(statuses.filter(s => s.status_id !== statusToDelete.status_id));
       toast.success('Status deleted successfully');
     } catch (error) {
-      console.error('Error deleting status:', error);
-      const message = error instanceof Error ? error.message : 'Cannot delete status because it is currently in use';
-      if (message.toLowerCase().includes('in use') || message.toLowerCase().includes('referenced') || message.toLowerCase().includes('foreign key')) {
-        toast.error(`Cannot delete "${statusToDelete.name}" because it is currently in use.`);
-      } else {
-        toast.error(message);
-      }
+      handleError(error, 'Failed to delete status');
     } finally {
       setShowDeleteDialog(false);
       setStatusToDelete(null);
@@ -187,8 +181,7 @@ const InteractionStatusSettings = (): React.JSX.Element => {
         setSelectedImportStatuses([]);
       }
     } catch (error) {
-      console.error('Error importing statuses:', error);
-      toast.error('Failed to import statuses');
+      handleError(error, 'Failed to import statuses');
     }
   };
 
@@ -219,8 +212,7 @@ const InteractionStatusSettings = (): React.JSX.Element => {
       setImportConflicts([]);
       setConflictResolutions({});
     } catch (error) {
-      console.error('Error importing statuses:', error);
-      toast.error('Failed to import statuses');
+      handleError(error, 'Failed to import statuses');
     }
   };
 

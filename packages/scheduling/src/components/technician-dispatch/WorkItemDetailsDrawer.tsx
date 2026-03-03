@@ -11,6 +11,7 @@ import { getCurrentUser, getAllUsersBasic } from '@alga-psa/users/actions';
 import { getScheduleEntries } from '@alga-psa/scheduling/actions';
 import { getInteractionById } from '@alga-psa/clients/actions';
 import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import TaskEdit from '@alga-psa/projects/components/TaskEdit';
 import EntryPopup from '@alga-psa/scheduling/components/schedule/EntryPopup';
@@ -53,8 +54,7 @@ export function WorkItemDetailsDrawer({
                 }
                 setUsers(allUsers || []);
             } catch (error) {
-                console.error('Error loading users:', error);
-                toast.error('Failed to load users. Please try refreshing the page.');
+                handleError(error, 'Failed to load users. Please try refreshing the page.');
                 setUsers([]);
             } finally {
                 console.log('Finished loading users, setting isUsersLoading to false');

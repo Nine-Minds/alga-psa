@@ -7,6 +7,7 @@ import { Badge } from "@alga-psa/ui/components/Badge";
 import { History, Check, AlertCircle } from "lucide-react";
 import { getWorkflowVersions, setActiveWorkflowVersion, WorkflowVersionData } from "@alga-psa/workflows/actions/workflow-editor-actions";
 import { toast } from "react-hot-toast";
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
 interface WorkflowVersionsDialogProps {
   workflowId: string;
@@ -41,8 +42,7 @@ export default function WorkflowVersionsDialog({
       const versionData = await getWorkflowVersions(workflowId);
       setVersions(versionData);
     } catch (error) {
-      console.error("Error loading workflow versions:", error);
-      toast.error("Failed to load workflow versions");
+      handleError(error, "Failed to load workflow versions");
     } finally {
       setLoading(false);
     }
@@ -63,8 +63,7 @@ export default function WorkflowVersionsDialog({
         toast.error("Failed to update active version");
       }
     } catch (error) {
-      console.error("Error setting active version:", error);
-      toast.error("An error occurred while updating the active version");
+      handleError(error, "An error occurred while updating the active version");
     } finally {
       setActivating(null);
     }
@@ -124,9 +123,9 @@ export default function WorkflowVersionsDialog({
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-[rgb(var(--color-card))] divide-y divide-gray-200 dark:divide-[rgb(var(--color-border-200))]">
                   {versions.map((version) => (
-                    <tr key={version.versionId} className="hover:bg-gray-50">
+                    <tr key={version.versionId} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                       <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
                         {version.version}
                       </td>

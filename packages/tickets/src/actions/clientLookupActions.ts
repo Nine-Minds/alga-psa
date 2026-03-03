@@ -7,6 +7,7 @@ import type { ContactFilterStatus } from '@alga-psa/shared/ticketClients/types';
 import { getAllClients as getAllClientsModel, getClientById as getClientByIdModel } from '@alga-psa/shared/ticketClients/clients';
 import {
   getContactByContactNameId as getContactByContactNameIdModel,
+  getAllActiveContacts as getAllActiveContactsModel,
   getContactsByClient as getContactsByClientModel,
 } from '@alga-psa/shared/ticketClients/contacts';
 import { getClientLocations as getClientLocationsModel } from '@alga-psa/shared/ticketClients/locations';
@@ -48,6 +49,18 @@ export const getContactByContactNameId = withAuth(async (_user, { tenant }, cont
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
     return getContactByContactNameIdModel(trx, tenant, contactNameId);
+  });
+});
+
+export const getAllActiveContacts = withAuth(async (
+  _user,
+  { tenant },
+  sortDirection: 'asc' | 'desc' = 'asc'
+): Promise<IContact[]> => {
+  const { knex } = await createTenantKnex();
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return getAllActiveContactsModel(trx, tenant, sortDirection);
   });
 });
 

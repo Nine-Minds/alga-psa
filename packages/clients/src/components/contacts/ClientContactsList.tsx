@@ -17,6 +17,7 @@ import ContactDetailsEdit from './ContactDetailsEdit';
 import type { IClient } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentActions';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getCurrentUserAsync } from '../../lib/usersHelpers';
 import QuickAddContact from './QuickAddContact';
 import { useRouter } from 'next/navigation';
@@ -124,14 +125,16 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
       
       if (!existingDocuments || existingDocuments.length === 0) {
         const response = await getDocumentsByEntity(contact.contact_name_id, 'contact');
-        
-        setDocuments(prev => {
-          const newDocuments = { ...prev };
-          newDocuments[contact.contact_name_id] = Array.isArray(response)
-            ? response
-            : response.documents || [];
-          return newDocuments;
-        });
+
+        if (!isActionPermissionError(response)) {
+          setDocuments(prev => {
+            const newDocuments = { ...prev };
+            newDocuments[contact.contact_name_id] = Array.isArray(response)
+              ? response
+              : response.documents || [];
+            return newDocuments;
+          });
+        }
       }
 
       openDrawer(
@@ -145,14 +148,16 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
           onDocumentCreated={async () => {
             try {
               const updatedResponse = await getDocumentsByEntity(contact.contact_name_id, 'contact');
-              
-              setDocuments(prev => {
-                const newDocuments = { ...prev };
-                newDocuments[contact.contact_name_id] = Array.isArray(updatedResponse)
-                  ? updatedResponse
-                  : updatedResponse.documents || [];
-                return newDocuments;
-              });
+
+              if (!isActionPermissionError(updatedResponse)) {
+                setDocuments(prev => {
+                  const newDocuments = { ...prev };
+                  newDocuments[contact.contact_name_id] = Array.isArray(updatedResponse)
+                    ? updatedResponse
+                    : updatedResponse.documents || [];
+                  return newDocuments;
+                });
+              }
             } catch (err) {
               console.error('Error refreshing documents:', err);
             }

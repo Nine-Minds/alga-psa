@@ -11,6 +11,7 @@ const { wrapEmailLayout } = require('../../_shared/emailLayout.cjs');
 const {
   BADGE_BG,
   BRAND_DARK,
+  BRAND_PRIMARY,
   INFO_BOX_BG,
   INFO_BOX_BORDER,
 } = require('../../_shared/constants.cjs');
@@ -28,8 +29,8 @@ const COPY = {
     headerLabel: 'Task Assignment',
     intro: 'Hello{{#if recipientName}} {{recipientName}}{{/if}}, you have been assigned as the primary resource for a project task.',
     assignedBadge: 'Primary Assignee',
-    badgeBg: 'rgba(16,185,129,0.12)',
-    badgeColor: '#047857',
+    badgeBg: BADGE_BG,
+    badgeColor: BRAND_DARK,
     taskLabel: 'Task',
     projectLabel: 'Project',
     dueDateLabel: 'Due Date',
@@ -37,7 +38,7 @@ const COPY = {
     roleLabel: 'Role',
     descriptionTitle: 'Description',
     viewButton: 'View Task',
-    buttonColor: '#10b981',
+    buttonColor: BRAND_PRIMARY,
     footer: 'Powered by Alga PSA',
     textHeader: 'Task Assignment',
     textIntro: 'You have been assigned as the Primary Assignee for this task:',

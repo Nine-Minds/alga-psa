@@ -10,7 +10,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { ContractWizardData } from '../ContractWizard';
 import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
-import { checkClientHasActiveContract } from '@alga-psa/billing/actions/contractActions';
+import { checkClientHasActiveContract, fetchClientIdsWithActiveContracts } from '@alga-psa/billing/actions/contractActions';
 import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
@@ -71,6 +71,7 @@ export function ContractBasicsStep({
   const [checkingActiveContract, setCheckingActiveContract] = useState(false);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const [disabledClientIds, setDisabledClientIds] = useState<Set<string>>(new Set());
   const [startDate, setStartDate] = useState<Date | undefined>(parseLocalYMD(data.start_date));
   const [endDate, setEndDate] = useState<Date | undefined>(parseLocalYMD(data.end_date));
 
@@ -84,8 +85,12 @@ export function ContractBasicsStep({
   useEffect(() => {
     const loadClients = async () => {
       try {
-        const fetchedClients = await getAllClientsForBilling();
+        const [fetchedClients, activeContractClientIds] = await Promise.all([
+          getAllClientsForBilling(),
+          fetchClientIdsWithActiveContracts(data.contract_id),
+        ]);
         setClients(fetchedClients);
+        setDisabledClientIds(new Set(activeContractClientIds));
       } catch (error) {
         console.error('Error loading clients:', error);
       } finally {
@@ -221,6 +226,7 @@ export function ContractBasicsStep({
           onFilterStateChange={setFilterState}
           clientTypeFilter={clientTypeFilter}
           onClientTypeFilterChange={setClientTypeFilter}
+          disabledClientIds={disabledClientIds}
           placeholder={isLoadingClients ? 'Loading clients…' : 'Select a client'}
           className="w-full"
         />

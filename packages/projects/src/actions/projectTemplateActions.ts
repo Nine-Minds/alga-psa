@@ -20,6 +20,7 @@ import ProjectModel from '@alga-psa/projects/models/project';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { getProjectStatuses } from './projectActions';
 import type { IUser } from '@alga-psa/types';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { validateData } from '@alga-psa/validation';
 import {
   createTemplateSchema,
@@ -211,6 +212,7 @@ export const createTemplateFromProject = withAuth(async (
           task_type_key: task.task_type_key,
           priority_id: task.priority_id,
           assigned_to: copyOptions.copyAssignments ? task.assigned_to : null,
+          assigned_team_id: copyOptions.copyAssignments ? (task.assigned_team_id || null) : null,
           template_status_mapping_id: templateStatusMappingId || null,
           order_key: task.order_key,
           duration_days,
@@ -358,6 +360,9 @@ export const applyTemplate = withAuth(async (
     // 2. Create project directly (no need to call createProject which has extra overhead)
     // Get project statuses for the project status field
     const projectStatuses = await getProjectStatuses();
+    if (isActionPermissionError(projectStatuses)) {
+      throw new Error(projectStatuses.permissionError);
+    }
     if (projectStatuses.length === 0) {
       throw new Error('No project statuses found');
     }
@@ -622,12 +627,14 @@ export const applyTemplate = withAuth(async (
         console.log(`[applyTemplate] Task "${templateTask.task_name}": No template_status_mapping_id, using first status ${firstStatusMappingId}`);
       }
 
-      // Determine assigned_to based on assignmentOption
+      // Determine assigned_to and assigned_team_id based on assignmentOption
       let taskAssignedTo: string | null = null;
+      let taskAssignedTeamId: string | null = null;
       if (options.assignmentOption === 'primary' || options.assignmentOption === 'all') {
         taskAssignedTo = templateTask.assigned_to || null;
+        taskAssignedTeamId = templateTask.assigned_team_id || null;
       }
-      // If assignmentOption is 'none', taskAssignedTo remains null
+      // If assignmentOption is 'none', both remain null
 
       try {
         const taskInsertData = {
@@ -642,6 +649,7 @@ export const applyTemplate = withAuth(async (
           wbs_code: newWbsCode,
           project_status_mapping_id: taskStatusMappingId,
           assigned_to: taskAssignedTo,
+          assigned_team_id: taskAssignedTeamId,
           due_date: dueDate,
           service_id: options.copyServices ? (templateTask.service_id || null) : null
         };
@@ -1569,6 +1577,7 @@ export const addTemplateTask = withAuth(async (
     task_type_key?: string;
     priority_id?: string;
     assigned_to?: string;
+    assigned_team_id?: string | null;
     template_status_mapping_id?: string;
     service_id?: string | null;
   },
@@ -1616,6 +1625,7 @@ export const addTemplateTask = withAuth(async (
         task_type_key: taskData.task_type_key || null,
         priority_id: taskData.priority_id || null,
         assigned_to: taskData.assigned_to || null,
+        assigned_team_id: taskData.assigned_team_id || null,
         template_status_mapping_id: taskData.template_status_mapping_id || null,
         service_id: taskData.service_id || null,
         order_key: orderKey
@@ -1646,6 +1656,7 @@ export const updateTemplateTask = withAuth(async (
     task_type_key?: string;
     priority_id?: string;
     assigned_to?: string | null;
+    assigned_team_id?: string | null;
     template_status_mapping_id?: string | null;
     template_phase_id?: string;
     order_key?: string;

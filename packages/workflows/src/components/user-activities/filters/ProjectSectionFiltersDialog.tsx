@@ -15,9 +15,10 @@ import { Checkbox } from "@alga-psa/ui/components/Checkbox";
 import { Label } from "@alga-psa/ui/components/Label";
 import { Input } from "@alga-psa/ui/components/Input";
 import { StringDateRangePicker } from "@alga-psa/ui/components/DateRangePicker";
-import { ActivityFilters, ActivityPriority } from "@alga-psa/types";
+import { ActivityFilters, IPriority } from "@alga-psa/types";
 import { ISO8601String } from '@alga-psa/types';
 import CustomSelect from "@alga-psa/ui/components/CustomSelect";
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { IProject, IProjectPhase } from "@alga-psa/types";
 
 interface ProjectSectionFiltersDialogProps {
@@ -27,6 +28,7 @@ interface ProjectSectionFiltersDialogProps {
   onApplyFilters: (filters: Partial<ActivityFilters>) => void;
   projects: IProject[];
   phases: IProjectPhase[];
+  priorities: IPriority[];
 }
 
 export function ProjectSectionFiltersDialog({
@@ -36,6 +38,7 @@ export function ProjectSectionFiltersDialog({
   onApplyFilters,
   projects = [],
   phases = [],
+  priorities = [],
 }: ProjectSectionFiltersDialogProps) {
   // Local state excluding projectId and phaseId, which are handled separately
   const [localFilters, setLocalFilters] = useState<Omit<Partial<ActivityFilters>, 'projectId' | 'phaseId'>>(() => {
@@ -52,10 +55,11 @@ export function ProjectSectionFiltersDialog({
   const [loadingPhases, setLoadingPhases] = useState<boolean>(false);
 // Sync local state when initial filters change from parent
 useEffect(() => {
-  const { projectId, phaseId, ...rest } = initialFilters;
+  const { projectId, phaseId, priorityIds, ...rest } = initialFilters;
   setLocalFilters(rest);
   setSelectedProjectId(projectId || 'all');
   setSelectedPhaseId(phaseId || 'all');
+  setSelectedPriorityId(priorityIds?.[0] || 'all');
 }, [initialFilters]);
 // Load phases when a project is selected
 useEffect(() => {
@@ -66,6 +70,10 @@ useEffect(() => {
         // Use getProjectDetails to get phases for the selected project
         const { getProjectDetails } = await import("@alga-psa/projects/actions/projectActions");
         const projectDetails = await getProjectDetails(selectedProjectId);
+        if (isActionPermissionError(projectDetails)) {
+          setProjectPhases([]);
+          return;
+        }
         setProjectPhases(projectDetails.phases);
       } catch (error) {
         console.error('Error loading project phases:', error);
@@ -81,31 +89,7 @@ useEffect(() => {
   
   loadProjectPhases();
 }, [selectedProjectId]);
-  const toggleArrayFilter = <K extends keyof ActivityFilters>(
-    key: K,
-    value: string,
-  ) => {
-    // Ensure we only toggle array types like 'priority' here
-    if (key === 'priority') {
-        setLocalFilters((prev) => {
-            const currentValues = (prev[key] as string[] | undefined) || [];
-            const newValues = [...currentValues];
-            const index = newValues.indexOf(value);
-
-            if (index >= 0) {
-                newValues.splice(index, 1);
-            } else {
-                newValues.push(value);
-            }
-            return { ...prev, [key]: newValues };
-        });
-    }
-  };
-
-  const isPrioritySelected = (value: ActivityPriority): boolean => {
-    const currentValues = localFilters.priority || [];
-    return currentValues.includes(value);
-  };
+  const [selectedPriorityId, setSelectedPriorityId] = useState<string>(initialFilters.priorityIds?.[0] || 'all');
 
   const handleSingleFilterChange = <K extends keyof Omit<ActivityFilters, 'projectId' | 'phaseId' | 'priority'>>( // Exclude array types
     key: K,
@@ -134,24 +118,24 @@ useEffect(() => {
   };
 
   const handleApply = () => {
-    // Construct the final filters object
+    // Construct the final filters object, converting single selects back to arrays
     const filtersToApply: Partial<ActivityFilters> = {
         ...localFilters,
         projectId: selectedProjectId !== 'all' ? selectedProjectId : undefined,
         phaseId: selectedPhaseId !== 'all' ? selectedPhaseId : undefined,
+        priorityIds: selectedPriorityId && selectedPriorityId !== 'all' ? [selectedPriorityId] : undefined,
     };
 
-    if (filtersToApply.priority?.length === 0) delete filtersToApply.priority;
     if (!filtersToApply.projectId) delete filtersToApply.projectId;
     if (!filtersToApply.phaseId) delete filtersToApply.phaseId;
+    if (!filtersToApply.priorityIds) delete filtersToApply.priorityIds;
 
     onApplyFilters(filtersToApply);
     onOpenChange(false);
   };
 
   const handleClear = () => {
-    const clearedFilters: Omit<Partial<ActivityFilters>, 'projectId' | 'phaseId'> = {
-      priority: [],
+    const clearedFilters: Omit<Partial<ActivityFilters>, 'projectId' | 'phaseId' | 'priorityIds'> = {
       isClosed: undefined,
       dueDateStart: undefined,
       dueDateEnd: undefined,
@@ -160,6 +144,7 @@ useEffect(() => {
     setLocalFilters(clearedFilters);
     setSelectedProjectId('all');
     setSelectedPhaseId('all');
+    setSelectedPriorityId('all');
   };
 
   return (
@@ -216,26 +201,34 @@ useEffect(() => {
                 disabled={!selectedProjectId || loadingPhases}
               />
             </div>
-          </div>
-
-          {/* Priority Filters */}
-          <div>
-            <Label className="text-base font-semibold">Priority</Label>
-            <div className="flex items-center space-x-4 pt-1">
-              {[
-                { value: ActivityPriority.LOW, label: 'Low' },
-                { value: ActivityPriority.MEDIUM, label: 'Medium' },
-                { value: ActivityPriority.HIGH, label: 'High' }
-              ].map((option) => (
-                 <Checkbox
-                    key={option.value}
-                    id={`priority-${option.value}`}
-                    label={option.label}
-                    checked={isPrioritySelected(option.value)}
-                    onChange={() => toggleArrayFilter('priority', option.value)}
-                  />
-              ))}
-            </div>
+            {/* Priority Filter */}
+            {priorities.length > 0 && (
+              <div className="space-y-1">
+                <Label htmlFor="project-priority-select" className="text-base font-semibold">Priority</Label>
+                <CustomSelect
+                  id="project-priority-select"
+                  value={selectedPriorityId}
+                  onValueChange={(value) => setSelectedPriorityId(value)}
+                  options={[
+                    { value: 'all', label: 'All Priorities' },
+                    ...priorities.map(p => ({
+                      value: p.priority_id,
+                      label: (
+                        <span className="flex items-center gap-2">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: p.color || '#94a3b8' }}
+                          />
+                          {p.priority_name}
+                        </span>
+                      ),
+                      textValue: p.priority_name,
+                    }))
+                  ]}
+                  placeholder="Select Priority..."
+                />
+              </div>
+            )}
           </div>
 
           {/* Due Date Range */}

@@ -11,7 +11,7 @@ import { ExternalLink, Check, X } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useDrawer, DeleteEntityDialog } from "@alga-psa/ui";
 import { WorkItemDrawer } from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/WorkItemDrawer';
-import { format, isWeekend, addYears } from 'date-fns';
+import { format, isWeekend } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 import { IScheduleEntry, IRecurrencePattern, IEditScope, DeletionValidationResult } from '@alga-psa/types';
 import { AddWorkItemDialog } from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/AddWorkItemDialog';
@@ -32,6 +32,7 @@ import {
   IAppointmentRequest
 } from '@alga-psa/scheduling/actions';
 import toast from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Label } from '@alga-psa/ui/components/Label';
 
 const EntryPopupContext = React.createContext<EntryPopupProps | null>(null);
@@ -301,27 +302,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     { value: 'count', label: 'After' }
   ];
 
-   // US Federal Holidays for the next year (can be tied to client location later to apply holidays from different countries)
-   const getHolidays = (startDate: Date): Date[] => {
-    const year = startDate.getFullYear();
-    const nextYear = addYears(startDate, 1);
-    
-    return [
-      // New Year's Day
-      new Date(year, 0, 1),
-      new Date(nextYear.getFullYear(), 0, 1),
-      // Memorial Day (last Monday in May)
-      new Date(year, 4, 31 - new Date(year, 4, 31).getDay()),
-      // Independence Day
-      new Date(year, 6, 4),
-      // Labor Day (first Monday in September)
-      new Date(year, 8, 1 + (8 - new Date(year, 8, 1).getDay()) % 7),
-      // Thanksgiving (fourth Thursday in November)
-      new Date(year, 10, 1 + (11 - new Date(year, 10, 1).getDay()) % 7 + 21),
-      // Christmas
-      new Date(year, 11, 25)
-    ];
-  };
+  // Note: Holidays are now automatically filtered at the backend from the unified
+  // holidays table (shared with SLA system). Tenants configure their own holidays
+  // in Settings > SLA > Business Hours. No hardcoded holiday list needed here.
 
   const handleRecurrenceChange = (value: string) => {
     if (value === 'none') {
@@ -335,8 +318,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         endDate: undefined,
         count: undefined,
         workdaysOnly: isDaily ? true : undefined,
-        // If daily and workdays only, add holidays to exceptions
-        exceptions: isDaily ? getHolidays(entryData.scheduled_start) : undefined,
+        // Holidays are automatically excluded at the backend from the tenant's holidays table
+        exceptions: undefined,
         // For daily workday events, set daysOfWeek to Mon-Fri (0-4 since RRule uses 0-based index for weekdays)
         daysOfWeek: isDaily ? [0, 1, 2, 3, 4] : undefined
       }));
@@ -520,8 +503,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         toast.error(result.error || 'Failed to approve request');
       }
     } catch (error) {
-      console.error('Failed to approve request:', error);
-      toast.error('Failed to approve request');
+      handleError(error, 'Failed to approve request');
     } finally {
       setIsProcessing(false);
     }
@@ -555,8 +537,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         toast.error(result.error || 'Failed to decline request');
       }
     } catch (error) {
-      console.error('Failed to decline request:', error);
-      toast.error('Failed to decline request');
+      handleError(error, 'Failed to decline request');
     } finally {
       setIsProcessing(false);
     }
@@ -1108,9 +1089,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                     return {
                       ...prev,
                       workdaysOnly: checked,
-                      // Update daysOfWeek and excludeDates based on the switch
-                      daysOfWeek: checked ? [0, 1, 2, 3, 4] : undefined,
-                      exceptions: checked ? getHolidays(entryData.scheduled_start) : undefined
+                      // Update daysOfWeek based on the switch
+                      // Holidays are automatically excluded at the backend from the tenant's holidays table
+                      daysOfWeek: checked ? [0, 1, 2, 3, 4] : undefined
                     };
                   })}
                   label="Workdays only (Mon-Fri, excluding holidays)"

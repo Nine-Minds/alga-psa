@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, createContext, useContext } from 'react';
 import { useTheme } from 'next-themes';
 import { useSession } from 'next-auth/react';
-import { useFeatureFlag } from './useFeatureFlag';
 
 type ThemePreference = 'light' | 'dark' | 'system';
 
@@ -36,20 +35,12 @@ export function useAppTheme() {
   const themeApi = useTheme();
   const { theme, setTheme } = themeApi;
   const { status } = useSession();
-  const { enabled: themesEnabled, loading: themesLoading } = useFeatureFlag('themes-enabled');
   const actions = useContext(ThemeActionsContext);
   const [hasLoadedFromDb, setHasLoadedFromDb] = useState(false);
   const lastSyncedTheme = useRef<ThemePreference | null>(null);
 
-  // Force light theme when feature flag is disabled (but not while still loading)
   useEffect(() => {
-    if (!themesLoading && !themesEnabled && theme !== 'light') {
-      setTheme('light');
-    }
-  }, [themesLoading, themesEnabled, theme, setTheme]);
-
-  useEffect(() => {
-    if (themesLoading || !themesEnabled || !actions) return;
+    if (!actions) return;
     if (status !== 'authenticated' || hasLoadedFromDb) {
       return;
     }
@@ -71,10 +62,10 @@ export function useAppTheme() {
     };
 
     loadPreference();
-  }, [themesEnabled, actions, hasLoadedFromDb, status, theme, setTheme]);
+  }, [actions, hasLoadedFromDb, status, theme, setTheme]);
 
   useEffect(() => {
-    if (themesLoading || !themesEnabled || !actions) return;
+    if (!actions) return;
     if (status !== 'authenticated') {
       return;
     }
@@ -95,7 +86,7 @@ export function useAppTheme() {
     };
 
     persistPreference();
-  }, [themesEnabled, actions, status, theme]);
+  }, [actions, status, theme]);
 
   return {
     ...themeApi,

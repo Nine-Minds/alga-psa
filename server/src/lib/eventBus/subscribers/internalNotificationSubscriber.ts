@@ -28,7 +28,7 @@ import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/
 import logger from '@alga-psa/core/logger';
 import { getConnection } from '../../db/db';
 import type { Knex } from 'knex';
-import { convertBlockNoteToMarkdown } from '../../utils/blocknoteUtils';
+import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { resolveNotificationLinks } from '../../utils/notificationLinkResolver';
 
 /**
@@ -208,7 +208,7 @@ async function getAllTaskAssignees(
 }
 
 /**
- * Handle ticket assigned events (primary assignment only)
+ * Handle ticket assigned events (primary assignment + team members)
  */
 async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
   const { tenantId, ticketId, userId, assignedByUserId } = event.payload;
@@ -256,7 +256,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       ticketNumber: ticket.ticket_number
     });
 
-    // Simple: just notify the assigned user (primary assignment)
+    // Notify the primary assigned user
     await createNotificationFromTemplateInternal(db, {
       tenant: tenantId,
       user_id: userId,
@@ -278,6 +278,55 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       userId,
       tenantId
     });
+
+    // If this is a team assignment, notify team members (excluding primary assignee)
+    const assignedTeamId = (event.payload as any).changes?.assigned_team_id as string | undefined;
+    if (assignedTeamId) {
+      const team = await db('teams')
+        .select('team_name')
+        .where({ team_id: assignedTeamId, tenant: tenantId })
+        .first();
+
+      if (team) {
+        const teamMembers = await db('team_members')
+          .join('users', function() {
+            this.on('team_members.user_id', 'users.user_id')
+                .andOn('team_members.tenant', 'users.tenant');
+          })
+          .where({ 'team_members.team_id': assignedTeamId, 'team_members.tenant': tenantId })
+          .andWhere('users.is_inactive', false)
+          .select('team_members.user_id');
+
+        const memberIds = teamMembers
+          .map((m: { user_id: string }) => m.user_id)
+          .filter((id: string) => id !== userId); // Exclude primary assignee who already got notified
+
+        for (const memberId of memberIds) {
+          await createNotificationFromTemplateInternal(db, {
+            tenant: tenantId,
+            user_id: memberId,
+            template_name: 'ticket-team-assigned',
+            type: 'info',
+            category: 'tickets',
+            link: internalUrl,
+            data: {
+              ticketId: ticket.ticket_number,
+              ticketNumber: ticket.ticket_number,
+              ticketTitle: ticket.title,
+              teamName: team.team_name,
+              performedByName
+            }
+          });
+        }
+
+        logger.info('[InternalNotificationSubscriber] Created team member notifications for ticket assigned', {
+          ticketId,
+          teamId: assignedTeamId,
+          memberCount: memberIds.length,
+          tenantId
+        });
+      }
+    }
   } catch (error) {
     logger.error('[InternalNotificationSubscriber] Error handling ticket assigned:', error);
   }
@@ -935,24 +984,20 @@ async function resolveEveryoneMention(
   tenantId: string,
   mentionedUserIds: string[]
 ): Promise<string[]> {
-  const resolvedUserIds: string[] = [];
+  const hasEveryone = mentionedUserIds.includes('@everyone');
+  const regularIds = mentionedUserIds.filter(id => id !== '@everyone');
 
-  for (const userId of mentionedUserIds) {
-    if (userId === '@everyone') {
-      // Get all active internal users in the tenant
-      const internalUsers = await db('users')
-        .select('user_id')
-        .where({ tenant: tenantId, user_type: 'internal', is_inactive: false });
+  if (hasEveryone) {
+    // Single query to get all active internal users in the tenant
+    const internalUsers = await db('users')
+      .select('user_id')
+      .where({ tenant: tenantId, user_type: 'internal', is_inactive: false });
 
-      resolvedUserIds.push(...internalUsers.map(u => u.user_id));
-    } else {
-      // Regular user ID
-      resolvedUserIds.push(userId);
-    }
+    const allIds = [...regularIds, ...internalUsers.map(u => u.user_id)];
+    return Array.from(new Set(allIds));
   }
 
-  // Remove duplicates
-  return Array.from(new Set(resolvedUserIds));
+  return Array.from(new Set(regularIds));
 }
 
 /**
@@ -1073,78 +1118,64 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
 
     // Extract user IDs from BlockNote mention inline content
     const mentionedUserIds = extractMentionUserIds(commentContent);
-    console.log('[InternalNotificationSubscriber] Found mentioned user IDs in task comment:', mentionedUserIds);
 
-    // Resolve @everyone mentions
-    const resolvedMentionedUserIds = await resolveEveryoneMention(db, tenantId, mentionedUserIds);
-    console.log('[InternalNotificationSubscriber] Resolved mentioned user IDs:', resolvedMentionedUserIds);
-
-    // Get user details for mentioned users
-    const mentionedUsers = resolvedMentionedUserIds.length > 0
-      ? await db('users')
-          .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-          .whereIn('user_id', resolvedMentionedUserIds)
-          .andWhere('tenant', tenantId)
-      : [];
-
-    console.log('[InternalNotificationSubscriber] Found mentioned users in task comment:', mentionedUsers.length);
-
-    // Resolve notification link
-    const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
-      type: 'project_task',
-      projectId,
-      taskId,
-      phaseId: task.phase_id,
-      taskCommentId
-    });
-
-    // Track users who have been notified to avoid duplicates
+    // Track users who have been notified to avoid duplicates with assignee notifications
     const notifiedUserIds = new Set<string>();
 
-    // Create notifications for mentioned users (excluding the comment author)
-    for (const mentionedUser of mentionedUsers) {
-      if (mentionedUser.user_id !== userId && !notifiedUserIds.has(mentionedUser.user_id)) {
-        await createNotificationFromTemplateInternal(db, {
-          tenant: tenantId,
-          user_id: mentionedUser.user_id,
-          template_name: 'user-mentioned',
-          type: 'info',
-          category: 'messages',
-          link: internalUrl,
-          data: {
-            authorName,
-            entityType: 'task comment',
-            entityName: task.task_name
-          },
-          metadata: {
-            taskId: task.task_id,
-            projectId: task.project_id,
-            taskName: task.task_name,
-            projectName: task.project_name,
-            taskCommentId: taskCommentId,
-            commentText: commentText,
-            commentPreview: commentPreview,
-            commentAuthor: authorName,
-            commentAuthorId: userId,
-            contextType: 'task',
-            contextId: taskId
-          }
+    // Resolve @everyone mentions and exclude the comment author
+    const resolvedMentionedUserIds = mentionedUserIds.length > 0
+      ? (await resolveEveryoneMention(db, tenantId, mentionedUserIds)).filter(id => id !== userId)
+      : [];
+
+    // Get user details and create notifications for mentioned users
+    if (resolvedMentionedUserIds.length > 0) {
+      const mentionedUsers = await db('users')
+        .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
+        .whereIn('user_id', resolvedMentionedUserIds)
+        .andWhere('tenant', tenantId);
+
+      if (mentionedUsers.length > 0) {
+        const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
+          type: 'project_task',
+          projectId,
+          taskId,
+          phaseId: task.phase_id,
+          taskCommentId
         });
 
-        notifiedUserIds.add(mentionedUser.user_id);
+        await Promise.all(mentionedUsers.map(mentionedUser => {
+          notifiedUserIds.add(mentionedUser.user_id);
+          return createNotificationFromTemplateInternal(db, {
+            tenant: tenantId,
+            user_id: mentionedUser.user_id,
+            template_name: 'user-mentioned',
+            type: 'info',
+            category: 'messages',
+            link: internalUrl,
+            data: {
+              authorName,
+              entityType: 'task comment',
+              entityName: task.task_name
+            },
+            metadata: {
+              taskId: task.task_id,
+              projectId: task.project_id,
+              taskName: task.task_name,
+              projectName: task.project_name,
+              taskCommentId: taskCommentId,
+              commentText: commentText,
+              commentPreview: commentPreview,
+              commentAuthor: authorName,
+              commentAuthorId: userId,
+              contextType: 'task',
+              contextId: taskId
+            }
+          });
+        }));
 
-        console.log('[InternalNotificationSubscriber] Created notification for user mentioned in task comment', {
+        logger.info('[InternalNotificationSubscriber] Created mention notifications for task comment', {
           taskId,
-          mentionedUserId: mentionedUser.user_id,
-          mentionedUsername: mentionedUser.username,
-          commentAuthor: userId,
-          tenantId
-        });
-
-        logger.info('[InternalNotificationSubscriber] Created notification for user mentioned in task comment', {
-          taskId,
-          mentionedUserId: mentionedUser.user_id,
-          commentAuthor: userId,
+          notifiedCount: mentionedUsers.length,
           tenantId
         });
       }
@@ -1291,83 +1322,63 @@ async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise
 
     // Find only NEW mentions (not in old content)
     const newlyMentionedUserIds = newMentionedUserIds.filter(
-      userId => !oldMentionedUserIds.includes(userId)
+      id => !oldMentionedUserIds.includes(id)
     );
 
-    console.log('[InternalNotificationSubscriber] Newly mentioned user IDs:', newlyMentionedUserIds);
+    if (newlyMentionedUserIds.length > 0) {
+      const resolvedNewlyMentionedUserIds = (await resolveEveryoneMention(db, tenantId, newlyMentionedUserIds))
+        .filter(id => id !== userId);
 
-    // Resolve @everyone mentions
-    const resolvedNewlyMentionedUserIds = await resolveEveryoneMention(db, tenantId, newlyMentionedUserIds);
-    console.log('[InternalNotificationSubscriber] Resolved newly mentioned user IDs:', resolvedNewlyMentionedUserIds);
-
-    // Get user details for newly mentioned users
-    const newlyMentionedUsers = resolvedNewlyMentionedUserIds.length > 0
-      ? await db('users')
+      if (resolvedNewlyMentionedUserIds.length > 0) {
+        const newlyMentionedUsers = await db('users')
           .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
           .whereIn('user_id', resolvedNewlyMentionedUserIds)
-          .andWhere('tenant', tenantId)
-      : [];
+          .andWhere('tenant', tenantId);
 
-    console.log('[InternalNotificationSubscriber] Found newly mentioned users:', newlyMentionedUsers.length);
+        if (newlyMentionedUsers.length > 0) {
+          const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
+            type: 'project_task',
+            projectId,
+            taskId,
+            phaseId: task.phase_id,
+            taskCommentId
+          });
 
-    // Resolve notification link
-    const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
-      type: 'project_task',
-      projectId,
-      taskId,
-      phaseId: task.phase_id,
-      taskCommentId
-    });
+          await Promise.all(newlyMentionedUsers.map(mentionedUser =>
+            createNotificationFromTemplateInternal(db, {
+              tenant: tenantId,
+              user_id: mentionedUser.user_id,
+              template_name: 'user-mentioned',
+              type: 'info',
+              category: 'messages',
+              link: internalUrl,
+              data: {
+                authorName,
+                entityType: 'task comment',
+                entityName: task.task_name
+              },
+              metadata: {
+                taskId: task.task_id,
+                projectId: task.project_id,
+                taskName: task.task_name,
+                projectName: task.project_name,
+                taskCommentId: taskCommentId,
+                commentText: commentText,
+                commentPreview: commentPreview,
+                commentAuthor: authorName,
+                commentAuthorId: userId,
+                contextType: 'task',
+                contextId: taskId
+              }
+            })
+          ));
 
-    // Track users who have been notified to avoid duplicates
-    const notifiedUserIds = new Set<string>();
-
-    // Create notifications for NEWLY mentioned users only (excluding the comment author)
-    for (const mentionedUser of newlyMentionedUsers) {
-      if (mentionedUser.user_id !== userId && !notifiedUserIds.has(mentionedUser.user_id)) {
-        await createNotificationFromTemplateInternal(db, {
-          tenant: tenantId,
-          user_id: mentionedUser.user_id,
-          template_name: 'user-mentioned',
-          type: 'info',
-          category: 'messages',
-          link: internalUrl,
-          data: {
-            authorName,
-            entityType: 'task comment',
-            entityName: task.task_name
-          },
-          metadata: {
-            taskId: task.task_id,
-            projectId: task.project_id,
-            taskName: task.task_name,
-            projectName: task.project_name,
-            taskCommentId: taskCommentId,
-            commentText: commentText,
-            commentPreview: commentPreview,
-            commentAuthor: authorName,
-            commentAuthorId: userId,
-            contextType: 'task',
-            contextId: taskId
-          }
-        });
-
-        notifiedUserIds.add(mentionedUser.user_id);
-
-        console.log('[InternalNotificationSubscriber] Created notification for newly mentioned user in updated task comment', {
-          taskId,
-          mentionedUserId: mentionedUser.user_id,
-          mentionedUsername: mentionedUser.username,
-          commentAuthor: userId,
-          tenantId
-        });
-
-        logger.info('[InternalNotificationSubscriber] Created notification for newly mentioned user in updated task comment', {
-          taskId,
-          mentionedUserId: mentionedUser.user_id,
-          commentAuthor: userId,
-          tenantId
-        });
+          logger.info('[InternalNotificationSubscriber] Created mention notifications for updated task comment', {
+            taskId,
+            notifiedCount: newlyMentionedUsers.length,
+            tenantId
+          });
+        }
       }
     }
   } catch (error) {
@@ -1432,86 +1443,66 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       }
     }
 
-    console.log('[InternalNotificationSubscriber] About to extract mentions from:', {
-      contentType: typeof comment?.content,
-      contentLength: comment?.content?.length,
-      contentPreview: comment?.content?.substring(0, 200)
-    });
-
     // Extract user IDs from BlockNote mention inline content
     const mentionedUserIds = extractMentionUserIds(comment?.content);
-    console.log('[InternalNotificationSubscriber] Found mentioned user IDs:', mentionedUserIds);
-
-    // Resolve @everyone mentions
-    const resolvedMentionedUserIds = await resolveEveryoneMention(db, tenantId, mentionedUserIds);
-    console.log('[InternalNotificationSubscriber] Resolved mentioned user IDs:', resolvedMentionedUserIds);
-
-    // Get user details for mentioned users
-    const mentionedUsers = resolvedMentionedUserIds.length > 0
-      ? await db('users')
-          .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-          .whereIn('user_id', resolvedMentionedUserIds)
-          .andWhere('tenant', tenantId)
-      : [];
-
-    console.log('[InternalNotificationSubscriber] Found mentioned users:', mentionedUsers.length);
-
-    // Resolve links for both MSP and client portal
-    const { internalUrl, portalUrl } = await resolveNotificationLinks(db, tenantId, {
-      type: 'ticket',
-      ticketId,
-      ticketNumber: ticket.ticket_number,
-      commentId: comment?.id
-    });
 
     // Track users who have been notified to avoid duplicates
     const notifiedUserIds = new Set<string>();
 
-    // Create notifications for mentioned users (excluding the comment author)
-    for (const mentionedUser of mentionedUsers) {
-      if (mentionedUser.user_id !== userId && !notifiedUserIds.has(mentionedUser.user_id)) {
-        await createNotificationFromTemplateInternal(db, {
-          tenant: tenantId,
-          user_id: mentionedUser.user_id,
-          template_name: 'user-mentioned-in-comment',
-          type: 'info',
-          category: 'messages',
-          link: internalUrl,
-          data: {
-            commentAuthor: authorName,
-            ticketNumber: ticket.ticket_number || 'New Ticket',
-            commentPreview
-          },
-          metadata: {
-            ticketId: ticket.ticket_id,
-            ticketNumber: ticket.ticket_number || 'New Ticket',
-            ticketTitle: ticket.title,
-            commentId: comment?.id || '',
-            commentText: commentText, // Full parsed text
-            commentPreview: commentPreview, // Truncated preview
-            commentAuthor: authorName,
-            commentAuthorId: userId,
-            contextType: 'ticket',
-            contextId: ticketId
-          }
-        });
+    // Resolve @everyone and create mention notifications
+    if (mentionedUserIds.length > 0) {
+      const resolvedMentionedUserIds = (await resolveEveryoneMention(db, tenantId, mentionedUserIds))
+        .filter(id => id !== userId);
 
-        notifiedUserIds.add(mentionedUser.user_id);
+      if (resolvedMentionedUserIds.length > 0) {
+        const mentionedUsers = await db('users')
+          .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
+          .whereIn('user_id', resolvedMentionedUserIds)
+          .andWhere('tenant', tenantId);
 
-        console.log('[InternalNotificationSubscriber] Created notification for user mentioned in comment', {
-          ticketId,
-          mentionedUserId: mentionedUser.user_id,
-          mentionedUsername: mentionedUser.username,
-          commentAuthor: userId,
-          tenantId
-        });
+        if (mentionedUsers.length > 0) {
+          const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
+            type: 'ticket',
+            ticketId,
+            ticketNumber: ticket.ticket_number,
+            commentId: comment?.id
+          });
 
-        logger.info('[InternalNotificationSubscriber] Created notification for user mentioned in comment', {
-          ticketId,
-          mentionedUserId: mentionedUser.user_id,
-          commentAuthor: userId,
-          tenantId
-        });
+          await Promise.all(mentionedUsers.map(mentionedUser => {
+            notifiedUserIds.add(mentionedUser.user_id);
+            return createNotificationFromTemplateInternal(db, {
+              tenant: tenantId,
+              user_id: mentionedUser.user_id,
+              template_name: 'user-mentioned-in-comment',
+              type: 'info',
+              category: 'messages',
+              link: internalUrl,
+              data: {
+                commentAuthor: authorName,
+                ticketNumber: ticket.ticket_number || 'New Ticket',
+                commentPreview
+              },
+              metadata: {
+                ticketId: ticket.ticket_id,
+                ticketNumber: ticket.ticket_number || 'New Ticket',
+                ticketTitle: ticket.title,
+                commentId: comment?.id || '',
+                commentText: commentText,
+                commentPreview: commentPreview,
+                commentAuthor: authorName,
+                commentAuthorId: userId,
+                contextType: 'ticket',
+                contextId: ticketId
+              }
+            });
+          }));
+
+          logger.info('[InternalNotificationSubscriber] Created mention notifications for ticket comment', {
+            ticketId,
+            notifiedCount: mentionedUsers.length,
+            tenantId
+          });
+        }
       }
     }
 
@@ -1680,81 +1671,61 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Pro
 
     // Find only NEW mentions (not in old content)
     const newlyMentionedUserIds = newMentionedUserIds.filter(
-      userId => !oldMentionedUserIds.includes(userId)
+      id => !oldMentionedUserIds.includes(id)
     );
 
-    console.log('[InternalNotificationSubscriber] Newly mentioned user IDs:', newlyMentionedUserIds);
+    if (newlyMentionedUserIds.length > 0) {
+      const resolvedNewlyMentionedUserIds = (await resolveEveryoneMention(db, tenantId, newlyMentionedUserIds))
+        .filter(id => id !== userId);
 
-    // Resolve @everyone mentions
-    const resolvedNewlyMentionedUserIds = await resolveEveryoneMention(db, tenantId, newlyMentionedUserIds);
-    console.log('[InternalNotificationSubscriber] Resolved newly mentioned user IDs:', resolvedNewlyMentionedUserIds);
-
-    // Get user details for newly mentioned users
-    const newlyMentionedUsers = resolvedNewlyMentionedUserIds.length > 0
-      ? await db('users')
+      if (resolvedNewlyMentionedUserIds.length > 0) {
+        const newlyMentionedUsers = await db('users')
           .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
           .whereIn('user_id', resolvedNewlyMentionedUserIds)
-          .andWhere('tenant', tenantId)
-      : [];
+          .andWhere('tenant', tenantId);
 
-    console.log('[InternalNotificationSubscriber] Found newly mentioned users:', newlyMentionedUsers.length);
+        if (newlyMentionedUsers.length > 0) {
+          const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
+            type: 'ticket',
+            ticketId,
+            ticketNumber: ticket.ticket_number,
+            commentId: newComment?.id
+          });
 
-    // Resolve links for both MSP and client portal
-    const { internalUrl, portalUrl } = await resolveNotificationLinks(db, tenantId, {
-      type: 'ticket',
-      ticketId,
-      ticketNumber: ticket.ticket_number,
-      commentId: newComment?.id
-    });
+          await Promise.all(newlyMentionedUsers.map(mentionedUser =>
+            createNotificationFromTemplateInternal(db, {
+              tenant: tenantId,
+              user_id: mentionedUser.user_id,
+              template_name: 'user-mentioned-in-comment',
+              type: 'info',
+              category: 'messages',
+              link: internalUrl,
+              data: {
+                commentAuthor: authorName,
+                ticketNumber: ticket.ticket_number || 'New Ticket',
+                commentPreview
+              },
+              metadata: {
+                ticketId: ticket.ticket_id,
+                ticketNumber: ticket.ticket_number || 'New Ticket',
+                ticketTitle: ticket.title,
+                commentId: newComment?.id || '',
+                commentText: commentText,
+                commentPreview: commentPreview,
+                commentAuthor: authorName,
+                commentAuthorId: userId,
+                contextType: 'ticket',
+                contextId: ticketId
+              }
+            })
+          ));
 
-    // Track users who have been notified to avoid duplicates
-    const notifiedUserIds = new Set<string>();
-
-    // Create notifications for NEWLY mentioned users only (excluding the comment author)
-    for (const mentionedUser of newlyMentionedUsers) {
-      if (mentionedUser.user_id !== userId && !notifiedUserIds.has(mentionedUser.user_id)) {
-        await createNotificationFromTemplateInternal(db, {
-          tenant: tenantId,
-          user_id: mentionedUser.user_id,
-          template_name: 'user-mentioned-in-comment',
-          type: 'info',
-          category: 'messages',
-          link: internalUrl,
-          data: {
-            commentAuthor: authorName,
-            ticketNumber: ticket.ticket_number || 'New Ticket',
-            commentPreview
-          },
-          metadata: {
-            ticketId: ticket.ticket_id,
-            ticketNumber: ticket.ticket_number || 'New Ticket',
-            ticketTitle: ticket.title,
-            commentId: newComment?.id || '',
-            commentText: commentText,
-            commentPreview: commentPreview,
-            commentAuthor: authorName,
-            commentAuthorId: userId,
-            contextType: 'ticket',
-            contextId: ticketId
-          }
-        });
-
-        notifiedUserIds.add(mentionedUser.user_id);
-
-        console.log('[InternalNotificationSubscriber] Created notification for newly mentioned user in updated ticket comment', {
-          ticketId,
-          mentionedUserId: mentionedUser.user_id,
-          mentionedUsername: mentionedUser.username,
-          commentAuthor: userId,
-          tenantId
-        });
-
-        logger.info('[InternalNotificationSubscriber] Created notification for newly mentioned user in updated ticket comment', {
-          ticketId,
-          mentionedUserId: mentionedUser.user_id,
-          commentAuthor: userId,
-          tenantId
-        });
+          logger.info('[InternalNotificationSubscriber] Created mention notifications for updated ticket comment', {
+            ticketId,
+            notifiedCount: newlyMentionedUsers.length,
+            tenantId
+          });
+        }
       }
     }
   } catch (error) {
@@ -1812,36 +1783,40 @@ async function handleUserMentionedInDocument(event: UserMentionedInDocumentEvent
       const oldMentionedUserIds = extractMentionUserIds(oldContent);
       const newMentionedUserIds = extractMentionUserIds(newContent);
 
-      console.log('[InternalNotificationSubscriber] Document mentions comparison:', {
-        oldMentions: oldMentionedUserIds,
-        newMentions: newMentionedUserIds
-      });
-
       // Find only NEW mentions (not in old content)
       mentionedUserIds = newMentionedUserIds.filter(
-        userId => !oldMentionedUserIds.includes(userId)
+        id => !oldMentionedUserIds.includes(id)
       );
-
-      console.log('[InternalNotificationSubscriber] Newly mentioned user IDs in document:', mentionedUserIds);
     } else {
       // New document or no old/new content provided - use all mentions from content
       mentionedUserIds = extractMentionUserIds(content || newContent);
-      console.log('[InternalNotificationSubscriber] Found mentioned user IDs in document:', mentionedUserIds);
     }
 
-    // Resolve @everyone mentions
+    // Early exit: skip all DB queries if no new mentions
+    if (mentionedUserIds.length === 0) {
+      return;
+    }
+
+    console.log('[InternalNotificationSubscriber] New mentions in document:', mentionedUserIds);
+
+    // Resolve @everyone mentions (single query instead of per-user loop)
     const resolvedMentionedUserIds = await resolveEveryoneMention(db, tenantId, mentionedUserIds);
-    console.log('[InternalNotificationSubscriber] Resolved mentioned user IDs in document:', resolvedMentionedUserIds);
 
-    // Get user details for mentioned users
-    const mentionedUsers = resolvedMentionedUserIds.length > 0
-      ? await db('users')
-          .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-          .whereIn('user_id', resolvedMentionedUserIds)
-          .andWhere('tenant', tenantId)
-      : [];
+    // Exclude the document author
+    const usersToNotify = resolvedMentionedUserIds.filter(id => id !== userId);
+    if (usersToNotify.length === 0) {
+      return;
+    }
 
-    console.log('[InternalNotificationSubscriber] Found mentioned users in document:', mentionedUsers.length);
+    // Get user details for mentioned users (single batch query)
+    const mentionedUsers = await db('users')
+      .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
+      .whereIn('user_id', usersToNotify)
+      .andWhere('tenant', tenantId);
+
+    if (mentionedUsers.length === 0) {
+      return;
+    }
 
     // Resolve links for MSP portal
     const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
@@ -1849,49 +1824,35 @@ async function handleUserMentionedInDocument(event: UserMentionedInDocumentEvent
       documentId
     });
 
-    // Track users who have been notified to avoid duplicates
-    const notifiedUserIds = new Set<string>();
+    // Create notifications for all mentioned users
+    const notificationPromises = mentionedUsers.map(mentionedUser =>
+      createNotificationFromTemplateInternal(db, {
+        tenant: tenantId,
+        user_id: mentionedUser.user_id,
+        template_name: 'user-mentioned-in-document',
+        type: 'info',
+        category: 'messages',
+        link: internalUrl,
+        data: {
+          authorName,
+          documentName: document.document_name || 'Untitled Document'
+        },
+        metadata: {
+          documentId: document.document_id,
+          documentName: document.document_name || 'Untitled Document',
+          authorName: authorName,
+          authorId: userId
+        }
+      })
+    );
 
-    // Create notifications for mentioned users (excluding the document author)
-    for (const mentionedUser of mentionedUsers) {
-      if (mentionedUser.user_id !== userId && !notifiedUserIds.has(mentionedUser.user_id)) {
-        await createNotificationFromTemplateInternal(db, {
-          tenant: tenantId,
-          user_id: mentionedUser.user_id,
-          template_name: 'user-mentioned-in-document',
-          type: 'info',
-          category: 'messages',
-          link: internalUrl,
-          data: {
-            authorName,
-            documentName: document.document_name || 'Untitled Document'
-          },
-          metadata: {
-            documentId: document.document_id,
-            documentName: document.document_name || 'Untitled Document',
-            authorName: authorName,
-            authorId: userId
-          }
-        });
+    await Promise.all(notificationPromises);
 
-        notifiedUserIds.add(mentionedUser.user_id);
-
-        console.log('[InternalNotificationSubscriber] Created notification for user mentioned in document', {
-          documentId,
-          mentionedUserId: mentionedUser.user_id,
-          mentionedUsername: mentionedUser.username,
-          documentAuthor: userId,
-          tenantId
-        });
-
-        logger.info('[InternalNotificationSubscriber] Created notification for user mentioned in document', {
-          documentId,
-          mentionedUserId: mentionedUser.user_id,
-          documentAuthor: userId,
-          tenantId
-        });
-      }
-    }
+    logger.info('[InternalNotificationSubscriber] Created mention notifications for document', {
+      documentId,
+      notifiedCount: mentionedUsers.length,
+      tenantId
+    });
   } catch (error) {
     logger.error('[InternalNotificationSubscriber] Error handling user mentioned in document', {
       error,
@@ -2035,11 +1996,12 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
 }
 
 /**
- * Handle task assigned events
+ * Handle task assigned events (user or team assignment)
  */
 async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId, projectId, taskId, assignedToId, assignedByUserId } = payload;
+  const assignedToType = (payload as any).assignedToType as string | undefined;
 
   try {
     const db = await getConnection(tenantId);
@@ -2092,27 +2054,101 @@ async function handleTaskAssigned(event: ProjectTaskAssignedEvent): Promise<void
       phaseId: task.phase_id
     });
 
-    // Primary assignment notification
-    await createNotificationFromTemplateInternal(db, {
-      tenant: tenantId,
-      user_id: assignedToId,
-      template_name: 'task-assigned',
-      type: 'info',
-      category: 'projects',
-      link: internalUrl,
-      data: {
-        taskName: task.task_name,
-        projectName: task.project_name,
-        performedByName
-      }
-    });
+    if (assignedToType === 'team') {
+      // Team assignment: assignedToId is the team ID
+      const team = await db('teams')
+        .select('team_name', 'manager_id')
+        .where({ team_id: assignedToId, tenant: tenantId })
+        .first();
 
-    logger.info('[InternalNotificationSubscriber] Created notification for task assigned', {
-      taskId,
-      projectId,
-      assignedToId,
-      tenantId
-    });
+      if (!team) {
+        logger.warn('[InternalNotificationSubscriber] Team not found for task assignment', {
+          taskId,
+          teamId: assignedToId,
+          tenantId
+        });
+        return;
+      }
+
+      // Get all active team members
+      const teamMembers = await db('team_members')
+        .join('users', function() {
+          this.on('team_members.user_id', 'users.user_id')
+              .andOn('team_members.tenant', 'users.tenant');
+        })
+        .where({ 'team_members.team_id': assignedToId, 'team_members.tenant': tenantId })
+        .andWhere('users.is_inactive', false)
+        .select('team_members.user_id');
+
+      const memberIds = teamMembers.map((m: { user_id: string }) => m.user_id);
+
+      // Notify team manager with task-assigned (primary assignee)
+      if (team.manager_id && memberIds.includes(team.manager_id)) {
+        await createNotificationFromTemplateInternal(db, {
+          tenant: tenantId,
+          user_id: team.manager_id,
+          template_name: 'task-assigned',
+          type: 'info',
+          category: 'projects',
+          link: internalUrl,
+          data: {
+            taskName: task.task_name,
+            projectName: task.project_name,
+            performedByName
+          }
+        });
+      }
+
+      // Notify other team members with task-team-assigned
+      const otherMembers = memberIds.filter((id: string) => id !== team.manager_id);
+      for (const memberId of otherMembers) {
+        await createNotificationFromTemplateInternal(db, {
+          tenant: tenantId,
+          user_id: memberId,
+          template_name: 'task-team-assigned',
+          type: 'info',
+          category: 'projects',
+          link: internalUrl,
+          data: {
+            taskName: task.task_name,
+            projectName: task.project_name,
+            teamName: team.team_name,
+            performedByName
+          }
+        });
+      }
+
+      logger.info('[InternalNotificationSubscriber] Created team notifications for task assigned', {
+        taskId,
+        projectId,
+        teamId: assignedToId,
+        managerNotified: !!team.manager_id,
+        memberCount: otherMembers.length,
+        tenantId
+      });
+    } else {
+      // User assignment (existing behavior)
+      await createNotificationFromTemplateInternal(db, {
+        tenant: tenantId,
+        user_id: assignedToId,
+        template_name: 'task-assigned',
+        type: 'info',
+        category: 'projects',
+        link: internalUrl,
+        data: {
+          taskName: task.task_name,
+          projectName: task.project_name,
+          performedByName
+        }
+      });
+
+      logger.info('[InternalNotificationSubscriber] Created notification for task assigned', {
+        taskId,
+        projectId,
+        assignedToId,
+        tenantId
+      });
+    }
   } catch (error) {
     logger.error('[InternalNotificationSubscriber] Error handling task assigned', {
       error,
