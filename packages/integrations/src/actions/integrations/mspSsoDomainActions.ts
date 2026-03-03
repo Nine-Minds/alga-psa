@@ -4,7 +4,12 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { normalizeMspSsoDomain, validateMspSsoDomain } from '@alga-psa/auth/lib/sso/mspSsoResolution';
+import {
+  normalizeMspSsoDomain,
+  normalizeMspSsoDomainClaimStatus,
+  validateMspSsoDomain,
+  type MspSsoDomainClaimStatus,
+} from '@alga-psa/auth/lib/sso/mspSsoResolution';
 import type { Knex } from 'knex';
 
 export const MSP_SSO_LOGIN_DOMAIN_TABLE = 'msp_sso_tenant_login_domains';
@@ -18,6 +23,24 @@ export interface MspSsoLoginDomain {
 export interface ListMspSsoLoginDomainsResult {
   success: boolean;
   domains?: string[];
+  error?: string;
+}
+
+export interface MspSsoDomainClaim {
+  id: string;
+  domain: string;
+  is_active: boolean;
+  claim_status: MspSsoDomainClaimStatus;
+  claim_status_updated_at: string | null;
+  claimed_at: string | null;
+  verified_at: string | null;
+  rejected_at: string | null;
+  revoked_at: string | null;
+}
+
+export interface ListMspSsoDomainClaimsResult {
+  success: boolean;
+  claims?: MspSsoDomainClaim[];
   error?: string;
 }
 
@@ -47,16 +70,86 @@ async function canManageDomains(user: unknown): Promise<boolean> {
 }
 
 async function listActiveTenantDomains(knex: Knex, tenant: string): Promise<string[]> {
+  const claims = await listActiveTenantDomainClaims(knex, tenant);
+  return uniqueSorted(claims.map((claim) => claim.domain));
+}
+
+async function listActiveTenantDomainClaims(knex: Knex, tenant: string): Promise<MspSsoDomainClaim[]> {
+  const hasClaimStatus = await knex.schema.hasColumn(MSP_SSO_LOGIN_DOMAIN_TABLE, 'claim_status');
+
   const rows = await knex(MSP_SSO_LOGIN_DOMAIN_TABLE)
-    .select('domain')
+    .select(
+      'id',
+      'domain',
+      'is_active',
+      ...(hasClaimStatus
+        ? [
+            'claim_status',
+            'claim_status_updated_at',
+            'claimed_at',
+            'verified_at',
+            'rejected_at',
+            'revoked_at',
+          ]
+        : [])
+    )
     .where({ tenant, is_active: true })
     .orderByRaw('lower(domain) asc');
 
-  const normalized = rows
-    .map((row) => normalizeDomain(String((row as { domain?: string }).domain ?? '')))
-    .filter(Boolean);
+  const claims = rows
+    .map((row) => {
+      const claim = row as Record<string, unknown>;
+      const id = String(claim.id ?? '');
+      const domain = normalizeDomain(String(claim.domain ?? ''));
+      if (!id || !domain) return null;
 
-  return uniqueSorted(normalized);
+      return {
+        id,
+        domain,
+        is_active: true,
+        claim_status: normalizeMspSsoDomainClaimStatus(claim.claim_status),
+        claim_status_updated_at:
+          claim.claim_status_updated_at instanceof Date
+            ? claim.claim_status_updated_at.toISOString()
+            : typeof claim.claim_status_updated_at === 'string'
+              ? claim.claim_status_updated_at
+              : null,
+        claimed_at:
+          claim.claimed_at instanceof Date
+            ? claim.claimed_at.toISOString()
+            : typeof claim.claimed_at === 'string'
+              ? claim.claimed_at
+              : null,
+        verified_at:
+          claim.verified_at instanceof Date
+            ? claim.verified_at.toISOString()
+            : typeof claim.verified_at === 'string'
+              ? claim.verified_at
+              : null,
+        rejected_at:
+          claim.rejected_at instanceof Date
+            ? claim.rejected_at.toISOString()
+            : typeof claim.rejected_at === 'string'
+              ? claim.rejected_at
+              : null,
+        revoked_at:
+          claim.revoked_at instanceof Date
+            ? claim.revoked_at.toISOString()
+            : typeof claim.revoked_at === 'string'
+              ? claim.revoked_at
+              : null,
+      } satisfies MspSsoDomainClaim;
+    })
+    .filter((claim): claim is MspSsoDomainClaim => claim !== null);
+
+  const byDomain = new Map<string, MspSsoDomainClaim>();
+  for (const claim of claims) {
+    if (!byDomain.has(claim.domain)) {
+      byDomain.set(claim.domain, claim);
+    }
+  }
+
+  return Array.from(byDomain.values()).sort((left, right) => left.domain.localeCompare(right.domain));
 }
 
 export const listMspSsoLoginDomains = withAuth(async (
@@ -75,6 +168,26 @@ export const listMspSsoLoginDomains = withAuth(async (
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to load MSP SSO login domains',
+    };
+  }
+});
+
+export const listMspSsoDomainClaims = withAuth(async (
+  user,
+  { tenant }
+): Promise<ListMspSsoDomainClaimsResult> => {
+  try {
+    if (!(await canManageDomains(user))) {
+      return { success: false, error: 'Forbidden' };
+    }
+
+    const { knex } = await createTenantKnex();
+    const claims = await listActiveTenantDomainClaims(knex as Knex, tenant);
+    return { success: true, claims };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to load MSP SSO domain claims',
     };
   }
 });

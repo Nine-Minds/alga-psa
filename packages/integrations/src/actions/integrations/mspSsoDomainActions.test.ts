@@ -5,6 +5,12 @@ type Row = {
   id: string;
   domain: string;
   is_active: boolean;
+  claim_status?: string | null;
+  claim_status_updated_at?: string | null;
+  claimed_at?: string | null;
+  verified_at?: string | null;
+  rejected_at?: string | null;
+  revoked_at?: string | null;
   created_by?: string | null;
   updated_by?: string | null;
 };
@@ -108,10 +114,14 @@ class QueryBuilder {
 const knexMock: any = (table: string) => new QueryBuilder(table);
 knexMock.raw = (value: string) => value;
 knexMock.fn = { now: () => 'now()' };
+knexMock.schema = {
+  hasColumn: async (_table: string, _column: string) => true,
+};
 knexMock.transaction = async (handler: (trx: any) => Promise<void>) => {
   const trx = (table: string) => new QueryBuilder(table);
   trx.raw = knexMock.raw;
   trx.fn = knexMock.fn;
+  trx.schema = knexMock.schema;
   await handler(trx);
 };
 
@@ -131,6 +141,7 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 import {
+  listMspSsoDomainClaims,
   listMspSsoLoginDomains,
   saveMspSsoLoginDomains,
 } from './mspSsoDomainActions';
@@ -154,8 +165,8 @@ describe('msp sso domain actions', () => {
 
   it('T005: list action returns normalized, deduplicated tenant domains', async () => {
     rows.push(
-      { tenant: 'tenant-1', id: '1', domain: 'Example.com', is_active: true },
-      { tenant: 'tenant-1', id: '2', domain: 'example.com', is_active: true },
+      { tenant: 'tenant-1', id: '1', domain: 'Example.com', is_active: true, claim_status: 'verified' },
+      { tenant: 'tenant-1', id: '2', domain: 'example.com', is_active: true, claim_status: 'pending' },
       { tenant: 'tenant-1', id: '3', domain: 'beta.io', is_active: false },
       { tenant: 'tenant-2', id: '4', domain: 'other.com', is_active: true }
     );
@@ -164,6 +175,41 @@ describe('msp sso domain actions', () => {
       success: true,
       domains: ['example.com'],
     });
+  });
+
+  it('T005b: claims list returns lifecycle metadata and applies same permission guard', async () => {
+    rows.push({
+      tenant: 'tenant-1',
+      id: '1',
+      domain: 'Example.com',
+      is_active: true,
+      claim_status: 'verified',
+      claim_status_updated_at: '2026-03-03T00:00:00.000Z',
+      claimed_at: '2026-03-03T00:00:00.000Z',
+      verified_at: '2026-03-03T00:00:00.000Z',
+      rejected_at: null,
+      revoked_at: null,
+    });
+
+    await expect(listMspSsoDomainClaims()).resolves.toEqual({
+      success: true,
+      claims: [
+        {
+          id: '1',
+          domain: 'example.com',
+          is_active: true,
+          claim_status: 'verified',
+          claim_status_updated_at: '2026-03-03T00:00:00.000Z',
+          claimed_at: '2026-03-03T00:00:00.000Z',
+          verified_at: '2026-03-03T00:00:00.000Z',
+          rejected_at: null,
+          revoked_at: null,
+        },
+      ],
+    });
+
+    mockUser = { user_id: 'client-1', user_type: 'client' };
+    await expect(listMspSsoDomainClaims()).resolves.toEqual({ success: false, error: 'Forbidden' });
   });
 
   it('T006/T007: save action persists and normalizes valid domains', async () => {
