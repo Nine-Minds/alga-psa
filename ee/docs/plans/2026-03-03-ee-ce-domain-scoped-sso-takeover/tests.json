@@ -368,7 +368,7 @@
   {
     "id": "T046",
     "description": "CE build wiring resolves MSP SSO entry to discovery-enabled provider buttons implementation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]
