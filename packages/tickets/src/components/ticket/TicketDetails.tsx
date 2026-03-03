@@ -36,7 +36,7 @@ import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useDrawer } from "@alga-psa/ui";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
-import { findUserById, getCurrentUser } from "@alga-psa/users/actions";
+import { findUserById, getCurrentUser } from "@alga-psa/user-composition/actions";
 import { findBoardById, getAllBoards } from "@alga-psa/tickets/actions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "@alga-psa/tickets/actions";
 import { getDocumentByTicketId } from "@alga-psa/documents/actions/documentActions";

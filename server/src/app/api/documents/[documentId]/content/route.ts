@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
-import { getCurrentUser, findUserByIdForApi } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 

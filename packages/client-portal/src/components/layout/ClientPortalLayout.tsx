@@ -12,8 +12,8 @@ import {
   DropdownMenuTrigger
 } from '@alga-psa/ui/components/DropdownMenu';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
-import { getCurrentUser } from '@alga-psa/users/actions';
-import { useContactAvatar } from '@alga-psa/users/hooks';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { useContactAvatar } from '@alga-psa/user-composition/hooks';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { useRouter } from 'next/navigation';
 import { checkClientPortalPermissions } from '@alga-psa/client-portal/actions';

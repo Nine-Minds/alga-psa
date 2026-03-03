@@ -4,7 +4,7 @@ import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 import type { IClientContractLine } from '@alga-psa/types';
 import { formatISO } from 'date-fns';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 
 // Copied from @alga-psa/billing/lib/contractLineDisambiguation to avoid scheduling → billing deps.
 

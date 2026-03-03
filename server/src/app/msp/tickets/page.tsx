@@ -1,5 +1,5 @@
 import { getConsolidatedTicketListData } from '@alga-psa/tickets/actions/optimizedTicketActions';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import type { ITicketListFilters } from '@alga-psa/types';
 import { MspTicketsPageClient } from '@alga-psa/msp-composition/tickets';

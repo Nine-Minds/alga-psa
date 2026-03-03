@@ -5,7 +5,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { DEFAULT_BLOCK, TextEditor } from '@alga-psa/ui/editor';
 import { createTaskComment } from '../actions/projectTaskCommentActions';
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
-import { searchUsersForMentions } from '@alga-psa/users/actions';
+import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 
 interface TaskCommentFormProps {
   taskId: string;

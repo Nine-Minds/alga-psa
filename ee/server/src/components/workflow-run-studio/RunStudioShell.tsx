@@ -21,7 +21,7 @@ import {
   cancelWorkflowRunAction,
   replayWorkflowRunAction
 } from '@/lib/actions/workflow-runtime-v2-actions';
-import { getCurrentUserPermissions } from '@alga-psa/users/actions';
+import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
 import type { WorkflowDefinition, Step } from '@shared/workflow/runtime';
 import type { IfBlock, ForEachBlock, TryCatchBlock, NodeStep } from '@shared/workflow/runtime';

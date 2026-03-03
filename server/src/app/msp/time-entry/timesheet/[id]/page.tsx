@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getCurrentUser } from "@alga-psa/users/actions";
+import { getCurrentUser } from "@alga-psa/user-composition/actions";
 import { fetchTimeSheet } from '@alga-psa/scheduling/actions/timeSheetActions';
 import TimeSheetClient from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/TimeSheetClient';
 import { createTenantKnex } from '@alga-psa/db';

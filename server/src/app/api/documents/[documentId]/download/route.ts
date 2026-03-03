@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from 'server/src/lib/db';
 import { StorageService } from 'server/src/lib/storage/StorageService';
-import { getCurrentUser, findUserByIdForApi } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { runWithTenant } from '@alga-psa/db';

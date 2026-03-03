@@ -22,7 +22,7 @@ import type {
   PreviewGenerationOptions,
   DuplicateDetectionStrategy
 } from '@/types/imports.types';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '@alga-psa/auth';
 
 const MAX_IMPORT_FILE_SIZE_BYTES = 100 * 1024 * 1024; // 100 MB

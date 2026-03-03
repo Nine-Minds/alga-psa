@@ -28,7 +28,7 @@ import {
   getTaskDependencies,
   addTaskDependency
 } from '../actions/projectTaskActions';
-import { getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { findTagsByEntityId, createTagsForEntity } from '@alga-psa/tags/actions';
 import { QuickAddTagPicker, TagManager } from '@alga-psa/tags/components';
 import type { PendingTag } from '@alga-psa/types';

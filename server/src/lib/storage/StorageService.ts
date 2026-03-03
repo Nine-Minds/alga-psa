@@ -16,7 +16,7 @@ import { StorageProviderFactory, generateStoragePath } from '@alga-psa/storage';
 import { FileStoreModel } from '../../models/storage';
 import type { FileStore } from '../../types/storage';
 import { StorageError } from './providers/StorageProvider';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import fs from 'fs';
 
 import { 

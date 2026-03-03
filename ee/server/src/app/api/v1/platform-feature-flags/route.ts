@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { ENTRA_PHASE1_FLAG_DEFINITIONS, PostHogFeatureFlagService } from '@ee/lib/platformFeatureFlags';
 

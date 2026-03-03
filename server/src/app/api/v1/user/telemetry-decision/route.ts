@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { isUsageStatsEnabled } from 'server/src/config/telemetry';
 import logger from 'server/src/utils/logger';
 

@@ -11,7 +11,7 @@ import { fetchNotificationActivities } from "@alga-psa/workflows/actions";
 import { NotificationSectionFiltersDialog } from "./filters/NotificationSectionFiltersDialog";
 import { Filter, XCircle } from 'lucide-react';
 import { useActivityDrawer } from "./ActivityDrawerProvider";
-import { getCurrentUser } from "@alga-psa/users/actions";
+import { getCurrentUser } from "@alga-psa/user-composition/actions";
 import { Badge } from "@alga-psa/ui/components/Badge";
 import { useInternalNotifications } from "@alga-psa/notifications/hooks";
 import { useSession } from 'next-auth/react';

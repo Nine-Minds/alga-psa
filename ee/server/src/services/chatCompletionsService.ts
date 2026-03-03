@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 import { NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getRegistry } from '../chat/registry/apiRegistry.indexer';
 import {
   ChatApiRegistryEntry,

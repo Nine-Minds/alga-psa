@@ -10,7 +10,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { FileText, Link2, Trash2 } from 'lucide-react';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
-import { searchUsersForMentions } from '@alga-psa/users/actions';
+import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 
 interface DocumentCardProps {
   id?: string;

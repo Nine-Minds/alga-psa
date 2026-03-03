@@ -194,8 +194,8 @@ export function useUserPreference<T>(
   // Set value with optimistic updates
   const setValue = useCallback((newValue: T | ((prev: T) => T)) => {
     setValueState(prev => {
-      const nextValue = typeof newValue === 'function' 
-        ? (newValue as (prev: T) => T)(prev) 
+      const nextValue = typeof newValue === 'function'
+        ? (newValue as (prev: T) => T)(prev)
         : newValue;
 
       // Save to localStorage immediately

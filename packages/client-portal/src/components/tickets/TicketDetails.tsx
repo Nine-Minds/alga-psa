@@ -28,7 +28,7 @@ import { ITicketWithDetails, TicketResponseState } from '@alga-psa/types';
 import { IComment } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { PartialBlock } from '@blocknote/core';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { IStatus } from '@alga-psa/types';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';

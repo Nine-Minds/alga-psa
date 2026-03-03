@@ -6,7 +6,7 @@ import { Plus, MoreVertical } from "lucide-react";
 import { getStatuses, deleteStatus, updateStatus } from '@alga-psa/reference-data/actions';
 import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions';
 import type { IStatus, IStandardStatus, DeletionValidationResult } from '@alga-psa/types';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';

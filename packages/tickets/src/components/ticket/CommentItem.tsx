@@ -14,7 +14,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { searchUsersForMentions } from '@alga-psa/users/actions';
+import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { getCommentResponseSource } from '../../lib/responseSource';
 import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { resolveCommentAuthor } from '../../lib/commentAuthorResolution';

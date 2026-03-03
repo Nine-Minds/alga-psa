@@ -3,7 +3,7 @@ import { getSecret } from '../lib/utils/getSecret';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import { getCurrencySymbol } from 'server/src/constants/currency';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getTenantDetails } from '@alga-psa/tenancy/actions';
 import { createTenantKnex } from 'server/src/lib/db';
 

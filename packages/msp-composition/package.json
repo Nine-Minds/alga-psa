@@ -68,6 +68,6 @@
     "@alga-psa/tickets": "*",
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",
-    "@alga-psa/users": "*"
+    "@alga-psa/user-composition": "*"
   }
 }

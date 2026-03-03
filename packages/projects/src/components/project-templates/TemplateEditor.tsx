@@ -64,7 +64,7 @@ import ClientPortalConfigEditor from '../ClientPortalConfigEditor';
 import { getTenantProjectStatuses } from '../../actions/projectTaskStatusActions';
 import { getTaskTypes } from '../../actions/projectTaskActions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
-import { getAllUsers } from '@alga-psa/users/actions';
+import { getAllUsers } from '@alga-psa/user-composition/actions';
 import { ITaskType } from '@alga-psa/types';
 import { IUserWithRoles } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
@@ -88,7 +88,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 
 // Task type icons mapping (fallback icons when database doesn't specify)
 const taskTypeIcons: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {

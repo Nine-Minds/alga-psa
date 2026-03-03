@@ -9,8 +9,8 @@ import EntryPopup from './EntryPopup';
 import { CalendarStyleProvider } from './CalendarStyleProvider';
 import { AgentScheduleDrawerStyles } from './AgentScheduleDrawerStyles';
 import { getScheduleEntries } from '@alga-psa/scheduling/actions';
-import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/users/actions';
-import { useUsers } from '@alga-psa/users/hooks';
+import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
+import { useUsers } from '@alga-psa/user-composition/hooks';
 import type { IScheduleEntry, WorkItemType } from '@alga-psa/types';
 
 const DynamicBigCalendar = dynamic(() => import('./DynamicBigCalendar'), {

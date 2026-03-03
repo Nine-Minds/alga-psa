@@ -4,7 +4,7 @@ import { CreateTenantSchema } from '../../../../services/provisioning/types/tena
 import { ZodError } from 'zod';
 import { getServerSession } from '@/lib/auth-compat';
 import { hasPermission } from '@alga-psa/auth';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 
 export async function POST(req: NextRequest) {
   try {

@@ -18,7 +18,7 @@ import {
   DialogFooter
 } from '@alga-psa/ui/components/Dialog';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
 import { createClient, createClientLocation, getAllCountries, ICountry } from '@alga-psa/clients/actions';
 import { createClientContact } from '@alga-psa/clients/actions';

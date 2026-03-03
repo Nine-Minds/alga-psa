@@ -7,7 +7,7 @@ import { IScheduleEntry } from '@alga-psa/types';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { getTaskWithDetails } from '@alga-psa/projects/actions/projectTaskActions';
 import { getWorkItemById } from '@alga-psa/scheduling/actions';
-import { getCurrentUser, getAllUsersBasic } from '@alga-psa/users/actions';
+import { getCurrentUser, getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import { getScheduleEntries } from '@alga-psa/scheduling/actions';
 import { getInteractionById } from '@alga-psa/clients/actions';
 import { toast } from 'react-hot-toast';

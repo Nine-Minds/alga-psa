@@ -19,7 +19,7 @@ import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getContactsByClient, getAllContacts } from '@alga-psa/clients/actions';
 import { IContact } from '@alga-psa/types';
-import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { ProjectTaskStatusSelector } from './ProjectTaskStatusSelector';
 import { QuickAddTagPicker } from '@alga-psa/tags/components';

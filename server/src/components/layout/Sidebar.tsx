@@ -20,7 +20,7 @@ import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSubMenuItem from './SidebarSubMenuItem';
 import SidebarBottomMenuItem from './SidebarBottomMenuItem';
 import type { MenuItem } from '@/config/menuConfig';
-import { useUserPreference } from '@alga-psa/users/hooks';
+import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 interface SidebarProps {

@@ -8,7 +8,7 @@ import {
   getDocumentsByEntity,
   removeDocumentAssociations
 } from '@alga-psa/documents/actions/documentActions';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { Button } from '@alga-psa/ui/components/Button';
 import DocumentUpload from '@alga-psa/documents/components/DocumentUpload';
 import DocumentSelector from '@alga-psa/documents/components/DocumentSelector';

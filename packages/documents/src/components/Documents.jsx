@@ -22,8 +22,8 @@ import { downloadDocument, getDocumentDownloadUrl } from '@alga-psa/documents/li
 import toast from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
-import { useUserPreference } from '@alga-psa/users/hooks';
-import { searchUsersForMentions } from '@alga-psa/users/actions';
+import { useUserPreference } from '@alga-psa/user-composition/hooks';
+import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { getDocumentsByFolder, moveDocumentsToFolder, createFolder, deleteDocument, removeDocumentAssociations, updateDocument } from '../actions/documentActions';
 import { getBlockContent, updateBlockContent, createBlockDocument } from '../actions/documentBlockContentActions';
 const DEFAULT_BLOCKS = [{

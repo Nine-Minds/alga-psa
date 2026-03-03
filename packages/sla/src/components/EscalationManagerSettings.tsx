@@ -15,7 +15,7 @@ import { ColumnDefinition } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { IBoardEscalationConfig, SlaNotificationChannel } from '../types';
 import { getBoardEscalationConfigs, setEscalationManager } from '../actions/escalationManagerActions';
-import { getAllUsers } from '@alga-psa/users/actions';
+import { getAllUsers } from '@alga-psa/user-composition/actions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import toast from 'react-hot-toast';

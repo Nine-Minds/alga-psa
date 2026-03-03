@@ -3,13 +3,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import Documents from './Documents';
 import { Card } from '@alga-psa/ui/components/Card';
 import { getDistinctEntityTypes } from '../actions/documentActions';
-import { getCurrentUser, getAllUsersBasic } from '@alga-psa/users/actions';
+import { getCurrentUser, getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import { toast } from 'react-hot-toast';
 import DocumentFilters from './DocumentFilters';
 import DocumentsPageSkeleton from './DocumentsPageSkeleton';
 import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useUserPreference } from '@alga-psa/users/hooks';
+import { useUserPreference } from '@alga-psa/user-composition/hooks';
 const FILTERS_PANE_COLLAPSED_SETTING = 'documents_filters_pane_collapsed';
 export default function DocumentsPage() {
     const searchParams = useSearchParams();

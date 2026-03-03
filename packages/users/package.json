@@ -18,14 +18,6 @@
       "import": "./src/actions/*.ts",
       "types": "./src/actions/*.ts"
     },
-    "./hooks": {
-      "import": "./src/hooks/index.ts",
-      "types": "./src/hooks/index.ts"
-    },
-    "./hooks/*": {
-      "import": "./src/hooks/*.ts",
-      "types": "./src/hooks/*.ts"
-    },
     "./components": {
       "import": "./src/components/index.ts",
       "types": "./src/components/index.ts"
@@ -43,7 +35,9 @@
     "@alga-psa/auth": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/media": "*",
     "@alga-psa/types": "*",
+    "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",
     "@alga-psa/ui": "*",
     "swr": "^2.3.0"

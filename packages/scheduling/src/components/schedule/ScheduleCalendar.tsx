@@ -23,9 +23,9 @@ import { IEditScope, IScheduleEntry, DeletionValidationResult } from '@alga-psa/
 import { produce } from 'immer';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { WorkItemType, IExtendedWorkItem } from '@alga-psa/types';
-import { useUsers } from '@alga-psa/users/hooks';
-import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/users/actions';
-import { useUserPreference } from '@alga-psa/users/hooks';
+import { useUsers } from '@alga-psa/user-composition/hooks';
+import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
+import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { IUserWithRoles } from '@alga-psa/types';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';

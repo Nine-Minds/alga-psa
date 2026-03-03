@@ -13,7 +13,7 @@ import type { TemplateChecklistItem, TemplateTask, TemplateWizardData } from '..
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { IUserWithRoles } from '@alga-psa/types';

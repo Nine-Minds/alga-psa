@@ -6,7 +6,7 @@ import { withTransaction } from '@alga-psa/shared/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { unparseCSV } from '@alga-psa/core';
-import { getAllUsersBasic } from '@alga-psa/users/actions';
+import { getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getServices } from './serviceCatalogActions';
 import { createTagsForEntityWithTransaction } from '@alga-psa/tags/actions';

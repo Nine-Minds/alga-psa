@@ -4,7 +4,7 @@ import type { IClient } from '@alga-psa/types';
 import type { IContact } from '@alga-psa/types';
 import type { IUser } from '@shared/interfaces/user.interfaces';
 import { getAllClients, getAllContacts } from '@alga-psa/clients/actions';
-import { getAllUsersBasic } from '@alga-psa/users/actions';
+import { getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import { ContactsLayout } from '@alga-psa/clients';
 
 export default async function ContactsPage() {

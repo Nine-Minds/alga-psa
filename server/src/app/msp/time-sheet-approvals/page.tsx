@@ -1,5 +1,5 @@
 import ManagerApprovalDashboard from '@alga-psa/scheduling/components/time-management/approvals/ManagerApprovalDashboard';
-import { findUserById } from '@alga-psa/users/actions';
+import { findUserById } from '@alga-psa/user-composition/actions';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';

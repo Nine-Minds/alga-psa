@@ -11,7 +11,7 @@ import { TextArea } from "@alga-psa/ui/components/TextArea";
 import { DataTable } from "@alga-psa/ui/components/DataTable";
 import { ColumnDefinition } from "@alga-psa/types";
 import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, Filter, Check, XCircle } from "lucide-react";
-import { useUserPreference } from "@alga-psa/users/hooks";
+import { useUserPreference } from "@alga-psa/user-composition/hooks";
 import {
   getTemplatesAction,
   updateTenantTemplateAction,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
-import { getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { 
   addTicketLinkAction,
   deleteTaskTicketLinkAction,

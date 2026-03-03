@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { useMemo } from 'react';
 import { ThemeProvider } from 'next-themes';
 import { ThemeActionsProvider } from '@alga-psa/ui/hooks/useAppTheme';
-import { getThemePreferenceAction, updateThemePreferenceAction } from '@alga-psa/users/actions';
+import { getThemePreferenceAction, updateThemePreferenceAction } from '@alga-psa/user-composition/actions';
 
 type AppThemeProviderProps = {
   children: ReactNode;
