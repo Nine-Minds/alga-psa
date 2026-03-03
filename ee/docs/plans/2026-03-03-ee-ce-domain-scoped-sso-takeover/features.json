@@ -110,7 +110,7 @@
   {
     "id": "F019",
     "description": "In CE discovery, treat advisory registrations as eligible for tenant routing without ownership verification gate.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #8", "Primary Flow C"]
   },
   {

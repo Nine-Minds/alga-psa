@@ -34,6 +34,7 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Discovery helper now resolves domain ownership with both edition and claim lifecycle context (`eligibleForTakeover`) before selecting `tenant` vs `app` source.
 - (2026-03-03) EE routing gate is now strict: only `verified`/`verified_legacy` claims can produce tenant-scoped provider discovery; all other statuses bypass tenant takeover.
 - (2026-03-03) EE fallback behavior now explicitly routes `pending`, `rejected`, `revoked`, and ambiguous domain claims to app-level provider discovery.
+- (2026-03-03) CE routing now treats advisory claims as takeover-eligible, enabling tenant-scoped provider discovery without ownership verification requirements.
 
 ## Discoveries / Constraints
 
@@ -61,6 +62,7 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Claim status precedence normalization (`verified > verified_legacy > pending > advisory > rejected > revoked`) prevents duplicate-row drift from producing unstable routing decisions.
 - (2026-03-03) Ambiguous multi-tenant mappings remain fail-closed and are never eligible for EE tenant takeover.
 - (2026-03-03) EE non-eligible statuses preserve anti-enumerating behavior by returning normal app-source provider readiness (including empty set when app providers are not configured).
+- (2026-03-03) CE still blocks `revoked`/`rejected` claims from tenant routing, preventing stale/deactivated claims from taking over discovery.
 
 ## Commands / Runbooks
 
@@ -110,6 +112,8 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) F017 implementation checks:
   - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
 - (2026-03-03) F018 implementation checks:
+  - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) F019 implementation checks:
   - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
 
 ## Links / References
