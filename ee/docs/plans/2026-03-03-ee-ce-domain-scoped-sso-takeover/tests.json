@@ -164,7 +164,7 @@
   {
     "id": "T021",
     "description": "EE settings UI shows neutral actionable error when verification fails.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
