@@ -100,7 +100,7 @@
   {
     "id": "T013",
     "description": "EE verify action with valid DNS challenge promotes pending claim to verified.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
