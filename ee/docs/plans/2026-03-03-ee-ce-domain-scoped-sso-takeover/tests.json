@@ -43,7 +43,7 @@
   {
     "id": "T006",
     "description": "Domain normalization helper trims, lowercases, and strips unsupported decorations.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
