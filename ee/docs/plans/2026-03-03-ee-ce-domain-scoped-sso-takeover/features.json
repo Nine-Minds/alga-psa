@@ -252,7 +252,7 @@
   {
     "id": "F029",
     "description": "Retain current SSO button interaction patterns (disabled states, in-flight behavior, remembered provider) with new routing matrix.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes #2",
       "UX / UI Notes #3"

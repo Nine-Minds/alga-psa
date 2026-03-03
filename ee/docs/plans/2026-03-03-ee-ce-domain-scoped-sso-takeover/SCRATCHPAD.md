@@ -166,3 +166,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `F028`: added contract assertion that `MspLoginForm` passes the live typed email state into `SsoProviderButtons` (`email={email}`), preserving discovery input propagation for CE/EE builds via shared entry wiring.
 - (2026-03-03) Validation run for `F028`:
   - `cd server && npx vitest run ../packages/auth/src/components/ssoProviderButtonsImport.test.ts`
+- (2026-03-03) Completed `F029`: existing MSP SSO button behavior suite continues to validate disabled state rules, in-flight discovery behavior, provider eligibility gating, disabled-click no-op, and remembered provider preference handling.
+- (2026-03-03) Validation run for `F029`:
+  - `cd server && npx vitest run ../packages/auth/src/components/SsoProviderButtons.msp.test.tsx`
