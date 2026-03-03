@@ -237,7 +237,7 @@
   {
     "id": "T030",
     "description": "EE discovery with ambiguous domain ownership returns app-level fallback providers only.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F011"
