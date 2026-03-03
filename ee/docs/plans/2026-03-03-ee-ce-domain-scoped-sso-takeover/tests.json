@@ -35,7 +35,7 @@
   {
     "id": "T005",
     "description": "Backfill marks existing CE active domain rows with advisory status.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]

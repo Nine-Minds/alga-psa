@@ -191,3 +191,4 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed \: Migration contract suite covers challenge table creation/index contract in mspSsoDomainLifecycle.migrations.test.ts.
 - (2026-03-03) Completed \: Migration contract suite verifies rollback drops lifecycle columns and challenge table.
 - (2026-03-03) Completed \: Migration contract suite verifies EE backfill SQL sets verified_legacy defaults.
+- (2026-03-03) Completed \: Migration contract suite verifies CE backfill SQL sets advisory defaults.
