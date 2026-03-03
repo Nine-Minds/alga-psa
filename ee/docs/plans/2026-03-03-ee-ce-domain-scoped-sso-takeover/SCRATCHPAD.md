@@ -174,3 +174,5 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
   - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoDocsContract.test.ts`
 - (2026-03-03) Completed `F031`: documentation now includes CE advisory mode behavior, explicitly stating non-blocking ownership verification and advisory routing limitations.
 - (2026-03-03) Validation source: `docs/integrations/msp-sso-domain-claims.md` (section `CE Advisory Domain Registration`) and docs contract assertions.
+- (2026-03-03) Completed `F032`: documentation now includes Nine Minds app-level fallback prerequisites and unmanaged/unapproved domain routing behavior with required `*_OAUTH_*` env vars.
+- (2026-03-03) Validation source: `docs/integrations/msp-sso-domain-claims.md` (section `App-Level Fallback`) and docs contract assertions.

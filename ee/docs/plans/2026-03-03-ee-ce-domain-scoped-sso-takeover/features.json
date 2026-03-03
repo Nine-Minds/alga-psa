@@ -279,7 +279,7 @@
   {
     "id": "F032",
     "description": "Document Nine Minds app-level fallback prerequisites and behavior for unmanaged/unapproved domains.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Summary",
       "Acceptance Criteria #6"
