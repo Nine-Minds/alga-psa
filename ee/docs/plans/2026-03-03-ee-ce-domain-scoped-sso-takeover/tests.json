@@ -344,7 +344,7 @@
   {
     "id": "T043",
     "description": "Resolution cookie payload remains signed, short-lived, and free of provider secrets.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
