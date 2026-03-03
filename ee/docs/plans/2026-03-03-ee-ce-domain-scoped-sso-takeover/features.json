@@ -104,7 +104,7 @@
   {
     "id": "F018",
     "description": "In EE discovery, route pending/rejected/revoked/ambiguous claims to app-level fallback providers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements #9", "Primary Flow B"]
   },
   {
