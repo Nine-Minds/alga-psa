@@ -14,8 +14,8 @@ import {
 } from '@alga-psa/auth/lib/sso/mspSsoResolution';
 import type { Knex } from 'knex';
 
-export const MSP_SSO_LOGIN_DOMAIN_TABLE = 'msp_sso_tenant_login_domains';
-export const MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE =
+const MSP_SSO_LOGIN_DOMAIN_TABLE = 'msp_sso_tenant_login_domains';
+const MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE =
   'msp_sso_domain_verification_challenges';
 
 export interface MspSsoLoginDomain {
@@ -916,8 +916,3 @@ export const saveMspSsoLoginDomains = withAuth(async (
     };
   }
 });
-
-export const __testExports = {
-  normalizeDomain,
-  validateDomain,
-};

@@ -332,7 +332,6 @@ export function MspSsoLoginDomainsSettings() {
                         claim.claim_status === 'revoked') && (
                         <Button
                           type="button"
-                          size="sm"
                           variant="outline"
                           onClick={() => handleRequestClaim(claim.domain)}
                           disabled={Boolean(claimActionKey)}
@@ -344,7 +343,6 @@ export function MspSsoLoginDomainsSettings() {
                         <>
                           <Button
                             type="button"
-                            size="sm"
                             variant="outline"
                             onClick={() => handleVerifyClaim(claim.id)}
                             disabled={Boolean(claimActionKey)}
@@ -353,12 +351,11 @@ export function MspSsoLoginDomainsSettings() {
                           </Button>
                           <Button
                             type="button"
-                            size="sm"
                             variant="outline"
                             onClick={() => handleRefreshChallenge(claim.id)}
                             disabled={Boolean(claimActionKey)}
                           >
-                            Refresh Challenge
+                            Reset Challenge
                           </Button>
                         </>
                       )}
@@ -367,8 +364,7 @@ export function MspSsoLoginDomainsSettings() {
                         claim.claim_status === 'verified_legacy') && (
                         <Button
                           type="button"
-                          size="sm"
-                          variant="ghost"
+                          variant="destructive"
                           onClick={() => handleRevokeClaim(claim.id)}
                           disabled={Boolean(claimActionKey)}
                         >
