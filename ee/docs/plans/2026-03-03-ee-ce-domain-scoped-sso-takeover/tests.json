@@ -485,7 +485,7 @@
   {
     "id": "T060",
     "description": "Route contract preserves `/auth/msp/signin` entry path and callbackUrl passthrough under new lifecycle rules.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]

@@ -328,3 +328,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `T059`: DB-backed integration CE advisory path: registered advisory domain can route to tenant source when tenant credentials exist.
 - (2026-03-03) Validation run for `T059`:
   - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T060`: Route contract preserves `/auth/msp/signin` entry path and callbackUrl passthrough under new lifecycle rules.
+- (2026-03-03) Validation run for `T060`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/components/MspSignInRoute.contract.test.ts`
