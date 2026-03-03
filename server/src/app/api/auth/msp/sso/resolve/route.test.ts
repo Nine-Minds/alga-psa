@@ -140,6 +140,15 @@ describe('POST /api/auth/msp/sso/resolve', () => {
       email: 'user@example.com',
       discovery: expect.objectContaining({ source: 'tenant', tenantId: 'tenant-1' }),
     });
+    expect(setCookieMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'msp_sso_resolution',
+        value: 'signed-cookie-value',
+        maxAge: 300,
+        httpOnly: true,
+        sameSite: 'lax',
+      })
+    );
   });
 
   it('T040: requested provider not in discovered allow-list returns generic failure', async () => {

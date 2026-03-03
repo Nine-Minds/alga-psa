@@ -150,3 +150,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `F023`: resolver generic failure contract remains invariant for invalid/disallowed/rate-limited resolution paths while lifecycle checks are applied internally.
 - (2026-03-03) Validation run for `F023`:
   - `cd server && npx vitest run src/app/api/auth/msp/sso/resolve/route.test.ts`
+- (2026-03-03) Completed `F024`: discovery payload now includes normalized domain and parsing rejects signed payloads with invalid domain values; resolve/discover cookie tests assert `httpOnly`/`sameSite=lax`/short TTL (`maxAge=300`).
+- (2026-03-03) Validation run for `F024`:
+  - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoResolution.test.ts src/app/api/auth/msp/sso/discover/route.test.ts src/app/api/auth/msp/sso/resolve/route.test.ts`

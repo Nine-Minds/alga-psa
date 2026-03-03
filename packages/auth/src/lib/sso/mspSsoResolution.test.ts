@@ -325,6 +325,22 @@ describe('mspSsoResolution helpers', () => {
       })
     ).toBeNull();
 
+    const invalidDomainDiscovery = createSignedMspSsoDiscoveryCookie({
+      source: 'app',
+      domain: 'bad domain value',
+      providers: ['google'],
+      secret: 'unit-secret',
+      now: 1_700_000_000_000,
+      ttlSeconds: 300,
+    });
+    expect(
+      parseAndVerifyMspSsoDiscoveryCookie({
+        value: invalidDomainDiscovery.value,
+        secret: 'unit-secret',
+        now: 1_700_000_010_000,
+      })
+    ).toBeNull();
+
     const resolution = createSignedMspSsoResolutionCookie({
       provider: 'azure-ad',
       source: 'tenant',

@@ -140,6 +140,7 @@ describe('POST /api/auth/msp/sso/discover', () => {
       expect.objectContaining({
         name: 'msp_sso_discovery',
         value: 'signed-discovery-cookie-value',
+        maxAge: 300,
         httpOnly: true,
         sameSite: 'lax',
       })

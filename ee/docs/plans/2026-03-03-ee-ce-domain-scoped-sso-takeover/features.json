@@ -207,7 +207,7 @@
   {
     "id": "F024",
     "description": "Preserve signed, secret-safe discovery/resolution cookie usage with lifecycle-aware payload consumption.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements #12",
       "Security / Permissions #4"
