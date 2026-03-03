@@ -319,7 +319,7 @@
   {
     "id": "T040",
     "description": "Resolver stale discovery context is revalidated and cannot force unauthorized tenant source.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F023"

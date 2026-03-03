@@ -268,3 +268,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `T039`: Resolver denies provider attempts outside discovered allow-list with generic response.
 - (2026-03-03) Validation run for `T039`:
   - `cd server && npx vitest run --coverage.enabled=false src/app/api/auth/msp/sso/resolve/route.test.ts`
+- (2026-03-03) Completed `T040`: Resolver stale discovery context is revalidated and cannot force unauthorized tenant source.
+- (2026-03-03) Validation run for `T040`:
+  - `cd server && npx vitest run --coverage.enabled=false src/app/api/auth/msp/sso/resolve/route.test.ts`
