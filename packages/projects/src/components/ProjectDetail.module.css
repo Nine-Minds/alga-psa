@@ -162,17 +162,19 @@
   background: rgb(var(--color-border-300));
 }
 
-/* Sticky Save/Cancel buttons when editing a phase */
-.phaseEditActions {
+/* Reduce bottom padding when editing so footer sits closer to content */
+.phasesScrollAreaEditing {
+  padding-bottom: 0.5rem;
+}
+
+/* Fixed footer for Save/Cancel when editing a phase */
+.phasesPanelFooter {
+  flex-shrink: 0;
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
-  margin-top: 0.75rem;
-  padding: 0.5rem 0;
-  position: sticky;
-  bottom: 0;
-  background-color: rgb(var(--color-card));
-  z-index: 1;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid rgb(var(--color-border-100));
 }
 
 .phasesList {

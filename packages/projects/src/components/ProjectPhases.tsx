@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { Fragment } from 'react';
 import type { IProjectPhase } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Upload } from 'lucide-react';
@@ -135,7 +135,8 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
     };
 
     return (
-      <div 
+      <li
+        aria-hidden="true"
         className={`${styles.phaseDropPlaceholder} ${visible ? styles.visible : ''}`}
         onDrop={handlePlaceholderDrop}
         onDragOver={handlePlaceholderDragOver}
@@ -178,7 +179,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
         </div>
       </div>
       {/* Scrollable phases list */}
-      <ul className={styles.phasesScrollArea} onDragOver={handleContainerDragOver} onDrop={handleContainerDrop}>
+      <ul className={`${styles.phasesScrollArea} ${editingPhaseId ? styles.phasesScrollAreaEditing : ''}`} onDragOver={handleContainerDragOver} onDrop={handleContainerDrop}>
         {(() => {
           const sortedPhases = phases
             .sort((a, b) => {
@@ -209,7 +210,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
                 />
               )}
               {sortedPhases.map((phase: IProjectPhase, index: number): React.JSX.Element => (
-          <div key={phase.phase_id}>
+          <Fragment key={phase.phase_id}>
             {/* Drop placeholder before phase - but not for first phase as it's handled above */}
             {phaseDropTarget?.phaseId === phase.phase_id && phaseDropTarget.position === 'before' && index > 0 && (
               <DropPlaceholder
@@ -233,8 +234,6 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
               taskDraggingOverPhaseId={taskDraggingOverPhaseId} // Pass prop to PhaseListItem
               onSelect={onPhaseSelect}
               onEdit={onEditPhase}
-              onSave={onSavePhase}
-              onCancel={onCancelEdit}
               onDelete={onDeletePhase}
               onNameChange={onEditingPhaseNameChange}
               onDescriptionChange={onEditingPhaseDescriptionChange}
@@ -255,12 +254,36 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
                 visible={true}
               />
             )}
-          </div>
+          </Fragment>
         ))}
             </>
           );
         })()}
       </ul>
+      {/* Fixed footer with Save/Cancel when editing a phase */}
+      {editingPhaseId && (
+        <div className={styles.phasesPanelFooter}>
+          <Button
+            id={`cancel-edit-phase-${editingPhaseId}`}
+            variant="outline"
+            size="sm"
+            onClick={onCancelEdit}
+          >
+            Cancel
+          </Button>
+          <Button
+            id={`save-edit-phase-${editingPhaseId}`}
+            variant="default"
+            size="sm"
+            onClick={() => {
+              const editingPhase = phases.find(p => p.phase_id === editingPhaseId);
+              if (editingPhase) onSavePhase(editingPhase);
+            }}
+          >
+            Save
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

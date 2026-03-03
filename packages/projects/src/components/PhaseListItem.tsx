@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { IProjectPhase } from '@alga-psa/types';
 import { Pencil, Trash2, GripVertical } from 'lucide-react';
-import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import styles from './ProjectDetail.module.css';
@@ -20,8 +19,6 @@ interface PhaseListItemProps {
   taskCount?: number;
   onSelect: (phase: IProjectPhase) => void;
   onEdit: (phase: IProjectPhase) => void;
-  onSave: (phase: IProjectPhase) => void;
-  onCancel: () => void;
   onDelete: (phase: IProjectPhase) => void;
   onNameChange: (name: string) => void;
   onDescriptionChange: (description: string | null) => void;
@@ -48,8 +45,6 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   taskCount,
   onSelect,
   onEdit,
-  onSave,
-  onCancel,
   onDelete,
   onNameChange,
   onDescriptionChange,
@@ -66,13 +61,13 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const itemRef = useRef<HTMLLIElement>(null);
 
-  // Auto-scroll the phase into view when editing starts
+  // Auto-scroll the editing form into view when editing starts
   useEffect(() => {
     if (isEditing && itemRef.current) {
       const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      // Small delay to let the form expand before scrolling
+      const scrollBehavior = prefersReducedMotion ? 'auto' : 'smooth';
       requestAnimationFrame(() => {
-        itemRef.current?.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'nearest' });
+        itemRef.current?.scrollIntoView({ behavior: scrollBehavior, block: 'nearest' });
       });
     }
   }, [isEditing]);
@@ -255,7 +250,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                 autoFocus
               />
             </div>
-            {/* Description Input - Added */}
+            {/* Description Input */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phase Description</label>
               <TextArea
@@ -289,33 +284,6 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                 clearable={true}
               />
             </div>
-          </div>
-          {/* Action Buttons - sticky so they're always visible */}
-          <div className={styles.phaseEditActions}>
-            <Button
-              id={`cancel-edit-phase-${phase.phase_id}`}
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onCancel();
-              }}
-              title="Cancel editing"
-            >
-              Cancel
-            </Button>
-            <Button
-              id={`save-edit-phase-${phase.phase_id}`}
-              variant="default"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onSave(phase);
-              }}
-              title="Save changes"
-            >
-              Save
-            </Button>
           </div>
         </div>
       ) : (
