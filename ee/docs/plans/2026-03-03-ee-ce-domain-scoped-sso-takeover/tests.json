@@ -376,7 +376,7 @@
   {
     "id": "T047",
     "description": "MSP login form passes normalized email prop into SSO discovery component in both editions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]

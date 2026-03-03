@@ -289,3 +289,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `T046`: CE build wiring resolves MSP SSO entry to discovery-enabled provider buttons implementation.
 - (2026-03-03) Validation run for `T046`:
   - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/components/ssoProviderButtons.ceEeParity.test.ts`
+- (2026-03-03) Completed `T047`: MSP login form passes normalized email prop into SSO discovery component in both editions.
+- (2026-03-03) Validation run for `T047`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/components/ssoProviderButtonsImport.test.ts`
