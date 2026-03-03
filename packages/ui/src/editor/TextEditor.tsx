@@ -422,7 +422,7 @@ export default function TextEditor({
     <div className="w-full h-full min-w-0">
       {children}
       <div
-        className="min-h-[100px] h-full w-full editor-paper border border-[#e8e4de] dark:border-[rgb(var(--color-border-200))] rounded-lg p-4 overflow-auto min-w-0"
+        className="min-h-[100px] h-full w-full editor-paper border border-[#e5e7eb] dark:border-[rgb(var(--color-border-200))] rounded-lg p-4 overflow-auto min-w-0"
         onDragStart={(e) => {
           // Only prevent drag from elements with draggable="true" attribute (the drag handle)
           const target = e.target as HTMLElement;
