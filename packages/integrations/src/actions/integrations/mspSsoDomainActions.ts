@@ -40,6 +40,8 @@ export interface MspSsoDomainClaim {
   verified_at: string | null;
   rejected_at: string | null;
   revoked_at: string | null;
+  active_challenge_label?: string | null;
+  active_challenge_value?: string | null;
 }
 
 export interface ListMspSsoDomainClaimsResult {
@@ -156,6 +158,7 @@ async function listActiveTenantDomains(knex: Knex, tenant: string): Promise<stri
 
 async function listActiveTenantDomainClaims(knex: Knex, tenant: string): Promise<MspSsoDomainClaim[]> {
   const hasClaimStatus = await knex.schema.hasColumn(MSP_SSO_LOGIN_DOMAIN_TABLE, 'claim_status');
+  const hasChallengeTable = await knex.schema.hasTable(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE);
 
   const rows = await knex(MSP_SSO_LOGIN_DOMAIN_TABLE)
     .select(
@@ -229,7 +232,36 @@ async function listActiveTenantDomainClaims(knex: Knex, tenant: string): Promise
     }
   }
 
-  return Array.from(byDomain.values()).sort((left, right) => left.domain.localeCompare(right.domain));
+  const dedupedClaims = Array.from(byDomain.values()).sort((left, right) => left.domain.localeCompare(right.domain));
+  if (!hasChallengeTable || dedupedClaims.length === 0) {
+    return dedupedClaims;
+  }
+
+  const claimIds = dedupedClaims.map((claim) => claim.id);
+  const challengeRows = await knex(MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE)
+    .select('claim_id', 'challenge_label', 'challenge_value', 'created_at')
+    .where({ tenant, is_active: true })
+    .whereIn('claim_id', claimIds)
+    .orderBy('created_at', 'desc');
+
+  const challengeByClaimId = new Map<string, { label: string; value: string }>();
+  for (const row of challengeRows as Array<Record<string, unknown>>) {
+    const claimId = String(row.claim_id ?? '');
+    if (!claimId || challengeByClaimId.has(claimId)) continue;
+    challengeByClaimId.set(claimId, {
+      label: String(row.challenge_label ?? ''),
+      value: String(row.challenge_value ?? ''),
+    });
+  }
+
+  return dedupedClaims.map((claim) => {
+    const challenge = challengeByClaimId.get(claim.id);
+    return {
+      ...claim,
+      active_challenge_label: challenge?.label ?? null,
+      active_challenge_value: challenge?.value ?? null,
+    };
+  });
 }
 
 async function toDomainClaim(

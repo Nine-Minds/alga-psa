@@ -116,6 +116,7 @@ knexMock.raw = (value: string) => value;
 knexMock.fn = { now: () => 'now()' };
 knexMock.schema = {
   hasColumn: async (_table: string, _column: string) => true,
+  hasTable: async (_table: string) => false,
 };
 knexMock.transaction = async (handler: (trx: any) => Promise<void>) => {
   const trx = (table: string) => new QueryBuilder(table);

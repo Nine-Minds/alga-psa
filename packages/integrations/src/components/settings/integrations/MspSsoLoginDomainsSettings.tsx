@@ -24,6 +24,8 @@ type ClaimRow = {
   id: string;
   domain: string;
   claim_status: ClaimStatus;
+  active_challenge_label?: string | null;
+  active_challenge_value?: string | null;
 };
 
 const isEnterprise = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
@@ -66,6 +68,8 @@ export function MspSsoLoginDomainsSettings() {
         id: claim.id,
         domain: claim.domain,
         claim_status: claim.claim_status,
+        active_challenge_label: claim.active_challenge_label ?? null,
+        active_challenge_value: claim.active_challenge_value ?? null,
       }));
       setClaims(normalizedClaims);
       setLoading(false);
@@ -294,11 +298,26 @@ export function MspSsoLoginDomainsSettings() {
                     key={claim.id}
                     className="rounded border p-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{claim.domain}</span>
-                      <Badge variant={claimStatusVariant(claim.claim_status)}>
-                        {claimStatusLabel(claim.claim_status)}
-                      </Badge>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{claim.domain}</span>
+                        <Badge variant={claimStatusVariant(claim.claim_status)}>
+                          {claimStatusLabel(claim.claim_status)}
+                        </Badge>
+                      </div>
+                      {claim.claim_status === 'pending' &&
+                        claim.active_challenge_label &&
+                        claim.active_challenge_value && (
+                          <div className="rounded border border-dashed p-2 text-xs text-muted-foreground space-y-1">
+                            <div>Add DNS TXT record, then click Verify:</div>
+                            <div>
+                              Host: <code>{claim.active_challenge_label}</code>
+                            </div>
+                            <div>
+                              Value: <code>{claim.active_challenge_value}</code>
+                            </div>
+                          </div>
+                        )}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       {(claim.claim_status === 'advisory' ||
