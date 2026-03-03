@@ -449,7 +449,7 @@
   {
     "id": "T056",
     "description": "DB-backed integration guard: EE pending claim with tenant credentials still returns app fallback source.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034",
       "F018"

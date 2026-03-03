@@ -316,3 +316,6 @@ Working notes for expanding domain-scoped MSP SSO discovery to support:
 - (2026-03-03) Completed `T055`: DB-backed integration happy path: EE verified claim + tenant Microsoft credentials returns tenant source and ["azure-ad"].
 - (2026-03-03) Validation run for `T055`:
   - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T056`: DB-backed integration guard: EE pending claim with tenant credentials still returns app fallback source.
+- (2026-03-03) Validation run for `T056`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
