@@ -1,0 +1,59 @@
+# Scratchpad — EE+CE Domain-Scoped SSO Takeover and Domain Approval
+
+- Plan slug: `ee-ce-domain-scoped-sso-takeover`
+- Created: `2026-03-03`
+
+## What This Is
+
+Working notes for expanding domain-scoped MSP SSO discovery to support:
+- EE domain ownership approval before tenant takeover
+- CE advisory domain registration behavior
+- reliable Nine Minds app-level fallback for unmanaged domains
+
+## Decisions
+
+- (2026-03-03) CE domain registration is advisory (no mandatory ownership verification gate).
+- (2026-03-03) EE requires domain ownership verification before a tenant can take over SSO routing for a domain.
+- (2026-03-03) Unmanaged/unapproved domains should route to Nine Minds app-level SSO providers.
+- (2026-03-03) Keep `/auth/msp/signin` UX and anti-enumeration response contracts intact.
+- (2026-03-03) Lifecycle status model for MSP SSO domain claims uses `advisory | pending | verified | verified_legacy | rejected | revoked` with per-status timestamps to preserve backward compatibility while enabling EE verification workflows.
+
+## Discoveries / Constraints
+
+- (2026-03-03) Existing domain-scoped discovery/resolver path already exists at `server/src/app/api/auth/msp/sso/discover/route.ts` and `server/src/app/api/auth/msp/sso/resolve/route.ts`.
+- (2026-03-03) Current domain mapping persistence uses `msp_sso_tenant_login_domains` and already supports normalized domain lookup.
+- (2026-03-03) Current fallback behavior already supports app-level provider readiness (`GOOGLE_OAUTH_*`, `MICROSOFT_OAUTH_*`).
+- (2026-03-03) CE/EE login wiring currently relies on edition aliasing for SSO provider buttons; CE parity must explicitly keep discovery-enabled behavior.
+- (2026-03-03) Existing managed email-domain flow (Resend-style) provides a useful pattern for async domain verification lifecycle in EE settings.
+- (2026-03-03) Existing `msp_sso_tenant_login_domains` table is already deployed in this branch and uses only `is_active`; lifecycle behavior must be introduced as additive columns to avoid breaking current discovery.
+- (2026-03-03) There is no tenant-level CE/EE column in the database schema; edition-aware defaults/backfill must rely on deployment edition context (env) rather than per-tenant data.
+
+## Commands / Runbooks
+
+- (2026-03-03) Scaffolded plan bundle:
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/scaffold_plan.py "EE+CE Domain-Scoped SSO Takeover and Domain Approval" --slug ee-ce-domain-scoped-sso-takeover`
+- (2026-03-03) Optional plan validation:
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-03-03-ee-ce-domain-scoped-sso-takeover`
+- (2026-03-03) F001 implementation checks:
+  - `node -c server/migrations/20260303100000_add_msp_sso_domain_claim_lifecycle.cjs`
+  - `npx vitest run server/src/test/unit/migrations/mspSsoTenantLoginDomainsMigration.test.ts`
+
+## Links / References
+
+- Prior domain-scoped discovery plan:
+  - `ee/docs/plans/2026-02-24-msp-domain-scoped-sso-discovery/PRD.md`
+- Discovery/resolver implementation:
+  - `packages/auth/src/lib/sso/mspSsoResolution.ts`
+  - `server/src/app/api/auth/msp/sso/discover/route.ts`
+  - `server/src/app/api/auth/msp/sso/resolve/route.ts`
+- Domain management actions/UI:
+  - `packages/integrations/src/actions/integrations/mspSsoDomainActions.ts`
+  - `packages/integrations/src/components/settings/integrations/MspSsoLoginDomainsSettings.tsx`
+- Managed email-domain reference patterns:
+  - `ee/server/src/lib/actions/email-actions/managedDomainActions.ts`
+  - `packages/integrations/src/actions/email-actions/emailDomainActions.ts`
+
+## Open Questions
+
+- Should EE verified-domain conflicts be blocked immediately at claim request time or at verification completion time?
+- Should EE verified claims support periodic re-verification in a future phase, or remain manual revoke/re-verify only?
