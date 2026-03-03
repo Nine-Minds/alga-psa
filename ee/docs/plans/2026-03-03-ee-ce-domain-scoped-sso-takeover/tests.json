@@ -189,7 +189,7 @@
   {
     "id": "T024",
     "description": "Settings copy explicitly states unmanaged domains use Nine Minds app-level fallback.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
