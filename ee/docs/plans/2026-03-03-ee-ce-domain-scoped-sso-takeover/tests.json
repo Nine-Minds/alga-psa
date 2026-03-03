@@ -254,7 +254,7 @@
   {
     "id": "T032",
     "description": "CE discovery with unregistered domain returns app-level fallback providers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
