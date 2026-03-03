@@ -10,7 +10,7 @@
   {
     "id": "T002",
     "description": "Migration creates optional verification challenge persistence for EE ownership checks.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ]
