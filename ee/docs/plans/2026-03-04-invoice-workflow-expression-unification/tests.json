@@ -62,7 +62,7 @@
   {
     "id": "T011",
     "description": "Unit: workflow context adapter emits payload/vars/meta/error and forEach roots when present.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
