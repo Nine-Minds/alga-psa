@@ -272,7 +272,7 @@
   {
     "id": "T034",
     "description": "Integration: invoice input insertion remains cursor-accurate for repeated insertions and mixed manual typing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]

@@ -165,4 +165,28 @@ describe('DesignerShell template insertion integration', () => {
     expect(correctedFeedback?.textContent).toContain('Inserted invoice.total.');
     expect(correctedFeedback?.textContent).not.toContain('Unknown path');
   });
+
+  it('keeps input insertion cursor-accurate across repeated inserts and manual typing', () => {
+    render(<DesignerShell />);
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = 'Start ';
+    input.setAttribute('data-template-insert-target', 'metadata.text');
+    document.body.appendChild(input);
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Insert invoice.total' }));
+    expect(input.value).toBe('Start {{invoice.total}}');
+    expect(input.selectionStart).toBe(input.value.length);
+    expect(input.selectionEnd).toBe(input.value.length);
+
+    input.value = `${input.value} and `;
+    input.setSelectionRange(input.value.length, input.value.length);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Insert invoice.total' }));
+    expect(input.value).toBe('Start {{invoice.total}} and {{invoice.total}}');
+    expect(input.selectionStart).toBe(input.value.length);
+    expect(input.selectionEnd).toBe(input.value.length);
+  });
 });
