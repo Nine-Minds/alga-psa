@@ -312,7 +312,7 @@
   {
     "id": "T039",
     "description": "Repo: invoice static template variable catalog file is removed and no imports remain.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]

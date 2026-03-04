@@ -195,3 +195,4 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
   - added `@alga-psa/core` alias coverage in `server/vitest.config.ts` to resolve document dependency imports in server Vitest runs,
   - updated integration test tenant mocks to use `mockImplementation(() => tenantId)` for mutable tenant scenarios,
   - updated event-trigger tests to use trigger `sourcePayloadSchemaRef` and schema-aware invalid-payload expectations aligned with current runtime contract.
+- (2026-03-04) T039 validated by new repo-guard test `templateVariableCatalog.removal.test.ts`: static catalog file `constants/templateVariableCatalog.ts` is absent and no source files under invoice-designer reference legacy `constants/templateVariableCatalog` / `TEMPLATE_VARIABLE_OPTIONS`.
