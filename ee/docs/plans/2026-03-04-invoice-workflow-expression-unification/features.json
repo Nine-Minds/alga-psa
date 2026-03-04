@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "Preserve invoice moustache-to-AST compilation behavior for single-token path and mixed template text.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-005", "FR-006", "FR-013"]
   },
   {

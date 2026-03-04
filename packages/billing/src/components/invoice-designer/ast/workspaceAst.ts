@@ -101,6 +101,115 @@ const normalizeInvoiceBindingPath = (bindingKey: string): string => {
   return aliases[normalized] ?? normalized;
 };
 
+const TEMPLATE_TOKEN_PATTERN = /\{\{\s*([^{}]+?)\s*\}\}/g;
+const SIMPLE_BINDING_ALIASES = new Set([
+  'invoiceNumber',
+  'issueDate',
+  'dueDate',
+  'subtotal',
+  'tax',
+  'total',
+  'discount',
+  'currencyCode',
+  'poNumber',
+]);
+
+const isLikelyBindingTokenPath = (token: string): boolean => {
+  if (token.includes('.')) {
+    return true;
+  }
+  return SIMPLE_BINDING_ALIASES.has(token);
+};
+
+const sanitizeTemplateArgName = (input: string, fallbackIndex: number): string => {
+  const normalized = input
+    .replace(/[^a-zA-Z0-9_.-]+/g, '_')
+    .replace(/[.-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toLowerCase();
+  const candidate = normalized.length > 0 ? normalized : `value_${fallbackIndex}`;
+  return /^[a-zA-Z_]/.test(candidate) ? candidate : `value_${candidate}`;
+};
+
+const parseTemplateInterpolationExpression = (text: string): InvoiceTemplateValueExpression | null => {
+  if (!text.includes('{{')) {
+    return null;
+  }
+
+  const matches = Array.from(text.matchAll(new RegExp(TEMPLATE_TOKEN_PATTERN)));
+  if (matches.length === 0) {
+    return null;
+  }
+
+  const parsedMatches = matches.map((match, index) => {
+    const rawToken = asTrimmedString(match[1]);
+    if (!rawToken || !isLikelyBindingTokenPath(rawToken)) {
+      return null;
+    }
+    const normalizedPath = normalizeInvoiceBindingPath(rawToken);
+    if (!normalizedPath) {
+      return null;
+    }
+    return {
+      rawMatch: match[0],
+      startIndex: match.index ?? 0,
+      normalizedPath,
+      argNameBase: sanitizeTemplateArgName(rawToken, index + 1),
+    };
+  });
+
+  if (parsedMatches.some((entry) => entry === null)) {
+    return null;
+  }
+
+  const resolvedMatches = parsedMatches as Array<{
+    rawMatch: string;
+    startIndex: number;
+    normalizedPath: string;
+    argNameBase: string;
+  }>;
+
+  if (
+    resolvedMatches.length === 1 &&
+    resolvedMatches[0].startIndex === 0 &&
+    resolvedMatches[0].rawMatch.length === text.length
+  ) {
+    return { type: 'path', path: resolvedMatches[0].normalizedPath };
+  }
+
+  const usedArgNames = new Set<string>();
+  const templateArgs: Record<string, InvoiceTemplateValueExpression> = {};
+  let cursor = 0;
+  let template = '';
+
+  resolvedMatches.forEach((entry, index) => {
+    const endIndex = entry.startIndex + entry.rawMatch.length;
+    template += text.slice(cursor, entry.startIndex);
+
+    let argName = entry.argNameBase;
+    let dedupeCounter = 2;
+    while (usedArgNames.has(argName)) {
+      argName = `${entry.argNameBase}_${dedupeCounter}`;
+      dedupeCounter += 1;
+    }
+    usedArgNames.add(argName);
+
+    template += `{{${argName}}}`;
+    templateArgs[argName] = { type: 'path', path: entry.normalizedPath };
+    cursor = endIndex;
+
+    if (index === resolvedMatches.length - 1) {
+      template += text.slice(cursor);
+    }
+  });
+
+  return {
+    type: 'template',
+    template,
+    args: templateArgs,
+  };
+};
+
 const getWorkspaceNodeMetadata = (node: WorkspaceNode): UnknownRecord => {
   const props = isRecord(node.props) ? node.props : {};
   return isRecord(props.metadata) ? (props.metadata as UnknownRecord) : {};
@@ -184,29 +293,30 @@ const resolveNodeTextContent = (node: WorkspaceNode): string => {
 const resolveTextNodeContentExpression = (node: WorkspaceNode): InvoiceTemplateValueExpression => {
   const metadata = getWorkspaceNodeMetadata(node);
   const currentText = resolveNodeTextContent(node);
+  const parsedExpression = parseTemplateInterpolationExpression(currentText);
   const preservedExpression = isInvoiceTemplateValueExpression(metadata.astContentExpression)
     ? metadata.astContentExpression
     : null;
 
   if (!preservedExpression) {
-    return { type: 'literal', value: currentText };
+    return parsedExpression ?? { type: 'literal', value: currentText };
   }
 
   const importedPreviewText = asTrimmedString(metadata.__astContentPreviewText);
   if (importedPreviewText.length > 0) {
     return currentText === importedPreviewText
       ? preservedExpression
-      : { type: 'literal', value: currentText };
+      : parsedExpression ?? { type: 'literal', value: currentText };
   }
 
   if (preservedExpression.type === 'literal') {
     const preservedLiteral = asTrimmedString(preservedExpression.value);
     return currentText === preservedLiteral
       ? preservedExpression
-      : { type: 'literal', value: currentText };
+      : parsedExpression ?? { type: 'literal', value: currentText };
   }
 
-  return preservedExpression;
+  return parsedExpression ?? { type: 'literal', value: currentText };
 };
 
 const createNodeStyle = (node: WorkspaceNode): InvoiceTemplateNode['style'] | undefined => {
