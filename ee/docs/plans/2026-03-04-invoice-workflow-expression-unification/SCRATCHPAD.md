@@ -202,3 +202,10 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
   - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/DesignerShell.insertion.integration.test.tsx` (5 passing tests),
   - `cd ee/server && npx vitest run src/components/workflow-designer/expression-editor/__tests__/ExpressionEditor.smoke.test.tsx` (1 passing test).
   This proves both designers render and accept at least one inserted binding path without runtime errors.
+- (2026-03-04) T043 validated by new meta-guard `packages/billing/src/components/invoice-designer/nonTautologyAssertions.meta.test.ts`:
+  - requires semantic assertion signals across scoped tests for AST behavior (`workspaceAst.test.ts` path/template checks),
+  - model/feedback behavior (`DesignerShell.insertion.integration.test.tsx` store mutation, diagnostics, cursor assertions),
+  - shared workflow diagnostics behavior (`ee/server/.../expressionValidation.test.ts` path attribution + severity partitioning).
+  Verification run:
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/nonTautologyAssertions.meta.test.ts ../packages/billing/src/components/invoice-designer/DesignerShell.insertion.integration.test.tsx ../packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts`
+  - `cd ee/server && npx vitest run src/components/workflow-designer/__tests__/expressionValidation.test.ts`

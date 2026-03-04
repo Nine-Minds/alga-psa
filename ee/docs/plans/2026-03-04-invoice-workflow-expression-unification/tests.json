@@ -347,7 +347,7 @@
   {
     "id": "T043",
     "description": "Meta-test: insertion/validation tests are non-tautological by asserting resulting AST/model/diagnostic behavior, not only source-literal string echo.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028",
       "F012",
