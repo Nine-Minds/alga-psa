@@ -8,7 +8,7 @@
   {
     "id": "T002",
     "description": "Unit: shared context root model serializes/deserializes predictable root/path metadata.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
