@@ -199,7 +199,7 @@
   {
     "id": "T025",
     "description": "Integration: workflow validation correctly flags unknown roots and missing vars references through shared validator.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F021"
