@@ -183,3 +183,4 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) Added `shared/workflow/runtime/__tests__/types.exprPersistence.test.ts` for T028: step schemas persist expressions as `{ $expr: string }` objects (and reject bare string Expr inputs).
 - (2026-03-04) T029 validated by `shared/workflow/runtime/__tests__/expressionEngine.test.ts`: runtime validation rejects disallowed functions (e.g. `$sum(...)`).
 - (2026-03-04) T030 validated by `expressionEngine.test.ts`: evaluation timeout and max output-size guardrails remain enforced post-migration.
+- (2026-03-04) T031 added to `coreContracts.test.ts`: shared `validateSourcePaths(...)` returns `info`/`unknown-path` diagnostic for unresolved schema-aware path references (`payload.user.missing`).

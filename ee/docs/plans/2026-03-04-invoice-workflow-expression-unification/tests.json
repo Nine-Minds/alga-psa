@@ -248,7 +248,7 @@
   {
     "id": "T031",
     "description": "Unit: shared schema-aware path check returns informational diagnostics for unresolved schema paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]

@@ -14,6 +14,7 @@ import {
 } from '../context';
 import { buildPathOptionsFromContextRoots } from '../pathDiscovery';
 import { createValidationResult } from '../validation';
+import { validateSourcePaths } from '../pathValidation';
 
 describe('expression authoring contracts', () => {
   it('accepts only path-only/template/expression modes', () => {
@@ -200,5 +201,36 @@ describe('expression authoring contracts', () => {
     expect(optionPaths.has('vars.previous')).toBe(true);
     expect(optionPaths.has('vars.previous.account')).toBe(true);
     expect(optionPaths.has('vars.previous.account.id')).toBe(true);
+  });
+
+  it('returns informational diagnostics for unresolved schema-aware paths', () => {
+    const options = buildWorkflowExpressionPathOptions({
+      payloadSchema: {
+        type: 'object',
+        properties: {
+          user: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+            },
+          },
+        },
+      },
+    });
+
+    const result = validateSourcePaths({
+      source: 'payload.user.missing',
+      mode: 'expression',
+      options,
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({
+        severity: 'info',
+        code: 'unknown-path',
+        path: 'payload.user.missing',
+      })
+    );
   });
 });
