@@ -368,6 +368,107 @@ export const updateSubtypeAction = withAuth(async (
   });
 });
 
+/**
+ * Send a test email using the specified template to the current user's email address.
+ * The subject is prefixed with "[TEST] " to distinguish from real emails.
+ */
+export const sendTestEmailAction = withAuth(async (
+  user,
+  { tenant },
+  templateId: number,
+  templateType: 'system' | 'tenant',
+  overrideContent?: {
+    subject?: string;
+    html_content?: string;
+    text_content?: string;
+  }
+): Promise<{ success: boolean; error?: string; sentTo?: string }> => {
+  const { knex } = await createTenantKnex();
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    // 1. Get the user's email from the database
+    const userRecord = await trx('users')
+      .where({ user_id: user.user_id, tenant })
+      .select('email')
+      .first();
+
+    if (!userRecord?.email) {
+      return { success: false, error: 'No email address found for your account.' };
+    }
+
+    // 2. Validate that email settings are configured
+    const { TenantEmailService: TenantEmailSvc } = await import('@alga-psa/email');
+    const validation = await TenantEmailSvc.validateEmailSettings(tenant);
+    if (!validation.valid) {
+      return { success: false, error: validation.error || 'Email settings are not configured.' };
+    }
+
+    // 3. Load the template
+    const table = templateType === 'system' ? 'system_email_templates' : 'tenant_email_templates';
+    const whereClause = templateType === 'system'
+      ? { id: templateId }
+      : { id: templateId, tenant };
+
+    const template = await trx(table).where(whereClause).first();
+    if (!template) {
+      return { success: false, error: 'Template not found.' };
+    }
+
+    // 4. Use override content if provided (for previewing unsaved edits)
+    const subject = overrideContent?.subject ?? template.subject;
+    const htmlContent = overrideContent?.html_content ?? template.html_content;
+    const textContent = overrideContent?.text_content ?? template.text_content;
+
+    // 5. Get sample data and substitute variables
+    const { getSampleDataForPreview } = await import('../../lib/templateSampleData');
+    const sampleData = getSampleDataForPreview(template.name, htmlContent, subject);
+
+    const { StaticTemplateProcessor } = await import('@alga-psa/email');
+    const renderedSubject = `[TEST] ${replaceVars(subject, sampleData)}`;
+    const renderedHtml = replaceVars(htmlContent, sampleData);
+    const renderedText = replaceVars(textContent, sampleData);
+
+    const templateProcessor = new StaticTemplateProcessor(renderedSubject, renderedHtml, renderedText);
+
+    // 6. Send the test email
+    const service = TenantEmailSvc.getInstance(tenant);
+    const result = await service.sendEmail({
+      to: userRecord.email,
+      templateProcessor,
+      tenantId: tenant,
+    });
+
+    if (!result.success) {
+      return { success: false, error: result.error || 'Failed to send test email.' };
+    }
+
+    return { success: true, sentTo: userRecord.email };
+  });
+});
+
+/**
+ * Simple variable replacement for test email rendering.
+ * Handles {{#if condition}}...{{/if}} blocks and {{variable}} placeholders.
+ */
+function replaceVars(content: string, data: Record<string, string>): string {
+  // Process {{#if condition}}...{{/if}} blocks first — show content when sample data exists
+  let result = content.replace(
+    /\{\{#if\s+([^}]+)\}\}([\s\S]*?)\{\{\/if\}\}/g,
+    (_match, condition, blockContent) => {
+      const key = condition.trim();
+      return key in data ? blockContent : '';
+    }
+  );
+
+  // Then replace simple {{variable}} placeholders
+  result = result.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+    const trimmedKey = key.trim();
+    return trimmedKey in data ? data[trimmedKey] : match;
+  });
+
+  return result;
+}
+
 export async function getUserPreferencesAction(
   tenant: string,
   userId: string
