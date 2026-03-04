@@ -74,7 +74,7 @@
   {
     "id": "T013",
     "description": "Integration: invoice palette FIELDS list renders from adapter-provided options (not hardcoded catalog).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F009"]
   },
   {
