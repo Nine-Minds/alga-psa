@@ -110,7 +110,7 @@
   {
     "id": "F019",
     "description": "Keep workflow persisted `{ $expr }` data model unchanged while migrating editor/validation plumbing.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-009", "NFR-003"]
   },
   {
