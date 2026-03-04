@@ -55,6 +55,7 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) T009 verified via `coreContracts.test.ts` invoice adapter assertions (roots + canonical paths for invoice/customer/tenant/item).
 - (2026-03-04) T010 verified via `coreContracts.test.ts` stable label assertions for known invoice adapter roots/paths.
 - (2026-03-04) T011 verified via `coreContracts.test.ts` workflow adapter root emission assertions (payload/vars/meta/error + forEach vars).
+- (2026-03-04) T012 verified via `coreContracts.test.ts` recursive vars-path assertions (`vars.previous.account.id`).
 - (2026-03-04) Preserve persisted contracts:
   - Invoice keeps AST value expressions (`literal|binding|path|template`).
   - Workflow keeps `{ $expr: string }`.

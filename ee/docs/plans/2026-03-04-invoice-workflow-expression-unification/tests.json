@@ -68,7 +68,7 @@
   {
     "id": "T012",
     "description": "Unit: workflow adapter resolves vars paths from prior step output schema recursively.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
