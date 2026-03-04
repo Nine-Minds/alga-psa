@@ -320,7 +320,7 @@
   {
     "id": "T040",
     "description": "Repo: workflow designer no longer imports or invokes legacy `${...}` scanner validation helpers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]

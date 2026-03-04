@@ -196,3 +196,4 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
   - updated integration test tenant mocks to use `mockImplementation(() => tenantId)` for mutable tenant scenarios,
   - updated event-trigger tests to use trigger `sourcePayloadSchemaRef` and schema-aware invalid-payload expectations aligned with current runtime contract.
 - (2026-03-04) T039 validated by new repo-guard test `templateVariableCatalog.removal.test.ts`: static catalog file `constants/templateVariableCatalog.ts` is absent and no source files under invoice-designer reference legacy `constants/templateVariableCatalog` / `TEMPLATE_VARIABLE_OPTIONS`.
+- (2026-03-04) T040 validated by `ee/server/src/components/workflow-designer/__tests__/expressionValidation.test.ts` (3 passing tests), including explicit source assertions that `WorkflowDesigner.tsx` no longer references legacy `extractExpressionPaths` or `validateExpressionPath` helpers.
