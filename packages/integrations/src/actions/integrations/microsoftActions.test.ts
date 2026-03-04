@@ -16,8 +16,8 @@ const setTenantSecretMock = vi.fn(async (tenant: string, key: string, value: str
   tenantSecrets.set(`${tenant}:${key}`, value);
 });
 const getAppSecretMock = vi.fn(async (key: string) => appSecrets.get(key) || null);
-const hasPermissionMock = vi.fn(async () => true);
-const getMicrosoftProviderReadinessMock = vi.fn(async () => ({
+const hasPermissionMock = vi.fn(async (..._args: unknown[]) => true);
+const getMicrosoftProviderReadinessMock = vi.fn(async (..._args: unknown[]) => ({
   ready: false,
   clientIdConfigured: false,
   clientSecretConfigured: false,
@@ -50,14 +50,14 @@ vi.mock('@alga-psa/auth/withAuth', () => ({
 }));
 
 vi.mock('@alga-psa/auth/rbac', () => ({
-  hasPermission: (...args: unknown[]) => hasPermissionMock(...args),
+  hasPermission: hasPermissionMock,
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: async () => ({
-    getTenantSecret: (...args: unknown[]) => getTenantSecretMock(...args),
-    setTenantSecret: (...args: unknown[]) => setTenantSecretMock(...args),
-    getAppSecret: (...args: unknown[]) => getAppSecretMock(...args),
+    getTenantSecret: getTenantSecretMock,
+    setTenantSecret: setTenantSecretMock,
+    getAppSecret: getAppSecretMock,
   }),
 }));
 
@@ -66,7 +66,7 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('./providerReadiness', () => ({
-  getMicrosoftProviderReadiness: (...args: unknown[]) => getMicrosoftProviderReadinessMock(...args),
+  getMicrosoftProviderReadiness: getMicrosoftProviderReadinessMock,
 }));
 
 import {

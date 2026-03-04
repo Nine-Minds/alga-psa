@@ -180,7 +180,7 @@ async function listActiveTenantDomainClaims(knex: Knex, tenant: string): Promise
     .orderByRaw('lower(domain) asc');
 
   const claims = rows
-    .map((row) => {
+    .map<MspSsoDomainClaim | null>((row) => {
       const claim = row as Record<string, unknown>;
       const id = String(claim.id ?? '');
       const domain = normalizeDomain(String(claim.domain ?? ''));
@@ -189,7 +189,7 @@ async function listActiveTenantDomainClaims(knex: Knex, tenant: string): Promise
       return {
         id,
         domain,
-        is_active: true,
+        is_active: Boolean(claim.is_active),
         claim_status: normalizeMspSsoDomainClaimStatus(claim.claim_status),
         claim_status_updated_at:
           claim.claim_status_updated_at instanceof Date
@@ -825,7 +825,7 @@ export const saveMspSsoLoginDomains = withAuth(async (
         .select('domain')
         .where({ is_active: true })
         .whereNot({ tenant })
-        .whereIn(knex.raw('lower(domain)'), desiredDomains);
+        .whereIn(knex.raw('lower(domain)') as unknown as string, desiredDomains);
 
       if (conflicts.length > 0) {
         const conflictDomains = uniqueSorted(
@@ -855,7 +855,7 @@ export const saveMspSsoLoginDomains = withAuth(async (
       if (desiredDomains.length > 0) {
         await trx(MSP_SSO_LOGIN_DOMAIN_TABLE)
           .where({ tenant, is_active: true })
-          .whereNotIn(trx.raw('lower(domain)'), desiredDomains)
+          .whereNotIn(trx.raw('lower(domain)') as unknown as string, desiredDomains)
           .update({
             is_active: false,
             updated_by: (user as { user_id?: string })?.user_id ?? null,

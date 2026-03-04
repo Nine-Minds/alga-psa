@@ -331,6 +331,7 @@ export function MspSsoLoginDomainsSettings() {
                         claim.claim_status === 'rejected' ||
                         claim.claim_status === 'revoked') && (
                         <Button
+                          id={`msp-sso-domain-claim-request-${claim.id}`}
                           type="button"
                           variant="outline"
                           onClick={() => handleRequestClaim(claim.domain)}
@@ -342,6 +343,7 @@ export function MspSsoLoginDomainsSettings() {
                       {claim.claim_status === 'pending' && (
                         <>
                           <Button
+                            id={`msp-sso-domain-claim-verify-${claim.id}`}
                             type="button"
                             variant="outline"
                             onClick={() => handleVerifyClaim(claim.id)}
@@ -350,6 +352,7 @@ export function MspSsoLoginDomainsSettings() {
                             Verify
                           </Button>
                           <Button
+                            id={`msp-sso-domain-claim-reset-${claim.id}`}
                             type="button"
                             variant="outline"
                             onClick={() => handleRefreshChallenge(claim.id)}
@@ -363,6 +366,7 @@ export function MspSsoLoginDomainsSettings() {
                         claim.claim_status === 'verified' ||
                         claim.claim_status === 'verified_legacy') && (
                         <Button
+                          id={`msp-sso-domain-claim-revoke-${claim.id}`}
                           type="button"
                           variant="destructive"
                           onClick={() => handleRevokeClaim(claim.id)}

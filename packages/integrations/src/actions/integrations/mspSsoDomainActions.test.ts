@@ -42,7 +42,9 @@ let rows: DomainRow[] = [];
 let challengeRows: ChallengeRow[] = [];
 let hasChallengeTable = false;
 
-const resolveTxtMock = vi.hoisted(() => vi.fn(async () => []));
+const resolveTxtMock = vi.hoisted(() =>
+  vi.fn(async (_hostname: string): Promise<string[][]> => [])
+);
 
 function normalize(value: string): string {
   const trimmed = value.trim().toLowerCase();
@@ -87,16 +89,18 @@ class QueryBuilder {
 
   whereIn(column: unknown, values: string[]): QueryBuilder {
     this.whereInColumn = String(column ?? '');
+    const whereInColumn = this.whereInColumn ?? '';
     this.whereInValues = values.map((value) =>
-      this.whereInColumn.includes('claim_status') ? String(value) : normalize(String(value))
+      whereInColumn.includes('claim_status') ? String(value) : normalize(String(value))
     );
     return this;
   }
 
   whereNotIn(column: unknown, values: string[]): QueryBuilder {
     this.whereNotInColumn = String(column ?? '');
+    const whereNotInColumn = this.whereNotInColumn ?? '';
     this.whereNotInValues = values.map((value) =>
-      this.whereNotInColumn.includes('claim_status') ? String(value) : normalize(String(value))
+      whereNotInColumn.includes('claim_status') ? String(value) : normalize(String(value))
     );
     return this;
   }
@@ -226,7 +230,7 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('node:dns/promises', () => ({
-  resolveTxt: (...args: unknown[]) => resolveTxtMock(...args),
+  resolveTxt: resolveTxtMock,
 }));
 
 import {

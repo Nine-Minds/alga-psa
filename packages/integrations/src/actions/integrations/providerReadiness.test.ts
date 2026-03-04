@@ -8,7 +8,7 @@ const getTenantSecretMock = vi.fn(async (tenant: string, key: string) => {
 
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: async () => ({
-    getTenantSecret: (...args: unknown[]) => getTenantSecretMock(...args),
+    getTenantSecret: getTenantSecretMock,
   }),
 }));
 
