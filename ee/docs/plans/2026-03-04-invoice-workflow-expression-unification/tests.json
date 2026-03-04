@@ -123,7 +123,7 @@
   {
     "id": "T016",
     "description": "Integration: invoice text insertion writes moustache token in template mode.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
