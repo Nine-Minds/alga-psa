@@ -37,6 +37,7 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) Workflow Monaco insertion paths now route through shared `insertTextIntoMonacoEditor` for both programmatic insert and drag/drop insert, with existing `$0` placeholder stripping preserved.
 - (2026-03-04) Invoice input/textarea insertion remains shared-helper based (`insertTextIntoDomControl` + `insertTextIntoValue`) for selection-aware replacement and repeated insert behavior.
 - (2026-03-04) Invoice preview interpolation semantics remain intact post-migration (resolved known tokens + visibly marked unresolved tokens), validated by preview-mode suite.
+- (2026-03-04) Workflow runtime expression suites (`expressionEngine`, `mappingResolver`, `mappingValidator`) remain green after migration; contracts for `{ $expr }` evaluation/validation are preserved.
 - (2026-03-04) Preserve persisted contracts:
   - Invoice keeps AST value expressions (`literal|binding|path|template`).
   - Workflow keeps `{ $expr: string }`.
@@ -106,6 +107,8 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
   - `cd ee/server && npx vitest run src/components/workflow-designer/expression-editor/__tests__/completionProvider.test.ts src/components/workflow-designer/expression-editor/__tests__/diagnosticsProvider.test.ts && npm run -s typecheck`
 - Validate invoice preview interpolation behavior:
   - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/canvas/DesignCanvas.previewMode.test.tsx`
+- Validate workflow runtime expression behavior:
+  - `npx vitest run --config shared/vitest.config.ts shared/workflow/runtime/__tests__/expressionEngine.test.ts shared/workflow/runtime/__tests__/mappingResolver.test.ts shared/workflow/runtime/__tests__/mappingValidator.test.ts`
 - Compare invoice/workflow binding/expression surfaces:
   - `rg -n "binding|template|\{\{|\$expr|validateExpressionSource" packages/billing/src/components/invoice-designer ee/server/src/components/workflow-designer shared/workflow/runtime -g"*.ts*"`
 - Review workflow designer expression sections:

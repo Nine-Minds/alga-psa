@@ -30,6 +30,22 @@ export default defineConfig({
         find: /^@alga-psa\/core\/secrets$/,
         replacement: path.resolve(__dirname, '../packages/core/src/lib/secrets/index.ts'),
       },
+      {
+        find: /^@shared\/workflow\/secrets$/,
+        replacement: path.resolve(__dirname, './workflow/secrets/index.ts'),
+      },
+      {
+        find: /^@shared\/workflow\/runtime$/,
+        replacement: path.resolve(__dirname, './workflow/runtime/index.ts'),
+      },
+      {
+        find: /^@shared\/workflow\/runtime\/(.*)$/,
+        replacement: path.resolve(__dirname, './workflow/runtime/$1'),
+      },
+      {
+        find: /^@shared\/workflow\/streams\/(.*)$/,
+        replacement: path.resolve(__dirname, './workflow/streams/$1'),
+      },
     ],
   },
 });

@@ -146,7 +146,7 @@
   {
     "id": "F025",
     "description": "Preserve workflow runtime/backend tests and behavior with no expression contract regressions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-014", "NFR-003"]
   },
   {
