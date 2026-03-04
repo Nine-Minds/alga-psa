@@ -26,7 +26,7 @@
   {
     "id": "F005",
     "description": "Implement shared validation result contract (`error`/`warning`/`info`) with consistent message shape and path attribution.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-001", "FR-011"]
   },
   {

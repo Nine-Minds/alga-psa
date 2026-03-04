@@ -14,6 +14,7 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) Shared context contract includes explicit `SharedExpressionContextRoot` and `SharedExpressionPathOption` interfaces plus deterministic root serialization to stabilize cross-editor behavior/tests.
 - (2026-03-04) Shared path discovery contract uses deterministic lexical traversal with explicit array item marker segments (`[]`) and additional-property wildcard (`*`) to produce stable picker options.
 - (2026-03-04) Shared insertion helper is split into pure value insertion (`insertTextIntoValue`) plus environment-specific adapters (`insertTextIntoDomControl`, `insertTextIntoMonacoEditor`) with explicit no-op reasons.
+- (2026-03-04) Shared validation contract (`SharedExpressionValidationResult`) normalizes severity ordering and preserves path/root/range attribution for downstream UI rendering.
 - (2026-03-04) Preserve persisted contracts:
   - Invoice keeps AST value expressions (`literal|binding|path|template`).
   - Workflow keeps `{ $expr: string }`.
@@ -46,6 +47,8 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
   - `shared/workflow/expression-authoring/pathDiscovery.ts`
 - Implement F004 insertion helper API:
   - `shared/workflow/expression-authoring/insertion.ts`
+- Implement F005 validation result contract:
+  - `shared/workflow/expression-authoring/validation.ts`
 - Compare invoice/workflow binding/expression surfaces:
   - `rg -n "binding|template|\{\{|\$expr|validateExpressionSource" packages/billing/src/components/invoice-designer ee/server/src/components/workflow-designer shared/workflow/runtime -g"*.ts*"`
 - Review workflow designer expression sections:
