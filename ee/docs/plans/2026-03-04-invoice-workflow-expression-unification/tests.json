@@ -147,7 +147,7 @@
   {
     "id": "T019",
     "description": "Unit: invoice moustache parser compiles mixed literal + tokens into AST `template` expression with args.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]
