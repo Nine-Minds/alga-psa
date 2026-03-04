@@ -104,7 +104,7 @@
   {
     "id": "F018",
     "description": "Align workflow editor function diagnostics with runtime allowlisted function set.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-008", "FR-010"]
   },
   {

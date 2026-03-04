@@ -8,7 +8,7 @@
  */
 
 import type * as monaco from 'monaco-editor';
-import { builtinFunctions } from './functionDefinitions';
+import { runtimeBuiltinFunctions } from './functionDefinitions';
 import { LANGUAGE_ID } from './jsonataLanguage';
 import type { ExpressionContext, JsonSchema } from './completionProvider';
 
@@ -260,7 +260,7 @@ function validateStrings(tokens: Token[]): ExpressionDiagnostic[] {
  */
 function validateFunctions(tokens: Token[]): ExpressionDiagnostic[] {
   const diagnostics: ExpressionDiagnostic[] = [];
-  const knownFunctions = new Set(builtinFunctions.map(f => f.name));
+  const knownFunctions = new Set(runtimeBuiltinFunctions.map((f) => f.name));
 
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
@@ -268,7 +268,7 @@ function validateFunctions(tokens: Token[]): ExpressionDiagnostic[] {
       // Check if function exists
       if (!knownFunctions.has(token.value)) {
         // Check for similar function names
-        const similar = builtinFunctions.find(f =>
+        const similar = runtimeBuiltinFunctions.find((f) =>
           f.name.toLowerCase().includes(token.value.slice(1).toLowerCase()) ||
           token.value.slice(1).toLowerCase().includes(f.name.slice(1).toLowerCase())
         );
