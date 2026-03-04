@@ -1,0 +1,506 @@
+[
+  {
+    "id": "T001",
+    "description": "Migration creates tenant MSP SSO login-domain persistence model with expected columns.",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Migration rollback removes tenant MSP SSO login-domain persistence objects cleanly.",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Schema includes indexes supporting fast lookup by normalized domain and tenant domain listing.",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "List login-domain action denies unauthorized users and client users.",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "List login-domain action returns normalized, deduplicated tenant domains.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F005"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Save login-domain action persists valid domains for the tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Save login-domain action lowercases and trims domains before persistence.",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Save login-domain action rejects malformed domains with a deterministic validation error.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F009"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Save login-domain action prevents duplicate domains in one tenant payload.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F006"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Cross-tenant domain conflict behavior follows configured policy (reject or mark ambiguous).",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F014"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Removing/deactivating a tenant login domain updates subsequent listing and discovery reads.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F006"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Providers settings page renders MSP SSO login-domain management section.",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Providers UI add-domain flow invokes save action and refreshes rendered domain list.",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Providers UI remove-domain flow invokes save action and removes domain row from view.",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Providers UI shows malformed-domain validation errors without exposing backend internals.",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Providers UI shows conflict/ambiguity error state with neutral language.",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F006"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Discovery endpoint returns `{ ok: true, providers: [] }` for invalid email input.",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F011",
+      "F018"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Discovery endpoint normalizes email and extracts domain correctly from mixed-case input.",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Discovery endpoint rate-limited calls return the same neutral response schema.",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F018"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Known mapped domain with tenant Microsoft configured returns only `azure-ad`.",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F016",
+      "F018"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Known mapped domain with both tenant providers configured returns `google` and `azure-ad`.",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F015",
+      "F016",
+      "F018"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Known mapped domain with no tenant providers configured returns empty providers list.",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F015",
+      "F016",
+      "F018"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Unresolved domain with app Google fallback configured returns only `google`.",
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F018"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Unresolved domain with app Microsoft fallback configured returns only `azure-ad`.",
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F018"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Unresolved domain with no app fallback providers configured returns empty provider list.",
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F018"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Discovery implementation contract does not branch on specific-user existence lookup results.",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F018"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Discovery logs avoid raw email and include only safe domain/hash metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F018"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Discovery context cookie is signed and excludes OAuth client IDs/secrets.",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Discovery context cookie expires according to configured short TTL.",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Discovery endpoint rotates cookie on valid requests and clears stale context on invalid input.",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "MSP SSO buttons remain disabled for invalid/empty email input.",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F022"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "MSP SSO buttons remain disabled while discovery request is in flight.",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F022"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "MSP login enables only Microsoft button when discovery returns `azure-ad` only.",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "MSP login enables both buttons when discovery returns both providers.",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "MSP login keeps unsupported provider buttons disabled based on discovery response.",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Last-selected provider preference is persisted locally when user completes provider click.",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Remembered provider is only auto-selected when it is still present in discovered provider list.",
+    "implemented": true,
+    "featureIds": [
+      "F024",
+      "F023"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Clicking a disabled provider button never triggers resolver/start API call.",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F026"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Resolver consumes valid discovery cookie and uses tenant/source metadata for provider start.",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Resolver rejects provider attempts not included in discovered allowed provider set using generic failure response.",
+    "implemented": true,
+    "featureIds": [
+      "F026",
+      "F028"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Resolver falls back to app-level behavior when discovery cookie is missing, invalid, or expired.",
+    "implemented": true,
+    "featureIds": [
+      "F027",
+      "F028"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "Unknown-user and known-user paths remain externally indistinguishable in resolver responses.",
+    "implemented": true,
+    "featureIds": [
+      "F028",
+      "F029"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "Resolver rate-limit failures preserve the same generic response shape and wording.",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "Resolver logging excludes raw email and other sensitive identifiers.",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "OAuth callback flow for unknown users remains unchanged (no discovery-specific account-existence messaging).",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "MSP credentials sign-in flow remains functional and independent from SSO discovery outcome.",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "Client portal sign-in flow remains unchanged with no MSP discovery behavior bleed-through.",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "CE/EE SSO component wiring continues to route MSP login through shared discovery-enabled SSO entrypoint.",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "DB-backed integration happy path: mapped tenant domain + tenant Microsoft secrets yields discovery providers `[\"azure-ad\"]`.",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F016",
+      "F018"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "DB-backed integration guard path: ambiguous duplicate domain mapping resolves as unresolved and returns neutral provider set.",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F018"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "DB-backed integration guard path: inactive/deleted domain mappings are ignored by discovery.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F006",
+      "F013"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "Documentation contract includes tenant login-domain setup in provider configuration instructions.",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "Environment/docs contract explains unresolved-domain app-fallback provider behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "Route contract verifies `/auth/msp/signin` path remains unchanged after discovery rollout.",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "Callback URL passthrough remains intact for MSP login redirects when SSO discovery is active.",
+    "implemented": true,
+    "featureIds": [
+      "F035",
+      "F030"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "Backfill migration populates initial login-domain entries from tenant primary email domain only when unambiguous.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F035"
+    ]
+  },
+  {
+    "id": "T057",
+    "description": "Backfill migration skips conflicting candidate domains and records deterministic no-op behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F006"
+    ]
+  },
+  {
+    "id": "T058",
+    "description": "CE and EE both expose discovery route + resolver gating behavior with identical external API contracts.",
+    "implemented": true,
+    "featureIds": [
+      "F034",
+      "F025",
+      "F026",
+      "F028"
+    ]
+  }
+]

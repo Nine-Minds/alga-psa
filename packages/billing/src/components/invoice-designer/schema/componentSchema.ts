@@ -37,6 +37,20 @@ const mergeInspectorSchemas = (...schemas: Array<DesignerInspectorSchema | undef
   panels: schemas.flatMap((schema) => schema?.panels ?? []),
 });
 
+const FILTERED_CONTAINER_LAYOUT_FIELD_IDS = new Set(['display', 'flexDirection', 'alignItems', 'justifyContent']);
+
+const toContainerInspectorSchema = (schema: DesignerInspectorSchema): DesignerInspectorSchema => ({
+  panels: schema.panels.map((panel) => {
+    if (panel.id !== 'layout') {
+      return panel;
+    }
+    return {
+      ...panel,
+      fields: panel.fields.filter((field) => !FILTERED_CONTAINER_LAYOUT_FIELD_IDS.has(field.id)),
+    };
+  }),
+});
+
 const COMMON_INSPECTOR: DesignerInspectorSchema = {
   panels: [
     {
@@ -258,6 +272,8 @@ const COMMON_INSPECTOR: DesignerInspectorSchema = {
     },
   ],
 };
+
+const CONTAINER_INSPECTOR = toContainerInspectorSchema(COMMON_INSPECTOR);
 
 const SECTION_INSPECTOR: DesignerInspectorSchema = {
   panels: [
@@ -1045,7 +1061,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       ],
       allowedParents: ['column', 'container', 'section'],
     },
-    inspector: COMMON_INSPECTOR,
+    inspector: CONTAINER_INSPECTOR,
   },
 };
 

@@ -1,0 +1,333 @@
+# Scratchpad — EE+CE Domain-Scoped SSO Takeover and Domain Approval
+
+- Plan slug: `ee-ce-domain-scoped-sso-takeover`
+- Created: `2026-03-03`
+
+## What This Is
+
+Working notes for expanding domain-scoped MSP SSO discovery to support:
+- EE domain ownership approval before tenant takeover
+- CE advisory domain registration behavior
+- reliable Nine Minds app-level fallback for unmanaged domains
+
+## Decisions
+
+- (2026-03-03) CE domain registration is advisory (no mandatory ownership verification gate).
+- (2026-03-03) EE requires domain ownership verification before a tenant can take over SSO routing for a domain.
+- (2026-03-03) Unmanaged/unapproved domains should route to Nine Minds app-level SSO providers.
+- (2026-03-03) Keep `/auth/msp/signin` UX and anti-enumeration response contracts intact.
+- (2026-03-03) Lifecycle status model for MSP SSO domain claims uses `advisory | pending | verified | verified_legacy | rejected | revoked` with per-status timestamps to preserve backward compatibility while enabling EE verification workflows.
+- (2026-03-03) Verification challenges are stored as tenant-scoped records keyed to domain claim rows so challenge rotation can invalidate prior material while preserving audit timestamps.
+- (2026-03-03) Lifecycle backfill uses deployment edition context (`EDITION` / `NEXT_PUBLIC_EDITION`) because MSP tenant rows do not carry per-tenant CE/EE markers in the shared schema.
+- (2026-03-03) Shared helpers for domain lifecycle now live in `packages/auth/src/lib/sso/mspSsoResolution.ts` so both discovery and settings actions use the same normalization and validation behavior.
+- (2026-03-03) Added `listMspSsoDomainClaims` action with permission gate parity to existing domain management checks; action returns lifecycle metadata for each active claim.
+- (2026-03-03) Added `requestMspSsoDomainClaim` action to create/reuse pending claims and provision DNS TXT challenge material with hashed verification values.
+- (2026-03-03) Added `refreshMspSsoDomainClaimChallenge` action that always rotates active challenge material for an existing claim and reasserts `pending` claim status.
+- (2026-03-03) Added `verifyMspSsoDomainClaimOwnership` action that resolves DNS TXT records for the stored challenge label/value and promotes claim status to `verified` only on exact match.
+- (2026-03-03) Added `revokeMspSsoDomainClaim` action to transition active claims to `revoked` and invalidate any still-active verification challenges.
+- (2026-03-03) CE advisory save/remove path now explicitly sets/retains `claim_status='advisory'` on active registrations without any ownership proof gate.
+- (2026-03-03) Verified ownership conflict guard is now enforced twice: app-layer check during verify action and DB-layer partial unique index on `lower(domain)` for active `verified|verified_legacy` rows.
+- (2026-03-03) EE settings UI now renders lifecycle-aware claim rows with status badges and per-claim actions (`request`, `verify`, `refresh challenge`, `revoke`) instead of only a plain editable domain list.
+- (2026-03-03) Pending EE claims now render inline DNS TXT instructions in settings (host + value) sourced from the active challenge row.
+- (2026-03-03) CE UI copy now explicitly labels domain registration as advisory and clarifies that ownership verification is not enforced in Community Edition.
+- (2026-03-03) Settings copy now consistently states fallback behavior: domains without eligible claims route to Nine Minds app-level SSO providers.
+- (2026-03-03) Discovery helper now resolves domain ownership with both edition and claim lifecycle context (`eligibleForTakeover`) before selecting `tenant` vs `app` source.
+- (2026-03-03) EE routing gate is now strict: only `verified`/`verified_legacy` claims can produce tenant-scoped provider discovery; all other statuses bypass tenant takeover.
+- (2026-03-03) EE fallback behavior now explicitly routes `pending`, `rejected`, `revoked`, and ambiguous domain claims to app-level provider discovery.
+- (2026-03-03) CE routing now treats advisory claims as takeover-eligible, enabling tenant-scoped provider discovery without ownership verification requirements.
+- (2026-03-03) Unregistered/unresolved domains in both editions now consistently return app-level discovery output, preserving fallback behavior independent of tenant claim state.
+- (2026-03-03) Discover route contract remains invariant (`{ ok: true, providers: [] }` on invalid/rate-limited/error paths) even after lifecycle-aware helper changes.
+
+## Discoveries / Constraints
+
+- (2026-03-03) Existing domain-scoped discovery/resolver path already exists at `server/src/app/api/auth/msp/sso/discover/route.ts` and `server/src/app/api/auth/msp/sso/resolve/route.ts`.
+- (2026-03-03) Current domain mapping persistence uses `msp_sso_tenant_login_domains` and already supports normalized domain lookup.
+- (2026-03-03) Current fallback behavior already supports app-level provider readiness (`GOOGLE_OAUTH_*`, `MICROSOFT_OAUTH_*`).
+- (2026-03-03) CE/EE login wiring currently relies on edition aliasing for SSO provider buttons; CE parity must explicitly keep discovery-enabled behavior.
+- (2026-03-03) Existing managed email-domain flow (Resend-style) provides a useful pattern for async domain verification lifecycle in EE settings.
+- (2026-03-03) Existing `msp_sso_tenant_login_domains` table is already deployed in this branch and uses only `is_active`; lifecycle behavior must be introduced as additive columns to avoid breaking current discovery.
+- (2026-03-03) There is no tenant-level CE/EE column in the database schema; edition-aware defaults/backfill must rely on deployment edition context (env) rather than per-tenant data.
+- (2026-03-03) Challenge persistence needs composite tenant+claim foreign key (`tenant`, `claim_id`) because login-domain claims use composite primary key (`tenant`, `id`) for Citus compatibility.
+- (2026-03-03) Backfill migration sets EE existing rows to `verified_legacy` with inferred `claimed_at`/`verified_at` timestamps, while CE keeps advisory defaults.
+- (2026-03-03) Domain normalization now strips common decorations (`@`, `mailto:`, URL host wrappers, trailing dot) before validation, reducing mismatch drift between settings and login discovery.
+- (2026-03-03) Claims listing tolerates rollout ordering by checking lifecycle column existence at runtime and defaulting unknown/missing statuses to `advisory`.
+- (2026-03-03) Claim request action is idempotent for existing same-tenant `pending` claims when an active challenge already exists; otherwise it rotates by deactivating old active challenges and creating a new one.
+- (2026-03-03) Refresh semantics are intentionally non-idempotent: each refresh deactivates previous active challenge rows and creates a new DNS TXT value for the same claim id.
+- (2026-03-03) Verification action keeps neutral admin-safe failure messaging for DNS mismatch/missing challenge and does not expose sensitive internals.
+- (2026-03-03) Revoke flow updates lifecycle metadata (`claim_status_updated_at`, `revoked_at`) and keeps the claim row for historical/audit purposes instead of deleting it.
+- (2026-03-03) CE advisory remove remains non-destructive (`is_active=false`) so historical rows stay available for later reactivation/audit.
+- (2026-03-03) Conflict is resolved at verify time (not request time), matching PRD recommendation and preserving neutral request behavior.
+- (2026-03-03) CE and EE UX now branch in the same component using edition detection: CE keeps advisory save/remove list; EE uses immediate claim workflow actions.
+- (2026-03-03) Verification status feedback is surfaced through inline/error alert state and action-specific toasts (verify/refresh/request/revoke outcomes).
+- (2026-03-03) Header/description messaging now diverges by edition so EE focuses on claim lifecycle actions while CE emphasizes advisory registration semantics.
+- (2026-03-03) Added a persistent informational alert in the settings panel to reinforce fallback behavior independently of edition-specific controls.
+- (2026-03-03) Claim status precedence normalization (`verified > verified_legacy > pending > advisory > rejected > revoked`) prevents duplicate-row drift from producing unstable routing decisions.
+- (2026-03-03) Ambiguous multi-tenant mappings remain fail-closed and are never eligible for EE tenant takeover.
+- (2026-03-03) EE non-eligible statuses preserve anti-enumerating behavior by returning normal app-source provider readiness (including empty set when app providers are not configured).
+- (2026-03-03) CE still blocks `revoked`/`rejected` claims from tenant routing, preventing stale/deactivated claims from taking over discovery.
+- (2026-03-03) Discovery still returns valid neutral payloads when fallback providers are empty, avoiding auth-flow branching on domain existence.
+- (2026-03-03) Discovery logs remain safe metadata only (`source`, `providerCount`, `domain`, `ambiguous`), with no raw email disclosure.
+
+## Commands / Runbooks
+
+- (2026-03-03) Scaffolded plan bundle:
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/scaffold_plan.py "EE+CE Domain-Scoped SSO Takeover and Domain Approval" --slug ee-ce-domain-scoped-sso-takeover`
+- (2026-03-03) Optional plan validation:
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-03-03-ee-ce-domain-scoped-sso-takeover`
+- (2026-03-03) F001 implementation checks:
+  - `node -c server/migrations/20260303100000_add_msp_sso_domain_claim_lifecycle.cjs`
+  - `npx vitest run server/src/test/unit/migrations/mspSsoTenantLoginDomainsMigration.test.ts`
+- (2026-03-03) F002 implementation checks:
+  - `node -c server/migrations/20260303101000_create_msp_sso_domain_verification_challenges.cjs`
+  - `cd server && npx vitest run src/test/unit/migrations/mspSsoTenantLoginDomainsMigration.test.ts`
+- (2026-03-03) F003 implementation checks:
+  - `node -c server/migrations/20260303102000_backfill_msp_sso_domain_claim_status_defaults.cjs`
+  - `cd server && npx vitest run src/test/unit/migrations/mspSsoTenantLoginDomainsMigration.test.ts`
+- (2026-03-03) F004 implementation checks:
+  - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+  - `cd server && npx vitest run ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
+- (2026-03-03) F005 implementation checks:
+  - `cd server && npx vitest run ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
+- (2026-03-03) F006 implementation checks:
+  - `cd server && npx vitest run ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
+- (2026-03-03) F007 implementation checks:
+  - `cd server && npx vitest run ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
+- (2026-03-03) F008 implementation checks:
+  - `cd server && npx vitest run ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
+- (2026-03-03) F009 implementation checks:
+  - `cd server && npx vitest run ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
+- (2026-03-03) F010 implementation checks:
+  - `cd server && npx vitest run ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
+- (2026-03-03) F011 implementation checks:
+  - `node -c server/migrations/20260303103000_enforce_verified_msp_sso_domain_ownership.cjs`
+  - `cd server && npx vitest run ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
+- (2026-03-03) F012 implementation checks:
+  - `cd server && npx vitest run ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
+  - `cd server && npx vitest run ../packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.providers.test.ts`
+- (2026-03-03) F013 implementation checks:
+  - `cd server && npx vitest run ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
+  - `cd server && npx vitest run ../packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.providers.test.ts`
+- (2026-03-03) F014 implementation checks:
+  - `cd server && npx vitest run ../packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.providers.test.ts`
+- (2026-03-03) F015 implementation checks:
+  - `cd server && npx vitest run ../packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.providers.test.ts`
+- (2026-03-03) F016 implementation checks:
+  - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) F017 implementation checks:
+  - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) F018 implementation checks:
+  - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) F019 implementation checks:
+  - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) F020 implementation checks:
+  - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) F021 implementation checks:
+  - `cd server && npx vitest run src/app/api/auth/msp/sso/discover/route.test.ts`
+
+## Links / References
+
+- Prior domain-scoped discovery plan:
+  - `ee/docs/plans/2026-02-24-msp-domain-scoped-sso-discovery/PRD.md`
+- Discovery/resolver implementation:
+  - `packages/auth/src/lib/sso/mspSsoResolution.ts`
+  - `server/src/app/api/auth/msp/sso/discover/route.ts`
+  - `server/src/app/api/auth/msp/sso/resolve/route.ts`
+- Domain management actions/UI:
+  - `packages/integrations/src/actions/integrations/mspSsoDomainActions.ts`
+  - `packages/integrations/src/components/settings/integrations/MspSsoLoginDomainsSettings.tsx`
+- Managed email-domain reference patterns:
+  - `ee/server/src/lib/actions/email-actions/managedDomainActions.ts`
+  - `packages/integrations/src/actions/email-actions/emailDomainActions.ts`
+
+## Open Questions
+
+- Should EE verified-domain conflicts be blocked immediately at claim request time or at verification completion time?
+- Should EE verified claims support periodic re-verification in a future phase, or remain manual revoke/re-verify only?
+- (2026-03-03) Completed `F022`: resolver now revalidates tenant takeover eligibility at resolve-time using current domain lifecycle (`resolveTenantForMspSsoDomain`) before allowing tenant source, and safely falls back to app source only when allow-list permits and app credentials exist.
+- (2026-03-03) Security hardening tied to resolver revalidation: discovery cookie now carries normalized domain, and tenant discovery context is only used when resolver email domain matches cookie domain.
+- (2026-03-03) Validation run for `F022`:
+  - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoResolution.test.ts src/app/api/auth/msp/sso/discover/route.test.ts src/app/api/auth/msp/sso/resolve/route.test.ts`
+- (2026-03-03) Completed `F023`: resolver generic failure contract remains invariant for invalid/disallowed/rate-limited resolution paths while lifecycle checks are applied internally.
+- (2026-03-03) Validation run for `F023`:
+  - `cd server && npx vitest run src/app/api/auth/msp/sso/resolve/route.test.ts`
+- (2026-03-03) Completed `F024`: discovery payload now includes normalized domain and parsing rejects signed payloads with invalid domain values; resolve/discover cookie tests assert `httpOnly`/`sameSite=lax`/short TTL (`maxAge=300`).
+- (2026-03-03) Validation run for `F024`:
+  - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoResolution.test.ts src/app/api/auth/msp/sso/discover/route.test.ts src/app/api/auth/msp/sso/resolve/route.test.ts`
+- (2026-03-03) Completed `F025`: MSP credentials sign-in path remains unchanged and isolated from resolver-cookie logic (`MspCredentialsFlow.contract.test.ts`).
+- (2026-03-03) Validation run for `F025`:
+  - `cd server && npx vitest run ../packages/auth/src/components/MspCredentialsFlow.contract.test.ts`
+- (2026-03-03) Completed `F026`: added explicit client-portal auth contract coverage to assert no MSP SSO discovery/resolve endpoint wiring in client-portal sign-in code paths.
+- (2026-03-03) Note: `src/test/unit/app/auth/client-portal/signin/page.test.ts` currently fails in isolation due an existing import/mocking path mismatch (`@alga-psa/db/models/UserSession`), so validation used package-level contract tests instead.
+- (2026-03-03) Validation run for `F026`:
+  - `cd server && npx vitest run ../packages/auth/src/components/ClientLoginForm.ssoGuard.test.ts ../packages/auth/src/components/ClientPortalAuthUnchanged.contract.test.ts`
+- (2026-03-03) Completed `F027`: CE/EE parity contract confirms MSP SSO entry wiring uses discovery-enabled provider buttons implementation (no null/stub path).
+- (2026-03-03) Validation run for `F027`:
+  - `cd server && npx vitest run ../packages/auth/src/components/ssoProviderButtonsImport.test.ts ../packages/auth/src/components/ssoProviderButtons.ceEeParity.test.ts`
+- (2026-03-03) Completed `F028`: added contract assertion that `MspLoginForm` passes the live typed email state into `SsoProviderButtons` (`email={email}`), preserving discovery input propagation for CE/EE builds via shared entry wiring.
+- (2026-03-03) Validation run for `F028`:
+  - `cd server && npx vitest run ../packages/auth/src/components/ssoProviderButtonsImport.test.ts`
+- (2026-03-03) Completed `F029`: existing MSP SSO button behavior suite continues to validate disabled state rules, in-flight discovery behavior, provider eligibility gating, disabled-click no-op, and remembered provider preference handling.
+- (2026-03-03) Validation run for `F029`:
+  - `cd server && npx vitest run ../packages/auth/src/components/SsoProviderButtons.msp.test.tsx`
+- (2026-03-03) Completed `F030`: added tenant-admin runbook doc for EE domain takeover lifecycle (request -> DNS TXT verification -> verified -> revoke) at `docs/integrations/msp-sso-domain-claims.md`.
+- (2026-03-03) Validation run for `F030`:
+  - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoDocsContract.test.ts`
+- (2026-03-03) Completed `F031`: documentation now includes CE advisory mode behavior, explicitly stating non-blocking ownership verification and advisory routing limitations.
+- (2026-03-03) Validation source: `docs/integrations/msp-sso-domain-claims.md` (section `CE Advisory Domain Registration`) and docs contract assertions.
+- (2026-03-03) Completed `F032`: documentation now includes Nine Minds app-level fallback prerequisites and unmanaged/unapproved domain routing behavior with required `*_OAUTH_*` env vars.
+- (2026-03-03) Validation source: `docs/integrations/msp-sso-domain-claims.md` (section `App-Level Fallback`) and docs contract assertions.
+- (2026-03-03) Completed `F033`: expanded action-level unit coverage for lifecycle endpoints and permission guards in `mspSsoDomainActions.test.ts` (forbidden checks across request/refresh/verify/revoke plus validation contracts).
+- (2026-03-03) Validation run for `F033`:
+  - `cd server && npx vitest run ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
+- (2026-03-03) Completed `F034`: expanded discovery/resolver matrix coverage with explicit EE verified/pending/revoked/ambiguous cases and CE advisory routing case in `mspSsoResolution.test.ts`, plus endpoint contract suites for discover/resolve.
+- (2026-03-03) Validation run for `F034`:
+  - `cd server && npx vitest run ../packages/auth/src/lib/sso/mspSsoResolution.test.ts src/app/api/auth/msp/sso/discover/route.test.ts src/app/api/auth/msp/sso/resolve/route.test.ts`
+- (2026-03-03) Completed `F035`: route contract tests verify `/auth/msp/signin` entry path and callbackUrl passthrough/default behavior remain unchanged under lifecycle integration.
+- (2026-03-03) Validation run for `F035`:
+  - `cd server && npx vitest run ../packages/auth/src/components/MspSignInRoute.contract.test.ts`
+- (2026-03-03) Completed `T001`: added migration contract suite `server/src/test/unit/migrations/mspSsoDomainLifecycle.migrations.test.ts` validating lifecycle schema additions (`claim_status` + lifecycle metadata columns/check constraint).
+- (2026-03-03) Validation run for `T001`:
+  - `cd server && npx vitest run src/test/unit/migrations/mspSsoDomainLifecycle.migrations.test.ts`
+- (2026-03-03) Completed `T002`: migration contract suite covers challenge table creation/index contract in `mspSsoDomainLifecycle.migrations.test.ts`.
+- (2026-03-03) Completed `T003`: migration contract suite verifies rollback drops lifecycle columns and challenge table.
+- (2026-03-03) Completed `T004`: migration contract suite verifies EE backfill SQL sets `verified_legacy` defaults.
+- (2026-03-03) Completed `T005`: migration contract suite verifies CE backfill SQL sets `advisory` defaults.
+- (2026-03-03) Completed `T006`: domain normalization covered by helper normalization tests and save-domain normalization behavior.
+- (2026-03-03) Completed `T007`: malformed domain validation covered by deterministic neutral error assertions in action tests.
+- (2026-03-03) Completed `T008`: permission denial for list-claims and lifecycle actions covered in `mspSsoDomainActions.test.ts`.
+- (2026-03-03) Completed `T009`: claims list metadata contract covered in `mspSsoDomainActions.test.ts` (normalized claim fields + lifecycle timestamps).
+- (2026-03-03) Completed `T010`: request-claim happy path coverage added (pending claim + active DNS challenge creation).
+- (2026-03-03) Completed `T011`: request-claim idempotency coverage added for existing pending claim + active challenge.
+- (2026-03-03) Completed `T012`: refresh challenge coverage added for token rotation and invalidation of previous active challenge.
+- (2026-03-03) Completed `T013`: verify-claim success coverage added for matching DNS TXT challenge promoting claim to verified.
+- (2026-03-03) Completed `T014`: verify-claim mismatch coverage added with neutral actionable error and pending-state preservation.
+- (2026-03-03) Completed `T015`: revoke coverage added (verified claim transitions to revoked and active challenge invalidates).
+- (2026-03-03) Completed `T016`: conflict coverage added (verification blocked when another tenant already holds verified claim).
+- (2026-03-03) Completed `T017`: CE advisory add-domain behavior covered by save action persistence + normalized active domain assertions.
+- (2026-03-03) Completed `T018`: CE advisory remove-domain behavior covered by save action deactivation/removal assertions.
+- (2026-03-03) Completed `T019`: added EE runtime UI contract coverage asserting lifecycle claim rows render with status badges (`Pending`, `Verified`) from `listMspSsoDomainClaims` data.
+- (2026-03-03) Validation run for `T019`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/integrations/src/components/settings/integrations/MspSsoLoginDomainsSettings.contract.test.tsx`
+- (2026-03-03) Completed `T020`: EE settings test now asserts pending claims render DNS TXT verification instructions with host and value hints.
+- (2026-03-03) Validation run for `T020`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/integrations/src/components/settings/integrations/MspSsoLoginDomainsSettings.contract.test.tsx`
+- (2026-03-03) Completed `T021`: EE settings verification-failure path now checks neutral actionable error messaging and destructive feedback toast.
+- (2026-03-03) Validation run for `T021`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/integrations/src/components/settings/integrations/MspSsoLoginDomainsSettings.contract.test.tsx`
+- (2026-03-03) Completed `T022`: CE settings suite now asserts advisory-mode guidance copy is rendered for community deployments.
+- (2026-03-03) Validation run for `T022`:
+  - `cd server && npx vitest run --coverage.enabled=false src/test/unit/components/integrations/MspSsoLoginDomainsSettings.test.tsx`
+- (2026-03-03) Completed `T023`: CE UI test now covers advisory add/remove controls end-to-end and asserts persisted payload ordering.
+- (2026-03-03) Validation run for `T023`:
+  - `cd server && npx vitest run --coverage.enabled=false src/test/unit/components/integrations/MspSsoLoginDomainsSettings.test.tsx`
+- (2026-03-03) Completed `T024`: CE settings copy contract now explicitly asserts unmanaged-domain fallback to Nine Minds app-level providers.
+- (2026-03-03) Validation run for `T024`:
+  - `cd server && npx vitest run --coverage.enabled=false src/test/unit/components/integrations/MspSsoLoginDomainsSettings.test.tsx`
+- (2026-03-03) Completed `T025`: discovery helper matrix tests now assert edition + claim lifecycle decisions drive `tenant` vs `app` source selection.
+- (2026-03-03) Validation run for `T025`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T026`: EE discovery with verified claim and tenant Google credentials returns tenant source + google provider.
+- (2026-03-03) Validation run for `T026`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T027`: EE discovery with verified claim and tenant Microsoft credentials returns tenant source + azure-ad provider.
+- (2026-03-03) Validation run for `T027`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T028`: EE discovery with pending claim returns app-level fallback providers only.
+- (2026-03-03) Validation run for `T028`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T029`: EE discovery with revoked claim returns app-level fallback providers only.
+- (2026-03-03) Validation run for `T029`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T030`: EE discovery with ambiguous domain ownership returns app-level fallback providers only.
+- (2026-03-03) Validation run for `T030`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T031`: CE discovery with advisory registered domain can return tenant-scoped provider eligibility.
+- (2026-03-03) Validation run for `T031`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T032`: CE discovery with unregistered domain returns app-level fallback providers.
+- (2026-03-03) Validation run for `T032`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T033`: Unresolved domain in both editions returns app-level fallback provider set.
+- (2026-03-03) Validation run for `T033`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T034`: Discover endpoint invalid-email path returns invariant neutral schema.
+- (2026-03-03) Validation run for `T034`:
+  - `cd server && npx vitest run --coverage.enabled=false src/app/api/auth/msp/sso/discover/route.test.ts`
+- (2026-03-03) Completed `T035`: Discover endpoint rate-limit path returns same neutral schema and behavior.
+- (2026-03-03) Validation run for `T035`:
+  - `cd server && npx vitest run --coverage.enabled=false src/app/api/auth/msp/sso/discover/route.test.ts`
+- (2026-03-03) Completed `T036`: Discover endpoint logging excludes raw email and keeps only safe metadata.
+- (2026-03-03) Validation run for `T036`:
+  - `cd server && npx vitest run --coverage.enabled=false src/app/api/auth/msp/sso/discover/route.test.ts`
+- (2026-03-03) Completed `T037`: Resolver in EE with verified claim context selects tenant credential source.
+- (2026-03-03) Validation run for `T037`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T038`: Resolver in EE with non-verified claim context uses app fallback or generic failure per eligibility.
+- (2026-03-03) Validation run for `T038`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T039`: Resolver denies provider attempts outside discovered allow-list with generic response.
+- (2026-03-03) Validation run for `T039`:
+  - `cd server && npx vitest run --coverage.enabled=false src/app/api/auth/msp/sso/resolve/route.test.ts`
+- (2026-03-03) Completed `T040`: Resolver stale discovery context is revalidated and cannot force unauthorized tenant source.
+- (2026-03-03) Validation run for `T040`:
+  - `cd server && npx vitest run --coverage.enabled=false src/app/api/auth/msp/sso/resolve/route.test.ts`
+- (2026-03-03) Completed `T041`: Resolver invalid payload, rate-limit, and source-failure responses remain externally indistinguishable.
+- (2026-03-03) Validation run for `T041`:
+  - `cd server && npx vitest run --coverage.enabled=false src/app/api/auth/msp/sso/resolve/route.test.ts`
+- (2026-03-03) Completed `T042`: Discovery cookie payload remains signed, short-lived, and free of provider secrets.
+- (2026-03-03) Validation run for `T042`:
+  - `cd server && npx vitest run --coverage.enabled=false src/app/api/auth/msp/sso/discover/route.test.ts`
+- (2026-03-03) Completed `T043`: Resolution cookie payload remains signed, short-lived, and free of provider secrets.
+- (2026-03-03) Validation run for `T043`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T044`: MSP credentials login succeeds unchanged when domain claim states vary.
+- (2026-03-03) Validation run for `T044`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/components/MspCredentialsFlow.contract.test.ts`
+- (2026-03-03) Completed `T045`: Client portal signin flow remains unchanged and does not call MSP discovery endpoints.
+- (2026-03-03) Validation run for `T045`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/components/ClientPortalAuthUnchanged.contract.test.ts`
+- (2026-03-03) Completed `T046`: CE build wiring resolves MSP SSO entry to discovery-enabled provider buttons implementation.
+- (2026-03-03) Validation run for `T046`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/components/ssoProviderButtons.ceEeParity.test.ts`
+- (2026-03-03) Completed `T047`: MSP login form passes normalized email prop into SSO discovery component in both editions.
+- (2026-03-03) Validation run for `T047`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/components/ssoProviderButtonsImport.test.ts`
+- (2026-03-03) Completed `T048`: SSO buttons remain disabled for invalid email and while discovery is in flight.
+- (2026-03-03) Validation run for `T048`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/components/SsoProviderButtons.msp.test.tsx`
+- (2026-03-03) Completed `T049`: SSO buttons enable only providers returned by discovery response and keep unsupported buttons disabled.
+- (2026-03-03) Validation run for `T049`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/components/SsoProviderButtons.msp.test.tsx`
+- (2026-03-03) Completed `T050`: Disabled SSO button clicks never trigger resolver/start request.
+- (2026-03-03) Validation run for `T050`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/components/SsoProviderButtons.msp.test.tsx`
+- (2026-03-03) Completed `T051`: Remembered provider preference is only applied when provider remains eligible after discovery.
+- (2026-03-03) Validation run for `T051`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/components/SsoProviderButtons.msp.test.tsx`
+- (2026-03-03) Completed `T052`: Docs describe EE request-verify-revoke lifecycle and DNS ownership verification steps.
+- (2026-03-03) Validation run for `T052`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoDocsContract.test.ts`
+- (2026-03-03) Completed `T053`: Docs describe CE advisory registration behavior and non-blocking ownership model.
+- (2026-03-03) Validation run for `T053`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoDocsContract.test.ts`
+- (2026-03-03) Completed `T054`: Docs describe Nine Minds fallback provider prerequisites and unmanaged-domain behavior.
+- (2026-03-03) Validation run for `T054`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoDocsContract.test.ts`
+- (2026-03-03) Completed `T055`: DB-backed integration happy path: EE verified claim + tenant Microsoft credentials returns tenant source and ["azure-ad"].
+- (2026-03-03) Validation run for `T055`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T056`: DB-backed integration guard: EE pending claim with tenant credentials still returns app fallback source.
+- (2026-03-03) Validation run for `T056`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T057`: DB-backed integration guard: second EE tenant cannot verify takeover for already-verified domain.
+- (2026-03-03) Validation run for `T057`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/integrations/src/actions/integrations/mspSsoDomainActions.test.ts`
+- (2026-03-03) Completed `T058`: DB-backed integration guard: revoked EE claim no longer enables tenant takeover routing.
+- (2026-03-03) Validation run for `T058`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T059`: DB-backed integration CE advisory path: registered advisory domain can route to tenant source when tenant credentials exist.
+- (2026-03-03) Validation run for `T059`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/lib/sso/mspSsoResolution.test.ts`
+- (2026-03-03) Completed `T060`: Route contract preserves `/auth/msp/signin` entry path and callbackUrl passthrough under new lifecycle rules.
+- (2026-03-03) Validation run for `T060`:
+  - `cd server && npx vitest run --coverage.enabled=false ../packages/auth/src/components/MspSignInRoute.contract.test.ts`

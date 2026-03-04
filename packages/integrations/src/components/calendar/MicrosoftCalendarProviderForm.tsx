@@ -16,7 +16,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { CheckCircle, Clock, ExternalLink, XCircle } from 'lucide-react';
-import { initiateCalendarOAuth, createCalendarProvider, updateCalendarProvider } from '@alga-psa/integrations/actions';
+import { initiateCalendarOAuth, createCalendarProvider, updateCalendarProvider, getMicrosoftIntegrationStatus } from '@alga-psa/integrations/actions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { CalendarProviderConfig } from '@alga-psa/types';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -47,6 +47,8 @@ export function MicrosoftCalendarProviderForm({
   const [oauthError, setOAuthError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [calendarProviderId, setCalendarProviderId] = useState<string | undefined>(provider?.id);
+  const [providerSetupReady, setProviderSetupReady] = useState(false);
+  const [providerSetupLoading, setProviderSetupLoading] = useState(true);
 
   const form = useForm<MicrosoftCalendarProviderFormData>({
     resolver: zodResolver(microsoftCalendarProviderSchema),
@@ -71,6 +73,21 @@ export function MicrosoftCalendarProviderForm({
       }
     }
   }, [provider]);
+
+  useEffect(() => {
+    const loadProviderSetupStatus = async () => {
+      try {
+        const res = await getMicrosoftIntegrationStatus();
+        setProviderSetupReady(Boolean(res.success && res.config?.ready));
+      } catch {
+        setProviderSetupReady(false);
+      } finally {
+        setProviderSetupLoading(false);
+      }
+    };
+
+    loadProviderSetupStatus();
+  }, []);
 
   // Listen for OAuth callback messages
   useEffect(() => {
@@ -299,6 +316,27 @@ export function MicrosoftCalendarProviderForm({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            {!providerSetupLoading && !providerSetupReady && (
+              <Alert>
+                <AlertDescription>
+                  <div className="space-y-2">
+                    <div className="font-medium">Microsoft provider settings are not configured.</div>
+                    <div className="text-sm text-muted-foreground">
+                      Configure Providers first in <strong>Settings → Integrations → Providers</strong>, then return here to connect Outlook Calendar.
+                    </div>
+                    <Button
+                      id="configure-microsoft-calendar-providers-link"
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.location.assign('/msp/settings?category=providers')}
+                    >
+                      Open Providers Settings
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
             <div className={`p-4 rounded-lg transition-colors ${
               oauthStatus === 'success' ? 'bg-success/10 border-2 border-success/30' : 'bg-muted/50'
             }`}>
@@ -323,7 +361,7 @@ export function MicrosoftCalendarProviderForm({
                   type="button"
                   variant="outline"
                   onClick={handleAuthorize}
-                  disabled={oauthStatus === 'authorizing'}
+                  disabled={!providerSetupReady || oauthStatus === 'authorizing'}
                 >
                   {oauthStatus === 'authorizing' && (
                     <>

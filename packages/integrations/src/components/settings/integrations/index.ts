@@ -2,6 +2,7 @@ export { default as AccountingIntegrationsSetup } from './AccountingIntegrations
 export { default as CSVIntegrationSettings } from './CSVIntegrationSettings';
 export { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
 export { default as IntegrationsSettingsPage } from './IntegrationsSettingsPage';
+export { MspSsoLoginDomainsSettings } from './MspSsoLoginDomainsSettings';
 export { default as NinjaOneComplianceDashboard } from './NinjaOneComplianceDashboard';
 export { default as RmmIntegrationsSetup } from './RmmIntegrationsSetup';
 export { default as XeroCsvClientSyncPanel } from './XeroCsvClientSyncPanel';

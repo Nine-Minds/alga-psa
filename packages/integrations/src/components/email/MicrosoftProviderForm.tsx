@@ -15,9 +15,9 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
-import { ExternalLink, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { ExternalLink, CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './types';
-import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '@alga-psa/integrations/actions';
+import { createEmailProvider, updateEmailProvider, upsertEmailProvider, getMicrosoftIntegrationStatus } from '@alga-psa/integrations/actions';
 import { initiateEmailOAuth } from '@alga-psa/integrations/actions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getInboundTicketDefaults } from '@alga-psa/integrations/actions';
@@ -25,9 +25,6 @@ import { getInboundTicketDefaults } from '@alga-psa/integrations/actions';
 const microsoftProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
   mailbox: z.string().email('Valid email address is required'),
-  clientId: z.string().min(1, 'Client ID is required'),
-  clientSecret: z.string().min(1, 'Client Secret is required'),
-  tenantId: z.string().optional(),
   redirectUri: z.string().url('Valid redirect URI is required'),
   isActive: z.boolean(),
   autoProcessEmails: z.boolean(),
@@ -53,9 +50,9 @@ export function MicrosoftProviderForm({
 }: MicrosoftProviderFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showClientSecret, setShowClientSecret] = useState(false);
+  const [providerSetupReady, setProviderSetupReady] = useState(false);
+  const [providerSetupLoading, setProviderSetupLoading] = useState(true);
   const [oauthStatus, setOauthStatus] = useState<'idle' | 'authorizing' | 'success' | 'error'>('idle');
-  const [oauthData, setOauthData] = useState<any>(null);
   const [oauthMessageReceived, setOauthMessageReceived] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [defaultsOptions, setDefaultsOptions] = useState<{ value: string; label: string }[]>([]);
@@ -67,9 +64,6 @@ export function MicrosoftProviderForm({
     defaultValues: provider && provider.microsoftConfig ? {
       providerName: provider.providerName,
       mailbox: provider.mailbox,
-      clientId: provider.microsoftConfig.client_id || '',
-      clientSecret: provider.microsoftConfig.client_secret || '',
-      tenantId: provider.microsoftConfig.tenant_id,
       redirectUri: provider.microsoftConfig.redirect_uri,
       isActive: provider.isActive,
       autoProcessEmails: provider.microsoftConfig.auto_process_emails ?? true,
@@ -103,6 +97,20 @@ export function MicrosoftProviderForm({
     return () => window.removeEventListener('inbound-defaults-updated', onUpdate as any);
   }, []);
 
+  React.useEffect(() => {
+    const loadProviderSetupStatus = async () => {
+      try {
+        const res = await getMicrosoftIntegrationStatus();
+        setProviderSetupReady(Boolean(res.success && res.config?.ready));
+      } catch {
+        setProviderSetupReady(false);
+      } finally {
+        setProviderSetupLoading(false);
+      }
+    };
+    loadProviderSetupStatus();
+  }, []);
+
   
 
   const onSubmit = async (data: MicrosoftProviderFormData) => {
@@ -126,9 +134,9 @@ export function MicrosoftProviderForm({
         isActive: data.isActive,
         inboundTicketDefaultsId: data.inboundTicketDefaultsId,
         microsoftConfig: {
-          client_id: data.clientId,
-          client_secret: data.clientSecret,
-          tenant_id: data.tenantId || '',
+          client_id: '',
+          client_secret: '',
+          tenant_id: '',
           redirect_uri: data.redirectUri,
           auto_process_emails: data.autoProcessEmails,
           folder_filters: data.folderFilters ? data.folderFilters.split(',').map(f => f.trim()) : ['Inbox'],
@@ -176,9 +184,9 @@ export function MicrosoftProviderForm({
           isActive: formData.isActive,
           inboundTicketDefaultsId: (form.getValues() as any).inboundTicketDefaultsId || undefined,
           microsoftConfig: {
-            client_id: formData.clientId,
-            client_secret: formData.clientSecret,
-            tenant_id: formData.tenantId || '',
+            client_id: '',
+            client_secret: '',
+            tenant_id: '',
             redirect_uri: formData.redirectUri,
             auto_process_emails: formData.autoProcessEmails,
             folder_filters: formData.folderFilters && formData.folderFilters.trim() ? formData.folderFilters.split(',').map(f => f.trim()) : ['INBOX'],
@@ -232,12 +240,6 @@ export function MicrosoftProviderForm({
           setOauthMessageReceived(true);
           
           if (event.data.success) {
-            // Store the authorization code and tokens in OAuth data (not form)
-            // These are temporary OAuth fields, not part of the provider configuration
-            
-            // Store tokens for the submit
-            setOauthData(event.data.data);
-            
             setOauthStatus('success');
           } else {
             setOauthStatus('error');
@@ -266,8 +268,6 @@ export function MicrosoftProviderForm({
             <ul className="list-disc list-inside space-y-1">
               {form.formState.errors.providerName && <li>Provider Name</li>}
               {form.formState.errors.mailbox && <li>Email Address</li>}
-              {form.formState.errors.clientId && <li>Client ID</li>}
-              {form.formState.errors.clientSecret && <li>Client Secret</li>}
               {form.formState.errors.redirectUri && <li>Redirect URI</li>}
             </ul>
           </AlertDescription>
@@ -369,7 +369,7 @@ export function MicrosoftProviderForm({
         <CardHeader>
           <CardTitle>Microsoft OAuth Configuration</CardTitle>
           <CardDescription>
-            Configure OAuth settings from your Azure AD app registration
+            Microsoft app credentials are configured in Providers settings and reused here.
             <Button 
               id="azure-portal-link"
               type="button" 
@@ -378,60 +378,32 @@ export function MicrosoftProviderForm({
               onClick={() => window.open('https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade', '_blank')}
             >
               <ExternalLink className="h-3 w-3 mr-1" />
-              Azure Portal
+              Microsoft Entra
             </Button>
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="clientId">Client ID *</Label>
-              <Input
-                id="clientId"
-                {...form.register('clientId')}
-                placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                className={hasAttemptedSubmit && form.formState.errors.clientId ? 'border-red-500' : ''}
-              />
-              {form.formState.errors.clientId && (
-                <p className="text-sm text-red-500">{form.formState.errors.clientId.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="tenantId">Tenant ID (Optional)</Label>
-              <Input
-                id="tenantId"
-                {...form.register('tenantId')}
-                placeholder="common (or specific tenant ID)"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="clientSecret">Client Secret *</Label>
-            <div className="relative">
-              <Input
-                id="clientSecret"
-                type={showClientSecret ? 'text' : 'password'}
-                {...form.register('clientSecret')}
-                placeholder="Enter client secret"
-                className={hasAttemptedSubmit && form.formState.errors.clientSecret ? 'border-red-500' : ''}
-              />
-              <Button
-                id="toggle-secret-visibility"
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3"
-                onClick={() => setShowClientSecret(!showClientSecret)}
-              >
-                {showClientSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </Button>
-            </div>
-            {form.formState.errors.clientSecret && (
-              <p className="text-sm text-red-500">{form.formState.errors.clientSecret.message}</p>
-            )}
-          </div>
+          {!providerSetupLoading && !providerSetupReady && (
+            <Alert>
+              <AlertDescription>
+                <div className="space-y-2">
+                  <div className="font-medium">Microsoft provider settings are not configured.</div>
+                  <div className="text-sm text-muted-foreground">
+                    Configure Providers first in <strong>Settings → Integrations → Providers</strong>, then return here to authorize this mailbox.
+                  </div>
+                  <Button
+                    id="configure-microsoft-providers-link"
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.location.assign('/msp/settings?category=providers')}
+                  >
+                    Open Providers Settings
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="redirectUri">Redirect URI *</Label>
@@ -460,7 +432,7 @@ export function MicrosoftProviderForm({
                 type="button"
                 variant="outline"
                 onClick={handleOAuthAuthorization}
-                disabled={!form.watch('clientId') || !form.watch('redirectUri') || oauthStatus === 'authorizing'}
+                disabled={!providerSetupReady || !form.watch('redirectUri') || oauthStatus === 'authorizing'}
               >
                 {oauthStatus === 'authorizing' && 'Authorizing...'}
                 {oauthStatus === 'success' && <><CheckCircle className="h-4 w-4 mr-2" />Authorized</>}
