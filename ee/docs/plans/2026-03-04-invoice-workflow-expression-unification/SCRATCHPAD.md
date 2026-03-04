@@ -46,6 +46,7 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
   - `shared/workflow/expression-authoring/__tests__/insertionDom.test.ts`
   These cover T001-T012 contract behaviors.
 - (2026-03-04) T002 verified by `coreContracts.test.ts` roundtrip serialization/deserialization assertions for shared context roots.
+- (2026-03-04) T003 verified by deterministic path ordering assertions in `coreContracts.test.ts` (`buildPathOptionsFromContextRoots` nested schema flattening).
 - (2026-03-04) Preserve persisted contracts:
   - Invoice keeps AST value expressions (`literal|binding|path|template`).
   - Workflow keeps `{ $expr: string }`.

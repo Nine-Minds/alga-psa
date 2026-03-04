@@ -14,7 +14,7 @@
   {
     "id": "T003",
     "description": "Unit: shared path discovery flattens nested object paths in deterministic order.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
