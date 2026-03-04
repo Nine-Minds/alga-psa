@@ -1,0 +1,266 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: shared expression mode contract accepts only `path-only`, `template`, and `expression`.",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: shared context root model serializes/deserializes predictable root/path metadata.",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: shared path discovery flattens nested object paths in deterministic order.",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: shared path discovery includes array markers/segments according to design rules.",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: insertion helper inserts token at cursor start/middle/end in a plain input.",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: insertion helper replaces active selection range correctly in textarea/input.",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: insertion helper returns no-op when target element is readonly/disabled/unfocused.",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T008",
+    "description": "Unit: shared validation result object normalizes severity/path/message fields.",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T009",
+    "description": "Unit: invoice context adapter emits expected roots and canonical billing path options.",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T010",
+    "description": "Unit: invoice adapter path option labels stay stable for known bindings (invoice/customer/tenant/item).",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T011",
+    "description": "Unit: workflow context adapter emits payload/vars/meta/error and forEach roots when present.",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T012",
+    "description": "Unit: workflow adapter resolves vars paths from prior step output schema recursively.",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T013",
+    "description": "Integration: invoice palette FIELDS list renders from adapter-provided options (not hardcoded catalog).",
+    "implemented": false,
+    "featureIds": ["F008", "F009"]
+  },
+  {
+    "id": "T014",
+    "description": "Integration: invoice field search filters adapter-provided options by label/path.",
+    "implemented": false,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T015",
+    "description": "Integration: invoice `bindingKey` insertion writes raw path token (no moustache wrapper).",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T016",
+    "description": "Integration: invoice text insertion writes moustache token in template mode.",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T017",
+    "description": "Integration: invoice fallback insertion path appends token to selected text node metadata when inspector target is absent.",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T018",
+    "description": "Unit: invoice moustache parser compiles single token text (`{{invoice.total}}`) into AST `path` expression.",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T019",
+    "description": "Unit: invoice moustache parser compiles mixed literal + tokens into AST `template` expression with args.",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T020",
+    "description": "Integration: invoice imported-text preservation keeps original AST expression when preview text is unchanged.",
+    "implemented": false,
+    "featureIds": ["F012", "F013"]
+  },
+  {
+    "id": "T021",
+    "description": "Integration: invoice exported AST remains deterministic after export->import->export with shared layer enabled.",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T022",
+    "description": "Integration: invoice validation feedback appears for invalid inserted path and allows correction without crashing editor.",
+    "implemented": false,
+    "featureIds": ["F014", "F021"]
+  },
+  {
+    "id": "T023",
+    "description": "Unit: workflow legacy `${...}` path extraction helper is removed or unused in step validation flow.",
+    "implemented": false,
+    "featureIds": ["F015", "F027"]
+  },
+  {
+    "id": "T024",
+    "description": "Integration: workflow step expression validation panel uses shared validation results for errors and warnings.",
+    "implemented": false,
+    "featureIds": ["F015", "F016"]
+  },
+  {
+    "id": "T025",
+    "description": "Integration: workflow validation correctly flags unknown roots and missing vars references through shared validator.",
+    "implemented": false,
+    "featureIds": ["F016", "F021"]
+  },
+  {
+    "id": "T026",
+    "description": "Unit: workflow editor completion provider function list is filtered to runtime-allowlisted function set.",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T027",
+    "description": "Unit: workflow diagnostics provider function warnings align with runtime allowlist (no hinted-but-disallowed functions).",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T028",
+    "description": "Regression: workflow persisted config still stores expressions as `{ $expr: string }` with no schema change.",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T029",
+    "description": "Unit: runtime expression engine still rejects disallowed functions after editor alignment changes.",
+    "implemented": false,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T030",
+    "description": "Unit: runtime expression engine still enforces timeout and output size limits after migration.",
+    "implemented": false,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T031",
+    "description": "Unit: shared schema-aware path check returns informational diagnostics for unresolved schema paths.",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T032",
+    "description": "Integration: Monaco insertion path uses shared insertion semantics and preserves cursor position post-insert.",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T033",
+    "description": "Integration: Monaco drop/insert path continues stripping trailing snippet placeholders where applicable.",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T034",
+    "description": "Integration: invoice input insertion remains cursor-accurate for repeated insertions and mixed manual typing.",
+    "implemented": false,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T035",
+    "description": "Integration: invoice text preview resolves known moustache tokens into formatted values and leaves unknown tokens visibly marked.",
+    "implemented": false,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T036",
+    "description": "Regression: existing invoice preview mode tests for field/table/totals scaffolds remain green.",
+    "implemented": false,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T037",
+    "description": "Regression: workflow runtime v2 unit suite remains green for expression compile/evaluate/resolve behaviors.",
+    "implemented": false,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T038",
+    "description": "Regression: workflow runtime integration tests remain green for control flow and event-trigger expression execution paths.",
+    "implemented": false,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T039",
+    "description": "Repo: invoice static template variable catalog file is removed and no imports remain.",
+    "implemented": false,
+    "featureIds": ["F026"]
+  },
+  {
+    "id": "T040",
+    "description": "Repo: workflow designer no longer imports or invokes legacy `${...}` scanner validation helpers.",
+    "implemented": false,
+    "featureIds": ["F027"]
+  },
+  {
+    "id": "T041",
+    "description": "Meta-test: all new/changed React UI tests in this scope run under Vitest + Testing Library and target controls via role/automation attributes (except explicit render-semantics cases).",
+    "implemented": false,
+    "featureIds": ["F028"]
+  },
+  {
+    "id": "T042",
+    "description": "Smoke: both designers render and accept at least one inserted binding path in the same local session without runtime errors.",
+    "implemented": false,
+    "featureIds": ["F008", "F015", "F022", "F023"]
+  },
+  {
+    "id": "T043",
+    "description": "Meta-test: insertion/validation tests are non-tautological by asserting resulting AST/model/diagnostic behavior, not only source-literal string echo.",
+    "implemented": false,
+    "featureIds": ["F028", "F012", "F014", "F016"]
+  },
+  {
+    "id": "T044",
+    "description": "Meta-test: feature-to-test traceability check confirms every `F00x` entry has at least one mapped `featureIds` reference.",
+    "implemented": false,
+    "featureIds": ["F028"]
+  }
+]

@@ -41,6 +41,10 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) Deprecated invoice static variable catalog path is removed; field discovery now only flows through shared adapter-driven options.
 - (2026-03-04) Deprecated workflow `${...}` scanner helpers are removed from step validation flow; only shared-path validation remains.
 - (2026-03-04) Test implementation standards are codified in `PRD.md` and operationalized as explicit meta-test backlog items (`T041`, `T043`, `T044`) for checklist enforcement.
+- (2026-03-04) Added shared expression-authoring foundational unit suites:
+  - `shared/workflow/expression-authoring/__tests__/coreContracts.test.ts`
+  - `shared/workflow/expression-authoring/__tests__/insertionDom.test.ts`
+  These cover T001-T012 contract behaviors.
 - (2026-03-04) Preserve persisted contracts:
   - Invoice keeps AST value expressions (`literal|binding|path|template`).
   - Workflow keeps `{ $expr: string }`.
@@ -116,6 +120,8 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
   - `rg -n "templateVariableCatalog|TEMPLATE_VARIABLE_OPTIONS" packages/billing/src/components/invoice-designer -g'*.ts*'`
 - Audit for deprecated workflow scanner helpers:
   - `rg -n "extractExpressionPaths|validateExpressionPath|\\$\\{\\[^\\}\\]\\+\\}" ee/server/src/components/workflow-designer -g'*.ts*'`
+- Run shared expression-authoring foundational tests:
+  - `npx vitest run --config shared/vitest.config.ts shared/workflow/expression-authoring/__tests__/coreContracts.test.ts shared/workflow/expression-authoring/__tests__/insertionDom.test.ts`
 - Compare invoice/workflow binding/expression surfaces:
   - `rg -n "binding|template|\{\{|\$expr|validateExpressionSource" packages/billing/src/components/invoice-designer ee/server/src/components/workflow-designer shared/workflow/runtime -g"*.ts*"`
 - Review workflow designer expression sections:
