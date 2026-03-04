@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { AlertCircle, CalendarClock, FileText, Layers3, Package, Users, Save, Pencil, X, Check, ArrowLeft, File, Upload, Trash2 } from 'lucide-react';
+import { AlertCircle, CalendarClock, FileText, Layers3, Package, Users, Save, Pencil, X, Check, ArrowLeft, File, Upload, Trash2, Eye } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -17,9 +17,16 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useDrawer } from '@alga-psa/ui';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { IContract, IContractAssignmentSummary } from '@alga-psa/types';
-import { IClient } from '@alga-psa/types';
-import type { IDocument } from '@alga-psa/types';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
+import type {
+  ColumnDefinition,
+  IClient,
+  IContract,
+  IContractAssignmentSummary,
+  IDocument,
+  IInvoiceTemplate,
+  InvoiceViewModel as BillingInvoiceViewModel
+} from '@alga-psa/types';
 import {
   getContractById,
   getContractSummary,
@@ -30,6 +37,8 @@ import {
 import type { IContractSummary } from '@alga-psa/billing/actions/contractActions';
 import { updateClientContractForBilling, getClientByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { getDocumentsByContractId } from '@alga-psa/documents/actions/documentActions';
+import { fetchInvoicesByContract } from '@alga-psa/billing/actions/invoiceQueries';
+import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
 
 import { BILLING_FREQUENCY_OPTIONS } from '@alga-psa/billing/constants/billing';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
@@ -37,6 +46,7 @@ import ContractHeader from './ContractHeader';
 import ContractLines from './ContractLines';
 import ContractOverview from './ContractOverview';
 import PricingSchedules from './PricingSchedules';
+import InvoicePreviewPanel from '../invoicing/InvoicePreviewPanel';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from '@alga-psa/core';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
@@ -93,6 +103,32 @@ interface ContractDetailProps {
   renderClientDetails?: (args: { id: string; client: IClient }) => React.ReactNode;
 }
 
+interface ContractInvoicePreviewDrawerContentProps {
+  invoiceId: string;
+  templates: IInvoiceTemplate[];
+  initialTemplateId: string;
+  isFinalized: boolean;
+}
+
+const ContractInvoicePreviewDrawerContent: React.FC<ContractInvoicePreviewDrawerContentProps> = ({
+  invoiceId,
+  templates,
+  initialTemplateId,
+  isFinalized
+}) => {
+  const [selectedTemplateId, setSelectedTemplateId] = useState(initialTemplateId);
+
+  return (
+    <InvoicePreviewPanel
+      invoiceId={invoiceId}
+      templates={templates}
+      selectedTemplateId={selectedTemplateId}
+      onTemplateChange={setSelectedTemplateId}
+      isFinalized={isFinalized}
+    />
+  );
+};
+
 const ContractDetail: React.FC<ContractDetailProps> = ({
   serverDocuments,
   serverUserId,
@@ -118,6 +154,10 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   const [assignments, setAssignments] = useState<IContractAssignmentSummary[]>([]);
   // Use server-provided documents if available, otherwise start empty
   const [documents, setDocuments] = useState<IDocument[]>(serverDocuments || []);
+  const [contractInvoices, setContractInvoices] = useState<BillingInvoiceViewModel[]>([]);
+  const [invoiceTemplates, setInvoiceTemplates] = useState<IInvoiceTemplate[]>([]);
+  const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
+  const [invoiceError, setInvoiceError] = useState<string | null>(null);
   // Use server-provided userId if available
   const [currentUserId, setCurrentUserId] = useState<string>(serverUserId || '');
 
@@ -354,6 +394,39 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       setIsLoading(false);
     }
   };
+
+  const loadContractInvoices = useCallback(async () => {
+    if (!contractId) {
+      setContractInvoices([]);
+      setInvoiceTemplates([]);
+      setInvoiceError(null);
+      return;
+    }
+
+    setIsLoadingInvoices(true);
+    setInvoiceError(null);
+
+    try {
+      const [invoices, templates] = await Promise.all([
+        fetchInvoicesByContract(contractId),
+        getInvoiceTemplates()
+      ]);
+
+      setContractInvoices(invoices);
+      setInvoiceTemplates(templates);
+    } catch (err) {
+      console.error('Error loading contract invoices:', err);
+      setInvoiceError('Failed to load invoices for this contract.');
+    } finally {
+      setIsLoadingInvoices(false);
+    }
+  }, [contractId]);
+
+  useEffect(() => {
+    if (activeTab === 'invoices') {
+      void loadContractInvoices();
+    }
+  }, [activeTab, loadContractInvoices]);
 
   const handleDeleteContract = async () => {
     if (!contractId) return;
@@ -745,6 +818,112 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
       return first === second;
     }
   };
+
+  const formatInvoiceStatus = useCallback((status: BillingInvoiceViewModel['status']) => {
+    return status
+      .split('_')
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  }, []);
+
+  const renderInvoiceStatusBadge = useCallback((status: BillingInvoiceViewModel['status']) => {
+    const variant =
+      status === 'paid'
+        ? 'success'
+        : status === 'draft'
+          ? 'warning'
+          : status === 'overdue' || status === 'cancelled'
+            ? 'error'
+            : 'default-muted';
+
+    return (
+      <Badge variant={variant}>
+        {formatInvoiceStatus(status)}
+      </Badge>
+    );
+  }, [formatInvoiceStatus]);
+
+  const handleOpenInvoicePreview = useCallback((invoice: BillingInvoiceViewModel) => {
+    const defaultTemplateId =
+      invoiceTemplates.find((template) => template.isStandard)?.template_id ??
+      invoiceTemplates[0]?.template_id;
+
+    if (!defaultTemplateId) {
+      openDrawer(
+        <div className="p-4 text-sm text-red-600">
+          No invoice templates are available for preview.
+        </div>,
+        undefined,
+        undefined,
+        '1100px'
+      );
+      return;
+    }
+
+    openDrawer(
+      <ContractInvoicePreviewDrawerContent
+        invoiceId={invoice.invoice_id}
+        templates={invoiceTemplates}
+        initialTemplateId={defaultTemplateId}
+        isFinalized={invoice.status !== 'draft'}
+      />,
+      undefined,
+      undefined,
+      '1100px'
+    );
+  }, [invoiceTemplates, openDrawer]);
+
+  const invoiceColumns = useMemo<ColumnDefinition<BillingInvoiceViewModel>[]>(() => [
+    {
+      title: 'Invoice #',
+      dataIndex: 'invoice_number',
+      render: (value) => value || '—',
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      render: (value) => renderInvoiceStatusBadge(value),
+    },
+    {
+      title: 'Invoice Date',
+      dataIndex: 'invoice_date',
+      render: (value) => formatDate(value),
+    },
+    {
+      title: 'Due Date',
+      dataIndex: 'due_date',
+      render: (value) => formatDate(value),
+    },
+    {
+      title: 'Amount',
+      dataIndex: 'total_amount',
+      render: (value, record) =>
+        formatCurrencyFromMinorUnits(
+          Number(value),
+          'en-US',
+          record.currencyCode || 'USD'
+        ),
+    },
+    {
+      title: 'Preview',
+      dataIndex: 'invoice_id',
+      width: '120px',
+      render: (_, record) => (
+        <Button
+          id={`contract-invoice-preview-${record.invoice_id}`}
+          variant="outline"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleOpenInvoicePreview(record);
+          }}
+        >
+          <Eye className="h-4 w-4 mr-1" />
+          Preview
+        </Button>
+      ),
+    },
+  ], [handleOpenInvoicePreview, renderInvoiceStatusBadge]);
 
   if (isLoading) {
     return (
@@ -1736,10 +1915,45 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                 Contract Invoices
               </CardTitle>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              <p className="mb-2">
-                Invoice reporting for this contract is coming soon. Once available, you’ll be able to review invoice history, open balances, and links to generated documents here.
-              </p>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Select an invoice to open a full preview in the drawer.
+                </p>
+                <Button
+                  id="contract-invoices-refresh"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void loadContractInvoices()}
+                  disabled={isLoadingInvoices}
+                >
+                  Refresh
+                </Button>
+              </div>
+
+              {invoiceError && (
+                <Alert variant="destructive">
+                  <AlertDescription>{invoiceError}</AlertDescription>
+                </Alert>
+              )}
+
+              {isLoadingInvoices ? (
+                <div className="py-10">
+                  <LoadingIndicator text="Loading contract invoices..." spinnerProps={{ size: 'sm' }} />
+                </div>
+              ) : contractInvoices.length === 0 ? (
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  No invoices are associated with this contract yet.
+                </div>
+              ) : (
+                <DataTable
+                  id="contract-invoices-table"
+                  data={contractInvoices}
+                  columns={invoiceColumns}
+                  pagination={false}
+                  onRowClick={handleOpenInvoicePreview}
+                />
+              )}
             </CardContent>
           </Card>
         </TabsContent>

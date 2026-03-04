@@ -410,6 +410,71 @@ export const fetchInvoicesByClient = withAuth(async (
   }
 });
 
+/**
+ * Fetch invoices for a specific contract assignment (client_contract_id)
+ * @param contractId The contract ID (client_contract_id) to fetch invoices for
+ * @returns Array of invoice view models
+ */
+export const fetchInvoicesByContract = withAuth(async (
+  user,
+  { tenant },
+  contractId: string
+): Promise<InvoiceViewModel[]> => {
+  try {
+    const { knex } = await createTenantKnex();
+
+    const invoices = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('invoices')
+        .join('client_contracts', function () {
+          this.on('invoices.client_contract_id', '=', 'client_contracts.client_contract_id')
+            .andOn('invoices.tenant', '=', 'client_contracts.tenant');
+        })
+        .join('clients', function() {
+          this.on('invoices.client_id', '=', 'clients.client_id')
+            .andOn('invoices.tenant', '=', 'clients.tenant');
+        })
+        .where({
+          'client_contracts.contract_id': contractId,
+          'invoices.tenant': tenant
+        })
+        .select(
+          'invoices.invoice_id',
+          'invoices.client_id',
+          'invoices.invoice_number',
+          'invoices.po_number',
+          'invoices.client_contract_id',
+          'invoices.invoice_date',
+          'invoices.due_date',
+          'invoices.status',
+          'invoices.is_manual',
+          'invoices.finalized_at',
+          'invoices.billing_cycle_id',
+          'invoices.currency_code',
+          trx.raw('CAST(invoices.subtotal AS BIGINT) as subtotal'),
+          trx.raw('CAST(invoices.tax AS BIGINT) as tax'),
+          trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
+          trx.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
+          'clients.client_name',
+          'clients.properties'
+        )
+        .orderBy('invoices.invoice_date', 'desc');
+    });
+
+    return Promise.all(invoices.map((invoice) => {
+      const clientProperties = invoice.properties as { logo?: string } || {};
+
+      return getBasicInvoiceViewModel(invoice, {
+        client_name: invoice.client_name,
+        logo: clientProperties.logo || '',
+        address: ''
+      });
+    }));
+  } catch (error) {
+    console.error(`Error fetching invoices for contract ${contractId}:`, error);
+    throw new Error('Error fetching contract invoices');
+  }
+});
+
 export const getInvoiceForRendering = withAuth(async (
   user,
   { tenant },
