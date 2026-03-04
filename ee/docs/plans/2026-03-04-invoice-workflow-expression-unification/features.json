@@ -152,7 +152,7 @@
   {
     "id": "F026",
     "description": "Remove deprecated invoice static-variable code paths once shared context-driven path picker is fully wired.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-003", "NFR-002"]
   },
   {
