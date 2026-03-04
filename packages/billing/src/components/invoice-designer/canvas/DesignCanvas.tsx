@@ -363,6 +363,17 @@ const shouldDeemphasizeNode = (
 
 const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
+const resolveTextInterpolationValue = (
+  previewData: WasmInvoiceViewModel | null,
+  bindingPath: string
+): string | null => {
+  const rawValue = resolveInvoiceBindingRawValue(previewData, bindingPath);
+  if (rawValue === null || rawValue === undefined) {
+    return null;
+  }
+  return String(rawValue);
+};
+
 const isTotalsRowType = (type: DesignerNode['type']): type is 'subtotal' | 'tax' | 'discount' | 'custom-total' =>
   type === 'subtotal' || type === 'tax' || type === 'discount' || type === 'custom-total';
 
@@ -614,7 +625,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
         asTrimmedString(metadata.label) ||
         asTrimmedString(metadata.content);
       const content = text.length > 0 ? text.slice(0, 140) : '';
-      
+
       // Check for interpolation variables {{var}}
       const parts = content.split(/(\{\{.*?\}\})/g);
       if (parts.length === 1) {
@@ -626,12 +637,21 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
         }
         return { content };
       }
-      
+
       return {
         content: (
           <span>
             {parts.map((part, index) => {
               if (part.startsWith('{{') && part.endsWith('}}')) {
+                const tokenPath = part.replace(/^\{\{\s*|\s*\}\}$/g, '').trim();
+                const interpolatedValue = resolveTextInterpolationValue(previewData, tokenPath);
+                if (interpolatedValue !== null) {
+                  return (
+                    <span key={index} className="text-slate-800">
+                      {interpolatedValue}
+                    </span>
+                  );
+                }
                 return (
                   <span
                     key={index}

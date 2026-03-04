@@ -66,6 +66,7 @@ describe('DesignerSchemaInspector (schema-driven integration)', () => {
     // Note: the shared <Input> component does not currently forward `id` to the native input,
     // so label->control association isn't reliable in tests. Use the field placeholder instead.
     const widthInput = screen.getByPlaceholderText('auto | 320px | 50% | 10rem') as HTMLInputElement;
+    expect(widthInput.getAttribute('data-template-insert-target')).toBeNull();
     fireEvent.change(widthInput, { target: { value: '123' } });
 
     const updated = useInvoiceDesignerStore.getState().nodesById['section-1'];
@@ -115,6 +116,7 @@ describe('DesignerSchemaInspector (schema-driven integration)', () => {
     render(<Wrapper />);
 
     const textInput = screen.getByPlaceholderText('Enter text or {{binding.path}}') as HTMLTextAreaElement;
+    expect(textInput.getAttribute('data-template-insert-target')).toBe('metadata.text');
     fireEvent.change(textInput, { target: { value: 'Due Date' } });
 
     const updated = useInvoiceDesignerStore.getState().nodesById['text-1'];
@@ -169,6 +171,9 @@ describe('DesignerSchemaInspector (schema-driven integration)', () => {
     render(<Wrapper />);
 
     const labelInput = screen.getByDisplayValue('Invoice #') as HTMLInputElement;
+    expect(labelInput.getAttribute('data-template-insert-target')).toBeNull();
+    const bindingInput = screen.getByDisplayValue('invoice.number') as HTMLInputElement;
+    expect(bindingInput.getAttribute('data-template-insert-target')).toBe('metadata.bindingKey');
     fireEvent.change(labelInput, { target: { value: 'PO #' } });
 
     const emptyValueInput = screen.getByDisplayValue('-') as HTMLInputElement;

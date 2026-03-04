@@ -302,6 +302,7 @@ const FIELD_INSPECTOR: DesignerInspectorSchema = {
           domId: 'designer-field-binding',
           label: 'Binding key',
           path: 'metadata.bindingKey',
+          enableExpressionInsert: true,
         },
         {
           kind: 'enum',
@@ -360,6 +361,7 @@ const TEXT_INSPECTOR: DesignerInspectorSchema = {
           label: 'Text',
           path: 'metadata.text',
           placeholder: 'Enter text or {{binding.path}}',
+          enableExpressionInsert: true,
         },
       ],
     },
@@ -417,6 +419,7 @@ const TOTALS_ROW_INSPECTOR: DesignerInspectorSchema = {
           domId: 'designer-total-binding',
           label: 'Binding key',
           path: 'metadata.bindingKey',
+          enableExpressionInsert: true,
         },
       ],
     },
@@ -442,6 +445,7 @@ const CUSTOM_TOTAL_INSPECTOR: DesignerInspectorSchema = {
           domId: 'designer-total-binding',
           label: 'Binding key',
           path: 'metadata.bindingKey',
+          enableExpressionInsert: true,
         },
         {
           kind: 'textarea',

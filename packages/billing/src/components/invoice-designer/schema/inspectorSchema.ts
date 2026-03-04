@@ -23,6 +23,7 @@ export type DesignerInspectorField =
       path: string;
       domId?: string;
       placeholder?: string;
+      enableExpressionInsert?: boolean;
       visibleWhen?: DesignerInspectorVisibleWhen;
     }
   | {
@@ -32,6 +33,7 @@ export type DesignerInspectorField =
       path: string;
       domId?: string;
       placeholder?: string;
+      enableExpressionInsert?: boolean;
       visibleWhen?: DesignerInspectorVisibleWhen;
     }
   | {
