@@ -232,7 +232,7 @@
   {
     "id": "T029",
     "description": "Unit: runtime expression engine still rejects disallowed functions after editor alignment changes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
