@@ -26,6 +26,8 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) Shared path validator (`validateSourcePaths`) now powers invoice insertion feedback; unknown paths emit informational diagnostics without breaking insertion flow.
 - (2026-03-04) Workflow step config validation now derives shared path options from `DataContext` via `buildWorkflowExpressionPathOptions(...)` and uses `validateSourcePaths(...)` in place of legacy `${...}` scanners.
 - (2026-03-04) Workflow step validation UI now consumes shared diagnostic objects directly (`severity`, `code`, `message`, `path`) and renders grouped Error/Warning/Info cards from the shared contract.
+- (2026-03-04) Runtime function allowlist is now centralized in `shared/workflow/runtime/expressionFunctions.ts` and consumed by both runtime validation and Monaco completion generation.
+- (2026-03-04) Workflow function completion/snippet suggestions are now constrained to runtime-allowlisted helpers (`$nowIso`, `$coalesce`, `$len`, `$toString`, `$append`).
 - (2026-03-04) Preserve persisted contracts:
   - Invoice keeps AST value expressions (`literal|binding|path|template`).
   - Workflow keeps `{ $expr: string }`.
@@ -46,6 +48,7 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
   - Monaco diagnostics provider
   - Legacy `${...}` extraction/validation in `WorkflowDesigner.tsx`.
 - (2026-03-04) `WorkflowDesigner.tsx` no longer defines `extractExpressionPaths` / `validateExpressionPath`; step validation now emits issues from shared validation diagnostics.
+- (2026-03-04) Editor metadata previously exposed broad JSONata helpers; completion hints were not runtime-aligned until runtime allowlist filtering was introduced.
 - (2026-03-04) Workflow editor function metadata includes many JSONata functions, while runtime currently allowlists only a small helper set in `shared/workflow/runtime/expressionEngine.ts`.
 - (2026-03-04) Removing drift between workflow editor and runtime is required to avoid misleading UX.
 
@@ -79,6 +82,8 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
   - `cd ee/server && npx vitest run src/components/workflow-designer/expression-editor/__tests__/completionProvider.test.ts src/components/workflow-designer/expression-editor/__tests__/diagnosticsProvider.test.ts`
 - Validate workflow designer type safety after shared validation UI refactor:
   - `cd ee/server && npm run -s typecheck`
+- Validate allowlisted function completions and diagnostics baseline:
+  - `cd ee/server && npx vitest run src/components/workflow-designer/expression-editor/__tests__/completionProvider.test.ts src/components/workflow-designer/expression-editor/__tests__/diagnosticsProvider.test.ts`
 - Compare invoice/workflow binding/expression surfaces:
   - `rg -n "binding|template|\{\{|\$expr|validateExpressionSource" packages/billing/src/components/invoice-designer ee/server/src/components/workflow-designer shared/workflow/runtime -g"*.ts*"`
 - Review workflow designer expression sections:

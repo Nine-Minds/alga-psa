@@ -9,7 +9,7 @@
  */
 
 import type * as monaco from 'monaco-editor';
-import { builtinFunctions, getFunctionsByCategory } from './functionDefinitions';
+import { getRuntimeFunctionsByCategory } from './functionDefinitions';
 import { LANGUAGE_ID } from './jsonataLanguage';
 
 /**
@@ -404,7 +404,7 @@ function getFunctionCompletions(
   monaco: typeof import('monaco-editor'),
   range: monaco.IRange
 ): monaco.languages.CompletionItem[] {
-  const categories = getFunctionsByCategory();
+  const categories = getRuntimeFunctionsByCategory();
   const items: monaco.languages.CompletionItem[] = [];
   const categoryOrder = ['String', 'Number', 'Array', 'Object', 'Boolean', 'Date', 'Higher-Order', 'Misc'];
 
@@ -529,54 +529,24 @@ function getSnippetCompletions(
       sortText: '4conditional',
     },
     {
-      label: 'map',
-      kind: monaco.languages.CompletionItemKind.Snippet,
-      detail: 'Map array transformation',
-      documentation: 'Transform each item in an array using $map function',
-      insertText: '\\$map(${1:array}, function(\\$v, \\$i) { ${2:\\$v} })',
-      insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-      range,
-      sortText: '4map',
-    },
-    {
-      label: 'filter',
-      kind: monaco.languages.CompletionItemKind.Snippet,
-      detail: 'Filter array',
-      documentation: 'Filter array items using $filter function',
-      insertText: '\\$filter(${1:array}, function(\\$v) { ${2:\\$v.condition} })',
-      insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-      range,
-      sortText: '4filter',
-    },
-    {
-      label: 'reduce',
-      kind: monaco.languages.CompletionItemKind.Snippet,
-      detail: 'Reduce array to value',
-      documentation: 'Reduce array to a single value using $reduce function',
-      insertText: '\\$reduce(${1:array}, function(\\$acc, \\$v) { ${2:\\$acc + \\$v} }, ${3:0})',
-      insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-      range,
-      sortText: '4reduce',
-    },
-    {
       label: 'coalesce',
       kind: monaco.languages.CompletionItemKind.Snippet,
-      detail: 'Null coalescing',
-      documentation: 'Return first non-null value',
-      insertText: '${1:value} ? ${1:value} : ${2:default}',
+      detail: 'Null coalescing helper',
+      documentation: 'Return the first non-null/undefined value via runtime-allowed helper',
+      insertText: '\\$coalesce(${1:primary}, ${2:fallback}, ${3:default})',
       insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
       range,
       sortText: '4coalesce',
     },
     {
-      label: 'exists',
+      label: 'append',
       kind: monaco.languages.CompletionItemKind.Snippet,
-      detail: 'Check if value exists',
-      documentation: 'Check if a value is defined and not null',
-      insertText: '\\$exists(${1:value})',
+      detail: 'Append value(s) to list',
+      documentation: 'Append one value or a list to an existing list via runtime helper',
+      insertText: '\\$append(${1:list}, ${2:value})',
       insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
       range,
-      sortText: '4exists',
+      sortText: '4append',
     },
     {
       label: 'string-template',
@@ -622,8 +592,8 @@ function getSnippetCompletions(
       label: 'date-now',
       kind: monaco.languages.CompletionItemKind.Snippet,
       detail: 'Current timestamp',
-      documentation: 'Get current date/time as ISO string',
-      insertText: '\\$now()',
+      documentation: 'Get current date/time as ISO string via runtime helper',
+      insertText: '\\$nowIso()',
       insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
       range,
       sortText: '4date-now',

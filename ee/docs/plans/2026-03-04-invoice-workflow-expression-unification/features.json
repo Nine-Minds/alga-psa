@@ -98,7 +98,7 @@
   {
     "id": "F017",
     "description": "Align workflow editor completion function list with runtime allowlisted functions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-008", "FR-010"]
   },
   {
