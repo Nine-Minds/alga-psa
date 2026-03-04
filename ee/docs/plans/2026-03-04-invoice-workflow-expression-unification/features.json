@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "Update invoice FIELDS panel rendering to consume shared path option model and grouped roots/categories.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-003", "FR-013"]
   },
   {

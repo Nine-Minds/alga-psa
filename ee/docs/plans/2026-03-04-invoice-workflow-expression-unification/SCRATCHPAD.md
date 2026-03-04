@@ -18,6 +18,7 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) Invoice adapter roots stay domain-native (`invoice`, `customer`, `tenant`, `item`) for this migration to preserve existing author mental model and template bindings.
 - (2026-03-04) Workflow adapter includes dynamic loop roots (`itemVar`, `indexVar`) so forEach-scoped expressions can use the same shared path options as global roots.
 - (2026-03-04) Invoice palette fields now derive from `buildInvoiceExpressionPathOptions(...)`; static catalog import path is no longer used in rendering/search.
+- (2026-03-04) Invoice FIELDS panel grouping now maps directly to shared root keys (`invoice/customer/tenant/item`) and only renders leaf path options from the shared model.
 - (2026-03-04) Preserve persisted contracts:
   - Invoice keeps AST value expressions (`literal|binding|path|template`).
   - Workflow keeps `{ $expr: string }`.
