@@ -264,6 +264,41 @@ describe('DesignCanvas preview mode', () => {
     expect(screen.queryByText('$27.50')).toBeNull();
   });
 
+  it('applies currency filter for moustache text interpolation tokens', () => {
+    const nodes = buildCanvasNodes([
+      baseNode({
+        id: 'text-filtered-token',
+        type: 'text',
+        name: 'Filtered Token Text',
+        metadata: { text: 'Total due {{invoice.total | currency}}' },
+      }),
+    ]);
+
+    render(
+      <DesignCanvas
+        nodes={nodes}
+        selectedNodeId={null}
+        showGuides={false}
+        showRulers={false}
+        gridSize={8}
+        canvasScale={1}
+        snapToGrid
+        guides={[]}
+        isDragActive={false}
+        forcedDropTarget={null}
+        droppableId="preview"
+        onPointerLocationChange={() => undefined}
+        onNodeSelect={() => undefined}
+        onResize={() => undefined}
+        readOnly
+        previewData={previewData}
+      />
+    );
+
+    expect(screen.getByText('$27.50')).toBeTruthy();
+    expect(screen.queryByText('2750')).toBeNull();
+  });
+
   it('renders totals and table data from preview invoice payload', () => {
     const nodes = buildCanvasNodes([
       baseNode({ id: 'totals-1', type: 'totals', name: 'Totals', size: { width: 280, height: 120 } }),

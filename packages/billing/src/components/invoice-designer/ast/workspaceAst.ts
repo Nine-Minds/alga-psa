@@ -8,6 +8,11 @@ import type {
   InvoiceTemplateValueFormat,
 } from '@alga-psa/types';
 import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import {
+  decodeInvoiceTemplatePathExpression,
+  encodeInvoiceTemplatePathExpression,
+  parseInvoiceTemplateToken,
+} from '../../../lib/invoice-template-ast/templateInterpolationFilters';
 import type {
   DesignerComponentType,
   DesignerContainerLayout,
@@ -69,7 +74,12 @@ const resolveExpressionPreviewText = (
     return `{{${denormalizeBindingPath(bindingPath)}}}`;
   }
   if (expression.type === 'path') {
-    return `{{${denormalizeBindingPath(expression.path)}}}`;
+    const parsed = decodeInvoiceTemplatePathExpression(expression.path);
+    const denormalizedPath = denormalizeBindingPath(parsed.path);
+    if (parsed.filter) {
+      return `{{${denormalizedPath} | ${parsed.filter}}}`;
+    }
+    return `{{${denormalizedPath}}}`;
   }
   return expression.template;
 };
@@ -143,17 +153,18 @@ const parseTemplateInterpolationExpression = (text: string): InvoiceTemplateValu
 
   const parsedMatches = matches.map((match, index) => {
     const rawToken = asTrimmedString(match[1]);
-    if (!rawToken || !isLikelyBindingTokenPath(rawToken)) {
+    const parsedToken = parseInvoiceTemplateToken(rawToken);
+    if (!parsedToken || !isLikelyBindingTokenPath(parsedToken.path)) {
       return null;
     }
-    const normalizedPath = normalizeInvoiceBindingPath(rawToken);
+    const normalizedPath = normalizeInvoiceBindingPath(parsedToken.path);
     if (!normalizedPath) {
       return null;
     }
     return {
       rawMatch: match[0],
       startIndex: match.index ?? 0,
-      normalizedPath,
+      normalizedPath: encodeInvoiceTemplatePathExpression(normalizedPath, parsedToken.filter),
       argNameBase: sanitizeTemplateArgName(rawToken, index + 1),
     };
   });

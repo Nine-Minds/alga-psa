@@ -633,6 +633,75 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
     expect(toLabel.content).toEqual({ type: 'path', path: 'total' });
   });
 
+  it('compiles edited moustache text with currency filter into a filtered path expression', () => {
+    const sourceAst = {
+      kind: 'invoice-template-ast',
+      version: 1,
+      bindings: {
+        values: {},
+        collections: {},
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'page-section',
+            type: 'section',
+            children: [
+              {
+                id: 'to-label',
+                type: 'text',
+                content: { type: 'literal', value: 'To' },
+              },
+            ],
+          },
+        ],
+      },
+    } as const;
+
+    const hydrated = importInvoiceTemplateAstToWorkspace(sourceAst as any);
+    const toLabelNode = hydrated.nodesById['to-label'];
+    expect(toLabelNode?.type).toBe('text');
+    if (!toLabelNode) return;
+
+    const toLabelProps = (toLabelNode.props ?? {}) as Record<string, unknown>;
+    const toLabelMetadata =
+      (toLabelProps.metadata && typeof toLabelProps.metadata === 'object'
+        ? toLabelProps.metadata
+        : {}) as Record<string, unknown>;
+
+    const editedWorkspace: DesignerWorkspaceSnapshot = {
+      ...hydrated,
+      nodesById: {
+        ...hydrated.nodesById,
+        [toLabelNode.id]: {
+          ...toLabelNode,
+          props: {
+            ...toLabelProps,
+            metadata: {
+              ...toLabelMetadata,
+              text: '{{invoice.total | currency}}',
+            },
+          },
+        },
+      },
+    };
+
+    const exported = exportWorkspaceToInvoiceTemplateAst(editedWorkspace);
+    expect(exported.layout.type).toBe('document');
+    if (exported.layout.type !== 'document') return;
+
+    const pageSection = exported.layout.children.find((child) => child.id === 'page-section');
+    expect(pageSection?.type).toBe('section');
+    if (!pageSection || pageSection.type !== 'section') return;
+
+    const toLabel = pageSection.children.find((child) => child.id === 'to-label');
+    expect(toLabel?.type).toBe('text');
+    if (!toLabel || toLabel.type !== 'text') return;
+    expect(toLabel.content).toEqual({ type: 'path', path: 'total|currency' });
+  });
+
   it('compiles mixed literal + moustache text into a template expression', () => {
     const workspace = createWorkspaceWithFieldAndDynamicTable();
     const pageNode = Object.values(workspace.nodesById).find((node) => node.type === 'page');

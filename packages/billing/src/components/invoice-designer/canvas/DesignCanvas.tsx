@@ -7,6 +7,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
+import { parseInvoiceTemplateToken } from '../../../lib/invoice-template-ast/templateInterpolationFilters';
 import { AlignmentGuide } from '../utils/layout';
 import { DesignerNode } from '../state/designerStore';
 import { DESIGNER_CANVAS_WIDTH, DESIGNER_CANVAS_HEIGHT } from '../constants/layout';
@@ -367,10 +368,20 @@ const resolveTextInterpolationValue = (
   previewData: WasmInvoiceViewModel | null,
   bindingPath: string
 ): string | null => {
-  const rawValue = resolveInvoiceBindingRawValue(previewData, bindingPath);
+  const parsedToken = parseInvoiceTemplateToken(bindingPath);
+  if (!parsedToken || !parsedToken.path) {
+    return null;
+  }
+
+  const rawValue = resolveInvoiceBindingRawValue(previewData, parsedToken.path);
   if (rawValue === null || rawValue === undefined) {
     return null;
   }
+
+  if (parsedToken.filter === 'currency') {
+    return formatBoundValue(rawValue, 'currency', previewData?.currencyCode ?? 'USD');
+  }
+
   return String(rawValue);
 };
 

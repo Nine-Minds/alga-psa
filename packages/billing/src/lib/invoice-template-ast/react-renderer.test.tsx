@@ -112,6 +112,42 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
     expect(rendered.html).toContain('300');
   });
 
+  it('formats template path expressions using currency filter syntax', async () => {
+    const ast: InvoiceTemplateAst = {
+      kind: 'invoice-template-ast',
+      version: INVOICE_TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {
+          total: { id: 'total', kind: 'value', path: 'total' },
+        },
+        collections: {},
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'headline',
+            type: 'text',
+            content: {
+              type: 'template',
+              template: 'Amount due {{amount}}',
+              args: {
+                amount: { type: 'path', path: 'total|currency' },
+              },
+            },
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateInvoiceTemplateAst(ast, invoiceFixture);
+    const rendered = await renderEvaluatedInvoiceTemplateAst(ast, evaluation);
+
+    expect(rendered.html).toContain('Amount due $3.30');
+    expect(rendered.html).not.toContain('Amount due 330');
+  });
+
   it('applies class tokens and style declarations consistently', async () => {
     const ast: InvoiceTemplateAst = {
       kind: 'invoice-template-ast',
