@@ -86,7 +86,7 @@
   {
     "id": "F015",
     "description": "Replace workflow legacy `${...}` extraction/validation path scan with shared validation pipeline.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-007", "FR-011"]
   },
   {

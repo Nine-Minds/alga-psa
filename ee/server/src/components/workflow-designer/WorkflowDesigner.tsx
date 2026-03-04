@@ -83,6 +83,12 @@ import type {
   MappingValue
 } from '@shared/workflow/runtime';
 import { validateExpressionSource } from '@shared/workflow/runtime/expressionEngine';
+import {
+  buildWorkflowExpressionPathOptions,
+  validateSourcePaths,
+  type SharedExpressionPathOption,
+  type SharedExpressionSchemaNode,
+} from '@shared/workflow/expression-authoring';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 type WorkflowDefinitionRecord = {
@@ -844,52 +850,40 @@ type ExpressionValidation = {
   warning?: string;
 };
 
-// Extract variable paths from an expression string (e.g., "${payload.email}" -> ["payload.email"])
-const extractExpressionPaths = (expr: string): string[] => {
-  const paths: string[] = [];
-  const regex = /\$\{([^}]+)\}/g;
-  let match;
-  while ((match = regex.exec(expr)) !== null) {
-    // Extract the path portion (handles simple cases)
-    const inner = match[1].trim();
-    // Skip complex expressions like conditions or calculations
-    if (!/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(inner)) continue;
-    paths.push(inner);
-  }
-  return paths;
+const buildWorkflowValidationPathOptions = (context: DataContext): SharedExpressionPathOption[] => {
+  const varsByName = context.steps.reduce<Record<string, SharedExpressionSchemaNode>>((acc, stepOutput) => {
+    acc[stepOutput.saveAs] = stepOutput.outputSchema as SharedExpressionSchemaNode;
+    return acc;
+  }, {});
+
+  return buildWorkflowExpressionPathOptions({
+    payloadSchema: (context.payloadSchema ?? undefined) as SharedExpressionSchemaNode | undefined,
+    varsByName,
+    includeErrorRoot: Boolean(context.inCatchBlock),
+    forEach: context.forEach
+      ? {
+          itemVar: context.forEach.itemVar,
+          indexVar: context.forEach.indexVar,
+        }
+      : undefined,
+  });
 };
 
-// Check if a path exists in the data context
-const validateExpressionPath = (path: string, context: DataContext): ExpressionValidation => {
-  const parts = path.split('.');
-  const root = parts[0];
-
-  // Check payload paths
-  if (root === 'payload') {
-    if (context.payload.length === 0) {
-      return { valid: true, warning: 'No payload schema defined' };
-    }
-    // Simple path existence check
-    return { valid: true };
+const toExpressionValidation = (
+  severity: 'error' | 'warning' | 'info',
+  message: string
+): ExpressionValidation => {
+  if (severity === 'error') {
+    return {
+      valid: false,
+      error: message,
+    };
   }
 
-  // Check vars paths (step outputs)
-  if (root === 'vars') {
-    const varName = parts[1];
-    if (!varName) return { valid: false, error: 'Missing variable name after vars.' };
-    const stepOutput = context.steps.find(s => s.saveAs === varName);
-    if (!stepOutput) {
-      return { valid: false, error: `Unknown variable: ${varName}. Available: ${context.steps.map(s => s.saveAs).join(', ') || 'none'}` };
-    }
-    return { valid: true };
-  }
-
-  // Check global paths
-  if (root === 'meta' || root === 'env' || root === 'secrets' || root === 'error') {
-    return { valid: true };
-  }
-
-  return { valid: false, error: `Unknown root: ${root}. Use payload, vars, meta, env, or secrets.` };
+  return {
+    valid: true,
+    warning: message,
+  };
 };
 
 // Validate all expressions in a step config
@@ -898,27 +892,31 @@ const validateStepExpressions = (
   context: DataContext
 ): { field: string; validation: ExpressionValidation }[] => {
   const results: { field: string; validation: ExpressionValidation }[] = [];
+  const options = buildWorkflowValidationPathOptions(context);
+
+  const appendDiagnostics = (field: string, source: string) => {
+    const validationResult = validateSourcePaths({
+      source,
+      mode: 'expression',
+      options,
+    });
+
+    for (const diagnostic of validationResult.diagnostics) {
+      results.push({
+        field,
+        validation: toExpressionValidation(diagnostic.severity, diagnostic.message),
+      });
+    }
+  };
 
   const checkValue = (value: unknown, path: string) => {
     if (typeof value === 'string' && value.includes('${')) {
-      const exprPaths = extractExpressionPaths(value);
-      for (const exprPath of exprPaths) {
-        const validation = validateExpressionPath(exprPath, context);
-        if (!validation.valid || validation.warning) {
-          results.push({ field: path, validation });
-        }
-      }
+      appendDiagnostics(path, value);
     } else if (value && typeof value === 'object') {
       if ('$expr' in (value as Record<string, unknown>)) {
         const expr = (value as { $expr: string }).$expr;
         if (expr) {
-          const exprPaths = extractExpressionPaths(expr);
-          for (const exprPath of exprPaths) {
-            const validation = validateExpressionPath(exprPath, context);
-            if (!validation.valid || validation.warning) {
-              results.push({ field: path, validation });
-            }
-          }
+          appendDiagnostics(path, expr);
         }
       } else if (!Array.isArray(value)) {
         // Recurse into object

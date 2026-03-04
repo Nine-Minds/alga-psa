@@ -24,6 +24,7 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) Workspace AST export now parses moustache text edits into dynamic expressions: full-token moustache becomes `path`, mixed literal+moustache becomes `template` with deterministic arg keys.
 - (2026-03-04) Existing roundtrip suites (`workspaceAst.roundtrip.*`) remain green after adapter/insertion changes, confirming deterministic export/import behavior.
 - (2026-03-04) Shared path validator (`validateSourcePaths`) now powers invoice insertion feedback; unknown paths emit informational diagnostics without breaking insertion flow.
+- (2026-03-04) Workflow step config validation now derives shared path options from `DataContext` via `buildWorkflowExpressionPathOptions(...)` and uses `validateSourcePaths(...)` in place of legacy `${...}` scanners.
 - (2026-03-04) Preserve persisted contracts:
   - Invoice keeps AST value expressions (`literal|binding|path|template`).
   - Workflow keeps `{ $expr: string }`.
@@ -43,6 +44,7 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) Workflow currently has duplicated expression validation paths:
   - Monaco diagnostics provider
   - Legacy `${...}` extraction/validation in `WorkflowDesigner.tsx`.
+- (2026-03-04) `WorkflowDesigner.tsx` no longer defines `extractExpressionPaths` / `validateExpressionPath`; step validation now emits issues from shared validation diagnostics.
 - (2026-03-04) Workflow editor function metadata includes many JSONata functions, while runtime currently allowlists only a small helper set in `shared/workflow/runtime/expressionEngine.ts`.
 - (2026-03-04) Removing drift between workflow editor and runtime is required to avoid misleading UX.
 
@@ -72,6 +74,8 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
   - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/ast/workspaceAst.roundtrip.templates.test.ts ../packages/billing/src/components/invoice-designer/ast/workspaceAst.roundtrip.nodes.test.ts ../packages/billing/src/components/invoice-designer/ast/workspaceAst.roundtrip.styles.test.ts`
 - Validate invoice insertion + validation integration:
   - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts ../packages/billing/src/components/invoice-designer/palette/ComponentPalette.fields.integration.test.tsx ../packages/billing/src/components/invoice-designer/DesignerShell.selectedContext.integration.test.tsx`
+- Validate workflow editor test baseline after validation migration:
+  - `cd ee/server && npx vitest run src/components/workflow-designer/expression-editor/__tests__/completionProvider.test.ts src/components/workflow-designer/expression-editor/__tests__/diagnosticsProvider.test.ts`
 - Compare invoice/workflow binding/expression surfaces:
   - `rg -n "binding|template|\{\{|\$expr|validateExpressionSource" packages/billing/src/components/invoice-designer ee/server/src/components/workflow-designer shared/workflow/runtime -g"*.ts*"`
 - Review workflow designer expression sections:
