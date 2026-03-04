@@ -101,7 +101,7 @@ beforeEach(async () => {
   tenantId = uuidv4();
   userId = uuidv4();
   mockedCreateTenantKnex.mockImplementation(async () => ({ knex: db, tenant: tenantId }));
-  mockedGetCurrentTenantId.mockReturnValue(tenantId);
+  mockedGetCurrentTenantId.mockImplementation(() => tenantId);
   mockedGetCurrentUser.mockResolvedValue({ user_id: userId, roles: [] } as any);
   resetTestActionState();
 });

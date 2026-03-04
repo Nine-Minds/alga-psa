@@ -304,7 +304,7 @@
   {
     "id": "T038",
     "description": "Regression: workflow runtime integration tests remain green for control flow and event-trigger expression execution paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]

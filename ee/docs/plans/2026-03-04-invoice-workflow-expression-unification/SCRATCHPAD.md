@@ -190,3 +190,8 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) T035 validated by `DesignCanvas.previewMode.test.tsx`: preview rendering resolves known moustache tokens and leaves unresolved tokens visibly marked.
 - (2026-03-04) T036 validated by `DesignCanvas.previewMode.test.tsx` regression run (17 passing tests), covering field/table/totals preview scaffolds.
 - (2026-03-04) T037 validated by `server/src/test/unit/workflowRuntimeV2.unit.test.ts` (33 passing tests): workflow runtime v2 expression compile/evaluate/resolve unit suite remains green.
+- (2026-03-04) T038 validated by `server/src/test/integration/workflowRuntimeV2.control.integration.test.ts` + `workflowRuntimeV2.eventTrigger.integration.test.ts` (86 passing tests total). Required fixes:
+  - improved `@alga-psa/auth` test mock in `server/src/test/setup.ts` to provide tenant-aware `withAuth`/`withOptionalAuth` context (using mocked db tenant where available),
+  - added `@alga-psa/core` alias coverage in `server/vitest.config.ts` to resolve document dependency imports in server Vitest runs,
+  - updated integration test tenant mocks to use `mockImplementation(() => tenantId)` for mutable tenant scenarios,
+  - updated event-trigger tests to use trigger `sourcePayloadSchemaRef` and schema-aware invalid-payload expectations aligned with current runtime contract.
