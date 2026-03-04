@@ -92,7 +92,7 @@
   {
     "id": "F016",
     "description": "Adapt workflow step expression validation UI to consume shared validation result contract.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-007", "FR-011"]
   },
   {
