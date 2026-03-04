@@ -80,7 +80,7 @@
   {
     "id": "T014",
     "description": "Integration: invoice field search filters adapter-provided options by label/path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {
