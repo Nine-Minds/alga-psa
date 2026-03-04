@@ -208,7 +208,7 @@
   {
     "id": "T026",
     "description": "Unit: workflow editor completion provider function list is filtered to runtime-allowlisted function set.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
