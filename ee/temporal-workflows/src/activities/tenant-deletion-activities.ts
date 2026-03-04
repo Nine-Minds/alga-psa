@@ -75,6 +75,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'gmail_processed_history', 'email_processed_attachments', 'email_processed_messages',
   'email_reply_tokens', 'email_sending_logs', 'email_rate_limits',
 
+  // MSP SSO domain claim lifecycle (dependent challenges before claim rows)
+  'msp_sso_domain_verification_challenges', 'msp_sso_tenant_login_domains',
+
   // User related details
   'user_notification_preferences', 'user_internal_notification_preferences', 'user_preferences',
   'role_permissions', 'user_roles', 'user_auth_accounts',

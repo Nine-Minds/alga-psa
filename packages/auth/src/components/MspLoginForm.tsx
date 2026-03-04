@@ -31,6 +31,7 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLookupError(null);
     setIsSubmitting(true);
 
     try {
@@ -143,7 +144,11 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
         </Button>
       </div>
 
-     <SsoProviderButtons callbackUrl={callbackUrl} />
+     <SsoProviderButtons
+       callbackUrl={callbackUrl}
+       email={email}
+       onError={(message) => setLookupError(message || null)}
+     />
 
     </form>
   );

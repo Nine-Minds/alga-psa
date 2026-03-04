@@ -1,0 +1,212 @@
+[
+  {
+    "id": "F001",
+    "description": "Add a tenant-scoped MSP SSO login-domain persistence model (migration + schema).",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #1", "Rollout / Migration #1"]
+  },
+  {
+    "id": "F002",
+    "description": "Add indexes to support fast domain lookup and tenant-scoped domain management operations.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F003",
+    "description": "Add server action to list configured MSP SSO login domains for the current tenant.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #2"]
+  },
+  {
+    "id": "F004",
+    "description": "Add server action to create/update/remove tenant MSP SSO login domains.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #2"]
+  },
+  {
+    "id": "F005",
+    "description": "Normalize login domains to lowercase and validate domain syntax in settings actions.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #1", "Functional Requirements #2"]
+  },
+  {
+    "id": "F006",
+    "description": "Implement domain conflict/ambiguity handling policy in domain-management actions.",
+    "implemented": true,
+    "prdRefs": ["Open Questions #1", "Security / Permissions #3"]
+  },
+  {
+    "id": "F007",
+    "description": "Add Providers settings UI section for tenant MSP SSO login domains.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #2", "Acceptance Criteria #1"]
+  },
+  {
+    "id": "F008",
+    "description": "Add add/remove/edit controls for multiple login domains in the Providers UI.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #2", "UX / UI Notes #1"]
+  },
+  {
+    "id": "F009",
+    "description": "Show domain validation/conflict failures as neutral actionable UI errors in Providers settings.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #2", "Security / Permissions #3"]
+  },
+  {
+    "id": "F010",
+    "description": "Add `POST /api/auth/msp/sso/discover` endpoint for MSP SSO domain discovery.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #3", "Endpoint"]
+  },
+  {
+    "id": "F011",
+    "description": "Parse and validate input email in discovery endpoint and derive normalized domain.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #4", "Endpoint"]
+  },
+  {
+    "id": "F012",
+    "description": "Apply rate limiting to discovery endpoint with neutral response behavior on limit hits.",
+    "implemented": true,
+    "prdRefs": ["Non-functional Requirements #2", "Security / Permissions #2"]
+  },
+  {
+    "id": "F013",
+    "description": "Resolve tenant context from domain mapping without any full-email user existence lookup.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #4", "Acceptance Criteria #4"]
+  },
+  {
+    "id": "F014",
+    "description": "Treat ambiguous domain mappings as unresolved (fail-closed for tenant resolution).",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Security / Permissions #3"]
+  },
+  {
+    "id": "F015",
+    "description": "Compute tenant-scoped Google readiness from tenant provider secrets when tenant is resolved.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #5"]
+  },
+  {
+    "id": "F016",
+    "description": "Compute tenant-scoped Microsoft readiness from tenant provider secrets when tenant is resolved.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #5"]
+  },
+  {
+    "id": "F017",
+    "description": "Compute app-fallback provider availability when tenant is unresolved.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #5", "Acceptance Criteria #3"]
+  },
+  {
+    "id": "F018",
+    "description": "Return invariant discovery response schema `{ ok: true, providers: [] }` with allowed provider IDs only.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #3", "Non-functional Requirements #1"]
+  },
+  {
+    "id": "F019",
+    "description": "Add signed discovery-context cookie helper carrying tenant/source/providers metadata only.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #6", "Non-functional Requirements #4"]
+  },
+  {
+    "id": "F020",
+    "description": "Set and rotate discovery-context cookie from discovery endpoint; clear stale cookie on invalid input.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #6", "Functional Requirements #7"]
+  },
+  {
+    "id": "F021",
+    "description": "Update MSP `SsoProviderButtons` to call discovery endpoint when a valid email is entered.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #7", "UX / UI Notes #2"]
+  },
+  {
+    "id": "F022",
+    "description": "Keep SSO buttons disabled while discovery is pending or email is invalid.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes #2"]
+  },
+  {
+    "id": "F023",
+    "description": "Enable only providers returned by discovery and keep unsupported providers disabled.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #7", "Acceptance Criteria #2"]
+  },
+  {
+    "id": "F024",
+    "description": "Persist last-selected provider locally and preselect it when still eligible (without bypassing server checks).",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes #5", "Open Questions #3"]
+  },
+  {
+    "id": "F025",
+    "description": "Update `/api/auth/msp/sso/resolve` to consume discovery-context cookie for tenant/provider source selection.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #8", "Existing endpoint updates"]
+  },
+  {
+    "id": "F026",
+    "description": "Reject resolver attempts when requested provider is not in discovered allowed provider set.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #8", "Acceptance Criteria #5"]
+  },
+  {
+    "id": "F027",
+    "description": "When discovery context is missing/invalid, resolver falls back to app-level provider path only.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #9", "Acceptance Criteria #3"]
+  },
+  {
+    "id": "F028",
+    "description": "Keep resolver external failure behavior generic/non-enumerating across unknown user and known user paths.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #9", "Non-functional Requirements #1", "Acceptance Criteria #4"]
+  },
+  {
+    "id": "F029",
+    "description": "Keep OAuth callback user mapping behavior unchanged for unknown users (no pre-auth user detection path).",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #10"]
+  },
+  {
+    "id": "F030",
+    "description": "Keep MSP credentials login flow unchanged while adding domain-based SSO discovery.",
+    "implemented": true,
+    "prdRefs": ["Primary Flow D", "Functional Requirements #11"]
+  },
+  {
+    "id": "F031",
+    "description": "Keep client portal login and client SSO affordances unchanged.",
+    "implemented": true,
+    "prdRefs": ["Non-goals #2", "Functional Requirements #11"]
+  },
+  {
+    "id": "F032",
+    "description": "Document provider setup order including tenant login-domain setup before MSP SSO use.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #11", "Acceptance Criteria #1"]
+  },
+  {
+    "id": "F033",
+    "description": "Update env/docs guidance for app-fallback behavior when domain is unresolved.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #11", "Open Questions #2"]
+  },
+  {
+    "id": "F034",
+    "description": "Ensure CE and EE route/component wiring both use the same discovery + resolver gating behavior.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #12", "Acceptance Criteria #7"]
+  },
+  {
+    "id": "F035",
+    "description": "Preserve existing `/auth/msp/signin` URLs and existing emailed links without hostname migration requirements.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements #11", "Acceptance Criteria #6"]
+  }
+]

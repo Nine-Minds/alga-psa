@@ -1,0 +1,493 @@
+[
+  {
+    "id": "T001",
+    "description": "Migration adds lifecycle columns/state to MSP SSO domain persistence schema.",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Migration creates optional verification challenge persistence for EE ownership checks.",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Migration rollback removes lifecycle/challenge schema changes cleanly.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Backfill marks existing EE active domain rows with verified-compatible legacy status.",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Backfill marks existing CE active domain rows with advisory status.",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Domain normalization helper trims, lowercases, and strips unsupported decorations.",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Domain validation rejects malformed values with deterministic neutral errors.",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "EE list-claims action denies client users and unauthorized internal users.",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "EE list-claims action returns normalized domains with lifecycle metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "EE request-claim action creates pending claim and challenge material for a new domain.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F002"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "EE request-claim action is idempotent for an existing pending claim by same tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "EE challenge refresh action rotates challenge token material and invalidates previous challenge.",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "EE verify action with valid DNS challenge promotes pending claim to verified.",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "EE verify action with invalid/missing DNS challenge remains pending and returns neutral admin error.",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "EE revoke action transitions verified claim to revoked and removes takeover eligibility.",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "EE conflict policy blocks second tenant from becoming verified owner of the same domain.",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "CE advisory add-domain action persists active advisory registration.",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "CE advisory remove-domain action deactivates advisory registration.",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "EE settings UI renders domain claim lifecycle table with status badges.",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "EE settings UI renders verification instructions for pending claims.",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "EE settings UI shows neutral actionable error when verification fails.",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "CE settings UI renders advisory registration copy and guidance.",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "CE settings UI add/remove controls persist advisory registrations successfully.",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F010"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Settings copy explicitly states unmanaged domains use Nine Minds app-level fallback.",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Discovery helper evaluates edition and claim lifecycle before selecting tenant/app source.",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "EE discovery with verified claim and tenant Google credentials returns tenant source + google provider.",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "EE discovery with verified claim and tenant Microsoft credentials returns tenant source + azure-ad provider.",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "EE discovery with pending claim returns app-level fallback providers only.",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "EE discovery with revoked claim returns app-level fallback providers only.",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "EE discovery with ambiguous domain ownership returns app-level fallback providers only.",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F011"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "CE discovery with advisory registered domain can return tenant-scoped provider eligibility.",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "CE discovery with unregistered domain returns app-level fallback providers.",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Unresolved domain in both editions returns app-level fallback provider set.",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Discover endpoint invalid-email path returns invariant neutral schema.",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Discover endpoint rate-limit path returns same neutral schema and behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Discover endpoint logging excludes raw email and keeps only safe metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Resolver in EE with verified claim context selects tenant credential source.",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Resolver in EE with non-verified claim context uses app fallback or generic failure per eligibility.",
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F018"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Resolver denies provider attempts outside discovered allow-list with generic response.",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Resolver stale discovery context is revalidated and cannot force unauthorized tenant source.",
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F023"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Resolver invalid payload, rate-limit, and source-failure responses remain externally indistinguishable.",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "Discovery cookie payload remains signed, short-lived, and free of provider secrets.",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "Resolution cookie payload remains signed, short-lived, and free of provider secrets.",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "MSP credentials login succeeds unchanged when domain claim states vary.",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "Client portal signin flow remains unchanged and does not call MSP discovery endpoints.",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "CE build wiring resolves MSP SSO entry to discovery-enabled provider buttons implementation.",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "MSP login form passes normalized email prop into SSO discovery component in both editions.",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "SSO buttons remain disabled for invalid email and while discovery is in flight.",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "SSO buttons enable only providers returned by discovery response and keep unsupported buttons disabled.",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "Disabled SSO button clicks never trigger resolver/start request.",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "Remembered provider preference is only applied when provider remains eligible after discovery.",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "Docs describe EE request-verify-revoke lifecycle and DNS ownership verification steps.",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "Docs describe CE advisory registration behavior and non-blocking ownership model.",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "Docs describe Nine Minds fallback provider prerequisites and unmanaged-domain behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "DB-backed integration happy path: EE verified claim + tenant Microsoft credentials returns tenant source and [\"azure-ad\"].",
+    "implemented": true,
+    "featureIds": [
+      "F034",
+      "F017"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "DB-backed integration guard: EE pending claim with tenant credentials still returns app fallback source.",
+    "implemented": true,
+    "featureIds": [
+      "F034",
+      "F018"
+    ]
+  },
+  {
+    "id": "T057",
+    "description": "DB-backed integration guard: second EE tenant cannot verify takeover for already-verified domain.",
+    "implemented": true,
+    "featureIds": [
+      "F034",
+      "F011"
+    ]
+  },
+  {
+    "id": "T058",
+    "description": "DB-backed integration guard: revoked EE claim no longer enables tenant takeover routing.",
+    "implemented": true,
+    "featureIds": [
+      "F034",
+      "F018"
+    ]
+  },
+  {
+    "id": "T059",
+    "description": "DB-backed integration CE advisory path: registered advisory domain can route to tenant source when tenant credentials exist.",
+    "implemented": true,
+    "featureIds": [
+      "F034",
+      "F019"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "Route contract preserves `/auth/msp/signin` entry path and callbackUrl passthrough under new lifecycle rules.",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ]
+  }
+]
