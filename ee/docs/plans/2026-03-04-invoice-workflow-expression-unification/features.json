@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "Create invoice context adapter exposing invoice roots/paths in shared context format.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-002"]
   },
   {

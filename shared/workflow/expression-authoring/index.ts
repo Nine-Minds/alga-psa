@@ -3,3 +3,4 @@ export * from './context';
 export * from './pathDiscovery';
 export * from './insertion';
 export * from './validation';
+export * from './adapters';
