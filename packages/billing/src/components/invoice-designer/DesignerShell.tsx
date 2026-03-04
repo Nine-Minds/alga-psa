@@ -28,6 +28,21 @@ import { getPresetById } from './constants/presets';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import type { LucideIcon } from 'lucide-react';
+import {
+  AlignCenter,
+  AlignHorizontalDistributeCenter,
+  AlignHorizontalSpaceAround,
+  AlignHorizontalSpaceBetween,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
+  ArrowDown,
+  ArrowRight,
+  ArrowUpDown,
+  Grid3X3,
+} from 'lucide-react';
 import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
 import { canNestWithinParent, getAllowedParentsForType } from './schema/componentSchema';
 import { invoiceDesignerCollisionDetection } from './utils/dndCollision';
@@ -262,6 +277,54 @@ const shouldPromoteParentToCanvasForManualPosition = (
 
 const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
+type IconToggleOption = {
+  value: string;
+  label: string;
+  tooltip: string;
+  icon: LucideIcon;
+};
+
+const CONTAINER_LAYOUT_MODE_OPTIONS: IconToggleOption[] = [
+  { value: 'flex', label: 'Stack', tooltip: 'Stack (Flex)', icon: AlignJustify },
+  { value: 'grid', label: 'Grid', tooltip: 'Grid layout', icon: Grid3X3 },
+];
+
+const CONTAINER_FLEX_DIRECTION_OPTIONS: IconToggleOption[] = [
+  { value: 'column', label: 'Vertical', tooltip: 'Vertical flow', icon: ArrowDown },
+  { value: 'row', label: 'Horizontal', tooltip: 'Horizontal flow', icon: ArrowRight },
+];
+
+const CONTAINER_ALIGN_ITEMS_OPTIONS: IconToggleOption[] = [
+  { value: 'stretch', label: 'Stretch', tooltip: 'Stretch children', icon: ArrowUpDown },
+  { value: 'flex-start', label: 'Start', tooltip: 'Align to start', icon: AlignLeft },
+  { value: 'center', label: 'Center', tooltip: 'Align to center', icon: AlignCenter },
+  { value: 'flex-end', label: 'End', tooltip: 'Align to end', icon: AlignRight },
+];
+
+const CONTAINER_JUSTIFY_CONTENT_OPTIONS: IconToggleOption[] = [
+  { value: 'flex-start', label: 'Start', tooltip: 'Pack at start', icon: AlignLeft },
+  { value: 'center', label: 'Center', tooltip: 'Pack at center', icon: AlignCenter },
+  { value: 'flex-end', label: 'End', tooltip: 'Pack at end', icon: AlignRight },
+  {
+    value: 'space-between',
+    label: 'Between',
+    tooltip: 'Distribute with space between',
+    icon: AlignHorizontalSpaceBetween,
+  },
+  {
+    value: 'space-around',
+    label: 'Around',
+    tooltip: 'Distribute with space around',
+    icon: AlignHorizontalSpaceAround,
+  },
+  {
+    value: 'space-evenly',
+    label: 'Evenly',
+    tooltip: 'Distribute with equal spacing',
+    icon: AlignHorizontalDistributeCenter,
+  },
+];
+
 const FIELD_TYPE_LABELS: Record<string, string> = {
   'invoice.number': 'Invoice Number',
   'invoice.invoiceNumber': 'Invoice Number',
@@ -402,6 +465,12 @@ export const DesignerShell: React.FC = () => {
   const selectedPreset = selectedNode?.layoutPresetId ? getPresetById(selectedNode.layoutPresetId) : null;
   const selectedNodeTypeLabel = useMemo(() => resolveSelectedNodeTypeLabel(selectedNode), [selectedNode]);
   const selectedFieldType = useMemo(() => resolveSelectedFieldType(selectedNode), [selectedNode]);
+  const selectedContainerLayout = useMemo(() => {
+    if (!selectedNode || selectedNode.type !== 'container') {
+      return undefined;
+    }
+    return getNodeLayout(selectedNode);
+  }, [selectedNode]);
   const selectedMediaParentSection = useMemo(() => {
     if (!selectedNode || !['image', 'logo', 'qr'].includes(selectedNode.type)) {
       return null;
@@ -844,6 +913,87 @@ export const DesignerShell: React.FC = () => {
     setDropIndicator(null);
     updatePointerLocation(null);
   }, [updatePointerLocation]);
+
+  const renderContainerLayoutControls = () => {
+    if (!selectedNode || selectedNode.type !== 'container' || !selectedContainerLayout) {
+      return null;
+    }
+
+    const layoutMode = selectedContainerLayout.display ?? 'flex';
+    const direction = selectedContainerLayout.flexDirection ?? 'column';
+    const alignItems = selectedContainerLayout.alignItems ?? 'stretch';
+    const justifyContent = selectedContainerLayout.justifyContent ?? 'flex-start';
+
+    const renderButtonGroup = (
+      keyPrefix: string,
+      label: string,
+      options: IconToggleOption[],
+      currentValue: string,
+      onSelect: (value: string) => void,
+      columns: number
+    ) => (
+      <div className="space-y-1.5">
+        <p className="text-xs text-slate-500">{label}</p>
+        <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+          {options.map((option) => {
+            const Icon = option.icon;
+            const isSelected = option.value === currentValue;
+            return (
+              <Tooltip key={option.value} content={option.tooltip}>
+                <button
+                  type="button"
+                  onClick={() => onSelect(option.value)}
+                  className={clsx(
+                    'h-8 rounded border transition-colors inline-flex items-center justify-center',
+                    isSelected
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-100'
+                  )}
+                  aria-pressed={isSelected}
+                  aria-label={`${label}: ${option.label}`}
+                  data-automation-id={`designer-container-layout-${keyPrefix}-${option.value}`}
+                >
+                  <Icon className="h-4 w-4" />
+                </button>
+              </Tooltip>
+            );
+          })}
+        </div>
+      </div>
+    );
+
+    return (
+      <div
+        className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2"
+        data-automation-id="designer-container-layout-controls"
+      >
+        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Layout Controls</p>
+        {renderButtonGroup('mode', 'Layout', CONTAINER_LAYOUT_MODE_OPTIONS, layoutMode, (value) => {
+          setNodeProp(selectedNode.id, 'layout.display', value, true);
+        }, 2)}
+        {layoutMode === 'flex' && (
+          <>
+            {renderButtonGroup('direction', 'Direction', CONTAINER_FLEX_DIRECTION_OPTIONS, direction, (value) => {
+              setNodeProp(selectedNode.id, 'layout.flexDirection', value, true);
+            }, 2)}
+            {renderButtonGroup('align-items', 'Align Items', CONTAINER_ALIGN_ITEMS_OPTIONS, alignItems, (value) => {
+              setNodeProp(selectedNode.id, 'layout.alignItems', value, true);
+            }, 4)}
+            {renderButtonGroup(
+              'justify-content',
+              'Justify Content',
+              CONTAINER_JUSTIFY_CONTENT_OPTIONS,
+              justifyContent,
+              (value) => {
+                setNodeProp(selectedNode.id, 'layout.justifyContent', value, true);
+              },
+              3
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
 
   const renderMetadataInspector = () => {
     if (!selectedNode) {
@@ -1603,6 +1753,7 @@ export const DesignerShell: React.FC = () => {
 	                  <p className="text-[11px] text-slate-500">{selectedPreset.description}</p>
 	                </div>
 		              )}
+                  {renderContainerLayoutControls()}
                   <DesignerSchemaInspector node={selectedNode} nodesById={nodesById} />
 			              {selectedNode.type === 'section' && (
 			                <div className="space-y-1">
