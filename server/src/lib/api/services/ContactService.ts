@@ -198,26 +198,62 @@ export class ContactService extends BaseService<IContact> {
         // Insert contact
         const [contact] = await trx('contacts').insert(contactData).returning('*');
 
-        // Create phone number row if phone_number provided
-        const phoneStr = (contact.phone_number || '').trim();
-        if (phoneStr) {
-          try {
-            const tableExists = await trx.schema.hasTable('contact_phone_numbers');
-            if (tableExists) {
-              await trx('contact_phone_numbers').insert({
-                tenant: context.tenant,
-                phone_number_id: trx.raw('gen_random_uuid()'),
-                contact_id: contact.contact_name_id,
-                phone_type: 'Office',
-                phone_number: phoneStr,
-                is_primary: true,
-                created_at: trx.raw('now()'),
-                updated_at: trx.raw('now()')
-              });
+        // Create phone number rows from phone_numbers array or legacy phone_number
+        try {
+          const tableExists = await trx.schema.hasTable('contact_phone_numbers');
+          if (tableExists) {
+            const phoneNumbersArray = (data as any).phone_numbers;
+            if (Array.isArray(phoneNumbersArray) && phoneNumbersArray.length > 0) {
+              // Use structured phone_numbers if provided
+              let hasPrimary = false;
+              for (const pn of phoneNumbersArray) {
+                if (!pn.phone_number || pn.phone_number.trim() === '') continue;
+                const isPrimary = !hasPrimary && (pn.is_primary || false);
+                if (isPrimary) hasPrimary = true;
+                await trx('contact_phone_numbers').insert({
+                  tenant: context.tenant,
+                  phone_number_id: trx.raw('gen_random_uuid()'),
+                  contact_id: contact.contact_name_id,
+                  phone_type: pn.phone_type || 'Office',
+                  phone_number: pn.phone_number.trim(),
+                  extension: pn.extension || null,
+                  country_code: pn.country_code || null,
+                  is_primary: isPrimary,
+                  created_at: trx.raw('now()'),
+                  updated_at: trx.raw('now()')
+                });
+              }
+              // If no primary was set, make the first one primary
+              if (!hasPrimary) {
+                const first = await trx('contact_phone_numbers')
+                  .where({ contact_id: contact.contact_name_id, tenant: context.tenant })
+                  .orderBy('created_at', 'asc')
+                  .first();
+                if (first) {
+                  await trx('contact_phone_numbers')
+                    .where({ phone_number_id: first.phone_number_id, tenant: context.tenant })
+                    .update({ is_primary: true });
+                }
+              }
+            } else {
+              // Fall back to legacy phone_number field
+              const phoneStr = (contact.phone_number || '').trim();
+              if (phoneStr) {
+                await trx('contact_phone_numbers').insert({
+                  tenant: context.tenant,
+                  phone_number_id: trx.raw('gen_random_uuid()'),
+                  contact_id: contact.contact_name_id,
+                  phone_type: 'Office',
+                  phone_number: phoneStr,
+                  is_primary: true,
+                  created_at: trx.raw('now()'),
+                  updated_at: trx.raw('now()')
+                });
+              }
             }
-          } catch {
-            // Table may not exist yet if migration hasn't run
           }
+        } catch {
+          // Table may not exist yet if migration hasn't run
         }
 
         // Handle tags if provided

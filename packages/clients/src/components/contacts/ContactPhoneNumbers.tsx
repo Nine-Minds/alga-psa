@@ -188,6 +188,7 @@ const ContactPhoneNumbers: React.FC<ContactPhoneNumbersProps> = ({
               <div className="flex items-center gap-1">
                 <div className={compact ? 'w-[80px]' : 'w-[100px]'}>
                   <CustomSelect
+                    id={`phone-type-${contactId}-${index}`}
                     value={pn.phone_type}
                     onValueChange={(value) => handlePhoneChange(index, 'phone_type', value)}
                     options={getAvailableTypeOptions(pn.phone_type)}
@@ -197,6 +198,7 @@ const ContactPhoneNumbers: React.FC<ContactPhoneNumbersProps> = ({
                 {/* Primary Star Toggle */}
                 {!compact && (
                   <button
+                    id={`phone-primary-${contactId}-${index}`}
                     type="button"
                     onClick={() => handleSetPrimary(index)}
                     disabled={disabled}
@@ -215,6 +217,7 @@ const ContactPhoneNumbers: React.FC<ContactPhoneNumbersProps> = ({
                 )}
                 {/* Delete Button */}
                 <button
+                  id={`phone-delete-${contactId}-${index}`}
                   type="button"
                   onClick={() => handleDelete(index)}
                   disabled={disabled}

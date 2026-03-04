@@ -147,15 +147,25 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
       const updatedContact = await updateContact(contactToSave);
 
       // Save phone numbers
+      let phoneSaveWarning = false;
       if (phoneNumbers.length > 0) {
-        await saveContactPhoneNumbers(
-          contact.contact_name_id,
-          phoneNumbers.map(pn => ({
-            ...pn,
-            phone_type: pn.phone_type,
-            phone_number: pn.phone_number
-          }))
-        );
+        try {
+          await saveContactPhoneNumbers(
+            contact.contact_name_id,
+            phoneNumbers.map(pn => ({
+              ...pn,
+              phone_type: pn.phone_type,
+              phone_number: pn.phone_number
+            }))
+          );
+        } catch (phoneError) {
+          console.error('Error saving phone numbers:', phoneError);
+          phoneSaveWarning = true;
+        }
+      }
+
+      if (phoneSaveWarning) {
+        setError('Contact details were saved, but phone numbers could not be updated. Please try saving again.');
       }
 
       onSave(updatedContact);

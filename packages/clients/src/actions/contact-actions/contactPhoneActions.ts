@@ -98,6 +98,11 @@ export const addContactPhoneNumber = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
+    // Validate phone number is not blank
+    if (!data.phone_number || data.phone_number.trim() === '') {
+      throw new Error('VALIDATION_ERROR: Phone number is required');
+    }
+
     // Verify contact exists
     const contact = await trx('contacts')
       .where({ contact_name_id: contactId, tenant })
@@ -317,6 +322,10 @@ export const saveContactPhoneNumbers = withAuth(async (
     const tableExists = await trx.schema.hasTable('contact_phone_numbers');
     if (!tableExists) return [];
 
+    // Filter out blank phone numbers before processing
+    phoneNumbers = phoneNumbers.filter(pn => pn.phone_number && pn.phone_number.trim() !== '');
+    if (phoneNumbers.length === 0) return [];
+
     // Verify contact exists
     const contact = await trx('contacts')
       .where({ contact_name_id: contactId, tenant })
@@ -354,10 +363,18 @@ export const saveContactPhoneNumbers = withAuth(async (
     const now = new Date().toISOString();
     const results: IContactPhoneNumber[] = [];
 
-    // Ensure exactly one primary
-    const hasPrimary = phoneNumbers.some(p => p.is_primary);
-    if (!hasPrimary && phoneNumbers.length > 0) {
+    // Enforce exactly one primary: if none, set first; if multiple, keep only first
+    const primaryIndices = phoneNumbers
+      .map((p, i) => p.is_primary ? i : -1)
+      .filter(i => i !== -1);
+
+    if (primaryIndices.length === 0 && phoneNumbers.length > 0) {
       phoneNumbers[0].is_primary = true;
+    } else if (primaryIndices.length > 1) {
+      // Keep only the first primary, clear the rest
+      for (let i = 1; i < primaryIndices.length; i++) {
+        phoneNumbers[primaryIndices[i]].is_primary = false;
+      }
     }
 
     for (const pn of phoneNumbers) {

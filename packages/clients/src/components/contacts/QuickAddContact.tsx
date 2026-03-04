@@ -345,6 +345,11 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
           );
         } catch (phoneError) {
           console.error("Error saving phone numbers:", phoneError);
+          toast({
+            title: 'Warning',
+            description: 'Contact was created but phone numbers could not be saved. Please edit the contact to add them.',
+            variant: 'destructive'
+          });
         }
       }
 

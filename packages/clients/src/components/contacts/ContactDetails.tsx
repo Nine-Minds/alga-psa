@@ -570,18 +570,24 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       const updatedContact = await updateContact(dataToUpdate);
 
       // Save phone numbers if they exist
+      let phoneSaveWarning = false;
       if (phoneNumbers.length > 0) {
-        const savedPhones = await saveContactPhoneNumbers(
-          editedContact.contact_name_id,
-          phoneNumbers.map(pn => ({
-            ...pn,
-            phone_type: pn.phone_type,
-            phone_number: pn.phone_number
-          }))
-        );
-        // Only update state if we got results (table may not exist yet)
-        if (savedPhones.length > 0) {
-          setPhoneNumbers(savedPhones);
+        try {
+          const savedPhones = await saveContactPhoneNumbers(
+            editedContact.contact_name_id,
+            phoneNumbers.map(pn => ({
+              ...pn,
+              phone_type: pn.phone_type,
+              phone_number: pn.phone_number
+            }))
+          );
+          // Only update state if we got results (table may not exist yet)
+          if (savedPhones.length > 0) {
+            setPhoneNumbers(savedPhones);
+          }
+        } catch (phoneError) {
+          console.error('Error saving phone numbers:', phoneError);
+          phoneSaveWarning = true;
         }
       }
 
@@ -589,10 +595,18 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       setOriginalContact(updatedContact);
       setHasUnsavedChanges(false);
 
-      toast({
-        title: "Contact Updated",
-        description: "Contact details have been saved successfully.",
-      });
+      if (phoneSaveWarning) {
+        toast({
+          title: "Partial Save",
+          description: "Contact details were saved, but phone numbers could not be updated. Please try again.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Contact Updated",
+          description: "Contact details have been saved successfully.",
+        });
+      }
 
       // In quick view mode, mark that changes were saved (for refresh on drawer close)
       // In regular mode, refresh immediately to maintain existing behavior
