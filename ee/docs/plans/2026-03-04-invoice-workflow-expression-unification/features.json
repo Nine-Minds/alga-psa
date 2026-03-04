@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "Implement shared insertion helper API for cursor-aware insertion in text inputs, textareas, and Monaco-backed editors.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-001", "FR-012"]
   },
   {
