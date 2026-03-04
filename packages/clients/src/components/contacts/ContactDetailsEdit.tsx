@@ -166,6 +166,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
 
       if (phoneSaveWarning) {
         setError('Contact details were saved, but phone numbers could not be updated. Please try saving again.');
+        return; // Don't navigate away — let user see the warning and retry
       }
 
       onSave(updatedContact);
