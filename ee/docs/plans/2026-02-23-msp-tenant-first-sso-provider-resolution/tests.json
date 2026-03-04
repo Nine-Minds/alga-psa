@@ -1,0 +1,619 @@
+[
+  {
+    "id": "T001",
+    "description": "Providers tab renders Microsoft card alongside existing Google card.",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Microsoft settings status action returns success for authorized internal admin user.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F010"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Microsoft settings status action returns masked values only (no raw secret content).",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F009"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Microsoft settings save action rejects empty client ID.",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Microsoft settings save action rejects empty client secret.",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Microsoft settings save action defaults tenant ID to `common` when omitted.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F008",
+      "F049"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Microsoft settings save action persists `microsoft_client_id` in tenant secrets.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Microsoft settings save action persists `microsoft_client_secret` in tenant secrets.",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Microsoft settings save action persists `microsoft_tenant_id` in tenant secrets.",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Microsoft settings status action exposes derived redirect URI and scope metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Microsoft settings reset action disconnects Microsoft email providers for the tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Microsoft settings reset action disconnects Microsoft calendar providers for the tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Microsoft settings save/reset actions are exported via integrations action index and callable from UI imports.",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Non-admin user receives permission error on Microsoft settings save.",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Client-portal user context is denied on Microsoft settings status/save/reset actions.",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Microsoft readiness helper returns ready only when both `microsoft_client_id` and `microsoft_client_secret` exist.",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Google readiness helper returns ready only when both `google_client_id` and `google_client_secret` exist.",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "CE Microsoft email form no longer blocks save due to manual client credentials fields.",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F017"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "CE Microsoft email form shows Providers CTA when Microsoft readiness is false.",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "CE Microsoft calendar form shows Providers CTA when Microsoft readiness is false.",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "CE Microsoft calendar form can save provider metadata without manual OAuth credential entry.",
+    "implemented": true,
+    "featureIds": [
+      "F016",
+      "F018"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "CE Microsoft email provider persistence writes null/derived credential fields rather than requiring form-entered secrets.",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Google provider readiness for MSP SSO uses `google_client_id`/`google_client_secret` and does not require Gmail PubSub keys.",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "CE MSP login renders Google and Microsoft SSO buttons from non-stub implementation.",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "SSO buttons remain disabled until email input is non-empty.",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Microsoft button triggers resolver call before invoking NextAuth signIn.",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Google button triggers resolver call before invoking NextAuth signIn.",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Resolver failure always shows same generic error message text in MSP login UI.",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Client portal login UI remains unchanged and does not render new SSO buttons.",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Resolver endpoint accepts valid payload and returns `{ ok: true }` with context cookie when source is resolvable.",
+    "implemented": true,
+    "featureIds": [
+      "F025",
+      "F032"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Resolver endpoint rejects invalid provider values with generic failure response shape.",
+    "implemented": true,
+    "featureIds": [
+      "F026",
+      "F031"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Resolver endpoint normalizes email case/whitespace before lookup.",
+    "implemented": true,
+    "featureIds": [
+      "F026",
+      "F027"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Resolver selects tenant source for Microsoft when user exists and tenant Microsoft secrets are present.",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Resolver selects tenant source for Google when user exists and tenant Google secrets are present.",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Resolver selects app fallback source when user exists but tenant Microsoft config is missing and app fallback exists.",
+    "implemented": true,
+    "featureIds": [
+      "F029",
+      "F034"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Resolver selects app fallback source when user exists but tenant Google config is missing and app fallback exists.",
+    "implemented": true,
+    "featureIds": [
+      "F029",
+      "F035"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Resolver unknown-user path with available app fallback returns same success schema as known-user-missing-provider path.",
+    "implemented": true,
+    "featureIds": [
+      "F030",
+      "F031"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Resolver unknown-user path with no available fallback returns same generic failure schema as known-user-no-source path.",
+    "implemented": true,
+    "featureIds": [
+      "F030",
+      "F031",
+      "F036"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Resolver context cookie payload excludes raw client IDs and client secrets.",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Resolver context cookie includes provider, source, issuedAt/expiresAt, nonce, and signature.",
+    "implemented": true,
+    "featureIds": [
+      "F032",
+      "F043"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Resolver uses `MICROSOFT_OAUTH_CLIENT_ID` + `MICROSOFT_OAUTH_CLIENT_SECRET` for Microsoft fallback readiness check.",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "Resolver uses `GOOGLE_OAUTH_CLIENT_ID` + `GOOGLE_OAUTH_CLIENT_SECRET` for Google fallback readiness check.",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "Resolver returns generic failure when tenant source missing and fallback source missing.",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "Resolver rate limiter blocks repeated abusive attempts and returns generic failure response.",
+    "implemented": true,
+    "featureIds": [
+      "F037"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "Resolver structured logs include provider and source classification but no raw email, secrets, or explicit existence marker.",
+    "implemented": true,
+    "featureIds": [
+      "F038"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "CE build registers Google/Microsoft OAuth providers in NextAuth when fallback or tenant-selected source is available.",
+    "implemented": true,
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "Auth options are not stuck on stale provider secrets across attempts with different resolver cookies.",
+    "implemented": true,
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "NextAuth secret resolver uses tenant source from valid resolver cookie for Microsoft.",
+    "implemented": true,
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "NextAuth secret resolver uses tenant source from valid resolver cookie for Google.",
+    "implemented": true,
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "Invalid resolver cookie signature is ignored and app fallback is used.",
+    "implemented": true,
+    "featureIds": [
+      "F042",
+      "F043"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "Expired resolver cookie context is ignored and app fallback is used.",
+    "implemented": true,
+    "featureIds": [
+      "F042",
+      "F043"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "Resolver cookie is overwritten on subsequent SSO start attempts (new nonce and expiry).",
+    "implemented": true,
+    "featureIds": [
+      "F044"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "CE OAuth mapper resolves internal user by normalized email for Microsoft profile and returns expected extended user shape.",
+    "implemented": true,
+    "featureIds": [
+      "F045",
+      "F046"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "CE OAuth mapper resolves internal user by normalized email for Google profile and returns expected extended user shape.",
+    "implemented": true,
+    "featureIds": [
+      "F045",
+      "F046"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "CE OAuth mapper rejects inactive user accounts.",
+    "implemented": true,
+    "featureIds": [
+      "F045",
+      "F046"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "CE OAuth mapper rejects client user_type for MSP SSO flow.",
+    "implemented": true,
+    "featureIds": [
+      "F045",
+      "F046"
+    ]
+  },
+  {
+    "id": "T057",
+    "description": "EE build path continues to use enterprise registry profile mapper unchanged.",
+    "implemented": true,
+    "featureIds": [
+      "F047"
+    ]
+  },
+  {
+    "id": "T058",
+    "description": "CE MSP OAuth sign-in succeeds without EE account-link persistence dependencies.",
+    "implemented": true,
+    "featureIds": [
+      "F048"
+    ]
+  },
+  {
+    "id": "T059",
+    "description": "Microsoft OAuth issuer/authorization path uses tenant ID when provided, else defaults to `common`.",
+    "implemented": true,
+    "featureIds": [
+      "F049"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "Code comments/docs include explicit anti-enumeration guidance in resolver/auth flow modules.",
+    "implemented": true,
+    "featureIds": [
+      "F050"
+    ]
+  },
+  {
+    "id": "T061",
+    "description": "`.env.example` documents CE MSP fallback usage for `GOOGLE_OAUTH_*` and `MICROSOFT_OAUTH_*` keys.",
+    "implemented": true,
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T062",
+    "description": "Integration docs describe provider setup order for Microsoft and Google in Providers settings before account connection flows.",
+    "implemented": true,
+    "featureIds": [
+      "F052"
+    ]
+  },
+  {
+    "id": "T063",
+    "description": "DB-backed integration sanity (happy path): resolver selects tenant source when matching internal user row and tenant secret readiness are present.",
+    "implemented": true,
+    "featureIds": [
+      "F027",
+      "F028"
+    ]
+  },
+  {
+    "id": "T064",
+    "description": "DB-backed integration sanity (guard path): resolver for unknown email returns generic response without user-existence details.",
+    "implemented": true,
+    "featureIds": [
+      "F030",
+      "F031"
+    ]
+  },
+  {
+    "id": "T065",
+    "description": "DB-backed integration sanity (fallback path): resolver selects app source when user row exists but tenant readiness is absent.",
+    "implemented": true,
+    "featureIds": [
+      "F029",
+      "F034",
+      "F035"
+    ]
+  },
+  {
+    "id": "T066",
+    "description": "End-to-end MSP Microsoft SSO with tenant source succeeds from login form to authenticated redirect.",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F028",
+      "F041",
+      "F046"
+    ]
+  },
+  {
+    "id": "T067",
+    "description": "End-to-end MSP Google SSO with tenant source succeeds from login form to authenticated redirect.",
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F028",
+      "F041",
+      "F046"
+    ]
+  },
+  {
+    "id": "T068",
+    "description": "End-to-end MSP Microsoft SSO fallback source succeeds when tenant source is absent but app fallback exists.",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F029",
+      "F034",
+      "F042"
+    ]
+  },
+  {
+    "id": "T069",
+    "description": "End-to-end MSP Google SSO fallback source succeeds when tenant source is absent but app fallback exists.",
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F029",
+      "F035",
+      "F042"
+    ]
+  },
+  {
+    "id": "T070",
+    "description": "End-to-end MSP SSO start failure shows same generic UI messaging for unknown user and known-unconfigured tenant.",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F030",
+      "F031"
+    ]
+  },
+  {
+    "id": "T071",
+    "description": "End-to-end CE credentials login (non-SSO) remains unaffected by resolver cookie behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F040",
+      "F042",
+      "F044"
+    ]
+  },
+  {
+    "id": "T072",
+    "description": "End-to-end client portal login behavior remains unchanged with no new SSO affordances introduced.",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  }
+]

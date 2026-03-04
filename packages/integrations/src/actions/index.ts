@@ -99,6 +99,20 @@ export {
   resetGoogleProvidersToDisconnected
 } from './integrations/googleActions';
 export {
+  getMicrosoftIntegrationStatus,
+  saveMicrosoftIntegrationSettings,
+  resetMicrosoftProvidersToDisconnected
+} from './integrations/microsoftActions';
+export {
+  listMspSsoLoginDomains,
+  listMspSsoDomainClaims,
+  saveMspSsoLoginDomains,
+  requestMspSsoDomainClaim,
+  refreshMspSsoDomainClaimChallenge,
+  verifyMspSsoDomainClaimOwnership,
+  revokeMspSsoDomainClaim,
+} from './integrations/mspSsoDomainActions';
+export {
   initiateEntraDirectOAuth,
   connectEntraCipp,
   getEntraIntegrationStatus,
