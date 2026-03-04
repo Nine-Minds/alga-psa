@@ -38,7 +38,7 @@
   {
     "id": "T007",
     "description": "Unit: insertion helper returns no-op when target element is readonly/disabled/unfocused.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {
