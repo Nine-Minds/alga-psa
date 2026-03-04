@@ -139,7 +139,7 @@
   {
     "id": "T018",
     "description": "Unit: invoice moustache parser compiles single token text (`{{invoice.total}}`) into AST `path` expression.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]
