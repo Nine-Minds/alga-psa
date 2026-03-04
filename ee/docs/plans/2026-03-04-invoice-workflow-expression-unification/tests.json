@@ -32,7 +32,7 @@
   {
     "id": "T006",
     "description": "Unit: insertion helper replaces active selection range correctly in textarea/input.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {
