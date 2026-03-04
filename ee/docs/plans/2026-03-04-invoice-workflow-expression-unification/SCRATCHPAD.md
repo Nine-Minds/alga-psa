@@ -35,6 +35,7 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
   - invoice insertion feedback (`DesignerShell`)
   - workflow step config validation (`WorkflowDesigner`)
 - (2026-03-04) Workflow Monaco insertion paths now route through shared `insertTextIntoMonacoEditor` for both programmatic insert and drag/drop insert, with existing `$0` placeholder stripping preserved.
+- (2026-03-04) Invoice input/textarea insertion remains shared-helper based (`insertTextIntoDomControl` + `insertTextIntoValue`) for selection-aware replacement and repeated insert behavior.
 - (2026-03-04) Preserve persisted contracts:
   - Invoice keeps AST value expressions (`literal|binding|path|template`).
   - Workflow keeps `{ $expr: string }`.

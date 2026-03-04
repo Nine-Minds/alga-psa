@@ -134,7 +134,7 @@
   {
     "id": "F023",
     "description": "Ensure invoice plain input/textarea insertion behavior remains cursor-accurate after shared insertion migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-012", "NFR-001"]
   },
   {
