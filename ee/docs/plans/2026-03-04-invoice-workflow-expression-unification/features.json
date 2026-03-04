@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "Create workflow context adapter exposing payload/vars/meta/error (and loop vars) in shared context format.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-002"]
   },
   {
