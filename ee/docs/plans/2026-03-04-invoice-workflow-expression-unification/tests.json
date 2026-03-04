@@ -172,7 +172,7 @@
   {
     "id": "T022",
     "description": "Integration: invoice validation feedback appears for invalid inserted path and allows correction without crashing editor.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014",
       "F021"

@@ -8,13 +8,22 @@ import { useInvoiceDesignerStore } from './state/designerStore';
 
 vi.mock('./palette/ComponentPalette', () => ({
   ComponentPalette: ({ onInsertTemplateVariable }: { onInsertTemplateVariable?: (value: string) => void }) => (
-    <button
-      type="button"
-      data-automation-id="insert-template-variable"
-      onClick={() => onInsertTemplateVariable?.('invoice.total')}
-    >
-      Insert invoice.total
-    </button>
+    <div>
+      <button
+        type="button"
+        data-automation-id="insert-template-variable"
+        onClick={() => onInsertTemplateVariable?.('invoice.total')}
+      >
+        Insert invoice.total
+      </button>
+      <button
+        type="button"
+        data-automation-id="insert-template-variable-invalid"
+        onClick={() => onInsertTemplateVariable?.('invoice.missingField')}
+      >
+        Insert invalid path
+      </button>
+    </div>
   ),
 }));
 
@@ -131,5 +140,29 @@ describe('DesignerShell template insertion integration', () => {
 
     const textNode = useInvoiceDesignerStore.getState().nodes.find((node) => node.id === 'text-1');
     expect((textNode?.props as any)?.metadata?.text).toBe('Hello {{invoice.total}}');
+  });
+
+  it('shows invalid path feedback and allows correction without crashing', () => {
+    render(<DesignerShell />);
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = '';
+    input.setAttribute('data-template-insert-target', 'metadata.bindingKey');
+    document.body.appendChild(input);
+    input.focus();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Insert invalid path' }));
+    expect(input.value).toBe('invoice.missingField');
+
+    const invalidFeedback = document.querySelector('[data-automation-id="designer-drop-feedback"]');
+    expect(invalidFeedback?.textContent).toContain('Unknown path "invoice.missingField" for current context.');
+
+    input.setSelectionRange(0, input.value.length);
+    fireEvent.click(screen.getByRole('button', { name: 'Insert invoice.total' }));
+    expect(input.value).toBe('invoice.total');
+
+    const correctedFeedback = document.querySelector('[data-automation-id="designer-drop-feedback"]');
+    expect(correctedFeedback?.textContent).toContain('Inserted invoice.total.');
+    expect(correctedFeedback?.textContent).not.toContain('Unknown path');
   });
 });
