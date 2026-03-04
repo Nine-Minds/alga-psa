@@ -80,7 +80,7 @@
   {
     "id": "F014",
     "description": "Implement invoice-side shared validation integration for inserted paths/templates with user-facing feedback.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-011"]
   },
   {

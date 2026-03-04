@@ -29,8 +29,10 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
+  buildInvoiceExpressionPathOptions,
   insertTextIntoDomControl,
   insertTextIntoValue,
+  validateSourcePaths,
   type ExpressionMode,
 } from '@shared/workflow/expression-authoring';
 import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
@@ -372,6 +374,13 @@ export const DesignerShell: React.FC = () => {
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const selectedNodeId = useInvoiceDesignerStore((state) => state.selectedNodeId);
   const selectedNode = useMemo(() => nodes.find((node) => node.id === selectedNodeId) ?? null, [nodes, selectedNodeId]);
+  const invoicePathOptions = useMemo(
+    () =>
+      buildInvoiceExpressionPathOptions({
+        includeRootPaths: false,
+      }),
+    []
+  );
   const addNode = useInvoiceDesignerStore((state) => state.addNodeFromPalette);
   const insertPreset = useInvoiceDesignerStore((state) => state.insertPreset);
   const moveNode = useInvoiceDesignerStore((state) => state.moveNode);
@@ -1218,6 +1227,15 @@ export const DesignerShell: React.FC = () => {
       clearDropFeedback();
       const inserted = tryInsertTemplateIntoFocusedInput(bindingPath);
       if (inserted) {
+        const validation = validateSourcePaths({
+          source: inserted.insertedValue,
+          mode: inserted.mode,
+          options: invoicePathOptions,
+        });
+        if (validation.diagnostics.length > 0) {
+          showDropFeedback('info', `Inserted ${inserted.insertedValue}. ${validation.diagnostics[0]?.message ?? ''}`);
+          return;
+        }
         showDropFeedback('info', `Inserted ${inserted.insertedValue}.`);
         return;
       }
@@ -1248,9 +1266,18 @@ export const DesignerShell: React.FC = () => {
         `${joiner}${token}`
       );
       setNodeProp(liveSelectedNode.id, 'metadata.text', insertion.nextValue, true);
+      const validation = validateSourcePaths({
+        source: token,
+        mode: 'template',
+        options: invoicePathOptions,
+      });
+      if (validation.diagnostics.length > 0) {
+        showDropFeedback('info', `Inserted ${token}. ${validation.diagnostics[0]?.message ?? ''}`);
+        return;
+      }
       showDropFeedback('info', `Inserted ${token}.`);
     },
-    [clearDropFeedback, setNodeProp, showDropFeedback]
+    [clearDropFeedback, invoicePathOptions, setNodeProp, showDropFeedback]
   );
 
   const simulateComponentDrop = useCallback(
