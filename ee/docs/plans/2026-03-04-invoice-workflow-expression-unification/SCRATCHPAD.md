@@ -189,3 +189,4 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) T034 added to `DesignerShell.insertion.integration.test.tsx`: repeated template insertions with manual typing in between remain cursor-accurate and produce expected final text.
 - (2026-03-04) T035 validated by `DesignCanvas.previewMode.test.tsx`: preview rendering resolves known moustache tokens and leaves unresolved tokens visibly marked.
 - (2026-03-04) T036 validated by `DesignCanvas.previewMode.test.tsx` regression run (17 passing tests), covering field/table/totals preview scaffolds.
+- (2026-03-04) T037 validated by `server/src/test/unit/workflowRuntimeV2.unit.test.ts` (33 passing tests): workflow runtime v2 expression compile/evaluate/resolve unit suite remains green.

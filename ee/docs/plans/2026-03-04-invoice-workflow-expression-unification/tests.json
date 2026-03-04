@@ -296,7 +296,7 @@
   {
     "id": "T037",
     "description": "Regression: workflow runtime v2 unit suite remains green for expression compile/evaluate/resolve behaviors.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
