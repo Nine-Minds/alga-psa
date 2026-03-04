@@ -40,6 +40,7 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) Workflow runtime expression suites (`expressionEngine`, `mappingResolver`, `mappingValidator`) remain green after migration; contracts for `{ $expr }` evaluation/validation are preserved.
 - (2026-03-04) Deprecated invoice static variable catalog path is removed; field discovery now only flows through shared adapter-driven options.
 - (2026-03-04) Deprecated workflow `${...}` scanner helpers are removed from step validation flow; only shared-path validation remains.
+- (2026-03-04) Test implementation standards are codified in `PRD.md` and operationalized as explicit meta-test backlog items (`T041`, `T043`, `T044`) for checklist enforcement.
 - (2026-03-04) Preserve persisted contracts:
   - Invoice keeps AST value expressions (`literal|binding|path|template`).
   - Workflow keeps `{ $expr: string }`.
