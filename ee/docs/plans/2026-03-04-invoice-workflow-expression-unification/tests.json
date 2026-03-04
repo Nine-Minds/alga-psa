@@ -264,7 +264,7 @@
   {
     "id": "T033",
     "description": "Integration: Monaco drop/insert path continues stripping trailing snippet placeholders where applicable.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
