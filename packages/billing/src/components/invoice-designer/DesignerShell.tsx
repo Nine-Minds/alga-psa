@@ -107,6 +107,12 @@ type DesignerTestApi = {
   setForcedDropTarget: (nodeId: string | 'canvas' | null) => void;
 };
 
+type PaletteFloatingFrame = {
+  left: number;
+  width: number;
+  height: number;
+};
+
 declare global {
   interface Window {
     __ALGA_INVOICE_DESIGNER_TEST_API__?: DesignerTestApi;
@@ -328,6 +334,21 @@ const resolveSelectedNodeTypeLabel = (selectedNode: DesignerNode | null): string
   return humanizeBindingToken(selectedNode.type);
 };
 
+const findNearestScrollableParent = (element: HTMLElement | null): HTMLElement | null => {
+  if (!element) {
+    return null;
+  }
+  let current = element.parentElement;
+  while (current) {
+    const style = window.getComputedStyle(current);
+    if (/(auto|scroll|overlay)/.test(style.overflowY)) {
+      return current;
+    }
+    current = current.parentElement;
+  }
+  return null;
+};
+
 export const DesignerShell: React.FC = () => {
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const selectedNodeId = useInvoiceDesignerStore((state) => state.selectedNodeId);
@@ -402,6 +423,13 @@ export const DesignerShell: React.FC = () => {
 	  const [dropIndicator, setDropIndicator] = useState<DropIndicator>(null);
 	  const [dropFeedback, setDropFeedback] = useState<DropFeedback | null>(null);
 	  const [forcedDropTarget, setForcedDropTarget] = useState<string | 'canvas' | null>(null);
+	  const [isPaletteFloating, setIsPaletteFloating] = useState(false);
+	  const [paletteFloatingFrame, setPaletteFloatingFrame] = useState<PaletteFloatingFrame>({
+	    left: 0,
+	    width: 0,
+	    height: 0,
+	  });
+	  const [paletteAnchor, setPaletteAnchor] = useState<HTMLDivElement | null>(null);
 	  const pointerRef = useRef<{ x: number; y: number } | null>(null);
 	  const dropFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	  
@@ -470,6 +498,68 @@ export const DesignerShell: React.FC = () => {
       }
     };
   }, []);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const anchor = paletteAnchor;
+    if (!anchor) {
+      return;
+    }
+
+    const scrollParent = findNearestScrollableParent(anchor);
+    let rafId: number | null = null;
+
+    const syncPaletteFloatingState = () => {
+      const rect = anchor.getBoundingClientRect();
+      const nextFrame: PaletteFloatingFrame = {
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+      };
+      setPaletteFloatingFrame((prev) => {
+        if (
+          Math.abs(prev.left - nextFrame.left) < 0.5 &&
+          Math.abs(prev.width - nextFrame.width) < 0.5 &&
+          Math.abs(prev.height - nextFrame.height) < 0.5
+        ) {
+          return prev;
+        }
+        return nextFrame;
+      });
+      setIsPaletteFloating((prev) => {
+        const shouldFloat = rect.top <= 0;
+        return prev === shouldFloat ? prev : shouldFloat;
+      });
+    };
+
+    const requestSync = () => {
+      if (rafId !== null) {
+        return;
+      }
+      rafId = window.requestAnimationFrame(() => {
+        rafId = null;
+        syncPaletteFloatingState();
+      });
+    };
+
+    syncPaletteFloatingState();
+    scrollParent?.addEventListener('scroll', requestSync, { passive: true });
+    window.addEventListener('scroll', requestSync, { passive: true, capture: true });
+    window.addEventListener('resize', requestSync);
+    const pollingId = window.setInterval(requestSync, 120);
+
+    return () => {
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+      }
+      window.clearInterval(pollingId);
+      scrollParent?.removeEventListener('scroll', requestSync);
+      window.removeEventListener('scroll', requestSync, true);
+      window.removeEventListener('resize', requestSync);
+    };
+  }, [paletteAnchor]);
 
   const snapModifier = useMemo<Modifier | null>(() => {
     if (!snapToGrid) {
@@ -1392,11 +1482,33 @@ export const DesignerShell: React.FC = () => {
           measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
         >
 	        <div className="flex flex-1 min-h-[560px] bg-white dark:bg-[rgb(var(--color-background))]">
-	          <div className="w-72">
-	            <ComponentPalette
-	              onInsertComponent={handleQuickInsertComponent}
-              onInsertPreset={handleQuickInsertPreset}
-            />
+	          <div
+              ref={setPaletteAnchor}
+              className="w-72 shrink-0 self-start"
+              style={
+                isPaletteFloating
+                  ? {
+                      height: paletteFloatingFrame.height > 0 ? paletteFloatingFrame.height : undefined,
+                    }
+                  : undefined
+              }
+            >
+              <div
+                className={clsx('w-72 h-screen z-20 shadow-sm', isPaletteFloating && 'fixed top-0')}
+                style={
+                  isPaletteFloating
+                    ? {
+                        left: paletteFloatingFrame.left,
+                        width: paletteFloatingFrame.width > 0 ? paletteFloatingFrame.width : undefined,
+                      }
+                    : undefined
+                }
+              >
+	              <ComponentPalette
+	                onInsertComponent={handleQuickInsertComponent}
+                onInsertPreset={handleQuickInsertPreset}
+              />
+              </div>
           </div>
 	          <DesignerWorkspace
 	            nodes={nodes}
