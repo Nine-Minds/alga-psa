@@ -74,7 +74,7 @@
   {
     "id": "F013",
     "description": "Preserve invoice import/export deterministic roundtrip behavior after shared insertion and context migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-006", "NFR-003"]
   },
   {

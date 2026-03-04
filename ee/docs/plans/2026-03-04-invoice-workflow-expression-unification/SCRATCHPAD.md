@@ -22,6 +22,7 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) `DesignerShell` now uses `insertTextIntoDomControl` and target-path mode inference: inspector fields ending in `bindingKey` receive raw path insertion (`path-only`).
 - (2026-03-04) Invoice text fallback insertion path also uses shared insertion primitives (`insertTextIntoValue`) and enforces template token formatting for text/label nodes.
 - (2026-03-04) Workspace AST export now parses moustache text edits into dynamic expressions: full-token moustache becomes `path`, mixed literal+moustache becomes `template` with deterministic arg keys.
+- (2026-03-04) Existing roundtrip suites (`workspaceAst.roundtrip.*`) remain green after adapter/insertion changes, confirming deterministic export/import behavior.
 - (2026-03-04) Preserve persisted contracts:
   - Invoice keeps AST value expressions (`literal|binding|path|template`).
   - Workflow keeps `{ $expr: string }`.
@@ -66,6 +67,8 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
   - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/palette/ComponentPalette.fields.integration.test.tsx ../packages/billing/src/components/invoice-designer/DesignerShell.selectedContext.integration.test.tsx`
 - Validate moustache-to-AST behavior:
   - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts`
+- Validate roundtrip determinism:
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/ast/workspaceAst.roundtrip.templates.test.ts ../packages/billing/src/components/invoice-designer/ast/workspaceAst.roundtrip.nodes.test.ts ../packages/billing/src/components/invoice-designer/ast/workspaceAst.roundtrip.styles.test.ts`
 - Compare invoice/workflow binding/expression surfaces:
   - `rg -n "binding|template|\{\{|\$expr|validateExpressionSource" packages/billing/src/components/invoice-designer ee/server/src/components/workflow-designer shared/workflow/runtime -g"*.ts*"`
 - Review workflow designer expression sections:
