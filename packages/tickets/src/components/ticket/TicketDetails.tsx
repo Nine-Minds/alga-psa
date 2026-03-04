@@ -36,7 +36,7 @@ import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useDrawer } from "@alga-psa/ui";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
-import { findUserById, getCurrentUser } from "@alga-psa/users/actions";
+import { findUserById, getCurrentUser } from "@alga-psa/user-composition/actions";
 import { findBoardById, getAllBoards } from "@alga-psa/tickets/actions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "@alga-psa/tickets/actions";
 import { getDocumentByTicketId } from "@alga-psa/documents/actions/documentActions";
@@ -59,6 +59,7 @@ import { IntervalTrackingService } from "@alga-psa/ui/services";
 import { convertBlockNoteToMarkdown } from "@alga-psa/formatting/blocknoteUtils";
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
+import TicketNavigation from './TicketNavigation';
 import TicketOriginBadge from '../TicketOriginBadge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { buildTicketTimeEntryContext, createTicketTimeEntryOnComplete } from '../../lib/timeEntryContext';
@@ -1654,11 +1655,14 @@ const handleClose = () => {
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
             <div className="bg-gray-100 dark:bg-gray-900">
-                <div className="flex items-center justify-between mb-4">
+                <div className="sticky top-0 z-10 bg-gray-100 dark:bg-gray-900 py-2 flex items-center justify-between">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                         {/* Only show the Back button if NOT in a drawer, using BackNav */}
                         {!isInDrawer && (
                             <BackNav href="/msp/tickets">← Back to Tickets</BackNav>
+                        )}
+                        {!isInDrawer && ticket.ticket_id && (
+                            <TicketNavigation currentTicketId={ticket.ticket_id} />
                         )}
                         <h6 className="text-sm font-medium whitespace-nowrap">#{ticket.ticket_number}</h6>
                         {responseStateTrackingEnabled && ticket.response_state ? (
@@ -1677,7 +1681,7 @@ const handleClose = () => {
                         />
                         <h1 className="text-xl font-bold break-words max-w-full min-w-0 flex-1" style={{overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap'}}>{ticket.title}</h1>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                         {/* Add popout button only when in drawer */}
                         {isInDrawer && (

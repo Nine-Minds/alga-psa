@@ -1,6 +1,6 @@
 import React from 'react';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { Suspense } from 'react';
 import { TicketDetailsSkeleton } from '@alga-psa/tickets/components/ticket/TicketDetailsSkeleton';
 import { getSurveyTicketSummary } from '@alga-psa/surveys/actions/survey-actions/surveyDashboardActions';

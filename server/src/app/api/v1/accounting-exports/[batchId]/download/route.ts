@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from 'server/src/lib/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { AccountingExportService, AccountingAdapterRegistry } from '@alga-psa/billing/services';
 import {

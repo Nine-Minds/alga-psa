@@ -3,7 +3,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { getConnection } from '@/lib/db/db';
 import { StorageProviderFactory } from '@alga-psa/storage';
 import { FileStoreModel } from 'server/src/models/storage';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 
 export async function GET(
   request: NextRequest,

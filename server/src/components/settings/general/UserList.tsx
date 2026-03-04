@@ -6,12 +6,11 @@ import UserDetails from './UserDetails';
 import { useDrawer, DeleteEntityDialog } from "@alga-psa/ui";
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
-import { getUserAvatarUrlAction, deleteUser } from '@alga-psa/users/actions';
+import { getUserAvatarUrlAction } from '@alga-psa/user-composition/actions';
+import { deleteUser, getUsersClientInfo } from '@alga-psa/users/actions';
 import { MoreVertical, Pen, Trash2 } from 'lucide-react';
 
 import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
-
-import { getUsersClientInfo } from '@alga-psa/users/actions';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import {
   DropdownMenu,

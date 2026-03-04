@@ -11,7 +11,7 @@ import { NotificationsSection } from './NotificationsSection';
 import { ActivitiesDataTableSection } from './ActivitiesDataTableSection';
 import { LayoutGrid, List, ChevronDown, ChevronUp } from 'lucide-react';
 import { ActivityFilters as ActivityFiltersType, ActivityType } from '@alga-psa/types';
-import { useUserPreference } from '@alga-psa/users/hooks';
+import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { Card, CardHeader } from '@alga-psa/ui/components/Card';
 
 export function UserActivitiesDashboard() {

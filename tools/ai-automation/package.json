@@ -10,9 +10,9 @@
   "dependencies": {
     "@types/socket.io": "^3.0.1",
     "cors": "^2.8.5",
-    "express": "^4.21.2",
+    "express": "^4.21.3",
     "jsondiffpatch": "^0.7.3",
-    "jsonpath-plus": "^10.2.0",
+    "jsonpath-plus": "^10.3.0",
     "node-fetch": "^3.3.2",
     "puppeteer": "^23.11.1",
     "socket.io": "^4.8.1"

@@ -9,7 +9,7 @@ import { ColumnDefinition } from "@alga-psa/types";
 import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, Lock } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { handleError } from "@alga-psa/ui/lib/errorHandling";
-import { useUserPreference } from "@alga-psa/users/hooks";
+import { useUserPreference } from "@alga-psa/user-composition/hooks";
 import {
   getCategoriesAction,
   getCategoryWithSubtypesAction,

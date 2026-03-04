@@ -19,7 +19,7 @@ import {
   startWorkflowRunAction
 } from '@alga-psa/workflows/actions';
 import { getEventCatalogEntries, getEventCatalogEntryByEventType } from '@alga-psa/workflows/actions';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import {
   filterEventCatalogEntries,
   getSchemaDiffSummary,

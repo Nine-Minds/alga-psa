@@ -7,7 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Ale
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { DynamicWorkflowComponent } from '@alga-psa/workflows/components/WorkflowComponentLoader';
 import type { WorkflowProps } from '@alga-psa/workflows/components/WorkflowComponentLoader';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';

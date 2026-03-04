@@ -1,4 +1,4 @@
-import { getCurrentUser } from "@alga-psa/users/actions";
+import { getCurrentUser } from "@alga-psa/user-composition/actions";
 import { getTeams } from '@alga-psa/teams/actions';
 import TimeTrackingClient from '@alga-psa/scheduling/components/time-management/time-entry/TimeTrackingClient';
 

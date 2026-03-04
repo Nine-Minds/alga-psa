@@ -11,7 +11,7 @@ import { ITicketListFilters, ITicketListItem, ITicketCategory, IBoard } from '@a
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { X } from 'lucide-react';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useTicketIntegration } from '../context/TicketIntegrationContext';

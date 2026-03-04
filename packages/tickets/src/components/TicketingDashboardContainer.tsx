@@ -5,13 +5,12 @@ import TicketingDashboard from './TicketingDashboard';
 import { fetchTicketsWithPagination } from '../actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { ITicketListItem, ITicketCategory, ITicketListFilters, ITag } from '@alga-psa/types';
-import { IClient } from '@alga-psa/types';
+import { ITicketListItem, ITicketListFilters, ITag, ITeam } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
-import { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { IBoard } from '@alga-psa/types';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
-import { useUserPreference } from '@alga-psa/users/hooks';
+import { useUserPreference } from '@alga-psa/user-composition/hooks';
+import { useTicketFormOptions, type TicketFormOptions } from '../hooks/useTicketFormOptions';
 
 const TICKETS_PAGE_SIZE_SETTING = 'tickets_list_page_size';
 
@@ -108,26 +107,27 @@ function parseTicketListStateFromSearch(search: string): {
   };
 }
 
+export interface TicketListMetadata {
+  agentAvatarUrls: Record<string, string | null>;
+  teamAvatarUrls: Record<string, string | null>;
+  ticketTags: Record<string, ITag[]>;
+}
+
 interface TicketingDashboardContainerProps {
   consolidatedData: {
-    options: {
-      statusOptions: SelectOption[];
-      priorityOptions: SelectOption[];
-      boardOptions: IBoard[];
-      agentOptions: SelectOption[];
-      categories: ITicketCategory[];
-      clients: IClient[];
-      users: IUser[];
-      tags?: ITag[];
-    };
+    options: TicketFormOptions;
     tickets: ITicketListItem[];
     totalCount: number;
+    metadata?: TicketListMetadata;
   };
   currentUser: IUser;
   initialFilters?: Partial<ITicketListFilters>;
   initialPage?: number;
   initialPageSize?: number;
   displaySettings?: TicketingDisplaySettings;
+  initialTeams?: ITeam[];
+  initialFormOptions?: TicketFormOptions | null;
+  canUpdateTickets?: boolean;
   renderClientDetails?: React.ComponentProps<typeof TicketingDashboard>['renderClientDetails'];
 }
 
@@ -138,6 +138,9 @@ export default function TicketingDashboardContainer({
   initialPage = 1,
   initialPageSize = 10,
   displaySettings,
+  initialTeams,
+  initialFormOptions,
+  canUpdateTickets,
   renderClientDetails,
 }: TicketingDashboardContainerProps) {
   const latestFetchRequestIdRef = useRef(0);
@@ -147,9 +150,19 @@ export default function TicketingDashboardContainer({
   const defaultSortBy = initialFilters?.sortBy ?? 'entered_at';
   const defaultSortDirection = initialFilters?.sortDirection ?? 'desc';
 
+  // Use cached form options (two-phase: sessionStorage → server)
+  // initialFormOptions or consolidatedData.options populates the cache on first load
+  const { options: cachedFormOptions } = useTicketFormOptions(
+    initialFormOptions ?? consolidatedData.options ?? null
+  );
+  // Effective options: cached hook result, or fall back to server-provided consolidated data
+  const effectiveOptions = cachedFormOptions ?? consolidatedData.options;
+
+  const emptyMetadata: TicketListMetadata = { agentAvatarUrls: {}, teamAvatarUrls: {}, ticketTags: {} };
   const [isLoading, setIsLoading] = useState(false);
   const [tickets, setTickets] = useState<ITicketListItem[]>(consolidatedData.tickets);
   const [totalCount, setTotalCount] = useState<number>(consolidatedData.totalCount);
+  const [ticketMetadata, setTicketMetadata] = useState<TicketListMetadata>(consolidatedData.metadata ?? emptyMetadata);
   const [currentPage, setCurrentPage] = useState(initialPage);
   const [pageSize, setPageSize] = useState(initialPageSize);
   const [sortBy, setSortBy] = useState<string>(defaultSortBy);
@@ -180,7 +193,10 @@ export default function TicketingDashboardContainer({
   useEffect(() => {
     setTickets(consolidatedData.tickets);
     setTotalCount(consolidatedData.totalCount);
-  }, [consolidatedData.tickets, consolidatedData.totalCount]);
+    if (consolidatedData.metadata) {
+      setTicketMetadata(consolidatedData.metadata);
+    }
+  }, [consolidatedData.tickets, consolidatedData.totalCount, consolidatedData.metadata]);
 
   const {
     value: storedPageSize,
@@ -313,9 +329,12 @@ export default function TicketingDashboardContainer({
       console.log('[Container] Fetch completed, got tickets:', result.tickets.length);
       setTickets(result.tickets);
       setTotalCount(result.totalCount);
-      setActiveFilters(currentFiltersWithDefaults);
-      setSortBy(effectiveSortBy);
-      setSortDirection(effectiveSortDirection);
+      if (result.metadata) {
+        setTicketMetadata(result.metadata);
+      }
+      // Note: callers are responsible for setting activeFilters, sortBy, sortDirection
+      // before calling fetchTickets. Setting them here would create new object references
+      // that cascade through dependencies and cause re-render loops.
 
     } catch (error) {
       if (requestId !== latestFetchRequestIdRef.current) {
@@ -330,7 +349,14 @@ export default function TicketingDashboardContainer({
         setIsLoading(false);
       }
     }
-  }, [currentUser, sortBy, sortDirection]);
+  }, [currentUser]);
+
+  // Refs to avoid putting activeFilters/fetchTickets in the storedPageSize effect deps.
+  // These values are needed when the effect fires, but changes to them should NOT re-trigger it.
+  const activeFiltersRef = useRef(activeFilters);
+  activeFiltersRef.current = activeFilters;
+  const fetchTicketsRef = useRef(fetchTickets);
+  fetchTicketsRef.current = fetchTickets;
 
   const syncFromUrl = useCallback(async (search: string) => {
     const normalizedSearch = search || '';
@@ -400,16 +426,14 @@ export default function TicketingDashboardContainer({
 
     setCurrentPage(1);
     setPageSize(normalizedPageSize);
-    updateURLWithFilters(activeFilters, 1, normalizedPageSize);
-    void fetchTickets(activeFilters, 1, normalizedPageSize);
+    updateURLWithFilters(activeFiltersRef.current, 1, normalizedPageSize);
+    void fetchTicketsRef.current(activeFiltersRef.current, 1, normalizedPageSize);
   }, [
     hasLoadedPageSizePreference,
     storedPageSize,
     pageSize,
     initialPageSize,
-    activeFilters,
     updateURLWithFilters,
-    fetchTickets
   ]);
 
   const handlePageChange = useCallback(async (newPage: number) => {
@@ -453,7 +477,7 @@ export default function TicketingDashboardContainer({
     await fetchTickets(updatedFilters, 1, pageSize, { sortBy: columnId, sortDirection: direction });
   }, [activeFilters, fetchTickets, pageSize, updateURLWithFilters]);
 
-  const mappedAndFilteredBoards = consolidatedData.options.boardOptions.map(board => ({
+  const mappedAndFilteredBoards = effectiveOptions.boardOptions.map(board => ({
     ...board,
     board_id: board.board_id || '',
     board_name: board.board_name || 'Unnamed Board',
@@ -462,18 +486,18 @@ export default function TicketingDashboardContainer({
   })).filter(board => board.board_id !== '');
 
   const initialBoardsForDashboard: Array<IBoard & { board_id: string; board_name: string; tenant: string; is_inactive: boolean }> = mappedAndFilteredBoards;
-  
+
   return (
     <TicketingDashboard
       id="ticketing-dashboard"
       initialTickets={tickets}
       initialBoards={initialBoardsForDashboard}
-      initialStatuses={consolidatedData.options.statusOptions}
-      initialPriorities={consolidatedData.options.priorityOptions}
-      initialCategories={consolidatedData.options.categories}
-      initialClients={consolidatedData.options.clients}
-      initialTags={consolidatedData.options.tags || []}
-      initialUsers={consolidatedData.options.users}
+      initialStatuses={effectiveOptions.statusOptions}
+      initialPriorities={effectiveOptions.priorityOptions}
+      initialCategories={effectiveOptions.categories}
+      initialClients={effectiveOptions.clients}
+      initialTags={effectiveOptions.tags || []}
+      initialUsers={effectiveOptions.users}
       totalCount={totalCount}
       currentPage={currentPage}
       pageSize={pageSize}
@@ -488,6 +512,11 @@ export default function TicketingDashboardContainer({
       sortDirection={sortDirection}
       onSortChange={handleSortChange}
       renderClientDetails={renderClientDetails}
+      initialAgentAvatarUrls={ticketMetadata.agentAvatarUrls}
+      initialTeamAvatarUrls={ticketMetadata.teamAvatarUrls}
+      initialTicketTags={ticketMetadata.ticketTags}
+      initialTeams={initialTeams}
+      canUpdateTickets={canUpdateTickets}
     />
   );
 }

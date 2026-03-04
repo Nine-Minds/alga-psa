@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IPermission, IUserWithRoles } from '@alga-psa/types';
 import { IUser, IRole } from '@shared/interfaces/user.interfaces';
-import { getCurrentUser, getUserRolesWithPermissions } from '@alga-psa/users/actions';
+import { getCurrentUser, getUserRolesWithPermissions } from '@alga-psa/user-composition/actions';
 import { 
   getClientUserById, 
   updateClientUser, 

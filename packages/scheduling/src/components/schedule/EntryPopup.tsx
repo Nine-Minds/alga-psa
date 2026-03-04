@@ -19,7 +19,7 @@ import { IWorkItem, IExtendedWorkItem } from '@alga-psa/types';
 import { getWorkItemById } from '@alga-psa/scheduling/actions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import SelectedWorkItem from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/SelectedWorkItem';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { IUser } from '@shared/interfaces/user.interfaces';

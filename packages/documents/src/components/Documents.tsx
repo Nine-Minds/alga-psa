@@ -30,8 +30,8 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
-import { useUserPreference } from '@alga-psa/users/hooks';
-import { getCurrentUser, searchUsersForMentions } from '@alga-psa/users/actions';
+import { useUserPreference } from '@alga-psa/user-composition/hooks';
+import { getCurrentUser, searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import {
   getDocumentsByEntity,
   getDocumentsByFolder,

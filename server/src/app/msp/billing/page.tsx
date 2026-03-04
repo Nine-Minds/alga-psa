@@ -3,7 +3,7 @@ import { MspBillingDashboardClient } from '@alga-psa/msp-composition/billing';
 import { getServices } from '@alga-psa/billing/actions';
 import { getDocumentsByContractId } from '@alga-psa/documents/actions/documentActions';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import type { IDocument } from '@alga-psa/types';
 
 interface BillingPageProps {

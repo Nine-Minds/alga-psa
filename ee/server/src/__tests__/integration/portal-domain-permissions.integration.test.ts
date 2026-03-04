@@ -15,7 +15,7 @@ let tenantId: string;
 const enqueueWorkflow = vi.fn(async () => ({ enqueued: true }));
 const analyticsCapture = vi.fn();
 
-vi.mock('@alga-psa/users/actions', () => ({
+vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: vi.fn(),
 }));
 
@@ -90,7 +90,7 @@ vi.mock('@alga-psa/core/encryption', async () => {
   return actual;
 });
 
-const { getCurrentUser } = await import('@alga-psa/users/actions');
+const { getCurrentUser } = await import('@alga-psa/user-composition/actions');
 const { requestPortalDomainRegistrationAction } = await import('@/lib/actions/tenant-actions/portalDomainActions');
 const { runWithTenant } = await import('server/src/lib/db');
 

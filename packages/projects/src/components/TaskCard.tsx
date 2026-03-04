@@ -9,7 +9,7 @@ import { ITag } from '@alga-psa/types';
 import { CheckSquare, Square, Ticket, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen, Paperclip, Ban, GitBranch, Link2, Tag } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { TagList } from '@alga-psa/ui/components';

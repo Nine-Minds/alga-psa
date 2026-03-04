@@ -75,6 +75,7 @@
     "@alga-psa/formatting": "*",
     "@alga-psa/storage": "*",
     "@alga-psa/types": "*",
+    "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",
     "zod": "^3.22.4"
   },

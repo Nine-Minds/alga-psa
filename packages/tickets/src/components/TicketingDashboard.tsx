@@ -14,11 +14,9 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
-import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/users/actions';
-import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { TagFilter } from '@alga-psa/ui/components';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { IBoard, IClient, IUser, ITeam } from '@alga-psa/types';
@@ -41,7 +39,7 @@ import { createTicketColumns } from '@alga-psa/tickets/lib';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
@@ -72,6 +70,11 @@ interface TicketingDashboardProps {
   sortDirection?: 'asc' | 'desc';
   onSortChange: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
   renderClientDetails?: (args: { id: string; client: IClient }) => React.ReactNode;
+  initialAgentAvatarUrls?: Record<string, string | null>;
+  initialTeamAvatarUrls?: Record<string, string | null>;
+  initialTicketTags?: Record<string, ITag[]>;
+  initialTeams?: ITeam[];
+  canUpdateTickets?: boolean;
 }
 
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -113,6 +116,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   sortDirection = 'desc',
   onSortChange,
   renderClientDetails,
+  initialAgentAvatarUrls = {},
+  initialTeamAvatarUrls = {},
+  initialTicketTags = {},
+  initialTeams = [],
+  canUpdateTickets = true,
 }) => {
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   const router = useRouter();
@@ -128,19 +136,18 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
   const [isDeleteValidating, setIsDeleteValidating] = useState(false);
   const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(user || null);
+  const currentUser = user || null;
   const { openDrawer, replaceDrawer } = useDrawer();
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [bulkDeleteErrors, setBulkDeleteErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
-  const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
-  const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>({});
+  const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>(initialAgentAvatarUrls);
+  const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>(initialTeamAvatarUrls);
   const [isBundleDialogOpen, setIsBundleDialogOpen] = useState(false);
   const [bundleMasterTicketId, setBundleMasterTicketId] = useState<string | null>(null);
   const [bundleSyncUpdates, setBundleSyncUpdates] = useState(true);
   const [bundleError, setBundleError] = useState<string | null>(null);
   const [isMultiClientBundleConfirmOpen, setIsMultiClientBundleConfirmOpen] = useState(false);
-  const [canUpdateTickets, setCanUpdateTickets] = useState(true);
 
   const [boards] = useState<IBoard[]>(initialBoards);
   const [clients] = useState<IClient[]>(initialClients);
@@ -163,7 +170,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>(initialFilterValues.assignedToIds ?? []);
   const [selectedTeams, setSelectedTeams] = useState<string[]>(initialFilterValues.assignedTeamIds ?? []);
   const [includeUnassigned, setIncludeUnassigned] = useState<boolean>(initialFilterValues.includeUnassigned ?? false);
-  const [teams, setTeams] = useState<ITeam[]>([]);
+  const [teams, setTeams] = useState<ITeam[]>(initialTeams);
 
   // Due date filter state
   const [selectedDueDateFilter, setSelectedDueDateFilter] = useState<string>(initialFilterValues.dueDateFilter ?? 'all');
@@ -183,28 +190,18 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
-  const [isLoadingSelf, setIsLoadingSelf] = useState(false);
 
+  // Teams are now provided via initialTeams from server-side fetch
   useEffect(() => {
     if (!teamsV2Enabled) {
       setTeams([]);
       setSelectedTeams([]);
-      return;
     }
-    const loadTeams = async () => {
-      try {
-        const fetchedTeams = await getTeams();
-        setTeams(fetchedTeams);
-      } catch (error) {
-        console.error('Failed to load teams:', error);
-      }
-    };
-    loadTeams();
   }, [teamsV2Enabled]);
 
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>(initialFilterValues.tags || []);
-  const ticketTagsRef = useRef<Record<string, ITag[]>>({});
+  const ticketTagsRef = useRef<Record<string, ITag[]>>(initialTicketTags);
   const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>(initialTags || []);
   const [tagsVersion, setTagsVersion] = useState(0); // Used to force re-render when tags are fetched
 
@@ -253,70 +250,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setLoadedBundleChildrenMasters(new Set());
   }, [initialTickets]);
 
-  // Fetch avatar URLs for additional agents when tickets change
+  // Avatar URLs are now provided via initialAgentAvatarUrls from server-side consolidated fetch
   useEffect(() => {
-    const fetchAvatarUrls = async () => {
-      // Collect all unique user IDs from additional agents
-      const userIds = new Set<string>();
-      tickets.forEach(ticket => {
-        ticket.additional_agents?.forEach(agent => {
-          userIds.add(agent.user_id);
-        });
-      });
+    setAdditionalAgentAvatarUrls(initialAgentAvatarUrls);
+  }, [initialAgentAvatarUrls]);
 
-      if (userIds.size === 0) return;
-
-      // Get tenant from first ticket
-      const tenant = tickets[0]?.tenant;
-      if (!tenant) return;
-
-      try {
-        const avatarUrlsMap = await getUserAvatarUrlsBatchAction(Array.from(userIds), tenant);
-        // Convert Map to Record
-        const urlsRecord: Record<string, string | null> = {};
-        avatarUrlsMap.forEach((url, id) => {
-          urlsRecord[id] = url;
-        });
-        setAdditionalAgentAvatarUrls(urlsRecord);
-      } catch (error) {
-        console.error('Failed to fetch avatar URLs:', error);
-      }
-    };
-
-    fetchAvatarUrls();
-  }, [tickets]);
-
-  // Fetch team avatar URLs when tickets change
+  // Team avatar URLs are now provided via initialTeamAvatarUrls from server-side consolidated fetch
   useEffect(() => {
-    const fetchTeamAvatarUrls = async () => {
-      const teamIds = new Set<string>();
-      tickets.forEach(ticket => {
-        if (ticket.assigned_team_id) {
-          teamIds.add(ticket.assigned_team_id);
-        }
-      });
-
-      if (teamIds.size === 0) return;
-
-      const tenant = tickets[0]?.tenant;
-      if (!tenant) return;
-
-      try {
-        const avatarUrlsMap = await getTeamAvatarUrlsBatchAction(Array.from(teamIds), tenant);
-        const urlsRecord: Record<string, string | null> = {};
-        if (avatarUrlsMap instanceof Map) {
-          avatarUrlsMap.forEach((url, id) => { urlsRecord[id] = url; });
-        } else {
-          Object.entries(avatarUrlsMap as Record<string, string | null>).forEach(([id, url]) => { urlsRecord[id] = url; });
-        }
-        setTeamAvatarUrls(urlsRecord);
-      } catch (error) {
-        console.error('Failed to fetch team avatar URLs:', error);
-      }
-    };
-
-    fetchTeamAvatarUrls();
-  }, [tickets]);
+    setTeamAvatarUrls(initialTeamAvatarUrls);
+  }, [initialTeamAvatarUrls]);
 
   const shouldSkipNextFilterEmitRef = useRef(false);
 
@@ -421,34 +363,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     teamsV2Enabled
   ]);
 
-  // Fetch ticket-specific tags when initial tickets change
+  // Ticket tags are now provided via initialTicketTags from server-side consolidated fetch
   useEffect(() => {
-    const fetchTags = async () => {
-      if (initialTickets.length === 0) return;
-      
-      try {
-        const ticketIds = initialTickets.map(ticket => ticket.ticket_id).filter((id): id is string => id !== undefined);
-        
-        // Only fetch ticket-specific tags, not all tags again
-        const ticketTags = await findTagsByEntityIds(ticketIds, 'ticket');
-
-        const newTicketTags: Record<string, ITag[]> = {};
-        ticketTags.forEach(tag => {
-          if (!newTicketTags[tag.tagged_id]) {
-            newTicketTags[tag.tagged_id] = [];
-          }
-          newTicketTags[tag.tagged_id].push(tag);
-        });
-
-        ticketTagsRef.current = newTicketTags;
-        // Force re-render to show fetched tags
-        setTagsVersion(v => v + 1);
-      } catch (error) {
-        console.error('Error fetching tags:', error);
-      }
-    };
-    fetchTags();
-  }, [initialTickets]);
+    ticketTagsRef.current = initialTicketTags;
+    setTagsVersion(v => v + 1);
+  }, [initialTicketTags]);
 
   // No longer need client-side tag fetching since we get all tags from server
 
@@ -575,7 +494,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const isFirstRender = useRef(true);
 
   useEffect(() => {
-    // Skip initial mount and controlled URL hydration updates.
+    // Always skip the effect on initial render — the RSC page already fetched
+    // tickets with the correct filters, so re-fetching is redundant and causes
+    // a cascade of state updates (especially when storedPageSize also triggers).
     if (isFirstRender.current) {
       isFirstRender.current = false;
       return;
@@ -687,41 +608,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
   }, [id, openDrawer, replaceDrawer, renderClientDetails]);
   
-  // Initialize currentUser state from props if available
-  useEffect(() => {
-    // Only fetch user if not already provided in props
-    if (!user) {
-      const fetchUser = async () => {
-        try {
-          setIsLoadingSelf(true);
-          const fetchedUser = await getCurrentUser();
-          setCurrentUser(fetchedUser);
-        } catch (error) {
-          console.error('Error fetching current user:', error);
-        } finally {
-          setIsLoadingSelf(false);
-        }
-      };
-      
-      fetchUser();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    const load = async () => {
-      if (!currentUser) return;
-      try {
-        const permissions = await getCurrentUserPermissions();
-        setCanUpdateTickets(permissions.includes('ticket:update'));
-      } catch {
-        setCanUpdateTickets(true);
-      }
-    };
-    load();
-  }, [currentUser]);
-  
   // Use interval tracking hook to get interval count
-  const { intervalCount, isLoading: isLoadingIntervals } = useIntervalTracking(currentUser?.id);
+  const { intervalCount, isLoading: isLoadingIntervals } = useIntervalTracking(currentUser?.user_id);
 
   const confirmDeleteTicket = async () => {
     if (!ticketToDelete) return;

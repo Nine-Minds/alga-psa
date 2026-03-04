@@ -9,7 +9,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Calendar, Settings } from 'lucide-react';
 import { getAppointmentRequests } from '@alga-psa/scheduling/actions';
-import { getCurrentUserPermissions, getCurrentUser, getReportsToSubordinates } from '@alga-psa/users/actions';
+import { getCurrentUserPermissions, getCurrentUser, getReportsToSubordinates } from '@alga-psa/user-composition/actions';
 import { getTeams } from '@alga-psa/teams/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 

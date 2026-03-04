@@ -1,5 +1,5 @@
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { checkPortalInvitationLimit, formatRateLimitError } from '@alga-psa/auth';
 import crypto from 'crypto';
 import { Knex } from 'knex';

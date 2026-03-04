@@ -13,7 +13,7 @@ import {
 import { importWorkflowBundleV1 } from 'server/src/lib/workflow/bundle/importWorkflowBundleV1';
 import { resetWorkflowRuntimeTables } from '../helpers/workflowRuntimeV2TestUtils';
 import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import {
   createWorkflowDefinitionAction,
   publishWorkflowDefinitionAction,

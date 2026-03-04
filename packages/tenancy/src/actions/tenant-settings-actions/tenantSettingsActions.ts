@@ -1,6 +1,6 @@
 'use server';
 
-import { getCurrentUserPermissions } from '@alga-psa/users/actions';
+import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';

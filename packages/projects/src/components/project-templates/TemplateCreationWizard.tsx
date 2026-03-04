@@ -14,7 +14,7 @@ import { createTemplateFromWizard } from '../../actions/projectTemplateWizardAct
 import { getTenantProjectStatuses } from '../../actions/projectTaskStatusActions';
 import { getTaskTypes } from '../../actions/projectTaskActions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
-import { getAllUsers } from '@alga-psa/users/actions';
+import { getAllUsers } from '@alga-psa/user-composition/actions';
 import { getServices } from '@alga-psa/projects/actions/serviceCatalogActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { IUserWithRoles } from '@alga-psa/types';

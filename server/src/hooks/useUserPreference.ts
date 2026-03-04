@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getCurrentUser, getUserPreference, setUserPreference } from '@alga-psa/users/actions';
+import { getCurrentUser, getUserPreference, setUserPreference } from '@alga-psa/user-composition/actions';
 import { useToast } from 'server/src/hooks/use-toast';
 
 interface UseUserPreferenceOptions<T> {

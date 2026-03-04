@@ -42,8 +42,8 @@ import { ChevronRight, HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, Ch
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
-import { useUserPreferencesBatch } from '@alga-psa/users/hooks';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
+import { useUserPreferencesBatch } from '@alga-psa/user-composition/hooks';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeamsBasic, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTheme } from 'next-themes';

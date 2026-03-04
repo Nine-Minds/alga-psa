@@ -46,7 +46,7 @@
     "@alga-psa/tags": "*",
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",
-    "@alga-psa/users": "*",
+    "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",
     "date-fns": "^3.6.0",
     "zod": "^3.22.4"

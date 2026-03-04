@@ -15,6 +15,7 @@ import { createTenantKnex, getConnection, withTransaction } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { getTicketOrigin } from '@alga-psa/tickets/lib/ticketOrigin';
+import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions';
 
 const clientTicketSchema = z.object({
   title: z.string().min(1),
@@ -335,7 +336,6 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       // For internal users, use getUserAvatarUrlAction
       if (userRecord.user_type === 'internal') {
         try {
-          const { getUserAvatarUrlAction } = await import('@alga-psa/users/actions');
           avatarUrl = await getUserAvatarUrlAction(userRecord.user_id, tenant);
         } catch (error) {
           console.error(`Error fetching avatar URL for internal user ${userRecord.user_id}:`, error);
@@ -350,7 +350,6 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
             .first();
 
           if (userDbRecord?.contact_id) {
-            const { getContactAvatarUrlAction } = await import('@alga-psa/users/actions');
             avatarUrl = await getContactAvatarUrlAction(userDbRecord.contact_id, tenant);
           }
         } catch (error) {

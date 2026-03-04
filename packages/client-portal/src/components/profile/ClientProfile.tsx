@@ -11,8 +11,9 @@ import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import { InternalNotificationPreferences } from '@alga-psa/notifications/components';
-import { getCurrentUser, updateUser } from '@alga-psa/users/actions';
-import { useContactAvatar, invalidateContactAvatar } from '@alga-psa/users/hooks';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { updateUser } from '@alga-psa/users/actions';
+import { useContactAvatar, invalidateContactAvatar } from '@alga-psa/user-composition/hooks';
 import {
   getCategoriesAction,
   getCategoryWithSubtypesAction,
@@ -27,7 +28,7 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import ContactAvatarUpload from '../contacts/ContactAvatarUpload';
 import { LanguagePreference } from '@alga-psa/ui/components/LanguagePreference';
 import { SupportedLocale } from '@alga-psa/core/i18n/config';
-import { updateUserLocaleAction, getUserLocaleAction } from '@alga-psa/users/actions';
+import { updateUserLocaleAction, getUserLocaleAction } from '@alga-psa/user-composition/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ClientNotificationsList } from '../notifications/ClientNotificationsList';
 

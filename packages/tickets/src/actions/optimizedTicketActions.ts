@@ -12,6 +12,7 @@ import type {
   ITicketCategory,
   ITicketResource,
   IDocument,
+  ITag,
   TicketResponseState,
 } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
@@ -25,7 +26,7 @@ import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishe
 import { getEventBus } from '@alga-psa/event-bus';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { getImageUrl } from '@alga-psa/documents/actions/documentActions';
-import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
+import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch, getEntityImageUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import {
   ticketFormSchema,
   ticketSchema,
@@ -697,42 +698,17 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 });
 
 /**
- * Get tickets for list with page-based pagination
- * This replaces cursor-based pagination with traditional page-based approach
+ * Build the base filtered query for the ticket list.
+ * Returns a Knex query builder with all JOINs and WHERE clauses applied,
+ * but no SELECT, ORDER BY, LIMIT, or OFFSET.
+ * Shared between getTicketsForList and getAdjacentTicketIds.
  */
-export const getTicketsForList = withAuth(async (
-  user,
-  { tenant },
-  filters: ITicketListFilters,
-  page: number = 1,
-  pageSize: number = 10
-): Promise<{ tickets: ITicketListItem[], totalCount: number }> => {
-  const {knex: db} = await createTenantKnex();
-
-  return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'read', trx)) {
-      throw new Error('Permission denied: Cannot view tickets');
-    }
-
-    try {
-      const validatedFilters = validateData(ticketListFiltersSchema, filters) as ITicketListFilters;
-
-      // Explicitly clear "$undefined" string values for ID filters
-      // to prevent them from being used as literal filter values if they bypass Zod.
-      if (validatedFilters.boardId === '$undefined') {
-        validatedFilters.boardId = undefined;
-      }
-      if (validatedFilters.categoryId === '$undefined') {
-        validatedFilters.categoryId = undefined;
-      }
-      if (validatedFilters.clientId === '$undefined') {
-        validatedFilters.clientId = undefined;
-      }
-      if (validatedFilters.contactId === '$undefined') {
-        validatedFilters.contactId = undefined;
-      }
-
-    // Build base query for filtering
+async function buildTicketListBaseQuery(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: { user_id: string },
+  validatedFilters: ITicketListFilters
+): Promise<{ builder: Knex.QueryBuilder }> {
     let baseQuery = trx('tickets as t')
       .leftJoin('tickets as mt', function() {
         this.on('t.master_ticket_id', 'mt.ticket_id')
@@ -1039,6 +1015,20 @@ export const getTicketsForList = withAuth(async (
       }
     }
 
+    // Wrap in object to prevent Promise thenable unwrapping.
+    // Knex query builders have .then(), so returning one from an async function
+    // would execute the query instead of returning the builder.
+    return { builder: baseQuery };
+}
+
+/**
+ * Apply sort ordering to a ticket list query.
+ * Shared between getTicketsForList and getAdjacentTicketIds.
+ */
+function applyTicketListSort(
+  query: Knex.QueryBuilder,
+  validatedFilters: ITicketListFilters
+): Knex.QueryBuilder {
     const sortBy = validatedFilters.sortBy ?? 'entered_at';
     const sortDirection: 'asc' | 'desc' = validatedFilters.sortDirection ?? 'desc';
     const sortColumnMap: Record<string, { column?: string; rawExpression?: string }> = {
@@ -1055,54 +1045,7 @@ export const getTicketsForList = withAuth(async (
     };
     const selectedSort = sortColumnMap[sortBy] || sortColumnMap.entered_at;
 
-    // Get total count
-    const countQuery = baseQuery.clone().clearSelect().clearOrder().count('t.ticket_id as count');
-    const [{ count }] = await countQuery;
-    const totalCount = parseInt(String(count), 10);
-
-    // Build query for paginated results
-    const query = baseQuery
-      .clone()
-      .select(
-        't.*',
-        trx.raw(
-          `(
-            SELECT COUNT(*)::int
-            FROM tickets as tc
-            WHERE tc.tenant = t.tenant
-              AND tc.master_ticket_id = t.ticket_id
-          ) as bundle_child_count`
-        ),
-        trx.raw(
-          `(
-            SELECT COUNT(DISTINCT x.client_id)::int
-            FROM (
-              SELECT t2.client_id as client_id
-              FROM tickets as t2
-              WHERE t2.tenant = t.tenant
-                AND t2.ticket_id = t.ticket_id
-              UNION ALL
-              SELECT tc.client_id
-              FROM tickets as tc
-              WHERE tc.tenant = t.tenant
-                AND tc.master_ticket_id = t.ticket_id
-            ) as x
-            WHERE x.client_id IS NOT NULL
-          ) as bundle_distinct_client_count`
-        ),
-        'mt.ticket_number as bundle_master_ticket_number',
-        's.name as status_name',
-        'p.priority_name',
-        'p.color as priority_color',
-        'c.board_name',
-        'cat.category_name',
-        'comp.client_name',
-        trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
-        trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
-        'tm.team_name as assigned_team_name',
-        trx.raw("(SELECT COUNT(*) FROM ticket_resources tr WHERE tr.ticket_id = t.ticket_id AND tr.tenant = t.tenant AND tr.additional_user_id IS NOT NULL)::int as additional_agent_count"),
-        trx.raw(`(SELECT COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json) FROM ticket_resources tr2 JOIN users uu ON tr2.additional_user_id = uu.user_id AND tr2.tenant = uu.tenant WHERE tr2.ticket_id = t.ticket_id AND tr2.tenant = t.tenant) as additional_agents`)
-      )
+    return query
       .modify(queryBuilder => {
         if (selectedSort.rawExpression) {
           queryBuilder.orderByRaw(`${selectedSort.rawExpression} ${sortDirection}`);
@@ -1112,7 +1055,105 @@ export const getTicketsForList = withAuth(async (
           queryBuilder.orderBy('t.entered_at', sortDirection);
         }
       })
-      .orderBy('t.ticket_id', 'desc')
+      .orderBy('t.ticket_id', 'desc');
+}
+
+/**
+ * Validate and clean filter values, clearing "$undefined" string sentinel values.
+ */
+function cleanFilterValues(validatedFilters: ITicketListFilters): ITicketListFilters {
+    if (validatedFilters.boardId === '$undefined') {
+      validatedFilters.boardId = undefined;
+    }
+    if (validatedFilters.categoryId === '$undefined') {
+      validatedFilters.categoryId = undefined;
+    }
+    if (validatedFilters.clientId === '$undefined') {
+      validatedFilters.clientId = undefined;
+    }
+    if (validatedFilters.contactId === '$undefined') {
+      validatedFilters.contactId = undefined;
+    }
+    return validatedFilters;
+}
+
+/**
+ * Get tickets for list with page-based pagination
+ * This replaces cursor-based pagination with traditional page-based approach
+ */
+export const getTicketsForList = withAuth(async (
+  user,
+  { tenant },
+  filters: ITicketListFilters,
+  page: number = 1,
+  pageSize: number = 10
+): Promise<{ tickets: ITicketListItem[], totalCount: number, metadata: { agentAvatarUrls: Record<string, string | null>, teamAvatarUrls: Record<string, string | null>, ticketTags: Record<string, ITag[]> } }> => {
+  const {knex: db} = await createTenantKnex();
+
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view tickets');
+    }
+
+    try {
+      const validatedFilters = cleanFilterValues(
+        validateData(ticketListFiltersSchema, filters) as ITicketListFilters
+      );
+
+    // Build base query for filtering
+    const { builder: baseQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
+
+    // Get total count
+    const countQuery = baseQuery.clone().clearSelect().clearOrder().count('t.ticket_id as count');
+    const [{ count }] = await countQuery;
+    const totalCount = parseInt(String(count), 10);
+
+    // Build query for paginated results
+    const query = applyTicketListSort(
+      baseQuery
+        .clone()
+        .select(
+          't.*',
+          trx.raw(
+            `(
+              SELECT COUNT(*)::int
+              FROM tickets as tc
+              WHERE tc.tenant = t.tenant
+                AND tc.master_ticket_id = t.ticket_id
+            ) as bundle_child_count`
+          ),
+          trx.raw(
+            `(
+              SELECT COUNT(DISTINCT x.client_id)::int
+              FROM (
+                SELECT t2.client_id as client_id
+                FROM tickets as t2
+                WHERE t2.tenant = t.tenant
+                  AND t2.ticket_id = t.ticket_id
+                UNION ALL
+                SELECT tc.client_id
+                FROM tickets as tc
+                WHERE tc.tenant = t.tenant
+                  AND tc.master_ticket_id = t.ticket_id
+              ) as x
+              WHERE x.client_id IS NOT NULL
+            ) as bundle_distinct_client_count`
+          ),
+          'mt.ticket_number as bundle_master_ticket_number',
+          's.name as status_name',
+          'p.priority_name',
+          'p.color as priority_color',
+          'c.board_name',
+          'cat.category_name',
+          'comp.client_name',
+          trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
+          trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
+          'tm.team_name as assigned_team_name',
+          trx.raw("(SELECT COUNT(*) FROM ticket_resources tr WHERE tr.ticket_id = t.ticket_id AND tr.tenant = t.tenant AND tr.additional_user_id IS NOT NULL)::int as additional_agent_count"),
+          trx.raw(`(SELECT COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json) FROM ticket_resources tr2 JOIN users uu ON tr2.additional_user_id = uu.user_id AND tr2.tenant = uu.tenant WHERE tr2.ticket_id = t.ticket_id AND tr2.tenant = t.tenant) as additional_agents`)
+        ),
+      validatedFilters
+    )
       .limit(pageSize)
       .offset((page - 1) * pageSize);
 
@@ -1182,9 +1223,87 @@ export const getTicketsForList = withAuth(async (
       };
     });
 
+    // Fetch metadata in parallel: avatar URLs, team avatar URLs, ticket tags
+    const ticketIds = ticketListItems
+      .map((t: ITicketListItem) => t.ticket_id)
+      .filter((id: string | undefined): id is string => id !== undefined);
+
+    const agentUserIds = new Set<string>();
+    ticketListItems.forEach((ticket: ITicketListItem) => {
+      ticket.additional_agents?.forEach((agent: { user_id: string }) => {
+        agentUserIds.add(agent.user_id);
+      });
+    });
+
+    const teamIds = new Set<string>();
+    ticketListItems.forEach((ticket: ITicketListItem) => {
+      if (ticket.assigned_team_id) {
+        teamIds.add(ticket.assigned_team_id);
+      }
+    });
+
+    const [agentAvatarUrlsMap, teamAvatarUrlsMap, ticketTagRows] = await Promise.all([
+      agentUserIds.size > 0
+        ? getEntityImageUrlsBatch('user', Array.from(agentUserIds), tenant)
+        : Promise.resolve(new Map<string, string | null>()),
+      teamIds.size > 0
+        ? getEntityImageUrlsBatch('team', Array.from(teamIds), tenant)
+        : Promise.resolve(new Map<string, string | null>()),
+      ticketIds.length > 0
+        ? trx('tag_mappings as tm')
+            .join('tag_definitions as td', function() {
+              this.on('tm.tenant', '=', 'td.tenant')
+                .andOn('tm.tag_id', '=', 'td.tag_id');
+            })
+            .where('tm.tenant', tenant)
+            .whereIn('tm.tagged_id', ticketIds)
+            .where('tm.tagged_type', 'ticket')
+            .select(
+              'tm.mapping_id',
+              'td.tag_id',
+              'td.tag_text',
+              'tm.tagged_id',
+              'tm.tagged_type',
+              'td.board_id',
+              'td.background_color',
+              'td.text_color'
+            )
+        : Promise.resolve([]),
+    ]);
+
+    // Convert Maps to Records for serialization
+    const agentAvatarUrls: Record<string, string | null> = {};
+    agentAvatarUrlsMap.forEach((url, id) => { agentAvatarUrls[id] = url; });
+
+    const teamAvatarUrls: Record<string, string | null> = {};
+    teamAvatarUrlsMap.forEach((url, id) => { teamAvatarUrls[id] = url; });
+
+    // Group tags by ticket ID
+    const ticketTags: Record<string, ITag[]> = {};
+    ticketTagRows.forEach((tag: any) => {
+      const tagObj: ITag = {
+        tag_id: tag.mapping_id,
+        tenant,
+        tag_text: tag.tag_text,
+        tagged_id: tag.tagged_id,
+        tagged_type: tag.tagged_type,
+        background_color: tag.background_color,
+        text_color: tag.text_color,
+      };
+      if (!ticketTags[tag.tagged_id]) {
+        ticketTags[tag.tagged_id] = [];
+      }
+      ticketTags[tag.tagged_id].push(tagObj);
+    });
+
     return {
       tickets: ticketListItems as ITicketListItem[],
-      totalCount
+      totalCount,
+      metadata: {
+        agentAvatarUrls,
+        teamAvatarUrls,
+        ticketTags,
+      }
     };
     } catch (error) {
       console.error('Failed to fetch tickets:', error);
@@ -1985,7 +2104,8 @@ export const getConsolidatedTicketListData = withAuth(async (
       return {
         options: formOptions,
         tickets: ticketsData.tickets,
-        totalCount: ticketsData.totalCount
+        totalCount: ticketsData.totalCount,
+        metadata: ticketsData.metadata
       };
     } catch (error) {
       console.error('Failed to fetch consolidated ticket list data:', error);
@@ -2155,4 +2275,69 @@ export const getTicketsForListWithCursor = withAuth(async (
     tickets: result.tickets,
     nextCursor: null // No more cursor-based pagination
   };
+});
+
+/**
+ * Get the previous and next ticket IDs relative to the current ticket,
+ * using the same filters and sort order as the ticket list.
+ * Used for prev/next navigation on the ticket detail page.
+ */
+export const getAdjacentTicketIds = withAuth(async (
+  user,
+  { tenant },
+  currentTicketId: string,
+  filters: ITicketListFilters
+): Promise<{
+  prevTicketId: string | null;
+  nextTicketId: string | null;
+  prevTicketNumber: string | null;
+  nextTicketNumber: string | null;
+  currentPosition: number;
+  totalCount: number;
+}> => {
+  const { knex: db } = await createTenantKnex();
+
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view tickets');
+    }
+
+    const validatedFilters = cleanFilterValues(
+      validateData(ticketListFiltersSchema, filters) as ITicketListFilters
+    );
+
+    const { builder: baseQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
+
+    // Only fetch IDs and ticket numbers -- lightweight query
+    const ticketIds: { ticket_id: string; ticket_number: string }[] = await applyTicketListSort(
+      baseQuery.clone().select('t.ticket_id', 't.ticket_number'),
+      validatedFilters
+    );
+
+    const currentIndex = ticketIds.findIndex(t => t.ticket_id === currentTicketId);
+
+    if (currentIndex === -1) {
+      // Current ticket is not in the filtered list (possibly status changed, etc.)
+      return {
+        prevTicketId: null,
+        nextTicketId: null,
+        prevTicketNumber: null,
+        nextTicketNumber: null,
+        currentPosition: 0,
+        totalCount: ticketIds.length,
+      };
+    }
+
+    const prev = currentIndex > 0 ? ticketIds[currentIndex - 1] : null;
+    const next = currentIndex < ticketIds.length - 1 ? ticketIds[currentIndex + 1] : null;
+
+    return {
+      prevTicketId: prev?.ticket_id ?? null,
+      nextTicketId: next?.ticket_id ?? null,
+      prevTicketNumber: prev?.ticket_number ?? null,
+      nextTicketNumber: next?.ticket_number ?? null,
+      currentPosition: currentIndex + 1,
+      totalCount: ticketIds.length,
+    };
+  });
 });

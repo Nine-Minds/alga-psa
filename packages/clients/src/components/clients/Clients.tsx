@@ -24,7 +24,7 @@ import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSw
 import { TrashIcon, MoreVertical, CloudDownload, Upload, LayoutGrid, List, Search, XCircle, Power, RotateCcw } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { useUserPreference } from '@alga-psa/users/hooks';
+import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import ClientsImportDialog from './ClientsImportDialog';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';

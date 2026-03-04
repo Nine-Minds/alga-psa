@@ -15,8 +15,9 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
-import { getCurrentUser, updateUser } from '@alga-psa/users/actions';
-import { useUserAvatar, invalidateUserAvatar } from '@alga-psa/users/hooks';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { updateUser } from '@alga-psa/users/actions';
+import { useUserAvatar, invalidateUserAvatar } from '@alga-psa/user-composition/hooks';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from '@alga-psa/notifications';
 import {
@@ -33,7 +34,7 @@ import { CalendarIntegrationsSettings } from '@alga-psa/integrations/components'
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 import { LanguagePreference } from '@alga-psa/ui/components/LanguagePreference';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
-import { getUserLocaleAction, updateUserLocaleAction } from '@alga-psa/users/actions';
+import { getUserLocaleAction, updateUserLocaleAction } from '@alga-psa/user-composition/actions';
 import { getInheritedLocaleAction } from '@alga-psa/tenancy/actions';
 import type { SupportedLocale } from '@alga-psa/core/i18n/config';
 

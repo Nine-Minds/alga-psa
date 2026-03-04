@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { BaseService, ServiceContext, ListOptions, ListResult } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '../../db';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '../../auth/rbac';
 import { auditLog } from '../../logging/auditLog';
 import { publishEvent, publishWorkflowEvent } from '../../eventBus/publishers';

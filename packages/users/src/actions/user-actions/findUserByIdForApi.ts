@@ -9,7 +9,7 @@ import { Knex } from 'knex';
 import { getConnection, runWithTenant } from '@alga-psa/db';
 import { IUserWithRoles } from '@alga-psa/types';
 import User from '@alga-psa/db/models/user';
-import { getUserAvatarUrl } from '../../lib/avatarUtils';
+import { getUserAvatarUrl } from '@alga-psa/user-composition/lib/avatarUtils';
 
 /**
  * Find a user by ID within a specific tenant context

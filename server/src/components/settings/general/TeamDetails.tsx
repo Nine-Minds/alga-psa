@@ -10,11 +10,10 @@ import {
   deleteTeamAvatar,
   getTeamAvatarUrlsBatchAction
 } from '@alga-psa/teams/actions';
-import { getAllUsers } from '@alga-psa/users/actions';
+import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { ITeam, ITeamMember, IUserWithRoles, ColumnDefinition } from '@alga-psa/types';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/users/actions';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';

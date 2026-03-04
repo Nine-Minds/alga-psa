@@ -33,13 +33,13 @@
   },
   "dependencies": {
     "@alga-psa/billing": "*",
+    "@alga-psa/clients": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/formatting": "*",
     "@alga-psa/types": "*",
-    "@alga-psa/users": "*",
+    "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",
-    "@alga-psa/clients": "*",
     "zod": "^3.22.4"
   },
   "peerDependencies": {

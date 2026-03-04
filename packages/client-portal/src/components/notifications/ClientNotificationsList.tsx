@@ -11,7 +11,7 @@ import { NotificationSectionFiltersDialog } from "@alga-psa/workflows/components
 import { Filter, XCircle } from 'lucide-react';
 import { useActivityDrawer } from "@alga-psa/workflows/components";
 import { getUnreadCountAction } from "@alga-psa/notifications/actions";
-import { getCurrentUser } from "@alga-psa/users/actions";
+import { getCurrentUser } from "@alga-psa/user-composition/actions";
 import { Badge } from "@alga-psa/ui/components/Badge";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
