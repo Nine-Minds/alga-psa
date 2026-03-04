@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Define a shared expression context root schema and typed path option shape consumed by both designers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-001", "FR-002"]
   },
   {
