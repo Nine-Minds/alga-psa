@@ -128,7 +128,7 @@
   {
     "id": "F022",
     "description": "Ensure workflow Monaco insert operations can consume shared insertion helper semantics without cursor regressions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-012", "NFR-001"]
   },
   {

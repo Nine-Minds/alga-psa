@@ -34,6 +34,7 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) Shared schema/context-aware path checks (`validateSourcePaths`) are now used in both designers where author-time validation exists:
   - invoice insertion feedback (`DesignerShell`)
   - workflow step config validation (`WorkflowDesigner`)
+- (2026-03-04) Workflow Monaco insertion paths now route through shared `insertTextIntoMonacoEditor` for both programmatic insert and drag/drop insert, with existing `$0` placeholder stripping preserved.
 - (2026-03-04) Preserve persisted contracts:
   - Invoice keeps AST value expressions (`literal|binding|path|template`).
   - Workflow keeps `{ $expr: string }`.
@@ -99,6 +100,8 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
   - `npx vitest run --config shared/vitest.config.ts shared/workflow/runtime/__tests__/expressionEngine.test.ts shared/workflow/runtime/__tests__/mappingResolver.test.ts`
 - Audit shared path-validator usage in both designers:
   - `rg -n "validateSourcePaths\\(" packages/billing/src/components/invoice-designer ee/server/src/components/workflow-designer -g'*.ts*'`
+- Validate workflow expression editor insertion refactor:
+  - `cd ee/server && npx vitest run src/components/workflow-designer/expression-editor/__tests__/completionProvider.test.ts src/components/workflow-designer/expression-editor/__tests__/diagnosticsProvider.test.ts && npm run -s typecheck`
 - Compare invoice/workflow binding/expression surfaces:
   - `rg -n "binding|template|\{\{|\$expr|validateExpressionSource" packages/billing/src/components/invoice-designer ee/server/src/components/workflow-designer shared/workflow/runtime -g"*.ts*"`
 - Review workflow designer expression sections:
