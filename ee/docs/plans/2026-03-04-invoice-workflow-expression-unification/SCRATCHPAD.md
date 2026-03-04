@@ -53,6 +53,7 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) T007 verified in `insertionDom.test.ts` with explicit readonly/disabled/unfocused no-op assertions for `insertTextIntoDomControl`.
 - (2026-03-04) T008 verified via `coreContracts.test.ts` validation-result normalization assertions (severity fallback + deterministic diagnostic ordering).
 - (2026-03-04) T009 verified via `coreContracts.test.ts` invoice adapter assertions (roots + canonical paths for invoice/customer/tenant/item).
+- (2026-03-04) T010 verified via `coreContracts.test.ts` stable label assertions for known invoice adapter roots/paths.
 - (2026-03-04) Preserve persisted contracts:
   - Invoice keeps AST value expressions (`literal|binding|path|template`).
   - Workflow keeps `{ $expr: string }`.
