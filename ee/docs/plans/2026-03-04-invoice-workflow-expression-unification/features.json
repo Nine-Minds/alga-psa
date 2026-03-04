@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "Keep workflow runtime expression safety guardrails unchanged (timeout, max output, JSON-serializable constraints, function allowlist).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-010"]
   },
   {
