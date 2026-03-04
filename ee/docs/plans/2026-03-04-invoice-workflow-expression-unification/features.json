@@ -158,7 +158,7 @@
   {
     "id": "F027",
     "description": "Remove deprecated workflow `${...}` scanner helpers once shared validator path is active.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-007", "NFR-002"]
   },
   {

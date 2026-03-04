@@ -39,6 +39,7 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) Invoice preview interpolation semantics remain intact post-migration (resolved known tokens + visibly marked unresolved tokens), validated by preview-mode suite.
 - (2026-03-04) Workflow runtime expression suites (`expressionEngine`, `mappingResolver`, `mappingValidator`) remain green after migration; contracts for `{ $expr }` evaluation/validation are preserved.
 - (2026-03-04) Deprecated invoice static variable catalog path is removed; field discovery now only flows through shared adapter-driven options.
+- (2026-03-04) Deprecated workflow `${...}` scanner helpers are removed from step validation flow; only shared-path validation remains.
 - (2026-03-04) Preserve persisted contracts:
   - Invoice keeps AST value expressions (`literal|binding|path|template`).
   - Workflow keeps `{ $expr: string }`.
@@ -112,6 +113,8 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
   - `npx vitest run --config shared/vitest.config.ts shared/workflow/runtime/__tests__/expressionEngine.test.ts shared/workflow/runtime/__tests__/mappingResolver.test.ts shared/workflow/runtime/__tests__/mappingValidator.test.ts`
 - Audit for deprecated invoice static catalog references:
   - `rg -n "templateVariableCatalog|TEMPLATE_VARIABLE_OPTIONS" packages/billing/src/components/invoice-designer -g'*.ts*'`
+- Audit for deprecated workflow scanner helpers:
+  - `rg -n "extractExpressionPaths|validateExpressionPath|\\$\\{\\[^\\}\\]\\+\\}" ee/server/src/components/workflow-designer -g'*.ts*'`
 - Compare invoice/workflow binding/expression surfaces:
   - `rg -n "binding|template|\{\{|\$expr|validateExpressionSource" packages/billing/src/components/invoice-designer ee/server/src/components/workflow-designer shared/workflow/runtime -g"*.ts*"`
 - Review workflow designer expression sections:
