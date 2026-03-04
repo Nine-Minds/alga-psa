@@ -180,3 +180,4 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) T025 covered in `expressionValidation.test.ts`: `validateStepExpressions(...)` now flags `unknown.root` and `vars.missing.id` via shared validator diagnostics while accepting known `vars.previous.id`.
 - (2026-03-04) T026 validated by `expression-editor/__tests__/completionProvider.test.ts`: function completion items are constrained to runtime allowlisted helpers only.
 - (2026-03-04) T027 validated by `expression-editor/__tests__/diagnosticsProvider.test.ts`: disallowed/non-allowlisted functions are diagnosed and runtime-allowlisted helpers pass.
+- (2026-03-04) Added `shared/workflow/runtime/__tests__/types.exprPersistence.test.ts` for T028: step schemas persist expressions as `{ $expr: string }` objects (and reject bare string Expr inputs).

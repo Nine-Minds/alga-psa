@@ -224,7 +224,7 @@
   {
     "id": "T028",
     "description": "Regression: workflow persisted config still stores expressions as `{ $expr: string }` with no schema change.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
