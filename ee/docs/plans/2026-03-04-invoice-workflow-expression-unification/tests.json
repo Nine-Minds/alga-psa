@@ -288,7 +288,7 @@
   {
     "id": "T036",
     "description": "Regression: existing invoice preview mode tests for field/table/totals scaffolds remain green.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
