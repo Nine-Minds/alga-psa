@@ -280,7 +280,7 @@
   {
     "id": "T035",
     "description": "Integration: invoice text preview resolves known moustache tokens into formatted values and leaves unknown tokens visibly marked.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]

@@ -187,3 +187,4 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) T032 covered by `shared/workflow/expression-authoring/__tests__/insertionDom.test.ts`: Monaco-style insertion now verifies shared helper replacement semantics and cursor/selection placement at the inserted text end.
 - (2026-03-04) T033 validated via `expression-editor/__tests__/insertionText.test.ts`: trailing snippet placeholder (`$0`) is stripped before insertion, while non-trailing text remains unchanged.
 - (2026-03-04) T034 added to `DesignerShell.insertion.integration.test.tsx`: repeated template insertions with manual typing in between remain cursor-accurate and produce expected final text.
+- (2026-03-04) T035 validated by `DesignCanvas.previewMode.test.tsx`: preview rendering resolves known moustache tokens and leaves unresolved tokens visibly marked.
