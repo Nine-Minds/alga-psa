@@ -169,3 +169,4 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - Is invoice drag/drop path insertion in scope for this plan, or deferred after click-insert parity?
 - (2026-03-04) T015 validated by `DesignerShell.insertion.integration.test.tsx`: bindingKey-target insertions write raw `invoice.total` path tokens without moustache wrapping.
 - (2026-03-04) T016 validated by `DesignerShell.insertion.integration.test.tsx`: non-binding text targets insert moustache-wrapped tokens in template mode (`Before {{invoice.total}}`).
+- (2026-03-04) T017 validated by `DesignerShell.insertion.integration.test.tsx`: when no insert target is focused, insertion falls back to appending template token into selected text-node `metadata.text`.

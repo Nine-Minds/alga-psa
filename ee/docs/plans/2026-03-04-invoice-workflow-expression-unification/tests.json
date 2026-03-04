@@ -131,7 +131,7 @@
   {
     "id": "T017",
     "description": "Integration: invoice fallback insertion path appends token to selected text node metadata when inspector target is absent.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
