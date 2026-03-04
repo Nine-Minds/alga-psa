@@ -328,7 +328,7 @@
   {
     "id": "T041",
     "description": "Meta-test: all new/changed React UI tests in this scope run under Vitest + Testing Library and target controls via role/automation attributes (except explicit render-semantics cases).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
