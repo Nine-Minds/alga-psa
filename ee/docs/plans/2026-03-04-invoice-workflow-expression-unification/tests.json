@@ -20,7 +20,7 @@
   {
     "id": "T004",
     "description": "Unit: shared path discovery includes array markers/segments according to design rules.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
