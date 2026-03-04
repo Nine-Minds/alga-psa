@@ -50,7 +50,7 @@
   {
     "id": "T009",
     "description": "Unit: invoice context adapter emits expected roots and canonical billing path options.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {
