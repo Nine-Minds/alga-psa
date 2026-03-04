@@ -190,7 +190,7 @@
   {
     "id": "T024",
     "description": "Integration: workflow step expression validation panel uses shared validation results for errors and warnings.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F016"
