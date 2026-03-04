@@ -76,9 +76,9 @@ export const getContactByContactNameId = withAuth(async (
       throw new Error('VALIDATION_ERROR: Contact ID is required');
     }
 
-    // Fetch contact with client information
+    // Fetch contact with client information and phone numbers
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('contacts')
+      const contactRow = await trx('contacts')
         .select(
           'contacts.*',
           'clients.client_name'
@@ -92,6 +92,23 @@ export const getContactByContactNameId = withAuth(async (
           'contacts.tenant': tenant
         })
         .first();
+
+      if (!contactRow) return null;
+
+      // Fetch phone numbers for this contact (graceful if table doesn't exist yet)
+      let phoneNumbers: any[] = [];
+      try {
+        const tableExists = await trx.schema.hasTable('contact_phone_numbers');
+        if (tableExists) {
+          phoneNumbers = await trx('contact_phone_numbers')
+            .where({ contact_id: contactNameId, tenant })
+            .orderByRaw('is_primary DESC, created_at ASC');
+        }
+      } catch {
+        // Table may not exist yet if migration hasn't run
+      }
+
+      return { ...contactRow, phone_numbers: phoneNumbers };
     });
 
     return contact || null;
@@ -503,6 +520,28 @@ export const addContact = withAuth(async (
       tenant,
       trx
     );
+
+    // Create a phone number row in contact_phone_numbers if phone_number provided
+    const phoneNumber = contact.phone_number?.trim();
+    if (phoneNumber) {
+      try {
+        const tableExists = await trx.schema.hasTable('contact_phone_numbers');
+        if (tableExists) {
+          await trx('contact_phone_numbers').insert({
+            tenant,
+            phone_number_id: trx.raw('gen_random_uuid()'),
+            contact_id: contact.contact_name_id,
+            phone_type: 'Office',
+            phone_number: phoneNumber,
+            is_primary: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+        }
+      } catch {
+        // Table may not exist yet if migration hasn't run
+      }
+    }
 
     return {
       ...contact,

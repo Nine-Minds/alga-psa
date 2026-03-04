@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { IContact } from '@alga-psa/types';
-import { getContactsByClient } from '@alga-psa/clients/actions';
+import { getContactsByClient, getPhoneNumbersByContact } from '@alga-psa/clients/actions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
@@ -121,25 +121,30 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
         [contact.contact_name_id]: true
       }));
 
+      // Fetch documents and phone numbers in parallel
       const existingDocuments = documents[contact.contact_name_id];
-      
-      if (!existingDocuments || existingDocuments.length === 0) {
-        const response = await getDocumentsByEntity(contact.contact_name_id, 'contact');
+      const [docResponse, phoneNumbers] = await Promise.all([
+        (!existingDocuments || existingDocuments.length === 0)
+          ? getDocumentsByEntity(contact.contact_name_id, 'contact')
+          : Promise.resolve(null),
+        getPhoneNumbersByContact(contact.contact_name_id)
+      ]);
 
-        if (!isActionPermissionError(response)) {
-          setDocuments(prev => {
-            const newDocuments = { ...prev };
-            newDocuments[contact.contact_name_id] = Array.isArray(response)
-              ? response
-              : response.documents || [];
-            return newDocuments;
-          });
-        }
+      if (docResponse && !isActionPermissionError(docResponse)) {
+        setDocuments(prev => {
+          const newDocuments = { ...prev };
+          newDocuments[contact.contact_name_id] = Array.isArray(docResponse)
+            ? docResponse
+            : docResponse.documents || [];
+          return newDocuments;
+        });
       }
+
+      const contactWithPhones = { ...contact, phone_numbers: phoneNumbers };
 
       openDrawer(
         <ContactDetails
-          contact={contact}
+          contact={contactWithPhones}
           clients={clients}
           documents={documents[contact.contact_name_id] || []}
           userId={currentUser}

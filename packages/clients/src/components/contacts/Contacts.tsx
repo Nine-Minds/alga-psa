@@ -5,7 +5,7 @@ import type { DeletionValidationResult, IContact } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import type { IDocument } from '@alga-psa/types';
-import { getAllContacts, getContactsByClient, getAllClients, exportContactsToCSV, deleteContact, updateContact } from '@alga-psa/clients/actions';
+import { getAllContacts, getContactsByClient, getAllClients, exportContactsToCSV, deleteContact, updateContact, getPhoneNumbersByContact } from '@alga-psa/clients/actions';
 import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
@@ -280,25 +280,30 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           [contact.contact_name_id]: true
         }));
 
+        // Fetch documents and phone numbers in parallel
         const existingDocuments = documents[contact.contact_name_id];
+        const [docResponse, phoneNumbers] = await Promise.all([
+          (!existingDocuments || existingDocuments.length === 0)
+            ? getDocumentsByEntity(contact.contact_name_id, 'contact')
+            : Promise.resolve(null),
+          getPhoneNumbersByContact(contact.contact_name_id)
+        ]);
 
-        if (!existingDocuments || existingDocuments.length === 0) {
-          const response = await getDocumentsByEntity(contact.contact_name_id, 'contact');
-
-          if (!isActionPermissionError(response)) {
-            setDocuments(prev => {
-              const newDocuments = { ...prev };
-              newDocuments[contact.contact_name_id] = Array.isArray(response)
-                ? response
-                : response.documents || [];
-              return newDocuments;
-            });
-          }
+        if (docResponse && !isActionPermissionError(docResponse)) {
+          setDocuments(prev => {
+            const newDocuments = { ...prev };
+            newDocuments[contact.contact_name_id] = Array.isArray(docResponse)
+              ? docResponse
+              : docResponse.documents || [];
+            return newDocuments;
+          });
         }
+
+        const contactWithPhones = { ...contact, phone_numbers: phoneNumbers };
 
         openDrawer(
           <ContactDetails
-            contact={contact}
+            contact={contactWithPhones}
             clients={clients}
             documents={documents[contact.contact_name_id] || []}
             userId={currentUser}
@@ -344,25 +349,30 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           [contact.contact_name_id]: true
         }));
 
+        // Fetch documents and phone numbers in parallel
         const existingDocuments = documents[contact.contact_name_id];
+        const [docResponse, phoneNumbers] = await Promise.all([
+          (!existingDocuments || existingDocuments.length === 0)
+            ? getDocumentsByEntity(contact.contact_name_id, 'contact')
+            : Promise.resolve(null),
+          getPhoneNumbersByContact(contact.contact_name_id)
+        ]);
 
-        if (!existingDocuments || existingDocuments.length === 0) {
-          const response = await getDocumentsByEntity(contact.contact_name_id, 'contact');
-
-          if (!isActionPermissionError(response)) {
-            setDocuments(prev => {
-              const newDocuments = { ...prev };
-              newDocuments[contact.contact_name_id] = Array.isArray(response)
-                ? response
-                : response.documents || [];
-              return newDocuments;
-            });
-          }
+        if (docResponse && !isActionPermissionError(docResponse)) {
+          setDocuments(prev => {
+            const newDocuments = { ...prev };
+            newDocuments[contact.contact_name_id] = Array.isArray(docResponse)
+              ? docResponse
+              : docResponse.documents || [];
+            return newDocuments;
+          });
         }
+
+        const contactWithPhones = { ...contact, phone_numbers: phoneNumbers };
 
         openDrawer(
           <ContactDetails
-            contact={contact}
+            contact={contactWithPhones}
             clients={clients}
             documents={documents[contact.contact_name_id] || []}
             userId={currentUser}

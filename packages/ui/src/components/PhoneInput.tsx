@@ -14,6 +14,7 @@ interface Country {
 // Common countries pinned at top (enterprise standard)
 const COMMON_COUNTRIES = ['US', 'GB', 'CA', 'AU', 'IN', 'DE', 'FR', 'BR', 'JP', 'CN'];
 
+
 // Country code to flag emoji mapping
 const getCountryFlag = (countryCode: string): string => {
   const codePoints = countryCode
@@ -61,6 +62,7 @@ interface PhoneInputProps {
   error?: boolean; // Whether to show error styling
   'data-automation-id'?: string;
   externalCountryCode?: string; // For one-way sync from address country
+  fullWidth?: boolean; // Stretch to fill container width
 }
 
 export const PhoneInput = ({
@@ -80,7 +82,8 @@ export const PhoneInput = ({
   allowExtensions = false,
   extensionPlaceholder = "ext. 1234",
   'data-automation-id': dataAutomationId,
-  externalCountryCode
+  externalCountryCode,
+  fullWidth = false
 }: PhoneInputProps) => {
   const [displayValue, setDisplayValue] = useState('');
   const [extensionValue, setExtensionValue] = useState('');
@@ -280,7 +283,7 @@ export const PhoneInput = ({
         </Label>
       )}
       <div className="relative">
-        <div className="inline-flex border border-[rgb(var(--color-border-400))] rounded-md shadow-sm focus-within:outline-none focus-within:ring-2 focus-within:ring-[rgb(var(--color-primary-500))] focus-within:border-transparent bg-white">
+        <div className={`${fullWidth ? 'flex w-full' : 'inline-flex'} border border-[rgb(var(--color-border-400))] rounded-md shadow-sm focus-within:outline-none focus-within:ring-2 focus-within:ring-[rgb(var(--color-primary-500))] focus-within:border-transparent bg-white`}>
           {/* Country Code Dropdown - integrated within phone field */}
           {true && (
             <div className="relative" ref={dropdownRef}>
@@ -360,7 +363,7 @@ export const PhoneInput = ({
             placeholder={getPlaceholderText()}
             disabled={disabled}
             required={required}
-            className={`w-80 border-0 focus:ring-0 focus:border-0 ${allowExtensions ? 'rounded-none' : 'rounded-r-md'} h-[42px] bg-white px-3`}
+            className={`${fullWidth ? 'flex-1 min-w-0' : 'w-80'} border-0 focus:ring-0 focus:border-0 ${allowExtensions ? 'rounded-none' : 'rounded-r-md'} h-[42px] bg-white px-3`}
           />
 
           {/* Extension Input */}

@@ -1,6 +1,37 @@
 import type { TenantEntity } from '.';
 import type { ITaggable } from './tag.interfaces';
 
+export type PhoneNumberType = 'Office' | 'Mobile' | 'Home' | 'Fax' | 'Other';
+
+export interface IContactPhoneNumber {
+  phone_number_id: string;
+  tenant?: string;
+  contact_id: string;
+  phone_type: PhoneNumberType;
+  phone_number: string;
+  extension: string | null;
+  country_code: string | null;
+  is_primary: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateContactPhoneNumberInput {
+  phone_type?: PhoneNumberType;
+  phone_number: string;
+  extension?: string;
+  country_code?: string;
+  is_primary?: boolean;
+}
+
+export interface UpdateContactPhoneNumberInput {
+  phone_type?: PhoneNumberType;
+  phone_number?: string;
+  extension?: string;
+  country_code?: string;
+  is_primary?: boolean;
+}
+
 export interface IContact extends TenantEntity, ITaggable {
   contact_name_id: string;
   full_name: string;
@@ -14,6 +45,7 @@ export interface IContact extends TenantEntity, ITaggable {
   created_at: string;
   updated_at: string;
 
+  phone_numbers?: IContactPhoneNumber[];
   avatarUrl?: string | null;
   is_client_admin?: boolean;
 

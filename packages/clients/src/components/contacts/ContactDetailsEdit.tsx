@@ -1,12 +1,12 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import type { IClient, IContact, ITag } from '@alga-psa/types';
+import type { IClient, IContact, IContactPhoneNumber, ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Flex, Text, Heading } from '@radix-ui/themes';
-import { updateContact, listInboundTicketDestinationOptions } from '@alga-psa/clients/actions';
+import { updateContact, listInboundTicketDestinationOptions, saveContactPhoneNumbers, getPhoneNumbersByContact, getAllCountries, ICountry } from '@alga-psa/clients/actions';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { ClientPicker } from '../clients/ClientPicker';
 import { TagManager } from '@alga-psa/tags/components';
@@ -19,6 +19,7 @@ import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutoma
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
 import ContactAvatarUpload from './ContactAvatarUpload';
+import ContactPhoneNumbers, { buildInitialPhoneNumbers } from './ContactPhoneNumbers';
 import { getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
 
 interface ContactDetailsEditProps {
@@ -45,15 +46,27 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [error, setError] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [phoneNumbers, setPhoneNumbers] = useState<IContactPhoneNumber[]>(buildInitialPhoneNumbers(initialContact));
+  const [countries, setCountries] = useState<ICountry[]>([]);
   const [inboundDestinationOptions, setInboundDestinationOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [isInboundDestinationOptionsLoading, setIsInboundDestinationOptionsLoading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const fetchedTags = await findTagsByEntityIds([contact.contact_name_id], 'contact');
+        const [fetchedTags, fetchedPhoneNumbers, fetchedCountries] = await Promise.all([
+          findTagsByEntityIds([contact.contact_name_id], 'contact'),
+          getPhoneNumbersByContact(contact.contact_name_id),
+          countries.length > 0 ? Promise.resolve(countries) : getAllCountries()
+        ]);
         setTags(fetchedTags);
-        
+        if (fetchedPhoneNumbers.length > 0) {
+          setPhoneNumbers(fetchedPhoneNumbers);
+        }
+        if (countries.length === 0) {
+          setCountries(fetchedCountries as ICountry[]);
+        }
+
         if (contact.tenant) {
           const contactAvatarUrl = await getContactAvatarUrlActionAsync(contact.contact_name_id, contact.tenant);
           setAvatarUrl(contactAvatarUrl);
@@ -125,7 +138,26 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
         return;
       }
       
-      const updatedContact = await updateContact(contact);
+      // Sync primary phone number to legacy field
+      const primaryPhone = phoneNumbers.find(pn => pn.is_primary) || phoneNumbers[0];
+      const contactToSave = {
+        ...contact,
+        phone_number: primaryPhone?.phone_number || contact.phone_number || ''
+      };
+      const updatedContact = await updateContact(contactToSave);
+
+      // Save phone numbers
+      if (phoneNumbers.length > 0) {
+        await saveContactPhoneNumbers(
+          contact.contact_name_id,
+          phoneNumbers.map(pn => ({
+            ...pn,
+            phone_type: pn.phone_type,
+            phone_number: pn.phone_number
+          }))
+        );
+      }
+
       onSave(updatedContact);
     } catch (err) {
       console.error('Error updating contact:', err);
@@ -187,12 +219,17 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
               value={contact.email} 
               onChange={(value) => handleInputChange('email', value)} 
             />
-            <TableRow 
-              id={`${id}-phone`}
-              label="Phone" 
-              value={contact.phone_number} 
-              onChange={(value) => handleInputChange('phone_number', value)} 
-            />
+            <tr>
+              <td className="py-2 font-semibold">Phone Number:</td>
+              <td className="py-2">
+                <ContactPhoneNumbers
+                  contactId={contact.contact_name_id}
+                  phoneNumbers={phoneNumbers}
+                  countries={countries}
+                  onChange={setPhoneNumbers}
+                />
+              </td>
+            </tr>
             <TableRow 
               id={`${id}-role`}
               label="Role" 

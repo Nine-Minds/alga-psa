@@ -14,6 +14,16 @@ import {
   booleanTransform
 } from './common';
 
+// Phone number schemas
+export const contactPhoneNumberApiSchema = z.object({
+  phone_number_id: uuidSchema.optional(),
+  phone_type: z.enum(['Office', 'Mobile', 'Home', 'Fax', 'Other']).default('Office'),
+  phone_number: z.string().min(1, 'Phone number is required'),
+  extension: z.string().optional().nullable(),
+  country_code: z.string().max(2).optional().nullable(),
+  is_primary: z.boolean().default(false),
+});
+
 // Create contact schema
 export const createContactSchema = z.object({
   full_name: z.string().min(1, 'Full name is required').max(255),
@@ -23,7 +33,8 @@ export const createContactSchema = z.object({
   role: z.string().max(100).optional(),
   notes: z.string().optional(),
   is_inactive: z.boolean().optional().default(false),
-  tags: z.array(z.string()).optional()
+  tags: z.array(z.string()).optional(),
+  phone_numbers: z.array(contactPhoneNumberApiSchema).optional()
 });
 
 // Update contact schema (all fields optional)
@@ -59,6 +70,7 @@ export const contactResponseSchema = z.object({
   avatarUrl: z.string().nullable().optional(),
   tenant: uuidSchema,
   tags: z.array(z.string()).optional(),
+  phone_numbers: z.array(contactPhoneNumberApiSchema).optional(),
   // Joined fields
   client_name: z.string().nullable().optional()
 });

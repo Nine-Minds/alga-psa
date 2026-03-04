@@ -5,6 +5,43 @@
  */
 
 /**
+ * Phone number type options for contacts
+ */
+export type PhoneNumberType = 'Office' | 'Mobile' | 'Home' | 'Fax' | 'Other';
+
+/**
+ * Contact phone number entity
+ */
+export interface IContactPhoneNumber {
+  phone_number_id: string;
+  tenant?: string;
+  contact_id: string;
+  phone_type: PhoneNumberType;
+  phone_number: string;
+  extension: string | null;
+  country_code: string | null;
+  is_primary: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateContactPhoneNumberInput {
+  phone_type?: PhoneNumberType;
+  phone_number: string;
+  extension?: string;
+  country_code?: string;
+  is_primary?: boolean;
+}
+
+export interface UpdateContactPhoneNumberInput {
+  phone_type?: PhoneNumberType;
+  phone_number?: string;
+  extension?: string;
+  country_code?: string;
+  is_primary?: boolean;
+}
+
+/**
  * Core contact entity interface
  */
 export interface IContact {
@@ -18,6 +55,7 @@ export interface IContact {
   notes: string | null;
   notes_document_id?: string | null;
   is_inactive: boolean | null;
+  phone_numbers?: IContactPhoneNumber[];
   created_at: string;
   updated_at: string;
   [key: string]: any; // Allow additional properties for database fields

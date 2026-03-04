@@ -4,13 +4,13 @@ import { X } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Button } from "@alga-psa/ui/components/Button";
 import { Input } from "@alga-psa/ui/components/Input";
-import { PhoneInput } from "@alga-psa/ui/components/PhoneInput";
 import { Label } from "@alga-psa/ui/components/Label";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
-import { addContact } from '@alga-psa/clients/actions';
+import { addContact, saveContactPhoneNumbers } from '@alga-psa/clients/actions';
 import { ClientPicker } from '../clients/ClientPicker';
-import type { IClient } from '@alga-psa/types';
+import type { IClient, IContactPhoneNumber } from '@alga-psa/types';
 import { IContact } from '@alga-psa/types';
+import ContactPhoneNumbers from './ContactPhoneNumbers';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useToast } from '@alga-psa/ui';
@@ -62,7 +62,17 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   const { toast } = useToast();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumbers, setPhoneNumbers] = useState<IContactPhoneNumber[]>([{
+    phone_number_id: `temp-${Date.now()}`,
+    contact_id: '',
+    phone_type: 'Office',
+    phone_number: '',
+    extension: null,
+    country_code: null,
+    is_primary: true,
+    created_at: '',
+    updated_at: ''
+  }]);
   const [clientId, setClientId] = useState<string | null>(null);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
@@ -76,21 +86,6 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [countries, setCountries] = useState<ICountry[]>([]);
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
-  const [countryCode, setCountryCode] = useState(() => {
-    // Enterprise locale detection
-    try {
-      const locale = Intl.DateTimeFormat().resolvedOptions().locale;
-      const parts = locale.split('-');
-      const detectedCountry = parts[parts.length - 1]?.toUpperCase();
-
-      if (detectedCountry && detectedCountry.length === 2 && /^[A-Z]{2}$/.test(detectedCountry)) {
-        return detectedCountry;
-      }
-    } catch (e) {
-      // Fallback to US if detection fails
-    }
-    return 'US';
-  });
 
 
   // Set initial client ID when the component mounts or when selectedClientId changes
@@ -126,7 +121,17 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     } else {
       setFullName('');
       setEmail('');
-      setPhoneNumber('');
+      setPhoneNumbers([{
+        phone_number_id: `temp-${Date.now()}`,
+        contact_id: '',
+        phone_type: 'Office',
+        phone_number: '',
+        extension: null,
+        country_code: null,
+        is_primary: true,
+        created_at: '',
+        updated_at: ''
+      }]);
       if (!selectedClientId) {
         setClientId(null);
       }
@@ -146,11 +151,6 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     if (typeof clientId === 'string' || clientId === null) {
       setClientId(clientId);
     }
-  };
-
-  const handleCountryChange = (countryCode: string) => {
-    setCountryCode(countryCode);
-    // When country changes, the PhoneInput will auto-update with the new phone code
   };
 
   // Enterprise-grade field validation function (Microsoft/Meta/Salesforce style)
@@ -280,11 +280,16 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       validationMessages.push(emailError);
     }
 
-    // Validate phone even if empty to catch invalid partial entries
-    const phoneError = validateField('contact_phone', phoneNumber, true);
-    if (phoneError) {
-      fieldValidationErrors.contact_phone = phoneError;
-      validationMessages.push(phoneError);
+    // Validate each phone number that has content
+    for (const pn of phoneNumbers) {
+      if (pn.phone_number.trim()) {
+        const phoneError = validateField('contact_phone', pn.phone_number, true);
+        if (phoneError) {
+          fieldValidationErrors.contact_phone = phoneError;
+          validationMessages.push(phoneError);
+          break; // One phone error is enough
+        }
+      }
     }
 
     // Validate optional fields if they have content
@@ -312,10 +317,12 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
 
     try {
       setError(null); // Clear any existing errors
+      // Use the primary phone number for the denormalized field
+      const primaryPhone = phoneNumbers.find(pn => pn.is_primary) || phoneNumbers[0];
       const contactData = {
         full_name: fullName.trim(),
         email: email.trim(),
-        phone_number: phoneNumber.trim(),
+        phone_number: primaryPhone?.phone_number.trim() || '',
         client_id: clientId || null, // Explicitly set to null if no client selected
         is_inactive: isInactive,
         role: role.trim(),
@@ -323,6 +330,23 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       };
 
       const newContact = await addContact(contactData);
+
+      // Save all phone numbers (beyond the first Office one created by addContact)
+      const phonesToSave = phoneNumbers.filter(pn => pn.phone_number.trim());
+      if (phonesToSave.length > 0) {
+        try {
+          await saveContactPhoneNumbers(
+            newContact.contact_name_id,
+            phonesToSave.map(pn => ({
+              ...pn,
+              phone_type: pn.phone_type,
+              phone_number: pn.phone_number
+            }))
+          );
+        } catch (phoneError) {
+          console.error("Error saving phone numbers:", phoneError);
+        }
+      }
 
       // Create tags for the new contact
       let createdTags: typeof newContact.tags = [];
@@ -502,30 +526,18 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
               )}
             </div>
             <div>
-              <PhoneInput
-                id="quick-add-contact-phone"
-                label="Phone Number"
-                value={phoneNumber}
-                onChange={(value) => {
-                  setPhoneNumber(value);
-                  // Clear error when user starts typing, clears the field, or has only country code
-                  const trimmedValue = value.trim();
-                  const isCountryCodeOnly = /^\+\d{1,4}\s*$/.test(trimmedValue);
-
-                  if (fieldErrors.contact_phone && (trimmedValue === '' || isCountryCodeOnly)) {
+              <Label>Phone Number</Label>
+              <ContactPhoneNumbers
+                contactId=""
+                phoneNumbers={phoneNumbers}
+                countries={countries}
+                onChange={(updatedPhones) => {
+                  setPhoneNumbers(updatedPhones);
+                  if (fieldErrors.contact_phone) {
                     setFieldErrors(prev => ({ ...prev, contact_phone: '' }));
                   }
                 }}
-                onBlur={() => {
-                  validateField('contact_phone', phoneNumber, false);
-                }}
-                countryCode={countryCode}
-                phoneCode={countries.find(c => c.code === countryCode)?.phone_code}
-                countries={countries}
-                onCountryChange={handleCountryChange}
-                allowExtensions={true}
-                data-automation-id="quick-add-contact-phone"
-                className={fieldErrors.contact_phone ? 'error' : ''}
+                compact={true}
               />
               {fieldErrors.contact_phone && (
                 <p className="text-sm text-red-600 mt-1">{fieldErrors.contact_phone}</p>

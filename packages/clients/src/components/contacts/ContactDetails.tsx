@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import type { DeletionValidationResult, IContact } from '@alga-psa/types';
+import type { DeletionValidationResult, IContact, IContactPhoneNumber } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
 import type { IDocument } from '@alga-psa/types';
 import { IInteraction } from '@alga-psa/types';
@@ -13,7 +13,6 @@ import { ExternalLink, Pencil, Trash2 } from 'lucide-react';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Input } from '@alga-psa/ui/components/Input';
-import { PhoneInput } from '@alga-psa/ui/components/PhoneInput';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import BackNav from '@alga-psa/ui/components/BackNav';
@@ -23,7 +22,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Card } from '@alga-psa/ui/components/Card';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { getCurrentUserAsync, getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
-import { updateContact, getContactByContactNameId, deleteContact, listInboundTicketDestinationOptions } from '@alga-psa/clients/actions';
+import { updateContact, getContactByContactNameId, deleteContact, listInboundTicketDestinationOptions, saveContactPhoneNumbers, getPhoneNumbersByContact } from '@alga-psa/clients/actions';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { validateEmailAddress, validatePhoneNumber, validateContactName, validateRole } from '@alga-psa/validation';
 import Documents from '@alga-psa/documents/components/Documents';
@@ -44,6 +43,7 @@ import { getClientById, getAllCountries, ICountry } from '@alga-psa/clients/acti
 import ClientDetails from '../clients/ClientDetails';
 import { ContactPortalTab } from './ContactPortalTab';
 import { ContactNotesPanel } from './panels/ContactNotesPanel';
+import ContactPhoneNumbers, { buildInitialPhoneNumbers } from './ContactPhoneNumbers';
 
 const SwitchDetailItem: React.FC<{
   value: boolean;
@@ -212,23 +212,9 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     users?: IUser[];
   } | null>(null);
   const [countries, setCountries] = useState<ICountry[]>([]);
+  const [phoneNumbers, setPhoneNumbers] = useState<IContactPhoneNumber[]>(buildInitialPhoneNumbers(contact));
   const [inboundDestinationOptions, setInboundDestinationOptions] = useState<SelectOption[]>([]);
   const [isInboundDestinationOptionsLoading, setIsInboundDestinationOptionsLoading] = useState(false);
-  const [countryCode, setCountryCode] = useState(() => {
-    // Enterprise locale detection
-    try {
-      const locale = Intl.DateTimeFormat().resolvedOptions().locale;
-      const parts = locale.split('-');
-      const detectedCountry = parts[parts.length - 1]?.toUpperCase();
-
-      if (detectedCountry && detectedCountry.length === 2 && /^[A-Z]{2}$/.test(detectedCountry)) {
-        return detectedCountry;
-      }
-    } catch (e) {
-      // Fallback to US if detection fails
-    }
-    return 'US';
-  });
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -261,6 +247,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     setEditedContact(contact);
     setOriginalContact(contact);
     setSelectedClientId(contact.client_id || null);
+    setPhoneNumbers(buildInitialPhoneNumbers(contact));
     setHasUnsavedChanges(false);
   }, [contact]);
 
@@ -314,6 +301,23 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     };
     fetchCountries();
   }, [countries.length]);
+
+  // Fetch phone numbers from DB if not already provided via contact prop
+  useEffect(() => {
+    if (contact?.phone_numbers && contact.phone_numbers.length > 0) return;
+    const fetchPhoneNumbers = async () => {
+      if (!contact?.contact_name_id) return;
+      try {
+        const fetched = await getPhoneNumbersByContact(contact.contact_name_id);
+        if (fetched.length > 0) {
+          setPhoneNumbers(fetched);
+        }
+      } catch (error) {
+        console.error('Error fetching phone numbers:', error);
+      }
+    };
+    fetchPhoneNumbers();
+  }, [contact?.contact_name_id, contact?.phone_numbers]);
 
   useEffect(() => {
     let cancelled = false;
@@ -372,11 +376,6 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       [field]: value
     }));
     setHasUnsavedChanges(true);
-  };
-
-  const handleCountryChange = (countryCode: string) => {
-    setCountryCode(countryCode);
-    // When country changes, the PhoneInput will auto-update with the new phone code
   };
 
   const runDeleteValidation = useCallback(async () => {
@@ -560,13 +559,32 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
 
   const handleSave = async () => {
     try {
-      // Make sure contact_name_id is included in the data being sent
+      // Sync primary phone number to legacy field
+      const primaryPhone = phoneNumbers.find(pn => pn.is_primary) || phoneNumbers[0];
       const dataToUpdate = {
         ...editedContact,
-        contact_name_id: editedContact.contact_name_id
+        contact_name_id: editedContact.contact_name_id,
+        phone_number: primaryPhone?.phone_number || editedContact.phone_number || ''
       };
 
       const updatedContact = await updateContact(dataToUpdate);
+
+      // Save phone numbers if they exist
+      if (phoneNumbers.length > 0) {
+        const savedPhones = await saveContactPhoneNumbers(
+          editedContact.contact_name_id,
+          phoneNumbers.map(pn => ({
+            ...pn,
+            phone_type: pn.phone_type,
+            phone_number: pn.phone_number
+          }))
+        );
+        // Only update state if we got results (table may not exist yet)
+        if (savedPhones.length > 0) {
+          setPhoneNumbers(savedPhones);
+        }
+      }
+
       setEditedContact(updatedContact);
       setOriginalContact(updatedContact);
       setHasUnsavedChanges(false);
@@ -575,7 +593,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         title: "Contact Updated",
         description: "Contact details have been saved successfully.",
       });
-      
+
       // In quick view mode, mark that changes were saved (for refresh on drawer close)
       // In regular mode, refresh immediately to maintain existing behavior
       if (quickView && onChangesSaved) {
@@ -762,17 +780,15 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               </Text>
             </div>
             <div className="space-y-2">
-              <PhoneInput
-                id="contact-phone-number"
-                label="Phone Number"
-                value={editedContact.phone_number || ''}
-                onChange={(value) => handleFieldChange('phone_number', value)}
-                countryCode={countryCode}
-                phoneCode={countries.find(c => c.code === countryCode)?.phone_code}
+              <Text as="label" size="2" className="text-gray-700 font-medium">Phone Number</Text>
+              <ContactPhoneNumbers
+                contactId={editedContact.contact_name_id}
+                phoneNumbers={phoneNumbers}
                 countries={countries}
-                onCountryChange={handleCountryChange}
-                allowExtensions={true}
-                data-automation-id="phone-number-field"
+                onChange={(updatedPhones) => {
+                  setPhoneNumbers(updatedPhones);
+                  setHasUnsavedChanges(true);
+                }}
               />
             </div>
             <SwitchDetailItem

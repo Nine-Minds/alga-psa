@@ -7,10 +7,14 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { 
-  IContact, 
-  CreateContactInput, 
-  UpdateContactInput 
+import {
+  IContact,
+  CreateContactInput,
+  UpdateContactInput,
+  IContactPhoneNumber,
+  CreateContactPhoneNumberInput,
+  UpdateContactPhoneNumberInput,
+  PhoneNumberType
 } from '../interfaces/contact.interfaces';
 import { ValidationResult } from '../interfaces/validation.interfaces';
 
@@ -50,6 +54,26 @@ export const contactUpdateSchema = contactSchema.partial().omit({
   tenant: true,
   created_at: true
 });
+
+// =============================================================================
+// PHONE NUMBER VALIDATION SCHEMAS
+// =============================================================================
+
+export const phoneNumberTypeEnum = z.enum(['Office', 'Mobile', 'Home', 'Fax', 'Other']);
+
+export const contactPhoneNumberSchema = z.object({
+  phone_number_id: z.string().uuid().optional(),
+  contact_id: z.string().uuid().optional(),
+  phone_type: phoneNumberTypeEnum.default('Office'),
+  phone_number: z.string().min(1, 'Phone number is required'),
+  extension: z.string().optional().nullable(),
+  country_code: z.string().max(2).optional().nullable(),
+  is_primary: z.boolean().default(false),
+});
+
+export const createContactPhoneNumberSchema = contactPhoneNumberSchema.omit({ phone_number_id: true, contact_id: true });
+
+export const updateContactPhoneNumberSchema = contactPhoneNumberSchema.partial().omit({ contact_id: true });
 
 // =============================================================================
 // Re-export interfaces for backward compatibility
