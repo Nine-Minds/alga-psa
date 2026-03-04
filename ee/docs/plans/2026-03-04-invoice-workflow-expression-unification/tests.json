@@ -216,7 +216,7 @@
   {
     "id": "T027",
     "description": "Unit: workflow diagnostics provider function warnings align with runtime allowlist (no hinted-but-disallowed functions).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
