@@ -164,7 +164,7 @@
   {
     "id": "T021",
     "description": "Integration: invoice exported AST remains deterministic after export->import->export with shared layer enabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]

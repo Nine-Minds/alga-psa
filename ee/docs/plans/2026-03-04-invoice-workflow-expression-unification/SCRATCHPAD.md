@@ -173,3 +173,4 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) T018 validated by `workspaceAst.test.ts` (`compiles edited moustache text into a dynamic path expression`): `{{invoice.total}}` compiles to AST `content: { type: 'path', path: 'total' }`.
 - (2026-03-04) T019 validated by `workspaceAst.test.ts` (`compiles mixed literal + moustache text into a template expression`): mixed text exports as AST `template` with args including `invoiceNumber` and `dueDate` paths.
 - (2026-03-04) T020 validated by `workspaceAst.test.ts` (`preserves expression and format semantics when importing existing AST templates`): import/export with unchanged imported content preserves original expression kinds/bindings (non-destructive text preview path).
+- (2026-03-04) T021 validated by `workspaceAst.test.ts` (`roundtrips exported AST deterministically (export -> import -> export)`): repeated export/import cycles are byte-stable for AST shape.
