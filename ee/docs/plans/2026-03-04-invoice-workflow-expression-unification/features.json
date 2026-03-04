@@ -140,7 +140,7 @@
   {
     "id": "F024",
     "description": "Preserve invoice preview interpolation rendering semantics for resolved/unresolved tokens after migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-013"]
   },
   {
