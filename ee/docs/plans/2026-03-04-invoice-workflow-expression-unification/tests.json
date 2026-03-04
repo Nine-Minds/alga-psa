@@ -155,7 +155,7 @@
   {
     "id": "T020",
     "description": "Integration: invoice imported-text preservation keeps original AST expression when preview text is unchanged.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F013"
