@@ -146,6 +146,25 @@ describe('watchList utilities', () => {
     ]);
   });
 
+  it('T011: merge accepts inbound_from watcher source for unmatched inbound senders', () => {
+    expect(
+      mergeTicketWatchListRecipients([], [
+        {
+          email: 'unknown-sender@example.com',
+          name: 'Unknown Sender',
+          source: 'inbound_from',
+        },
+      ])
+    ).toEqual([
+      {
+        email: 'unknown-sender@example.com',
+        active: true,
+        name: 'Unknown Sender',
+        source: 'inbound_from',
+      },
+    ]);
+  });
+
   it('T045: parser accepts watch-list entry objects that include entity_type and entity_id metadata', () => {
     expect(
       parseTicketWatchListAttributes({

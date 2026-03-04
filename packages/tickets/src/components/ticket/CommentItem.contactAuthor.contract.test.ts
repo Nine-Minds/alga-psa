@@ -39,6 +39,14 @@ describe('CommentItem contact-authored rendering contract', () => {
     expect(source).toContain('userName="Unknown User"');
   });
 
+  it('T032: unmatched inbound-email comments use metadata email sender identity for display', () => {
+    const source = readCommentItemSource();
+
+    expect(source).toContain('getInboundSenderIdentity(conversation.metadata)');
+    expect(source).toContain("inboundSenderIdentity.fromName || inboundSenderIdentity.fromAddress");
+    expect(source).toContain('return inboundSenderIdentity.fromAddress;');
+  });
+
   it('T031: edit/delete permission check remains bound to authenticated user_id ownership', () => {
     const source = readCommentItemSource();
 

@@ -166,6 +166,16 @@ describe('processInboundEmailInApp additional authorship paths', () => {
     expect(createTicketFromEmailMock).toHaveBeenCalledWith(
       expect.objectContaining({
         contact_id: undefined,
+        attributes: {
+          watch_list: [
+            {
+              email: 'sender@example.com',
+              active: true,
+              name: 'Sender',
+              source: 'inbound_from',
+            },
+          ],
+        },
       }),
       'tenant-1'
     );
