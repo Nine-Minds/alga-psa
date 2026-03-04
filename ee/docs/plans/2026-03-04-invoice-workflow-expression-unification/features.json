@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "Implement shared path discovery helpers that can flatten nested schema/context trees into picker-friendly options.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-001", "FR-011"]
   },
   {

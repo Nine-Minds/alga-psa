@@ -12,6 +12,7 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) Use a shared abstraction centered on typed context paths + expression modes (`path-only`, `template`, `expression`) instead of forcing one persisted expression format across products.
 - (2026-03-04) Shared primitives module location: `shared/workflow/expression-authoring/*` so both invoice (`packages/billing`) and workflow designer (`ee/server`) can import through `@shared/workflow/...`.
 - (2026-03-04) Shared context contract includes explicit `SharedExpressionContextRoot` and `SharedExpressionPathOption` interfaces plus deterministic root serialization to stabilize cross-editor behavior/tests.
+- (2026-03-04) Shared path discovery contract uses deterministic lexical traversal with explicit array item marker segments (`[]`) and additional-property wildcard (`*`) to produce stable picker options.
 - (2026-03-04) Preserve persisted contracts:
   - Invoice keeps AST value expressions (`literal|binding|path|template`).
   - Workflow keeps `{ $expr: string }`.
@@ -40,6 +41,8 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
   - `shared/workflow/expression-authoring/modes.ts` (`EXPRESSION_MODES`, `ExpressionMode`, `isExpressionMode`)
 - Implement F002 context and path option contracts:
   - `shared/workflow/expression-authoring/context.ts`
+- Implement F003 path discovery helper:
+  - `shared/workflow/expression-authoring/pathDiscovery.ts`
 - Compare invoice/workflow binding/expression surfaces:
   - `rg -n "binding|template|\{\{|\$expr|validateExpressionSource" packages/billing/src/components/invoice-designer ee/server/src/components/workflow-designer shared/workflow/runtime -g"*.ts*"`
 - Review workflow designer expression sections:
