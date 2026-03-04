@@ -358,7 +358,7 @@
   {
     "id": "T044",
     "description": "Meta-test: feature-to-test traceability check confirms every `F00x` entry has at least one mapped `featureIds` reference.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]

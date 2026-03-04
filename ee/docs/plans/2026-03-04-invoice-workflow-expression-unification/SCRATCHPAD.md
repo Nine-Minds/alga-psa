@@ -209,3 +209,9 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
   Verification run:
   - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/nonTautologyAssertions.meta.test.ts ../packages/billing/src/components/invoice-designer/DesignerShell.insertion.integration.test.tsx ../packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts`
   - `cd ee/server && npx vitest run src/components/workflow-designer/__tests__/expressionValidation.test.ts`
+- (2026-03-04) T044 validated by new meta-test `packages/billing/src/components/invoice-designer/featureTraceability.meta.test.ts`:
+  - loads plan `features.json` + `tests.json`,
+  - asserts every `Fxxx` in features has at least one reference in tests `featureIds`,
+  - asserts no tests reference unknown feature IDs.
+  Verification run:
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/featureTraceability.meta.test.ts`
