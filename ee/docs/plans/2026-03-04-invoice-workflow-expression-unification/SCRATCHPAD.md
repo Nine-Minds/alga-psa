@@ -31,6 +31,9 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) Workflow diagnostics now validate `$function(...)` tokens against runtime-allowlisted helpers only; non-allowlisted JSONata built-ins are flagged as unknown in-editor.
 - (2026-03-04) Workflow persisted expression shape remains `{ $expr: string }`; migration changes were limited to authoring/validation paths and retained `ensureExpr` + runtime schema guards.
 - (2026-03-04) Added focused runtime guardrail tests (`expressionEngine.test.ts`) to lock function allowlist rejection, timeout enforcement, JSON-serializable result checks, and max output size checks.
+- (2026-03-04) Shared schema/context-aware path checks (`validateSourcePaths`) are now used in both designers where author-time validation exists:
+  - invoice insertion feedback (`DesignerShell`)
+  - workflow step config validation (`WorkflowDesigner`)
 - (2026-03-04) Preserve persisted contracts:
   - Invoice keeps AST value expressions (`literal|binding|path|template`).
   - Workflow keeps `{ $expr: string }`.
@@ -94,6 +97,8 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
   - `rg -n '\\$expr' ee/server/src/components/workflow-designer/WorkflowDesigner.tsx shared/workflow/runtime -g'*.ts*'`
 - Validate runtime expression guardrails:
   - `npx vitest run --config shared/vitest.config.ts shared/workflow/runtime/__tests__/expressionEngine.test.ts shared/workflow/runtime/__tests__/mappingResolver.test.ts`
+- Audit shared path-validator usage in both designers:
+  - `rg -n "validateSourcePaths\\(" packages/billing/src/components/invoice-designer ee/server/src/components/workflow-designer -g'*.ts*'`
 - Compare invoice/workflow binding/expression surfaces:
   - `rg -n "binding|template|\{\{|\$expr|validateExpressionSource" packages/billing/src/components/invoice-designer ee/server/src/components/workflow-designer shared/workflow/runtime -g"*.ts*"`
 - Review workflow designer expression sections:

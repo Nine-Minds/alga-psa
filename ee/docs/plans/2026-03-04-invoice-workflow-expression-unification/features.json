@@ -122,7 +122,7 @@
   {
     "id": "F021",
     "description": "Use shared validator path existence checks against invoice/workflow schema contexts where available.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-011"]
   },
   {
