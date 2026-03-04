@@ -336,7 +336,7 @@
   {
     "id": "T042",
     "description": "Smoke: both designers render and accept at least one inserted binding path in the same local session without runtime errors.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008",
       "F015",
