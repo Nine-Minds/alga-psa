@@ -19,6 +19,7 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) Workflow adapter includes dynamic loop roots (`itemVar`, `indexVar`) so forEach-scoped expressions can use the same shared path options as global roots.
 - (2026-03-04) Invoice palette fields now derive from `buildInvoiceExpressionPathOptions(...)`; static catalog import path is no longer used in rendering/search.
 - (2026-03-04) Invoice FIELDS panel grouping now maps directly to shared root keys (`invoice/customer/tenant/item`) and only renders leaf path options from the shared model.
+- (2026-03-04) `DesignerShell` now uses `insertTextIntoDomControl` and target-path mode inference: inspector fields ending in `bindingKey` receive raw path insertion (`path-only`).
 - (2026-03-04) Preserve persisted contracts:
   - Invoice keeps AST value expressions (`literal|binding|path|template`).
   - Workflow keeps `{ $expr: string }`.
@@ -59,6 +60,8 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
   - `shared/workflow/expression-authoring/adapters/workflowContextAdapter.ts`
 - Validate invoice field palette integration after adapter wiring:
   - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/palette/ComponentPalette.fields.integration.test.tsx`
+- Validate invoice shell + fields insertion wiring:
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/palette/ComponentPalette.fields.integration.test.tsx ../packages/billing/src/components/invoice-designer/DesignerShell.selectedContext.integration.test.tsx`
 - Compare invoice/workflow binding/expression surfaces:
   - `rg -n "binding|template|\{\{|\$expr|validateExpressionSource" packages/billing/src/components/invoice-designer ee/server/src/components/workflow-designer shared/workflow/runtime -g"*.ts*"`
 - Review workflow designer expression sections:

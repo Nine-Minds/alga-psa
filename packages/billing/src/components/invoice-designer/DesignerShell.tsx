@@ -28,6 +28,7 @@ import { getPresetById } from './constants/presets';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { insertTextIntoDomControl, type ExpressionMode } from '@shared/workflow/expression-authoring';
 import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
 import { canNestWithinParent, getAllowedParentsForType } from './schema/componentSchema';
 import { invoiceDesignerCollisionDetection } from './utils/dndCollision';
@@ -326,6 +327,41 @@ const resolveSelectedNodeTypeLabel = (selectedNode: DesignerNode | null): string
     return definition.label;
   }
   return humanizeBindingToken(selectedNode.type);
+};
+
+const resolveInsertModeFromTargetPath = (targetPath: string | null): ExpressionMode => {
+  if (typeof targetPath === 'string' && targetPath.trim().toLowerCase().endsWith('bindingkey')) {
+    return 'path-only';
+  }
+  return 'template';
+};
+
+const formatBindingInsertValue = (bindingPath: string, mode: ExpressionMode): string =>
+  mode === 'path-only' ? bindingPath : `{{${bindingPath}}}`;
+
+const tryInsertTemplateIntoFocusedInput = (
+  bindingPath: string
+): { insertedValue: string; mode: ExpressionMode } | null => {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+  const activeElement = document.activeElement;
+  if (!(activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement)) {
+    return null;
+  }
+
+  const targetPath = activeElement.getAttribute('data-template-insert-target');
+  if (!targetPath) {
+    return null;
+  }
+
+  const mode = resolveInsertModeFromTargetPath(targetPath);
+  const insertValue = formatBindingInsertValue(bindingPath, mode);
+  const result = insertTextIntoDomControl(activeElement, insertValue, { requireFocus: true });
+  if (!result.didInsert) {
+    return null;
+  }
+  return { insertedValue: insertValue, mode };
 };
 
 export const DesignerShell: React.FC = () => {
@@ -1173,6 +1209,38 @@ export const DesignerShell: React.FC = () => {
     [clearDropFeedback, insertPresetWithResolution]
   );
 
+  const handleInsertTemplateVariable = useCallback(
+    (bindingPath: string) => {
+      clearDropFeedback();
+      const inserted = tryInsertTemplateIntoFocusedInput(bindingPath);
+      if (inserted) {
+        showDropFeedback('info', `Inserted ${inserted.insertedValue}.`);
+        return;
+      }
+
+      const liveState = useInvoiceDesignerStore.getState();
+      const liveSelectedNodeId = liveState.selectedNodeId;
+      if (!liveSelectedNodeId) {
+        showDropFeedback('info', 'Select a text block, then focus a text field to insert variables.');
+        return;
+      }
+
+      const liveSelectedNode = liveState.nodesById[liveSelectedNodeId];
+      if (!liveSelectedNode || (liveSelectedNode.type !== 'text' && liveSelectedNode.type !== 'label')) {
+        showDropFeedback('info', 'Focus a text field in the inspector to insert this variable.');
+        return;
+      }
+
+      const metadata = getNodeMetadata(liveSelectedNode) as Record<string, unknown>;
+      const existingText = typeof metadata.text === 'string' ? metadata.text : '';
+      const token = formatBindingInsertValue(bindingPath, 'template');
+      const joiner = existingText.length > 0 && !/\s$/.test(existingText) ? ' ' : '';
+      setNodeProp(liveSelectedNode.id, 'metadata.text', `${existingText}${joiner}${token}`, true);
+      showDropFeedback('info', `Inserted ${token}.`);
+    },
+    [clearDropFeedback, setNodeProp, showDropFeedback]
+  );
+
   const simulateComponentDrop = useCallback(
     (type: DesignerComponentType, targetNodeId?: string | 'canvas', dropPoint?: Point) => {
       clearDropFeedback();
@@ -1396,6 +1464,7 @@ export const DesignerShell: React.FC = () => {
 	            <ComponentPalette
 	              onInsertComponent={handleQuickInsertComponent}
               onInsertPreset={handleQuickInsertPreset}
+              onInsertTemplateVariable={handleInsertTemplateVariable}
             />
           </div>
 	          <DesignerWorkspace

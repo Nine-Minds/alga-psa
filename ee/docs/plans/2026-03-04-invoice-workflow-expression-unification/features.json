@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "Route invoice `bindingKey` insertion through shared insertion helper in `path-only` mode.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-004", "FR-012"]
   },
   {
