@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from 'vitest';
-import { insertTextIntoDomControl, insertTextIntoValue } from '../insertion';
+import { insertTextIntoDomControl, insertTextIntoMonacoEditor, insertTextIntoValue } from '../insertion';
 
 describe('shared insertion helpers', () => {
   it('inserts text at start/middle/end offsets for plain values', () => {
@@ -57,5 +57,63 @@ describe('shared insertion helpers', () => {
     expect(insertTextIntoDomControl(unfocusedInput, 'customer.name', { requireFocus: true }).reason).toBe(
       'unfocused'
     );
+  });
+
+  it('uses shared Monaco insertion semantics and keeps cursor at inserted range end', () => {
+    let currentValue = 'payload.id';
+    let selection = {
+      startLineNumber: 1,
+      startColumn: 9,
+      endLineNumber: 1,
+      endColumn: 11,
+    };
+    let cursor = { lineNumber: 1, column: 11 };
+
+    const model = {
+      getValue: () => currentValue,
+      getOffsetAt: (position: { lineNumber: number; column: number }) => position.column - 1,
+      getPositionAt: (offset: number) => ({ lineNumber: 1, column: offset + 1 }),
+    };
+
+    const editor = {
+      hasTextFocus: () => true,
+      getModel: () => model,
+      getSelection: () => selection,
+      executeEdits: (
+        _source: string,
+        edits: Array<{
+          range: { startLineNumber: number; startColumn: number; endLineNumber: number; endColumn: number };
+          text: string;
+        }>
+      ) => {
+        const edit = edits[0];
+        if (!edit) return;
+        const startOffset = edit.range.startColumn - 1;
+        const endOffset = edit.range.endColumn - 1;
+        currentValue = `${currentValue.slice(0, startOffset)}${edit.text}${currentValue.slice(endOffset)}`;
+      },
+      setPosition: (position: { lineNumber: number; column: number }) => {
+        cursor = position;
+      },
+      setSelection: (nextSelection: {
+        startLineNumber: number;
+        startColumn: number;
+        endLineNumber: number;
+        endColumn: number;
+      }) => {
+        selection = nextSelection;
+      },
+      focus: () => {},
+    };
+
+    const result = insertTextIntoMonacoEditor(editor, 'name', {
+      source: 'insertion-monaco-test',
+    });
+
+    expect(result.didInsert).toBe(true);
+    expect(result.nextValue).toBe('payload.name');
+    expect(selection.startColumn).toBe(13);
+    expect(selection.endColumn).toBe(13);
+    expect(cursor.column).toBe(13);
   });
 });

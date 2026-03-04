@@ -256,7 +256,7 @@
   {
     "id": "T032",
     "description": "Integration: Monaco insertion path uses shared insertion semantics and preserves cursor position post-insert.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]

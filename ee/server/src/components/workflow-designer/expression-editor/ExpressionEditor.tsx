@@ -21,6 +21,7 @@ import { registerHoverProvider } from './hoverProvider';
 import { registerSignatureHelpProvider } from './signatureHelpProvider';
 import { createDiagnosticsProvider, validateExpression } from './diagnosticsProvider';
 import { insertTextIntoMonacoEditor } from '@shared/workflow/expression-authoring';
+import { normalizeInsertedText } from './insertionText';
 
 /**
  * Props for the ExpressionEditor component
@@ -110,7 +111,6 @@ const getEditorState = () => {
 };
 
 const WORKFLOW_MAPPING_MIME_TYPE = 'application/x-workflow-mapping';
-const SNIPPET_CURSOR_PLACEHOLDER = '$0';
 
 const extractDropText = (dataTransfer: DataTransfer): string | null => {
   const mappingData = dataTransfer.getData(WORKFLOW_MAPPING_MIME_TYPE);
@@ -132,11 +132,6 @@ const extractDropText = (dataTransfer: DataTransfer): string | null => {
 
   return null;
 };
-
-const normalizeInsertedText = (value: string): string =>
-  value.endsWith(SNIPPET_CURSOR_PLACEHOLDER)
-    ? value.slice(0, -SNIPPET_CURSOR_PLACEHOLDER.length)
-    : value;
 
 /**
  * Expression Editor Component
