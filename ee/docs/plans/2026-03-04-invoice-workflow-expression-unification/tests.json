@@ -240,7 +240,7 @@
   {
     "id": "T030",
     "description": "Unit: runtime expression engine still enforces timeout and output size limits after migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
