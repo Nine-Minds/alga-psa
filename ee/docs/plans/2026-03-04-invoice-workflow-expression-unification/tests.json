@@ -181,7 +181,7 @@
   {
     "id": "T023",
     "description": "Unit: workflow legacy `${...}` path extraction helper is removed or unused in step validation flow.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F027"

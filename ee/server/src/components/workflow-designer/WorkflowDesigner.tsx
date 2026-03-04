@@ -83,13 +83,7 @@ import type {
   MappingValue
 } from '@shared/workflow/runtime';
 import { validateExpressionSource } from '@shared/workflow/runtime/expressionEngine';
-import {
-  buildWorkflowExpressionPathOptions,
-  validateSourcePaths,
-  type SharedExpressionPathOption,
-  type SharedExpressionValidationDiagnostic,
-  type SharedExpressionSchemaNode,
-} from '@shared/workflow/expression-authoring';
+import { partitionStepExpressionValidations, validateStepExpressions } from './expressionValidation';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 type WorkflowDefinitionRecord = {
@@ -842,78 +836,6 @@ const buildDefaultValueFromSchema = (schema: JsonSchema, root: JsonSchema): unkn
   }
 
   return null;
-};
-
-type StepExpressionValidation = {
-  field: string;
-  diagnostic: SharedExpressionValidationDiagnostic;
-};
-
-const buildWorkflowValidationPathOptions = (context: DataContext): SharedExpressionPathOption[] => {
-  const varsByName = context.steps.reduce<Record<string, SharedExpressionSchemaNode>>((acc, stepOutput) => {
-    acc[stepOutput.saveAs] = stepOutput.outputSchema as SharedExpressionSchemaNode;
-    return acc;
-  }, {});
-
-  return buildWorkflowExpressionPathOptions({
-    payloadSchema: (context.payloadSchema ?? undefined) as SharedExpressionSchemaNode | undefined,
-    varsByName,
-    includeErrorRoot: Boolean(context.inCatchBlock),
-    forEach: context.forEach
-      ? {
-          itemVar: context.forEach.itemVar,
-          indexVar: context.forEach.indexVar,
-        }
-      : undefined,
-  });
-};
-
-// Validate all expressions in a step config
-const validateStepExpressions = (
-  config: Record<string, unknown>,
-  context: DataContext
-): StepExpressionValidation[] => {
-  const results: StepExpressionValidation[] = [];
-  const options = buildWorkflowValidationPathOptions(context);
-
-  const appendDiagnostics = (field: string, source: string) => {
-    const validationResult = validateSourcePaths({
-      source,
-      mode: 'expression',
-      options,
-    });
-
-    for (const diagnostic of validationResult.diagnostics) {
-      results.push({
-        field,
-        diagnostic,
-      });
-    }
-  };
-
-  const checkValue = (value: unknown, path: string) => {
-    if (typeof value === 'string' && value.includes('${')) {
-      appendDiagnostics(path, value);
-    } else if (value && typeof value === 'object') {
-      if ('$expr' in (value as Record<string, unknown>)) {
-        const expr = (value as { $expr: string }).$expr;
-        if (expr) {
-          appendDiagnostics(path, expr);
-        }
-      } else if (!Array.isArray(value)) {
-        // Recurse into object
-        Object.entries(value).forEach(([key, val]) => {
-          checkValue(val, `${path}.${key}`);
-        });
-      }
-    }
-  };
-
-  Object.entries(config).forEach(([key, val]) => {
-    checkValue(val, key);
-  });
-
-  return results;
 };
 
 const parsePipePath = (pipePath: string): PipeSegment[] => {
@@ -5237,18 +5159,13 @@ const StepConfigPanel: React.FC<{
     }
     return [];
   }, [step, dataContext]);
-  const expressionErrors = useMemo(
-    () => expressionValidations.filter((validation) => validation.diagnostic.severity === 'error'),
+  const expressionGroups = useMemo(
+    () => partitionStepExpressionValidations(expressionValidations),
     [expressionValidations]
   );
-  const expressionWarnings = useMemo(
-    () => expressionValidations.filter((validation) => validation.diagnostic.severity === 'warning'),
-    [expressionValidations]
-  );
-  const expressionInfo = useMemo(
-    () => expressionValidations.filter((validation) => validation.diagnostic.severity === 'info'),
-    [expressionValidations]
-  );
+  const expressionErrors = expressionGroups.errors;
+  const expressionWarnings = expressionGroups.warnings;
+  const expressionInfo = expressionGroups.info;
 
   const handleCopyPath = useCallback((path: string) => {
     navigator.clipboard.writeText(path);
