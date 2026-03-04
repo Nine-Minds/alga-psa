@@ -44,7 +44,7 @@
   {
     "id": "T008",
     "description": "Unit: shared validation result object normalizes severity/path/message fields.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {

@@ -51,6 +51,7 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) T005 verified in `insertionDom.test.ts` with start/middle/end insertion coverage for `insertTextIntoValue`.
 - (2026-03-04) T006 verified in `insertionDom.test.ts` by replacing an active range (`{{invoice.total}}` -> `{{customer.name}}`).
 - (2026-03-04) T007 verified in `insertionDom.test.ts` with explicit readonly/disabled/unfocused no-op assertions for `insertTextIntoDomControl`.
+- (2026-03-04) T008 verified via `coreContracts.test.ts` validation-result normalization assertions (severity fallback + deterministic diagnostic ordering).
 - (2026-03-04) Preserve persisted contracts:
   - Invoice keeps AST value expressions (`literal|binding|path|template`).
   - Workflow keeps `{ $expr: string }`.
