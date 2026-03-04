@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "Route invoice text/label insertion through shared insertion helper in `template` mode.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-005", "FR-012"]
   },
   {

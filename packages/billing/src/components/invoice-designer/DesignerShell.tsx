@@ -28,7 +28,11 @@ import { getPresetById } from './constants/presets';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { insertTextIntoDomControl, type ExpressionMode } from '@shared/workflow/expression-authoring';
+import {
+  insertTextIntoDomControl,
+  insertTextIntoValue,
+  type ExpressionMode,
+} from '@shared/workflow/expression-authoring';
 import { useDesignerShortcuts } from './hooks/useDesignerShortcuts';
 import { canNestWithinParent, getAllowedParentsForType } from './schema/componentSchema';
 import { invoiceDesignerCollisionDetection } from './utils/dndCollision';
@@ -1235,7 +1239,15 @@ export const DesignerShell: React.FC = () => {
       const existingText = typeof metadata.text === 'string' ? metadata.text : '';
       const token = formatBindingInsertValue(bindingPath, 'template');
       const joiner = existingText.length > 0 && !/\s$/.test(existingText) ? ' ' : '';
-      setNodeProp(liveSelectedNode.id, 'metadata.text', `${existingText}${joiner}${token}`, true);
+      const insertion = insertTextIntoValue(
+        {
+          value: existingText,
+          selectionStart: existingText.length,
+          selectionEnd: existingText.length,
+        },
+        `${joiner}${token}`
+      );
+      setNodeProp(liveSelectedNode.id, 'metadata.text', insertion.nextValue, true);
       showDropFeedback('info', `Inserted ${token}.`);
     },
     [clearDropFeedback, setNodeProp, showDropFeedback]

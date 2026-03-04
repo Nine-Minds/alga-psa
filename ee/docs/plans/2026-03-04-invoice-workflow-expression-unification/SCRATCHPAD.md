@@ -20,6 +20,7 @@ Working notes for unifying invoice designer bindings and Workflow v2 expression 
 - (2026-03-04) Invoice palette fields now derive from `buildInvoiceExpressionPathOptions(...)`; static catalog import path is no longer used in rendering/search.
 - (2026-03-04) Invoice FIELDS panel grouping now maps directly to shared root keys (`invoice/customer/tenant/item`) and only renders leaf path options from the shared model.
 - (2026-03-04) `DesignerShell` now uses `insertTextIntoDomControl` and target-path mode inference: inspector fields ending in `bindingKey` receive raw path insertion (`path-only`).
+- (2026-03-04) Invoice text fallback insertion path also uses shared insertion primitives (`insertTextIntoValue`) and enforces template token formatting for text/label nodes.
 - (2026-03-04) Preserve persisted contracts:
   - Invoice keeps AST value expressions (`literal|binding|path|template`).
   - Workflow keeps `{ $expr: string }`.
