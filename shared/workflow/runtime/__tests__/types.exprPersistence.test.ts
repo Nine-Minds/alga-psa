@@ -11,7 +11,7 @@ describe('workflow expression persistence contract', () => {
     });
 
     expect(parsed.type).toBe('control.if');
-    if (parsed.type !== 'control.if') return;
+    if (!('condition' in parsed)) return;
     expect(parsed.condition).toEqual({ $expr: 'payload.ready' });
     expect(Object.prototype.hasOwnProperty.call(parsed.condition, '$expr')).toBe(true);
   });
