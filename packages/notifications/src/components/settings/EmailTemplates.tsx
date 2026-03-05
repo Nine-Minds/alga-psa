@@ -666,7 +666,7 @@ function ViewTemplateDialog({
     <Dialog isOpen={!!template} onClose={onClose}>
       <DialogTitle>Standard Template: {formatTemplateName(template.name)}</DialogTitle>
 
-      <DialogContent className="space-y-4 max-h-[80vh] overflow-y-auto px-6">
+      <DialogContent className="space-y-4 px-6">
         <div>
           <Label>Language</Label>
           <div className="p-2 bg-gray-50 rounded border">
@@ -833,7 +833,7 @@ function EditTemplateDialog({
       <form onSubmit={handleSubmit}>
         <DialogTitle>Edit Custom Template: {formatTemplateName(template?.name ?? '')}</DialogTitle>
 
-        <DialogContent className="space-y-4 max-h-[80vh] overflow-y-auto px-6">
+        <DialogContent className="space-y-4 px-6">
           <div>
             <Label>Language</Label>
             <div className="p-2 bg-gray-50 rounded border text-gray-700">
