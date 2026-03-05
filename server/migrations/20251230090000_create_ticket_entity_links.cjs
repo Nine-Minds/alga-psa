@@ -28,16 +28,8 @@ exports.up = async function up(knex) {
     table.index(['tenant', 'entity_type', 'entity_id'], 'ticket_entity_links_entity_idx');
   });
 
-  await knex.raw(`
-    ALTER TABLE ticket_entity_links ENABLE ROW LEVEL SECURITY;
-
-    CREATE POLICY tenant_isolation_policy ON ticket_entity_links
-      USING (tenant = current_setting('app.current_tenant')::uuid);
-
-    CREATE POLICY tenant_isolation_insert_policy ON ticket_entity_links
-      FOR INSERT
-      WITH CHECK (tenant = current_setting('app.current_tenant')::uuid);
-  `);
+  // RLS intentionally omitted — CitusDB handles tenant isolation at the shard level.
+  // See 20250523152638_remove_rls_policies_for_citusdb.cjs
 };
 
 /**
