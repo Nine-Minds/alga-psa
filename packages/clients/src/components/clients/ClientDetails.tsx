@@ -20,11 +20,11 @@ import ClientContactsList from '../contacts/ClientContactsList';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import BillingConfiguration from './BillingConfiguration';
+import { getClientById } from '@alga-psa/msp-composition/clients/actions';
 import {
   updateClient,
   uploadClientLogo,
   deleteClientLogo,
-  getClientById,
   deleteClient,
   validateClientDeletion,
   reactivateClientContacts,

@@ -18,7 +18,8 @@ const TextEditor = dynamic<any>(() => import('@alga-psa/ui/editor').then((mod) =
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { PartialBlock } from '@blocknote/core';
 import InteractionIcon from '@alga-psa/ui/components/InteractionIcon';
-import { addInteraction, updateInteraction, getInteractionById, getInteractionStatuses } from '@alga-psa/clients/actions';
+import { getInteractionById, getAllClients, getAllContacts } from '@alga-psa/msp-composition/clients/actions';
+import { addInteraction, updateInteraction, getInteractionStatuses } from '@alga-psa/clients/actions';
 import { getAllInteractionTypes } from '@alga-psa/clients/actions';
 import { IInteraction, IInteractionType } from '@alga-psa/types';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
@@ -29,8 +30,6 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
 import { clampDuration } from '../../lib/durationHelpers';
-import { getAllClients } from '@alga-psa/clients/actions';
-import { getAllContacts } from '@alga-psa/clients/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { IContact } from '@alga-psa/types';
 import { IClient } from '@alga-psa/types';

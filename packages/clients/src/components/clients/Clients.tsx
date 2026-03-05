@@ -5,8 +5,8 @@ import { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import QuickAddClient from './QuickAddClient';
+import { getAllClients } from '@alga-psa/msp-composition/clients/actions';
 import {
-  getAllClients,
   getAllClientsPaginated,
   deleteClient,
   importClientsFromCSV,

@@ -23,7 +23,7 @@ import {
   getClientUsersForClient
 } from '@alga-psa/user-composition/actions';
 import { deleteUser, updateUser } from '@alga-psa/users/actions';
-import { createOrFindContactByEmail } from '@alga-psa/clients/actions';
+import { createOrFindContactByEmail } from '@alga-psa/msp-composition/clients/actions';
 import { createClientUser, getClientPortalRoles, getClientUserRoles } from '@alga-psa/client-portal/actions';
 import type { DeletionValidationResult, IUser, IPermission } from '@alga-psa/types';
 import type { IRole as SharedIRole } from '@shared/interfaces/user.interfaces';

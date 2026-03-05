@@ -54,6 +54,14 @@
       "import": "./src/clients/index.ts",
       "types": "./src/clients/index.ts"
     },
+    "./clients/actions": {
+      "import": "./src/clients/actions.ts",
+      "types": "./src/clients/actions.ts"
+    },
+    "./clients/ClientModel": {
+      "import": "./src/clients/ClientModel.ts",
+      "types": "./src/clients/ClientModel.ts"
+    },
     "./clients/*": {
       "import": "./src/clients/*.tsx",
       "types": "./src/clients/*.tsx"
@@ -61,8 +69,11 @@
   },
   "dependencies": {
     "@alga-psa/assets": "*",
+    "@alga-psa/auth": "*",
     "@alga-psa/billing": "*",
     "@alga-psa/clients": "*",
+    "@alga-psa/db": "*",
+    "@alga-psa/formatting": "*",
     "@alga-psa/projects": "*",
     "@alga-psa/scheduling": "*",
     "@alga-psa/tickets": "*",

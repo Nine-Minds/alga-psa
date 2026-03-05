@@ -7,7 +7,7 @@ import { TaxRegion } from '@alga-psa/types';
 import { fetchClientTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from '../../../../actions/timeEntryActions';
 import { getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
 import { formatISO, parseISO } from 'date-fns';
-import { getClientById } from '@alga-psa/clients/actions';
+import { getClientById } from '@alga-psa/msp-composition/clients/actions';
 import { Service, ITimeEntryWithNew } from './types';
 
 interface TimeEntryState {

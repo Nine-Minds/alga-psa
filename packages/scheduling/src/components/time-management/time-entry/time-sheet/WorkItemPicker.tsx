@@ -16,7 +16,7 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { getAllUsersBasic, getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { getAllClients } from '@alga-psa/clients/actions';
+import { getAllClients } from '@alga-psa/msp-composition/clients/actions';
 import { IClient } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 

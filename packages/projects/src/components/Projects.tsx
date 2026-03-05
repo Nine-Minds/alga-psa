@@ -11,7 +11,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import ProjectQuickAdd from './ProjectQuickAdd';
 import { deleteProject } from '../actions/projectActions';
-import { getContactByContactNameId } from '@alga-psa/clients/actions';
+
 import { findUserById } from '@alga-psa/user-composition/actions';
 import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
 import { TagFilter } from '@alga-psa/ui/components';
@@ -33,7 +33,7 @@ import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { DeadlineFilter, DeadlineFilterValue } from './DeadlineFilter';
 import { IContact } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
-import { getAllContacts } from '@alga-psa/clients/actions';
+import { getAllContacts } from '@alga-psa/msp-composition/clients/actions';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import Drawer from '@alga-psa/ui/components/Drawer';
 import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';

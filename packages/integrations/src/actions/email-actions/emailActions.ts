@@ -1,6 +1,6 @@
 'use server'
 
-import { findContactByEmailAddress, createOrFindContactByEmail } from '@alga-psa/clients/actions';
+import { findContactByEmailAddress, createOrFindContactByEmail } from '@alga-psa/msp-composition/clients/actions';
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';

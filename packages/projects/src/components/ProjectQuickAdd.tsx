@@ -17,7 +17,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { getContactsByClient, getAllContacts } from '@alga-psa/clients/actions';
+import { getContactsByClient, getAllContacts } from '@alga-psa/msp-composition/clients/actions';
 import { IContact } from '@alga-psa/types';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
