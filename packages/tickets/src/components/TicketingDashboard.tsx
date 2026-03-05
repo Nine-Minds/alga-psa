@@ -261,105 +261,62 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, [initialTeamAvatarUrls]);
 
   const shouldSkipNextFilterEmitRef = useRef(false);
+  const prevInitialFilterValuesRef = useRef(initialFilterValues);
 
   // Keep local filter controls in sync with URL-derived props (for back/forward restoration).
+  // Compares previous vs current initialFilterValues so that user-initiated local state
+  // changes don't trigger this effect — only actual prop changes from the parent do.
   useEffect(() => {
-    const nextSelectedBoard = initialFilterValues.boardId ?? null;
-    const nextSelectedClient = initialFilterValues.clientId ?? null;
-    const nextSelectedStatus = initialFilterValues.statusId ?? 'open';
-    const nextSelectedPriority = initialFilterValues.priorityId ?? 'all';
-    const nextSelectedCategories = initialFilterValues.categoryId ? [initialFilterValues.categoryId] : [];
-    const nextSearchQuery = initialFilterValues.searchQuery ?? '';
-    const nextBoardFilterState = initialFilterValues.boardFilterState ?? 'active';
-    const nextSelectedTags = initialFilterValues.tags ?? [];
-    const nextSelectedAssignees = initialFilterValues.assignedToIds ?? [];
-    const nextSelectedTeams = teamsV2Enabled ? (initialFilterValues.assignedTeamIds ?? []) : [];
-    const nextIncludeUnassigned = initialFilterValues.includeUnassigned ?? false;
-    const nextSelectedDueDateFilter = initialFilterValues.dueDateFilter ?? 'all';
-    const nextDueDateFilterValue = (() => {
-      const dateStr = initialFilterValues.dueDateFrom || initialFilterValues.dueDateTo;
-      return dateStr ? new Date(dateStr) : undefined;
-    })();
-    const nextSelectedResponseState = initialFilterValues.responseState ?? 'all';
-    const nextSelectedSlaStatus = initialFilterValues.slaStatusFilter ?? 'all';
-    const nextBundleView = initialFilterValues.bundleView ?? 'bundled';
+    const prev = prevInitialFilterValuesRef.current;
+    const next = initialFilterValues;
 
-    const normalizedCurrentDueDate = dueDateFilterValue ? dueDateFilterValue.toISOString() : undefined;
-    const normalizedNextDueDate = nextDueDateFilterValue ? nextDueDateFilterValue.toISOString() : undefined;
+    const hasPropsChanged =
+      prev.boardId !== next.boardId ||
+      prev.clientId !== next.clientId ||
+      prev.statusId !== next.statusId ||
+      prev.priorityId !== next.priorityId ||
+      prev.categoryId !== next.categoryId ||
+      prev.searchQuery !== next.searchQuery ||
+      prev.boardFilterState !== next.boardFilterState ||
+      JSON.stringify(prev.tags) !== JSON.stringify(next.tags) ||
+      JSON.stringify(prev.assignedToIds) !== JSON.stringify(next.assignedToIds) ||
+      JSON.stringify(prev.assignedTeamIds) !== JSON.stringify(next.assignedTeamIds) ||
+      prev.includeUnassigned !== next.includeUnassigned ||
+      prev.dueDateFilter !== next.dueDateFilter ||
+      prev.dueDateFrom !== next.dueDateFrom ||
+      prev.dueDateTo !== next.dueDateTo ||
+      prev.responseState !== next.responseState ||
+      prev.slaStatusFilter !== next.slaStatusFilter ||
+      prev.bundleView !== next.bundleView;
 
-    const hasChanges =
-      selectedBoard !== nextSelectedBoard ||
-      selectedClient !== nextSelectedClient ||
-      selectedStatus !== nextSelectedStatus ||
-      selectedPriority !== nextSelectedPriority ||
-      JSON.stringify(selectedCategories) !== JSON.stringify(nextSelectedCategories) ||
-      searchQuery !== nextSearchQuery ||
-      boardFilterState !== nextBoardFilterState ||
-      JSON.stringify(selectedTags) !== JSON.stringify(nextSelectedTags) ||
-      JSON.stringify(selectedAssignees) !== JSON.stringify(nextSelectedAssignees) ||
-      JSON.stringify(selectedTeams) !== JSON.stringify(nextSelectedTeams) ||
-      includeUnassigned !== nextIncludeUnassigned ||
-      selectedDueDateFilter !== nextSelectedDueDateFilter ||
-      normalizedCurrentDueDate !== normalizedNextDueDate ||
-      selectedResponseState !== nextSelectedResponseState ||
-      selectedSlaStatus !== nextSelectedSlaStatus ||
-      bundleView !== nextBundleView;
+    prevInitialFilterValuesRef.current = next;
 
-    if (!hasChanges) {
+    if (!hasPropsChanged) {
       return;
     }
 
     shouldSkipNextFilterEmitRef.current = true;
-    setSelectedBoard(nextSelectedBoard);
-    setSelectedClient(nextSelectedClient);
-    setSelectedStatus(nextSelectedStatus);
-    setSelectedPriority(nextSelectedPriority);
-    setSelectedCategories(nextSelectedCategories);
-    setSearchQuery(nextSearchQuery);
-    setBoardFilterState(nextBoardFilterState);
-    setSelectedTags(nextSelectedTags);
-    setSelectedAssignees(nextSelectedAssignees);
-    setSelectedTeams(nextSelectedTeams);
-    setIncludeUnassigned(nextIncludeUnassigned);
-    setSelectedDueDateFilter(nextSelectedDueDateFilter);
-    setDueDateFilterValue(nextDueDateFilterValue);
-    setSelectedResponseState(nextSelectedResponseState as 'awaiting_client' | 'awaiting_internal' | 'none' | 'all');
-    setSelectedSlaStatus(nextSelectedSlaStatus);
-    setBundleView(nextBundleView);
+    setSelectedBoard(next.boardId ?? null);
+    setSelectedClient(next.clientId ?? null);
+    setSelectedStatus(next.statusId ?? 'open');
+    setSelectedPriority(next.priorityId ?? 'all');
+    setSelectedCategories(next.categoryId ? [next.categoryId] : []);
+    setSearchQuery(next.searchQuery ?? '');
+    setBoardFilterState(next.boardFilterState ?? 'active');
+    setSelectedTags(next.tags ?? []);
+    setSelectedAssignees(next.assignedToIds ?? []);
+    setSelectedTeams(teamsV2Enabled ? (next.assignedTeamIds ?? []) : []);
+    setIncludeUnassigned(next.includeUnassigned ?? false);
+    setSelectedDueDateFilter(next.dueDateFilter ?? 'all');
+    setDueDateFilterValue((() => {
+      const dateStr = next.dueDateFrom || next.dueDateTo;
+      return dateStr ? new Date(dateStr) : undefined;
+    })());
+    setSelectedResponseState((next.responseState ?? 'all') as 'awaiting_client' | 'awaiting_internal' | 'none' | 'all');
+    setSelectedSlaStatus(next.slaStatusFilter ?? 'all');
+    setBundleView(next.bundleView ?? 'bundled');
   }, [
-    initialFilterValues.assignedTeamIds,
-    initialFilterValues.assignedToIds,
-    initialFilterValues.boardFilterState,
-    initialFilterValues.boardId,
-    initialFilterValues.bundleView,
-    initialFilterValues.categoryId,
-    initialFilterValues.clientId,
-    initialFilterValues.dueDateFilter,
-    initialFilterValues.dueDateFrom,
-    initialFilterValues.dueDateTo,
-    initialFilterValues.includeUnassigned,
-    initialFilterValues.priorityId,
-    initialFilterValues.responseState,
-    initialFilterValues.searchQuery,
-    initialFilterValues.slaStatusFilter,
-    initialFilterValues.statusId,
-    initialFilterValues.tags,
-    boardFilterState,
-    bundleView,
-    dueDateFilterValue,
-    includeUnassigned,
-    searchQuery,
-    selectedAssignees,
-    selectedBoard,
-    selectedCategories,
-    selectedClient,
-    selectedDueDateFilter,
-    selectedPriority,
-    selectedResponseState,
-    selectedSlaStatus,
-    selectedStatus,
-    selectedTags,
-    selectedTeams,
+    initialFilterValues,
     teamsV2Enabled
   ]);
 
