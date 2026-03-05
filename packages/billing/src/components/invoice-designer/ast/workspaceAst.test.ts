@@ -564,6 +564,193 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
     expect(fromLabel.content).toEqual({ type: 'literal', value: 'From Contact' });
   });
 
+  it('compiles edited moustache text into a dynamic path expression', () => {
+    const sourceAst = {
+      kind: 'invoice-template-ast',
+      version: 1,
+      bindings: {
+        values: {},
+        collections: {},
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'page-section',
+            type: 'section',
+            children: [
+              {
+                id: 'to-label',
+                type: 'text',
+                content: { type: 'literal', value: 'To' },
+              },
+            ],
+          },
+        ],
+      },
+    } as const;
+
+    const hydrated = importInvoiceTemplateAstToWorkspace(sourceAst as any);
+    const toLabelNode = hydrated.nodesById['to-label'];
+    expect(toLabelNode?.type).toBe('text');
+    if (!toLabelNode) return;
+
+    const toLabelProps = (toLabelNode.props ?? {}) as Record<string, unknown>;
+    const toLabelMetadata =
+      (toLabelProps.metadata && typeof toLabelProps.metadata === 'object'
+        ? toLabelProps.metadata
+        : {}) as Record<string, unknown>;
+
+    const editedWorkspace: DesignerWorkspaceSnapshot = {
+      ...hydrated,
+      nodesById: {
+        ...hydrated.nodesById,
+        [toLabelNode.id]: {
+          ...toLabelNode,
+          props: {
+            ...toLabelProps,
+            metadata: {
+              ...toLabelMetadata,
+              text: '{{invoice.total}}',
+            },
+          },
+        },
+      },
+    };
+
+    const exported = exportWorkspaceToInvoiceTemplateAst(editedWorkspace);
+    expect(exported.layout.type).toBe('document');
+    if (exported.layout.type !== 'document') return;
+
+    const pageSection = exported.layout.children.find((child) => child.id === 'page-section');
+    expect(pageSection?.type).toBe('section');
+    if (!pageSection || pageSection.type !== 'section') return;
+
+    const toLabel = pageSection.children.find((child) => child.id === 'to-label');
+    expect(toLabel?.type).toBe('text');
+    if (!toLabel || toLabel.type !== 'text') return;
+    expect(toLabel.content).toEqual({ type: 'path', path: 'total' });
+  });
+
+  it('compiles edited moustache text with currency filter into a filtered path expression', () => {
+    const sourceAst = {
+      kind: 'invoice-template-ast',
+      version: 1,
+      bindings: {
+        values: {},
+        collections: {},
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'page-section',
+            type: 'section',
+            children: [
+              {
+                id: 'to-label',
+                type: 'text',
+                content: { type: 'literal', value: 'To' },
+              },
+            ],
+          },
+        ],
+      },
+    } as const;
+
+    const hydrated = importInvoiceTemplateAstToWorkspace(sourceAst as any);
+    const toLabelNode = hydrated.nodesById['to-label'];
+    expect(toLabelNode?.type).toBe('text');
+    if (!toLabelNode) return;
+
+    const toLabelProps = (toLabelNode.props ?? {}) as Record<string, unknown>;
+    const toLabelMetadata =
+      (toLabelProps.metadata && typeof toLabelProps.metadata === 'object'
+        ? toLabelProps.metadata
+        : {}) as Record<string, unknown>;
+
+    const editedWorkspace: DesignerWorkspaceSnapshot = {
+      ...hydrated,
+      nodesById: {
+        ...hydrated.nodesById,
+        [toLabelNode.id]: {
+          ...toLabelNode,
+          props: {
+            ...toLabelProps,
+            metadata: {
+              ...toLabelMetadata,
+              text: '{{invoice.total | currency}}',
+            },
+          },
+        },
+      },
+    };
+
+    const exported = exportWorkspaceToInvoiceTemplateAst(editedWorkspace);
+    expect(exported.layout.type).toBe('document');
+    if (exported.layout.type !== 'document') return;
+
+    const pageSection = exported.layout.children.find((child) => child.id === 'page-section');
+    expect(pageSection?.type).toBe('section');
+    if (!pageSection || pageSection.type !== 'section') return;
+
+    const toLabel = pageSection.children.find((child) => child.id === 'to-label');
+    expect(toLabel?.type).toBe('text');
+    if (!toLabel || toLabel.type !== 'text') return;
+    expect(toLabel.content).toEqual({ type: 'path', path: 'total|currency' });
+  });
+
+  it('compiles mixed literal + moustache text into a template expression', () => {
+    const workspace = createWorkspaceWithFieldAndDynamicTable();
+    const pageNode = Object.values(workspace.nodesById).find((node) => node.type === 'page');
+    if (!pageNode) return;
+
+    const textId = 'ast-interpolated-text';
+    const withText: DesignerWorkspaceSnapshot = {
+      ...workspace,
+      nodesById: {
+        ...workspace.nodesById,
+        [pageNode.id]: {
+          ...pageNode,
+          children: [...pageNode.children, textId],
+        },
+        [textId]: {
+          id: textId,
+          type: 'text',
+          props: {
+            name: 'Interpolated Text',
+            metadata: {
+              text: 'Invoice {{invoice.number}} due {{invoice.dueDate}}',
+            },
+          },
+          children: [],
+        },
+      },
+    };
+
+    const exported = exportWorkspaceToInvoiceTemplateAst(withText);
+    expect(exported.layout.type).toBe('document');
+    if (exported.layout.type !== 'document') return;
+
+    const pageSection = exported.layout.children.find((child) => child.type === 'section');
+    expect(pageSection?.type).toBe('section');
+    if (!pageSection || pageSection.type !== 'section') return;
+
+    const interpolated = pageSection.children.find((child) => child.id === textId);
+    expect(interpolated?.type).toBe('text');
+    if (!interpolated || interpolated.type !== 'text') return;
+    expect(interpolated.content.type).toBe('template');
+    if (interpolated.content.type !== 'template') return;
+
+    const argPaths = Object.values(interpolated.content.args ?? {})
+      .map((arg) => (arg.type === 'path' ? arg.path : ''))
+      .filter(Boolean);
+    expect(argPaths).toContain('invoiceNumber');
+    expect(argPaths).toContain('dueDate');
+  });
+
   it('preserves standard-detailed template fidelity across import/export round-trip', () => {
     const sourceAst = getStandardInvoiceTemplateAstByCode('standard-detailed');
     const hydrated = importInvoiceTemplateAstToWorkspace(sourceAst as any);

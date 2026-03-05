@@ -28,6 +28,13 @@ import { getPresetById } from './constants/presets';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import {
+  buildInvoiceExpressionPathOptions,
+  insertTextIntoDomControl,
+  insertTextIntoValue,
+  validateSourcePaths,
+  type ExpressionMode,
+} from '@shared/workflow/expression-authoring';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -397,6 +404,41 @@ const resolveSelectedNodeTypeLabel = (selectedNode: DesignerNode | null): string
   return humanizeBindingToken(selectedNode.type);
 };
 
+const resolveInsertModeFromTargetPath = (targetPath: string | null): ExpressionMode => {
+  if (typeof targetPath === 'string' && targetPath.trim().toLowerCase().endsWith('bindingkey')) {
+    return 'path-only';
+  }
+  return 'template';
+};
+
+const formatBindingInsertValue = (bindingPath: string, mode: ExpressionMode): string =>
+  mode === 'path-only' ? bindingPath : `{{${bindingPath}}}`;
+
+const tryInsertTemplateIntoFocusedInput = (
+  bindingPath: string
+): { insertedValue: string; mode: ExpressionMode } | null => {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+  const activeElement = document.activeElement;
+  if (!(activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement)) {
+    return null;
+  }
+
+  const targetPath = activeElement.getAttribute('data-template-insert-target');
+  if (!targetPath) {
+    return null;
+  }
+
+  const mode = resolveInsertModeFromTargetPath(targetPath);
+  const insertValue = formatBindingInsertValue(bindingPath, mode);
+  const result = insertTextIntoDomControl(activeElement, insertValue, { requireFocus: true });
+  if (!result.didInsert) {
+    return null;
+  }
+  return { insertedValue: insertValue, mode };
+};
+
 const findNearestScrollableParent = (element: HTMLElement | null): HTMLElement | null => {
   if (!element) {
     return null;
@@ -416,6 +458,13 @@ export const DesignerShell: React.FC = () => {
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const selectedNodeId = useInvoiceDesignerStore((state) => state.selectedNodeId);
   const selectedNode = useMemo(() => nodes.find((node) => node.id === selectedNodeId) ?? null, [nodes, selectedNodeId]);
+  const invoicePathOptions = useMemo(
+    () =>
+      buildInvoiceExpressionPathOptions({
+        includeRootPaths: false,
+      }),
+    []
+  );
   const addNode = useInvoiceDesignerStore((state) => state.addNodeFromPalette);
   const insertPreset = useInvoiceDesignerStore((state) => state.insertPreset);
   const moveNode = useInvoiceDesignerStore((state) => state.moveNode);
@@ -1413,6 +1462,64 @@ export const DesignerShell: React.FC = () => {
     [clearDropFeedback, insertPresetWithResolution]
   );
 
+  const handleInsertTemplateVariable = useCallback(
+    (bindingPath: string) => {
+      clearDropFeedback();
+      const inserted = tryInsertTemplateIntoFocusedInput(bindingPath);
+      if (inserted) {
+        const validation = validateSourcePaths({
+          source: inserted.insertedValue,
+          mode: inserted.mode,
+          options: invoicePathOptions,
+        });
+        if (validation.diagnostics.length > 0) {
+          showDropFeedback('info', `Inserted ${inserted.insertedValue}. ${validation.diagnostics[0]?.message ?? ''}`);
+          return;
+        }
+        showDropFeedback('info', `Inserted ${inserted.insertedValue}.`);
+        return;
+      }
+
+      const liveState = useInvoiceDesignerStore.getState();
+      const liveSelectedNodeId = liveState.selectedNodeId;
+      if (!liveSelectedNodeId) {
+        showDropFeedback('info', 'Select a text block, then focus a text field to insert variables.');
+        return;
+      }
+
+      const liveSelectedNode = liveState.nodesById[liveSelectedNodeId];
+      if (!liveSelectedNode || (liveSelectedNode.type !== 'text' && liveSelectedNode.type !== 'label')) {
+        showDropFeedback('info', 'Focus a text field in the inspector to insert this variable.');
+        return;
+      }
+
+      const metadata = getNodeMetadata(liveSelectedNode) as Record<string, unknown>;
+      const existingText = typeof metadata.text === 'string' ? metadata.text : '';
+      const token = formatBindingInsertValue(bindingPath, 'template');
+      const joiner = existingText.length > 0 && !/\s$/.test(existingText) ? ' ' : '';
+      const insertion = insertTextIntoValue(
+        {
+          value: existingText,
+          selectionStart: existingText.length,
+          selectionEnd: existingText.length,
+        },
+        `${joiner}${token}`
+      );
+      setNodeProp(liveSelectedNode.id, 'metadata.text', insertion.nextValue, true);
+      const validation = validateSourcePaths({
+        source: token,
+        mode: 'template',
+        options: invoicePathOptions,
+      });
+      if (validation.diagnostics.length > 0) {
+        showDropFeedback('info', `Inserted ${token}. ${validation.diagnostics[0]?.message ?? ''}`);
+        return;
+      }
+      showDropFeedback('info', `Inserted ${token}.`);
+    },
+    [clearDropFeedback, invoicePathOptions, setNodeProp, showDropFeedback]
+  );
+
   const simulateComponentDrop = useCallback(
     (type: DesignerComponentType, targetNodeId?: string | 'canvas', dropPoint?: Point) => {
       clearDropFeedback();
@@ -1657,6 +1764,7 @@ export const DesignerShell: React.FC = () => {
 	              <ComponentPalette
 	                onInsertComponent={handleQuickInsertComponent}
                 onInsertPreset={handleQuickInsertPreset}
+                onInsertTemplateVariable={handleInsertTemplateVariable}
               />
               </div>
           </div>

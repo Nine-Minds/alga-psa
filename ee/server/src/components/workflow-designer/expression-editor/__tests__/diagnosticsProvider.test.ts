@@ -187,22 +187,16 @@ describe('Diagnostics Provider', () => {
     });
 
     it('should accept known functions', () => {
-      const diagnostics = validateExpression('$string(payload.value)', {});
+      const diagnostics = validateExpression('$toString(payload.value)', {});
       const funcWarnings = diagnostics.filter(d =>
-        d.message.includes('Unknown function') && d.message.includes('$string')
+        d.message.includes('Unknown function') && d.message.includes('$toString')
       );
 
       expect(funcWarnings).toHaveLength(0);
     });
 
-    it('should accept common built-in functions', () => {
-      // Test a subset of functions that are definitely in the list
-      const commonFunctions = [
-        '$sum', '$count', '$string', '$number', '$boolean',
-        '$substring', '$trim', '$uppercase', '$lowercase',
-        '$map', '$filter', '$reduce', '$keys',
-        '$now', '$exists', '$type',
-      ];
+    it('should accept runtime-allowlisted functions', () => {
+      const commonFunctions = ['$append', '$coalesce', '$len', '$toString', '$nowIso'];
 
       for (const fn of commonFunctions) {
         const diagnostics = validateExpression(`${fn}(payload)`, {});
@@ -212,6 +206,16 @@ describe('Diagnostics Provider', () => {
 
         expect(unknownFuncErrors).toHaveLength(0);
       }
+    });
+
+    it('should warn about disallowed JSONata functions', () => {
+      const diagnostics = validateExpression('$string(payload.value)', {});
+      const warnings = diagnostics.filter((diagnostic) =>
+        diagnostic.message.includes("Unknown function '$string'")
+      );
+
+      expect(warnings.length).toBeGreaterThan(0);
+      expect(warnings[0]?.severity).toBe(DiagnosticSeverity.Warning);
     });
   });
 

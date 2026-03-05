@@ -20,6 +20,8 @@ import { registerCompletionProvider, type ExpressionContext, type JsonSchema } f
 import { registerHoverProvider } from './hoverProvider';
 import { registerSignatureHelpProvider } from './signatureHelpProvider';
 import { createDiagnosticsProvider, validateExpression } from './diagnosticsProvider';
+import { insertTextIntoMonacoEditor } from '@shared/workflow/expression-authoring';
+import { normalizeInsertedText } from './insertionText';
 
 /**
  * Props for the ExpressionEditor component
@@ -189,16 +191,10 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
       insertAtCursor: (text: string) => {
         const editor = editorRef.current;
         if (!editor) return;
-        const selection = editor.getSelection();
-        if (!selection) return;
-        editor.executeEdits('expression-editor', [
-          {
-            range: selection,
-            text,
-            forceMoveMarkers: true,
-          },
-        ]);
-        editor.focus();
+        insertTextIntoMonacoEditor(editor, normalizeInsertedText(text), {
+          source: 'expression-editor',
+          requireFocus: false,
+        });
       },
       getEditor: () => editorRef.current,
     }));
@@ -355,18 +351,10 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
               editor.setSelection(new monacoInstance.Selection(pos.lineNumber, pos.column, pos.lineNumber, pos.column));
             }
 
-            const selection = editor.getSelection();
-            if (!selection) return;
-
-            editor.executeEdits('expression-editor-drop', [
-              {
-                range: selection,
-                // If a snippet placeholder slipped through, strip it.
-                text: text.endsWith('$0') ? text.slice(0, -2) : text,
-                forceMoveMarkers: true,
-              },
-            ]);
-            editor.focus();
+            insertTextIntoMonacoEditor(editor, normalizeInsertedText(text), {
+              source: 'expression-editor-drop',
+              requireFocus: false,
+            });
           };
 
           domNode.addEventListener('dragover', handleDragOver, true);

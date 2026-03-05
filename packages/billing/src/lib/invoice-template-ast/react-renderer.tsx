@@ -8,6 +8,7 @@ import type {
   InvoiceTemplateValueFormat,
 } from '@alga-psa/types';
 import type { InvoiceTemplateEvaluationResult } from './evaluator';
+import { decodeInvoiceTemplatePathExpression } from './templateInterpolationFilters';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -212,7 +213,8 @@ const buildAstCss = (ast: InvoiceTemplateAst): string => {
 const resolveExpressionValue = (
   expression: InvoiceTemplateValueExpression,
   evaluation: InvoiceTemplateEvaluationResult,
-  scope: RenderScope
+  scope: RenderScope,
+  ctx: RenderContext
 ): unknown => {
   switch (expression.type) {
     case 'literal':
@@ -220,22 +222,29 @@ const resolveExpressionValue = (
     case 'binding':
       return evaluation.bindings[expression.bindingId];
     case 'path': {
-      const rowValue = scope.row ? getPathValue(scope.row, expression.path) : undefined;
-      if (rowValue !== undefined) {
-        return rowValue;
+      const parsedPath = decodeInvoiceTemplatePathExpression(expression.path);
+      const rowValue = scope.row ? getPathValue(scope.row, parsedPath.path) : undefined;
+      const resolvedValue =
+        rowValue !== undefined
+          ? rowValue
+          : getPathValue(evaluation.bindings.invoice, parsedPath.path);
+
+      if (resolvedValue === undefined) {
+        return undefined;
       }
-      const invoiceValue = getPathValue(evaluation.bindings.invoice, expression.path);
-      if (invoiceValue !== undefined) {
-        return invoiceValue;
+
+      if (parsedPath.filter === 'currency') {
+        return formatValue(resolvedValue, 'currency', ctx);
       }
-      return undefined;
+
+      return resolvedValue;
     }
     case 'template': {
       const args = expression.args ?? {};
       return expression.template.replace(/\{\{([a-zA-Z0-9_.-]+)\}\}/g, (_match, name: string) => {
         const arg = args[name];
         if (arg) {
-          const argValue = resolveExpressionValue(arg, evaluation, scope);
+          const argValue = resolveExpressionValue(arg, evaluation, scope, ctx);
           return String(argValue ?? '');
         }
         if (scope.row) {
@@ -299,7 +308,7 @@ const renderNode = (
       );
     }
     case 'text': {
-      const content = resolveExpressionValue(node.content, evaluation, scope);
+      const content = resolveExpressionValue(node.content, evaluation, scope, ctx);
       return (
         <p key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
           {String(content ?? '')}
@@ -316,11 +325,11 @@ const renderNode = (
       );
     }
     case 'image': {
-      const src = normalizeImageSrc(resolveExpressionValue(node.src, evaluation, scope));
+      const src = normalizeImageSrc(resolveExpressionValue(node.src, evaluation, scope, ctx));
       if (!src) {
         return null;
       }
-      const alt = node.alt ? resolveExpressionValue(node.alt, evaluation, scope) : '';
+      const alt = node.alt ? resolveExpressionValue(node.alt, evaluation, scope, ctx) : '';
       return (
         <img
           key={node.id}
@@ -364,7 +373,7 @@ const renderNode = (
               rows.map((row, index) => (
                 <tr key={`${node.id}-row-${index}`}>
                   {node.columns.map((column) => {
-                    const value = resolveExpressionValue(column.value, evaluation, { row });
+                    const value = resolveExpressionValue(column.value, evaluation, { row }, ctx);
                     const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
                     const alignRight = column.format === 'currency' || column.format === 'number';
                     return (
@@ -414,7 +423,7 @@ const renderNode = (
               rows.map((row, index) => (
                 <tr key={`${node.id}-row-${index}`}>
                   {node.columns.map((column) => {
-                    const value = resolveExpressionValue(column.value, evaluation, { row });
+                    const value = resolveExpressionValue(column.value, evaluation, { row }, ctx);
                     const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
                     const alignRight = column.format === 'currency' || column.format === 'number';
                     return (
@@ -440,7 +449,7 @@ const renderNode = (
       return (
         <div key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
           {node.rows.map((row) => {
-            const raw = totals[row.id] ?? resolveExpressionValue(row.value, evaluation, scope) ?? '';
+            const raw = totals[row.id] ?? resolveExpressionValue(row.value, evaluation, scope, ctx) ?? '';
             return (
               <div key={row.id} className="ast-totals-row" style={row.emphasize ? { fontWeight: 700 } : undefined}>
                 <span className="ast-totals-label">{row.label}</span>

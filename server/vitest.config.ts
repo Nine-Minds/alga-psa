@@ -117,6 +117,8 @@ export default defineConfig({
       { find: /^@alga-psa\/tenancy\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tenancy/src/$1') },
 
       { find: /^@alga-psa\/media$/, replacement: path.resolve(__dirname, '../packages/media/src/index.ts') },
+      { find: /^@alga-psa\/storage$/, replacement: path.resolve(__dirname, '../packages/storage/src/index.ts') },
+      { find: /^@alga-psa\/storage\/(.*)$/, replacement: path.resolve(__dirname, '../packages/storage/src/$1') },
 
       { find: /^@alga-psa\/users$/, replacement: path.resolve(__dirname, '../packages/users/src/index.ts') },
       { find: /^@alga-psa\/users\/actions$/, replacement: path.resolve(__dirname, '../packages/users/src/actions/index.ts') },
@@ -126,10 +128,21 @@ export default defineConfig({
       { find: /^@alga-psa\/event-bus\/(.*)$/, replacement: path.resolve(__dirname, '../packages/event-bus/src/$1') },
       { find: /^@alga-psa\/email$/, replacement: path.resolve(__dirname, '../packages/email/src/index.ts') },
       { find: /^@alga-psa\/email\/(.*)$/, replacement: path.resolve(__dirname, '../packages/email/src/$1') },
+      { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../packages/core/src/index.ts') },
+      { find: /^@alga-psa\/core\/server$/, replacement: path.resolve(__dirname, '../packages/core/src/server.ts') },
+      { find: /^@alga-psa\/core\/config\/(.*)$/, replacement: path.resolve(__dirname, '../packages/core/src/config/$1') },
+      { find: /^@alga-psa\/core\/constants\/(.*)$/, replacement: path.resolve(__dirname, '../packages/core/src/constants/$1') },
+      { find: /^@alga-psa\/core\/types\/(.*)$/, replacement: path.resolve(__dirname, '../packages/core/src/types/$1') },
+      { find: /^@alga-psa\/core\/(.*)$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/$1') },
 
       { find: 'fs', replacement: 'node:fs' },
       { find: 'fs/promises', replacement: 'node:fs/promises' },
       { find: 'next/server', replacement: path.resolve(__dirname, './src/test/stubs/next-server.ts') },
+      { find: /^ajv\/dist\/2020$/, replacement: path.resolve(__dirname, '../node_modules/ajv/dist/2020.js') },
+      {
+        find: /^ajv\/dist\/refs\/json-schema-draft-07\.json$/,
+        replacement: path.resolve(__dirname, '../node_modules/ajv/dist/refs/json-schema-draft-07.json'),
+      },
       { find: '@tiptap/extension-collaboration-caret', replacement: path.resolve(__dirname, './src/test/stubs/tiptap-collaboration-caret.ts') },
       { find: 'emoticon', replacement: path.resolve(__dirname, './src/test/stubs/emoticon.ts') },
       { find: '@product/settings-extensions/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-settings-extensions-entry.ts') },

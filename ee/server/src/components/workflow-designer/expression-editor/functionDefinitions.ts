@@ -5,6 +5,8 @@
  * for all available functions in workflow expressions.
  */
 
+import { WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from '@shared/workflow/runtime/expressionFunctions';
+
 export interface FunctionParameter {
   name: string;
   type: string;
@@ -26,6 +28,51 @@ export interface FunctionDefinition {
  * All built-in JSONata functions available in workflow expressions
  */
 export const builtinFunctions: FunctionDefinition[] = [
+  // Runtime allowlisted workflow helper functions
+  {
+    name: '$nowIso',
+    signature: '$nowIso()',
+    description: 'Returns the current timestamp as an ISO-8601 string',
+    parameters: [],
+    returnType: 'string',
+    category: 'Date',
+    examples: ['$nowIso() → "2026-03-04T13:10:00.000Z"'],
+  },
+  {
+    name: '$coalesce',
+    signature: '$coalesce(value1, value2, ...)',
+    description: 'Returns the first non-null and non-undefined value',
+    parameters: [
+      { name: 'value1', type: 'any', description: 'First candidate value' },
+      { name: 'value2', type: 'any', description: 'Second candidate value' },
+    ],
+    returnType: 'any',
+    category: 'Misc',
+    examples: ['$coalesce(payload.primaryEmail, payload.fallbackEmail, "unknown")'],
+  },
+  {
+    name: '$len',
+    signature: '$len(value)',
+    description: 'Returns length for strings/arrays; returns 0 for other types',
+    parameters: [
+      { name: 'value', type: 'string | array | any', description: 'Value to measure' },
+    ],
+    returnType: 'number',
+    category: 'Array',
+    examples: ['$len(payload.items) → 3', '$len("hello") → 5'],
+  },
+  {
+    name: '$toString',
+    signature: '$toString(value)',
+    description: 'Converts a value to string (null/undefined become empty string)',
+    parameters: [
+      { name: 'value', type: 'any', description: 'Value to convert' },
+    ],
+    returnType: 'string',
+    category: 'String',
+    examples: ['$toString(123) → "123"'],
+  },
+
   // String functions
   {
     name: '$string',
@@ -732,4 +779,26 @@ export function getFunctionsByCategory(): Map<string, FunctionDefinition[]> {
  */
 export function findFunction(name: string): FunctionDefinition | undefined {
   return builtinFunctions.find(fn => fn.name === name);
+}
+
+const runtimeAllowedFunctionNames = new Set(
+  WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS.map((name) => `$${name}`)
+);
+
+export const runtimeBuiltinFunctions: FunctionDefinition[] = builtinFunctions.filter((fn) =>
+  runtimeAllowedFunctionNames.has(fn.name)
+);
+
+export function getRuntimeFunctionsByCategory(): Map<string, FunctionDefinition[]> {
+  const categories = new Map<string, FunctionDefinition[]>();
+  for (const fn of runtimeBuiltinFunctions) {
+    const list = categories.get(fn.category) || [];
+    list.push(fn);
+    categories.set(fn.category, list);
+  }
+  return categories;
+}
+
+export function findRuntimeFunction(name: string): FunctionDefinition | undefined {
+  return runtimeBuiltinFunctions.find((fn) => fn.name === name);
 }

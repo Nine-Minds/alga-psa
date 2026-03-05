@@ -7,6 +7,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import clsx from 'clsx';
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
+import { parseInvoiceTemplateToken } from '../../../lib/invoice-template-ast/templateInterpolationFilters';
 import { AlignmentGuide } from '../utils/layout';
 import { DesignerNode } from '../state/designerStore';
 import { DESIGNER_CANVAS_WIDTH, DESIGNER_CANVAS_HEIGHT } from '../constants/layout';
@@ -363,6 +364,27 @@ const shouldDeemphasizeNode = (
 
 const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
+const resolveTextInterpolationValue = (
+  previewData: WasmInvoiceViewModel | null,
+  bindingPath: string
+): string | null => {
+  const parsedToken = parseInvoiceTemplateToken(bindingPath);
+  if (!parsedToken || !parsedToken.path) {
+    return null;
+  }
+
+  const rawValue = resolveInvoiceBindingRawValue(previewData, parsedToken.path);
+  if (rawValue === null || rawValue === undefined) {
+    return null;
+  }
+
+  if (parsedToken.filter === 'currency') {
+    return formatBoundValue(rawValue, 'currency', previewData?.currencyCode ?? 'USD');
+  }
+
+  return String(rawValue);
+};
+
 const isTotalsRowType = (type: DesignerNode['type']): type is 'subtotal' | 'tax' | 'discount' | 'custom-total' =>
   type === 'subtotal' || type === 'tax' || type === 'discount' || type === 'custom-total';
 
@@ -614,7 +636,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
         asTrimmedString(metadata.label) ||
         asTrimmedString(metadata.content);
       const content = text.length > 0 ? text.slice(0, 140) : '';
-      
+
       // Check for interpolation variables {{var}}
       const parts = content.split(/(\{\{.*?\}\})/g);
       if (parts.length === 1) {
@@ -626,12 +648,21 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
         }
         return { content };
       }
-      
+
       return {
         content: (
           <span>
             {parts.map((part, index) => {
               if (part.startsWith('{{') && part.endsWith('}}')) {
+                const tokenPath = part.replace(/^\{\{\s*|\s*\}\}$/g, '').trim();
+                const interpolatedValue = resolveTextInterpolationValue(previewData, tokenPath);
+                if (interpolatedValue !== null) {
+                  return (
+                    <span key={index} className="text-slate-800">
+                      {interpolatedValue}
+                    </span>
+                  );
+                }
                 return (
                   <span
                     key={index}

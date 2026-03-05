@@ -1,0 +1,170 @@
+[
+  {
+    "id": "F001",
+    "description": "Define a shared expression mode contract (`path-only`, `template`, `expression`) usable by invoice and workflow UIs.",
+    "implemented": true,
+    "prdRefs": ["FR-001"]
+  },
+  {
+    "id": "F002",
+    "description": "Define a shared expression context root schema and typed path option shape consumed by both designers.",
+    "implemented": true,
+    "prdRefs": ["FR-001", "FR-002"]
+  },
+  {
+    "id": "F003",
+    "description": "Implement shared path discovery helpers that can flatten nested schema/context trees into picker-friendly options.",
+    "implemented": true,
+    "prdRefs": ["FR-001", "FR-011"]
+  },
+  {
+    "id": "F004",
+    "description": "Implement shared insertion helper API for cursor-aware insertion in text inputs, textareas, and Monaco-backed editors.",
+    "implemented": true,
+    "prdRefs": ["FR-001", "FR-012"]
+  },
+  {
+    "id": "F005",
+    "description": "Implement shared validation result contract (`error`/`warning`/`info`) with consistent message shape and path attribution.",
+    "implemented": true,
+    "prdRefs": ["FR-001", "FR-011"]
+  },
+  {
+    "id": "F006",
+    "description": "Create invoice context adapter exposing invoice roots/paths in shared context format.",
+    "implemented": true,
+    "prdRefs": ["FR-002"]
+  },
+  {
+    "id": "F007",
+    "description": "Create workflow context adapter exposing payload/vars/meta/error (and loop vars) in shared context format.",
+    "implemented": true,
+    "prdRefs": ["FR-002"]
+  },
+  {
+    "id": "F008",
+    "description": "Replace invoice static template variable catalog usage with adapter-driven path options.",
+    "implemented": true,
+    "prdRefs": ["FR-003"]
+  },
+  {
+    "id": "F009",
+    "description": "Update invoice FIELDS panel rendering to consume shared path option model and grouped roots/categories.",
+    "implemented": true,
+    "prdRefs": ["FR-003", "FR-013"]
+  },
+  {
+    "id": "F010",
+    "description": "Route invoice `bindingKey` insertion through shared insertion helper in `path-only` mode.",
+    "implemented": true,
+    "prdRefs": ["FR-004", "FR-012"]
+  },
+  {
+    "id": "F011",
+    "description": "Route invoice text/label insertion through shared insertion helper in `template` mode.",
+    "implemented": true,
+    "prdRefs": ["FR-005", "FR-012"]
+  },
+  {
+    "id": "F012",
+    "description": "Preserve invoice moustache-to-AST compilation behavior for single-token path and mixed template text.",
+    "implemented": true,
+    "prdRefs": ["FR-005", "FR-006", "FR-013"]
+  },
+  {
+    "id": "F013",
+    "description": "Preserve invoice import/export deterministic roundtrip behavior after shared insertion and context migration.",
+    "implemented": true,
+    "prdRefs": ["FR-006", "NFR-003"]
+  },
+  {
+    "id": "F014",
+    "description": "Implement invoice-side shared validation integration for inserted paths/templates with user-facing feedback.",
+    "implemented": true,
+    "prdRefs": ["FR-011"]
+  },
+  {
+    "id": "F015",
+    "description": "Replace workflow legacy `${...}` extraction/validation path scan with shared validation pipeline.",
+    "implemented": true,
+    "prdRefs": ["FR-007", "FR-011"]
+  },
+  {
+    "id": "F016",
+    "description": "Adapt workflow step expression validation UI to consume shared validation result contract.",
+    "implemented": true,
+    "prdRefs": ["FR-007", "FR-011"]
+  },
+  {
+    "id": "F017",
+    "description": "Align workflow editor completion function list with runtime allowlisted functions.",
+    "implemented": true,
+    "prdRefs": ["FR-008", "FR-010"]
+  },
+  {
+    "id": "F018",
+    "description": "Align workflow editor function diagnostics with runtime allowlisted function set.",
+    "implemented": true,
+    "prdRefs": ["FR-008", "FR-010"]
+  },
+  {
+    "id": "F019",
+    "description": "Keep workflow persisted `{ $expr }` data model unchanged while migrating editor/validation plumbing.",
+    "implemented": true,
+    "prdRefs": ["FR-009", "NFR-003"]
+  },
+  {
+    "id": "F020",
+    "description": "Keep workflow runtime expression safety guardrails unchanged (timeout, max output, JSON-serializable constraints, function allowlist).",
+    "implemented": true,
+    "prdRefs": ["FR-010"]
+  },
+  {
+    "id": "F021",
+    "description": "Use shared validator path existence checks against invoice/workflow schema contexts where available.",
+    "implemented": true,
+    "prdRefs": ["FR-011"]
+  },
+  {
+    "id": "F022",
+    "description": "Ensure workflow Monaco insert operations can consume shared insertion helper semantics without cursor regressions.",
+    "implemented": true,
+    "prdRefs": ["FR-012", "NFR-001"]
+  },
+  {
+    "id": "F023",
+    "description": "Ensure invoice plain input/textarea insertion behavior remains cursor-accurate after shared insertion migration.",
+    "implemented": true,
+    "prdRefs": ["FR-012", "NFR-001"]
+  },
+  {
+    "id": "F024",
+    "description": "Preserve invoice preview interpolation rendering semantics for resolved/unresolved tokens after migration.",
+    "implemented": true,
+    "prdRefs": ["FR-013"]
+  },
+  {
+    "id": "F025",
+    "description": "Preserve workflow runtime/backend tests and behavior with no expression contract regressions.",
+    "implemented": true,
+    "prdRefs": ["FR-014", "NFR-003"]
+  },
+  {
+    "id": "F026",
+    "description": "Remove deprecated invoice static-variable code paths once shared context-driven path picker is fully wired.",
+    "implemented": true,
+    "prdRefs": ["FR-003", "NFR-002"]
+  },
+  {
+    "id": "F027",
+    "description": "Remove deprecated workflow `${...}` scanner helpers once shared validator path is active.",
+    "implemented": true,
+    "prdRefs": ["FR-007", "NFR-002"]
+  },
+  {
+    "id": "F028",
+    "description": "Define and enforce test implementation standards for this scope (React test framework usage, robust selector/assertion strategy, and anti-tautology requirements).",
+    "implemented": true,
+    "prdRefs": ["Test Implementation Standards"]
+  }
+]

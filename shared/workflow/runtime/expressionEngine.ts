@@ -1,10 +1,11 @@
 import jsonata from 'jsonata';
 import type { Expr } from './types';
+import { WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from './expressionFunctions';
 
 const MAX_OUTPUT_BYTES = 256 * 1024;
 const DEFAULT_TIMEOUT_MS = 25;
 
-const allowedFunctions = new Set(['nowIso', 'coalesce', 'len', 'toString', 'append']);
+const allowedFunctions = new Set<string>(WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS);
 
 export type ExpressionContext = {
   payload?: unknown;

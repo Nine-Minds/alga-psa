@@ -1,0 +1,217 @@
+# SCRATCHPAD — Invoice Workflow Expression Binding Unification
+
+- Plan slug: `invoice-workflow-expression-unification`
+- Created: `2026-03-04`
+
+## What This Is
+
+Working notes for unifying invoice designer bindings and Workflow v2 expression authoring on a shared expression foundation while preserving each runtime/storage contract.
+
+## Decisions
+
+- (2026-03-04) Use a shared abstraction centered on typed context paths + expression modes (`path-only`, `template`, `expression`) instead of forcing one persisted expression format across products.
+- (2026-03-04) Shared primitives module location: `shared/workflow/expression-authoring/*` so both invoice (`packages/billing`) and workflow designer (`ee/server`) can import through `@shared/workflow/...`.
+- (2026-03-04) Shared context contract includes explicit `SharedExpressionContextRoot` and `SharedExpressionPathOption` interfaces plus deterministic root serialization to stabilize cross-editor behavior/tests.
+- (2026-03-04) Shared path discovery contract uses deterministic lexical traversal with explicit array item marker segments (`[]`) and additional-property wildcard (`*`) to produce stable picker options.
+- (2026-03-04) Shared insertion helper is split into pure value insertion (`insertTextIntoValue`) plus environment-specific adapters (`insertTextIntoDomControl`, `insertTextIntoMonacoEditor`) with explicit no-op reasons.
+- (2026-03-04) Shared validation contract (`SharedExpressionValidationResult`) normalizes severity ordering and preserves path/root/range attribution for downstream UI rendering.
+- (2026-03-04) Invoice adapter roots stay domain-native (`invoice`, `customer`, `tenant`, `item`) for this migration to preserve existing author mental model and template bindings.
+- (2026-03-04) Workflow adapter includes dynamic loop roots (`itemVar`, `indexVar`) so forEach-scoped expressions can use the same shared path options as global roots.
+- (2026-03-04) Invoice palette fields now derive from `buildInvoiceExpressionPathOptions(...)`; static catalog import path is no longer used in rendering/search.
+- (2026-03-04) Invoice FIELDS panel grouping now maps directly to shared root keys (`invoice/customer/tenant/item`) and only renders leaf path options from the shared model.
+- (2026-03-04) `DesignerShell` now uses `insertTextIntoDomControl` and target-path mode inference: inspector fields ending in `bindingKey` receive raw path insertion (`path-only`).
+- (2026-03-04) Invoice text fallback insertion path also uses shared insertion primitives (`insertTextIntoValue`) and enforces template token formatting for text/label nodes.
+- (2026-03-04) Workspace AST export now parses moustache text edits into dynamic expressions: full-token moustache becomes `path`, mixed literal+moustache becomes `template` with deterministic arg keys.
+- (2026-03-04) Existing roundtrip suites (`workspaceAst.roundtrip.*`) remain green after adapter/insertion changes, confirming deterministic export/import behavior.
+- (2026-03-04) Shared path validator (`validateSourcePaths`) now powers invoice insertion feedback; unknown paths emit informational diagnostics without breaking insertion flow.
+- (2026-03-04) Workflow step config validation now derives shared path options from `DataContext` via `buildWorkflowExpressionPathOptions(...)` and uses `validateSourcePaths(...)` in place of legacy `${...}` scanners.
+- (2026-03-04) Workflow step validation UI now consumes shared diagnostic objects directly (`severity`, `code`, `message`, `path`) and renders grouped Error/Warning/Info cards from the shared contract.
+- (2026-03-04) Runtime function allowlist is now centralized in `shared/workflow/runtime/expressionFunctions.ts` and consumed by both runtime validation and Monaco completion generation.
+- (2026-03-04) Workflow function completion/snippet suggestions are now constrained to runtime-allowlisted helpers (`$nowIso`, `$coalesce`, `$len`, `$toString`, `$append`).
+- (2026-03-04) Workflow diagnostics now validate `$function(...)` tokens against runtime-allowlisted helpers only; non-allowlisted JSONata built-ins are flagged as unknown in-editor.
+- (2026-03-04) Workflow persisted expression shape remains `{ $expr: string }`; migration changes were limited to authoring/validation paths and retained `ensureExpr` + runtime schema guards.
+- (2026-03-04) Added focused runtime guardrail tests (`expressionEngine.test.ts`) to lock function allowlist rejection, timeout enforcement, JSON-serializable result checks, and max output size checks.
+- (2026-03-04) Shared schema/context-aware path checks (`validateSourcePaths`) are now used in both designers where author-time validation exists:
+  - invoice insertion feedback (`DesignerShell`)
+  - workflow step config validation (`WorkflowDesigner`)
+- (2026-03-04) Workflow Monaco insertion paths now route through shared `insertTextIntoMonacoEditor` for both programmatic insert and drag/drop insert, with existing `$0` placeholder stripping preserved.
+- (2026-03-04) Invoice input/textarea insertion remains shared-helper based (`insertTextIntoDomControl` + `insertTextIntoValue`) for selection-aware replacement and repeated insert behavior.
+- (2026-03-04) Invoice preview interpolation semantics remain intact post-migration (resolved known tokens + visibly marked unresolved tokens), validated by preview-mode suite.
+- (2026-03-04) Workflow runtime expression suites (`expressionEngine`, `mappingResolver`, `mappingValidator`) remain green after migration; contracts for `{ $expr }` evaluation/validation are preserved.
+- (2026-03-04) Deprecated invoice static variable catalog path is removed; field discovery now only flows through shared adapter-driven options.
+- (2026-03-04) Deprecated workflow `${...}` scanner helpers are removed from step validation flow; only shared-path validation remains.
+- (2026-03-04) Test implementation standards are codified in `PRD.md` and operationalized as explicit meta-test backlog items (`T041`, `T043`, `T044`) for checklist enforcement.
+- (2026-03-04) Added shared expression-authoring foundational unit suites:
+  - `shared/workflow/expression-authoring/__tests__/coreContracts.test.ts`
+  - `shared/workflow/expression-authoring/__tests__/insertionDom.test.ts`
+  These cover T001-T012 contract behaviors.
+- (2026-03-04) T002 verified by `coreContracts.test.ts` roundtrip serialization/deserialization assertions for shared context roots.
+- (2026-03-04) T003 verified by deterministic path ordering assertions in `coreContracts.test.ts` (`buildPathOptionsFromContextRoots` nested schema flattening).
+- (2026-03-04) T004 verified by array marker segment assertions in `coreContracts.test.ts` (`payload.items[]` and `payload.items[].id`).
+- (2026-03-04) T005 verified in `insertionDom.test.ts` with start/middle/end insertion coverage for `insertTextIntoValue`.
+- (2026-03-04) T006 verified in `insertionDom.test.ts` by replacing an active range (`{{invoice.total}}` -> `{{customer.name}}`).
+- (2026-03-04) T007 verified in `insertionDom.test.ts` with explicit readonly/disabled/unfocused no-op assertions for `insertTextIntoDomControl`.
+- (2026-03-04) T008 verified via `coreContracts.test.ts` validation-result normalization assertions (severity fallback + deterministic diagnostic ordering).
+- (2026-03-04) T009 verified via `coreContracts.test.ts` invoice adapter assertions (roots + canonical paths for invoice/customer/tenant/item).
+- (2026-03-04) T010 verified via `coreContracts.test.ts` stable label assertions for known invoice adapter roots/paths.
+- (2026-03-04) T011 verified via `coreContracts.test.ts` workflow adapter root emission assertions (payload/vars/meta/error + forEach vars).
+- (2026-03-04) T012 verified via `coreContracts.test.ts` recursive vars-path assertions (`vars.previous.account.id`).
+- (2026-03-04) T013 validated with `ComponentPalette.fields.integration.test.tsx` by exercising FIELDS tab insertion path callback using adapter-derived field options.
+- (2026-03-04) T014 validated with `ComponentPalette.fields.integration.test.tsx` search assertions (query filters adapter-derived labels/paths).
+- (2026-03-04) Preserve persisted contracts:
+  - Invoice keeps AST value expressions (`literal|binding|path|template`).
+  - Workflow keeps `{ $expr: string }`.
+- (2026-03-04) Migrate incrementally via adapters; no big-bang rewrite.
+- (2026-03-04) Treat runtime allowlist as source of truth for workflow function capability; editor metadata must conform to it.
+- (2026-03-04) Keep plan scope focused on logic/functionality and correctness; exclude metrics/observability/production-readiness additions.
+- (2026-03-04) Replace doc-only feature/test entries with explicit test implementation standards and enforceable meta-tests (framework, selector strategy, anti-tautology, feature-test traceability).
+
+## Discoveries / Constraints
+
+- (2026-03-04) This branch already had uncommitted invoice-designer WIP focused on static `templateVariableCatalog` and local insertion logic; foundational shared abstractions were still missing.
+- (2026-03-04) Invoice currently uses multiple authoring paths:
+  - `metadata.bindingKey` (path string)
+  - moustache text in `metadata.text`
+  - AST conversion in `workspaceAst.ts`.
+- (2026-03-04) Invoice preview now resolves moustache interpolation in canvas preview path but this is distinct from export compilation.
+- (2026-03-04) Workflow currently has duplicated expression validation paths:
+  - Monaco diagnostics provider
+  - Legacy `${...}` extraction/validation in `WorkflowDesigner.tsx`.
+- (2026-03-04) `WorkflowDesigner.tsx` no longer defines `extractExpressionPaths` / `validateExpressionPath`; step validation now emits issues from shared validation diagnostics.
+- (2026-03-04) Editor metadata previously exposed broad JSONata helpers; completion hints were not runtime-aligned until runtime allowlist filtering was introduced.
+- (2026-03-04) Workflow editor function metadata includes many JSONata functions, while runtime currently allowlists only a small helper set in `shared/workflow/runtime/expressionEngine.ts`.
+- (2026-03-04) Removing drift between workflow editor and runtime is required to avoid misleading UX.
+
+## Commands / Runbooks
+
+- Implement F001 shared mode contract:
+  - `shared/workflow/expression-authoring/modes.ts` (`EXPRESSION_MODES`, `ExpressionMode`, `isExpressionMode`)
+- Implement F002 context and path option contracts:
+  - `shared/workflow/expression-authoring/context.ts`
+- Implement F003 path discovery helper:
+  - `shared/workflow/expression-authoring/pathDiscovery.ts`
+- Implement F004 insertion helper API:
+  - `shared/workflow/expression-authoring/insertion.ts`
+- Implement F005 validation result contract:
+  - `shared/workflow/expression-authoring/validation.ts`
+- Implement F006 invoice adapter:
+  - `shared/workflow/expression-authoring/adapters/invoiceContextAdapter.ts`
+- Implement F007 workflow adapter:
+  - `shared/workflow/expression-authoring/adapters/workflowContextAdapter.ts`
+- Validate invoice field palette integration after adapter wiring:
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/palette/ComponentPalette.fields.integration.test.tsx`
+- Validate invoice shell + fields insertion wiring:
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/palette/ComponentPalette.fields.integration.test.tsx ../packages/billing/src/components/invoice-designer/DesignerShell.selectedContext.integration.test.tsx`
+- Validate moustache-to-AST behavior:
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts`
+- Validate roundtrip determinism:
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/ast/workspaceAst.roundtrip.templates.test.ts ../packages/billing/src/components/invoice-designer/ast/workspaceAst.roundtrip.nodes.test.ts ../packages/billing/src/components/invoice-designer/ast/workspaceAst.roundtrip.styles.test.ts`
+- Validate invoice insertion + validation integration:
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts ../packages/billing/src/components/invoice-designer/palette/ComponentPalette.fields.integration.test.tsx ../packages/billing/src/components/invoice-designer/DesignerShell.selectedContext.integration.test.tsx`
+- Validate workflow editor test baseline after validation migration:
+  - `cd ee/server && npx vitest run src/components/workflow-designer/expression-editor/__tests__/completionProvider.test.ts src/components/workflow-designer/expression-editor/__tests__/diagnosticsProvider.test.ts`
+- Validate workflow designer type safety after shared validation UI refactor:
+  - `cd ee/server && npm run -s typecheck`
+- Validate allowlisted function completions and diagnostics baseline:
+  - `cd ee/server && npx vitest run src/components/workflow-designer/expression-editor/__tests__/completionProvider.test.ts src/components/workflow-designer/expression-editor/__tests__/diagnosticsProvider.test.ts`
+- Validate diagnostics allowlist behavior and type safety:
+  - `cd ee/server && npx vitest run src/components/workflow-designer/expression-editor/__tests__/diagnosticsProvider.test.ts`
+  - `cd ee/server && npm run -s typecheck`
+- Audit persisted expression contract usage:
+  - `rg -n '\\$expr' ee/server/src/components/workflow-designer/WorkflowDesigner.tsx shared/workflow/runtime -g'*.ts*'`
+- Validate runtime expression guardrails:
+  - `npx vitest run --config shared/vitest.config.ts shared/workflow/runtime/__tests__/expressionEngine.test.ts shared/workflow/runtime/__tests__/mappingResolver.test.ts`
+- Audit shared path-validator usage in both designers:
+  - `rg -n "validateSourcePaths\\(" packages/billing/src/components/invoice-designer ee/server/src/components/workflow-designer -g'*.ts*'`
+- Validate workflow expression editor insertion refactor:
+  - `cd ee/server && npx vitest run src/components/workflow-designer/expression-editor/__tests__/completionProvider.test.ts src/components/workflow-designer/expression-editor/__tests__/diagnosticsProvider.test.ts && npm run -s typecheck`
+- Validate invoice preview interpolation behavior:
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/canvas/DesignCanvas.previewMode.test.tsx`
+- Validate workflow runtime expression behavior:
+  - `npx vitest run --config shared/vitest.config.ts shared/workflow/runtime/__tests__/expressionEngine.test.ts shared/workflow/runtime/__tests__/mappingResolver.test.ts shared/workflow/runtime/__tests__/mappingValidator.test.ts`
+- Audit for deprecated invoice static catalog references:
+  - `rg -n "templateVariableCatalog|TEMPLATE_VARIABLE_OPTIONS" packages/billing/src/components/invoice-designer -g'*.ts*'`
+- Audit for deprecated workflow scanner helpers:
+  - `rg -n "extractExpressionPaths|validateExpressionPath|\\$\\{\\[^\\}\\]\\+\\}" ee/server/src/components/workflow-designer -g'*.ts*'`
+- Run shared expression-authoring foundational tests:
+  - `npx vitest run --config shared/vitest.config.ts shared/workflow/expression-authoring/__tests__/coreContracts.test.ts shared/workflow/expression-authoring/__tests__/insertionDom.test.ts`
+- Compare invoice/workflow binding/expression surfaces:
+  - `rg -n "binding|template|\{\{|\$expr|validateExpressionSource" packages/billing/src/components/invoice-designer ee/server/src/components/workflow-designer shared/workflow/runtime -g"*.ts*"`
+- Review workflow designer expression sections:
+  - `sed -n '820,980p' ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`
+  - `sed -n '6060,6665p' ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`
+- Review workflow runtime constraints:
+  - `sed -n '1,220p' shared/workflow/runtime/expressionEngine.ts`
+- Review invoice AST compile/render paths:
+  - `sed -n '104,340p' packages/billing/src/components/invoice-designer/ast/workspaceAst.ts`
+  - `sed -n '210,290p' packages/billing/src/lib/invoice-template-ast/react-renderer.tsx`
+
+## Links / References
+
+- Workflow designer:
+  - `ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`
+  - `ee/server/src/components/workflow-designer/expression-editor/`
+- Workflow runtime:
+  - `shared/workflow/runtime/expressionEngine.ts`
+  - `shared/workflow/runtime/types.ts`
+- Invoice designer:
+  - `packages/billing/src/components/invoice-designer/DesignerShell.tsx`
+  - `packages/billing/src/components/invoice-designer/palette/ComponentPalette.tsx`
+  - `packages/billing/src/components/invoice-designer/ast/workspaceAst.ts`
+- Invoice AST renderer:
+  - `packages/billing/src/lib/invoice-template-ast/react-renderer.tsx`
+
+## Open Questions
+
+- Should invoice roots stay domain-native (`invoice/customer/tenant/item`) or converge on workflow-style roots for long-term consistency?
+- Should workflow function metadata be hard-pruned immediately to runtime allowlist, or staged with compatibility warnings first?
+- Should shared validation include a true parser abstraction now, or remain an interface with domain-specific parser implementations?
+- Is invoice drag/drop path insertion in scope for this plan, or deferred after click-insert parity?
+- (2026-03-04) T015 validated by `DesignerShell.insertion.integration.test.tsx`: bindingKey-target insertions write raw `invoice.total` path tokens without moustache wrapping.
+- (2026-03-04) T016 validated by `DesignerShell.insertion.integration.test.tsx`: non-binding text targets insert moustache-wrapped tokens in template mode (`Before {{invoice.total}}`).
+- (2026-03-04) T017 validated by `DesignerShell.insertion.integration.test.tsx`: when no insert target is focused, insertion falls back to appending template token into selected text-node `metadata.text`.
+- (2026-03-04) T018 validated by `workspaceAst.test.ts` (`compiles edited moustache text into a dynamic path expression`): `{{invoice.total}}` compiles to AST `content: { type: 'path', path: 'total' }`.
+- (2026-03-04) T019 validated by `workspaceAst.test.ts` (`compiles mixed literal + moustache text into a template expression`): mixed text exports as AST `template` with args including `invoiceNumber` and `dueDate` paths.
+- (2026-03-04) T020 validated by `workspaceAst.test.ts` (`preserves expression and format semantics when importing existing AST templates`): import/export with unchanged imported content preserves original expression kinds/bindings (non-destructive text preview path).
+- (2026-03-04) T021 validated by `workspaceAst.test.ts` (`roundtrips exported AST deterministically (export -> import -> export)`): repeated export/import cycles are byte-stable for AST shape.
+- (2026-03-04) Added `DesignerShell.insertion.integration.test.tsx` coverage for T022: inserting `invoice.missingField` surfaces shared-validator feedback (`Unknown path ...`) and subsequent replacement with `invoice.total` succeeds without UI crash.
+- (2026-03-04) Introduced `workflow-designer/expressionValidation.ts` and test coverage proving `WorkflowDesigner.tsx` no longer references legacy `extractExpressionPaths`/`validateExpressionPath`; step config validation uses shared validator wiring.
+- (2026-03-04) T024 covered in `expressionValidation.test.ts`: `partitionStepExpressionValidations` consumes shared diagnostics contract (`severity`/`message`/`code`) and splits panel-facing error/warning/info groups deterministically.
+- (2026-03-04) T025 covered in `expressionValidation.test.ts`: `validateStepExpressions(...)` now flags `unknown.root` and `vars.missing.id` via shared validator diagnostics while accepting known `vars.previous.id`.
+- (2026-03-04) T026 validated by `expression-editor/__tests__/completionProvider.test.ts`: function completion items are constrained to runtime allowlisted helpers only.
+- (2026-03-04) T027 validated by `expression-editor/__tests__/diagnosticsProvider.test.ts`: disallowed/non-allowlisted functions are diagnosed and runtime-allowlisted helpers pass.
+- (2026-03-04) Added `shared/workflow/runtime/__tests__/types.exprPersistence.test.ts` for T028: step schemas persist expressions as `{ $expr: string }` objects (and reject bare string Expr inputs).
+- (2026-03-04) T029 validated by `shared/workflow/runtime/__tests__/expressionEngine.test.ts`: runtime validation rejects disallowed functions (e.g. `$sum(...)`).
+- (2026-03-04) T030 validated by `expressionEngine.test.ts`: evaluation timeout and max output-size guardrails remain enforced post-migration.
+- (2026-03-04) T031 added to `coreContracts.test.ts`: shared `validateSourcePaths(...)` returns `info`/`unknown-path` diagnostic for unresolved schema-aware path references (`payload.user.missing`).
+- (2026-03-04) T032 covered by `shared/workflow/expression-authoring/__tests__/insertionDom.test.ts`: Monaco-style insertion now verifies shared helper replacement semantics and cursor/selection placement at the inserted text end.
+- (2026-03-04) T033 validated via `expression-editor/__tests__/insertionText.test.ts`: trailing snippet placeholder (`$0`) is stripped before insertion, while non-trailing text remains unchanged.
+- (2026-03-04) T034 added to `DesignerShell.insertion.integration.test.tsx`: repeated template insertions with manual typing in between remain cursor-accurate and produce expected final text.
+- (2026-03-04) T035 validated by `DesignCanvas.previewMode.test.tsx`: preview rendering resolves known moustache tokens and leaves unresolved tokens visibly marked.
+- (2026-03-04) T036 validated by `DesignCanvas.previewMode.test.tsx` regression run (17 passing tests), covering field/table/totals preview scaffolds.
+- (2026-03-04) T037 validated by `server/src/test/unit/workflowRuntimeV2.unit.test.ts` (33 passing tests): workflow runtime v2 expression compile/evaluate/resolve unit suite remains green.
+- (2026-03-04) T038 validated by `server/src/test/integration/workflowRuntimeV2.control.integration.test.ts` + `workflowRuntimeV2.eventTrigger.integration.test.ts` (86 passing tests total). Required fixes:
+  - improved `@alga-psa/auth` test mock in `server/src/test/setup.ts` to provide tenant-aware `withAuth`/`withOptionalAuth` context (using mocked db tenant where available),
+  - added `@alga-psa/core` alias coverage in `server/vitest.config.ts` to resolve document dependency imports in server Vitest runs,
+  - updated integration test tenant mocks to use `mockImplementation(() => tenantId)` for mutable tenant scenarios,
+  - updated event-trigger tests to use trigger `sourcePayloadSchemaRef` and schema-aware invalid-payload expectations aligned with current runtime contract.
+- (2026-03-04) T039 validated by new repo-guard test `templateVariableCatalog.removal.test.ts`: static catalog file `constants/templateVariableCatalog.ts` is absent and no source files under invoice-designer reference legacy `constants/templateVariableCatalog` / `TEMPLATE_VARIABLE_OPTIONS`.
+- (2026-03-04) T040 validated by `ee/server/src/components/workflow-designer/__tests__/expressionValidation.test.ts` (3 passing tests), including explicit source assertions that `WorkflowDesigner.tsx` no longer references legacy `extractExpressionPaths` or `validateExpressionPath` helpers.
+- (2026-03-04) T041 validated by new meta-test `testImplementationStandards.meta.test.ts`: scoped React UI tests are enforced to import Vitest + Testing Library and, unless explicitly marked render-semantics-only, include role/automation-based selector signals.
+- (2026-03-04) T042 validated in one local session by running invoice + workflow smoke insertion tests:
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/DesignerShell.insertion.integration.test.tsx` (5 passing tests),
+  - `cd ee/server && npx vitest run src/components/workflow-designer/expression-editor/__tests__/ExpressionEditor.smoke.test.tsx` (1 passing test).
+  This proves both designers render and accept at least one inserted binding path without runtime errors.
+- (2026-03-04) T043 validated by new meta-guard `packages/billing/src/components/invoice-designer/nonTautologyAssertions.meta.test.ts`:
+  - requires semantic assertion signals across scoped tests for AST behavior (`workspaceAst.test.ts` path/template checks),
+  - model/feedback behavior (`DesignerShell.insertion.integration.test.tsx` store mutation, diagnostics, cursor assertions),
+  - shared workflow diagnostics behavior (`ee/server/.../expressionValidation.test.ts` path attribution + severity partitioning).
+  Verification run:
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/nonTautologyAssertions.meta.test.ts ../packages/billing/src/components/invoice-designer/DesignerShell.insertion.integration.test.tsx ../packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts`
+  - `cd ee/server && npx vitest run src/components/workflow-designer/__tests__/expressionValidation.test.ts`
+- (2026-03-04) T044 validated by new meta-test `packages/billing/src/components/invoice-designer/featureTraceability.meta.test.ts`:
+  - loads plan `features.json` + `tests.json`,
+  - asserts every `Fxxx` in features has at least one reference in tests `featureIds`,
+  - asserts no tests reference unknown feature IDs.
+  Verification run:
+  - `cd server && npx vitest run ../packages/billing/src/components/invoice-designer/featureTraceability.meta.test.ts`

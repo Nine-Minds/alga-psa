@@ -69,8 +69,8 @@ beforeEach(async () => {
   await resetWorkflowRuntimeTables(db);
   tenantId = uuidv4();
   userId = uuidv4();
-  mockedCreateTenantKnex.mockResolvedValue({ knex: db, tenant: tenantId });
-  mockedGetCurrentTenantId.mockReturnValue(tenantId);
+  mockedCreateTenantKnex.mockImplementation(async () => ({ knex: db, tenant: tenantId }));
+  mockedGetCurrentTenantId.mockImplementation(() => tenantId);
   mockedGetCurrentUser.mockResolvedValue({ user_id: userId, roles: [] } as any);
 });
 
@@ -82,11 +82,16 @@ describe('workflow runtime v2 event trigger integration tests', () => {
   it('Event trigger starts a run for workflows with matching trigger name. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
       steps: [stateSetStep('state-1', 'READY')],
-      trigger: { type: 'event', eventName: 'PING' }
+      trigger: { type: 'event', eventName: 'PING', sourcePayloadSchemaRef: TEST_SCHEMA_REF }
     });
     await publishWorkflow(workflowId, 1);
 
-    const result = await submitWorkflowEventAction({ eventName: 'PING', correlationKey: 'k1', payload: { foo: 'bar' } });
+    const result = await submitWorkflowEventAction({
+      eventName: 'PING',
+      correlationKey: 'k1',
+      payload: { foo: 'bar' },
+      payloadSchemaRef: TEST_SCHEMA_REF
+    });
     expect(result.startedRuns.length).toBe(1);
 
     const run = await WorkflowRunModelV2.getById(db, result.startedRuns[0]);
@@ -97,16 +102,21 @@ describe('workflow runtime v2 event trigger integration tests', () => {
   it('Event trigger starts runs for all published workflows sharing the trigger. Mocks: non-target dependencies.', async () => {
     const workflowA = await createDraftWorkflow({
       steps: [stateSetStep('state-1', 'READY')],
-      trigger: { type: 'event', eventName: 'ALERT' }
+      trigger: { type: 'event', eventName: 'ALERT', sourcePayloadSchemaRef: TEST_SCHEMA_REF }
     });
     const workflowB = await createDraftWorkflow({
       steps: [stateSetStep('state-1', 'READY')],
-      trigger: { type: 'event', eventName: 'ALERT' }
+      trigger: { type: 'event', eventName: 'ALERT', sourcePayloadSchemaRef: TEST_SCHEMA_REF }
     });
     await publishWorkflow(workflowA, 1);
     await publishWorkflow(workflowB, 1);
 
-    const result = await submitWorkflowEventAction({ eventName: 'ALERT', correlationKey: 'k2', payload: { foo: 'bar' } });
+    const result = await submitWorkflowEventAction({
+      eventName: 'ALERT',
+      correlationKey: 'k2',
+      payload: { foo: 'bar' },
+      payloadSchemaRef: TEST_SCHEMA_REF
+    });
     expect(result.startedRuns.length).toBe(2);
 
     const runs = await db('workflow_runs').whereIn('run_id', result.startedRuns);
@@ -118,7 +128,7 @@ describe('workflow runtime v2 event trigger integration tests', () => {
   it('Event trigger uses latest published version when no version specified. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
       steps: [stateSetStep('state-1', 'READY')],
-      trigger: { type: 'event', eventName: 'LATEST' }
+      trigger: { type: 'event', eventName: 'LATEST', sourcePayloadSchemaRef: TEST_SCHEMA_REF }
     });
     await publishWorkflow(workflowId, 1);
     await publishWorkflow(workflowId, 2, {
@@ -126,11 +136,16 @@ describe('workflow runtime v2 event trigger integration tests', () => {
       version: 2,
       name: 'v2',
       payloadSchemaRef: TEST_SCHEMA_REF,
-      trigger: { type: 'event', eventName: 'LATEST' },
+      trigger: { type: 'event', eventName: 'LATEST', sourcePayloadSchemaRef: TEST_SCHEMA_REF },
       steps: [stateSetStep('state-2', 'READY')]
     });
 
-    const result = await submitWorkflowEventAction({ eventName: 'LATEST', correlationKey: 'k3', payload: { foo: 'bar' } });
+    const result = await submitWorkflowEventAction({
+      eventName: 'LATEST',
+      correlationKey: 'k3',
+      payload: { foo: 'bar' },
+      payloadSchemaRef: TEST_SCHEMA_REF
+    });
     const run = await WorkflowRunModelV2.getById(db, result.startedRuns[0]);
     expect(run?.workflow_version).toBe(2);
   });
@@ -143,12 +158,18 @@ describe('workflow runtime v2 event trigger integration tests', () => {
     const workflowId = await createDraftWorkflow({
       steps: [stateSetStep('state-1', 'READY')],
       payloadSchemaRef: strictRef,
-      trigger: { type: 'event', eventName: 'STRICT' }
+      trigger: { type: 'event', eventName: 'STRICT', sourcePayloadSchemaRef: strictRef }
     });
     await publishWorkflow(workflowId, 1);
 
-    const result = await submitWorkflowEventAction({ eventName: 'STRICT', correlationKey: 'k4', payload: { bar: 123 } });
-    expect(result.startedRuns.length).toBe(0);
+    await expect(
+      submitWorkflowEventAction({
+        eventName: 'STRICT',
+        correlationKey: 'k4',
+        payload: { bar: 123 },
+        payloadSchemaRef: strictRef
+      })
+    ).rejects.toMatchObject({ status: 400 });
 
     const runs = await db('workflow_runs').where({ workflow_id: workflowId });
     expect(runs.length).toBe(0);
@@ -160,7 +181,12 @@ describe('workflow runtime v2 event trigger integration tests', () => {
       trigger: { type: 'event', eventName: 'DRAFT' }
     });
 
-    const result = await submitWorkflowEventAction({ eventName: 'DRAFT', correlationKey: 'k5', payload: { foo: 'bar' } });
+    const result = await submitWorkflowEventAction({
+      eventName: 'DRAFT',
+      correlationKey: 'k5',
+      payload: { foo: 'bar' },
+      payloadSchemaRef: TEST_SCHEMA_REF
+    });
     expect(result.startedRuns.length).toBe(0);
 
     const runs = await db('workflow_runs').where({ workflow_id: workflowId });

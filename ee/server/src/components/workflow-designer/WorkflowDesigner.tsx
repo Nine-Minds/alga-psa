@@ -83,6 +83,7 @@ import type {
   MappingValue
 } from '@shared/workflow/runtime';
 import { validateExpressionSource } from '@shared/workflow/runtime/expressionEngine';
+import { partitionStepExpressionValidations, validateStepExpressions } from './expressionValidation';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 type WorkflowDefinitionRecord = {
@@ -835,105 +836,6 @@ const buildDefaultValueFromSchema = (schema: JsonSchema, root: JsonSchema): unkn
   }
 
   return null;
-};
-
-// §16.5 - Expression path validation
-type ExpressionValidation = {
-  valid: boolean;
-  error?: string;
-  warning?: string;
-};
-
-// Extract variable paths from an expression string (e.g., "${payload.email}" -> ["payload.email"])
-const extractExpressionPaths = (expr: string): string[] => {
-  const paths: string[] = [];
-  const regex = /\$\{([^}]+)\}/g;
-  let match;
-  while ((match = regex.exec(expr)) !== null) {
-    // Extract the path portion (handles simple cases)
-    const inner = match[1].trim();
-    // Skip complex expressions like conditions or calculations
-    if (!/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(inner)) continue;
-    paths.push(inner);
-  }
-  return paths;
-};
-
-// Check if a path exists in the data context
-const validateExpressionPath = (path: string, context: DataContext): ExpressionValidation => {
-  const parts = path.split('.');
-  const root = parts[0];
-
-  // Check payload paths
-  if (root === 'payload') {
-    if (context.payload.length === 0) {
-      return { valid: true, warning: 'No payload schema defined' };
-    }
-    // Simple path existence check
-    return { valid: true };
-  }
-
-  // Check vars paths (step outputs)
-  if (root === 'vars') {
-    const varName = parts[1];
-    if (!varName) return { valid: false, error: 'Missing variable name after vars.' };
-    const stepOutput = context.steps.find(s => s.saveAs === varName);
-    if (!stepOutput) {
-      return { valid: false, error: `Unknown variable: ${varName}. Available: ${context.steps.map(s => s.saveAs).join(', ') || 'none'}` };
-    }
-    return { valid: true };
-  }
-
-  // Check global paths
-  if (root === 'meta' || root === 'env' || root === 'secrets' || root === 'error') {
-    return { valid: true };
-  }
-
-  return { valid: false, error: `Unknown root: ${root}. Use payload, vars, meta, env, or secrets.` };
-};
-
-// Validate all expressions in a step config
-const validateStepExpressions = (
-  config: Record<string, unknown>,
-  context: DataContext
-): { field: string; validation: ExpressionValidation }[] => {
-  const results: { field: string; validation: ExpressionValidation }[] = [];
-
-  const checkValue = (value: unknown, path: string) => {
-    if (typeof value === 'string' && value.includes('${')) {
-      const exprPaths = extractExpressionPaths(value);
-      for (const exprPath of exprPaths) {
-        const validation = validateExpressionPath(exprPath, context);
-        if (!validation.valid || validation.warning) {
-          results.push({ field: path, validation });
-        }
-      }
-    } else if (value && typeof value === 'object') {
-      if ('$expr' in (value as Record<string, unknown>)) {
-        const expr = (value as { $expr: string }).$expr;
-        if (expr) {
-          const exprPaths = extractExpressionPaths(expr);
-          for (const exprPath of exprPaths) {
-            const validation = validateExpressionPath(exprPath, context);
-            if (!validation.valid || validation.warning) {
-              results.push({ field: path, validation });
-            }
-          }
-        }
-      } else if (!Array.isArray(value)) {
-        // Recurse into object
-        Object.entries(value).forEach(([key, val]) => {
-          checkValue(val, `${path}.${key}`);
-        });
-      }
-    }
-  };
-
-  Object.entries(config).forEach(([key, val]) => {
-    checkValue(val, key);
-  });
-
-  return results;
 };
 
 const parsePipePath = (pipePath: string): PipeSegment[] => {
@@ -5257,6 +5159,13 @@ const StepConfigPanel: React.FC<{
     }
     return [];
   }, [step, dataContext]);
+  const expressionGroups = useMemo(
+    () => partitionStepExpressionValidations(expressionValidations),
+    [expressionValidations]
+  );
+  const expressionErrors = expressionGroups.errors;
+  const expressionWarnings = expressionGroups.warnings;
+  const expressionInfo = expressionGroups.info;
 
   const handleCopyPath = useCallback((path: string) => {
     navigator.clipboard.writeText(path);
@@ -5321,33 +5230,48 @@ const StepConfigPanel: React.FC<{
       {/* §16.5 - Expression validation errors/warnings */}
       {expressionValidations.length > 0 && (
         <div className="space-y-2">
-          {expressionValidations.filter(v => v.validation.error).length > 0 && (
+          {expressionErrors.length > 0 && (
             <Card className="border border-destructive/30 bg-destructive/10 p-3">
               <div className="text-xs font-semibold text-destructive mb-1 flex items-center gap-1">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 Expression errors
               </div>
               <ul className="text-xs text-destructive space-y-1">
-                {expressionValidations
-                  .filter(v => v.validation.error)
-                  .map((v, i) => (
-                    <li key={i}><code className="bg-destructive/15 px-1 rounded">{v.field}</code>: {v.validation.error}</li>
+                {expressionErrors.map((validation, i) => (
+                  <li key={`${validation.diagnostic.code ?? 'error'}-${validation.field}-${i}`}>
+                    <code className="bg-destructive/15 px-1 rounded">{validation.field}</code>: {validation.diagnostic.message}
+                  </li>
                   ))}
               </ul>
             </Card>
           )}
-          {expressionValidations.filter(v => v.validation.warning && !v.validation.error).length > 0 && (
+          {expressionWarnings.length > 0 && (
             <Card className="border border-warning/30 bg-warning/10 p-3">
               <div className="text-xs font-semibold text-warning-foreground mb-1 flex items-center gap-1">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 Warnings
               </div>
               <ul className="text-xs text-warning-foreground space-y-1">
-                {expressionValidations
-                  .filter(v => v.validation.warning && !v.validation.error)
-                  .map((v, i) => (
-                    <li key={i}><code className="bg-warning/15 px-1 rounded">{v.field}</code>: {v.validation.warning}</li>
+                {expressionWarnings.map((validation, i) => (
+                  <li key={`${validation.diagnostic.code ?? 'warning'}-${validation.field}-${i}`}>
+                    <code className="bg-warning/15 px-1 rounded">{validation.field}</code>: {validation.diagnostic.message}
+                  </li>
                   ))}
+              </ul>
+            </Card>
+          )}
+          {expressionInfo.length > 0 && (
+            <Card className="border border-muted/50 bg-muted/20 p-3">
+              <div className="text-xs font-semibold text-muted-foreground mb-1 flex items-center gap-1">
+                <Info className="w-3.5 h-3.5" />
+                Expression info
+              </div>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                {expressionInfo.map((validation, i) => (
+                  <li key={`${validation.diagnostic.code ?? 'info'}-${validation.field}-${i}`}>
+                    <code className="bg-muted/40 px-1 rounded">{validation.field}</code>: {validation.diagnostic.message}
+                  </li>
+                ))}
               </ul>
             </Card>
           )}
