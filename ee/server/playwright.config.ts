@@ -31,6 +31,11 @@ const dockerComposeEnvFile = fs.existsSync(path.resolve(__dirname, '.env'))
 process.env.SECRET_READ_CHAIN = process.env.SECRET_READ_CHAIN || 'filesystem,env';
 process.env.SECRET_WRITE_PROVIDER = process.env.SECRET_WRITE_PROVIDER || 'filesystem';
 process.env.SECRET_FS_BASE_PATH = process.env.SECRET_FS_BASE_PATH || 'secrets-playwright';
+process.env.PLAYWRIGHT_FAKE_GOOGLE_OAUTH = process.env.PLAYWRIGHT_FAKE_GOOGLE_OAUTH || 'true';
+process.env.NEXT_PUBLIC_PLAYWRIGHT_FAKE_GOOGLE_OAUTH =
+  process.env.NEXT_PUBLIC_PLAYWRIGHT_FAKE_GOOGLE_OAUTH || 'true';
+process.env.GOOGLE_OAUTH_CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID || 'playwright-google-client-id';
+process.env.GOOGLE_OAUTH_CLIENT_SECRET = process.env.GOOGLE_OAUTH_CLIENT_SECRET || 'playwright-google-client-secret';
 
 // Don't set STORAGE_LOCAL_BASE_PATH - we want to use MinIO for tests
 // const storageBasePath = path.resolve(__dirname, 'playwright-storage');

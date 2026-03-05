@@ -30,6 +30,8 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-05) The existing MSP sign-in page unit test had stale mocks for `@alga-psa/auth/client` and `@alga-psa/db/models/UserSession`; those needed correction before remember-email coverage could be trusted.
 - (2026-03-05) The current worktree has `vitest@4.0.18` with `@vitest/coverage-v8@3.2.4`, so targeted checks need `--coverage.enabled=false` until repo dependency versions are aligned.
 - (2026-03-05) `server/vitest.config.ts` was missing the alias for `@alga-psa/product-extension-actions`, which blocks component tests that touch shared UI navigation imports.
+- (2026-03-05) The SSO Playwright coverage needed a local fake Google OAuth path because the MSP flow finalizes remember-email state only after a successful callback; the test harness now uses server-side fake OAuth routes gated behind `PLAYWRIGHT_FAKE_GOOGLE_OAUTH`.
+- (2026-03-05) Revisit assertions are more reliable in a fresh browser context seeded only with the durable remember-email cookie; reusing the authenticated page leaks session state and can hide prefill regressions.
 
 ## Progress Log
 
@@ -39,6 +41,10 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-05) Completed `F003`/`F004` by rendering a `Public workstation - do not remember my email` checkbox in `MspLoginForm` and backing it with local state that defaults to `false` on each fresh render.
 - (2026-03-05) Completed `F005`-`F011` by adding `POST /api/auth/msp/remember-email`, persisting only after successful credentials sign-in, normalizing before write, clearing on public-workstation success, and using a distinct `HttpOnly` cookie with a 180-day lifetime.
 - (2026-03-05) Completed `T002`-`T010` with focused page, form, and API tests that cover absent-cookie prefill, form initialization, checkbox rendering/defaults, credentials-side cookie writes/clears, normalization, max-age, and failure-path non-persistence.
+- (2026-03-05) Completed `F012`-`F018` by threading remember-context through MSP SSO resolve, signing a short-lived pending remember cookie, finalizing or clearing the durable cookie only on successful OAuth sign-in, and preserving automatic discovery for prefilled emails.
+- (2026-03-05) Completed `T011`-`T019` and `T021` with contract, resolver, button, and callback tests covering cookie isolation, server-side prefill, SSO remember-context request/response handling, OAuth callback finalization, and fail-closed behavior.
+- (2026-03-05) Completed `F019`/`F020` and `T020`/`T022`/`T023` by verifying durable-cookie replacement on later successful sign-in, proving OAuth start alone does not create the durable cookie, and confirming client-portal auth code remains unchanged.
+- (2026-03-05) Completed `T024` with an EE Playwright credentials-flow test that signs in with a seeded MSP admin, verifies the durable remembered-email cookie, and confirms a later `/auth/msp/signin` visit prefills the email in a clean browser context.
 
 ## Commands / Runbooks
 
@@ -46,6 +52,8 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-05) Scaffold plan folder: `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/scaffold_plan.py 'Remember Previous MSP Login Username' --slug remember-previous-msp-login-username`
 - (2026-03-05) Install dependencies in a fresh worktree: `npm install --ignore-scripts`
 - (2026-03-05) Run targeted page test without coverage: `cd server && ../node_modules/.bin/vitest run --config vitest.config.ts --coverage.enabled=false src/test/unit/app/auth/msp/signin/page.test.ts`
+- (2026-03-05) Run SSO Playwright subset: `./node_modules/.bin/playwright test --config ee/server/playwright.config.ts ee/server/src/__tests__/integration/msp-remembered-email.playwright.test.ts --grep "T027|T028"`
+- (2026-03-05) Run credentials + cancelled-SSO Playwright subset: `./node_modules/.bin/playwright test --config ee/server/playwright.config.ts ee/server/src/__tests__/integration/msp-remembered-email.playwright.test.ts --grep "T024|T025|T026|T029"`
 
 ## Links / References
 

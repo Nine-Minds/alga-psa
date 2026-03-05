@@ -62,85 +62,85 @@
   {
     "id": "T011",
     "description": "Contract: the remembered-email implementation does not reuse the existing `msp_sso_last_provider` localStorage key or session cookie names.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {
     "id": "T012",
     "description": "Server/unit: the durable remembered-email cookie is read server-side for page prefill rather than from browser storage in the form component.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
     "id": "T013",
     "description": "API: the MSP SSO resolve route accepts remember-context fields for normalized email and public-workstation state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
     "id": "T014",
     "description": "API: the MSP SSO resolve route writes a short-lived pending remember-context cookie for valid SSO starts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {
     "id": "T015",
     "description": "API: the pending remember-context cookie is not written when the SSO resolve request is invalid or rejected.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013", "F017"]
   },
   {
     "id": "T016",
     "description": "Auth callback: successful OAuth login with public-workstation unchecked promotes the pending remember-context email into the durable cookie.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014", "F008", "F009"]
   },
   {
     "id": "T017",
     "description": "Auth callback: successful OAuth login with public-workstation checked clears any existing durable remembered-email cookie.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {
     "id": "T018",
     "description": "Auth callback: pending remember-context is cleared after successful OAuth finalization.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016"]
   },
   {
     "id": "T019",
     "description": "Auth callback: missing or invalid pending remember-context fails closed without blocking successful OAuth login.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F017"]
   },
   {
     "id": "T020",
     "description": "Integration: an abandoned or failed OAuth flow does not create a durable remembered-email cookie.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   },
   {
     "id": "T021",
     "description": "Unit/UI: a prefilled remembered email still results in SSO discovery fetches for the MSP sign-in page.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {
     "id": "T022",
     "description": "Integration: a later successful MSP sign-in with a different email replaces the previously remembered email when public-workstation is unchecked.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {
     "id": "T023",
     "description": "Contract: client portal login components do not gain remembered-email or public-workstation behavior from this change.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {
     "id": "T024",
     "description": "Playwright: successful credentials sign-in remembers the email and prefills it on a later visit to `/auth/msp/signin`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F002", "F005", "F009"]
   },
   {

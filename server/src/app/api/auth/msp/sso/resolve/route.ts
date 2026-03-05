@@ -14,6 +14,11 @@ import {
   parseResolverProvider,
   resolveMspSsoCredentialSource,
 } from '@alga-psa/auth/lib/sso/mspSsoResolution';
+import {
+  buildClearedPendingRememberContextCookie,
+  buildPendingRememberContextCookie,
+  createPendingRememberContextCookie,
+} from '@alga-psa/auth/lib/mspRememberedEmail';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,17 +54,19 @@ function buildGenericFailureResponse(): NextResponse {
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
   });
+  response.cookies.set(buildClearedPendingRememberContextCookie());
   return response;
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = (await request.json().catch(() => null)) as
-      | { provider?: unknown; email?: unknown; callbackUrl?: unknown }
+      | { provider?: unknown; email?: unknown; publicWorkstation?: unknown; callbackUrl?: unknown }
       | null;
 
     const provider = parseResolverProvider(body?.provider);
     const email = typeof body?.email === 'string' ? normalizeResolverEmail(body.email) : '';
+    const publicWorkstation = body?.publicWorkstation === true;
     const callbackUrl =
       typeof body?.callbackUrl === 'string' ? body.callbackUrl.trim() : undefined;
 
@@ -115,6 +122,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       secret: signingSecret,
       ttlSeconds: MSP_SSO_RESOLUTION_TTL_SECONDS,
     });
+    const pendingRememberContext = createPendingRememberContextCookie({
+      email,
+      publicWorkstation,
+      secret: signingSecret,
+    });
 
     const response = NextResponse.json({ ok: true }, { status: 200 });
     response.cookies.set({
@@ -126,6 +138,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',
     });
+    response.cookies.set(buildPendingRememberContextCookie(pendingRememberContext.value));
 
     console.info('[msp-sso-resolve] credential source selected', {
       provider,

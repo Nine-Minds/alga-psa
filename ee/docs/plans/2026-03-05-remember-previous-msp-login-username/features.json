@@ -68,55 +68,55 @@
   {
     "id": "F012",
     "description": "MSP SSO resolve requests include remember-context fields for normalized email and public-workstation preference.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
   },
   {
     "id": "F013",
     "description": "The MSP SSO resolve route persists a short-lived pending remember-context cookie before redirecting to OAuth.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements", "Architecture"]
   },
   {
     "id": "F014",
     "description": "Successful OAuth sign-in with public-workstation unchecked promotes pending remember-context into the durable remembered-email cookie.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F015",
     "description": "Successful OAuth sign-in with public-workstation checked clears any existing durable remembered-email cookie.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F016",
     "description": "OAuth callback handling clears pending remember-context after finalization.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements", "Architecture"]
   },
   {
     "id": "F017",
     "description": "Failed or abandoned OAuth flows do not create or update the durable remembered-email cookie.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements", "Error Handling"]
   },
   {
     "id": "F018",
     "description": "Prefilled remembered email still triggers the existing domain-based SSO discovery behavior on the MSP sign-in page.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "UX / UI Notes"]
   },
   {
     "id": "F019",
     "description": "A later successful MSP sign-in can replace a previously remembered email with a newly successful email when public-workstation is unchecked.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F020",
     "description": "The remembered-email feature applies only to MSP sign-in and does not change client portal login behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Scope", "Non-goals", "Acceptance Criteria (Definition of Done)"]
   }
 ]

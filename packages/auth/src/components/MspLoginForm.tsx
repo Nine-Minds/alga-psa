@@ -182,6 +182,7 @@ export default function MspLoginForm({
      <SsoProviderButtons
        callbackUrl={callbackUrl}
        email={email}
+       publicWorkstation={isPublicWorkstation}
        onError={(message) => setLookupError(message || null)}
      />
 

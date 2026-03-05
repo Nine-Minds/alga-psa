@@ -97,4 +97,16 @@ describe('POST /api/auth/msp/remember-email', () => {
       })
     );
   });
+
+  it('T022: a later successful remember-email write replaces the previously remembered email', async () => {
+    await POST(buildRequest({ email: 'first@example.com' }) as any);
+    await POST(buildRequest({ email: 'second@example.com' }) as any);
+
+    expect(setCookieMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        name: 'msp_remembered_email',
+        value: 'second@example.com',
+      })
+    );
+  });
 });

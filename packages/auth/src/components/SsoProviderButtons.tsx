@@ -32,6 +32,7 @@ export interface SsoProviderButtonsProps {
   callbackUrl: string;
   tenantHint?: string;
   email?: string;
+  publicWorkstation?: boolean;
   onError?: (message: string) => void;
 }
 
@@ -39,6 +40,7 @@ export default function SsoProviderButtons({
   callbackUrl,
   tenantHint,
   email,
+  publicWorkstation = false,
   onError,
 }: SsoProviderButtonsProps): React.ReactElement {
   const [pendingProvider, setPendingProvider] = useState<string | null>(null);
@@ -135,6 +137,7 @@ export default function SsoProviderButtons({
         body: JSON.stringify({
           provider: providerId,
           email: normalizedEmail,
+          publicWorkstation,
           callbackUrl,
         }),
       });
@@ -155,6 +158,16 @@ export default function SsoProviderButtons({
         window.localStorage.setItem(LAST_PROVIDER_STORAGE_KEY, providerId);
       }
       setPreferredProvider(providerId);
+
+      if (
+        process.env.NEXT_PUBLIC_PLAYWRIGHT_FAKE_GOOGLE_OAUTH === 'true' &&
+        providerId === 'google'
+      ) {
+        const completionUrl = new URL('/api/auth/e2e/google/complete', window.location.origin);
+        completionUrl.searchParams.set('callbackUrl', callbackUrl);
+        window.location.assign(completionUrl.toString());
+        return;
+      }
 
       const statePayload: Record<string, unknown> = {
         mode: 'login',

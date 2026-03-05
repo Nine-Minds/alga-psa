@@ -20,4 +20,14 @@ describe('Client portal auth contract', () => {
     expect(clientPortalRouteSource).not.toContain('/api/auth/msp/sso/discover');
     expect(clientPortalRouteSource).not.toContain('/api/auth/msp/sso/resolve');
   });
+
+  it('T023: client portal login components do not gain remembered-email or public-workstation behavior', () => {
+    const clientLoginSource = read('packages/auth/src/components/ClientLoginForm.tsx');
+    const clientPortalSignInSource = read('packages/auth/src/components/ClientPortalSignIn.tsx');
+
+    expect(clientLoginSource).not.toContain('initialEmail');
+    expect(clientLoginSource).not.toContain('Public workstation - do not remember my email');
+    expect(clientLoginSource).not.toContain('/api/auth/msp/remember-email');
+    expect(clientPortalSignInSource).not.toContain('initialEmail');
+  });
 });
