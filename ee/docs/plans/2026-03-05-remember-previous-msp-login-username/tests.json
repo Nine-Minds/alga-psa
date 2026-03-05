@@ -158,7 +158,7 @@
   {
     "id": "T027",
     "description": "Playwright: successful SSO sign-in remembers the email and prefills it on a later visit.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012", "F013", "F014", "F018"]
   },
   {
