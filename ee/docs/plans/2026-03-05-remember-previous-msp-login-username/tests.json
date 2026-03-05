@@ -152,7 +152,7 @@
   {
     "id": "T026",
     "description": "Playwright: failed credentials sign-in leaves previously remembered email unchanged.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
