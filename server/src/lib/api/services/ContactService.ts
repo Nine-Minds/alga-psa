@@ -140,12 +140,25 @@ export class ContactService extends BaseService<IContact> {
       return null;
     }
 
-    // Get avatar URL
+    // Get avatar URL and phone numbers
     const avatarUrl = await getContactAvatarUrl(id, context.tenant);
+
+    let phoneNumbers: any[] = [];
+    try {
+      const tableExists = await knex.schema.hasTable('contact_phone_numbers');
+      if (tableExists) {
+        phoneNumbers = await knex('contact_phone_numbers')
+          .where({ contact_id: id, tenant: context.tenant })
+          .orderByRaw('is_primary DESC, created_at ASC');
+      }
+    } catch {
+      // Table may not exist yet if migration hasn't run
+    }
 
     return {
       ...contact,
-      avatarUrl
+      avatarUrl,
+      phone_numbers: phoneNumbers
     } as IContact;
   }
 
@@ -184,12 +197,70 @@ export class ContactService extends BaseService<IContact> {
   
         // Insert contact
         const [contact] = await trx('contacts').insert(contactData).returning('*');
-  
+
+        // Create phone number rows from phone_numbers array or legacy phone_number
+        try {
+          const tableExists = await trx.schema.hasTable('contact_phone_numbers');
+          if (tableExists) {
+            const phoneNumbersArray = (data as any).phone_numbers;
+            if (Array.isArray(phoneNumbersArray) && phoneNumbersArray.length > 0) {
+              // Use structured phone_numbers if provided
+              let hasPrimary = false;
+              for (const pn of phoneNumbersArray) {
+                if (!pn.phone_number || pn.phone_number.trim() === '') continue;
+                const isPrimary = !hasPrimary && (pn.is_primary || false);
+                if (isPrimary) hasPrimary = true;
+                await trx('contact_phone_numbers').insert({
+                  tenant: context.tenant,
+                  phone_number_id: trx.raw('gen_random_uuid()'),
+                  contact_id: contact.contact_name_id,
+                  phone_type: pn.phone_type || 'Office',
+                  phone_number: pn.phone_number.trim(),
+                  extension: pn.extension || null,
+                  country_code: pn.country_code || null,
+                  is_primary: isPrimary,
+                  created_at: trx.raw('now()'),
+                  updated_at: trx.raw('now()')
+                });
+              }
+              // If no primary was set, make the first one primary
+              if (!hasPrimary) {
+                const first = await trx('contact_phone_numbers')
+                  .where({ contact_id: contact.contact_name_id, tenant: context.tenant })
+                  .orderBy('created_at', 'asc')
+                  .first();
+                if (first) {
+                  await trx('contact_phone_numbers')
+                    .where({ phone_number_id: first.phone_number_id, tenant: context.tenant })
+                    .update({ is_primary: true });
+                }
+              }
+            } else {
+              // Fall back to legacy phone_number field
+              const phoneStr = (contact.phone_number || '').trim();
+              if (phoneStr) {
+                await trx('contact_phone_numbers').insert({
+                  tenant: context.tenant,
+                  phone_number_id: trx.raw('gen_random_uuid()'),
+                  contact_id: contact.contact_name_id,
+                  phone_type: 'Office',
+                  phone_number: phoneStr,
+                  is_primary: true,
+                  created_at: trx.raw('now()'),
+                  updated_at: trx.raw('now()')
+                });
+              }
+            }
+          }
+        } catch {
+          // Table may not exist yet if migration hasn't run
+        }
+
         // Handle tags if provided
         if ((data as any).tags && (data as any).tags.length > 0) {
           await this.handleTags(contact.contact_name_id, (data as any).tags, context, trx);
         }
-  
+
         return contact as IContact;
       });
 
