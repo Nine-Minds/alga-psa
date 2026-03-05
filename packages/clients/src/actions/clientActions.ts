@@ -126,50 +126,6 @@ async function cleanupEntraReferencesBeforeClientDelete(
   }
 }
 
-export const getClientById = withAuth(async (user, { tenant }, clientId: string): Promise<IClientWithLocation | null> => {
-  // Check permission for client reading (in MSP, clients are managed via 'client' resource)
-  if (!await hasPermissionAsync(user, 'client', 'read')) {
-    throw new Error('Permission denied: Cannot read clients');
-  }
-
-  const { knex } = await createTenantKnex();
-
-  // Fetch client data with account manager info and location data
-  const clientData = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('clients as c')
-      .leftJoin('users as u', function() {
-        this.on('c.account_manager_id', '=', 'u.user_id')
-            .andOn('c.tenant', '=', 'u.tenant');
-      })
-      .leftJoin('client_locations as cl', function() {
-        this.on('c.client_id', '=', 'cl.client_id')
-            .andOn('c.tenant', '=', 'cl.tenant')
-            .andOn('cl.is_default', '=', trx.raw('true'));
-      })
-      .select(
-        'c.*',
-        'cl.email as location_email',
-        'cl.phone as location_phone',
-        'cl.address_line1 as location_address',
-        trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
-      )
-      .where({ 'c.client_id': clientId, 'c.tenant': tenant })
-      .first();
-  });
-
-  if (!clientData) {
-    return null;
-  }
-
-  // Get the client logo URL using the utility function
-  const logoUrl = await getClientLogoUrlAsync(clientId, tenant);
-
-  return {
-    ...clientData,
-    logoUrl,
-  } as IClientWithLocation;
-});
-
 export const updateClient = withAuth(async (user, { tenant }, clientId: string, updateData: Partial<Omit<IClient, 'account_manager_full_name'>>): Promise<IClient> => {
   // Check permission for client updating
   if (!await hasPermissionAsync(user, 'client', 'update')) {
@@ -271,11 +227,9 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
 
     // Email suffix functionality removed for security
 
-    // Fetch and return the updated client data including logoUrl
-    const updatedClientWithLogo = await getClientById(clientId);
-    if (!updatedClientWithLogo) {
-        throw new Error('Failed to fetch updated client data');
-    }
+    // Add logoUrl to the updated client data
+    const logoUrl = await getClientLogoUrlAsync(clientId, tenant);
+    const updatedClientWithLogo = { ...updateResult.after, logoUrl } as IClientWithLocation;
 
     const occurredAt = updateResult.occurredAt ?? updatedClientWithLogo.updated_at ?? new Date().toISOString();
     const actor = maybeUserActor(user);
@@ -871,43 +825,6 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
     console.error('Error fetching paginated clients with billing cycles:', error);
     throw error;
   }
-});
-
-export const getAllClients = withAuth(async (user, { tenant }, includeInactive: boolean = true): Promise<IClient[]> => {
-  // Check permission for client reading (in MSP, clients are managed via 'client' resource)
-  if (!await hasPermissionAsync(user, 'client', 'read')) {
-    throw new Error('Permission denied: Cannot read clients');
-  }
-
-  const { knex: db } = await createTenantKnex();
-
-  const clients = await withTransaction(db, async (trx) => {
-    const query = trx('clients')
-      .select('*')
-      .where('tenant', tenant)
-      .orderBy('client_name', 'asc');
-
-    if (!includeInactive) {
-      query.andWhere({ is_inactive: false });
-    }
-
-    return query;
-  });
-
-  if (clients.length === 0) {
-    return [];
-  }
-
-  const clientIds = clients.map((client: any) => client.client_id);
-  const logoUrlsMap = await getClientLogoUrlsBatchAsync(clientIds, tenant);
-
-  const clientsWithLogos = clients.map((client: any) => ({
-    ...client,
-    properties: client.properties || {},
-    logoUrl: logoUrlsMap.get(client.client_id) || null,
-  }));
-
-  return clientsWithLogos as IClient[];
 });
 
 export const validateClientDeletion = withAuth(async (

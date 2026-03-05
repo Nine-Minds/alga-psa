@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTenantIdBySlug } from '@alga-psa/tenancy/actions';
+import { getTenantIdBySlug } from '@alga-psa/db';
 import { getServicesForPublicBooking } from '@/lib/services/availabilityService';
 import logger from '@alga-psa/core/logger';
 

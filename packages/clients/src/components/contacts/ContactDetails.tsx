@@ -34,13 +34,14 @@ import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketA
 import { ITicketCategory } from '@alga-psa/types';
 import { IBoard } from '@alga-psa/types';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import { ClientPicker } from '../clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { TagManager } from '@alga-psa/tags/components';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { useTags } from '@alga-psa/tags/context';
 import ContactAvatarUpload from './ContactAvatarUpload';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
-import { getClientById, getAllCountries, ICountry } from '@alga-psa/clients/actions';
+import { getClientById } from '@alga-psa/clients/actions';
+import { getAllCountries, ICountry } from '@alga-psa/clients/actions';
 import ClientDetails from '../clients/ClientDetails';
 import { ContactPortalTab } from './ContactPortalTab';
 import { ContactNotesPanel } from './panels/ContactNotesPanel';

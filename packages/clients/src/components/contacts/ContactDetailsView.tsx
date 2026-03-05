@@ -25,7 +25,7 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { ButtonComponent, ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
-import { ClientPicker } from '../clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 
 // Stable empty array reference to avoid infinite re-render loops
 // when the `documents` prop is not passed (default `= []` creates a new ref each render).

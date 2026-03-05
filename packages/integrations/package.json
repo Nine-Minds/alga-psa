@@ -36,6 +36,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@alga-psa/clients": "file:../clients",
     "@alga-psa/core": "file:../core",
     "@alga-psa/db": "file:../db",
     "@alga-psa/types": "file:../types",

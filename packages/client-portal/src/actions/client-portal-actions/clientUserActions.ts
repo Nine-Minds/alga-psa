@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, getTenantSlugForTenant } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
@@ -454,6 +454,22 @@ export const deleteContactAvatar = withAuth(async (
     });
     const message = error instanceof Error ? error.message : 'Failed to delete contact avatar';
     return { success: false, message };
+  }
+});
+
+/**
+ * Get tenant slug for sign-out redirect URL.
+ * Server action wrapper so client components don't import @alga-psa/db directly.
+ */
+export const getSignOutTenantSlug = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<string | null> => {
+  try {
+    return await getTenantSlugForTenant(tenant);
+  } catch (error) {
+    console.error('Error getting tenant slug for sign out:', error);
+    return null;
   }
 });
 

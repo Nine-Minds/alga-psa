@@ -3,7 +3,7 @@
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
-import Client from '@alga-psa/clients/models/client';
+import { Client } from '@alga-psa/clients/models';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import type { IClient, IUserWithRoles } from '@alga-psa/types';
 import { withAuth, type AuthContext } from '@alga-psa/auth';

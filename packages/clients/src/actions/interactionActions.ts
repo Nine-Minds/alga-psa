@@ -189,26 +189,6 @@ export const updateInteraction = withAuth(async (
   }
 });
 
-export const getInteractionById = withAuth(async (
-  _user,
-  { tenant },
-  interactionId: string
-): Promise<IInteraction> => {
-  try {
-    const { knex } = await createTenantKnex();
-    const interaction = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await InteractionModel.getById(interactionId, tenant);
-    });
-    if (!interaction) {
-      throw new Error('Interaction not found');
-    }
-    return interaction;
-  } catch (error) {
-    console.error('Error fetching interaction:', error);
-    throw new Error('Failed to fetch interaction');
-  }
-});
-
 export const getInteractionStatuses = withAuth(async (_user, { tenant }): Promise<any[]> => {
   try {
     const { knex } = await createTenantKnex();

@@ -61,8 +61,11 @@
   },
   "dependencies": {
     "@alga-psa/assets": "*",
+    "@alga-psa/auth": "*",
     "@alga-psa/billing": "*",
     "@alga-psa/clients": "*",
+    "@alga-psa/db": "*",
+    "@alga-psa/formatting": "*",
     "@alga-psa/projects": "*",
     "@alga-psa/scheduling": "*",
     "@alga-psa/tickets": "*",

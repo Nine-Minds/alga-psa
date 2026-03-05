@@ -16,10 +16,9 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { useContactAvatar } from '@alga-psa/user-composition/hooks';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { useRouter } from 'next/navigation';
-import { checkClientPortalPermissions } from '@alga-psa/client-portal/actions';
+import { checkClientPortalPermissions, getSignOutTenantSlug } from '@alga-psa/client-portal/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useBranding } from '@alga-psa/tenancy/components';
-import { getTenantSlugForTenant } from '@alga-psa/tenancy/actions';
 import { ClientExtensionsMenu } from '@alga-psa/client-portal/components';
 import { NotificationBell } from '@alga-psa/notifications/components';
 import { ActivityDrawerProvider } from '@alga-psa/workflows/components';
@@ -46,18 +45,12 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
   const handleSignOut = async () => {
     // Get tenant slug to include in callback URL
     let callbackUrl = '/auth/client-portal/signin';
-    if (userData?.tenant) {
-      try {
-        const tenantSlug = await getTenantSlugForTenant(userData.tenant);
-        callbackUrl = `/auth/client-portal/signin?tenant=${encodeURIComponent(tenantSlug)}`;
-      } catch (error) {
-        console.error('Error getting tenant slug for sign out:', error);
-        // Fallback to signin page without tenant
-      }
+    const tenantSlug = await getSignOutTenantSlug();
+    if (tenantSlug) {
+      callbackUrl = `/auth/client-portal/signin?tenant=${encodeURIComponent(tenantSlug)}`;
     }
 
     signOut({ callbackUrl });
-    console.log('Signing out...');
   };
 
   useEffect(() => {
