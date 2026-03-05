@@ -6,9 +6,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const redirectMock = vi.fn();
 const getSessionMock = vi.fn();
 const isRevokedMock = vi.fn();
+const cookiesMock = vi.fn();
 
 const MspSignInMock = () => null;
 const PortalSwitchPromptMock = () => null;
+
+vi.mock('next/headers', () => ({
+  cookies: cookiesMock,
+}));
 
 vi.mock('next/navigation', () => ({
   redirect: redirectMock,
@@ -18,13 +23,13 @@ vi.mock('@alga-psa/auth', () => ({
   getSession: getSessionMock,
 }));
 
-vi.mock('server/src/lib/models/UserSession', () => ({
+vi.mock('@alga-psa/db/models/UserSession', () => ({
   UserSession: {
     isRevoked: (...args: unknown[]) => isRevokedMock(...args),
   },
 }));
 
-vi.mock('@alga-psa/auth', () => ({
+vi.mock('@alga-psa/auth/client', () => ({
   MspSignIn: MspSignInMock,
   PortalSwitchPrompt: PortalSwitchPromptMock,
 }));
@@ -36,6 +41,9 @@ describe('MspSignInPage', () => {
     vi.clearAllMocks();
     getSessionMock.mockReset();
     isRevokedMock.mockReset();
+    cookiesMock.mockResolvedValue({
+      get: vi.fn(() => undefined),
+    });
   });
 
   it('redirects authenticated internal users to the MSP dashboard when no callback is provided', async () => {
@@ -74,5 +82,21 @@ describe('MspSignInPage', () => {
 
     expect(redirectMock).not.toHaveBeenCalled();
     expect((result as any)?.type).toBe(MspSignInMock);
+  });
+
+  it('T001: passes the remembered email into the shared sign-in component when the durable cookie is present', async () => {
+    cookiesMock.mockResolvedValue({
+      get: vi.fn((name: string) =>
+        name === 'msp_remembered_email' ? { value: ' remembered@example.com ' } : undefined
+      ),
+    });
+    getSessionMock.mockResolvedValue(null);
+
+    const result = await MspSignInPage({ searchParams: Promise.resolve({}) });
+
+    expect((result as any)?.type).toBe(MspSignInMock);
+    expect((result as any)?.props).toMatchObject({
+      initialEmail: 'remembered@example.com',
+    });
   });
 });

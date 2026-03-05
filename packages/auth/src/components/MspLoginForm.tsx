@@ -11,11 +11,17 @@ import SsoProviderButtons from '@alga-psa/auth/sso/entry';
 
 interface MspLoginFormProps {
   callbackUrl: string;
+  initialEmail?: string;
   onError: (alertInfo: AlertProps) => void;
   onTwoFactorRequired: () => void;
 }
 
-export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired }: MspLoginFormProps) {
+export default function MspLoginForm({
+  callbackUrl,
+  initialEmail,
+  onError,
+  onTwoFactorRequired,
+}: MspLoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

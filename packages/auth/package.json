@@ -70,6 +70,10 @@
       "import": "./src/nextauth/auth.ts",
       "types": "./src/nextauth/auth.ts"
     },
+    "./lib/mspRememberedEmail": {
+      "import": "./src/lib/mspRememberedEmail.ts",
+      "types": "./src/lib/mspRememberedEmail.ts"
+    },
     "./nextauth/edge-auth": {
       "import": "./src/nextauth/edge-auth.ts",
       "types": "./src/nextauth/edge-auth.ts"

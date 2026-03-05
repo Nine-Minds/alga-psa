@@ -9,7 +9,11 @@ import Alert from './Alert';
 import type { AlertProps } from '@alga-psa/types';
 import { Ticket, Mail, Calendar, Clock, Users, FileText, Layers } from 'lucide-react';
 
-export default function MspSignIn() {
+interface MspSignInProps {
+  initialEmail?: string;
+}
+
+export default function MspSignIn({ initialEmail }: MspSignInProps) {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [alertInfo, setAlertInfo] = useState<AlertProps>({ type: 'success', title: '', message: '' });
   const [isOpen2FA, setIsOpen2FA] = useState(false);
@@ -164,6 +168,7 @@ export default function MspSignIn() {
             <CardContent>
               <MspLoginForm
                 callbackUrl={callbackUrl}
+                initialEmail={initialEmail}
                 onError={handleError}
                 onTwoFactorRequired={() => setIsOpen2FA(true)}
               />

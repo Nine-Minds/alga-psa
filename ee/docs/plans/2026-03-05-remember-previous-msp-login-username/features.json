@@ -1,0 +1,122 @@
+[
+  {
+    "id": "F001",
+    "description": "The MSP sign-in server route reads the remembered-email cookie and passes the value into the shared MSP login form.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Users and Primary Flows"]
+  },
+  {
+    "id": "F002",
+    "description": "The shared MSP login form initializes its email field from a provided remembered email value.",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F003",
+    "description": "The MSP login form renders a `Public workstation - do not remember my email` checkbox.",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F004",
+    "description": "The public-workstation checkbox defaults to unchecked on every fresh visit to MSP sign-in.",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F005",
+    "description": "Successful credentials sign-in with public-workstation unchecked stores the normalized email in the durable remembered-email cookie.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F006",
+    "description": "Successful credentials sign-in with public-workstation checked clears any existing durable remembered-email cookie.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F007",
+    "description": "Failed credentials sign-in leaves durable remembered-email state unchanged.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F008",
+    "description": "Remembered email values are normalized by trimming whitespace and converting to lowercase before persistence.",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes", "Requirements > Non-functional Requirements"]
+  },
+  {
+    "id": "F009",
+    "description": "The durable remembered-email cookie uses a 180-day max age.",
+    "implemented": false,
+    "prdRefs": ["Goals", "Requirements > Non-functional Requirements"]
+  },
+  {
+    "id": "F010",
+    "description": "The durable remembered-email cookie is stored separately from session cookies and existing remembered SSO provider state.",
+    "implemented": false,
+    "prdRefs": ["Security / Permissions", "Non-goals"]
+  },
+  {
+    "id": "F011",
+    "description": "The durable remembered-email cookie is server-readable for MSP sign-in prefill and is not required to be client-readable.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Non-functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F012",
+    "description": "MSP SSO resolve requests include remember-context fields for normalized email and public-workstation preference.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F013",
+    "description": "The MSP SSO resolve route persists a short-lived pending remember-context cookie before redirecting to OAuth.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Architecture"]
+  },
+  {
+    "id": "F014",
+    "description": "Successful OAuth sign-in with public-workstation unchecked promotes pending remember-context into the durable remembered-email cookie.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F015",
+    "description": "Successful OAuth sign-in with public-workstation checked clears any existing durable remembered-email cookie.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F016",
+    "description": "OAuth callback handling clears pending remember-context after finalization.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Architecture"]
+  },
+  {
+    "id": "F017",
+    "description": "Failed or abandoned OAuth flows do not create or update the durable remembered-email cookie.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements", "Error Handling"]
+  },
+  {
+    "id": "F018",
+    "description": "Prefilled remembered email still triggers the existing domain-based SSO discovery behavior on the MSP sign-in page.",
+    "implemented": false,
+    "prdRefs": ["Problem", "UX / UI Notes"]
+  },
+  {
+    "id": "F019",
+    "description": "A later successful MSP sign-in can replace a previously remembered email with a newly successful email when public-workstation is unchecked.",
+    "implemented": false,
+    "prdRefs": ["Users and Primary Flows", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F020",
+    "description": "The remembered-email feature applies only to MSP sign-in and does not change client portal login behavior.",
+    "implemented": false,
+    "prdRefs": ["Scope", "Non-goals", "Acceptance Criteria (Definition of Done)"]
+  }
+]
