@@ -5,7 +5,7 @@ import { Filter, Plus, XCircle } from 'lucide-react';
 import InteractionIcon from '@alga-psa/ui/components/InteractionIcon';
 import { IInteraction, IInteractionType } from '@alga-psa/types';
 import { QuickAddInteraction } from './QuickAddInteraction';
-import { getInteractionById } from '@alga-psa/msp-composition/clients/actions';
+import { getInteractionById } from '@alga-psa/clients/actions';
 import { getInteractionsForEntity } from '@alga-psa/clients/actions';
 import { getAllInteractionTypes } from '@alga-psa/clients/actions';
 import { useDrawer } from '@alga-psa/ui';

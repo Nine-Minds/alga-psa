@@ -9,7 +9,7 @@ import { getTaskWithDetails } from '@alga-psa/projects/actions/projectTaskAction
 import { getWorkItemById } from '@alga-psa/scheduling/actions';
 import { getCurrentUser, getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import { getScheduleEntries } from '@alga-psa/scheduling/actions';
-import { getInteractionById } from '@alga-psa/msp-composition/clients/actions';
+import { getInteractionById } from '@alga-psa/clients/actions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';

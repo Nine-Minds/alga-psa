@@ -24,7 +24,7 @@ import {
   deactivateClientContract,
   applyContractToClient
 } from '@alga-psa/clients/actions';
-import { getClientById } from '@alga-psa/msp-composition/clients/actions';
+import { getClientById } from '@alga-psa/clients/actions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { ClientContractDialog, ClientContractDialogSubmission } from './ClientContractDialog';

@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { getEligibleContractLinesForUI, getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
-import { getClientById } from '@alga-psa/msp-composition/clients/actions';
+import { getClientById } from '@alga-psa/clients/actions';
 import { formatISO, parseISO, addMinutes, setHours, setMinutes, setSeconds } from 'date-fns';
 import { IService } from '@alga-psa/types';
 import { Input } from '@alga-psa/ui/components/Input';

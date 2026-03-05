@@ -227,11 +227,9 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
 
     // Email suffix functionality removed for security
 
-    // Fetch and return the updated client data including logoUrl
-    const updatedClientWithLogo = await getClientById(clientId);
-    if (!updatedClientWithLogo) {
-        throw new Error('Failed to fetch updated client data');
-    }
+    // Add logoUrl to the updated client data
+    const logoUrl = await getClientLogoUrlAsync(clientId, tenant);
+    const updatedClientWithLogo = { ...updateResult.after, logoUrl } as IClientWithLocation;
 
     const occurredAt = updateResult.occurredAt ?? updatedClientWithLogo.updated_at ?? new Date().toISOString();
     const actor = maybeUserActor(user);

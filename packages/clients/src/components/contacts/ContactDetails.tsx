@@ -40,7 +40,7 @@ import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { useTags } from '@alga-psa/tags/context';
 import ContactAvatarUpload from './ContactAvatarUpload';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
-import { getClientById } from '@alga-psa/msp-composition/clients/actions';
+import { getClientById } from '@alga-psa/clients/actions';
 import { getAllCountries, ICountry } from '@alga-psa/clients/actions';
 import ClientDetails from '../clients/ClientDetails';
 import { ContactPortalTab } from './ContactPortalTab';

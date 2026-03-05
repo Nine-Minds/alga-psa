@@ -9,12 +9,8 @@ import {
   getClientLogoUrlsBatch,
   getContactAvatarUrlsBatch,
 } from '@alga-psa/formatting/avatarUtils';
-import InteractionModel from './InteractionModel';
-
-async function hasPermissionAsync(user: any, resource: string, action: string, trx?: any): Promise<boolean> {
-  const module = await import('@alga-psa/auth');
-  return module.hasPermission(user, resource, action, trx);
-}
+import { hasPermissionAsync } from '../lib/authHelpers';
+import InteractionModel from '../models/interactions';
 
 // --- Client query actions ---
 

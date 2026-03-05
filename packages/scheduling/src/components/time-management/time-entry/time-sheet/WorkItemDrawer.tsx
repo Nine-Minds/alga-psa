@@ -14,7 +14,7 @@ import EntryPopup from '../../../schedule/EntryPopup';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { InteractionDetails } from '@alga-psa/clients/components';
-import { getInteractionById } from '@alga-psa/msp-composition/clients/actions';
+import { getInteractionById } from '@alga-psa/clients/actions';
 
 interface WorkItemDrawerProps {
     workItem: IExtendedWorkItem;

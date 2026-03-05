@@ -9,7 +9,7 @@ import {
 } from '@alga-psa/integrations/actions';
 import { getServices } from '@alga-psa/integrations/actions';
 import { getTaxRegions } from '@alga-psa/integrations/actions';
-import { getAllClients } from '@alga-psa/msp-composition/clients/actions';
+import { getAllClients } from '@alga-psa/clients/actions';
 import type { IClient, IService, ITaxRegion } from '@alga-psa/types';
 import type {
   AccountingMappingContext,

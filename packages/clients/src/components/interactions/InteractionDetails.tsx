@@ -16,7 +16,7 @@ import AgentScheduleDrawer from '@alga-psa/tickets/components/ticket/AgentSchedu
 import { Button } from '@alga-psa/ui/components/Button';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { QuickAddInteraction } from '@alga-psa/clients/components/interactions/QuickAddInteraction';
-import { getClientById, getAllClients } from '@alga-psa/msp-composition/clients/actions';
+import { getClientById, getAllClients } from '@alga-psa/clients/actions';
 import { getContactByContactNameId } from '@alga-psa/clients/actions';
 import { deleteInteraction } from '@alga-psa/clients/actions';
 import { Text, Flex, Heading } from '@radix-ui/themes';
