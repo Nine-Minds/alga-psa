@@ -13,7 +13,6 @@ import { ColumnDefinition } from "@alga-psa/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@alga-psa/ui/components/Tabs";
 import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, Filter, Check, XCircle, Send } from "lucide-react";
 import { useUserPreference } from "@alga-psa/user-composition/hooks";
-import { useFeatureFlag } from "@alga-psa/ui/hooks";
 import {
   getTemplatesAction,
   updateTenantTemplateAction,
@@ -170,7 +169,6 @@ function EmailTemplatePreview({
 
 export function EmailTemplates() {
   const { data: session } = useSession();
-  const { enabled: previewEnabled } = useFeatureFlag('email-template-preview');
   const [templates, setTemplates] = useState<{
     systemTemplates: (SystemEmailTemplate & { category: string })[];
     tenantTemplates: TenantEmailTemplate[];
@@ -606,7 +604,6 @@ export function EmailTemplates() {
       <ViewTemplateDialog
         template={viewingTemplate}
         onClose={() => setViewingTemplate(null)}
-        previewEnabled={previewEnabled}
       />
 
       <EditTemplateDialog
@@ -615,7 +612,6 @@ export function EmailTemplates() {
         template={editingTemplate}
         tenant={tenant}
         onTemplatesChange={setTemplates}
-        previewEnabled={previewEnabled}
       />
     </div>
   );
@@ -624,23 +620,21 @@ export function EmailTemplates() {
 function ViewTemplateDialog({
   template,
   onClose,
-  previewEnabled,
 }: {
   template: SystemEmailTemplate | null;
   onClose: () => void;
-  previewEnabled: boolean;
 }) {
-  const [htmlTab, setHtmlTab] = useState<string>(previewEnabled ? 'preview' : 'source');
+  const [htmlTab, setHtmlTab] = useState<string>('preview');
   const [sendingTest, setSendingTest] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // Reset tab and test result when dialog opens
   useEffect(() => {
     if (template) {
-      setHtmlTab(previewEnabled ? 'preview' : 'source');
+      setHtmlTab('preview');
       setTestResult(null);
     }
-  }, [template, previewEnabled]);
+  }, [template]);
 
   const handleSendTest = async () => {
     if (!template) return;
@@ -681,32 +675,26 @@ function ViewTemplateDialog({
 
         <div>
           <Label>HTML Content</Label>
-          {previewEnabled ? (
-            <Tabs value={htmlTab} onValueChange={setHtmlTab}>
-              <TabsList>
-                <TabsTrigger value="source">Source</TabsTrigger>
-                <TabsTrigger value="preview">Preview</TabsTrigger>
-              </TabsList>
-              <TabsContent value="source">
-                <div className="p-2 bg-gray-50 rounded border whitespace-pre-wrap font-mono text-sm max-h-48 overflow-y-auto mt-2">
-                  {template.html_content}
-                </div>
-              </TabsContent>
-              <TabsContent value="preview">
-                <div className="mt-2">
-                  <EmailTemplatePreview
-                    htmlContent={template.html_content}
-                    templateName={template.name}
-                    subject={template.subject}
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
-          ) : (
-            <div className="p-2 bg-gray-50 rounded border whitespace-pre-wrap font-mono text-sm max-h-48 overflow-y-auto">
-              {template.html_content}
-            </div>
-          )}
+          <Tabs value={htmlTab} onValueChange={setHtmlTab}>
+            <TabsList>
+              <TabsTrigger value="source">Source</TabsTrigger>
+              <TabsTrigger value="preview">Preview</TabsTrigger>
+            </TabsList>
+            <TabsContent value="source">
+              <div className="p-2 bg-gray-50 rounded border whitespace-pre-wrap font-mono text-sm max-h-48 overflow-y-auto mt-2">
+                {template.html_content}
+              </div>
+            </TabsContent>
+            <TabsContent value="preview">
+              <div className="mt-2">
+                <EmailTemplatePreview
+                  htmlContent={template.html_content}
+                  templateName={template.name}
+                  subject={template.subject}
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
 
         {htmlTab !== 'preview' && (
@@ -726,19 +714,17 @@ function ViewTemplateDialog({
       </DialogContent>
 
       <DialogFooter>
-        {previewEnabled && (
-          <Button
-            id="send-test-email-view-btn"
-            type="button"
-            variant="outline"
-            onClick={handleSendTest}
-            disabled={sendingTest}
-            className="mr-auto flex items-center gap-2"
-          >
-            <Send className="h-4 w-4" />
-            {sendingTest ? "Sending..." : "Send Test Email"}
-          </Button>
-        )}
+        <Button
+          id="send-test-email-view-btn"
+          type="button"
+          variant="outline"
+          onClick={handleSendTest}
+          disabled={sendingTest}
+          className="mr-auto flex items-center gap-2"
+        >
+          <Send className="h-4 w-4" />
+          {sendingTest ? "Sending..." : "Send Test Email"}
+        </Button>
         <Button id="close-view-dialog-btn" type="button" onClick={onClose}>
           Close
         </Button>
@@ -753,14 +739,12 @@ function EditTemplateDialog({
   template,
   tenant,
   onTemplatesChange,
-  previewEnabled,
 }: {
   isOpen: boolean;
   onClose: () => void;
   template: TenantEmailTemplate | null;
   tenant: string;
   onTemplatesChange: (templates: { systemTemplates: (SystemEmailTemplate & { category: string })[]; tenantTemplates: TenantEmailTemplate[] }) => void;
-  previewEnabled: boolean;
 }) {
   const [formData, setFormData] = useState<Partial<TenantEmailTemplate>>({
     name: template?.name ?? "",
@@ -853,41 +837,31 @@ function EditTemplateDialog({
 
           <div>
             <Label htmlFor="html-content">HTML Content</Label>
-            {previewEnabled ? (
-              <Tabs value={htmlTab} onValueChange={setHtmlTab}>
-                <TabsList>
-                  <TabsTrigger value="source">Source</TabsTrigger>
-                  <TabsTrigger value="preview">Preview</TabsTrigger>
-                </TabsList>
-                <TabsContent value="source">
-                  <TextArea
-                    id="html-content"
-                    value={formData.html_content}
-                    onChange={(e) => setFormData(prev => ({ ...prev, html_content: e.target.value }))}
-                    required
-                    rows={10}
-                    className="mt-2"
+            <Tabs value={htmlTab} onValueChange={setHtmlTab}>
+              <TabsList>
+                <TabsTrigger value="source">Source</TabsTrigger>
+                <TabsTrigger value="preview">Preview</TabsTrigger>
+              </TabsList>
+              <TabsContent value="source">
+                <TextArea
+                  id="html-content"
+                  value={formData.html_content}
+                  onChange={(e) => setFormData(prev => ({ ...prev, html_content: e.target.value }))}
+                  required
+                  rows={10}
+                  className="mt-2"
+                />
+              </TabsContent>
+              <TabsContent value="preview">
+                <div className="mt-2">
+                  <EmailTemplatePreview
+                    htmlContent={formData.html_content ?? ''}
+                    templateName={template?.name ?? ''}
+                    subject={formData.subject}
                   />
-                </TabsContent>
-                <TabsContent value="preview">
-                  <div className="mt-2">
-                    <EmailTemplatePreview
-                      htmlContent={formData.html_content ?? ''}
-                      templateName={template?.name ?? ''}
-                      subject={formData.subject}
-                    />
-                  </div>
-                </TabsContent>
-              </Tabs>
-            ) : (
-              <TextArea
-                id="html-content"
-                value={formData.html_content}
-                onChange={(e) => setFormData(prev => ({ ...prev, html_content: e.target.value }))}
-                required
-                rows={10}
-              />
-            )}
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
 
           {htmlTab !== 'preview' && (
@@ -911,19 +885,17 @@ function EditTemplateDialog({
         </DialogContent>
 
         <DialogFooter>
-          {previewEnabled && (
-            <Button
-              id="send-test-email-edit-btn"
-              type="button"
-              variant="outline"
-              onClick={handleSendTest}
-              disabled={sendingTest}
-              className="mr-auto flex items-center gap-2"
-            >
-              <Send className="h-4 w-4" />
-              {sendingTest ? "Sending..." : "Send Test Email"}
-            </Button>
-          )}
+          <Button
+            id="send-test-email-edit-btn"
+            type="button"
+            variant="outline"
+            onClick={handleSendTest}
+            disabled={sendingTest}
+            className="mr-auto flex items-center gap-2"
+          >
+            <Send className="h-4 w-4" />
+            {sendingTest ? "Sending..." : "Send Test Email"}
+          </Button>
           <Button id="cancel-edit-dialog-btn" type="button" onClick={onClose} variant="outline">
             Cancel
           </Button>
