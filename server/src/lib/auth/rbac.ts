@@ -62,7 +62,11 @@ export class Permission implements IPermission {
 }
 
 const RESOURCE_CANONICAL_MAP: Record<string, string> = {
-  client: 'client'
+  client: 'client',
+  timeentry: 'time_entry',
+  time_entry: 'time_entry',
+  timesheet: 'time_sheet',
+  time_sheet: 'time_sheet',
 };
 
 function canonicalizeResource(resource: string): string {
@@ -152,13 +156,13 @@ export async function checkMultiplePermissions(
       if (isClientPortal && !permission.client) continue;
       if (!isClientPortal && !permission.msp) continue;
 
-      userPermissions.add(`${permission.resource}:${permission.action}`);
+      userPermissions.add(`${canonicalizeResource(permission.resource)}:${permission.action}`);
     }
   }
 
   return permissionChecks.map(check => ({
     resource: check.resource,
     action: check.action,
-    granted: userPermissions.has(`${check.resource}:${check.action}`)
+    granted: userPermissions.has(`${canonicalizeResource(check.resource)}:${check.action}`)
   }));
 }
