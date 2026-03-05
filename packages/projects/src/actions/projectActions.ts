@@ -574,14 +574,15 @@ export const createProject = withAuth(async (
             console.log(`[createProject] Generated project number: ${projectNumber}`);
 
             const wbsCode = await ProjectModel.generateNextWbsCode(trx, tenant, '');
-            const defaultStatus = projectStatuses[0];
             // Remove tenant field if present in validatedData
             const { tenant: _, ...safeValidatedData } = validatedData;
+            // Use the status the user selected; fall back to first available status
+            const selectedStatus = projectStatuses.find(s => s.status_id === safeValidatedData.status) ?? projectStatuses[0];
             const projectDataWithStatus = {
                 ...safeValidatedData,
-                status: defaultStatus.status_id,
-                status_name: defaultStatus.name,
-                is_closed: defaultStatus.is_closed,
+                status: selectedStatus.status_id,
+                status_name: selectedStatus.name,
+                is_closed: selectedStatus.is_closed,
                 assigned_to: safeValidatedData.assigned_to || null,
                 contact_name_id: safeValidatedData.contact_name_id || null,
                 wbs_code: wbsCode,
