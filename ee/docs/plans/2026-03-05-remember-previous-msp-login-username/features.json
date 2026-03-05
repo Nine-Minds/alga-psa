@@ -14,13 +14,13 @@
   {
     "id": "F003",
     "description": "The MSP login form renders a `Public workstation - do not remember my email` checkbox.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Requirements > Functional Requirements"]
   },
   {
     "id": "F004",
     "description": "The public-workstation checkbox defaults to unchecked on every fresh visit to MSP sign-in.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Requirements > Functional Requirements"]
   },
   {

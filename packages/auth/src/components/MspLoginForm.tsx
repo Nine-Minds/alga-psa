@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
-import { Label, Input, Button, Alert, AlertDescription } from '@alga-psa/ui/components';
+import { Label, Input, Button, Alert, AlertDescription, Checkbox } from '@alga-psa/ui/components';
 import type { AlertProps } from '@alga-psa/types';
 import { useRegisterUIComponent, withDataAutomationId } from '@alga-psa/ui/ui-reflection';
 import type { FormComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection';
@@ -25,6 +25,7 @@ export default function MspLoginForm({
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState(() => initialEmail ?? '');
   const [password, setPassword] = useState('');
+  const [isPublicWorkstation, setIsPublicWorkstation] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -127,6 +128,13 @@ export default function MspLoginForm({
             </Button>
           </div>
         </div>
+        <Checkbox
+          id="msp-public-workstation-checkbox"
+          checked={isPublicWorkstation}
+          label="Public workstation - do not remember my email"
+          onChange={(event) => setIsPublicWorkstation(event.target.checked)}
+          containerClassName="mb-0"
+        />
       </div>
 
       {lookupError && (
