@@ -1,7 +1,7 @@
 'use client';
 
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@alga-psa/ui/components/Dialog";
@@ -10,18 +10,22 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
 import { DataTable } from "@alga-psa/ui/components/DataTable";
 import { ColumnDefinition } from "@alga-psa/types";
-import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, Filter, Check, XCircle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@alga-psa/ui/components/Tabs";
+import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical, Filter, Check, XCircle, Send } from "lucide-react";
 import { useUserPreference } from "@alga-psa/user-composition/hooks";
+import { useFeatureFlag } from "@alga-psa/ui/hooks";
 import {
   getTemplatesAction,
   updateTenantTemplateAction,
   cloneSystemTemplateAction,
-  deactivateTenantTemplateAction
+  deactivateTenantTemplateAction,
+  sendTestEmailAction
 } from "../../actions";
 import {
   SystemEmailTemplate,
   TenantEmailTemplate
 } from "../../types/notification";
+import { getSampleDataForPreview } from "../../lib/templateSampleData";
 import LoadingIndicator from "@alga-psa/ui/components/LoadingIndicator";
 import {
   DropdownMenu,
@@ -65,8 +69,108 @@ interface TemplateRow {
 
 type EmailTemplateRow = CategoryRow | TemplateRow;
 
+/**
+ * Replace {{variable}} placeholders in content with sample data values.
+ * Supports both simple ({{name}}) and dotted ({{user.name}}) variables.
+ */
+export function replaceTemplateVariables(
+  content: string,
+  data: Record<string, string>
+): string {
+  // First, process {{#if condition}}...{{/if}} blocks.
+  // For preview, show the block content (with variables replaced) since sample data is available.
+  let result = content.replace(
+    /\{\{#if\s+([^}]+)\}\}([\s\S]*?)\{\{\/if\}\}/g,
+    (_match, _condition, blockContent) => blockContent
+  );
+
+  // Then replace simple {{variable}} placeholders
+  result = result.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+    const trimmedKey = key.trim();
+    return trimmedKey in data ? data[trimmedKey] : match;
+  });
+
+  return result;
+}
+
+/**
+ * Renders HTML content in a sandboxed iframe for email template preview.
+ */
+function EmailTemplatePreview({
+  htmlContent,
+  templateName,
+  subject,
+}: {
+  htmlContent: string;
+  templateName: string;
+  subject?: string;
+}) {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const sampleData = useMemo(
+    () => getSampleDataForPreview(templateName, htmlContent, subject),
+    [templateName, htmlContent, subject]
+  );
+
+  const renderedHtml = useMemo(
+    () => replaceTemplateVariables(htmlContent, sampleData),
+    [htmlContent, sampleData]
+  );
+
+  const renderedSubject = useMemo(
+    () => subject ? replaceTemplateVariables(subject, sampleData) : undefined,
+    [subject, sampleData]
+  );
+
+  // Auto-resize iframe to content height
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    const handleLoad = () => {
+      try {
+        const doc = iframe.contentDocument;
+        if (doc?.body) {
+          iframe.style.height = `${doc.body.scrollHeight + 20}px`;
+        }
+      } catch {
+        // sandbox may restrict access
+      }
+    };
+
+    iframe.addEventListener('load', handleLoad);
+    return () => iframe.removeEventListener('load', handleLoad);
+  }, [renderedHtml]);
+
+  return (
+    <div className="space-y-2">
+      {renderedSubject && (
+        <div>
+          <Label className="text-xs text-gray-500">Subject Preview</Label>
+          <div className="p-2 bg-gray-50 rounded border text-sm">
+            {renderedSubject}
+          </div>
+        </div>
+      )}
+      <div className="border rounded overflow-hidden">
+        <iframe
+          ref={iframeRef}
+          srcDoc={renderedHtml}
+          sandbox="allow-same-origin"
+          title="Email template preview"
+          className="w-full min-h-[200px] bg-white"
+          style={{ border: 'none' }}
+        />
+      </div>
+      <p className="text-xs text-gray-400">
+        Preview uses sample data. Actual emails will contain real values.
+      </p>
+    </div>
+  );
+}
+
 export function EmailTemplates() {
   const { data: session } = useSession();
+  const { enabled: previewEnabled } = useFeatureFlag('email-template-preview');
   const [templates, setTemplates] = useState<{
     systemTemplates: (SystemEmailTemplate & { category: string })[];
     tenantTemplates: TenantEmailTemplate[];
@@ -502,6 +606,7 @@ export function EmailTemplates() {
       <ViewTemplateDialog
         template={viewingTemplate}
         onClose={() => setViewingTemplate(null)}
+        previewEnabled={previewEnabled}
       />
 
       <EditTemplateDialog
@@ -510,6 +615,7 @@ export function EmailTemplates() {
         template={editingTemplate}
         tenant={tenant}
         onTemplatesChange={setTemplates}
+        previewEnabled={previewEnabled}
       />
     </div>
   );
@@ -517,11 +623,43 @@ export function EmailTemplates() {
 
 function ViewTemplateDialog({
   template,
-  onClose
+  onClose,
+  previewEnabled,
 }: {
   template: SystemEmailTemplate | null;
   onClose: () => void;
+  previewEnabled: boolean;
 }) {
+  const [htmlTab, setHtmlTab] = useState<string>(previewEnabled ? 'preview' : 'source');
+  const [sendingTest, setSendingTest] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  // Reset tab and test result when dialog opens
+  useEffect(() => {
+    if (template) {
+      setHtmlTab(previewEnabled ? 'preview' : 'source');
+      setTestResult(null);
+    }
+  }, [template, previewEnabled]);
+
+  const handleSendTest = async () => {
+    if (!template) return;
+    setSendingTest(true);
+    setTestResult(null);
+    try {
+      const result = await sendTestEmailAction(template.id, 'system');
+      if (result.success) {
+        setTestResult({ success: true, message: `Test email sent to ${result.sentTo}` });
+      } else {
+        setTestResult({ success: false, message: result.error || 'Failed to send test email.' });
+      }
+    } catch (err) {
+      setTestResult({ success: false, message: err instanceof Error ? err.message : 'Failed to send test email.' });
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
   if (!template) return null;
 
   return (
@@ -543,20 +681,64 @@ function ViewTemplateDialog({
 
         <div>
           <Label>HTML Content</Label>
-          <div className="p-2 bg-gray-50 rounded border whitespace-pre-wrap font-mono text-sm max-h-48 overflow-y-auto">
-            {template.html_content}
-          </div>
+          {previewEnabled ? (
+            <Tabs value={htmlTab} onValueChange={setHtmlTab}>
+              <TabsList>
+                <TabsTrigger value="source">Source</TabsTrigger>
+                <TabsTrigger value="preview">Preview</TabsTrigger>
+              </TabsList>
+              <TabsContent value="source">
+                <div className="p-2 bg-gray-50 rounded border whitespace-pre-wrap font-mono text-sm max-h-48 overflow-y-auto mt-2">
+                  {template.html_content}
+                </div>
+              </TabsContent>
+              <TabsContent value="preview">
+                <div className="mt-2">
+                  <EmailTemplatePreview
+                    htmlContent={template.html_content}
+                    templateName={template.name}
+                    subject={template.subject}
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <div className="p-2 bg-gray-50 rounded border whitespace-pre-wrap font-mono text-sm max-h-48 overflow-y-auto">
+              {template.html_content}
+            </div>
+          )}
         </div>
 
-        <div>
-          <Label>Text Content</Label>
-          <div className="p-2 bg-gray-50 rounded border whitespace-pre-wrap font-mono text-sm max-h-48 overflow-y-auto">
-            {template.text_content}
+        {htmlTab !== 'preview' && (
+          <div>
+            <Label>Text Content</Label>
+            <div className="p-2 bg-gray-50 rounded border whitespace-pre-wrap font-mono text-sm max-h-48 overflow-y-auto">
+              {template.text_content}
+            </div>
           </div>
-        </div>
+        )}
+
+        {testResult && (
+          <div className={`p-3 rounded text-sm ${testResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+            {testResult.message}
+          </div>
+        )}
       </DialogContent>
 
       <DialogFooter>
+        {previewEnabled && (
+          <Button
+            id="send-test-email-view-btn"
+            type="button"
+            variant="outline"
+            onClick={handleSendTest}
+            disabled={sendingTest}
+            className="mr-auto flex items-center gap-2"
+          >
+            <Send className="h-4 w-4" />
+            {sendingTest ? "Sending..." : "Send Test Email"}
+          </Button>
+        )}
         <Button id="close-view-dialog-btn" type="button" onClick={onClose}>
           Close
         </Button>
@@ -570,13 +752,15 @@ function EditTemplateDialog({
   onClose,
   template,
   tenant,
-  onTemplatesChange
+  onTemplatesChange,
+  previewEnabled,
 }: {
   isOpen: boolean;
   onClose: () => void;
   template: TenantEmailTemplate | null;
   tenant: string;
   onTemplatesChange: (templates: { systemTemplates: (SystemEmailTemplate & { category: string })[]; tenantTemplates: TenantEmailTemplate[] }) => void;
+  previewEnabled: boolean;
 }) {
   const [formData, setFormData] = useState<Partial<TenantEmailTemplate>>({
     name: template?.name ?? "",
@@ -585,6 +769,9 @@ function EditTemplateDialog({
     text_content: template?.text_content ?? "",
     language_code: template?.language_code ?? "en"
   });
+  const [htmlTab, setHtmlTab] = useState<string>('source');
+  const [sendingTest, setSendingTest] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // Update form data when template changes
   useEffect(() => {
@@ -596,6 +783,8 @@ function EditTemplateDialog({
         text_content: template.text_content,
         language_code: template.language_code
       });
+      setHtmlTab('source');
+      setTestResult(null);
     }
   }, [template]);
   const [isSaving, setIsSaving] = useState(false);
@@ -613,6 +802,29 @@ function EditTemplateDialog({
       console.error("Failed to save template:", error);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSendTest = async () => {
+    if (!template) return;
+    setSendingTest(true);
+    setTestResult(null);
+    try {
+      // Send the current draft content (not the saved version)
+      const result = await sendTestEmailAction(template.id, 'tenant', {
+        subject: formData.subject,
+        html_content: formData.html_content,
+        text_content: formData.text_content,
+      });
+      if (result.success) {
+        setTestResult({ success: true, message: `Test email sent to ${result.sentTo}` });
+      } else {
+        setTestResult({ success: false, message: result.error || 'Failed to send test email.' });
+      }
+    } catch (err) {
+      setTestResult({ success: false, message: err instanceof Error ? err.message : 'Failed to send test email.' });
+    } finally {
+      setSendingTest(false);
     }
   };
 
@@ -641,28 +853,77 @@ function EditTemplateDialog({
 
           <div>
             <Label htmlFor="html-content">HTML Content</Label>
-            <TextArea
-              id="html-content"
-              value={formData.html_content}
-              onChange={(e) => setFormData(prev => ({ ...prev, html_content: e.target.value }))}
-              required
-              rows={10}
-            />
+            {previewEnabled ? (
+              <Tabs value={htmlTab} onValueChange={setHtmlTab}>
+                <TabsList>
+                  <TabsTrigger value="source">Source</TabsTrigger>
+                  <TabsTrigger value="preview">Preview</TabsTrigger>
+                </TabsList>
+                <TabsContent value="source">
+                  <TextArea
+                    id="html-content"
+                    value={formData.html_content}
+                    onChange={(e) => setFormData(prev => ({ ...prev, html_content: e.target.value }))}
+                    required
+                    rows={10}
+                    className="mt-2"
+                  />
+                </TabsContent>
+                <TabsContent value="preview">
+                  <div className="mt-2">
+                    <EmailTemplatePreview
+                      htmlContent={formData.html_content ?? ''}
+                      templateName={template?.name ?? ''}
+                      subject={formData.subject}
+                    />
+                  </div>
+                </TabsContent>
+              </Tabs>
+            ) : (
+              <TextArea
+                id="html-content"
+                value={formData.html_content}
+                onChange={(e) => setFormData(prev => ({ ...prev, html_content: e.target.value }))}
+                required
+                rows={10}
+              />
+            )}
           </div>
 
-          <div>
-            <Label htmlFor="text-content">Text Content</Label>
-            <TextArea
-              id="text-content"
-              value={formData.text_content}
-              onChange={(e) => setFormData(prev => ({ ...prev, text_content: e.target.value }))}
-              required
-              rows={10}
-            />
-          </div>
+          {htmlTab !== 'preview' && (
+            <div>
+              <Label htmlFor="text-content">Text Content</Label>
+              <TextArea
+                id="text-content"
+                value={formData.text_content}
+                onChange={(e) => setFormData(prev => ({ ...prev, text_content: e.target.value }))}
+                required
+                rows={10}
+              />
+            </div>
+          )}
+
+          {testResult && (
+            <div className={`p-3 rounded text-sm ${testResult.success ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+              {testResult.message}
+            </div>
+          )}
         </DialogContent>
 
         <DialogFooter>
+          {previewEnabled && (
+            <Button
+              id="send-test-email-edit-btn"
+              type="button"
+              variant="outline"
+              onClick={handleSendTest}
+              disabled={sendingTest}
+              className="mr-auto flex items-center gap-2"
+            >
+              <Send className="h-4 w-4" />
+              {sendingTest ? "Sending..." : "Send Test Email"}
+            </Button>
+          )}
           <Button id="cancel-edit-dialog-btn" type="button" onClick={onClose} variant="outline">
             Cancel
           </Button>
