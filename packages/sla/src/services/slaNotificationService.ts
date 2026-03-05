@@ -131,23 +131,34 @@ export async function sendSlaNotification(
       ? 'sla-breach'
       : 'sla-warning';
 
-    // 5. Prepare template data
+    // 5. Look up SLA policy name
+    const policy = await trx('sla_policies')
+      .where({ tenant: context.tenant, sla_policy_id: context.slaPolicyId })
+      .select('policy_name')
+      .first();
+
+    // 6. Prepare template data
+    const formattedTime = formatRemainingTime(Math.abs(context.remainingMinutes));
     const templateData = {
       ticketNumber: context.ticketNumber,
       ticketTitle: context.ticketTitle,
       clientName: context.clientName || 'Unknown',
       priorityName: context.priorityName || 'Unknown',
+      priority: context.priorityName || 'Unknown',
+      policyName: policy?.policy_name || 'Unknown',
       slaType: context.slaType === 'response' ? 'Response' : 'Resolution',
       thresholdPercent: context.thresholdPercent,
-      remainingTime: formatRemainingTime(context.remainingMinutes),
+      remainingTime: formattedTime,
+      timeRemaining: formattedTime,
+      timeOverdue: formattedTime,
       dueAt: context.dueAt.toISOString(),
       ticketUrl: `/msp/tickets/${context.ticketId}`
     };
 
-    // 6. Parse channels from threshold
+    // 7. Parse channels from threshold
     const channels: SlaNotificationChannel[] = threshold.channels || ['in_app'];
 
-    // 7. Send notifications to each recipient
+    // 8. Send notifications to each recipient
     for (const recipient of recipients) {
       try {
         // Send in-app notification
@@ -168,12 +179,13 @@ export async function sendSlaNotification(
 
         // Send email notification
         if (channels.includes('email') && recipient.email) {
+          const recipientName = [recipient.first_name, recipient.last_name].filter(Boolean).join(' ') || 'there';
           const emailResult = await sendEmailNotification(
             trx,
             context.tenant,
             recipient,
             emailTemplateName,
-            templateData
+            { ...templateData, recipientName }
           );
 
           if (emailResult) {

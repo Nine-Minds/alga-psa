@@ -225,6 +225,38 @@ export const updateSlaPolicy = withAuth(async (
 });
 
 /**
+ * Get usage information for an SLA policy — which boards, clients, and tickets reference it.
+ */
+export const getSlaPolicyUsage = withAuth(async (_user, { tenant }, policyId: string): Promise<{
+  boards: { board_id: string; name: string }[];
+  clients: { client_id: string; client_name: string }[];
+  ticketCount: number;
+}> => {
+  const { knex: db } = await createTenantKnex();
+
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    const [boards, clients, ticketCountResult] = await Promise.all([
+      trx('boards')
+        .where({ tenant, sla_policy_id: policyId })
+        .select('board_id', 'name'),
+      trx('clients')
+        .where({ tenant, sla_policy_id: policyId })
+        .select('client_id', 'client_name'),
+      trx('tickets')
+        .where({ tenant, sla_policy_id: policyId })
+        .count('* as count')
+        .first()
+    ]);
+
+    return {
+      boards: boards as { board_id: string; name: string }[],
+      clients: clients as { client_id: string; client_name: string }[],
+      ticketCount: Number(ticketCountResult?.count ?? 0)
+    };
+  });
+});
+
+/**
  * Delete an SLA policy and its associated targets and notification thresholds.
  */
 export const deleteSlaPolicy = withAuth(async (_user, { tenant }, policyId: string): Promise<void> => {
@@ -241,25 +273,18 @@ export const deleteSlaPolicy = withAuth(async (_user, { tenant }, policyId: stri
         throw new Error(`SLA policy ${policyId} not found`);
       }
 
-      // Check if policy is assigned to any clients or boards
-      const [assignedClients, assignedBoards] = await Promise.all([
+      // Clear SLA policy reference from any assigned clients, boards, and tickets
+      await Promise.all([
         trx('clients')
           .where({ tenant, sla_policy_id: policyId })
-          .count('* as count')
-          .first(),
+          .update({ sla_policy_id: null, updated_at: trx.fn.now() }),
         trx('boards')
           .where({ tenant, sla_policy_id: policyId })
-          .count('* as count')
-          .first()
+          .update({ sla_policy_id: null, updated_at: trx.fn.now() }),
+        trx('tickets')
+          .where({ tenant, sla_policy_id: policyId })
+          .update({ sla_policy_id: null })
       ]);
-
-      if (assignedClients && Number(assignedClients.count) > 0) {
-        throw new Error('Cannot delete SLA policy that is assigned to clients. Please remove the policy from all clients first.');
-      }
-
-      if (assignedBoards && Number(assignedBoards.count) > 0) {
-        throw new Error('Cannot delete SLA policy that is assigned to boards. Please remove the policy from all boards first.');
-      }
 
       // Delete notification thresholds (CitusDB doesn't support ON DELETE CASCADE)
       await trx('sla_notification_thresholds')

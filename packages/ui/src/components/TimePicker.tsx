@@ -86,7 +86,7 @@ export function TimePicker({
 
     const normalizedHour = hourNum % 12 || 12;
     const displayPeriod = hourNum >= 12 ? 'PM' : 'AM';
-    return `${String(normalizedHour).padStart(2, '0')}:${minuteStr.padStart(2, '0')} ${displayPeriod}`;
+    return `${String(normalizedHour)}:${minuteStr.padStart(2, '0')} ${displayPeriod}`;
   }, [timeFormat]);
 
   const parseManualTimeInput = React.useCallback((rawValue: string): string | null => {
@@ -234,7 +234,8 @@ export function TimePicker({
     if (timeFormat === '24h') {
       return `${value}`;
     } else {
-      return `${hour}:${minute} ${period}`;
+      const displayHour = String(parseInt(hour));
+      return `${displayHour}:${minute} ${period}`;
     }
   }, [value, placeholder, parseValue, timeFormat]);
 
