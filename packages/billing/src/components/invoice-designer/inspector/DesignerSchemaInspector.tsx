@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { Input } from '@alga-psa/ui/components/Input';
+import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getComponentSchema } from '../schema/componentSchema';
 import type { DesignerNode } from '../state/designerStore';
@@ -47,6 +48,13 @@ const normalizeInspectorPath = (input: string): string => {
   if (path === 'layout' || path.startsWith('layout.')) return `props.${path}`;
   if (path === 'style' || path.startsWith('style.')) return `props.${path}`;
   return path;
+};
+
+const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{6})$/;
+
+const toPickerHexColor = (value: string): string | null => {
+  if (!value) return null;
+  return HEX_COLOR_RE.test(value) ? value : null;
 };
 
 type Props = {
@@ -220,18 +228,44 @@ export const DesignerSchemaInspector: React.FC<Props> = ({ node, nodesById }) =>
     if (field.kind === 'css-color') {
       const value = resolveValue(field);
       const valueAsString = typeof value === 'string' ? value : '';
+      const pickerColor = toPickerHexColor(valueAsString);
       return (
         <div key={field.id}>
           <label htmlFor={domId} className="text-[10px] text-slate-500 block mb-1">
             {field.label}
           </label>
-          <Input
-            id={domId}
-            value={valueAsString}
-            placeholder={field.placeholder}
-            onChange={(event) => applyNormalized(field.path, normalizeCssColor(event.target.value), false)}
-            onBlur={(event) => applyNormalized(field.path, normalizeCssColor(event.target.value), true)}
-          />
+          <div className="flex items-center gap-2">
+            <Input
+              id={domId}
+              className="flex-1"
+              value={valueAsString}
+              placeholder={field.placeholder}
+              onChange={(event) => applyNormalized(field.path, normalizeCssColor(event.target.value), false)}
+              onBlur={(event) => applyNormalized(field.path, normalizeCssColor(event.target.value), true)}
+            />
+            <ColorPicker
+              currentBackgroundColor={pickerColor}
+              currentTextColor={null}
+              onSave={(backgroundColor) => applyNormalized(field.path, normalizeCssColor(backgroundColor ?? ''), true)}
+              showTextColor={false}
+              previewType="circle"
+              colorMode="solid"
+              trigger={
+                <button
+                  type="button"
+                  id={`${domId}-color-picker`}
+                  className="h-10 w-10 shrink-0 rounded border border-slate-300 bg-white p-1 transition-colors hover:border-slate-400"
+                  title={`Pick ${field.label.toLowerCase()}`}
+                  aria-label={`Pick ${field.label.toLowerCase()}`}
+                >
+                  <span
+                    className="block h-full w-full rounded"
+                    style={{ backgroundColor: pickerColor ?? 'transparent' }}
+                  />
+                </button>
+              }
+            />
+          </div>
         </div>
       );
     }
