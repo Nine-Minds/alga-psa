@@ -45,6 +45,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-05) Completed `T011`-`T019` and `T021` with contract, resolver, button, and callback tests covering cookie isolation, server-side prefill, SSO remember-context request/response handling, OAuth callback finalization, and fail-closed behavior.
 - (2026-03-05) Completed `F019`/`F020` and `T020`/`T022`/`T023` by verifying durable-cookie replacement on later successful sign-in, proving OAuth start alone does not create the durable cookie, and confirming client-portal auth code remains unchanged.
 - (2026-03-05) Completed `T024` with an EE Playwright credentials-flow test that signs in with a seeded MSP admin, verifies the durable remembered-email cookie, and confirms a later `/auth/msp/signin` visit prefills the email in a clean browser context.
+- (2026-03-05) Completed `T025` with an EE Playwright credentials-flow test that starts from a seeded remembered-email cookie, signs in with `Public workstation - do not remember my email` checked, and verifies later sign-in visits show an empty email field.
 
 ## Commands / Runbooks
 

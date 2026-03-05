@@ -146,7 +146,7 @@
   {
     "id": "T025",
     "description": "Playwright: successful credentials sign-in with public-workstation checked clears a previously remembered email and later visits show an empty email field.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003", "F004", "F006"]
   },
   {
