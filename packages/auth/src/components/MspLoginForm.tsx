@@ -23,10 +23,14 @@ export default function MspLoginForm({
   onTwoFactorRequired,
 }: MspLoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => initialEmail ?? '');
   const [password, setPassword] = useState('');
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    setEmail(initialEmail ?? '');
+  }, [initialEmail]);
 
   // Register the form component
   const updateForm = useRegisterUIComponent<FormComponent>({

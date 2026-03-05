@@ -34,6 +34,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 
 - (2026-03-05) Completed `F001` by adding shared remember-email constants in `packages/auth/src/lib/mspRememberedEmail.ts`, reading the durable cookie server-side in `server/src/app/auth/msp/signin/page.tsx`, and plumbing `initialEmail` through `MspSignIn` to the shared login form.
 - (2026-03-05) Completed `T001` with a page-level unit test that proves the remembered-email cookie is read on the server and passed into the shared MSP sign-in component.
+- (2026-03-05) Completed `F002` by seeding `MspLoginForm` email state from `initialEmail` and syncing that state when the server-provided prefill changes.
 
 ## Commands / Runbooks
 

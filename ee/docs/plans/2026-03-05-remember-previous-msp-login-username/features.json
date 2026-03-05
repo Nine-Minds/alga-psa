@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "The shared MSP login form initializes its email field from a provided remembered email value.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Requirements > Functional Requirements"]
   },
   {
