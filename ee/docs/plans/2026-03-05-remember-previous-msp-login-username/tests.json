@@ -170,7 +170,7 @@
   {
     "id": "T029",
     "description": "Playwright: failed or cancelled SSO does not create a durable remembered-email cookie.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   }
 ]
