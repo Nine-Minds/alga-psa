@@ -38,7 +38,7 @@ import KanbanZoomControl, { calculateColumnWidth } from './KanbanZoomControl';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
 import { IClient } from '@alga-psa/types';
-import { ChevronRight, HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, CheckSquare, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3 } from 'lucide-react';
+import { ChevronRight, HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, CheckSquare, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3, Plus } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
@@ -2521,6 +2521,18 @@ export default function ProjectDetail({
                           <span className={styles.kanbanStatusStripName}>
                             {status.custom_name || status.name}
                           </span>
+                          <Button
+                            id={`sticky-add-task-button-${status.project_status_mapping_id}`}
+                            variant="default"
+                            size="sm"
+                            onClick={() => handleAddCard(status)}
+                            disabled={isAddingTask || !selectedPhase}
+                            tooltipText="Add Task"
+                            tooltip={true}
+                            className="!w-5 !h-5 !p-0 !min-w-0 flex-shrink-0"
+                          >
+                            <Plus className="w-3 h-3 text-white" />
+                          </Button>
                           <span className={styles.kanbanStatusStripCount} style={countStyle}>
                             {statusTaskCounts[status.project_status_mapping_id] ?? 0}
                           </span>
