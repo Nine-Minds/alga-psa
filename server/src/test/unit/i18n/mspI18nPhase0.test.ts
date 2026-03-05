@@ -8,7 +8,7 @@ import {
   LOCALE_CONFIG as UI_LOCALE_CONFIG,
   ROUTE_NAMESPACES,
   getNamespacesForRoute,
-} from '@alga-psa/ui/lib/i18n/config';
+} from '@alga-psa/core/i18n/config';
 
 const repoRoot = path.resolve(__dirname, '../../../../..');
 const localesRoot = path.join(repoRoot, 'server/public/locales');

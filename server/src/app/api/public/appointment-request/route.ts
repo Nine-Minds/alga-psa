@@ -5,7 +5,7 @@ import {
   createPublicAppointmentRequestSchema,
   CreatePublicAppointmentRequestInput
 } from '@/lib/schemas/appointmentSchemas';
-import { getTenantIdBySlug } from '@alga-psa/tenancy/actions';
+import { getTenantIdBySlug } from '@alga-psa/db';
 import { getConnection } from '@/lib/db/db';
 import { getServicesForPublicBooking } from '@/lib/services/availabilityService';
 import { SystemEmailService } from '@alga-psa/email';

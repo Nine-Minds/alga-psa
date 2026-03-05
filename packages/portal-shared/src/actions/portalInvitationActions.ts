@@ -2,7 +2,7 @@
 
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { PortalInvitationService } from '../services/PortalInvitationService';
-import { getTenantSlugForTenant } from '@alga-psa/tenancy/actions';
+import { getTenantSlugForTenant } from '@alga-psa/db';
 import { getSystemEmailService, TenantEmailService, sendPortalInvitationEmail } from '@alga-psa/email';
 import { UserService } from '@alga-psa/users';
 import { runAsSystem, createSystemContext } from '@alga-psa/db';

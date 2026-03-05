@@ -4,7 +4,7 @@ import logger from '@alga-psa/core/logger';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { IUser } from '@alga-psa/types';
 import { getPortalDomain } from '@alga-psa/client-portal/models/PortalDomainModel';
-import { getTenantSlugForTenant } from '@alga-psa/tenancy/actions/tenant-actions';
+import { getTenantSlugForTenant } from '@alga-psa/db';
 import { sendTenantRecoveryEmail } from '@alga-psa/email';
 
 export interface TenantLoginInfo {

@@ -8,7 +8,7 @@ import { PhoneInput } from "@alga-psa/ui/components/PhoneInput";
 import { Label } from "@alga-psa/ui/components/Label";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
 import { addContact } from '@alga-psa/clients/actions';
-import { ClientPicker } from '../clients/ClientPicker';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import type { IClient } from '@alga-psa/types';
 import { IContact } from '@alga-psa/types';
 import { Switch } from '@alga-psa/ui/components/Switch';

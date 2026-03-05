@@ -3,7 +3,7 @@
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '@alga-psa/db';
 import { getPortalDomain } from '@alga-psa/client-portal/models/PortalDomainModel';
-import { getTenantSlugForTenant } from '@alga-psa/tenancy/actions';
+import { getTenantSlugForTenant } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 
 export interface TenantPortalLinkResult {
