@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { Fragment, useEffect, useRef } from 'react';
 import type { IProjectPhase } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Upload } from 'lucide-react';
@@ -73,6 +73,33 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
   onDragEnd,
   onImport,
 }) => {
+  const phasesScrollRef = useRef<HTMLUListElement>(null);
+
+  useEffect(() => {
+    const el = phasesScrollRef.current;
+    if (!el) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      const { deltaY } = event;
+      if (deltaY === 0) return;
+
+      const atTop = el.scrollTop <= 0;
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1;
+      const scrollingDown = deltaY > 0;
+      const canScroll = (scrollingDown && !atBottom) || (!scrollingDown && !atTop);
+
+      if (canScroll) {
+        event.preventDefault();
+        event.stopPropagation();
+        el.scrollTop += deltaY;
+      }
+    };
+
+    // Non-passive to reliably prevent board/page scroll while list can still scroll.
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, []);
+
   const handleContainerDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     
@@ -135,7 +162,8 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
     };
 
     return (
-      <div 
+      <li
+        aria-hidden="true"
         className={`${styles.phaseDropPlaceholder} ${visible ? styles.visible : ''}`}
         onDrop={handlePlaceholderDrop}
         onDragOver={handlePlaceholderDragOver}
@@ -178,9 +206,15 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
         </div>
       </div>
       {/* Scrollable phases list */}
-      <ul className={styles.phasesScrollArea} onDragOver={handleContainerDragOver} onDrop={handleContainerDrop}>
+      <ul
+        ref={phasesScrollRef}
+        data-phase-scroll-area="true"
+        className={styles.phasesScrollArea}
+        onDragOver={handleContainerDragOver}
+        onDrop={handleContainerDrop}
+      >
         {(() => {
-          const sortedPhases = phases
+          const sortedPhases = [...phases]
             .sort((a, b) => {
               // Sort by order_key if available, otherwise fall back to end_date
               if (a.order_key || b.order_key) {
@@ -209,7 +243,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
                 />
               )}
               {sortedPhases.map((phase: IProjectPhase, index: number): React.JSX.Element => (
-          <div key={phase.phase_id}>
+          <Fragment key={phase.phase_id}>
             {/* Drop placeholder before phase - but not for first phase as it's handled above */}
             {phaseDropTarget?.phaseId === phase.phase_id && phaseDropTarget.position === 'before' && index > 0 && (
               <DropPlaceholder
@@ -255,7 +289,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
                 visible={true}
               />
             )}
-          </div>
+          </Fragment>
         ))}
             </>
           );
