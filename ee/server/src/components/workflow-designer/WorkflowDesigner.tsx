@@ -13,7 +13,7 @@ import {
   Zap, Database, Link, Workflow, Mail, Send, Inbox, MailOpen,
   FileText, Layers, Box, Cog, Terminal, Globe, Search, GripVertical,
   // Business operations icons
-  MessageSquare, Edit, UserPlus, CheckCircle, Paperclip, Building,
+  MessageSquare, Edit, UserPlus, CheckCircle, Paperclip, Building, Users,
   Bell, Calendar, SquareCheck, StickyNote, ClipboardList
 } from 'lucide-react';
 import {
@@ -235,6 +235,36 @@ const CONTROL_BLOCKS: Array<{ id: Step['type']; label: string; category: string;
   { id: 'control.callWorkflow', label: 'Call Workflow', category: 'Control', description: 'Invoke another workflow' },
   { id: 'control.return', label: 'Return', category: 'Control', description: 'Stop execution' }
 ];
+
+// Designer-only action curation.
+// We hide legacy Email workflow-specific actions and expose only universal, domain-oriented actions.
+const DESIGNER_ACTION_CATEGORY_BY_MODULE: Record<string, string> = {
+  tickets: 'Tickets',
+  contacts: 'Contacts',
+  clients: 'Clients',
+  email: 'Communication',
+  notifications: 'Communication',
+  scheduling: 'Scheduling',
+  projects: 'Projects',
+  time: 'Time',
+  crm: 'CRM'
+};
+
+const getActionModuleName = (actionId: string): string => actionId.split('.')[0]?.trim().toLowerCase() ?? '';
+
+const isLegacyWorkflowSpecificAction = (action: ActionRegistryItem): boolean =>
+  (action.ui?.category ?? '').trim().toLowerCase() === 'email';
+
+const getDesignerActionCategory = (action: ActionRegistryItem): string | null => {
+  if (isLegacyWorkflowSpecificAction(action)) return null;
+  const moduleName = getActionModuleName(action.id);
+  return DESIGNER_ACTION_CATEGORY_BY_MODULE[moduleName] ?? null;
+};
+
+const LEGACY_WORKFLOW_NODE_IDS = new Set<string>([
+  'email.parseBody',
+  'email.renderCommentBlocks'
+]);
 
 const DEFAULT_PAYLOAD_SCHEMA = 'payload.EmailWorkflowPayload.v1';
 
@@ -2876,30 +2906,36 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     const searchTerm = search.trim().toLowerCase();
 
     // §16.6 - Enhanced registry items with output schema preview
-    const registryItems = nodeRegistry.map((node) => {
-      // For action.call nodes, find the corresponding action in actionRegistry
-      const action = node.id === 'action.call'
-        ? actionRegistry[0] // Just show a placeholder for action.call
-        : actionRegistry.find(a => a.id === node.id);
-      const outputFields = action?.outputSchema
-        ? extractSchemaFields(action.outputSchema, action.outputSchema).map(f => f.name)
-        : [];
+    const registryItems = nodeRegistry
+      .filter((node) => !LEGACY_WORKFLOW_NODE_IDS.has(node.id))
+      .map((node) => {
+        // For action.call nodes, find the corresponding action in actionRegistry
+        const action = node.id === 'action.call'
+          ? actionRegistry[0] // Just show a placeholder for action.call
+          : actionRegistry.find(a => a.id === node.id);
+        const outputFields = action?.outputSchema
+          ? extractSchemaFields(action.outputSchema, action.outputSchema).map(f => f.name)
+          : [];
 
-      return {
-        id: node.id,
-        label: node.ui?.label || node.id,
-        description: node.ui?.description || node.id,
-        category: node.ui?.category || 'Nodes',
-        type: node.id,
-        outputSummary: outputFields.length > 0
-          ? `Returns: ${outputFields.slice(0, 3).join(', ')}${outputFields.length > 3 ? '...' : ''}`
-          : undefined,
-        searchableFields: outputFields.join(' ').toLowerCase()
-      };
-    });
+        return {
+          id: node.id,
+          label: node.ui?.label || node.id,
+          description: node.ui?.description || node.id,
+          category: node.ui?.category || 'Nodes',
+          type: node.id,
+          outputSummary: outputFields.length > 0
+            ? `Returns: ${outputFields.slice(0, 3).join(', ')}${outputFields.length > 3 ? '...' : ''}`
+            : undefined,
+          searchableFields: outputFields.join(' ').toLowerCase()
+        };
+      });
 
-    // Also add action registry actions directly for better discoverability
-    const actionItems = actionRegistry.map((action) => {
+    // Also add action registry actions directly for better discoverability.
+    // Only include curated universal actions in the designer palette.
+    const actionItems = actionRegistry.flatMap((action) => {
+      const curatedCategory = getDesignerActionCategory(action);
+      if (!curatedCategory) return [];
+
       const outputFields = action.outputSchema
         ? extractSchemaFields(action.outputSchema, action.outputSchema).map(f => f.name)
         : [];
@@ -2907,11 +2943,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         ? extractSchemaFields(action.inputSchema, action.inputSchema).map(f => f.name)
         : [];
 
-      return {
+      return [{
         id: `action:${action.id}`,
         label: action.ui?.label || action.id,
         description: action.ui?.description || `Action: ${action.id}`,
-        category: action.ui?.category || 'Actions',
+        category: curatedCategory,
         type: 'action.call' as Step['type'],
         actionId: action.id,
         actionVersion: action.version,
@@ -2919,7 +2955,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           ? `Returns: ${outputFields.slice(0, 3).join(', ')}${outputFields.length > 3 ? '...' : ''}`
           : undefined,
         searchableFields: [...outputFields, ...inputFields].join(' ').toLowerCase()
-      };
+      }];
     });
 
     const controlItems = CONTROL_BLOCKS.map((block) => ({
@@ -2946,53 +2982,23 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   }, [nodeRegistry, actionRegistry, search]);
 
   const groupedPaletteItems = useMemo(() => {
-    // First pass: collect all categories to detect conflicts
-    const allCategories = new Set<string>();
-    paletteItems.forEach(item => {
-      if (item.category !== 'Business Operations') {
-        allCategories.add(item.category);
-      }
-    });
-
     const grouped = paletteItems.reduce<Record<string, typeof paletteItems>>((acc, item) => {
-      let category = item.category;
-      
-      // Split Business Operations into module-based subcategories
-      if (category === 'Business Operations') {
-        const itemWithAction = item as typeof item & { actionId?: string };
-        if (itemWithAction.actionId) {
-          // Extract module name from actionId (e.g., "tickets.create" -> "Tickets")
-          const moduleName = itemWithAction.actionId.split('.')[0];
-          // Capitalize first letter
-          category = moduleName.charAt(0).toUpperCase() + moduleName.slice(1);
-          // Handle special case for CRM
-          if (category === 'Crm') category = 'CRM';
-          
-          // Check if this category already exists (e.g., "Email" conflicts with email workflow actions)
-          // If it does, prefix with "Business Operations: " to keep them separate
-          if (allCategories.has(category)) {
-            category = `Business Operations: ${category}`;
-          }
-        }
-      }
-      
+      const category = item.category;
       acc[category] = acc[category] || [];
       acc[category].push(item);
       return acc;
     }, {});
 
-    // Define category order: Control, Core, Transform, Email, then Business Operations subcategories
+    // Stable, intentional palette ordering.
     const categoryOrder = [
       'Control',
       'Core',
       'Transform',
       'Email',
-      // Business Operations subcategories in logical order
       'Tickets',
-      'Clients',
       'Contacts',
-      'Business Operations: Email',
-      'Notifications',
+      'Clients',
+      'Communication',
       'Scheduling',
       'Projects',
       'Time',
@@ -3010,13 +3016,6 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       if (aIndex !== -1) return -1;
       // If only b is in the order list, it comes first
       if (bIndex !== -1) return 1;
-      // For Business Operations subcategories, sort them together
-      const aIsBO = a.startsWith('Business Operations:');
-      const bIsBO = b.startsWith('Business Operations:');
-      if (aIsBO && !bIsBO) return 1; // Business Operations after main categories
-      if (!aIsBO && bIsBO) return -1;
-      if (aIsBO && bIsBO) return a.localeCompare(b); // Sort BO subcategories alphabetically
-      // Otherwise, sort alphabetically
       return a.localeCompare(b);
     });
 
@@ -3082,10 +3081,12 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       if (actionId === 'tickets.find') return <Search className={iconClass} />;
       
       // Business Operations - Clients
-      if (actionId === 'clients.find' || actionId === 'clients.search') return <Building className={iconClass} />;
+      if (actionId === 'clients.find') return <Building className={iconClass} />;
+      if (actionId === 'clients.search') return <Search className={iconClass} />;
       
       // Business Operations - Contacts
-      if (actionId === 'contacts.find' || actionId === 'contacts.search') return <User className={iconClass} />;
+      if (actionId === 'contacts.find') return <User className={iconClass} />;
+      if (actionId === 'contacts.search') return <Users className={iconClass} />;
       
       // Business Operations - Email
       if (actionId === 'email.send') return <Send className={iconClass} />;
