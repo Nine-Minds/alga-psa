@@ -164,7 +164,7 @@
   {
     "id": "T028",
     "description": "Playwright: successful SSO sign-in with public-workstation checked clears previously remembered email.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015", "F016"]
   },
   {

@@ -48,6 +48,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-05) Completed `T025` with an EE Playwright credentials-flow test that starts from a seeded remembered-email cookie, signs in with `Public workstation - do not remember my email` checked, and verifies later sign-in visits show an empty email field.
 - (2026-03-05) Completed `T026` with an EE Playwright failure-path test that preserves an existing remembered-email cookie across a rejected MSP credentials sign-in and confirms the old email still prefills on the next visit.
 - (2026-03-05) Completed `T027` with an EE Playwright SSO-flow test that resolves Google from the prefilled domain, completes the fake OAuth callback, verifies the durable cookie, and confirms later MSP sign-in visits prefill the SSO email.
+- (2026-03-05) Completed `T028` with an EE Playwright SSO-flow test that starts from a seeded remembered-email cookie, opts into `Public workstation`, and verifies a successful SSO callback clears the durable cookie before the next sign-in visit.
 
 ## Commands / Runbooks
 
