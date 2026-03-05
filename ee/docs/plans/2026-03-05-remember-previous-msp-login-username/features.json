@@ -26,43 +26,43 @@
   {
     "id": "F005",
     "description": "Successful credentials sign-in with public-workstation unchecked stores the normalized email in the durable remembered-email cookie.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F006",
     "description": "Successful credentials sign-in with public-workstation checked clears any existing durable remembered-email cookie.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F007",
     "description": "Failed credentials sign-in leaves durable remembered-email state unchanged.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F008",
     "description": "Remembered email values are normalized by trimming whitespace and converting to lowercase before persistence.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Requirements > Non-functional Requirements"]
   },
   {
     "id": "F009",
     "description": "The durable remembered-email cookie uses a 180-day max age.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements > Non-functional Requirements"]
   },
   {
     "id": "F010",
     "description": "The durable remembered-email cookie is stored separately from session cookies and existing remembered SSO provider state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Security / Permissions", "Non-goals"]
   },
   {
     "id": "F011",
     "description": "The durable remembered-email cookie is server-readable for MSP sign-in prefill and is not required to be client-readable.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Non-functional Requirements", "Security / Permissions"]
   },
   {

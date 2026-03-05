@@ -58,6 +58,10 @@
       "import": "./src/client.ts",
       "types": "./src/client.ts"
     },
+    "./sso/entry": {
+      "import": "./src/components/SsoProviderButtons.tsx",
+      "types": "./src/components/SsoProviderButtons.tsx"
+    },
     "./components": {
       "import": "./src/components/index.ts",
       "types": "./src/components/index.ts"

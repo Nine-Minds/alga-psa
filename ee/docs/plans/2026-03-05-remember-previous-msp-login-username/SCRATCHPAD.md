@@ -17,6 +17,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-05) A successful public-workstation sign-in must clear any previously remembered email on that machine.
 - (2026-03-05) Durable remembered-email lifetime is 180 days.
 - (2026-03-05) Recommended implementation shape is a server-owned durable cookie plus a short-lived pending cookie for the SSO redirect round-trip.
+- (2026-03-05) Credentials-side remember persistence uses a dedicated MSP API route after successful `signIn('credentials', { redirect: false })` resolution, matching the plan artifacts and keeping cookie writes server-owned.
 
 ## Discoveries / Constraints
 
@@ -36,6 +37,8 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-05) Completed `T001` with a page-level unit test that proves the remembered-email cookie is read on the server and passed into the shared MSP sign-in component.
 - (2026-03-05) Completed `F002` by seeding `MspLoginForm` email state from `initialEmail` and syncing that state when the server-provided prefill changes.
 - (2026-03-05) Completed `F003`/`F004` by rendering a `Public workstation - do not remember my email` checkbox in `MspLoginForm` and backing it with local state that defaults to `false` on each fresh render.
+- (2026-03-05) Completed `F005`-`F011` by adding `POST /api/auth/msp/remember-email`, persisting only after successful credentials sign-in, normalizing before write, clearing on public-workstation success, and using a distinct `HttpOnly` cookie with a 180-day lifetime.
+- (2026-03-05) Completed `T002`-`T010` with focused page, form, and API tests that cover absent-cookie prefill, form initialization, checkbox rendering/defaults, credentials-side cookie writes/clears, normalization, max-age, and failure-path non-persistence.
 
 ## Commands / Runbooks
 
@@ -50,6 +53,8 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - MSP sign-in page: `server/src/app/auth/msp/signin/page.tsx`
 - Shared MSP sign-in shell: `packages/auth/src/components/MspSignIn.tsx`
 - Shared MSP login form: `packages/auth/src/components/MspLoginForm.tsx`
+- Remember-email helper: `packages/auth/src/lib/mspRememberedEmail.ts`
+- Credentials remember route: `server/src/app/api/auth/msp/remember-email/route.ts`
 - MSP SSO buttons: `packages/auth/src/components/SsoProviderButtons.tsx`
 - MSP SSO discover route: `server/src/app/api/auth/msp/sso/discover/route.ts`
 - MSP SSO resolve route: `server/src/app/api/auth/msp/sso/resolve/route.ts`

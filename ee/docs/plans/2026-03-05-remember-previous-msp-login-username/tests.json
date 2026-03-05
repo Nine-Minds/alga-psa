@@ -8,55 +8,55 @@
   {
     "id": "T002",
     "description": "Unit: MSP sign-in page passes no initial email when the durable cookie is absent.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {
     "id": "T003",
     "description": "Unit: MSP login form initializes the email field from `initialEmail`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
     "id": "T004",
     "description": "Unit: MSP login form renders the `Public workstation - do not remember my email` checkbox.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
     "id": "T005",
     "description": "Unit: the public-workstation checkbox defaults to unchecked.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {
     "id": "T006",
     "description": "API: the credentials remember-email endpoint stores the normalized lowercase email when public-workstation is false.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005", "F008", "F009"]
   },
   {
     "id": "T007",
     "description": "API: the credentials remember-email endpoint clears the durable cookie when public-workstation is true.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {
     "id": "T008",
     "description": "Unit: failed credentials sign-in does not call the remember-email persistence endpoint.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
     "id": "T009",
     "description": "API: whitespace-padded mixed-case emails are persisted as trimmed lowercase values.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
     "id": "T010",
     "description": "API: the durable remembered-email cookie is written with a 180-day max age.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {

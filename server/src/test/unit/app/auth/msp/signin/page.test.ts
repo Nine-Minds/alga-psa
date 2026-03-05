@@ -99,4 +99,13 @@ describe('MspSignInPage', () => {
       initialEmail: 'remembered@example.com',
     });
   });
+
+  it('T002: passes no initial email when the durable cookie is absent', async () => {
+    getSessionMock.mockResolvedValue(null);
+
+    const result = await MspSignInPage({ searchParams: Promise.resolve({}) });
+
+    expect((result as any)?.type).toBe(MspSignInMock);
+    expect((result as any)?.props.initialEmail).toBeUndefined();
+  });
 });

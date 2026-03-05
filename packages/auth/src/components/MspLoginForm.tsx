@@ -40,6 +40,22 @@ export default function MspLoginForm({
     label: 'MSP Login'
   });
 
+  const persistRememberedEmail = async () => {
+    try {
+      await fetch('/api/auth/msp/remember-email', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          email,
+          publicWorkstation: isPublicWorkstation,
+        }),
+      });
+    } catch {
+      // Remembered-email persistence is best-effort and must not block sign-in.
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLookupError(null);
@@ -63,6 +79,7 @@ export default function MspLoginForm({
           message: 'Invalid email or password. Please try again.' 
         });
       } else if (result?.url) {
+        await persistRememberedEmail();
         window.location.href = result.url;
       }
     } catch (error) {
