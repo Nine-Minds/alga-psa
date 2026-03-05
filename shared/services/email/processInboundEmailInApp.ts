@@ -367,6 +367,10 @@ export async function processInboundEmailInApp(
 
   const senderIsProviderMailbox =
     Boolean(senderEmail) && Boolean(providerMailboxEmail) && senderEmail === providerMailboxEmail;
+  const senderName =
+    typeof emailData.from?.name === 'string' && emailData.from.name.trim()
+      ? emailData.from.name.trim()
+      : undefined;
   const hasReplySignals =
     Boolean(conversationToken) ||
     Boolean(emailData.inReplyTo) ||
@@ -388,8 +392,41 @@ export async function processInboundEmailInApp(
     return { outcome: 'skipped', reason: 'self_notification' };
   }
 
-  const upsertWatchListBestEffort = async (ticketId: string) => {
-    if (!inboundWatchListRecipients.length) {
+  const buildCommentEmailMetadata = () => ({
+    messageId: emailData.id,
+    provider: emailData.provider,
+    providerId,
+    threadId: emailData.threadId,
+    inReplyTo: emailData.inReplyTo,
+    references: emailData.references,
+    from: emailData.from,
+    fromAddress: senderEmail ?? undefined,
+    fromName: senderName,
+    to: emailData.to,
+    subject: emailData.subject,
+    receivedAt: emailData.receivedAt,
+  });
+
+  const buildUnmatchedSenderWatchListRecipients = (matchedContactId?: string | null) => {
+    if (matchedContactId || !senderEmail || senderIsProviderMailbox) {
+      return [] as TicketWatchListRecipientInput[];
+    }
+
+    return [
+      {
+        email: senderEmail,
+        active: true,
+        name: senderName,
+        source: 'inbound_from',
+      },
+    ] as TicketWatchListRecipientInput[];
+  };
+
+  const upsertWatchListBestEffort = async (
+    ticketId: string,
+    recipients: TicketWatchListRecipientInput[] = inboundWatchListRecipients
+  ) => {
+    if (!recipients.length) {
       return;
     }
 
@@ -397,7 +434,7 @@ export async function processInboundEmailInApp(
       await upsertTicketWatchListRecipients(
         {
           ticketId,
-          recipients: inboundWatchListRecipients,
+          recipients,
         },
         tenantId
       );
@@ -407,7 +444,7 @@ export async function processInboundEmailInApp(
         providerId,
         emailId: emailData.id,
         ticketId,
-        recipientCount: inboundWatchListRecipients.length,
+        recipientCount: recipients.length,
         error: error instanceof Error ? error.message : String(error),
       });
     }
@@ -440,6 +477,10 @@ export async function processInboundEmailInApp(
         });
         const serializedBlocks = JSON.stringify(blocks);
         const matchedSenderContact = await resolveSenderContact({ ticketId: match.ticketId });
+        const watchListRecipients = mergeTicketWatchListRecipients(
+          inboundWatchListRecipients,
+          buildUnmatchedSenderWatchListRecipients(matchedSenderContact?.contact_id ?? null)
+        );
         const commentId = await createCommentFromEmail(
           {
             ticket_id: match.ticketId,
@@ -449,18 +490,7 @@ export async function processInboundEmailInApp(
             author_id: matchedSenderContact?.user_id,
             contact_id: matchedSenderContact?.contact_id,
             metadata: {
-              email: {
-                messageId: emailData.id,
-                provider: emailData.provider,
-                providerId,
-                threadId: emailData.threadId,
-                inReplyTo: emailData.inReplyTo,
-                references: emailData.references,
-                from: emailData.from,
-                to: emailData.to,
-                subject: emailData.subject,
-                receivedAt: emailData.receivedAt,
-              },
+              email: buildCommentEmailMetadata(),
               parser: {
                 confidence: parsedEmail?.confidence,
                 strategy: parsedEmail?.strategy,
@@ -498,7 +528,7 @@ export async function processInboundEmailInApp(
           artifactsResult,
         });
 
-        await upsertWatchListBestEffort(match.ticketId);
+        await upsertWatchListBestEffort(match.ticketId, watchListRecipients);
 
         return {
           outcome: 'replied',
@@ -564,6 +594,10 @@ export async function processInboundEmailInApp(
     });
     const serializedBlocks = JSON.stringify(blocks);
     const matchedSenderContact = await resolveSenderContact({ ticketId: threadedTicketId });
+    const watchListRecipients = mergeTicketWatchListRecipients(
+      inboundWatchListRecipients,
+      buildUnmatchedSenderWatchListRecipients(matchedSenderContact?.contact_id ?? null)
+    );
     const commentId = await createCommentFromEmail(
       {
         ticket_id: threadedTicketId,
@@ -573,18 +607,7 @@ export async function processInboundEmailInApp(
         author_id: matchedSenderContact?.user_id,
         contact_id: matchedSenderContact?.contact_id,
         metadata: {
-          email: {
-            messageId: emailData.id,
-            provider: emailData.provider,
-            providerId,
-            threadId: emailData.threadId,
-            inReplyTo: emailData.inReplyTo,
-            references: emailData.references,
-            from: emailData.from,
-            to: emailData.to,
-            subject: emailData.subject,
-            receivedAt: emailData.receivedAt,
-          },
+          email: buildCommentEmailMetadata(),
           parser: {
             confidence: parsedEmail?.confidence,
             strategy: parsedEmail?.strategy,
@@ -622,7 +645,7 @@ export async function processInboundEmailInApp(
       artifactsResult,
     });
 
-    await upsertWatchListBestEffort(threadedTicketId);
+    await upsertWatchListBestEffort(threadedTicketId, watchListRecipients);
 
     return {
       outcome: 'replied',
@@ -733,7 +756,10 @@ export async function processInboundEmailInApp(
     text: parsedText,
   });
   const serializedBlocks = JSON.stringify(blocks);
-  const seededWatchList = mergeTicketWatchListRecipients([], inboundWatchListRecipients);
+  const seededWatchList = mergeTicketWatchListRecipients(
+    inboundWatchListRecipients,
+    buildUnmatchedSenderWatchListRecipients(commentAuthorContactId ?? null)
+  );
   const seededAttributes = setTicketWatchListOnAttributes(undefined, seededWatchList);
 
   const ticketResult = await createTicketFromEmail(
@@ -773,18 +799,7 @@ export async function processInboundEmailInApp(
       author_id: commentAuthorUserId ?? undefined,
       contact_id: commentAuthorContactId ?? undefined,
       metadata: {
-        email: {
-          messageId: emailData.id,
-          provider: emailData.provider,
-          providerId,
-          threadId: emailData.threadId,
-          inReplyTo: emailData.inReplyTo,
-          references: emailData.references,
-          from: emailData.from,
-          to: emailData.to,
-          subject: emailData.subject,
-          receivedAt: emailData.receivedAt,
-        },
+        email: buildCommentEmailMetadata(),
         parser: {
           confidence: parsedEmail?.confidence,
           strategy: parsedEmail?.strategy,

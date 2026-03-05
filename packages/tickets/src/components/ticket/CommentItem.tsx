@@ -19,6 +19,7 @@ import { getCommentResponseSource } from '../../lib/responseSource';
 import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { resolveCommentAuthor } from '../../lib/commentAuthorResolution';
 import ResponseSourceBadge from '../ResponseSourceBadge';
+import { normalizeEmailAddress } from '@shared/lib/email/addressUtils';
 
 interface CommentItemProps {
   id?: string;
@@ -36,6 +37,43 @@ interface CommentItemProps {
   onDelete: (comment: IComment) => void;
   hideInternalTab?: boolean;
   uploadFile?: (file: File, blockId?: string) => Promise<string>;
+}
+
+function getInboundSenderIdentity(
+  metadata: IComment['metadata']
+): { fromAddress: string | null; fromName: string | null } {
+  const emailMetadata =
+    metadata?.email && typeof metadata.email === 'object' && !Array.isArray(metadata.email)
+      ? (metadata.email as Record<string, unknown>)
+      : null;
+
+  if (!emailMetadata) {
+    return { fromAddress: null, fromName: null };
+  }
+
+  const fromValue =
+    emailMetadata.from && typeof emailMetadata.from === 'object' && !Array.isArray(emailMetadata.from)
+      ? (emailMetadata.from as Record<string, unknown>)
+      : null;
+
+  const fromAddress =
+    normalizeEmailAddress(
+      typeof emailMetadata.fromAddress === 'string'
+        ? emailMetadata.fromAddress
+        : typeof fromValue?.email === 'string'
+          ? fromValue.email
+          : undefined
+    ) ?? null;
+
+  const fromNameRaw =
+    typeof emailMetadata.fromName === 'string'
+      ? emailMetadata.fromName
+      : typeof fromValue?.name === 'string'
+        ? fromValue.name
+        : '';
+  const fromName = fromNameRaw.trim() ? fromNameRaw.trim() : null;
+
+  return { fromAddress, fromName };
 }
 
 const CommentItem: React.FC<CommentItemProps> = ({
@@ -108,17 +146,27 @@ const CommentItem: React.FC<CommentItemProps> = ({
       }),
     [conversation, userMap, contactMap]
   );
+  const inboundSenderIdentity = useMemo(
+    () => getInboundSenderIdentity(conversation.metadata),
+    [conversation.metadata]
+  );
 
   const getAuthorName = () => {
     if (conversation.is_system_generated) return 'Bundled update';
     if (resolvedAuthor.source === 'user') {
       return `${resolvedAuthor.displayName}${resolvedAuthor.userType === 'client' ? ' (Client)' : ''}`;
     }
+    if (resolvedAuthor.source === 'unknown' && inboundSenderIdentity.fromAddress) {
+      return inboundSenderIdentity.fromName || inboundSenderIdentity.fromAddress;
+    }
     return resolvedAuthor.displayName;
   };
 
   const getAuthorEmail = () => {
     if (conversation.is_system_generated) return null;
+    if (resolvedAuthor.source === 'unknown' && inboundSenderIdentity.fromAddress) {
+      return inboundSenderIdentity.fromAddress;
+    }
     return resolvedAuthor.email ?? null;
   };
 

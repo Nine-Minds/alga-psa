@@ -581,6 +581,12 @@ describe('processInboundEmailInApp', () => {
               name: 'Watcher Cc',
               source: 'inbound_cc',
             },
+            {
+              email: 'client@example.com',
+              active: true,
+              name: 'Client User',
+              source: 'inbound_from',
+            },
           ],
         },
       }),
@@ -614,6 +620,12 @@ describe('processInboundEmailInApp', () => {
               active: true,
               name: 'Watcher',
               source: 'inbound_to',
+            },
+            {
+              email: 'client@example.com',
+              active: true,
+              name: 'Client User',
+              source: 'inbound_from',
             },
           ],
         },
@@ -649,6 +661,12 @@ describe('processInboundEmailInApp', () => {
               active: true,
               name: 'Watcher',
               source: 'inbound_to',
+            },
+            {
+              email: 'client@example.com',
+              active: true,
+              name: 'Client User',
+              source: 'inbound_from',
             },
           ],
         },
@@ -695,6 +713,12 @@ describe('processInboundEmailInApp', () => {
             name: 'Watcher',
             source: 'inbound_to',
           },
+          {
+            email: 'client@example.com',
+            active: true,
+            name: 'Client User',
+            source: 'inbound_from',
+          },
         ],
       },
       'tenant-1'
@@ -732,13 +756,19 @@ describe('processInboundEmailInApp', () => {
             name: 'Watcher',
             source: 'inbound_to',
           },
+          {
+            email: 'client@example.com',
+            active: true,
+            name: 'Client User',
+            source: 'inbound_from',
+          },
         ],
       },
       'tenant-1'
     );
   });
 
-  it('T024: when no To/CC recipients remain after exclusions, no watch-list upsert is attempted', async () => {
+  it('T024: when sender is unmatched and To/CC recipients are excluded, sender is still upserted to watch-list', async () => {
     parseEmailReplyBodyMock.mockResolvedValue({
       sanitizedText: 'Reply body',
       sanitizedHtml: undefined,
@@ -767,6 +797,19 @@ describe('processInboundEmailInApp', () => {
       }),
     });
 
-    expect(upsertTicketWatchListRecipientsMock).not.toHaveBeenCalled();
+    expect(upsertTicketWatchListRecipientsMock).toHaveBeenCalledWith(
+      {
+        ticketId: 'ticket-reply-123',
+        recipients: [
+          {
+            email: 'client@example.com',
+            active: true,
+            name: 'Client User',
+            source: 'inbound_from',
+          },
+        ],
+      },
+      'tenant-1'
+    );
   });
 });
