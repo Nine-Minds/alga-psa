@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters, DeletionValidationResult } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
@@ -122,6 +123,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   canUpdateTickets = true,
 }) => {
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
+  const router = useRouter();
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['ticket']);
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
@@ -187,24 +189,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
-  const filtersHaveInitialValues = useMemo(() => {
-    return Boolean(
-      initialFilterValues.boardId ||
-      initialFilterValues.clientId ||
-      (initialFilterValues.statusId && initialFilterValues.statusId !== 'open') ||
-      (initialFilterValues.priorityId && initialFilterValues.priorityId !== 'all') ||
-      initialFilterValues.categoryId ||
-      (initialFilterValues.tags && initialFilterValues.tags.length > 0) ||
-      (initialFilterValues.assignedToIds && initialFilterValues.assignedToIds.length > 0) ||
-      (initialFilterValues.assignedTeamIds && initialFilterValues.assignedTeamIds.length > 0) ||
-      initialFilterValues.includeUnassigned ||
-      (initialFilterValues.dueDateFilter && initialFilterValues.dueDateFilter !== 'all') ||
-      initialFilterValues.dueDateFrom ||
-      initialFilterValues.dueDateTo ||
-      (initialFilterValues.slaStatusFilter && initialFilterValues.slaStatusFilter !== 'all')
-    );
-  }, [initialFilterValues.boardId, initialFilterValues.clientId, initialFilterValues.statusId, initialFilterValues.priorityId, initialFilterValues.categoryId, initialFilterValues.tags, initialFilterValues.assignedToIds, initialFilterValues.assignedTeamIds, initialFilterValues.includeUnassigned, initialFilterValues.dueDateFilter, initialFilterValues.dueDateFrom, initialFilterValues.dueDateTo, initialFilterValues.slaStatusFilter]);
-
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
   // Teams are now provided via initialTeams from server-side fetch
@@ -219,8 +203,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [selectedTags, setSelectedTags] = useState<string[]>(initialFilterValues.tags || []);
   const ticketTagsRef = useRef<Record<string, ITag[]>>(initialTicketTags);
   const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>(initialTags || []);
-  // Track previous initialFilterValues.tags to detect actual changes (for back/forward navigation)
-  const prevInitialTagsRef = useRef<string[] | undefined>(initialFilterValues.tags);
   const [tagsVersion, setTagsVersion] = useState(0); // Used to force re-render when tags are fetched
 
   const isFiltered = useMemo(() => {
@@ -278,21 +260,108 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setTeamAvatarUrls(initialTeamAvatarUrls);
   }, [initialTeamAvatarUrls]);
 
-  // Sync selectedTags when initialFilterValues.tags changes (e.g., back/forward navigation)
-  // Uses a ref to compare previous values and avoid infinite loops
+  const shouldSkipNextFilterEmitRef = useRef(false);
+
+  // Keep local filter controls in sync with URL-derived props (for back/forward restoration).
   useEffect(() => {
-    const prevTags = prevInitialTagsRef.current;
-    const newTags = initialFilterValues.tags;
+    const nextSelectedBoard = initialFilterValues.boardId ?? null;
+    const nextSelectedClient = initialFilterValues.clientId ?? null;
+    const nextSelectedStatus = initialFilterValues.statusId ?? 'open';
+    const nextSelectedPriority = initialFilterValues.priorityId ?? 'all';
+    const nextSelectedCategories = initialFilterValues.categoryId ? [initialFilterValues.categoryId] : [];
+    const nextSearchQuery = initialFilterValues.searchQuery ?? '';
+    const nextBoardFilterState = initialFilterValues.boardFilterState ?? 'active';
+    const nextSelectedTags = initialFilterValues.tags ?? [];
+    const nextSelectedAssignees = initialFilterValues.assignedToIds ?? [];
+    const nextSelectedTeams = teamsV2Enabled ? (initialFilterValues.assignedTeamIds ?? []) : [];
+    const nextIncludeUnassigned = initialFilterValues.includeUnassigned ?? false;
+    const nextSelectedDueDateFilter = initialFilterValues.dueDateFilter ?? 'all';
+    const nextDueDateFilterValue = (() => {
+      const dateStr = initialFilterValues.dueDateFrom || initialFilterValues.dueDateTo;
+      return dateStr ? new Date(dateStr) : undefined;
+    })();
+    const nextSelectedResponseState = initialFilterValues.responseState ?? 'all';
+    const nextSelectedSlaStatus = initialFilterValues.slaStatusFilter ?? 'all';
+    const nextBundleView = initialFilterValues.bundleView ?? 'bundled';
 
-    // Compare arrays - only update if actually different
-    const prevStr = JSON.stringify(prevTags?.slice().sort() || []);
-    const newStr = JSON.stringify(newTags?.slice().sort() || []);
+    const normalizedCurrentDueDate = dueDateFilterValue ? dueDateFilterValue.toISOString() : undefined;
+    const normalizedNextDueDate = nextDueDateFilterValue ? nextDueDateFilterValue.toISOString() : undefined;
 
-    if (prevStr !== newStr) {
-      prevInitialTagsRef.current = newTags;
-      setSelectedTags(newTags || []);
+    const hasChanges =
+      selectedBoard !== nextSelectedBoard ||
+      selectedClient !== nextSelectedClient ||
+      selectedStatus !== nextSelectedStatus ||
+      selectedPriority !== nextSelectedPriority ||
+      JSON.stringify(selectedCategories) !== JSON.stringify(nextSelectedCategories) ||
+      searchQuery !== nextSearchQuery ||
+      boardFilterState !== nextBoardFilterState ||
+      JSON.stringify(selectedTags) !== JSON.stringify(nextSelectedTags) ||
+      JSON.stringify(selectedAssignees) !== JSON.stringify(nextSelectedAssignees) ||
+      JSON.stringify(selectedTeams) !== JSON.stringify(nextSelectedTeams) ||
+      includeUnassigned !== nextIncludeUnassigned ||
+      selectedDueDateFilter !== nextSelectedDueDateFilter ||
+      normalizedCurrentDueDate !== normalizedNextDueDate ||
+      selectedResponseState !== nextSelectedResponseState ||
+      selectedSlaStatus !== nextSelectedSlaStatus ||
+      bundleView !== nextBundleView;
+
+    if (!hasChanges) {
+      return;
     }
-  }, [initialFilterValues.tags]);
+
+    shouldSkipNextFilterEmitRef.current = true;
+    setSelectedBoard(nextSelectedBoard);
+    setSelectedClient(nextSelectedClient);
+    setSelectedStatus(nextSelectedStatus);
+    setSelectedPriority(nextSelectedPriority);
+    setSelectedCategories(nextSelectedCategories);
+    setSearchQuery(nextSearchQuery);
+    setBoardFilterState(nextBoardFilterState);
+    setSelectedTags(nextSelectedTags);
+    setSelectedAssignees(nextSelectedAssignees);
+    setSelectedTeams(nextSelectedTeams);
+    setIncludeUnassigned(nextIncludeUnassigned);
+    setSelectedDueDateFilter(nextSelectedDueDateFilter);
+    setDueDateFilterValue(nextDueDateFilterValue);
+    setSelectedResponseState(nextSelectedResponseState as 'awaiting_client' | 'awaiting_internal' | 'none' | 'all');
+    setSelectedSlaStatus(nextSelectedSlaStatus);
+    setBundleView(nextBundleView);
+  }, [
+    initialFilterValues.assignedTeamIds,
+    initialFilterValues.assignedToIds,
+    initialFilterValues.boardFilterState,
+    initialFilterValues.boardId,
+    initialFilterValues.bundleView,
+    initialFilterValues.categoryId,
+    initialFilterValues.clientId,
+    initialFilterValues.dueDateFilter,
+    initialFilterValues.dueDateFrom,
+    initialFilterValues.dueDateTo,
+    initialFilterValues.includeUnassigned,
+    initialFilterValues.priorityId,
+    initialFilterValues.responseState,
+    initialFilterValues.searchQuery,
+    initialFilterValues.slaStatusFilter,
+    initialFilterValues.statusId,
+    initialFilterValues.tags,
+    boardFilterState,
+    bundleView,
+    dueDateFilterValue,
+    includeUnassigned,
+    searchQuery,
+    selectedAssignees,
+    selectedBoard,
+    selectedCategories,
+    selectedClient,
+    selectedDueDateFilter,
+    selectedPriority,
+    selectedResponseState,
+    selectedSlaStatus,
+    selectedStatus,
+    selectedTags,
+    selectedTeams,
+    teamsV2Enabled
+  ]);
 
   // Ticket tags are now provided via initialTicketTags from server-side consolidated fetch
   useEffect(() => {
@@ -432,6 +501,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       isFirstRender.current = false;
       return;
     }
+    if (shouldSkipNextFilterEmitRef.current) {
+      shouldSkipNextFilterEmitRef.current = false;
+      return;
+    }
 
     const currentFilters: Partial<ITicketListFilters> = {
       boardId: selectedBoard ?? undefined,
@@ -474,7 +547,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     dueDateFilterValue,
     selectedResponseState,
     selectedSlaStatus,
-    teamsV2Enabled,
+    teamsV2Enabled
     // onFiltersChanged intentionally omitted - we want to trigger only when filter values change, not when the callback changes
   ]);
 
@@ -580,8 +653,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     const href = filterQuery 
       ? `/msp/tickets/${ticketId}?returnFilters=${encodeURIComponent(filterQuery)}`
       : `/msp/tickets/${ticketId}`;
-    window.location.href = href;
-  }, [getCurrentFiltersQuery]);
+    router.push(href);
+  }, [getCurrentFiltersQuery, router]);
 
 
   // Handle saving time entries created from intervals

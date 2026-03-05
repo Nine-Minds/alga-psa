@@ -14,6 +14,99 @@ import { useTicketFormOptions, type TicketFormOptions } from '../hooks/useTicket
 
 const TICKETS_PAGE_SIZE_SETTING = 'tickets_list_page_size';
 
+const ALLOWED_DUE_DATE_FILTERS = new Set(['all', 'overdue', 'upcoming', 'today', 'no_due_date', 'before', 'after', 'custom']);
+const ALLOWED_RESPONSE_STATES = new Set(['all', 'awaiting_client', 'awaiting_internal', 'none']);
+const ALLOWED_SLA_STATUS_FILTERS = new Set(['all', 'has_sla', 'no_sla', 'on_track', 'breached', 'paused']);
+const ALLOWED_BOARD_FILTER_STATES = new Set(['active', 'inactive', 'all']);
+const ALLOWED_BUNDLE_VIEWS = new Set(['bundled', 'individual']);
+const ALLOWED_SORT_KEYS = new Set([
+  'ticket_number',
+  'title',
+  'status_name',
+  'priority_name',
+  'board_name',
+  'category_name',
+  'client_name',
+  'entered_at',
+  'entered_by_name',
+  'due_date'
+]);
+
+function decodeCsvParam(value: string | null): string[] | undefined {
+  if (!value) return undefined;
+  const decoded = value
+    .split(',')
+    .map(item => decodeURIComponent(item).trim())
+    .filter(item => item.length > 0);
+  return decoded.length > 0 ? decoded : undefined;
+}
+
+function parseTicketListStateFromSearch(search: string): {
+  filters: Partial<ITicketListFilters>;
+  page: number;
+  pageSize: number;
+  sortBy: string;
+  sortDirection: 'asc' | 'desc';
+} {
+  const params = new URLSearchParams(search);
+  const parsedPage = Number.parseInt(params.get('page') || '1', 10);
+  const parsedPageSize = Number.parseInt(params.get('pageSize') || '10', 10);
+
+  const sortByRaw = params.get('sortBy') || 'entered_at';
+  const sortDirectionRaw = (params.get('sortDirection') || 'desc').toLowerCase();
+  const sortBy = ALLOWED_SORT_KEYS.has(sortByRaw) ? sortByRaw : 'entered_at';
+  const sortDirection: 'asc' | 'desc' = sortDirectionRaw === 'asc' ? 'asc' : 'desc';
+
+  const dueDateFilterRaw = params.get('dueDateFilter');
+  const dueDateFilter = dueDateFilterRaw && ALLOWED_DUE_DATE_FILTERS.has(dueDateFilterRaw)
+    ? (dueDateFilterRaw as ITicketListFilters['dueDateFilter'])
+    : undefined;
+
+  const responseStateRaw = params.get('responseState');
+  const responseState = responseStateRaw && ALLOWED_RESPONSE_STATES.has(responseStateRaw)
+    ? (responseStateRaw as ITicketListFilters['responseState'])
+    : undefined;
+
+  const slaStatusRaw = params.get('slaStatusFilter');
+  const slaStatusFilter = slaStatusRaw && ALLOWED_SLA_STATUS_FILTERS.has(slaStatusRaw)
+    ? (slaStatusRaw as ITicketListFilters['slaStatusFilter'])
+    : undefined;
+
+  const filters: Partial<ITicketListFilters> = {
+    boardId: params.get('boardId') || undefined,
+    clientId: params.get('clientId') || undefined,
+    statusId: params.get('statusId') || 'open',
+    priorityId: params.get('priorityId') || 'all',
+    categoryId: params.get('categoryId') || undefined,
+    searchQuery: params.get('searchQuery') || '',
+    boardFilterState: ALLOWED_BOARD_FILTER_STATES.has(params.get('boardFilterState') || '')
+      ? (params.get('boardFilterState') as ITicketListFilters['boardFilterState'])
+      : 'active',
+    bundleView: ALLOWED_BUNDLE_VIEWS.has(params.get('bundleView') || '')
+      ? (params.get('bundleView') as ITicketListFilters['bundleView'])
+      : 'bundled',
+    tags: decodeCsvParam(params.get('tags')),
+    assignedToIds: decodeCsvParam(params.get('assignedToIds')),
+    assignedTeamIds: decodeCsvParam(params.get('assignedTeamIds')),
+    includeUnassigned: params.get('includeUnassigned') === 'true',
+    dueDateFilter,
+    dueDateFrom: params.get('dueDateFrom') || undefined,
+    dueDateTo: params.get('dueDateTo') || undefined,
+    responseState,
+    slaStatusFilter,
+    sortBy,
+    sortDirection,
+  };
+
+  return {
+    filters,
+    page: Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1,
+    pageSize: Number.isFinite(parsedPageSize) && parsedPageSize > 0 ? parsedPageSize : 10,
+    sortBy,
+    sortDirection,
+  };
+}
+
 export interface TicketListMetadata {
   agentAvatarUrls: Record<string, string | null>;
   teamAvatarUrls: Record<string, string | null>;
@@ -50,6 +143,10 @@ export default function TicketingDashboardContainer({
   canUpdateTickets,
   renderClientDetails,
 }: TicketingDashboardContainerProps) {
+  const latestFetchRequestIdRef = useRef(0);
+  const lastAppliedSearchRef = useRef<string>('');
+  const isSyncingFromHistoryRef = useRef(false);
+
   const defaultSortBy = initialFilters?.sortBy ?? 'entered_at';
   const defaultSortDirection = initialFilters?.sortDirection ?? 'desc';
 
@@ -174,6 +271,7 @@ export default function TicketingDashboardContainer({
     // Update URL without triggering a server-side re-render
     const newURL = params.toString() ? `/msp/tickets?${params.toString()}` : '/msp/tickets';
     window.history.replaceState(null, '', newURL);
+    lastAppliedSearchRef.current = params.toString() ? `?${params.toString()}` : '';
   }, []);
 
   const fetchTickets = useCallback(async (
@@ -187,6 +285,7 @@ export default function TicketingDashboardContainer({
       toast.error('You must be logged in to perform this action');
       return;
     }
+    const requestId = ++latestFetchRequestIdRef.current;
     setIsLoading(true);
     try {
       const effectiveSortBy = overrides?.sortBy ?? filters.sortBy ?? sortBy ?? 'entered_at';
@@ -223,6 +322,10 @@ export default function TicketingDashboardContainer({
         pageSize
       );
 
+      if (requestId !== latestFetchRequestIdRef.current) {
+        return;
+      }
+
       console.log('[Container] Fetch completed, got tickets:', result.tickets.length);
       setTickets(result.tickets);
       setTotalCount(result.totalCount);
@@ -234,12 +337,17 @@ export default function TicketingDashboardContainer({
       // that cascade through dependencies and cause re-render loops.
 
     } catch (error) {
+      if (requestId !== latestFetchRequestIdRef.current) {
+        return;
+      }
       handleError(error, 'Failed to fetch tickets');
       setTickets([]);
       setTotalCount(0);
     } finally {
-      console.log('[Container] Setting isLoading to false');
-      setIsLoading(false);
+      if (requestId === latestFetchRequestIdRef.current) {
+        console.log('[Container] Setting isLoading to false');
+        setIsLoading(false);
+      }
     }
   }, [currentUser]);
 
@@ -250,9 +358,65 @@ export default function TicketingDashboardContainer({
   const fetchTicketsRef = useRef(fetchTickets);
   fetchTicketsRef.current = fetchTickets;
 
+  const syncFromUrl = useCallback(async (search: string) => {
+    const normalizedSearch = search || '';
+    if (normalizedSearch === lastAppliedSearchRef.current || isSyncingFromHistoryRef.current) {
+      return;
+    }
+
+    isSyncingFromHistoryRef.current = true;
+    try {
+      const parsed = parseTicketListStateFromSearch(normalizedSearch);
+      setCurrentPage(parsed.page);
+      setPageSize(parsed.pageSize);
+      setSortBy(parsed.sortBy);
+      setSortDirection(parsed.sortDirection);
+      setActiveFilters(parsed.filters);
+      lastAppliedSearchRef.current = normalizedSearch;
+      await fetchTickets(parsed.filters, parsed.page, parsed.pageSize, {
+        sortBy: parsed.sortBy,
+        sortDirection: parsed.sortDirection,
+      });
+    } finally {
+      isSyncingFromHistoryRef.current = false;
+    }
+  }, [fetchTickets]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    lastAppliedSearchRef.current = window.location.search;
+
+    const handlePopState = () => {
+      void syncFromUrl(window.location.search);
+    };
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        lastAppliedSearchRef.current = '__pageshow__';
+        void syncFromUrl(window.location.search);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('pageshow', handlePageShow);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('pageshow', handlePageShow);
+    };
+  }, [syncFromUrl]);
+
   useEffect(() => {
     if (!hasLoadedPageSizePreference) {
       return;
+    }
+
+    if (typeof window !== 'undefined') {
+      const hasExplicitPageSizeInUrl = new URLSearchParams(window.location.search).has('pageSize');
+      if (hasExplicitPageSizeInUrl) {
+        return;
+      }
     }
 
     const normalizedPageSize = storedPageSize ?? initialPageSize;
