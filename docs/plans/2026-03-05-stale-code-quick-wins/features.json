@@ -194,7 +194,7 @@
   {
     "id": "F023B",
     "description": "Update `server/src/app/api/secrets/[name]/route.ts` to import tenant secret actions from `@alga-psa/tenancy/actions` instead of the deleted server duplicate",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task 2"
     ]
