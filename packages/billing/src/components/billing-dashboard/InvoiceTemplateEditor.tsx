@@ -11,6 +11,7 @@ import { getInvoiceTemplate, saveInvoiceTemplate } from '@alga-psa/billing/actio
 import { IInvoiceTemplate } from '@alga-psa/types';
 import BackNav from '@alga-psa/ui/components/BackNav'; // Import BackNav
 import { Editor } from '@monaco-editor/react';
+import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { DesignerVisualWorkspace } from '../invoice-designer/DesignerVisualWorkspace';
 import { useInvoiceDesignerStore } from '../invoice-designer/state/designerStore';
@@ -23,9 +24,11 @@ import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
 interface InvoiceTemplateEditorProps {
   templateId: string | null; // null indicates a new template
+  /** Whether the user can use the visual designer (premium feature). Defaults to true. */
+  canUseVisualDesigner?: boolean;
 }
 
-const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateId }) => {
+const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateId, canUseVisualDesigner = true }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [template, setTemplate] = useState<Partial<IInvoiceTemplate> | null>(null);
@@ -282,12 +285,20 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
                <TabsTrigger value="code" data-automation-id="invoice-template-editor-code-tab">Code</TabsTrigger>
              </TabsList>
              <TabsContent value="visual" className="pt-4 space-y-3">
-               <div className="border rounded overflow-hidden bg-card" id="invoice-template-visual-designer">
-                 <DesignerVisualWorkspace
-                   visualWorkspaceTab={visualWorkspaceTab}
-                   onVisualWorkspaceTabChange={setVisualWorkspaceTab}
+               {canUseVisualDesigner ? (
+                 <div className="border rounded overflow-hidden bg-card" id="invoice-template-visual-designer">
+                   <DesignerVisualWorkspace
+                     visualWorkspaceTab={visualWorkspaceTab}
+                     onVisualWorkspaceTabChange={setVisualWorkspaceTab}
+                   />
+                 </div>
+               ) : (
+                 <FeatureUpgradeNotice
+                   featureName="Invoice Designer"
+                   requiredTier="premium"
+                   description="Design custom invoice templates with the drag-and-drop visual editor. Upgrade to Premium to unlock this feature."
                  />
-               </div>
+               )}
              </TabsContent>
              <TabsContent value="code" className="pt-4">
                <Alert variant="info" className="mb-3" data-automation-id="invoice-template-editor-code-readonly-alert">
@@ -333,7 +344,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
            </div>
            <div className="flex gap-2"> {/* Container for buttons */}
              <Button id="cancel-template-edit-button" variant="outline" onClick={handleBack} disabled={isLoading}>Cancel</Button> {/* Add id */}
-             <Button id="save-template-button" onClick={handleSave} disabled={isLoading}> {/* Add id */}
+             <Button id="save-template-button" onClick={handleSave} disabled={isLoading}>
                {isLoading ? 'Saving...' : 'Save Template'}
              </Button>
            </div>

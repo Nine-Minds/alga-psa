@@ -36,6 +36,8 @@ interface BillingDashboardProps {
   initialQuery?: Record<string, string | undefined>;
   /** Optional injected UI for client quick view. */
   renderClientDetails?: (args: { id: string; client: IClient }) => React.ReactNode;
+  /** Whether the user can use the visual invoice designer (premium feature) */
+  canUseVisualDesigner?: boolean;
 }
 
 const BillingDashboard: React.FC<BillingDashboardProps> = ({
@@ -43,7 +45,8 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   contractDocuments,
   currentUserId,
   initialQuery,
-  renderClientDetails
+  renderClientDetails,
+  canUseVisualDesigner = true,
 }) => {
   const router = useRouter();
   const liveSearchParams = useSearchParams();
@@ -158,7 +161,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
         <Tabs.Content value="invoice-templates">
           {searchParams?.has('templateId') ? (
-            <InvoiceTemplateEditor templateId={searchParams.get('templateId') === 'new' ? null : searchParams.get('templateId')} />
+            <InvoiceTemplateEditor templateId={searchParams.get('templateId') === 'new' ? null : searchParams.get('templateId')} canUseVisualDesigner={canUseVisualDesigner} />
           ) : (
             <InvoiceTemplates />
           )}
