@@ -13,7 +13,7 @@ import {
   listWorkflowEventsAction,
   resumeWorkflowRunAction,
   cancelWorkflowRunAction
-} from 'server/src/lib/actions/workflow-runtime-v2-actions';
+} from '@alga-psa/workflows/actions';
 import { WorkflowRuntimeV2 } from '@shared/workflow/runtime';
 import { getActionRegistryV2, getSchemaRegistry } from '@shared/workflow/runtime';
 import WorkflowRunModelV2 from '@shared/workflow/persistence/workflowRunModelV2';

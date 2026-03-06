@@ -17,7 +17,7 @@ import {
   resumeWorkflowRunAction,
   getWorkflowRunAction,
   listWorkflowRunStepsAction
-} from 'server/src/lib/actions/workflow-runtime-v2-actions';
+} from '@alga-psa/workflows/actions';
 import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
 import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
 import WorkflowRunModelV2 from '@shared/workflow/persistence/workflowRunModelV2';

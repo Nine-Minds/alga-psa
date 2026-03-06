@@ -12,12 +12,12 @@
       "require": "./dist/index.js"
     },
     "./actions": {
-      "types": "./dist/actions/index.d.ts",
+      "types": "./src/actions/index.ts",
       "import": "./dist/actions/index.mjs",
       "require": "./dist/actions/index.js"
     },
     "./components": {
-      "types": "./dist/components/index.d.ts",
+      "types": "./src/components/index.ts",
       "import": "./dist/components/index.mjs",
       "require": "./dist/components/index.js"
     }

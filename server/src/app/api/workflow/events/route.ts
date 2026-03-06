@@ -3,7 +3,7 @@ import { handleWorkflowV2ApiError } from 'server/src/lib/api/workflowRuntimeV2Ap
 import {
   listWorkflowEventsAction,
   submitWorkflowEventAction
-} from 'server/src/lib/actions/workflow-runtime-v2-actions';
+} from '@alga-psa/workflows/actions';
 
 export async function POST(req: NextRequest) {
   try {

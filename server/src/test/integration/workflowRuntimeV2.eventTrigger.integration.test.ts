@@ -10,7 +10,7 @@ import {
   createWorkflowDefinitionAction,
   publishWorkflowDefinitionAction,
   submitWorkflowEventAction
-} from 'server/src/lib/actions/workflow-runtime-v2-actions';
+} from '@alga-psa/workflows/actions';
 import WorkflowRunModelV2 from '@shared/workflow/persistence/workflowRunModelV2';
 import WorkflowRuntimeEventModelV2 from '@shared/workflow/persistence/workflowRuntimeEventModelV2';
 import { getSchemaRegistry } from '@shared/workflow/runtime';

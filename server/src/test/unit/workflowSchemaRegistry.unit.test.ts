@@ -25,7 +25,7 @@ vi.mock('@shared/workflow/runtime', async () => {
   };
 });
 
-import { listWorkflowSchemaRefsAction } from 'server/src/lib/actions/workflow-runtime-v2-actions';
+import { listWorkflowSchemaRefsAction } from '@alga-psa/workflows/actions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { getSchemaRegistry } from '@shared/workflow/runtime';
 
