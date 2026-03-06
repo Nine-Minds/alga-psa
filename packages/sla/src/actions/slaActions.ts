@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
-import { withAuth, hasPermission } from '@alga-psa/auth';
+import { withAuth, hasPermission, throwPermissionError } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import {
   ISlaPolicy,
@@ -22,7 +22,7 @@ import {
  */
 export const getSlaPolicies = withAuth(async (user, { tenant }): Promise<ISlaPolicy[]> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    throw new Error('Permission denied: Cannot view SLA policies');
+    throwPermissionError('view SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -45,7 +45,7 @@ export const getSlaPolicies = withAuth(async (user, { tenant }): Promise<ISlaPol
  */
 export const getSlaPolicyById = withAuth(async (user, { tenant }, policyId: string): Promise<ISlaPolicyWithTargets | null> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    throw new Error('Permission denied: Cannot view SLA policies');
+    throwPermissionError('view SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -86,7 +86,7 @@ export const getSlaPolicyById = withAuth(async (user, { tenant }, policyId: stri
  */
 export const getDefaultSlaPolicy = withAuth(async (user, { tenant }): Promise<ISlaPolicy | null> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    throw new Error('Permission denied: Cannot view SLA policies');
+    throwPermissionError('view SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -115,7 +115,7 @@ export const createSlaPolicy = withAuth(async (
   seedDefaultThresholds: boolean = true
 ): Promise<ISlaPolicy> => {
   if (!await hasPermission(user, 'sla_policy', 'create')) {
-    throw new Error('Permission denied: Cannot create SLA policies');
+    throwPermissionError('create SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -186,7 +186,7 @@ export const updateSlaPolicy = withAuth(async (
   input: Partial<ISlaPolicyInput>
 ): Promise<ISlaPolicy> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    throw new Error('Permission denied: Cannot update SLA policies');
+    throwPermissionError('update SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -248,7 +248,7 @@ export const getSlaPolicyUsage = withAuth(async (user, { tenant }, policyId: str
   ticketCount: number;
 }> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    throw new Error('Permission denied: Cannot view SLA policies');
+    throwPermissionError('view SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -279,7 +279,7 @@ export const getSlaPolicyUsage = withAuth(async (user, { tenant }, policyId: str
  */
 export const deleteSlaPolicy = withAuth(async (user, { tenant }, policyId: string): Promise<void> => {
   if (!await hasPermission(user, 'sla_policy', 'delete')) {
-    throw new Error('Permission denied: Cannot delete SLA policies');
+    throwPermissionError('delete SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -334,7 +334,7 @@ export const deleteSlaPolicy = withAuth(async (user, { tenant }, policyId: strin
  */
 export const setDefaultSlaPolicy = withAuth(async (user, { tenant }, policyId: string): Promise<void> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    throw new Error('Permission denied: Cannot update SLA policies');
+    throwPermissionError('update SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -374,7 +374,7 @@ export const setDefaultSlaPolicy = withAuth(async (user, { tenant }, policyId: s
  */
 export const getSlaPolicyTargets = withAuth(async (user, { tenant }, policyId: string): Promise<ISlaPolicyTarget[]> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    throw new Error('Permission denied: Cannot view SLA policies');
+    throwPermissionError('view SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -402,7 +402,7 @@ export const createSlaPolicyTarget = withAuth(async (
   input: ISlaPolicyTargetInput
 ): Promise<ISlaPolicyTarget> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    throw new Error('Permission denied: Cannot update SLA policies');
+    throwPermissionError('update SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -470,7 +470,7 @@ export const updateSlaPolicyTarget = withAuth(async (
   input: Partial<ISlaPolicyTargetInput>
 ): Promise<ISlaPolicyTarget> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    throw new Error('Permission denied: Cannot update SLA policies');
+    throwPermissionError('update SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -549,7 +549,7 @@ export const updateSlaPolicyTarget = withAuth(async (
  */
 export const deleteSlaPolicyTarget = withAuth(async (user, { tenant }, targetId: string): Promise<void> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    throw new Error('Permission denied: Cannot update SLA policies');
+    throwPermissionError('update SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -580,7 +580,7 @@ export const upsertSlaPolicyTargets = withAuth(async (
   targets: ISlaPolicyTargetInput[]
 ): Promise<ISlaPolicyTarget[]> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    throw new Error('Permission denied: Cannot update SLA policies');
+    throwPermissionError('update SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -676,7 +676,7 @@ export const upsertSlaPolicyTargets = withAuth(async (
  */
 export const getSlaNotificationThresholds = withAuth(async (user, { tenant }, policyId: string): Promise<ISlaNotificationThreshold[]> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    throw new Error('Permission denied: Cannot view SLA policies');
+    throwPermissionError('view SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -705,7 +705,7 @@ export const upsertSlaNotificationThresholds = withAuth(async (
   thresholds: ISlaNotificationThresholdInput[]
 ): Promise<ISlaNotificationThreshold[]> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    throw new Error('Permission denied: Cannot update SLA policies');
+    throwPermissionError('update SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -770,7 +770,7 @@ export const upsertSlaNotificationThresholds = withAuth(async (
  */
 export const getClientSlaPolicy = withAuth(async (user, { tenant }, clientId: string): Promise<ISlaPolicy | null> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    throw new Error('Permission denied: Cannot view SLA policies');
+    throwPermissionError('view SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -806,7 +806,7 @@ export const setClientSlaPolicy = withAuth(async (
   policyId: string | null
 ): Promise<void> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    throw new Error('Permission denied: Cannot update SLA policies');
+    throwPermissionError('update SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -854,7 +854,7 @@ export const setClientSlaPolicy = withAuth(async (
  */
 export const getBoardSlaPolicy = withAuth(async (user, { tenant }, boardId: string): Promise<ISlaPolicy | null> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    throw new Error('Permission denied: Cannot view SLA policies');
+    throwPermissionError('view SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -890,7 +890,7 @@ export const setBoardSlaPolicy = withAuth(async (
   policyId: string | null
 ): Promise<void> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    throw new Error('Permission denied: Cannot update SLA policies');
+    throwPermissionError('update SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -945,7 +945,7 @@ export const updateSlaPolicyBoardAssignments = withAuth(async (
   boardIds: string[]
 ): Promise<void> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    throw new Error('Permission denied: Cannot update SLA policies');
+    throwPermissionError('update SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -984,7 +984,7 @@ export const updateSlaPolicyClientAssignments = withAuth(async (
   clientIds: string[]
 ): Promise<void> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    throw new Error('Permission denied: Cannot update SLA policies');
+    throwPermissionError('update SLA policies');
   }
   const { knex: db } = await createTenantKnex();
 
