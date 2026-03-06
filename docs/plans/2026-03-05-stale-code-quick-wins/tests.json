@@ -171,7 +171,7 @@
   {
     "id": "T022",
     "description": "`services/workflow-worker/Dockerfile` does NOT contain `@alga-psa/media`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
