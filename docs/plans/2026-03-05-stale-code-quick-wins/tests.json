@@ -59,7 +59,7 @@
   {
     "id": "T008",
     "description": "`getTeamAvatarUrl` function exists in `packages/formatting/src/avatarUtils.ts` and calls `getEntityImageUrl('team', teamId, tenant)`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
