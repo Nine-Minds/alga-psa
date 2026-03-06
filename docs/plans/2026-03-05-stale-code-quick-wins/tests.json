@@ -75,7 +75,7 @@
   {
     "id": "T010",
     "description": "`UserService.ts` imports `getUserAvatarUrl` from `@alga-psa/formatting/avatarUtils` (not `@alga-psa/media`)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]
