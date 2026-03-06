@@ -140,3 +140,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - F008: Split `packages/teams/src/actions/team-actions/avatarActions.ts` imports across canonical documents and formatting packages.
 - F009: Replaced the stale `@alga-psa/media` dependency in `packages/users/package.json` with canonical `documents` and `formatting` package dependencies.
 - F010: Replaced the teams package dependency on `@alga-psa/media` with the canonical documents and formatting packages.
+- F011: Removed all `@alga-psa/media` alias and transpilation wiring from `server/next.config.mjs`.

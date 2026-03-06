@@ -82,7 +82,7 @@
   {
     "id": "F011",
     "description": "Remove `@alga-psa/media` alias from `server/next.config.mjs` (alias mapping, transpile entry, resolve alias)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task 3"
     ]
