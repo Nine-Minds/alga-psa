@@ -18,7 +18,7 @@
   {
     "id": "F003",
     "description": "Update `SecretDialog.tsx` to import from `@alga-psa/tenancy/actions` instead of `@/lib/actions/tenant-secret-actions`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task 2"
     ]
