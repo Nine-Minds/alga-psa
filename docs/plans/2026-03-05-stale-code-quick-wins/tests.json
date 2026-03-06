@@ -289,7 +289,7 @@
   {
     "id": "T036",
     "description": "`UserList.tsx` avatar fetch loop still uses `getUserAvatarUrlAction(user.user_id)` for internal users (no regression)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
