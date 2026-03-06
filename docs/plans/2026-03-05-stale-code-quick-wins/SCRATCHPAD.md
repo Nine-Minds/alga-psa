@@ -179,3 +179,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - T011: Verified UserService.ts imports uploadEntityImage and deleteEntityImage from @alga-psa/documents.
 - T012: Verified userActions.ts imports uploadEntityImage and deleteEntityImage from @alga-psa/documents.
 - T013: Verified teams avatarActions.ts imports uploadEntityImage and deleteEntityImage from @alga-psa/documents.
+- T014: Verified teams avatarActions.ts imports getTeamAvatarUrl from formatting instead of media.

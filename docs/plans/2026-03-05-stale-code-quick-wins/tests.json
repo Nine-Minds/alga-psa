@@ -107,7 +107,7 @@
   {
     "id": "T014",
     "description": "`teams/avatarActions.ts` imports `getTeamAvatarUrl` from `@alga-psa/formatting/avatarUtils` (not `@alga-psa/media`)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
