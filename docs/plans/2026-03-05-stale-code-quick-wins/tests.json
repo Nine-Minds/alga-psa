@@ -203,7 +203,7 @@
   {
     "id": "T026",
     "description": "`packages/media/` directory does not exist on disk",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
