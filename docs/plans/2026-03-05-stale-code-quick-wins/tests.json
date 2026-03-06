@@ -281,7 +281,7 @@
   {
     "id": "T035",
     "description": "`UserList.tsx` avatar fetch loop checks `user.user_type === 'client'` and uses `getContactAvatarUrlAction(user.contact_id)` for client users",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]

@@ -200,3 +200,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - T032: Verified packages/documents/src/lib/entityImageService.ts exports EntityType, uploadEntityImage, and deleteEntityImage for migrated callers.
 - T033: Verified packages/formatting/src/avatarUtils.ts exports both getUserAvatarUrl and getTeamAvatarUrl.
 - T034: Verified UserList.tsx imports getContactAvatarUrlAction alongside getUserAvatarUrlAction from @alga-psa/user-composition/actions.
+- T035: Verified the avatar fetch loop branches on user.user_type === 'client' and uses getContactAvatarUrlAction(user.contact_id, user.tenant).
