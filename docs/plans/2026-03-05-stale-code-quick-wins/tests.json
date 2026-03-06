@@ -195,7 +195,7 @@
   {
     "id": "T025",
     "description": "Test T089 assertion updated to check formatting file for `getTeamAvatarUrl`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]

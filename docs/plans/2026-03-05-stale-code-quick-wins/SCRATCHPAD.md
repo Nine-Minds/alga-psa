@@ -190,3 +190,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - T022: Confirmed the workflow-worker Dockerfile no longer references the deleted @alga-psa/media workspace.
 - T023: Verified teams-v2-improvements.test.ts now reads packages/formatting/src/avatarUtils.ts instead of the deleted media file.
 - T024: Verified the T085 assertion now checks formatting avatar utils for the team EntityType entry.
+- T025: Verified the T089 assertion now checks formatting avatar utils for getTeamAvatarUrl.
