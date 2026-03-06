@@ -47,6 +47,8 @@ import Link from 'next/link';
 import { ProjectSettings } from '@alga-psa/projects/components';
 import { SecretsManagement } from './secrets';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useTierFeature } from '@/context/TierContext';
+import { TIER_FEATURES } from '@alga-psa/types';
 
 // Wrapper component with UnsavedChangesProvider
 type SettingsPageProps = {
@@ -72,6 +74,8 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
   const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
+  const canUseEntraSync = useTierFeature(TIER_FEATURES.ENTRA_SYNC);
+  const canUseCipp = useTierFeature(TIER_FEATURES.CIPP);
 
   // Extensions dynamic imports moved to ExtensionManagement shared component
 
@@ -279,7 +283,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       // Integrations tab with category-based organization
       label: "Integrations",
       icon: Plug,
-      content: <IntegrationsSettingsPage />,
+      content: <IntegrationsSettingsPage canUseEntraSync={canUseEntraSync} canUseCipp={canUseCipp} />,
     }
   ];
 
