@@ -26,7 +26,7 @@
   {
     "id": "F004",
     "description": "Delete `server/src/lib/actions/tenant-secret-actions.ts`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task 2"
     ]
