@@ -12,6 +12,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { TimePicker } from '@alga-psa/ui/components/TimePicker';
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
 import GenericDialog from '@alga-psa/ui/components/GenericDialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -414,7 +415,7 @@ export function BusinessHoursSettings() {
           <Clock className="h-4 w-4 text-gray-400" />
           <span className="font-medium">{value}</span>
           {record.is_default && (
-            <Badge variant="default" className="bg-blue-500">Default</Badge>
+            <Badge variant="info">Default</Badge>
           )}
           {record.is_24x7 && (
             <Badge variant="outline">24/7</Badge>
@@ -799,21 +800,19 @@ export function BusinessHoursSettings() {
                         disabled={isSavingSchedule}
                       />
                     </div>
-                    <Input
+                    <TimePicker
                       id={`day-start-${entry.day_of_week}`}
-                      type="time"
                       value={entry.start_time}
-                      onChange={(e) => updateEntry(entry.day_of_week, 'start_time', e.target.value)}
+                      onChange={(value) => updateEntry(entry.day_of_week, 'start_time', value)}
                       disabled={isSavingSchedule || !entry.is_enabled}
-                      className="h-8 text-sm"
+                      allowManualInput
                     />
-                    <Input
+                    <TimePicker
                       id={`day-end-${entry.day_of_week}`}
-                      type="time"
                       value={entry.end_time}
-                      onChange={(e) => updateEntry(entry.day_of_week, 'end_time', e.target.value)}
+                      onChange={(value) => updateEntry(entry.day_of_week, 'end_time', value)}
                       disabled={isSavingSchedule || !entry.is_enabled}
-                      className="h-8 text-sm"
+                      allowManualInput
                     />
                   </div>
                 ))}

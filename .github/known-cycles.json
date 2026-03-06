@@ -1,7 +1,6 @@
 {
   "cycles": [
     "@alga-psa/assets -> @alga-psa/tickets -> @alga-psa/billing -> @alga-psa/integrations -> @alga-psa/clients",
-    "@alga-psa/auth -> @alga-psa/ee-stubs -> @alga-psa/shared -> @alga-psa/storage",
     "@alga-psa/documents -> @alga-psa/tags",
     "@alga-psa/shared -> @alga-psa/storage",
     "@product/settings-extensions -> sebastian-ee -> server",

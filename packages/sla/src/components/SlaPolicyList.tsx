@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ISlaPolicy } from '../types';
-import { getSlaPolicies, deleteSlaPolicy, setDefaultSlaPolicy } from '../actions';
+import { getSlaPolicies, deleteSlaPolicy, setDefaultSlaPolicy, getSlaPolicyUsage } from '../actions';
 import { MoreVertical } from 'lucide-react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
@@ -18,6 +18,7 @@ import {
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 
 interface SlaPolicyListProps {
   onEditPolicy?: (policy: ISlaPolicy) => void;
@@ -31,6 +32,12 @@ export function SlaPolicyList({ onEditPolicy, onAddPolicy }: SlaPolicyListProps)
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
   const [policyToDelete, setPolicyToDelete] = useState<ISlaPolicy | null>(null);
+  const [policyUsage, setPolicyUsage] = useState<{
+    boards: { board_id: string; name: string }[];
+    clients: { client_id: string; client_name: string }[];
+    ticketCount: number;
+  } | null>(null);
+  const [isLoadingUsage, setIsLoadingUsage] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   const fetchPolicies = useCallback(async () => {
@@ -67,8 +74,19 @@ export function SlaPolicyList({ onEditPolicy, onAddPolicy }: SlaPolicyListProps)
     }
   };
 
-  const handleDeleteClick = (policy: ISlaPolicy) => {
+  const handleDeleteClick = async (policy: ISlaPolicy) => {
     setPolicyToDelete(policy);
+    setPolicyUsage(null);
+    setIsLoadingUsage(true);
+    try {
+      const usage = await getSlaPolicyUsage(policy.sla_policy_id);
+      setPolicyUsage(usage);
+    } catch (err) {
+      console.error('Error fetching policy usage:', err);
+      setPolicyUsage({ boards: [], clients: [], ticketCount: 0 });
+    } finally {
+      setIsLoadingUsage(false);
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -90,6 +108,7 @@ export function SlaPolicyList({ onEditPolicy, onAddPolicy }: SlaPolicyListProps)
 
   const handleCancelDelete = () => {
     setPolicyToDelete(null);
+    setPolicyUsage(null);
   };
 
   const handleRowClick = (policy: ISlaPolicy) => {
@@ -247,16 +266,49 @@ export function SlaPolicyList({ onEditPolicy, onAddPolicy }: SlaPolicyListProps)
             <strong>{policyToDelete?.policy_name}</strong>? This action cannot be
             undone.
             {policyToDelete?.is_default && (
-              <p className="mt-2 text-amber-600">
-                Warning: This is the default policy. You may want to set another
-                policy as default first.
-              </p>
+              <Alert variant="warning" className="mt-3">
+                <AlertDescription>
+                  This is the default policy. You may want to set another policy as default first.
+                </AlertDescription>
+              </Alert>
+            )}
+            {isLoadingUsage && (
+              <p className="mt-2 text-sm text-muted-foreground">Checking usage...</p>
+            )}
+            {policyUsage && (policyUsage.boards.length > 0 || policyUsage.clients.length > 0 || policyUsage.ticketCount > 0) && (
+              <Alert variant="warning" className="mt-3">
+                <AlertTitle>This policy is currently in use</AlertTitle>
+                <AlertDescription>
+                  <ul className="list-disc list-inside space-y-0.5 mt-1">
+                    {policyUsage.boards.length > 0 && (
+                      <li>
+                        {policyUsage.boards.length === 1 ? 'Board' : 'Boards'}:{' '}
+                        {policyUsage.boards.map(b => b.name).join(', ')}
+                      </li>
+                    )}
+                    {policyUsage.clients.length > 0 && (
+                      <li>
+                        {policyUsage.clients.length === 1 ? 'Client' : 'Clients'}:{' '}
+                        {policyUsage.clients.map(c => c.client_name).join(', ')}
+                      </li>
+                    )}
+                    {policyUsage.ticketCount > 0 && (
+                      <li>
+                        {policyUsage.ticketCount} {policyUsage.ticketCount === 1 ? 'ticket' : 'tickets'}
+                      </li>
+                    )}
+                  </ul>
+                  <p className="mt-1.5">
+                    These references will be unlinked. Existing SLA tracking data on tickets will be preserved.
+                  </p>
+                </AlertDescription>
+              </Alert>
             )}
           </>
         }
         confirmLabel="Delete"
         cancelLabel="Cancel"
-        isConfirming={isDeleting}
+        isConfirming={isDeleting || isLoadingUsage}
       />
     </Card>
   );
