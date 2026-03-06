@@ -142,3 +142,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - F010: Replaced the teams package dependency on `@alga-psa/media` with the canonical documents and formatting packages.
 - F011: Removed all `@alga-psa/media` alias and transpilation wiring from `server/next.config.mjs`.
 - F012: Removed the `@alga-psa/media` path mappings from `server/tsconfig.json`.
+- F013: Removed the stale `@alga-psa/media` path mappings from `ee/server/tsconfig.json`.

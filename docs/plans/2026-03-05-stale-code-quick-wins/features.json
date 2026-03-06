@@ -98,7 +98,7 @@
   {
     "id": "F013",
     "description": "Remove `@alga-psa/media` path mappings from `ee/server/tsconfig.json`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task 3"
     ]
