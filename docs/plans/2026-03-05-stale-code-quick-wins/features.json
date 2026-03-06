@@ -122,7 +122,7 @@
   {
     "id": "F016",
     "description": "Delete `packages/media/` directory entirely (8 files: src/index.ts, src/lib/avatarUtils.ts, src/lib/documentsHelpers.ts, src/services/EntityImageService.ts, package.json, project.json, tsconfig.json, tsup.config.ts)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task 3"
     ]
