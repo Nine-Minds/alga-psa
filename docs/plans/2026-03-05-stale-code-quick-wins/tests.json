@@ -329,7 +329,7 @@
   {
     "id": "T041",
     "description": "`ContactDetailsEdit.tsx` passes `contactName` to `ContactAvatarUpload` if applicable",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]

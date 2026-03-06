@@ -206,3 +206,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - T038: Verified ContactAvatarUploadProps includes a required contactName: string prop.
 - T039: Verified ContactAvatarUpload passes contactName through as EntityImageUpload.entityName.
 - T040: Verified ContactDetails.tsx passes editedContact.full_name to ContactAvatarUpload.
+- T041: Verified ContactDetailsEdit.tsx passes contact.full_name to ContactAvatarUpload.
