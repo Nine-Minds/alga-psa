@@ -155,7 +155,7 @@
   {
     "id": "T020",
     "description": "`server/tsconfig.json` does NOT contain `@alga-psa/media` path mappings",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]

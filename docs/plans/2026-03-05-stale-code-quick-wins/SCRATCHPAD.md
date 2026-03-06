@@ -185,3 +185,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - T017: Verified packages/teams/package.json no longer lists @alga-psa/media in dependencies.
 - T018: Verified packages/teams/package.json includes canonical documents and formatting dependencies.
 - T019: Confirmed server/next.config.mjs no longer contains any @alga-psa/media alias or transpile references.
+- T020: Confirmed server/tsconfig.json no longer contains @alga-psa/media path mappings.
