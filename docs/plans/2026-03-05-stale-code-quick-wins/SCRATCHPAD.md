@@ -199,3 +199,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - T031: Checked all modified source/config files and confirmed none are shim-only re-export files.
 - T032: Verified packages/documents/src/lib/entityImageService.ts exports EntityType, uploadEntityImage, and deleteEntityImage for migrated callers.
 - T033: Verified packages/formatting/src/avatarUtils.ts exports both getUserAvatarUrl and getTeamAvatarUrl.
+- T034: Verified UserList.tsx imports getContactAvatarUrlAction alongside getUserAvatarUrlAction from @alga-psa/user-composition/actions.
