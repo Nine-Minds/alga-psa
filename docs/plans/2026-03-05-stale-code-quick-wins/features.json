@@ -130,7 +130,7 @@
   {
     "id": "F017",
     "description": "Run `npm install` to update package-lock.json after dependency changes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task 3"
     ]
