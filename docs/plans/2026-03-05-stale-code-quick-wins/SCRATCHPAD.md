@@ -128,3 +128,6 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - `package-lock.json` will have stale entries for `@alga-psa/media` until `npm install` is run.
 - The Dockerfile `--workspace=@alga-psa/media` line is in a `COPY` instruction context -- verify the line can be cleanly removed without breaking the multi-line command.
 - T102 in `teams-v2-improvements.test.ts` checks that `@alga-psa/media` is in teams package.json deps -- must update to check for `@alga-psa/documents` and `@alga-psa/formatting` instead.
+
+## Progress Log
+- F001: Deleted `server/src/lib/posthog.ts` after validating the deprecated wrapper path had no remaining imports.

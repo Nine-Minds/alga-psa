@@ -2,145 +2,197 @@
   {
     "id": "F001",
     "description": "Delete `server/src/lib/posthog.ts` (0 callers, deprecated wrapper)",
-    "implemented": false,
-    "prdRefs": ["Task 1"]
+    "implemented": true,
+    "prdRefs": [
+      "Task 1"
+    ]
   },
   {
     "id": "F002",
     "description": "Update `SecretsManagement.tsx` to import from `@alga-psa/tenancy/actions` instead of `@/lib/actions/tenant-secret-actions`",
     "implemented": false,
-    "prdRefs": ["Task 2"]
+    "prdRefs": [
+      "Task 2"
+    ]
   },
   {
     "id": "F003",
     "description": "Update `SecretDialog.tsx` to import from `@alga-psa/tenancy/actions` instead of `@/lib/actions/tenant-secret-actions`",
     "implemented": false,
-    "prdRefs": ["Task 2"]
+    "prdRefs": [
+      "Task 2"
+    ]
   },
   {
     "id": "F004",
     "description": "Delete `server/src/lib/actions/tenant-secret-actions.ts`",
     "implemented": false,
-    "prdRefs": ["Task 2"]
+    "prdRefs": [
+      "Task 2"
+    ]
   },
   {
     "id": "F005",
     "description": "Add `getTeamAvatarUrl` convenience function to `packages/formatting/src/avatarUtils.ts`",
     "implemented": false,
-    "prdRefs": ["Task 3"]
+    "prdRefs": [
+      "Task 3"
+    ]
   },
   {
     "id": "F006",
     "description": "Update `packages/users/src/services/UserService.ts`: replace `getUserAvatarUrl` import from `@alga-psa/media` with `@alga-psa/formatting/avatarUtils`, replace `uploadEntityImage`/`deleteEntityImage` imports with `@alga-psa/documents`",
     "implemented": false,
-    "prdRefs": ["Task 3"]
+    "prdRefs": [
+      "Task 3"
+    ]
   },
   {
     "id": "F007",
     "description": "Update `packages/users/src/actions/user-actions/userActions.ts`: replace `uploadEntityImage`/`deleteEntityImage` imports from `@alga-psa/media` with `@alga-psa/documents`",
     "implemented": false,
-    "prdRefs": ["Task 3"]
+    "prdRefs": [
+      "Task 3"
+    ]
   },
   {
     "id": "F008",
     "description": "Update `packages/teams/src/actions/team-actions/avatarActions.ts`: replace `uploadEntityImage`/`deleteEntityImage` imports from `@alga-psa/media` with `@alga-psa/documents`, replace `getTeamAvatarUrl` import with `@alga-psa/formatting/avatarUtils`",
     "implemented": false,
-    "prdRefs": ["Task 3"]
+    "prdRefs": [
+      "Task 3"
+    ]
   },
   {
     "id": "F009",
     "description": "Update `packages/users/package.json`: remove `@alga-psa/media` dependency, add `@alga-psa/documents` and `@alga-psa/formatting`",
     "implemented": false,
-    "prdRefs": ["Task 3"]
+    "prdRefs": [
+      "Task 3"
+    ]
   },
   {
     "id": "F010",
     "description": "Update `packages/teams/package.json`: remove `@alga-psa/media` dependency, add `@alga-psa/documents` and `@alga-psa/formatting`",
     "implemented": false,
-    "prdRefs": ["Task 3"]
+    "prdRefs": [
+      "Task 3"
+    ]
   },
   {
     "id": "F011",
     "description": "Remove `@alga-psa/media` alias from `server/next.config.mjs` (alias mapping, transpile entry, resolve alias)",
     "implemented": false,
-    "prdRefs": ["Task 3"]
+    "prdRefs": [
+      "Task 3"
+    ]
   },
   {
     "id": "F012",
     "description": "Remove `@alga-psa/media` path mappings from `server/tsconfig.json`",
     "implemented": false,
-    "prdRefs": ["Task 3"]
+    "prdRefs": [
+      "Task 3"
+    ]
   },
   {
     "id": "F013",
     "description": "Remove `@alga-psa/media` path mappings from `ee/server/tsconfig.json`",
     "implemented": false,
-    "prdRefs": ["Task 3"]
+    "prdRefs": [
+      "Task 3"
+    ]
   },
   {
     "id": "F014",
     "description": "Remove `--workspace=@alga-psa/media` from `services/workflow-worker/Dockerfile`",
     "implemented": false,
-    "prdRefs": ["Task 3"]
+    "prdRefs": [
+      "Task 3"
+    ]
   },
   {
     "id": "F015",
     "description": "Update `server/src/test/teams-v2-improvements.test.ts`: change `read()` path from `packages/media/src/lib/avatarUtils.ts` to `packages/formatting/src/avatarUtils.ts`, update assertions T085 and T089 to match formatting file content",
     "implemented": false,
-    "prdRefs": ["Task 3"]
+    "prdRefs": [
+      "Task 3"
+    ]
   },
   {
     "id": "F016",
     "description": "Delete `packages/media/` directory entirely (8 files: src/index.ts, src/lib/avatarUtils.ts, src/lib/documentsHelpers.ts, src/services/EntityImageService.ts, package.json, project.json, tsconfig.json, tsup.config.ts)",
     "implemented": false,
-    "prdRefs": ["Task 3"]
+    "prdRefs": [
+      "Task 3"
+    ]
   },
   {
     "id": "F017",
     "description": "Run `npm install` to update package-lock.json after dependency changes",
     "implemented": false,
-    "prdRefs": ["Task 3"]
+    "prdRefs": [
+      "Task 3"
+    ]
   },
   {
     "id": "F018",
     "description": "In `UserList.tsx`, import `getContactAvatarUrlAction` from `@alga-psa/user-composition/actions`",
     "implemented": false,
-    "prdRefs": ["Task 4"]
+    "prdRefs": [
+      "Task 4"
+    ]
   },
   {
     "id": "F019",
     "description": "In `UserList.tsx` avatar fetch loop, branch on `user.user_type`: use `getContactAvatarUrlAction(user.contact_id)` for client users, `getUserAvatarUrlAction(user.user_id)` for internal users",
     "implemented": false,
-    "prdRefs": ["Task 4"]
+    "prdRefs": [
+      "Task 4"
+    ]
   },
   {
     "id": "F020",
     "description": "Add `contactName: string` prop to `ContactAvatarUploadProps` in `ContactAvatarUpload.tsx`",
     "implemented": false,
-    "prdRefs": ["Task 5"]
+    "prdRefs": [
+      "Task 5"
+    ]
   },
   {
     "id": "F021",
     "description": "Pass `contactName` as `entityName` to `EntityImageUpload` in `ContactAvatarUpload.tsx` (replacing hardcoded empty string)",
     "implemented": false,
-    "prdRefs": ["Task 5"]
+    "prdRefs": [
+      "Task 5"
+    ]
   },
   {
     "id": "F022",
     "description": "Update `ContactDetails.tsx` to pass `contactName={editedContact.full_name}` to `ContactAvatarUpload`",
     "implemented": false,
-    "prdRefs": ["Task 5"]
+    "prdRefs": [
+      "Task 5"
+    ]
   },
   {
     "id": "F023",
     "description": "Update `ContactDetailsEdit.tsx` to pass `contactName={contact.full_name}` to `ContactAvatarUpload`",
     "implemented": false,
-    "prdRefs": ["Task 5"]
+    "prdRefs": [
+      "Task 5"
+    ]
   },
   {
     "id": "F024",
     "description": "Verify full build passes (`NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4`) after all tasks",
     "implemented": false,
-    "prdRefs": ["Task 1", "Task 2", "Task 3", "Task 4", "Task 5"]
+    "prdRefs": [
+      "Task 1",
+      "Task 2",
+      "Task 3",
+      "Task 4",
+      "Task 5"
+    ]
   }
 ]
