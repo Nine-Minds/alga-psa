@@ -321,7 +321,7 @@
   {
     "id": "T040",
     "description": "`ContactDetails.tsx` passes `contactName={editedContact.full_name}` to `ContactAvatarUpload`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
