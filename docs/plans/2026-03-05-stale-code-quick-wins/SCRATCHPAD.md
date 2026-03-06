@@ -139,3 +139,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - F007: Updated `packages/users/src/actions/user-actions/userActions.ts` to consume entity image mutations from `@alga-psa/documents`.
 - F008: Split `packages/teams/src/actions/team-actions/avatarActions.ts` imports across canonical documents and formatting packages.
 - F009: Replaced the stale `@alga-psa/media` dependency in `packages/users/package.json` with canonical `documents` and `formatting` package dependencies.
+- F010: Replaced the teams package dependency on `@alga-psa/media` with the canonical documents and formatting packages.

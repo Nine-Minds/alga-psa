@@ -74,7 +74,7 @@
   {
     "id": "F010",
     "description": "Update `packages/teams/package.json`: remove `@alga-psa/media` dependency, add `@alga-psa/documents` and `@alga-psa/formatting`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task 3"
     ]
