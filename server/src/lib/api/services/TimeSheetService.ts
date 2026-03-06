@@ -79,30 +79,43 @@ export class TimeSheetService extends BaseService<any> {
           query.where(`${this.tableName}.approved_by`, filters.approved_by);
         }
         if (filters.period_start_from) {
-          query.join('time_periods', `${this.tableName}.period_id`, 'time_periods.period_id')
+          query.join('time_periods', function() {
+            this.on('time_sheets.period_id', '=', 'time_periods.period_id')
+              .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
+          })
             .where('time_periods.start_date', '>=', filters.period_start_from);
         }
         if (filters.period_start_to) {
           if (!query.toString().includes('time_periods')) {
-            query.join('time_periods', `${this.tableName}.period_id`, 'time_periods.period_id');
+            query.join('time_periods', function() {
+              this.on('time_sheets.period_id', '=', 'time_periods.period_id')
+                .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
+            });
           }
           query.where('time_periods.start_date', '<=', filters.period_start_to);
         }
         if (filters.period_end_from) {
           if (!query.toString().includes('time_periods')) {
-            query.join('time_periods', `${this.tableName}.period_id`, 'time_periods.period_id');
+            query.join('time_periods', function() {
+              this.on('time_sheets.period_id', '=', 'time_periods.period_id')
+                .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
+            });
           }
           query.where('time_periods.end_date', '>=', filters.period_end_from);
         }
         if (filters.period_end_to) {
           if (!query.toString().includes('time_periods')) {
-            query.join('time_periods', `${this.tableName}.period_id`, 'time_periods.period_id');
+            query.join('time_periods', function() {
+              this.on('time_sheets.period_id', '=', 'time_periods.period_id')
+                .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
+            });
           }
           query.where('time_periods.end_date', '<=', filters.period_end_to);
         }
         if (filters.has_entries !== undefined) {
           const subquery = knex('time_entries')
             .where('time_entries.time_sheet_id', knex.raw(`${this.tableName}.id`))
+            .andWhere('time_entries.tenant', knex.raw(`${this.tableName}.tenant`))
             .select(knex.raw('1'));
           
           if (filters.has_entries) {
@@ -114,9 +127,18 @@ export class TimeSheetService extends BaseService<any> {
       }
   
       // Add joins for additional data
-      query.leftJoin('users', `${this.tableName}.user_id`, 'users.user_id')
-        .leftJoin('users as approvers', `${this.tableName}.approved_by`, 'approvers.user_id')
-        .leftJoin('time_periods', `${this.tableName}.period_id`, 'time_periods.period_id')
+      query.leftJoin('users', function() {
+        this.on('time_sheets.user_id', '=', 'users.user_id')
+          .andOn('time_sheets.tenant', '=', 'users.tenant');
+      })
+        .leftJoin('users as approvers', function() {
+          this.on('time_sheets.approved_by', '=', 'approvers.user_id')
+            .andOn('time_sheets.tenant', '=', 'approvers.tenant');
+        })
+        .leftJoin('time_periods', function() {
+          this.on('time_sheets.period_id', '=', 'time_periods.period_id')
+            .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
+        })
         .select(
           `${this.tableName}.*`,
           knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
@@ -128,6 +150,7 @@ export class TimeSheetService extends BaseService<any> {
       // Add computed fields
       const timeEntrySubquery = knex('time_entries')
         .where('time_entries.time_sheet_id', knex.raw(`${this.tableName}.id`))
+        .andWhere('time_entries.tenant', knex.raw(`${this.tableName}.tenant`))
         .select([
           knex.raw('SUM(billable_duration) / 60.0 as total_hours'),
           knex.raw('SUM(CASE WHEN billable_duration > 0 THEN billable_duration ELSE 0 END) / 60.0 as billable_hours'),
@@ -171,9 +194,18 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       const timeSheet = await knex(this.tableName)
-        .leftJoin('users', `${this.tableName}.user_id`, 'users.user_id')
-        .leftJoin('users as approvers', `${this.tableName}.approved_by`, 'approvers.user_id')
-        .leftJoin('time_periods', `${this.tableName}.period_id`, 'time_periods.period_id')
+        .leftJoin('users', function() {
+          this.on('time_sheets.user_id', '=', 'users.user_id')
+            .andOn('time_sheets.tenant', '=', 'users.tenant');
+        })
+        .leftJoin('users as approvers', function() {
+          this.on('time_sheets.approved_by', '=', 'approvers.user_id')
+            .andOn('time_sheets.tenant', '=', 'approvers.tenant');
+        })
+        .leftJoin('time_periods', function() {
+          this.on('time_sheets.period_id', '=', 'time_periods.period_id')
+            .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
+        })
         .where({
           [`${this.tableName}.${this.primaryKey}`]: id,
           [`${this.tableName}.tenant`]: context.tenant
@@ -603,7 +635,10 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       const comments = await knex('time_sheet_comments')
-        .leftJoin('users', 'time_sheet_comments.user_id', 'users.user_id')
+        .leftJoin('users', function() {
+          this.on('time_sheet_comments.user_id', '=', 'users.user_id')
+            .andOn('time_sheet_comments.tenant', '=', 'users.tenant');
+        })
         .where({
           'time_sheet_comments.time_sheet_id': timeSheetId,
           'time_sheet_comments.tenant': context.tenant
@@ -832,7 +867,10 @@ export class TimeSheetService extends BaseService<any> {
         query = query.where('scheduled_end', '<=', filters.end_date);
       }
       if (filters?.user_id) {
-        query = query.join('schedule_entry_assignees', 'schedule_entries.entry_id', 'schedule_entry_assignees.entry_id')
+        query = query.join('schedule_entry_assignees', function() {
+          this.on('schedule_entries.entry_id', '=', 'schedule_entry_assignees.entry_id')
+            .andOn('schedule_entries.tenant', '=', 'schedule_entry_assignees.tenant');
+        })
           .where('schedule_entry_assignees.user_id', filters.user_id);
       }
   
@@ -1013,18 +1051,27 @@ export class TimeSheetService extends BaseService<any> {
         query.whereIn(`${tableName}.period_id`, searchData.period_ids);
       }
       if (searchData.date_from) {
-        query.join('time_periods', `${tableName}.period_id`, 'time_periods.period_id')
+        query.join('time_periods', function() {
+          this.on('time_sheets.period_id', '=', 'time_periods.period_id')
+            .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
+        })
           .where('time_periods.start_date', '>=', searchData.date_from);
       }
       if (searchData.date_to) {
         if (!query.toString().includes('time_periods')) {
-          query.join('time_periods', `${tableName}.period_id`, 'time_periods.period_id');
+          query.join('time_periods', function() {
+            this.on('time_sheets.period_id', '=', 'time_periods.period_id')
+              .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
+          });
         }
         query.where('time_periods.end_date', '<=', searchData.date_to);
       }
   
       // Add joins
-      query.leftJoin('users', `${tableName}.user_id`, 'users.user_id')
+      query.leftJoin('users', function() {
+        this.on('time_sheets.user_id', '=', 'users.user_id')
+          .andOn('time_sheets.tenant', '=', 'users.tenant');
+      })
         .select(
           `${tableName}.*`,
           knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`)
@@ -1173,7 +1220,10 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       return knex('schedule_entry_assignees')
-        .join('users', 'schedule_entry_assignees.user_id', 'users.user_id')
+        .join('users', function() {
+          this.on('schedule_entry_assignees.user_id', '=', 'users.user_id')
+            .andOn('schedule_entry_assignees.tenant', '=', 'users.tenant');
+        })
         .where({ 'schedule_entry_assignees.entry_id': entryId, 'schedule_entry_assignees.tenant': context.tenant })
         .select('users.user_id', 'users.first_name', 'users.last_name', 'users.email');
     }

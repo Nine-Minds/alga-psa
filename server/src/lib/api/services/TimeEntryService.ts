@@ -86,14 +86,22 @@ export class TimeEntryService extends BaseService<any> {
     if (filters.client_id) {
       query.leftJoin('tickets', function() {
         this.on(`time_entries.work_item_id`, 'tickets.ticket_id')
+          .andOn(`time_entries.tenant`, '=', 'tickets.tenant')
           .andOn(`time_entries.work_item_type`, '=', 'ticket');
       })
       .leftJoin('project_tasks', function() {
         this.on(`time_entries.work_item_id`, 'project_tasks.task_id')
+          .andOn(`time_entries.tenant`, '=', 'project_tasks.tenant')
           .andOn(`time_entries.work_item_type`, '=', 'project_task');
       })
-      .leftJoin('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
-      .leftJoin('projects', 'project_phases.project_id', 'projects.project_id')
+      .leftJoin('project_phases', function() {
+        this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
+          .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
+      })
+      .leftJoin('projects', function() {
+        this.on('project_phases.project_id', '=', 'projects.project_id')
+          .andOn('project_phases.tenant', '=', 'projects.tenant');
+      })
       .where(function() {
         this.where('tickets.client_id', filters.client_id!)
           .orWhere('projects.client_id', filters.client_id!);
@@ -121,9 +129,18 @@ export class TimeEntryService extends BaseService<any> {
     this.applyFilters(query, filters);
 
     // Add joins for additional data
-    query.leftJoin('users', `${this.tableName}.user_id`, 'users.user_id')
-      .leftJoin('service_catalog', `${this.tableName}.service_id`, 'service_catalog.service_id')
-      .leftJoin('time_sheets', `${this.tableName}.time_sheet_id`, 'time_sheets.id')
+    query.leftJoin('users', function() {
+      this.on('time_entries.user_id', '=', 'users.user_id')
+        .andOn('time_entries.tenant', '=', 'users.tenant');
+    })
+      .leftJoin('service_catalog', function() {
+        this.on('time_entries.service_id', '=', 'service_catalog.service_id')
+          .andOn('time_entries.tenant', '=', 'service_catalog.tenant');
+      })
+      .leftJoin('time_sheets', function() {
+        this.on('time_entries.time_sheet_id', '=', 'time_sheets.id')
+          .andOn('time_entries.tenant', '=', 'time_sheets.tenant');
+      })
       .select(
         `${this.tableName}.*`,
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
@@ -163,9 +180,18 @@ export class TimeEntryService extends BaseService<any> {
   async getById(id: string, context: ServiceContext): Promise<any | null> {
     const { knex } = await this.getKnex();
     const timeEntry = await knex(this.tableName)
-      .leftJoin('users', `${this.tableName}.user_id`, 'users.user_id')
-      .leftJoin('service_catalog', `${this.tableName}.service_id`, 'service_catalog.service_id')
-      .leftJoin('time_sheets', `${this.tableName}.time_sheet_id`, 'time_sheets.id')
+      .leftJoin('users', function() {
+        this.on('time_entries.user_id', '=', 'users.user_id')
+          .andOn('time_entries.tenant', '=', 'users.tenant');
+      })
+      .leftJoin('service_catalog', function() {
+        this.on('time_entries.service_id', '=', 'service_catalog.service_id')
+          .andOn('time_entries.tenant', '=', 'service_catalog.tenant');
+      })
+      .leftJoin('time_sheets', function() {
+        this.on('time_entries.time_sheet_id', '=', 'time_sheets.id')
+          .andOn('time_entries.tenant', '=', 'time_sheets.tenant');
+      })
       .where({
         [`${this.tableName}.${this.primaryKey}`]: id,
         [`${this.tableName}.tenant`]: context.tenant
@@ -709,14 +735,22 @@ export class TimeEntryService extends BaseService<any> {
     this.applyFilters(query, filters);
     
     // Add joins for complete data
-    query.leftJoin('users', `${this.tableName}.user_id`, 'users.user_id')
-      .leftJoin('service_catalog', `${this.tableName}.service_id`, 'service_catalog.service_id')
+    query.leftJoin('users', function() {
+      this.on('time_entries.user_id', '=', 'users.user_id')
+        .andOn('time_entries.tenant', '=', 'users.tenant');
+    })
+      .leftJoin('service_catalog', function() {
+        this.on('time_entries.service_id', '=', 'service_catalog.service_id')
+          .andOn('time_entries.tenant', '=', 'service_catalog.tenant');
+      })
       .leftJoin('tickets', function() {
         this.on(`time_entries.work_item_id`, 'tickets.ticket_id')
+          .andOn(`time_entries.tenant`, '=', 'tickets.tenant')
           .andOn(`time_entries.work_item_type`, '=', knex.raw('?', ['ticket']));
       })
       .leftJoin('project_tasks', function() {
         this.on(`time_entries.work_item_id`, 'project_tasks.task_id')
+          .andOn(`time_entries.tenant`, '=', 'project_tasks.tenant')
           .andOn(`time_entries.work_item_type`, '=', knex.raw('?', ['project_task']));
       })
       .select(
@@ -903,8 +937,14 @@ export class TimeEntryService extends BaseService<any> {
     this.applyFilters(query, filters);
 
     // Add joins
-    query.leftJoin('users', `${this.tableName}.user_id`, 'users.user_id')
-      .leftJoin('service_catalog', `${this.tableName}.service_id`, 'service_catalog.service_id')
+    query.leftJoin('users', function() {
+      this.on('time_entries.user_id', '=', 'users.user_id')
+        .andOn('time_entries.tenant', '=', 'users.tenant');
+    })
+      .leftJoin('service_catalog', function() {
+        this.on('time_entries.service_id', '=', 'service_catalog.service_id')
+          .andOn('time_entries.tenant', '=', 'service_catalog.tenant');
+      })
       .select(
         `${this.tableName}.*`,
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
@@ -991,8 +1031,14 @@ export class TimeEntryService extends BaseService<any> {
     }
 
     // Add joins
-    query.leftJoin('users', `${this.tableName}.user_id`, 'users.user_id')
-      .leftJoin('service_catalog', `${this.tableName}.service_id`, 'service_catalog.service_id')
+    query.leftJoin('users', function() {
+      this.on('time_entries.user_id', '=', 'users.user_id')
+        .andOn('time_entries.tenant', '=', 'users.tenant');
+    })
+      .leftJoin('service_catalog', function() {
+        this.on('time_entries.service_id', '=', 'service_catalog.service_id')
+          .andOn('time_entries.tenant', '=', 'service_catalog.tenant');
+      })
       .select(
         `${this.tableName}.*`,
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
@@ -1131,8 +1177,14 @@ export class TimeEntryService extends BaseService<any> {
           .first();
       case 'project_task':
         return knex('project_tasks')
-          .join('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
-          .join('projects', 'project_phases.project_id', 'projects.project_id')
+          .join('project_phases', function() {
+            this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
+              .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
+          })
+          .join('projects', function() {
+            this.on('project_phases.project_id', '=', 'projects.project_id')
+              .andOn('project_phases.tenant', '=', 'projects.tenant');
+          })
           .where({ 'project_tasks.task_id': workItemId, 'project_tasks.tenant': context.tenant })
           .select(
             'project_tasks.task_id as id', 
@@ -1240,7 +1292,10 @@ export class TimeEntryService extends BaseService<any> {
   private async getEntriesByUser(query: Knex.QueryBuilder, context: ServiceContext): Promise<Record<string, number>> {
     const { knex } = await this.getKnex();
     const results = await query
-      .join('users', `${this.tableName}.user_id`, 'users.user_id')
+      .join('users', function() {
+        this.on('time_entries.user_id', '=', 'users.user_id')
+          .andOn('time_entries.tenant', '=', 'users.tenant');
+      })
       .groupBy('users.user_id', 'users.first_name', 'users.last_name')
       .select(
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as user_name`),
@@ -1257,7 +1312,10 @@ export class TimeEntryService extends BaseService<any> {
   private async getEntriesByService(query: Knex.QueryBuilder, context: ServiceContext): Promise<Record<string, number>> {
     const { knex } = await this.getKnex();
     const results = await query
-      .leftJoin('service_catalog', this.tableName + '.service_id', 'service_catalog.service_id')
+      .leftJoin('service_catalog', function() {
+        this.on('time_entries.service_id', '=', 'service_catalog.service_id')
+          .andOn('time_entries.tenant', '=', 'service_catalog.tenant');
+      })
       .groupBy('service_catalog.service_name')
       .select('service_catalog.service_name', knex.raw('COUNT(*) as count'))
       .limit(10);
