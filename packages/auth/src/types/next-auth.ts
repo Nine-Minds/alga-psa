@@ -9,6 +9,7 @@ declare module 'next-auth' {
     user_type: string;
     clientId?: string;
     contactId?: string;
+    plan?: string;
     max_concurrent_sessions?: number;
     two_factor_enabled?: boolean;
     two_factor_required_new_device?: boolean;
@@ -37,6 +38,7 @@ declare module 'next-auth' {
       user_type: string;
       clientId?: string;
       contactId?: string;
+      plan?: string;
     };
   }
 
@@ -52,10 +54,12 @@ declare module 'next-auth' {
     user_type: string;
     clientId?: string;
     contactId?: string;
+    plan?: string;
     session_id?: string;
     login_method?: string;
     last_activity_check?: number;
     last_revocation_check?: number;
+    last_plan_check?: number;
   }
 }
 
