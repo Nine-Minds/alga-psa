@@ -208,3 +208,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - T040: Verified ContactDetails.tsx passes editedContact.full_name to ContactAvatarUpload.
 - T041: Verified ContactDetailsEdit.tsx passes contact.full_name to ContactAvatarUpload.
 - T041A: Verified server/src/app/api/secrets/route.ts imports tenant secret actions from @alga-psa/tenancy/actions.
+- T041B: Verified server/src/app/api/secrets/[name]/route.ts imports tenant secret actions from @alga-psa/tenancy/actions.
