@@ -305,7 +305,7 @@
   {
     "id": "T038",
     "description": "`ContactAvatarUploadProps` interface includes `contactName: string` prop",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
