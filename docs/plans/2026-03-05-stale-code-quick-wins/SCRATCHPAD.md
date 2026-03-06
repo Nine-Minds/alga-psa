@@ -152,3 +152,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - F020: Added a required `contactName` prop to `ContactAvatarUploadProps` and plumbed it into the component signature.
 - F021: Replaced the hardcoded empty `entityName` in `ContactAvatarUpload` with the new `contactName` prop so initials render correctly.
 - F022: Updated `ContactDetails.tsx` to pass `editedContact.full_name` into `ContactAvatarUpload`.
+- F023: Updated `ContactDetailsEdit.tsx` to pass `contact.full_name` into `ContactAvatarUpload`.
