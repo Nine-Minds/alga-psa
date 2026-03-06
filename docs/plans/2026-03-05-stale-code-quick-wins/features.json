@@ -42,7 +42,7 @@
   {
     "id": "F006",
     "description": "Update `packages/users/src/services/UserService.ts`: replace `getUserAvatarUrl` import from `@alga-psa/media` with `@alga-psa/formatting/avatarUtils`, replace `uploadEntityImage`/`deleteEntityImage` imports with `@alga-psa/documents`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task 3"
     ]

@@ -28,7 +28,8 @@ import {
 import { hashPassword, verifyPassword } from '@alga-psa/core/encryption';
 import { hasPermission } from '@alga-psa/user-composition/lib/permissions';
 import { validateSystemContext } from '@alga-psa/db';
-import { getUserAvatarUrl, uploadEntityImage, deleteEntityImage } from '@alga-psa/media';
+import { uploadEntityImage, deleteEntityImage } from '@alga-psa/documents';
+import { getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import User from '@alga-psa/db/models/user';
 import Team from '@alga-psa/teams/models/team';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
