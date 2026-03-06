@@ -19,10 +19,12 @@ import {
   getScheduledLicenseChangesAction,
   sendCancellationFeedbackAction,
   upgradeTierAction,
+  getUpgradePreviewAction,
 } from 'ee/server/src/lib/actions/license-actions';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
 import { useRouter } from 'next/navigation';
 import { ILicenseInfo, IPaymentMethod, ISubscriptionInfo, IInvoiceInfo, IScheduledLicenseChange } from 'server/src/interfaces/subscription.interfaces';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import ReduceLicensesModal from '@ee/components/licensing/ReduceLicensesModal';
 import CancellationFeedbackModal from './CancellationFeedbackModal';
 import { signOut } from 'next-auth/react';
@@ -32,7 +34,9 @@ import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 // Feature display names for the tier features list
 const FEATURE_DISPLAY_NAMES: Record<TIER_FEATURES, string> = {
-  [TIER_FEATURES.INVOICE_DESIGNER]: 'Invoice Designer',
+  [TIER_FEATURES.INVOICE_DESIGNER]: 'Visual Invoice Designer — drag-and-drop custom invoice templates',
+  [TIER_FEATURES.ENTRA_SYNC]: 'Microsoft Entra Sync — auto-discover tenants and sync contacts from Entra ID',
+  [TIER_FEATURES.CIPP]: 'CIPP Integration — connect your CIPP instance for multi-tenant Entra management',
 };
 
 export default function AccountManagement() {
@@ -244,18 +248,48 @@ export default function AccountManagement() {
   };
 
   const [upgrading, setUpgrading] = useState(false);
+  const [showUpgradeConfirm, setShowUpgradeConfirm] = useState(false);
+  const [upgradePreview, setUpgradePreview] = useState<{
+    currentMonthly?: number;
+    newMonthly?: number;
+    newBasePrice?: number;
+    newUserPrice?: number;
+    userCount?: number;
+    currency?: string;
+    prorationAmount?: number;
+  } | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
-  const handleUpgradePlan = async () => {
+  const handleUpgradeClick = async () => {
     if (!canManageAccount) {
       toast.error('You do not have permission to manage the subscription');
       return;
     }
 
+    setLoadingPreview(true);
+    try {
+      const preview = await getUpgradePreviewAction('premium');
+      if (!preview.success) {
+        toast.error(preview.error || 'Failed to get upgrade pricing');
+        return;
+      }
+      setUpgradePreview(preview);
+      setShowUpgradeConfirm(true);
+    } catch (error) {
+      console.error('Error fetching upgrade preview:', error);
+      toast.error('Failed to get upgrade pricing');
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  const handleConfirmUpgrade = async () => {
     setUpgrading(true);
     try {
       const result = await upgradeTierAction('premium');
       if (result.success) {
         toast.success('Upgraded to Premium! Refreshing your session...');
+        setShowUpgradeConfirm(false);
         await refreshTier();
       } else {
         toast.error(result.error || 'Failed to upgrade plan');
@@ -410,9 +444,9 @@ export default function AccountManagement() {
                         Unlock the visual Invoice Designer and upcoming premium features.
                       </p>
                     </div>
-                    <Button id="upgrade-to-premium-btn" onClick={handleUpgradePlan} disabled={upgrading}>
+                    <Button id="upgrade-to-premium-btn" onClick={handleUpgradeClick} disabled={upgrading || loadingPreview}>
                       <Rocket className="mr-2 h-4 w-4" />
-                      {upgrading ? 'Upgrading...' : 'Upgrade'}
+                      {loadingPreview ? 'Loading...' : 'Upgrade'}
                     </Button>
                   </div>
                 </div>
@@ -744,6 +778,56 @@ export default function AccountManagement() {
         onClose={() => setShowCancellationFeedback(false)}
         onConfirm={handleConfirmCancellation}
         onLogout={handleLogout}
+      />
+
+      <ConfirmationDialog
+        id="upgrade-tier-confirm"
+        isOpen={showUpgradeConfirm}
+        onClose={() => setShowUpgradeConfirm(false)}
+        onConfirm={handleConfirmUpgrade}
+        title="Upgrade to Premium"
+        confirmLabel={upgrading ? 'Upgrading...' : 'Confirm Upgrade'}
+        isConfirming={upgrading}
+        message={
+          upgradePreview ? (
+            <div className="space-y-4">
+              <p>You are about to upgrade to the <strong>Premium</strong> plan.</p>
+
+              <div className="rounded-lg border p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Current monthly total</span>
+                  <span>${upgradePreview.currentMonthly?.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Premium base fee</span>
+                  <span>${upgradePreview.newBasePrice?.toFixed(2)}/mo</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Per-user fee ({upgradePreview.userCount} users)</span>
+                  <span>${upgradePreview.newUserPrice?.toFixed(2)} × {upgradePreview.userCount} = ${((upgradePreview.newUserPrice || 0) * (upgradePreview.userCount || 0)).toFixed(2)}/mo</span>
+                </div>
+                <div className="flex justify-between font-semibold pt-2 border-t">
+                  <span>New monthly total</span>
+                  <span>${upgradePreview.newMonthly?.toFixed(2)}/mo</span>
+                </div>
+              </div>
+
+              {upgradePreview.prorationAmount !== undefined && upgradePreview.prorationAmount > 0 && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                  <p className="text-sm text-amber-800">
+                    A prorated charge of <strong>${upgradePreview.prorationAmount.toFixed(2)}</strong> will be billed now for the remainder of the current billing period.
+                  </p>
+                </div>
+              )}
+
+              <p className="text-sm text-muted-foreground">
+                Your existing subscription will be updated and your payment method will be charged. This change takes effect immediately.
+              </p>
+            </div>
+          ) : (
+            'Loading pricing details...'
+          )
+        }
       />
     </div>
   );

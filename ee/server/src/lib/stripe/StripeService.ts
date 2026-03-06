@@ -1401,6 +1401,28 @@ export class StripeService {
           updated_at: knex.fn.now(),
         });
 
+      // Cancel any other active Stripe subscriptions for this customer
+      // (e.g. legacy subscription that wasn't updated in-place)
+      try {
+        const allStripeSubs = await this.stripe.subscriptions.list({
+          customer: customer.stripe_customer_external_id,
+          status: 'active',
+        });
+        for (const sub of allStripeSubs.data) {
+          if (sub.id !== existingSubscription.stripe_subscription_external_id) {
+            logger.info(`[StripeService] Cancelling stale subscription ${sub.id} for tenant ${tenantId}`);
+            await this.stripe.subscriptions.cancel(sub.id, { prorate: true });
+            // Mark as cancelled in DB if it exists
+            await knex<StripeSubscription>('stripe_subscriptions')
+              .where({ tenant: tenantId, stripe_subscription_external_id: sub.id })
+              .update({ status: 'canceled', canceled_at: knex.fn.now(), updated_at: knex.fn.now() });
+          }
+        }
+      } catch (cleanupError) {
+        // Don't fail the upgrade if cleanup fails — log and continue
+        logger.warn(`[StripeService] Failed to clean up stale subscriptions for tenant ${tenantId}`, { error: cleanupError });
+      }
+
       logger.info(`[StripeService] Upgraded tenant ${tenantId} to ${targetTier}`);
       return { success: true };
     } catch (error: any) {
@@ -1409,6 +1431,116 @@ export class StripeService {
         success: false,
         error: error.message || 'Failed to upgrade subscription',
       };
+    }
+  }
+
+  /**
+   * Get a preview of what the tier upgrade will cost.
+   * Fetches live prices from Stripe so the UI can show a confirmation dialog.
+   */
+  async getUpgradePreview(
+    tenantId: string,
+    targetTier: TenantTier
+  ): Promise<{
+    success: boolean;
+    error?: string;
+    currentMonthly?: number;
+    newBasePrice?: number;
+    newUserPrice?: number;
+    newMonthly?: number;
+    userCount?: number;
+    currency?: string;
+    prorationAmount?: number;
+  }> {
+    await this.ensureInitialized();
+
+    const tierPrices = this.getTierPriceIds(targetTier);
+    if (!tierPrices) {
+      return { success: false, error: `Pricing not configured for ${targetTier} tier` };
+    }
+
+    try {
+      const knex = await getConnection(tenantId);
+      const customer = await this.getOrImportCustomer(tenantId);
+
+      const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
+        .where({
+          tenant: tenantId,
+          stripe_customer_id: customer.stripe_customer_id,
+          status: 'active',
+        })
+        .first();
+
+      const userCount = existingSubscription?.quantity || 1;
+
+      // Fetch target tier prices from Stripe
+      const [basePrice, userPrice] = await Promise.all([
+        this.stripe.prices.retrieve(tierPrices.basePriceId),
+        this.stripe.prices.retrieve(tierPrices.userPriceId),
+      ]);
+
+      const basePriceAmount = (basePrice.unit_amount || 0) / 100;
+      const userPriceAmount = (userPrice.unit_amount || 0) / 100;
+      const newMonthly = basePriceAmount + (userPriceAmount * userCount);
+
+      // Calculate current monthly from existing subscription
+      let currentMonthly = 0;
+      if (existingSubscription) {
+        const currentPrice = await knex<StripePrice>('stripe_prices')
+          .where({ stripe_price_id: existingSubscription.stripe_price_id })
+          .first();
+        const currentUserAmount = (currentPrice?.unit_amount || 0) / 100;
+
+        if (existingSubscription.stripe_base_price_id) {
+          const currentBasePrice = await knex<StripePrice>('stripe_prices')
+            .where({ stripe_price_id: existingSubscription.stripe_base_price_id })
+            .first();
+          currentMonthly = ((currentBasePrice?.unit_amount || 0) / 100) + (currentUserAmount * userCount);
+        } else {
+          currentMonthly = currentUserAmount * userCount;
+        }
+      }
+
+      // Get proration estimate from Stripe
+      let prorationAmount: number | undefined;
+      if (existingSubscription) {
+        try {
+          const invoice = await this.stripe.invoices.createPreview({
+            customer: customer.stripe_customer_external_id,
+            subscription: existingSubscription.stripe_subscription_external_id,
+            subscription_details: {
+              items: [
+                ...(existingSubscription.stripe_subscription_item_id
+                  ? [{ id: existingSubscription.stripe_subscription_item_id, deleted: true as const }]
+                  : []),
+                ...(existingSubscription.stripe_base_item_id
+                  ? [{ id: existingSubscription.stripe_base_item_id, deleted: true as const }]
+                  : []),
+                { price: tierPrices.basePriceId, quantity: 1 },
+                { price: tierPrices.userPriceId, quantity: userCount },
+              ],
+              proration_behavior: 'always_invoice',
+            },
+          });
+          prorationAmount = (invoice.amount_due || 0) / 100;
+        } catch (e) {
+          logger.warn('[StripeService] Could not estimate proration', { error: e });
+        }
+      }
+
+      return {
+        success: true,
+        currentMonthly,
+        newBasePrice: basePriceAmount,
+        newUserPrice: userPriceAmount,
+        newMonthly,
+        userCount,
+        currency: basePrice.currency,
+        prorationAmount,
+      };
+    } catch (error: any) {
+      logger.error(`[StripeService] Failed to get upgrade preview for tenant ${tenantId}:`, error);
+      return { success: false, error: error.message || 'Failed to get upgrade preview' };
     }
   }
 
