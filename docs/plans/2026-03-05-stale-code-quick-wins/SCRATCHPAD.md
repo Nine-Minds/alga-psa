@@ -168,3 +168,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - Discovery: added `T042A` because the PRD explicitly requires `server/src/test/teams-v2-improvements.test.ts` to pass after the media cleanup.
 - T001: Confirmed the deprecated @/lib/posthog wrapper path has zero remaining imports anywhere outside docs and lockfiles.
 - T002: Verified server/src/lib/posthog.ts is absent on disk after F001.
+- T003: Verified SecretsManagement.tsx imports tenant secret helpers from @alga-psa/tenancy/actions.
