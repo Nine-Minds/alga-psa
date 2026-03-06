@@ -99,7 +99,7 @@
   {
     "id": "T013",
     "description": "`teams/avatarActions.ts` imports `uploadEntityImage` and `deleteEntityImage` from `@alga-psa/documents` (not `@alga-psa/media`)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
