@@ -169,6 +169,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
         <div className="mb-6">
           <ContactAvatarUpload
             contactId={contact.contact_name_id}
+            contactName={contact.full_name}
             currentAvatarUrl={avatarUrl}
             onAvatarUpdated={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
           />

@@ -6,7 +6,7 @@ import UserDetails from './UserDetails';
 import { useDrawer, DeleteEntityDialog } from "@alga-psa/ui";
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
-import { getUserAvatarUrlAction } from '@alga-psa/user-composition/actions';
+import { getContactAvatarUrlAction, getUserAvatarUrlAction } from '@alga-psa/user-composition/actions';
 import { deleteUser, getUsersClientInfo } from '@alga-psa/users/actions';
 import { MoreVertical, Pen, Trash2 } from 'lucide-react';
 
@@ -70,7 +70,14 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteSuccess, onUpdate, s
       
       const avatarPromises = usersToFetch.map(async (user) => {
         try {
-          const avatarUrl = await getUserAvatarUrlAction(user.user_id, user.tenant);
+          let avatarUrl: string | null = null;
+          if (user.user_type === 'client') {
+            avatarUrl = user.contact_id
+              ? await getContactAvatarUrlAction(user.contact_id, user.tenant)
+              : null;
+          } else {
+            avatarUrl = await getUserAvatarUrlAction(user.user_id, user.tenant);
+          }
           return { userId: user.user_id, avatarUrl };
         } catch (error) {
           console.error(`Error fetching avatar for user ${user.user_id}:`, error);

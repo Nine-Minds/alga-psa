@@ -43,7 +43,6 @@ RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm ins
   --workspace=@alga-psa/event-bus \
   --workspace=@alga-psa/event-schemas \
   --workspace=@alga-psa/formatting \
-  --workspace=@alga-psa/media \
   --workspace=@alga-psa/portal-shared \
   --workspace=@alga-psa/storage \
   --workspace=@alga-psa/types \
