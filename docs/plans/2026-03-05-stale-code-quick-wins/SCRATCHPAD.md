@@ -144,3 +144,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - F012: Removed the `@alga-psa/media` path mappings from `server/tsconfig.json`.
 - F013: Removed the stale `@alga-psa/media` path mappings from `ee/server/tsconfig.json`.
 - F014: Dropped the deleted `@alga-psa/media` workspace from `services/workflow-worker/Dockerfile`.
+- F015: Updated `server/src/test/teams-v2-improvements.test.ts` to read formatting avatar utilities and assert the new canonical package dependencies.

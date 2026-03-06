@@ -114,7 +114,7 @@
   {
     "id": "F015",
     "description": "Update `server/src/test/teams-v2-improvements.test.ts`: change `read()` path from `packages/media/src/lib/avatarUtils.ts` to `packages/formatting/src/avatarUtils.ts`, update assertions T085 and T089 to match formatting file content",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task 3"
     ]

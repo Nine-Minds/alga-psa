@@ -5,7 +5,6 @@ const repoRoot = path.resolve(__dirname, '../../..');
 const read = (rel: string) => fs.readFileSync(path.join(repoRoot, rel), 'utf8');
 
 const migration = read('server/migrations/20260227000001_add_team_to_document_associations_entity_type.cjs');
-const mediaAvatarUtils = read('packages/media/src/lib/avatarUtils.ts');
 const usersAvatarUtils = read('packages/users/src/lib/avatarUtils.ts');
 const formattingAvatarUtils = read('packages/formatting/src/avatarUtils.ts');
 const entityImageUpload = read('packages/ui/src/components/EntityImageUpload.tsx');
@@ -43,8 +42,8 @@ describe('Teams V2 Improvements', () => {
     expect(downSection).not.toContain("'team'");
   });
 
-  it('T085: media EntityType includes team', () => {
-    expect(mediaAvatarUtils).toContain("'team'");
+  it('T085: formatting EntityType includes team', () => {
+    expect(formattingAvatarUtils).toContain("'team'");
   });
 
   it('T086: users EntityType includes team', () => {
@@ -60,8 +59,8 @@ describe('Teams V2 Improvements', () => {
   });
 
   it('T089: getTeamAvatarUrl uses getEntityImageUrl(team)', () => {
-    expect(mediaAvatarUtils).toContain('getTeamAvatarUrl');
-    expect(mediaAvatarUtils).toContain("getEntityImageUrl('team'");
+    expect(formattingAvatarUtils).toContain('getTeamAvatarUrl');
+    expect(formattingAvatarUtils).toContain("getEntityImageUrl('team'");
   });
 
   it('T090: TeamAvatar renders EntityAvatar with team props', () => {
@@ -116,9 +115,10 @@ describe('Teams V2 Improvements', () => {
     expect(teamActionsIndex).toContain("export * from './avatarActions'");
   });
 
-  it('T102: teams package.json includes media/auth/swr deps', () => {
+  it('T102: teams package.json includes canonical avatar dependencies', () => {
     expect(teamsPackageJson.dependencies).toMatchObject({
-      '@alga-psa/media': expect.any(String),
+      '@alga-psa/documents': expect.any(String),
+      '@alga-psa/formatting': expect.any(String),
       '@alga-psa/auth': expect.any(String),
       swr: expect.any(String),
     });
