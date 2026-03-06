@@ -626,9 +626,10 @@ export default function TaskForm({
 
     const errors: string[] = [];
     if (!taskName.trim()) errors.push('Task name');
-    const currentAgents = task?.task_id ? taskResources : tempTaskResources;
+    const currentAgents = [...taskResources, ...tempTaskResources];
     if (currentAgents.length > 0 && !assignedUser) {
-      errors.push('Primary agent is required when additional agents are assigned');
+      toast.error('Primary agent is required when additional agents are assigned');
+      return;
     }
 
     if (errors.length > 0) {
@@ -712,6 +713,12 @@ export default function TaskForm({
           service_id: selectedServiceId
         };
         resultTask = await updateTaskWithChecklist(taskToUpdate.task_id, taskData);
+
+        // Save any temporarily stored additional agents (added while task had no primary agent)
+        for (const resource of tempTaskResources) {
+          await addTaskResourceAction(taskToUpdate.task_id, resource.additional_user_id);
+        }
+
         onSubmit(resultTask);
         onClose();
       } else {
@@ -1107,13 +1114,14 @@ export default function TaskForm({
 
   const handleAddAgent = async (userId: string) => {
     try {
-      if (task?.task_id) {
+      if (task?.task_id && assignedUser) {
+        // Existing task with a primary agent: save immediately
         await addTaskResourceAction(task.task_id, userId);
         const updatedResources = await getTaskResourcesAction(task.task_id);
         setTaskResources(updatedResources);
         toast.success('Agent added successfully');
       } else {
-        // For new tasks, store resources temporarily
+        // New task OR existing task without primary agent: store temporarily
         const selectedUser = users.find(u => u.user_id === userId);
         if (selectedUser) {
           const tempResource = {
@@ -1127,21 +1135,17 @@ export default function TaskForm({
         }
       }
     } catch (error: any) {
-      if (error.message?.includes('assigned_to')) {
-        handleError(error, 'Please assign a primary agent first');
-      } else {
-        handleError(error, 'Failed to add agent');
-      }
+      handleError(error, 'Failed to add agent');
     }
   };
 
   const handleRemoveAgent = async (assignmentId: string) => {
     try {
-      if (task?.task_id) {
+      if (assignmentId.startsWith('temp-')) {
+        setTempTaskResources(prev => prev.filter(r => r.assignment_id !== assignmentId));
+      } else {
         await removeTaskResourceAction(assignmentId);
         setTaskResources(taskResources.filter(r => r.assignment_id !== assignmentId));
-      } else {
-        setTempTaskResources(prev => prev.filter(r => r.assignment_id !== assignmentId));
       }
     } catch (error) {
       handleError(error, 'Failed to remove agent');
@@ -1200,7 +1204,7 @@ export default function TaskForm({
         targetStatusId: targetStatusId, // Store the target status ID
         hasChecklist: (task.checklist_items?.length || checklistItems.length) > 0,
         hasPrimaryAssignee: !!(task.assigned_to || assignedUser),
-        additionalAssigneeCount: (task.task_id ? taskResources : tempTaskResources).length,
+        additionalAssigneeCount: ([...taskResources, ...tempTaskResources]).length,
         ticketLinkCount: pendingTicketLinks.length,
       };
 
@@ -1460,7 +1464,7 @@ export default function TaskForm({
                       onTeamSelect={handleAssignTeam}
                       size="sm"
                       users={users.filter(u =>
-                        !(task?.task_id ? taskResources : tempTaskResources)
+                        !([...taskResources, ...tempTaskResources])
                           .some(r => r.additional_user_id === u.user_id)
                       )}
                       teams={teams}
@@ -1477,7 +1481,7 @@ export default function TaskForm({
                       }}
                       size="sm"
                       users={users.filter(u =>
-                        !(task?.task_id ? taskResources : tempTaskResources)
+                        !([...taskResources, ...tempTaskResources])
                           .some(r => r.additional_user_id === u.user_id)
                       )}
                       getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
@@ -1503,7 +1507,7 @@ export default function TaskForm({
                   {teamsV2Enabled ? (
                     <MultiUserAndTeamPicker
                       id="task-additional-agents"
-                      values={(task?.task_id ? taskResources : tempTaskResources).map(r => r.additional_user_id)}
+                      values={([...taskResources, ...tempTaskResources]).map(r => r.additional_user_id)}
                       getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                       getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
                       teams={teams}
@@ -1524,7 +1528,7 @@ export default function TaskForm({
                         isProcessingAgentsRef.current = true;
 
                         try {
-                          const currentResources = task?.task_id ? taskResources : tempTaskResources;
+                          const currentResources = [...taskResources, ...tempTaskResources];
                           const currentUserIds = currentResources.map(r => r.additional_user_id);
 
                           // Find added users
@@ -1555,7 +1559,7 @@ export default function TaskForm({
                   ) : (
                     <MultiUserPicker
                       id="task-additional-agents"
-                      values={(task?.task_id ? taskResources : tempTaskResources).map(r => r.additional_user_id)}
+                      values={([...taskResources, ...tempTaskResources]).map(r => r.additional_user_id)}
                       getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                       onValuesChange={async (newUserIds) => {
                         if (isProcessingAgentsRef.current) {
@@ -1564,7 +1568,7 @@ export default function TaskForm({
                         isProcessingAgentsRef.current = true;
 
                         try {
-                          const currentResources = task?.task_id ? taskResources : tempTaskResources;
+                          const currentResources = [...taskResources, ...tempTaskResources];
                           const currentUserIds = currentResources.map(r => r.additional_user_id);
 
                           const addedUserIds = newUserIds.filter(id => !currentUserIds.includes(id));
@@ -1743,7 +1747,7 @@ export default function TaskForm({
                     description,
                     assigned_to: assignedUser,
                     due_date: dueDate ?? null,
-                    additional_agents: (task?.task_id ? taskResources : tempTaskResources).map(r => ({
+                    additional_agents: ([...taskResources, ...tempTaskResources]).map(r => ({
                       user_id: r.additional_user_id,
                       name: r.first_name ? `${r.first_name} ${r.last_name || ''}`.trim() : undefined
                     }))

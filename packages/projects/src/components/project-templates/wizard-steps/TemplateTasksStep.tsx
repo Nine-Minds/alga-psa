@@ -352,11 +352,6 @@ export function TemplateTasksStep({
 
                           <div>
                             <Label>Additional Agents</Label>
-                            {!task.assigned_to ? (
-                              <div className="text-sm text-gray-500 italic p-2 bg-gray-50 rounded">
-                                Please assign a primary agent first.
-                              </div>
-                            ) : (
                               <MultiUserPicker
                                 values={task.additional_agents || []}
                                 onValuesChange={(values) =>
@@ -365,7 +360,6 @@ export function TemplateTasksStep({
                                 users={users.filter(u => u.user_id !== task.assigned_to)}
                                 getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                               />
-                            )}
                           </div>
                         </div>
 
