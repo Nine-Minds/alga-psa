@@ -650,6 +650,66 @@ describe('ChatCompletionsService (unit)', () => {
     });
   });
 
+  it('summarizes oversized tool results before replaying them into the follow-up completion', async () => {
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    vi.spyOn(ChatCompletionsService as any, 'executeFunctionCall').mockResolvedValue({
+      status: 200,
+      ok: true,
+      data: Array.from({ length: 10 }, (_, index) => ({
+        entry_id: `entry-${index}`,
+        notes: 'x'.repeat(4000),
+      })),
+    });
+    const processModelInteractionSpy = vi
+      .spyOn(ChatCompletionsService as any, 'processModelInteraction')
+      .mockResolvedValue({
+        type: 'assistant_message',
+        message: { role: 'assistant', content: 'Execution complete' },
+        nextMessages: [],
+        modelMessages: [],
+      });
+
+    const response = await (ChatCompletionsService as any).executeAfterApproval({
+      messages: [{ role: 'user', content: 'Run endpoint' }],
+      functionCall: {
+        name: 'call_api_endpoint',
+        arguments: { entryId: 'tickets.list' },
+        toolCallId: 'tool-call-large-result',
+        entryId: 'tickets.list',
+      },
+      action: 'approve',
+      baseUrl: 'https://example.invalid',
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+      chatId: 'chat-1',
+    });
+
+    expect(processModelInteractionSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: expect.arrayContaining([
+          expect.objectContaining({
+            role: 'function',
+            tool_call_id: 'tool-call-large-result',
+            content: expect.stringContaining('"truncated":true'),
+          }),
+        ]),
+      }),
+    );
+
+    const functionMessage = (processModelInteractionSpy.mock.calls[0]?.[0]?.messages ?? []).find(
+      (message: { role?: string }) => message.role === 'function',
+    ) as { content?: string } | undefined;
+    expect(functionMessage?.content?.length ?? 0).toBeLessThanOrEqual(12000 + 200);
+    expect(response).toMatchObject({
+      type: 'assistant_message',
+      functionCall: expect.objectContaining({
+        toolCallId: 'tool-call-large-result',
+        toolResultTruncated: true,
+      }),
+    });
+  });
+
   it('retries non-stream completion requests on 429 with backoff', async () => {
     process.env.AI_CHAT_PROVIDER = 'openrouter';
     setSecrets({
