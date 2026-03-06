@@ -337,7 +337,7 @@
   {
     "id": "T041A",
     "description": "`server/src/app/api/secrets/route.ts` imports tenant secret actions from `@alga-psa/tenancy/actions`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023A"
     ]
