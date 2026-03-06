@@ -220,3 +220,26 @@ export async function upgradeTierAction(
     error: 'Plan upgrades are only available in Enterprise Edition',
   };
 }
+
+/**
+ * CE Stub - Not available in Community Edition
+ */
+export async function getUpgradePreviewAction(
+  _targetTier: 'pro' | 'premium'
+): Promise<{
+  success: boolean;
+  error?: string;
+  currentMonthly?: number;
+  newBasePrice?: number;
+  newUserPrice?: number;
+  newMonthly?: number;
+  userCount?: number;
+  currency?: string;
+  prorationAmount?: number;
+}> {
+  logger.warn('[CE] getUpgradePreviewAction called but Stripe integration is EE-only');
+  return {
+    success: false,
+    error: 'Plan upgrades are only available in Enterprise Edition',
+  };
+}

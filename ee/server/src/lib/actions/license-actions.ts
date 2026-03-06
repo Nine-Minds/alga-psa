@@ -1064,3 +1064,41 @@ export async function upgradeTierAction(
     };
   }
 }
+
+/**
+ * Get a preview of what upgrading to a new tier will cost.
+ * Used by the UI to show a confirmation dialog before charging.
+ */
+export async function getUpgradePreviewAction(
+  targetTier: 'pro' | 'premium'
+): Promise<{
+  success: boolean;
+  error?: string;
+  currentMonthly?: number;
+  newBasePrice?: number;
+  newUserPrice?: number;
+  newMonthly?: number;
+  userCount?: number;
+  currency?: string;
+  prorationAmount?: number;
+}> {
+  try {
+    const session = await getSession();
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return { success: false, error: 'Stripe billing is not configured' };
+    }
+
+    return await stripeService.getUpgradePreview(session.user.tenant, targetTier);
+  } catch (error) {
+    logger.error('[getUpgradePreviewAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get upgrade preview',
+    };
+  }
+}

@@ -152,12 +152,11 @@ export async function createTenantInDB(
               quantity: input.licenseCount || 1
             });
 
-            await trx('stripe_subscriptions')
-              .insert({
+            const subscriptionData: any = {
                 tenant: tenantId,
                 stripe_subscription_id: trx.raw('gen_random_uuid()'), // Internal UUID
                 stripe_subscription_external_id: input.stripeSubscriptionId, // Stripe's ID (sub_...)
-                stripe_subscription_item_id: input.stripeSubscriptionItemId, // For quantity updates
+                stripe_subscription_item_id: input.stripeSubscriptionItemId, // Per-user item for quantity updates
                 stripe_customer_id: stripeCustomer.stripe_customer_id, // FK to our stripe_customers
                 stripe_price_id: price.stripe_price_id, // FK to our stripe_prices
                 status: 'active',
@@ -166,7 +165,30 @@ export async function createTenantInDB(
                 current_period_end: trx.raw(`NOW() + INTERVAL '1 month'`),
                 created_at: knex.fn.now(),
                 updated_at: knex.fn.now(),
-              })
+              };
+
+            // Add base item/price for multi-item subscriptions
+            if (input.stripeBaseItemId) {
+              subscriptionData.stripe_base_item_id = input.stripeBaseItemId;
+
+              if (input.stripeBasePriceId) {
+                const basePrice = await trx('stripe_prices')
+                  .where({
+                    stripe_price_external_id: input.stripeBasePriceId,
+                    tenant: MASTER_TENANT_ID
+                  })
+                  .first();
+
+                if (basePrice) {
+                  subscriptionData.stripe_base_price_id = basePrice.stripe_price_id;
+                } else {
+                  log.warn(`Base price ${input.stripeBasePriceId} not found in database`);
+                }
+              }
+            }
+
+            await trx('stripe_subscriptions')
+              .insert(subscriptionData)
               .returning('*');
 
             log.info('Stripe subscription created successfully', {
