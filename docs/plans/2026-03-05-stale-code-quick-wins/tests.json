@@ -313,7 +313,7 @@
   {
     "id": "T039",
     "description": "`ContactAvatarUpload` passes `contactName` as `entityName` to `EntityImageUpload` (not empty string)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]

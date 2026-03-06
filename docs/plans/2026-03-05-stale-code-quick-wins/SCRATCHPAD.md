@@ -204,3 +204,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - T036: Verified the avatar fetch loop still uses getUserAvatarUrlAction(user.user_id, user.tenant) for non-client users.
 - T037: Verified client users without contact_id fall back to a null avatar instead of querying the wrong entity type.
 - T038: Verified ContactAvatarUploadProps includes a required contactName: string prop.
+- T039: Verified ContactAvatarUpload passes contactName through as EntityImageUpload.entityName.
