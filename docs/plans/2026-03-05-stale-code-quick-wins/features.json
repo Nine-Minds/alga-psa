@@ -50,7 +50,7 @@
   {
     "id": "F007",
     "description": "Update `packages/users/src/actions/user-actions/userActions.ts`: replace `uploadEntityImage`/`deleteEntityImage` imports from `@alga-psa/media` with `@alga-psa/documents`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task 3"
     ]

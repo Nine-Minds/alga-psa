@@ -136,3 +136,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - F004: Deleted `server/src/lib/actions/tenant-secret-actions.ts` once both settings callers had been redirected to `@alga-psa/tenancy/actions`.
 - F005: Added `getTeamAvatarUrl` to `packages/formatting/src/avatarUtils.ts` as the canonical wrapper over `getEntityImageUrl('team', ...)`.
 - F006: Repointed `packages/users/src/services/UserService.ts` to import avatar URL lookup from formatting and image mutations from documents.
+- F007: Updated `packages/users/src/actions/user-actions/userActions.ts` to consume entity image mutations from `@alga-psa/documents`.
