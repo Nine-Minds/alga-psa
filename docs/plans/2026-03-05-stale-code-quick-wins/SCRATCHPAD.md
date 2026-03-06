@@ -134,3 +134,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - F002: Pointed `SecretsManagement.tsx` at `@alga-psa/tenancy/actions` so it uses the canonical tenant secret actions barrel.
 - F003: Updated `SecretDialog.tsx` to import secret CRUD helpers from the canonical `@alga-psa/tenancy/actions` barrel.
 - F004: Deleted `server/src/lib/actions/tenant-secret-actions.ts` once both settings callers had been redirected to `@alga-psa/tenancy/actions`.
+- F005: Added `getTeamAvatarUrl` to `packages/formatting/src/avatarUtils.ts` as the canonical wrapper over `getEntityImageUrl('team', ...)`.
