@@ -58,7 +58,7 @@
   {
     "id": "F008",
     "description": "Update `packages/teams/src/actions/team-actions/avatarActions.ts`: replace `uploadEntityImage`/`deleteEntityImage` imports from `@alga-psa/media` with `@alga-psa/documents`, replace `getTeamAvatarUrl` import with `@alga-psa/formatting/avatarUtils`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task 3"
     ]
