@@ -15,6 +15,7 @@ export type FunctionCallMeta = {
   status: 'success' | 'declined' | 'pending' | 'error';
   timestamp: string;
   preview?: string;
+  notice?: string;
 };
 
 type MessageProps = {
@@ -148,6 +149,7 @@ export const Message: React.FC<MessageProps> = ({
     const previewRaw = functionCallMeta.preview?.trim();
     const preview =
       previewRaw && previewRaw.length > 220 ? `${previewRaw.slice(0, 217)}…` : previewRaw;
+    const notice = functionCallMeta.notice?.trim();
     const statusLabel =
       functionCallMeta.status === 'success'
         ? 'Function executed'
@@ -182,6 +184,7 @@ export const Message: React.FC<MessageProps> = ({
               <span className="function-card__endpoint">{functionCallMeta.endpoint}</span>
             </div>
             {preview ? <p className="function-card__preview">{preview}</p> : null}
+            {notice ? <p className="function-card__preview">{notice}</p> : null}
             <span className="function-card__timestamp">
               {formatTimestamp(functionCallMeta.timestamp)}
             </span>

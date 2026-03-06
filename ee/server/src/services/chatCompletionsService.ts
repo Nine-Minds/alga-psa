@@ -90,6 +90,7 @@ export interface AssistantMessageResponse {
     arguments: Record<string, unknown>;
     result?: unknown;
     toolCallId?: string;
+    toolResultTruncated?: boolean;
   };
   nextMessages: ChatCompletionMessage[];
   modelMessages: ChatCompletionMessage[];
@@ -501,10 +502,11 @@ export class ChatCompletionsService {
 
     const toolCallId = functionCall.toolCallId ?? uuid();
 
+    const toolResultReplay = this.serializeToolResultForConversation(resultPayload);
     const functionMessage: ChatCompletionMessage = {
       role: 'function',
       name: EXECUTE_TOOL_NAME,
-      content: this.serializeToolResultForConversation(resultPayload),
+      content: toolResultReplay.content,
       tool_call_id: toolCallId,
     };
 
@@ -522,6 +524,7 @@ export class ChatCompletionsService {
         arguments: preparedArgs,
         result: resultPayload,
         toolCallId,
+        toolResultTruncated: toolResultReplay.truncated,
       };
     }
 
@@ -1837,10 +1840,13 @@ export class ChatCompletionsService {
       : {};
   }
 
-  private static serializeToolResultForConversation(resultPayload: unknown): string {
+  private static serializeToolResultForConversation(resultPayload: unknown): {
+    content: string;
+    truncated: boolean;
+  } {
     const raw = JSON.stringify(resultPayload ?? null);
     if (raw.length <= MAX_TOOL_RESULT_CHARS) {
-      return raw;
+      return { content: raw, truncated: false };
     }
 
     const summarized = {
@@ -1850,14 +1856,17 @@ export class ChatCompletionsService {
     };
     const summarizedJson = JSON.stringify(summarized);
     if (summarizedJson.length <= MAX_TOOL_RESULT_CHARS) {
-      return summarizedJson;
+      return { content: summarizedJson, truncated: true };
     }
 
-    return JSON.stringify({
+    return {
+      content: JSON.stringify({
+        truncated: true,
+        originalLength: raw.length,
+        preview: raw.slice(0, MAX_TOOL_RESULT_CHARS),
+      }),
       truncated: true,
-      originalLength: raw.length,
-      preview: raw.slice(0, MAX_TOOL_RESULT_CHARS),
-    });
+    };
   }
 
   private static summarizeToolResultValue(value: unknown, depth: number): unknown {

@@ -670,7 +670,7 @@ describe('ChatCompletionsService (unit)', () => {
         modelMessages: [],
       });
 
-    await (ChatCompletionsService as any).executeAfterApproval({
+    const response = await (ChatCompletionsService as any).executeAfterApproval({
       messages: [{ role: 'user', content: 'Run endpoint' }],
       functionCall: {
         name: 'call_api_endpoint',
@@ -701,6 +701,13 @@ describe('ChatCompletionsService (unit)', () => {
       (message: { role?: string }) => message.role === 'function',
     ) as { content?: string } | undefined;
     expect(functionMessage?.content?.length ?? 0).toBeLessThanOrEqual(12000 + 200);
+    expect(response).toMatchObject({
+      type: 'assistant_message',
+      functionCall: expect.objectContaining({
+        toolCallId: 'tool-call-large-result',
+        toolResultTruncated: true,
+      }),
+    });
   });
 
   it('retries non-stream completion requests on 429 with backoff', async () => {

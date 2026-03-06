@@ -63,6 +63,7 @@ type FunctionCallInfo = {
   arguments: Record<string, unknown>;
   toolCallId?: string;
   entryId?: string;
+  toolResultTruncated?: boolean;
 };
 
 type PendingFunctionState = {
@@ -178,6 +179,10 @@ const buildFunctionCallMeta = (
     status,
     timestamp: new Date().toISOString(),
     preview: sanitizeThinking(fn.assistantPreview ?? ''),
+    notice:
+      fn.functionCall.toolResultTruncated && action === 'approve'
+        ? 'Result was too large and was truncated.'
+        : undefined,
   };
 };
 
@@ -899,7 +904,17 @@ export const Chat: React.FC<ChatProps> = ({
           : data.type === 'assistant_message'
             ? 'success'
             : 'pending';
-      appendFunctionCallMarker(pendingFunction, action, outcomeStatus);
+      const completedFunctionState: PendingFunctionState =
+        data.type === 'assistant_message' && data.functionCall
+          ? {
+              ...pendingFunction,
+              functionCall: {
+                ...pendingFunction.functionCall,
+                ...data.functionCall,
+              },
+            }
+          : pendingFunction;
+      appendFunctionCallMarker(completedFunctionState, action, outcomeStatus);
 
       if (data.type === 'assistant_message') {
         const modelMessages = data.modelMessages ?? data.nextMessages;
