@@ -151,3 +151,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - F019: Updated the `UserList.tsx` avatar lookup loop to fetch contact avatars for client users, preserve user avatars for internal users, and fall back to `null` when a client user lacks `contact_id`.
 - F020: Added a required `contactName` prop to `ContactAvatarUploadProps` and plumbed it into the component signature.
 - F021: Replaced the hardcoded empty `entityName` in `ContactAvatarUpload` with the new `contactName` prop so initials render correctly.
+- F022: Updated `ContactDetails.tsx` to pass `editedContact.full_name` into `ContactAvatarUpload`.

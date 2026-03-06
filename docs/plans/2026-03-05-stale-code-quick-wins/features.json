@@ -170,7 +170,7 @@
   {
     "id": "F022",
     "description": "Update `ContactDetails.tsx` to pass `contactName={editedContact.full_name}` to `ContactAvatarUpload`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task 5"
     ]
