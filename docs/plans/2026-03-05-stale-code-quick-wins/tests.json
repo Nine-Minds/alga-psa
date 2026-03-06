@@ -139,7 +139,7 @@
   {
     "id": "T018",
     "description": "`packages/teams/package.json` contains `@alga-psa/documents` and `@alga-psa/formatting` in dependencies",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]
