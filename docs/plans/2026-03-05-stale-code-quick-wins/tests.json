@@ -131,7 +131,7 @@
   {
     "id": "T017",
     "description": "`packages/teams/package.json` does NOT contain `@alga-psa/media` in dependencies",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]
