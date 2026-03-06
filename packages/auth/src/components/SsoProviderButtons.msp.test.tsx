@@ -167,6 +167,46 @@ describe('MSP SSO provider buttons', () => {
     expect(window.localStorage.getItem('msp_sso_last_provider')).toBe('azure-ad');
   });
 
+  it('T021: a prefilled remembered email triggers SSO discovery and resolver payload includes public-workstation state', async () => {
+    const fetchMock = buildFetchMock({ discoverProviders: ['google', 'azure-ad'] });
+    vi.stubGlobal('fetch', fetchMock as any);
+
+    render(
+      <SsoProviderButtons
+        callbackUrl="/msp"
+        email="Remembered@example.com"
+        publicWorkstation={true}
+      />
+    );
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/auth/msp/sso/discover',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ email: 'remembered@example.com' }),
+        })
+      )
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }));
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/auth/msp/sso/resolve',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({
+            provider: 'google',
+            email: 'remembered@example.com',
+            publicWorkstation: true,
+            callbackUrl: '/msp',
+          }),
+        })
+      )
+    );
+  });
+
   it('T037: remembered provider is preselected only when still eligible', async () => {
     window.localStorage.setItem('msp_sso_last_provider', 'google');
 

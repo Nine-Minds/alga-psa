@@ -15,6 +15,16 @@ const createCookieMock = vi.fn(() => ({
     nonce: 'nonce',
   },
 }));
+const createPendingRememberContextCookieMock = vi.fn(() => ({
+  value: 'signed-pending-remember-context',
+  payload: {
+    email: 'user@example.com',
+    publicWorkstation: false,
+    issuedAt: 1,
+    expiresAt: 2,
+    nonce: 'remember-nonce',
+  },
+}));
 
 vi.mock('rate-limiter-flexible', () => ({
   RateLimiterMemory: class {
@@ -54,6 +64,25 @@ vi.mock('@alga-psa/auth/lib/sso/mspSsoResolution', () => ({
   parseResolverProvider: (value: unknown) =>
     value === 'google' || value === 'azure-ad' ? value : null,
   resolveMspSsoCredentialSource: (...args: unknown[]) => resolveSourceMock(...args),
+}));
+
+vi.mock('@alga-psa/auth/lib/mspRememberedEmail', () => ({
+  buildClearedPendingRememberContextCookie: () => ({
+    name: 'msp_pending_remember_context',
+    value: '',
+    maxAge: 0,
+    httpOnly: true,
+    sameSite: 'lax',
+  }),
+  buildPendingRememberContextCookie: (value: string) => ({
+    name: 'msp_pending_remember_context',
+    value,
+    maxAge: 600,
+    httpOnly: true,
+    sameSite: 'lax',
+  }),
+  createPendingRememberContextCookie: (...args: unknown[]) =>
+    createPendingRememberContextCookieMock(...args),
 }));
 
 const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
@@ -106,6 +135,16 @@ describe('POST /api/auth/msp/sso/resolve', () => {
         nonce: 'nonce',
       },
     });
+    createPendingRememberContextCookieMock.mockReturnValue({
+      value: 'signed-pending-remember-context',
+      payload: {
+        email: 'user@example.com',
+        publicWorkstation: false,
+        issuedAt: 1,
+        expiresAt: 2,
+        nonce: 'remember-nonce',
+      },
+    });
     consumeLimiterMock.mockResolvedValue({ remainingPoints: 7 });
   });
 
@@ -147,6 +186,72 @@ describe('POST /api/auth/msp/sso/resolve', () => {
         maxAge: 300,
         httpOnly: true,
         sameSite: 'lax',
+      })
+    );
+    expect(setCookieMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'msp_pending_remember_context',
+        value: 'signed-pending-remember-context',
+        maxAge: 600,
+        httpOnly: true,
+      })
+    );
+  });
+
+  it('T013: accepts remember-context fields for normalized email and public-workstation state', async () => {
+    await POST(
+      buildRequest({
+        provider: 'google',
+        email: ' User@Example.COM ',
+        publicWorkstation: true,
+        callbackUrl: '/msp',
+      }) as any
+    );
+
+    expect(createPendingRememberContextCookieMock).toHaveBeenCalledWith({
+      email: 'user@example.com',
+      publicWorkstation: true,
+      secret: 'unit-test-signing-secret',
+    });
+  });
+
+  it('T014: writes a short-lived pending remember-context cookie for valid SSO starts', async () => {
+    await POST(
+      buildRequest({ provider: 'google', email: 'user@example.com', callbackUrl: '/msp' }) as any
+    );
+
+    expect(setCookieMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'msp_pending_remember_context',
+        value: 'signed-pending-remember-context',
+        maxAge: 600,
+      })
+    );
+  });
+
+  it('T015: does not write a pending remember-context cookie when the SSO resolve request is rejected', async () => {
+    resolveSourceMock.mockResolvedValueOnce({ resolved: false });
+
+    await POST(
+      buildRequest({ provider: 'google', email: 'user@example.com', callbackUrl: '/msp' }) as any
+    );
+
+    expect(setCookieMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'msp_pending_remember_context',
+        value: 'signed-pending-remember-context',
+      })
+    );
+  });
+
+  it('T020: starting MSP OAuth does not create the durable remembered-email cookie before callback success', async () => {
+    await POST(
+      buildRequest({ provider: 'google', email: 'user@example.com', callbackUrl: '/msp' }) as any
+    );
+
+    expect(setCookieMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'msp_remembered_email',
       })
     );
   });

@@ -29,6 +29,13 @@ import {
     getMspSsoSigningSecret,
     parseAndVerifyMspSsoResolutionCookie,
 } from "./sso/mspSsoResolution";
+import {
+    buildClearedPendingRememberContextCookie,
+    buildClearedRememberedEmailCookie,
+    buildRememberedEmailCookie,
+    MSP_PENDING_REMEMBER_CONTEXT_COOKIE,
+    parsePendingRememberContextCookie,
+} from "./mspRememberedEmail";
 import { UserSession } from "@alga-psa/db/models/UserSession";
 import { getClientIp } from "./ipAddress";
 import { generateDeviceFingerprint, getDeviceInfo } from "./deviceFingerprint";
@@ -56,6 +63,7 @@ const SESSION_COOKIE = getSessionCookieConfig();
 
 const NEXTAUTH_SECURE_COOKIES = process.env.NODE_ENV === 'production';
 const NEXTAUTH_COOKIE_PREFIX = NEXTAUTH_SECURE_COOKIES ? '__Secure-' : '';
+const PLAYWRIGHT_FAKE_GOOGLE_OAUTH_ENABLED = process.env.PLAYWRIGHT_FAKE_GOOGLE_OAUTH === 'true';
 
 const NEXTAUTH_COOKIES = {
     sessionToken: SESSION_COOKIE,
@@ -107,6 +115,66 @@ const NEXTAUTH_COOKIES = {
         },
     },
 } as const;
+
+function mapGoogleProfile(profile: Record<string, any>): Promise<ExtendedUser> {
+    const googleProfile = profile as Record<string, unknown>;
+    const tenantHint =
+        typeof googleProfile.hd === 'string' ? googleProfile.hd : undefined;
+    const userTypeHint =
+        typeof googleProfile.user_type === 'string'
+            ? googleProfile.user_type
+            : undefined;
+    const vanityHostHint =
+        typeof googleProfile.vanity_host === 'string'
+            ? googleProfile.vanity_host
+            : undefined;
+    return mapOAuthProfileToExtendedUser({
+        provider: 'google',
+        email: typeof profile.email === 'string' ? profile.email : undefined,
+        image: typeof profile.picture === 'string' ? profile.picture : undefined,
+        profile,
+        tenantHint,
+        vanityHostHint,
+        userTypeHint,
+    }) as Promise<ExtendedUser>;
+}
+
+function getLocalGoogleOauthBaseUrl(): string {
+    return new URL('/api/auth/e2e/google/', process.env.NEXTAUTH_URL || 'http://localhost:3000').toString();
+}
+
+function buildGoogleProvider(clientId: string, clientSecret: string) {
+    if (PLAYWRIGHT_FAKE_GOOGLE_OAUTH_ENABLED) {
+        const localBaseUrl = getLocalGoogleOauthBaseUrl();
+        return {
+            id: 'google',
+            name: 'Google',
+            type: 'oauth' as const,
+            clientId,
+            clientSecret,
+            checks: ['pkce', 'state'] as Array<'pkce' | 'state'>,
+            authorization: {
+                url: new URL('authorize', localBaseUrl).toString(),
+                params: {
+                    scope: 'openid email profile',
+                },
+            },
+            token: {
+                url: new URL('token', localBaseUrl).toString(),
+            },
+            userinfo: {
+                url: new URL('userinfo', localBaseUrl).toString(),
+            },
+            profile: mapGoogleProfile,
+        };
+    }
+
+    return GoogleProvider({
+        clientId,
+        clientSecret,
+        profile: mapGoogleProfile,
+    });
+}
 
 let enterpriseSsoRegistryInitPromise: Promise<void> | null = null;
 
@@ -657,6 +725,36 @@ async function consumeLinkStateCookie(
     }
 }
 
+async function finalizePendingRememberedEmailCookie(): Promise<void> {
+    try {
+        const store = await cookies();
+        const pendingValue = store.get(MSP_PENDING_REMEMBER_CONTEXT_COOKIE)?.value;
+        if (!pendingValue) {
+            return;
+        }
+
+        store.set(buildClearedPendingRememberContextCookie());
+
+        const signingSecret = await getMspSsoSigningSecret();
+        const pendingContext = parsePendingRememberContextCookie({
+            value: pendingValue,
+            secret: signingSecret ?? undefined,
+        });
+        if (!pendingContext) {
+            return;
+        }
+
+        if (pendingContext.publicWorkstation) {
+            store.set(buildClearedRememberedEmailCookie());
+            return;
+        }
+
+        store.set(buildRememberedEmailCookie(pendingContext.email));
+    } catch (error) {
+        console.warn('[remember-email] failed to finalize pending remember context', { error });
+    }
+}
+
 function extractProviderAccountId(
     account: Record<string, unknown> | null | undefined,
     metadata: OAuthAccountMetadata,
@@ -889,32 +987,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
     providers: [
         ...(secrets.googleClientId && secrets.googleClientSecret
             ? [
-                GoogleProvider({
-                    clientId: secrets.googleClientId,
-                    clientSecret: secrets.googleClientSecret,
-                    profile: async (profile): Promise<ExtendedUser> => {
-                        const googleProfile = profile as Record<string, unknown>;
-                        const tenantHint =
-                            typeof googleProfile.hd === 'string' ? googleProfile.hd : undefined;
-                        const userTypeHint =
-                            typeof googleProfile.user_type === 'string'
-                                ? googleProfile.user_type
-                                : undefined;
-                        const vanityHostHint =
-                            typeof googleProfile.vanity_host === 'string'
-                                ? googleProfile.vanity_host
-                                : undefined;
-                        return await mapOAuthProfileToExtendedUser({
-                            provider: 'google',
-                            email: profile.email,
-                            image: profile.picture,
-                            profile,
-                            tenantHint,
-                            vanityHostHint,
-                            userTypeHint,
-                        }) as ExtendedUser;
-                    },
-                }),
+                buildGoogleProvider(secrets.googleClientId, secrets.googleClientSecret),
             ]
             : []),
         ...(secrets.microsoftClientId && secrets.microsoftClientSecret
@@ -1333,6 +1406,10 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 }
             }
 
+            if (providerId && providerId !== 'credentials') {
+                await finalizePendingRememberedEmailCookie();
+            }
+
             if (providerId === 'credentials') {
                 const callbackUrl = typeof credentials?.callbackUrl === 'string' ? credentials.callbackUrl : undefined;
                 const canonicalBaseUrl = process.env.NEXTAUTH_URL;
@@ -1645,32 +1722,10 @@ export const options: NextAuthConfig = {
         ...(process.env.GOOGLE_OAUTH_CLIENT_ID &&
         process.env.GOOGLE_OAUTH_CLIENT_SECRET
             ? [
-                GoogleProvider({
-                    clientId: process.env.GOOGLE_OAUTH_CLIENT_ID as string,
-                    clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET as string,
-                    profile: async (profile): Promise<ExtendedUser> => {
-                        const googleProfile = profile as Record<string, unknown>;
-                        const tenantHint =
-                            typeof googleProfile.hd === 'string' ? googleProfile.hd : undefined;
-                        const userTypeHint =
-                            typeof googleProfile.user_type === 'string'
-                                ? googleProfile.user_type
-                                : undefined;
-                        const vanityHostHint =
-                            typeof googleProfile.vanity_host === 'string'
-                                ? googleProfile.vanity_host
-                                : undefined;
-                        return await mapOAuthProfileToExtendedUser({
-                            provider: 'google',
-                            email: profile.email,
-                            image: (profile as any).picture,
-                            profile,
-                            tenantHint,
-                            vanityHostHint,
-                            userTypeHint,
-                        }) as ExtendedUser;
-                    },
-                }),
+                buildGoogleProvider(
+                    process.env.GOOGLE_OAUTH_CLIENT_ID as string,
+                    process.env.GOOGLE_OAUTH_CLIENT_SECRET as string,
+                ),
             ]
             : []),
         ...(process.env.MICROSOFT_OAUTH_CLIENT_ID &&
@@ -2086,6 +2141,10 @@ export const options: NextAuthConfig = {
                 } catch (error) {
                     console.warn('[signIn] failed to update last login', error);
                 }
+            }
+
+            if (providerId && providerId !== 'credentials') {
+                await finalizePendingRememberedEmailCookie();
             }
 
             if (providerId === 'credentials') {

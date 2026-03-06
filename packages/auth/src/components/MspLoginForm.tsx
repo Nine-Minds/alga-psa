@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
-import { Label, Input, Button, Alert, AlertDescription } from '@alga-psa/ui/components';
+import { Label, Input, Button, Alert, AlertDescription, Checkbox } from '@alga-psa/ui/components';
 import type { AlertProps } from '@alga-psa/types';
 import { useRegisterUIComponent, withDataAutomationId } from '@alga-psa/ui/ui-reflection';
 import type { FormComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection';
@@ -11,16 +11,27 @@ import SsoProviderButtons from '@alga-psa/auth/sso/entry';
 
 interface MspLoginFormProps {
   callbackUrl: string;
+  initialEmail?: string;
   onError: (alertInfo: AlertProps) => void;
   onTwoFactorRequired: () => void;
 }
 
-export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired }: MspLoginFormProps) {
+export default function MspLoginForm({
+  callbackUrl,
+  initialEmail,
+  onError,
+  onTwoFactorRequired,
+}: MspLoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => initialEmail ?? '');
   const [password, setPassword] = useState('');
+  const [isPublicWorkstation, setIsPublicWorkstation] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    setEmail(initialEmail ?? '');
+  }, [initialEmail]);
 
   // Register the form component
   const updateForm = useRegisterUIComponent<FormComponent>({
@@ -28,6 +39,22 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
     type: 'form',
     label: 'MSP Login'
   });
+
+  const persistRememberedEmail = async () => {
+    try {
+      await fetch('/api/auth/msp/remember-email', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          email,
+          publicWorkstation: isPublicWorkstation,
+        }),
+      });
+    } catch {
+      // Remembered-email persistence is best-effort and must not block sign-in.
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,6 +79,7 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
           message: 'Invalid email or password. Please try again.' 
         });
       } else if (result?.url) {
+        await persistRememberedEmail();
         window.location.href = result.url;
       }
     } catch (error) {
@@ -117,6 +145,13 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
             </Button>
           </div>
         </div>
+        <Checkbox
+          id="msp-public-workstation-checkbox"
+          checked={isPublicWorkstation}
+          label="Public workstation - do not remember my email"
+          onChange={(event) => setIsPublicWorkstation(event.target.checked)}
+          containerClassName="mb-0"
+        />
       </div>
 
       {lookupError && (
@@ -147,6 +182,7 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
      <SsoProviderButtons
        callbackUrl={callbackUrl}
        email={email}
+       publicWorkstation={isPublicWorkstation}
        onError={(message) => setLookupError(message || null)}
      />
 

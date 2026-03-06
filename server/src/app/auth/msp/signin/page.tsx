@@ -1,6 +1,11 @@
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { MspSignIn, PortalSwitchPrompt } from '@alga-psa/auth/client';
 import { getSession } from '@alga-psa/auth';
+import {
+  MSP_REMEMBERED_EMAIL_COOKIE,
+  normalizeRememberedEmail,
+} from '@alga-psa/auth/lib/mspRememberedEmail';
 import { UserSession } from '@alga-psa/db/models/UserSession';
 
 export default async function MspSignInPage({
@@ -10,6 +15,11 @@ export default async function MspSignInPage({
 }) {
   const params = await searchParams;
   const callbackUrl = typeof params?.callbackUrl === 'string' ? params.callbackUrl : '/msp/dashboard';
+  const cookieStore = await cookies();
+  const rememberedEmail = normalizeRememberedEmail(
+    cookieStore.get(MSP_REMEMBERED_EMAIL_COOKIE)?.value ?? ''
+  );
+  const initialEmail = rememberedEmail || undefined;
 
   const session = await getSession();
   if (session?.user) {
@@ -19,7 +29,7 @@ export default async function MspSignInPage({
       const isRevoked = await UserSession.isRevoked(session.user.tenant, sessionId);
       if (isRevoked) {
         // Session was revoked, don't redirect - show signin form
-        return <MspSignIn />;
+        return <MspSignIn initialEmail={initialEmail} />;
       }
     }
 
@@ -38,5 +48,5 @@ export default async function MspSignInPage({
 
     redirect(callbackUrl);
   }
-  return <MspSignIn />;
+  return <MspSignIn initialEmail={initialEmail} />;
 }
