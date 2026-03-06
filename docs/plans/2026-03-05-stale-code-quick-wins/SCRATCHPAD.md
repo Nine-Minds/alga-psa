@@ -181,3 +181,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - T013: Verified teams avatarActions.ts imports uploadEntityImage and deleteEntityImage from @alga-psa/documents.
 - T014: Verified teams avatarActions.ts imports getTeamAvatarUrl from formatting instead of media.
 - T015: Verified packages/users/package.json no longer lists @alga-psa/media in dependencies.
+- T016: Verified packages/users/package.json includes canonical documents and formatting dependencies.
