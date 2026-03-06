@@ -243,7 +243,7 @@
   {
     "id": "T031",
     "description": "No re-export shims created -- grep for files containing only `export * from` or `export { ... } from` in modified paths returns no new shims",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F004",
