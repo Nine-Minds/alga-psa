@@ -26,7 +26,7 @@
   {
     "id": "T004",
     "description": "`SecretDialog.tsx` imports from `@alga-psa/tenancy/actions`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
