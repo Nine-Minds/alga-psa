@@ -458,10 +458,14 @@ const ProjectTaskModel = {
         throw new Error('Task not found');
       }
 
+      // assigned_to is guaranteed non-null: either the task already has one,
+      // or we fall back to the additional user being added.
+      const assignedTo: string = (task.assigned_to as string | null) || userId;
+
       await knexOrTrx('task_resources').insert({
         tenant,
         task_id: taskId,
-        assigned_to: task.assigned_to,
+        assigned_to: assignedTo,
         additional_user_id: userId,
         role: role || null
       });
