@@ -502,7 +502,7 @@ export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: S
     } finally {
       setIsLoading(false);
     }
-  }, [policyId]);
+  }, [policyId, boards, clients]);
 
   useEffect(() => {
     loadData();
