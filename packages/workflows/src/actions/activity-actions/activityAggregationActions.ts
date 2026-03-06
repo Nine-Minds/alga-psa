@@ -331,17 +331,21 @@ export async function fetchProjectActivities(
         if (filters.isClosed === false) {
           // If isClosed is false, only show open tasks
           // Tasks with NULL project_status_mapping_id are treated as open
+          // Mappings without a standard_status_id are also treated as open (LEFT JOIN)
           queryBuilder.where(function() {
             this.whereNull("project_tasks.project_status_mapping_id")
               .orWhereIn("project_tasks.project_status_mapping_id", function() {
                 this.select("project_status_mappings.project_status_mapping_id")
                   .from("project_status_mappings")
-                  .join("standard_statuses", function() {
+                  .leftJoin("standard_statuses", function() {
                     this.on("project_status_mappings.standard_status_id", "standard_statuses.standard_status_id")
                         .andOn("project_status_mappings.tenant", "standard_statuses.tenant");
                   })
                   .where("project_status_mappings.tenant", tenant)
-                  .where("standard_statuses.is_closed", false);
+                  .where(function() {
+                    this.where("standard_statuses.is_closed", false)
+                      .orWhereNull("standard_statuses.is_closed");
+                  });
               });
           });
         }
