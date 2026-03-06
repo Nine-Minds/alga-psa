@@ -207,3 +207,16 @@ export async function getScheduledLicenseChangesAction(): Promise<{
     error: 'This feature is only available in Enterprise Edition',
   };
 }
+
+/**
+ * CE Stub - Not available in Community Edition
+ */
+export async function upgradeTierAction(
+  _targetTier: 'pro' | 'premium'
+): Promise<{ success: boolean; error?: string }> {
+  logger.warn('[CE] upgradeTierAction called but Stripe integration is EE-only');
+  return {
+    success: false,
+    error: 'Plan upgrades are only available in Enterprise Edition',
+  };
+}
