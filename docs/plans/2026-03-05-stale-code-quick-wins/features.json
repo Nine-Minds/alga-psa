@@ -162,7 +162,7 @@
   {
     "id": "F021",
     "description": "Pass `contactName` as `entityName` to `EntityImageUpload` in `ContactAvatarUpload.tsx` (replacing hardcoded empty string)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task 5"
     ]

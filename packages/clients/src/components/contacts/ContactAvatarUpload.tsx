@@ -37,7 +37,7 @@ export default function ContactAvatarUpload({
     <EntityImageUpload
       entityType="contact"
       entityId={contactId}
-      entityName=""
+      entityName={contactName}
       imageUrl={currentAvatarUrl || null}
       onImageChange={onAvatarUpdated}
       uploadAction={uploadContactAvatar}
