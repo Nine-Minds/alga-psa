@@ -106,7 +106,7 @@
   {
     "id": "F014",
     "description": "Remove `--workspace=@alga-psa/media` from `services/workflow-worker/Dockerfile`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task 3"
     ]
