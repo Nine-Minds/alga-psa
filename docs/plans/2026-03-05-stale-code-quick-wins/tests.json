@@ -297,7 +297,7 @@
   {
     "id": "T037",
     "description": "`UserList.tsx` handles case where client user has no `contact_id` (falls back gracefully to null avatar)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]

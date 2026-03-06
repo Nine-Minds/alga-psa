@@ -202,3 +202,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - T034: Verified UserList.tsx imports getContactAvatarUrlAction alongside getUserAvatarUrlAction from @alga-psa/user-composition/actions.
 - T035: Verified the avatar fetch loop branches on user.user_type === 'client' and uses getContactAvatarUrlAction(user.contact_id, user.tenant).
 - T036: Verified the avatar fetch loop still uses getUserAvatarUrlAction(user.user_id, user.tenant) for non-client users.
+- T037: Verified client users without contact_id fall back to a null avatar instead of querying the wrong entity type.
