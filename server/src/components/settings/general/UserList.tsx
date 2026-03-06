@@ -70,7 +70,14 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteSuccess, onUpdate, s
       
       const avatarPromises = usersToFetch.map(async (user) => {
         try {
-          const avatarUrl = await getUserAvatarUrlAction(user.user_id, user.tenant);
+          let avatarUrl: string | null = null;
+          if (user.user_type === 'client') {
+            avatarUrl = user.contact_id
+              ? await getContactAvatarUrlAction(user.contact_id, user.tenant)
+              : null;
+          } else {
+            avatarUrl = await getUserAvatarUrlAction(user.user_id, user.tenant);
+          }
           return { userId: user.user_id, avatarUrl };
         } catch (error) {
           console.error(`Error fetching avatar for user ${user.user_id}:`, error);

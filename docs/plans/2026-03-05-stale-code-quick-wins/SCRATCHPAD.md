@@ -148,3 +148,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - F016: Deleted `packages/media/` entirely after migrating its three callers, config references, and the source-reading regression test.
 - F017: Ran `npm install` to refresh `package-lock.json` after removing `@alga-psa/media` and adding canonical package dependencies.
 - F018: Imported `getContactAvatarUrlAction` into `UserList.tsx` to support client-user avatar lookup via contact records.
+- F019: Updated the `UserList.tsx` avatar lookup loop to fetch contact avatars for client users, preserve user avatars for internal users, and fall back to `null` when a client user lacks `contact_id`.

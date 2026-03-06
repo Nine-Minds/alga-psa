@@ -146,7 +146,7 @@
   {
     "id": "F019",
     "description": "In `UserList.tsx` avatar fetch loop, branch on `user.user_type`: use `getContactAvatarUrlAction(user.contact_id)` for client users, `getUserAvatarUrlAction(user.user_id)` for internal users",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task 4"
     ]
