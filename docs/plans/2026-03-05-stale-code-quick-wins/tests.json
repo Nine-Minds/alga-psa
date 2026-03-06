@@ -147,7 +147,7 @@
   {
     "id": "T019",
     "description": "`server/next.config.mjs` does NOT contain `@alga-psa/media`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
