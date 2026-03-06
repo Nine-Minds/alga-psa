@@ -235,7 +235,7 @@
   {
     "id": "T030",
     "description": "No new circular dependencies introduced (run `scripts/check-circular-deps.mjs` against baseline)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]

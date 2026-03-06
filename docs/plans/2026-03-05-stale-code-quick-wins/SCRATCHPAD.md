@@ -195,3 +195,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - T027: Confirmed there are no remaining @alga-psa/media references outside docs, plan artifacts, lockfiles, and AI metadata.
 - T028: Re-ran npm install successfully after the dependency cleanup; see /tmp/t028-npm-install.log for the command output from this validation run.
 - T029: Re-ran the full Nx build successfully; output captured in /tmp/t029-build.log.
+- T030: Generated a fresh Nx graph and confirmed scripts/check-circular-deps.mjs reports no new cycles against .github/known-cycles.json.
