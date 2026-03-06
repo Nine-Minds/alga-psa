@@ -147,3 +147,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - F015: Updated `server/src/test/teams-v2-improvements.test.ts` to read formatting avatar utilities and assert the new canonical package dependencies.
 - F016: Deleted `packages/media/` entirely after migrating its three callers, config references, and the source-reading regression test.
 - F017: Ran `npm install` to refresh `package-lock.json` after removing `@alga-psa/media` and adding canonical package dependencies.
+- F018: Imported `getContactAvatarUrlAction` into `UserList.tsx` to support client-user avatar lookup via contact records.
