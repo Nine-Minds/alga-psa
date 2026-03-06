@@ -31,6 +31,10 @@ const MIN_RATE_LIMIT_DELAY_MS = 100;
 const SEARCH_TOOL_NAME = 'search_api_registry';
 const EXECUTE_TOOL_NAME = 'call_api_endpoint';
 const MAX_TOOL_ITERATIONS = 6;
+const MAX_TOOL_RESULT_CHARS = 12000;
+const TOOL_RESULT_PREVIEW_ITEMS = 3;
+const TOOL_RESULT_PREVIEW_KEYS = 12;
+const TOOL_RESULT_PREVIEW_DEPTH = 3;
 
 export type ChatCompletionMessage = {
   role: 'user' | 'assistant' | 'function';
@@ -500,7 +504,7 @@ export class ChatCompletionsService {
     const functionMessage: ChatCompletionMessage = {
       role: 'function',
       name: EXECUTE_TOOL_NAME,
-      content: JSON.stringify(resultPayload),
+      content: this.serializeToolResultForConversation(resultPayload),
       tool_call_id: toolCallId,
     };
 
@@ -1831,6 +1835,72 @@ export class ChatCompletionsService {
     return value && typeof value === 'object' && !Array.isArray(value)
       ? { ...(value as Record<string, unknown>) }
       : {};
+  }
+
+  private static serializeToolResultForConversation(resultPayload: unknown): string {
+    const raw = JSON.stringify(resultPayload ?? null);
+    if (raw.length <= MAX_TOOL_RESULT_CHARS) {
+      return raw;
+    }
+
+    const summarized = {
+      truncated: true,
+      originalLength: raw.length,
+      summary: this.summarizeToolResultValue(resultPayload, 0),
+    };
+    const summarizedJson = JSON.stringify(summarized);
+    if (summarizedJson.length <= MAX_TOOL_RESULT_CHARS) {
+      return summarizedJson;
+    }
+
+    return JSON.stringify({
+      truncated: true,
+      originalLength: raw.length,
+      preview: raw.slice(0, MAX_TOOL_RESULT_CHARS),
+    });
+  }
+
+  private static summarizeToolResultValue(value: unknown, depth: number): unknown {
+    if (
+      value === null ||
+      value === undefined ||
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean'
+    ) {
+      return value;
+    }
+
+    if (depth >= TOOL_RESULT_PREVIEW_DEPTH) {
+      if (Array.isArray(value)) {
+        return `[Array(${value.length})]`;
+      }
+      return '[Object]';
+    }
+
+    if (Array.isArray(value)) {
+      return {
+        type: 'array',
+        count: value.length,
+        items: value
+          .slice(0, TOOL_RESULT_PREVIEW_ITEMS)
+          .map((item) => this.summarizeToolResultValue(item, depth + 1)),
+      };
+    }
+
+    if (typeof value === 'object') {
+      const entries = Object.entries(value as Record<string, unknown>);
+      const summary: Record<string, unknown> = {};
+      for (const [key, child] of entries.slice(0, TOOL_RESULT_PREVIEW_KEYS)) {
+        summary[key] = this.summarizeToolResultValue(child, depth + 1);
+      }
+      if (entries.length > TOOL_RESULT_PREVIEW_KEYS) {
+        summary._truncatedKeys = entries.length - TOOL_RESULT_PREVIEW_KEYS;
+      }
+      return summary;
+    }
+
+    return String(value);
   }
 
   private static stripReasoningPrefix(content?: string): string | undefined {
