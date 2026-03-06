@@ -169,3 +169,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - T001: Confirmed the deprecated @/lib/posthog wrapper path has zero remaining imports anywhere outside docs and lockfiles.
 - T002: Verified server/src/lib/posthog.ts is absent on disk after F001.
 - T003: Verified SecretsManagement.tsx imports tenant secret helpers from @alga-psa/tenancy/actions.
+- T004: Verified SecretDialog.tsx imports its secret helpers from @alga-psa/tenancy/actions.
