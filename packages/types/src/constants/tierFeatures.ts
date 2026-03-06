@@ -13,6 +13,8 @@ import { TenantTier } from './tenantTiers';
  */
 export enum TIER_FEATURES {
   INVOICE_DESIGNER = 'INVOICE_DESIGNER',
+  ENTRA_SYNC = 'ENTRA_SYNC',
+  CIPP = 'CIPP',
 }
 
 /**
@@ -29,6 +31,8 @@ export const TIER_FEATURE_MAP: Record<TenantTier, readonly TIER_FEATURES[]> = {
   pro: [],
   premium: [
     TIER_FEATURES.INVOICE_DESIGNER,
+    TIER_FEATURES.ENTRA_SYNC,
+    TIER_FEATURES.CIPP,
   ],
 } as const;
 
@@ -37,6 +41,8 @@ export const TIER_FEATURE_MAP: Record<TenantTier, readonly TIER_FEATURES[]> = {
  */
 export const FEATURE_MINIMUM_TIER: Record<TIER_FEATURES, TenantTier> = {
   [TIER_FEATURES.INVOICE_DESIGNER]: 'premium',
+  [TIER_FEATURES.ENTRA_SYNC]: 'premium',
+  [TIER_FEATURES.CIPP]: 'premium',
 } as const;
 
 /**
