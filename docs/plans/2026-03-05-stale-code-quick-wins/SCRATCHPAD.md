@@ -131,3 +131,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 
 ## Progress Log
 - F001: Deleted `server/src/lib/posthog.ts` after validating the deprecated wrapper path had no remaining imports.
+- F002: Pointed `SecretsManagement.tsx` at `@alga-psa/tenancy/actions` so it uses the canonical tenant secret actions barrel.

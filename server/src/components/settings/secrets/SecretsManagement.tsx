@@ -9,7 +9,7 @@ import {
   listTenantSecrets,
   deleteSecret,
   getSecretUsage
-} from '@/lib/actions/tenant-secret-actions';
+} from '@alga-psa/tenancy/actions';
 import type { TenantSecretMetadata } from '@alga-psa/shared/workflow/secrets';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
