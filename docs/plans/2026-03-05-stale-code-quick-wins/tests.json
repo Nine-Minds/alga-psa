@@ -83,7 +83,7 @@
   {
     "id": "T011",
     "description": "`UserService.ts` imports `uploadEntityImage` and `deleteEntityImage` from `@alga-psa/documents` (not `@alga-psa/media`)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]
