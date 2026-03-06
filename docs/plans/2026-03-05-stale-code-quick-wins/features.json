@@ -202,7 +202,7 @@
   {
     "id": "F024",
     "description": "Verify full build passes (`NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4`) after all tasks",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task 1",
       "Task 2",

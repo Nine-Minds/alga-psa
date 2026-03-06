@@ -156,3 +156,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - Discovery: the first full build after F023 failed because `server/src/app/api/secrets/route.ts` and `server/src/app/api/secrets/[name]/route.ts` still imported the deleted server duplicate. Added follow-up items `F023A`/`F023B` and `T041A`/`T041B` so the plan matches the real remaining work.
 - F023A: Repointed `server/src/app/api/secrets/route.ts` to `@alga-psa/tenancy/actions` to remove the hidden stale import found by the build.
 - F023B: Repointed `server/src/app/api/secrets/[name]/route.ts` to `@alga-psa/tenancy/actions` so the build no longer looks for the deleted server duplicate.
+- F024: Re-ran `NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4` after fixing the hidden secrets API imports; the full build completed successfully.
