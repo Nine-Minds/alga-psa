@@ -18,7 +18,7 @@
   {
     "id": "T003",
     "description": "`SecretsManagement.tsx` imports `listTenantSecrets`, `createTenantSecret`, etc. from `@alga-psa/tenancy/actions`",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ]
