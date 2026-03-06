@@ -157,3 +157,5 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - F023A: Repointed `server/src/app/api/secrets/route.ts` to `@alga-psa/tenancy/actions` to remove the hidden stale import found by the build.
 - F023B: Repointed `server/src/app/api/secrets/[name]/route.ts` to `@alga-psa/tenancy/actions` so the build no longer looks for the deleted server duplicate.
 - F024: Re-ran `NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4` after fixing the hidden secrets API imports; the full build completed successfully.
+- Discovery: added `T042A` because the PRD explicitly requires `server/src/test/teams-v2-improvements.test.ts` to pass after the media cleanup.
+- T001: Confirmed the deprecated `@/lib/posthog` wrapper path has zero remaining imports anywhere outside docs and lockfiles.
