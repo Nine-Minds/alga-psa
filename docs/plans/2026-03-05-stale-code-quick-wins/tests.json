@@ -263,7 +263,7 @@
   {
     "id": "T033",
     "description": "`formatting/avatarUtils` exports `getUserAvatarUrl` and `getTeamAvatarUrl` (confirming target exports exist for callers)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F006",
