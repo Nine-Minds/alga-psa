@@ -174,3 +174,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - T006: Confirmed server/src no longer references tenant-secret-actions outside excluded test/docs paths.
 - T007: Corrected the outdated checklist wording and verified the tenancy barrel re-exports the exact secret helpers now used by the settings UI and API routes.
 - T008: Verified getTeamAvatarUrl exists in formatting and delegates to getEntityImageUrl('team', teamId, tenant).
+- T009: Confirmed getTeamAvatarUrl is exported directly from packages/formatting/src/avatarUtils.ts.

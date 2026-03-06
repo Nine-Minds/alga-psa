@@ -67,7 +67,7 @@
   {
     "id": "T009",
     "description": "`getTeamAvatarUrl` is exported from the formatting avatarUtils module (not just defined internally)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
