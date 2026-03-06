@@ -1,0 +1,254 @@
+[
+  {
+    "id": "T001",
+    "description": "Grep for `@/lib/posthog` across repo returns 0 hits after deleting posthog.ts",
+    "implemented": false,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "`server/src/lib/posthog.ts` does not exist on disk after deletion",
+    "implemented": false,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T003",
+    "description": "`SecretsManagement.tsx` imports `listTenantSecrets`, `createTenantSecret`, etc. from `@alga-psa/tenancy/actions`",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T004",
+    "description": "`SecretDialog.tsx` imports from `@alga-psa/tenancy/actions`",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T005",
+    "description": "`server/src/lib/actions/tenant-secret-actions.ts` does not exist on disk after deletion",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T006",
+    "description": "Grep for `tenant-secret-actions` in `server/src/` returns 0 results (excluding test/docs)",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T007",
+    "description": "The functions exported from `@alga-psa/tenancy/actions` match what `SecretsManagement.tsx` and `SecretDialog.tsx` need (listTenantSecrets, createTenantSecret, updateTenantSecret, deleteTenantSecret, getTenantSecretValue)",
+    "implemented": false,
+    "featureIds": ["F002", "F003"]
+  },
+  {
+    "id": "T008",
+    "description": "`getTeamAvatarUrl` function exists in `packages/formatting/src/avatarUtils.ts` and calls `getEntityImageUrl('team', teamId, tenant)`",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T009",
+    "description": "`getTeamAvatarUrl` is exported from the formatting avatarUtils module (not just defined internally)",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T010",
+    "description": "`UserService.ts` imports `getUserAvatarUrl` from `@alga-psa/formatting/avatarUtils` (not `@alga-psa/media`)",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T011",
+    "description": "`UserService.ts` imports `uploadEntityImage` and `deleteEntityImage` from `@alga-psa/documents` (not `@alga-psa/media`)",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T012",
+    "description": "`userActions.ts` imports `uploadEntityImage` and `deleteEntityImage` from `@alga-psa/documents` (not `@alga-psa/media`)",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T013",
+    "description": "`teams/avatarActions.ts` imports `uploadEntityImage` and `deleteEntityImage` from `@alga-psa/documents` (not `@alga-psa/media`)",
+    "implemented": false,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T014",
+    "description": "`teams/avatarActions.ts` imports `getTeamAvatarUrl` from `@alga-psa/formatting/avatarUtils` (not `@alga-psa/media`)",
+    "implemented": false,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T015",
+    "description": "`packages/users/package.json` does NOT contain `@alga-psa/media` in dependencies",
+    "implemented": false,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T016",
+    "description": "`packages/users/package.json` contains `@alga-psa/documents` and `@alga-psa/formatting` in dependencies",
+    "implemented": false,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T017",
+    "description": "`packages/teams/package.json` does NOT contain `@alga-psa/media` in dependencies",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T018",
+    "description": "`packages/teams/package.json` contains `@alga-psa/documents` and `@alga-psa/formatting` in dependencies",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T019",
+    "description": "`server/next.config.mjs` does NOT contain `@alga-psa/media`",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T020",
+    "description": "`server/tsconfig.json` does NOT contain `@alga-psa/media` path mappings",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T021",
+    "description": "`ee/server/tsconfig.json` does NOT contain `@alga-psa/media` path mappings",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T022",
+    "description": "`services/workflow-worker/Dockerfile` does NOT contain `@alga-psa/media`",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T023",
+    "description": "`teams-v2-improvements.test.ts` reads formatting avatarUtils instead of media avatarUtils",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T024",
+    "description": "Test T085 assertion updated to check formatting file for `'team'` in EntityType",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T025",
+    "description": "Test T089 assertion updated to check formatting file for `getTeamAvatarUrl`",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T026",
+    "description": "`packages/media/` directory does not exist on disk",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T027",
+    "description": "Grep for `@alga-psa/media` across entire repo returns 0 hits in source files (excluding docs/plans, package-lock.json, .ai/)",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T028",
+    "description": "`npm install` succeeds without errors after dependency changes",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T029",
+    "description": "`NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4` completes successfully with exit code 0",
+    "implemented": false,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T030",
+    "description": "No new circular dependencies introduced (run `scripts/check-circular-deps.mjs` against baseline)",
+    "implemented": false,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T031",
+    "description": "No re-export shims created -- grep for files containing only `export * from` or `export { ... } from` in modified paths returns no new shims",
+    "implemented": false,
+    "featureIds": ["F001", "F004", "F016"]
+  },
+  {
+    "id": "T032",
+    "description": "`documents` package entityImageService.ts exports `uploadEntityImage`, `deleteEntityImage`, and `EntityType` (confirming the target exports exist for callers)",
+    "implemented": false,
+    "featureIds": ["F006", "F007", "F008"]
+  },
+  {
+    "id": "T033",
+    "description": "`formatting/avatarUtils` exports `getUserAvatarUrl` and `getTeamAvatarUrl` (confirming target exports exist for callers)",
+    "implemented": false,
+    "featureIds": ["F005", "F006", "F008"]
+  },
+  {
+    "id": "T034",
+    "description": "`UserList.tsx` imports `getContactAvatarUrlAction` from `@alga-psa/user-composition/actions`",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T035",
+    "description": "`UserList.tsx` avatar fetch loop checks `user.user_type === 'client'` and uses `getContactAvatarUrlAction(user.contact_id)` for client users",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T036",
+    "description": "`UserList.tsx` avatar fetch loop still uses `getUserAvatarUrlAction(user.user_id)` for internal users (no regression)",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T037",
+    "description": "`UserList.tsx` handles case where client user has no `contact_id` (falls back gracefully to null avatar)",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T038",
+    "description": "`ContactAvatarUploadProps` interface includes `contactName: string` prop",
+    "implemented": false,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T039",
+    "description": "`ContactAvatarUpload` passes `contactName` as `entityName` to `EntityImageUpload` (not empty string)",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T040",
+    "description": "`ContactDetails.tsx` passes `contactName={editedContact.full_name}` to `ContactAvatarUpload`",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T041",
+    "description": "`ContactDetailsEdit.tsx` passes `contactName` to `ContactAvatarUpload` if applicable",
+    "implemented": false,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T042",
+    "description": "`NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4` completes successfully after all 5 tasks",
+    "implemented": false,
+    "featureIds": ["F024"]
+  }
+]
