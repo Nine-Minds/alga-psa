@@ -238,7 +238,7 @@ export const getSlaPolicyUsage = withAuth(async (_user, { tenant }, policyId: st
     const [boards, clients, ticketCountResult] = await Promise.all([
       trx('boards')
         .where({ tenant, sla_policy_id: policyId })
-        .select('board_id', 'name'),
+        .select('board_id', 'board_name as name'),
       trx('clients')
         .where({ tenant, sla_policy_id: policyId })
         .select('client_id', 'client_name'),
@@ -868,6 +868,70 @@ export const setBoardSlaPolicy = withAuth(async (
     } catch (error) {
       console.error(`Error setting SLA policy for board ${boardId}, tenant ${tenant}:`, error);
       throw new Error(error instanceof Error ? error.message : `Failed to set SLA policy for board ${tenant}`);
+    }
+  });
+});
+
+// ============================================================================
+// Batch Board/Client Assignment
+// ============================================================================
+
+/**
+ * Update which boards are assigned to this SLA policy.
+ * Clears boards previously assigned to this policy that are not in the new list,
+ * and sets the policy on newly selected boards.
+ */
+export const updateSlaPolicyBoardAssignments = withAuth(async (
+  _user,
+  { tenant },
+  policyId: string,
+  boardIds: string[]
+): Promise<void> => {
+  const { knex: db } = await createTenantKnex();
+
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    // Clear boards previously assigned to this policy but no longer selected
+    await trx('boards')
+      .where({ tenant, sla_policy_id: policyId })
+      .whereNotIn('board_id', boardIds)
+      .update({ sla_policy_id: null, updated_at: trx.fn.now() });
+
+    // Assign this policy to newly selected boards
+    if (boardIds.length > 0) {
+      await trx('boards')
+        .where({ tenant })
+        .whereIn('board_id', boardIds)
+        .update({ sla_policy_id: policyId, updated_at: trx.fn.now() });
+    }
+  });
+});
+
+/**
+ * Update which clients are assigned to this SLA policy.
+ * Clears clients previously assigned to this policy that are not in the new list,
+ * and sets the policy on newly selected clients.
+ */
+export const updateSlaPolicyClientAssignments = withAuth(async (
+  _user,
+  { tenant },
+  policyId: string,
+  clientIds: string[]
+): Promise<void> => {
+  const { knex: db } = await createTenantKnex();
+
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    // Clear clients previously assigned to this policy but no longer selected
+    await trx('clients')
+      .where({ tenant, sla_policy_id: policyId })
+      .whereNotIn('client_id', clientIds)
+      .update({ sla_policy_id: null, updated_at: trx.fn.now() });
+
+    // Assign this policy to newly selected clients
+    if (clientIds.length > 0) {
+      await trx('clients')
+        .where({ tenant })
+        .whereIn('client_id', clientIds)
+        .update({ sla_policy_id: policyId, updated_at: trx.fn.now() });
     }
   });
 });

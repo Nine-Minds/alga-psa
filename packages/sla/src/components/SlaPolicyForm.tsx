@@ -17,9 +17,14 @@ import {
   getSlaPolicyById,
   upsertSlaPolicyTargets,
   upsertSlaNotificationThresholds,
-  getBusinessHoursSchedules
+  getBusinessHoursSchedules,
+  getSlaPolicyUsage,
+  updateSlaPolicyBoardAssignments,
+  updateSlaPolicyClientAssignments
 } from '../actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
+import { getAllBoards } from '@alga-psa/tickets/actions';
+import { getAllClients } from '@alga-psa/clients/actions';
 import { IPriority } from '@alga-psa/types';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -28,7 +33,8 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Label } from '@alga-psa/ui/components/Label';
-import { Plus, Trash2, ChevronDown } from 'lucide-react';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Plus, Trash2, ChevronDown, X } from 'lucide-react';
 import * as Accordion from '@radix-ui/react-accordion';
 
 interface SlaPolicyFormProps {
@@ -125,6 +131,12 @@ export function SlaPolicyForm({ policyId, onSave, onCancel }: SlaPolicyFormProps
   // Reference data
   const [businessHoursSchedules, setBusinessHoursSchedules] = useState<IBusinessHoursSchedule[]>([]);
   const [priorities, setPriorities] = useState<IPriority[]>([]);
+  const [allBoards, setAllBoards] = useState<{ board_id: string; name: string }[]>([]);
+  const [allClients, setAllClients] = useState<{ client_id: string; client_name: string }[]>([]);
+
+  // Board/client assignments
+  const [selectedBoardIds, setSelectedBoardIds] = useState<string[]>([]);
+  const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
 
   // Targets data
   const [targets, setTargets] = useState<TargetFormData[]>([]);
@@ -145,18 +157,27 @@ export function SlaPolicyForm({ policyId, onSave, onCancel }: SlaPolicyFormProps
     setError(null);
 
     try {
-      // Load business hours and priorities in parallel
-      const [schedules, priorityList] = await Promise.all([
+      // Load reference data in parallel
+      const [schedules, priorityList, boardsList, clientsList] = await Promise.all([
         getBusinessHoursSchedules(),
-        getAllPriorities('ticket')
+        getAllPriorities('ticket'),
+        getAllBoards(true).then(boards => boards
+          .filter((b): b is typeof b & { board_id: string; board_name: string } => !!b.board_id && !!b.board_name)
+          .map(b => ({ board_id: b.board_id, name: b.board_name }))),
+        getAllClients(false).then(clients => clients.map(c => ({ client_id: c.client_id, client_name: c.client_name })))
       ]);
 
       setBusinessHoursSchedules(schedules);
       setPriorities(priorityList);
+      setAllBoards(boardsList);
+      setAllClients(clientsList);
 
       if (policyId) {
-        // Load existing policy for editing
-        const policy = await getSlaPolicyById(policyId);
+        // Load existing policy and current assignments in parallel
+        const [policy, usage] = await Promise.all([
+          getSlaPolicyById(policyId),
+          getSlaPolicyUsage(policyId)
+        ]);
         if (!policy) {
           setError('SLA policy not found');
           return;
@@ -167,6 +188,10 @@ export function SlaPolicyForm({ policyId, onSave, onCancel }: SlaPolicyFormProps
         setDescription(policy.description || '');
         setIsDefault(policy.is_default);
         setBusinessHoursScheduleId(policy.business_hours_schedule_id || '');
+
+        // Populate board/client assignments
+        setSelectedBoardIds(usage.boards.map(b => b.board_id));
+        setSelectedClientIds(usage.clients.map(c => c.client_id));
 
         // Map existing targets to form data
         const targetMap = new Map<string, typeof policy.targets[number]>(
@@ -395,6 +420,12 @@ export function SlaPolicyForm({ policyId, onSave, onCancel }: SlaPolicyFormProps
 
       await upsertSlaNotificationThresholds(savedPolicy.sla_policy_id, thresholdInputs);
 
+      // Save board and client assignments
+      await Promise.all([
+        updateSlaPolicyBoardAssignments(savedPolicy.sla_policy_id, selectedBoardIds),
+        updateSlaPolicyClientAssignments(savedPolicy.sla_policy_id, selectedClientIds)
+      ]);
+
       // Notify parent
       onSave?.(savedPolicy);
     } catch (err) {
@@ -543,6 +574,76 @@ export function SlaPolicyForm({ policyId, onSave, onCancel }: SlaPolicyFormProps
               placeholder="Select business hours schedule"
               allowClear
             />
+          </div>
+
+          {/* Board assignment */}
+          <div>
+            <Label className="mb-1 block">Assign to Boards</Label>
+            <CustomSelect
+              id="sla-policy-board-picker"
+              options={allBoards
+                .filter(b => !selectedBoardIds.includes(b.board_id))
+                .map(b => ({ value: b.board_id, label: b.name }))}
+              value=""
+              onValueChange={(boardId) => {
+                if (boardId) setSelectedBoardIds(prev => [...prev, boardId]);
+              }}
+              placeholder="Select a board to assign..."
+            />
+            {selectedBoardIds.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {selectedBoardIds.map(id => {
+                  const board = allBoards.find(b => b.board_id === id);
+                  return (
+                    <Badge key={id} variant="secondary" className="gap-1 pr-1">
+                      {board?.name || id}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBoardIds(prev => prev.filter(bid => bid !== id))}
+                        className="ml-0.5 rounded-full p-0.5 hover:bg-black/10"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Client assignment */}
+          <div>
+            <Label className="mb-1 block">Assign to Clients</Label>
+            <CustomSelect
+              id="sla-policy-client-picker"
+              options={allClients
+                .filter(c => !selectedClientIds.includes(c.client_id))
+                .map(c => ({ value: c.client_id, label: c.client_name }))}
+              value=""
+              onValueChange={(clientId) => {
+                if (clientId) setSelectedClientIds(prev => [...prev, clientId]);
+              }}
+              placeholder="Select a client to assign..."
+            />
+            {selectedClientIds.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {selectedClientIds.map(id => {
+                  const client = allClients.find(c => c.client_id === id);
+                  return (
+                    <Badge key={id} variant="secondary" className="gap-1 pr-1">
+                      {client?.client_name || id}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedClientIds(prev => prev.filter(cid => cid !== id))}
+                        className="ml-0.5 rounded-full p-0.5 hover:bg-black/10"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
