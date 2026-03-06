@@ -211,7 +211,7 @@
   {
     "id": "T027",
     "description": "Grep for `@alga-psa/media` across entire repo returns 0 hits in source files (excluding docs/plans, package-lock.json, .ai/)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
