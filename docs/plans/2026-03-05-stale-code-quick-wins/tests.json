@@ -179,7 +179,7 @@
   {
     "id": "T023",
     "description": "`teams-v2-improvements.test.ts` reads formatting avatarUtils instead of media avatarUtils",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]

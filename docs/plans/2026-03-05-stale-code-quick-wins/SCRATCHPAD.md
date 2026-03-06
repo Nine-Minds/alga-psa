@@ -188,3 +188,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - T020: Confirmed server/tsconfig.json no longer contains @alga-psa/media path mappings.
 - T021: Confirmed ee/server/tsconfig.json no longer contains @alga-psa/media path mappings.
 - T022: Confirmed the workflow-worker Dockerfile no longer references the deleted @alga-psa/media workspace.
+- T023: Verified teams-v2-improvements.test.ts now reads packages/formatting/src/avatarUtils.ts instead of the deleted media file.
