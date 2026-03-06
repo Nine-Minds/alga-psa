@@ -2,6 +2,7 @@
 
 import { getLicenseUsage, type LicenseUsage } from '../license/get-license-usage';
 import { getSession } from '@alga-psa/auth';
+import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
 import { getStripeService } from '../stripe/StripeService';
 import { getConnection } from '@/lib/db/db';
 import logger from '@alga-psa/core/logger';
@@ -1025,6 +1026,41 @@ export async function getScheduledLicenseChangesAction(): Promise<{
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to get scheduled license changes',
+    };
+  }
+}
+
+/**
+ * Upgrade the tenant's subscription to a new tier.
+ * Modifies the Stripe subscription items directly (no redirect to Stripe).
+ */
+export async function upgradeTierAction(
+  targetTier: 'pro' | 'premium'
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getSession();
+
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const hasPermission = await checkAccountManagementPermission();
+    if (!hasPermission) {
+      return { success: false, error: 'You do not have permission to change the subscription plan' };
+    }
+
+    const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return { success: false, error: 'Stripe billing is not configured' };
+    }
+
+    const result = await stripeService.upgradeTier(session.user.tenant, targetTier);
+    return result;
+  } catch (error) {
+    logger.error('[upgradeTierAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to upgrade plan',
     };
   }
 }

@@ -7,7 +7,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { toast } from 'react-hot-toast';
-import { CreditCard, User, Rocket, MinusCircle, Info, ChevronDown, ChevronUp, DollarSign, Calendar, CheckCircle } from 'lucide-react';
+import { CreditCard, User, Rocket, MinusCircle, Info, ChevronDown, ChevronUp, DollarSign, Calendar, CheckCircle, Shield } from 'lucide-react';
 import {
   getLicenseUsageAction,
   getLicensePricingAction,
@@ -18,6 +18,7 @@ import {
   cancelSubscriptionAction,
   getScheduledLicenseChangesAction,
   sendCancellationFeedbackAction,
+  upgradeTierAction,
 } from 'ee/server/src/lib/actions/license-actions';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
 import { useRouter } from 'next/navigation';
@@ -25,6 +26,14 @@ import { ILicenseInfo, IPaymentMethod, ISubscriptionInfo, IInvoiceInfo, ISchedul
 import ReduceLicensesModal from '@ee/components/licensing/ReduceLicensesModal';
 import CancellationFeedbackModal from './CancellationFeedbackModal';
 import { signOut } from 'next-auth/react';
+import { useTier } from 'server/src/context/TierContext';
+import { TIER_LABELS, TIER_FEATURE_MAP, TIER_FEATURES } from '@alga-psa/types';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+
+// Feature display names for the tier features list
+const FEATURE_DISPLAY_NAMES: Record<TIER_FEATURES, string> = {
+  [TIER_FEATURES.INVOICE_DESIGNER]: 'Invoice Designer',
+};
 
 export default function AccountManagement() {
   const [loading, setLoading] = useState(true);
@@ -36,9 +45,13 @@ export default function AccountManagement() {
   const [showReduceModal, setShowReduceModal] = useState(false);
   const [showCancellationFeedback, setShowCancellationFeedback] = useState(false);
   const [scheduledChanges, setScheduledChanges] = useState<IScheduledLicenseChange | null>(null);
+  const { tier, isMisconfigured, isPro, refreshTier } = useTier();
+  const upgradeFlowFlag = useFeatureFlag('tier-upgrade-flow');
+  const showUpgradeFlow = isPro && (typeof upgradeFlowFlag === 'boolean' ? upgradeFlowFlag : upgradeFlowFlag?.enabled ?? false);
 
   // Collapsible sections state
   const [expandedSections, setExpandedSections] = useState({
+    tierInfo: true,
     licenseDetails: true,
     paymentInfo: true,
     subscriptionDetails: true,
@@ -230,6 +243,31 @@ export default function AccountManagement() {
     }
   };
 
+  const [upgrading, setUpgrading] = useState(false);
+
+  const handleUpgradePlan = async () => {
+    if (!canManageAccount) {
+      toast.error('You do not have permission to manage the subscription');
+      return;
+    }
+
+    setUpgrading(true);
+    try {
+      const result = await upgradeTierAction('premium');
+      if (result.success) {
+        toast.success('Upgraded to Premium! Refreshing your session...');
+        await refreshTier();
+      } else {
+        toast.error(result.error || 'Failed to upgrade plan');
+      }
+    } catch (error) {
+      console.error('Error upgrading plan:', error);
+      toast.error('Failed to upgrade plan');
+    } finally {
+      setUpgrading(false);
+    }
+  };
+
   if (loading) {
     return (
       <Card className="p-6">
@@ -296,6 +334,93 @@ export default function AccountManagement() {
           </div>
         </Card>
       </div>
+
+      {/* Plan & Tier Information */}
+      <Card>
+        <CardHeader
+          className="cursor-pointer hover:bg-muted/50 transition-colors"
+          onClick={() => toggleSection('tierInfo')}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Shield className="h-5 w-5" />
+              <CardTitle>Plan & Tier</CardTitle>
+            </div>
+            {expandedSections.tierInfo ? (
+              <ChevronUp className="h-5 w-5 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+            )}
+          </div>
+        </CardHeader>
+        {expandedSections.tierInfo && (
+          <CardContent className="space-y-4">
+            {/* Current Tier Badge */}
+            <div className="rounded-lg border p-4 bg-muted/50">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold">Current Tier</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Your subscription tier determines which features are available
+                  </p>
+                </div>
+                <Badge
+                  variant={
+                    tier === 'premium' ? 'success' : 'default'
+                  }
+                  className="text-lg px-4 py-1"
+                >
+                  {TIER_LABELS[tier]}
+                </Badge>
+              </div>
+
+              {isMisconfigured && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertDescription>
+                    Your plan is not configured correctly. Please contact support.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Features available in current tier */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Features included in your tier:</Label>
+                <ul className="grid grid-cols-2 gap-2">
+                  {TIER_FEATURE_MAP[tier].map((feature) => (
+                    <li key={feature} className="flex items-center space-x-2 text-sm">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <span>{FEATURE_DISPLAY_NAMES[feature]}</span>
+                    </li>
+                  ))}
+                </ul>
+                {TIER_FEATURE_MAP[tier].length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Your Pro plan includes all standard features.
+                  </p>
+                )}
+              </div>
+
+              {/* Upgrade to Premium */}
+              {showUpgradeFlow && (
+                <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold">Upgrade to Premium</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Unlock the visual Invoice Designer and upcoming premium features.
+                      </p>
+                    </div>
+                    <Button id="upgrade-to-premium-btn" onClick={handleUpgradePlan} disabled={upgrading}>
+                      <Rocket className="mr-2 h-4 w-4" />
+                      {upgrading ? 'Upgrading...' : 'Upgrade'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        )}
+      </Card>
 
       {/* Scheduled License Changes Alert */}
       {scheduledChanges && (
