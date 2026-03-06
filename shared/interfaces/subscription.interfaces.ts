@@ -59,6 +59,8 @@ export interface IStripeSubscription extends TenantEntity {
   stripe_price_id: string;
   status: SubscriptionStatus;
   quantity: number;
+  stripe_base_item_id: string | null;
+  stripe_base_price_id: string | null;
   current_period_start: ISO8601String | null;
   current_period_end: ISO8601String | null;
   cancel_at: ISO8601String | null;
