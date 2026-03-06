@@ -177,3 +177,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - T009: Confirmed getTeamAvatarUrl is exported directly from packages/formatting/src/avatarUtils.ts.
 - T010: Verified UserService.ts imports getUserAvatarUrl from formatting instead of the deleted media package.
 - T011: Verified UserService.ts imports uploadEntityImage and deleteEntityImage from @alga-psa/documents.
+- T012: Verified userActions.ts imports uploadEntityImage and deleteEntityImage from @alga-psa/documents.

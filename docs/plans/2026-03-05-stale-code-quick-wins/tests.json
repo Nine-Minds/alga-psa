@@ -91,7 +91,7 @@
   {
     "id": "T012",
     "description": "`userActions.ts` imports `uploadEntityImage` and `deleteEntityImage` from `@alga-psa/documents` (not `@alga-psa/media`)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ]
