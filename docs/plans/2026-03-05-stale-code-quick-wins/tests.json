@@ -34,7 +34,7 @@
   {
     "id": "T005",
     "description": "`server/src/lib/actions/tenant-secret-actions.ts` does not exist on disk after deletion",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
