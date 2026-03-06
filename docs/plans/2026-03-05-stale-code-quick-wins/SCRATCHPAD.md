@@ -167,3 +167,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - T007: Corrected the outdated checklist wording and verified the tenancy barrel re-exports the exact secret helpers now used by the settings UI and API routes.
 - Discovery: added `T042A` because the PRD explicitly requires `server/src/test/teams-v2-improvements.test.ts` to pass after the media cleanup.
 - T001: Confirmed the deprecated @/lib/posthog wrapper path has zero remaining imports anywhere outside docs and lockfiles.
+- T002: Verified server/src/lib/posthog.ts is absent on disk after F001.
