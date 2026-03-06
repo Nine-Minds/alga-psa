@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleWorkflowV2ApiError } from 'server/src/lib/api/workflowRuntimeV2Api';
-import { updateWorkflowDefinitionMetadataAction } from 'server/src/lib/actions/workflow-runtime-v2-actions';
+import { updateWorkflowDefinitionMetadataAction } from '@alga-psa/workflows/actions';
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ workflowId: string }> }) {
   try {

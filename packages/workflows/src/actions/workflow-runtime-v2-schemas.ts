@@ -16,7 +16,10 @@ const optionalNonNegativeInt = z.preprocess(
   z.number().int().nonnegative()
 ).optional();
 
+const workflowKey = z.string().min(1).regex(/^[a-z0-9][a-z0-9._-]*$/);
+
 export const CreateWorkflowDefinitionInput = z.object({
+  key: workflowKey.optional(),
   definition: workflowDefinitionSchema,
   payloadSchemaMode: z.enum(['inferred', 'pinned']).optional(),
   pinnedPayloadSchemaRef: z.string().min(1).optional()
@@ -31,6 +34,7 @@ export const UpdateWorkflowDefinitionInput = z.object({
 
 export const UpdateWorkflowDefinitionMetadataInput = z.object({
   workflowId: z.string().min(1),
+  key: workflowKey.optional(),
   isVisible: z.boolean().optional(),
   isPaused: z.boolean().optional(),
   concurrencyLimit: optionalNonNegativeInt.optional(),
@@ -137,6 +141,18 @@ export const ListWorkflowEventsInput = z.object({
   to: z.string().optional(),
   limit: optionalPositiveInt.default(100),
   cursor: optionalNonNegativeInt.default(0)
+});
+
+export const ListWorkflowEventsPagedInput = z.object({
+  page: pageNumber.default(1),
+  pageSize: pageSizeNumber.default(25),
+  eventName: z.string().min(1).optional(),
+  correlationKey: z.string().min(1).optional(),
+  status: z.enum(['all', 'matched', 'unmatched', 'error']).optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+  sortBy: z.enum(['created_at', 'processed_at', 'event_name', 'correlation_key', 'status']).optional(),
+  sortDirection: z.enum(['asc', 'desc']).optional()
 });
 
 export const ListWorkflowDeadLetterInput = z.object({

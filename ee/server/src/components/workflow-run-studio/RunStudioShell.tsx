@@ -20,7 +20,7 @@ import {
   listWorkflowRunTimelineEventsAction,
   cancelWorkflowRunAction,
   replayWorkflowRunAction
-} from '@/lib/actions/workflow-runtime-v2-actions';
+} from '@alga-psa/workflows/actions';
 import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
 import type { WorkflowDefinition, Step } from '@shared/workflow/runtime';
