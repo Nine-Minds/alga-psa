@@ -22,12 +22,14 @@ const deleteContactAvatar = async (
 
 interface ContactAvatarUploadProps {
   contactId: string;
+  contactName: string;
   currentAvatarUrl?: string | null;
   onAvatarUpdated?: (newUrl: string | null) => void;
 }
 
 export default function ContactAvatarUpload({
   contactId,
+  contactName,
   currentAvatarUrl,
   onAvatarUpdated,
 }: ContactAvatarUploadProps) {

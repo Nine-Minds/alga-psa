@@ -154,7 +154,7 @@
   {
     "id": "F020",
     "description": "Add `contactName: string` prop to `ContactAvatarUploadProps` in `ContactAvatarUpload.tsx`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Task 5"
     ]
