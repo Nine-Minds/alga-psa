@@ -10,7 +10,7 @@
   {
     "id": "T002",
     "description": "`server/src/lib/posthog.ts` does not exist on disk after deletion",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001"
     ]
