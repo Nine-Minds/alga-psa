@@ -34,7 +34,7 @@ vi.mock('../../../../../packages/auth/src/components/Alert', () => ({
   default: () => null,
 }));
 
-const { MspSignIn } = await import('@alga-psa/auth');
+const { default: MspSignIn } = await import('../../../../../packages/auth/src/components/MspSignIn');
 
 describe('MspSignIn', () => {
   beforeEach(() => {
@@ -60,5 +60,14 @@ describe('MspSignIn', () => {
 
     const props = loginFormMock.mock.calls.at(-1)?.[0] as { callbackUrl: string } | undefined;
     expect(props?.callbackUrl).toBe('/msp/tickets');
+  });
+
+  it('forwards the initial email into the shared login form', () => {
+    useSearchParamsMock.mockReturnValue(new URLSearchParams());
+
+    render(<MspSignIn initialEmail="remembered@example.com" />);
+
+    const props = loginFormMock.mock.calls.at(-1)?.[0] as { initialEmail?: string } | undefined;
+    expect(props?.initialEmail).toBe('remembered@example.com');
   });
 });
