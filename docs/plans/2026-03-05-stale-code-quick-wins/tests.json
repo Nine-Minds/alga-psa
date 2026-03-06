@@ -227,7 +227,7 @@
   {
     "id": "T029",
     "description": "`NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4` completes successfully with exit code 0",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
