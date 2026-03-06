@@ -20,6 +20,7 @@ export * from './lib/telemetry';
 export * from './lib/tenancy';
 export * from './lib/onboardingWizard';
 export * from './deletion';
+export * from './constants';
 
 // Outbound email types - exported with explicit naming to avoid conflicts with inbound email interfaces.
 export type {
