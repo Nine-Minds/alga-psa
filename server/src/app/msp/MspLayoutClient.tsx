@@ -6,6 +6,7 @@ import { TagProvider } from "@alga-psa/tags/context";
 import { PostHogUserIdentifier } from "@alga-psa/ui/components/analytics/PostHogUserIdentifier";
 import { ClientUIStateProvider } from "@alga-psa/ui/ui-reflection/ClientUIStateProvider";
 import { I18nWrapper } from "@alga-psa/tenancy/components";
+import { TierProvider } from "@/context/TierContext";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import type { Session } from "next-auth";
@@ -44,22 +45,24 @@ export function MspLayoutClient({
 
   const content = (
     <AppSessionProvider session={session}>
-      <PostHogUserIdentifier />
-      <TagProvider>
-        <ClientUIStateProvider
-          initialPageState={{
-            id: 'msp-portal',
-            title: 'MSP Portal',
-            components: []
-          }}
-        >
-          {isOnboardingPage ? children : (
-            <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>
-              {children}
-            </DefaultLayout>
-          )}
-        </ClientUIStateProvider>
-      </TagProvider>
+      <TierProvider>
+        <PostHogUserIdentifier />
+        <TagProvider>
+          <ClientUIStateProvider
+            initialPageState={{
+              id: 'msp-portal',
+              title: 'MSP Portal',
+              components: []
+            }}
+          >
+            {isOnboardingPage ? children : (
+              <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>
+                {children}
+              </DefaultLayout>
+            )}
+          </ClientUIStateProvider>
+        </TagProvider>
+      </TierProvider>
     </AppSessionProvider>
   );
 

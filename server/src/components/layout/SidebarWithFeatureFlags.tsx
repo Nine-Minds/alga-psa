@@ -7,7 +7,7 @@ import {
   bottomMenuItems,
   menuItems as legacyMenuItems,
   navigationSections as originalSections,
-  type NavigationSection
+  type NavigationSection,
 } from '@/config/menuConfig';
 import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
 
@@ -59,21 +59,22 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
 
     return baseSections.map((section) => ({
       ...section,
-      items: section.items.map((item) => {
-        if (item.name !== 'Automation Hub') {
-          return item;
-        }
+      items: section.items
+        .map((item) => {
+          if (item.name !== 'Automation Hub') {
+            return item;
+          }
 
-        const filteredSubItems = item.subItems?.filter((subItem) => {
-          if (subItem.name !== 'Dead Letter') return true;
-          return canWorkflowAdmin;
-        });
+          const filteredSubItems = item.subItems?.filter((subItem) => {
+            if (subItem.name !== 'Dead Letter') return true;
+            return canWorkflowAdmin;
+          });
 
-        return {
-          ...item,
-          subItems: filteredSubItems
-        };
-      })
+          return {
+            ...item,
+            subItems: filteredSubItems
+          };
+        })
     }));
   }, [canWorkflowAdmin, useNavigationSections]);
 

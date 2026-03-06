@@ -11,7 +11,9 @@ export default async function ProjectsPage() {
 
   const projectsData: IProject[] = isActionPermissionError(projectsResult) ? [] : projectsResult;
 
-  return <Projects initialProjects={projectsData} clients={clientsData} />;
+  return (
+    <Projects initialProjects={projectsData} clients={clientsData} />
+  );
 }
 
 export const dynamic = "force-dynamic";
