@@ -24,8 +24,6 @@ import {
   updateSlaPolicyClientAssignments
 } from '../actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
-import { getAllBoards } from '@alga-psa/tickets/actions';
-import { getAllClients } from '@alga-psa/clients/actions';
 import { IPriority } from '@alga-psa/types';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -40,6 +38,8 @@ import * as Accordion from '@radix-ui/react-accordion';
 
 interface SlaPolicyFormProps {
   policyId?: string;  // If provided, edit mode
+  boards: { board_id: string; name: string }[];
+  clients: { client_id: string; client_name: string; logoUrl: string | null }[];
   onSave?: (policy: ISlaPolicy) => void;
   onCancel?: () => void;
 }
@@ -314,7 +314,7 @@ function MultiSelectPanel({ id, label, placeholder, searchPlaceholder, items, se
   );
 }
 
-export function SlaPolicyForm({ policyId, onSave, onCancel }: SlaPolicyFormProps) {
+export function SlaPolicyForm({ policyId, boards, clients, onSave, onCancel }: SlaPolicyFormProps) {
   // Loading and error states
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -356,19 +356,15 @@ export function SlaPolicyForm({ policyId, onSave, onCancel }: SlaPolicyFormProps
 
     try {
       // Load reference data in parallel
-      const [schedules, priorityList, boardsList, clientsList] = await Promise.all([
+      const [schedules, priorityList] = await Promise.all([
         getBusinessHoursSchedules(),
         getAllPriorities('ticket'),
-        getAllBoards(true).then(boards => boards
-          .filter((b): b is typeof b & { board_id: string; board_name: string } => !!b.board_id && !!b.board_name)
-          .map(b => ({ board_id: b.board_id, name: b.board_name }))),
-        getAllClients(false).then(clients => clients.map(c => ({ client_id: c.client_id, client_name: c.client_name, logoUrl: (c as any).logoUrl ?? null })))
       ]);
 
       setBusinessHoursSchedules(schedules);
       setPriorities(priorityList);
-      setAllBoards(boardsList);
-      setAllClients(clientsList);
+      setAllBoards(boards);
+      setAllClients(clients);
 
       if (policyId) {
         // Load existing policy and current assignments in parallel
