@@ -554,7 +554,10 @@ export class ProjectService extends BaseService<IProject> {
       }
       
       return knex('project_tasks')
-        .join('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
+        .join('project_phases', function joinProjectPhases(this: Knex.JoinClause) {
+          this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
+            .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
+        })
         .where({
           'project_phases.project_id': projectId,
           'project_tasks.tenant': context.tenant
@@ -814,7 +817,10 @@ export class ProjectService extends BaseService<IProject> {
       const { knex } = await this.getKnex();
       
       return knex('project_ticket_links')
-        .leftJoin('tickets', 'project_ticket_links.ticket_id', 'tickets.ticket_id')
+        .leftJoin('tickets', function joinTickets(this: Knex.JoinClause) {
+          this.on('project_ticket_links.ticket_id', '=', 'tickets.ticket_id')
+            .andOn('project_ticket_links.tenant', '=', 'tickets.tenant');
+        })
         .leftJoin('clients', function joinClients(this: Knex.JoinClause) {
           this.on('tickets.client_id', '=', 'clients.client_id')
             .andOn('tickets.tenant', '=', 'clients.tenant');
@@ -1072,7 +1078,10 @@ export class ProjectService extends BaseService<IProject> {
           .count('* as count')
           .first(),
         knex('project_tasks')
-          .join('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
+          .join('project_phases', function joinProjectPhases(this: Knex.JoinClause) {
+            this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
+              .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
+          })
           .where({
             'project_phases.project_id': projectId,
             'project_tasks.tenant': context.tenant
@@ -1083,8 +1092,14 @@ export class ProjectService extends BaseService<IProject> {
             knex.raw('SUM(project_tasks.estimated_hours) as total_estimated_hours'),
             knex.raw('SUM(project_tasks.actual_hours) as total_actual_hours')
           ])
-          .leftJoin('project_status_mappings', 'project_tasks.project_status_mapping_id', 'project_status_mappings.project_status_mapping_id')
-          .leftJoin('standard_statuses', 'project_status_mappings.standard_status_id', 'standard_statuses.standard_status_id')
+          .leftJoin('project_status_mappings', function joinProjectStatusMappings(this: Knex.JoinClause) {
+            this.on('project_tasks.project_status_mapping_id', '=', 'project_status_mappings.project_status_mapping_id')
+              .andOn('project_tasks.tenant', '=', 'project_status_mappings.tenant');
+          })
+          .leftJoin('standard_statuses', function joinStandardStatuses(this: Knex.JoinClause) {
+            this.on('project_status_mappings.standard_status_id', '=', 'standard_statuses.standard_status_id')
+              .andOn('project_status_mappings.tenant', '=', 'standard_statuses.tenant');
+          })
           .first()
       ]);
   
@@ -1208,7 +1223,10 @@ export class ProjectService extends BaseService<IProject> {
     
     // Get tickets related to this project through project_ticket_links
     const baseQuery = knex('project_ticket_links')
-      .leftJoin('tickets', 'project_ticket_links.ticket_id', 'tickets.ticket_id')
+      .leftJoin('tickets', function joinTickets(this: Knex.JoinClause) {
+        this.on('project_ticket_links.ticket_id', '=', 'tickets.ticket_id')
+          .andOn('project_ticket_links.tenant', '=', 'tickets.tenant');
+      })
       .leftJoin('clients', function joinClients(this: Knex.JoinClause) {
         this.on('tickets.client_id', '=', 'clients.client_id')
           .andOn('tickets.tenant', '=', 'clients.tenant');
