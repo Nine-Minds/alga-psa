@@ -353,7 +353,7 @@
   {
     "id": "T042",
     "description": "`NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4` completes successfully after all 5 tasks",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
