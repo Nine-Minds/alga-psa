@@ -280,7 +280,7 @@ export const deleteSlaPolicy = withAuth(async (_user, { tenant }, policyId: stri
           .update({ sla_policy_id: null, updated_at: trx.fn.now() }),
         trx('boards')
           .where({ tenant, sla_policy_id: policyId })
-          .update({ sla_policy_id: null, updated_at: trx.fn.now() }),
+          .update({ sla_policy_id: null }),
         trx('tickets')
           .where({ tenant, sla_policy_id: policyId })
           .update({ sla_policy_id: null })
@@ -891,17 +891,23 @@ export const updateSlaPolicyBoardAssignments = withAuth(async (
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     // Clear boards previously assigned to this policy but no longer selected
-    await trx('boards')
-      .where({ tenant, sla_policy_id: policyId })
-      .whereNotIn('board_id', boardIds)
-      .update({ sla_policy_id: null, updated_at: trx.fn.now() });
+    if (boardIds.length > 0) {
+      await trx('boards')
+        .where({ tenant, sla_policy_id: policyId })
+        .whereNotIn('board_id', boardIds)
+        .update({ sla_policy_id: null });
+    } else {
+      await trx('boards')
+        .where({ tenant, sla_policy_id: policyId })
+        .update({ sla_policy_id: null });
+    }
 
     // Assign this policy to newly selected boards
     if (boardIds.length > 0) {
       await trx('boards')
         .where({ tenant })
         .whereIn('board_id', boardIds)
-        .update({ sla_policy_id: policyId, updated_at: trx.fn.now() });
+        .update({ sla_policy_id: policyId });
     }
   });
 });
@@ -921,10 +927,16 @@ export const updateSlaPolicyClientAssignments = withAuth(async (
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     // Clear clients previously assigned to this policy but no longer selected
-    await trx('clients')
-      .where({ tenant, sla_policy_id: policyId })
-      .whereNotIn('client_id', clientIds)
-      .update({ sla_policy_id: null, updated_at: trx.fn.now() });
+    if (clientIds.length > 0) {
+      await trx('clients')
+        .where({ tenant, sla_policy_id: policyId })
+        .whereNotIn('client_id', clientIds)
+        .update({ sla_policy_id: null, updated_at: trx.fn.now() });
+    } else {
+      await trx('clients')
+        .where({ tenant, sla_policy_id: policyId })
+        .update({ sla_policy_id: null, updated_at: trx.fn.now() });
+    }
 
     // Assign this policy to newly selected clients
     if (clientIds.length > 0) {

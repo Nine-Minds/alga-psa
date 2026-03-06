@@ -12,10 +12,11 @@
  * - Not currently paused (sla_paused_at is null)
  */
 
-import { createTenantKnex, withTransaction } from '@alga-psa/db';
-import { runWithTenant } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { findCrossedThresholds } from '@alga-psa/sla';
+import { calculateElapsedBusinessMinutes } from '@alga-psa/sla/services/businessHoursCalculator';
+import type { IBusinessHoursScheduleWithEntries } from '@alga-psa/sla/types';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import logger from '@alga-psa/core/logger';
 
@@ -87,6 +88,9 @@ interface TicketSlaData {
   sla_resolution_met: boolean | null;
   sla_paused_at: Date | null;
   sla_total_pause_minutes: number;
+  // Target minutes from the SLA policy target
+  response_time_minutes: number | null;
+  resolution_time_minutes: number | null;
   // Metadata field to track last notified threshold
   // This is stored in the ticket's attributes JSONB field
   sla_last_response_threshold_notified?: number;
@@ -105,25 +109,32 @@ async function getTicketsNeedingSlaCheck(
   trx: Knex.Transaction,
   tenant: string
 ): Promise<TicketSlaData[]> {
-  const tickets = await trx('tickets')
-    .where({ tenant })
-    .whereNotNull('sla_policy_id')
-    .whereNull('sla_resolution_at') // Not yet resolved
-    .whereNull('sla_paused_at') // Not currently paused
+  const tickets = await trx('tickets as t')
+    .leftJoin('sla_policy_targets as spt', function() {
+      this.on('t.sla_policy_id', 'spt.sla_policy_id')
+          .andOn('t.tenant', 'spt.tenant')
+          .andOn('t.priority_id', 'spt.priority_id');
+    })
+    .where('t.tenant', tenant)
+    .whereNotNull('t.sla_policy_id')
+    .whereNull('t.sla_resolution_at') // Not yet resolved
+    .whereNull('t.sla_paused_at') // Not currently paused
     .select(
-      'ticket_id',
-      'ticket_number',
-      'sla_policy_id',
-      'sla_started_at',
-      'sla_response_due_at',
-      'sla_response_at',
-      'sla_response_met',
-      'sla_resolution_due_at',
-      'sla_resolution_at',
-      'sla_resolution_met',
-      'sla_paused_at',
-      'sla_total_pause_minutes',
-      'attributes'
+      't.ticket_id',
+      't.ticket_number',
+      't.sla_policy_id',
+      't.sla_started_at',
+      't.sla_response_due_at',
+      't.sla_response_at',
+      't.sla_response_met',
+      't.sla_resolution_due_at',
+      't.sla_resolution_at',
+      't.sla_resolution_met',
+      't.sla_paused_at',
+      't.sla_total_pause_minutes',
+      't.attributes',
+      'spt.response_time_minutes',
+      'spt.resolution_time_minutes'
     );
 
   // Extract the last notified thresholds from attributes
@@ -152,13 +163,17 @@ async function processTicketSla(
   let updatedResolutionThreshold = ticket.sla_last_resolution_threshold_notified || 0;
   let needsUpdate = false;
 
+  // Fetch business hours schedule for elapsed time calculation
+  const schedule = await getBusinessHoursSchedule(trx, tenant, ticket.sla_policy_id);
+
   // Check response SLA if not yet responded
   if (ticket.sla_response_due_at && !ticket.sla_response_at) {
-    const elapsedPercent = calculateElapsedPercent(
+    const elapsedPercent = calculateElapsedPercentBusinessHours(
       ticket.sla_started_at,
-      ticket.sla_response_due_at,
+      ticket.response_time_minutes,
       ticket.sla_total_pause_minutes,
-      now
+      now,
+      schedule
     );
 
     const { highestThreshold } = await findCrossedThresholds(
@@ -213,11 +228,12 @@ async function processTicketSla(
 
   // Check resolution SLA
   if (ticket.sla_resolution_due_at) {
-    const elapsedPercent = calculateElapsedPercent(
+    const elapsedPercent = calculateElapsedPercentBusinessHours(
       ticket.sla_started_at,
-      ticket.sla_resolution_due_at,
+      ticket.resolution_time_minutes,
       ticket.sla_total_pause_minutes,
-      now
+      now,
+      schedule
     );
 
     const { highestThreshold: resHighest } = await findCrossedThresholds(
@@ -288,30 +304,76 @@ async function processTicketSla(
 }
 
 /**
- * Calculate the elapsed percentage of SLA time.
- *
- * Takes into account pause time to give accurate elapsed percentage.
+ * Fetch the business hours schedule for a ticket's SLA policy.
  */
-function calculateElapsedPercent(
-  startedAt: Date,
-  dueAt: Date,
-  pauseMinutes: number,
-  currentTime: Date
-): number {
-  const startMs = new Date(startedAt).getTime();
-  const dueMs = new Date(dueAt).getTime();
-  const currentMs = currentTime.getTime();
-  const pauseMs = pauseMinutes * 60000;
+async function getBusinessHoursSchedule(
+  trx: Knex.Transaction,
+  tenant: string,
+  policyId: string
+): Promise<IBusinessHoursScheduleWithEntries | null> {
+  const policy = await trx('sla_policies')
+    .where({ tenant, sla_policy_id: policyId })
+    .select('business_hours_schedule_id', 'is_24x7')
+    .first();
 
-  // Total time allowed (adjusted for pause)
-  const totalAllowedMs = dueMs - startMs + pauseMs;
-
-  // Elapsed time
-  const elapsedMs = currentMs - startMs;
-
-  if (totalAllowedMs <= 0) {
-    return 100; // Avoid division by zero
+  if (!policy || !policy.business_hours_schedule_id) {
+    return null;
   }
 
-  return Math.min(200, Math.max(0, (elapsedMs / totalAllowedMs) * 100));
+  const schedule = await trx('business_hours_schedules')
+    .where({ tenant, schedule_id: policy.business_hours_schedule_id })
+    .first();
+
+  if (!schedule) {
+    return null;
+  }
+
+  const entries = await trx('business_hours_entries')
+    .where({ tenant, schedule_id: schedule.schedule_id })
+    .orderBy('day_of_week');
+
+  const holidays = await trx('holidays')
+    .where({ tenant, schedule_id: schedule.schedule_id });
+
+  return {
+    ...schedule,
+    entries,
+    holidays,
+  };
+}
+
+/**
+ * Calculate the elapsed percentage of SLA time using business hours.
+ *
+ * Uses the business hours calculator to count only minutes within
+ * the configured schedule, minus pause time.
+ */
+function calculateElapsedPercentBusinessHours(
+  startedAt: Date,
+  targetMinutes: number | null,
+  pauseMinutes: number,
+  currentTime: Date,
+  schedule: IBusinessHoursScheduleWithEntries | null
+): number {
+  if (!targetMinutes || targetMinutes <= 0) {
+    return 100;
+  }
+
+  // If no schedule available, fall back to wall-clock calculation
+  if (!schedule) {
+    const startMs = new Date(startedAt).getTime();
+    const elapsedMs = currentTime.getTime() - startMs;
+    const totalAllowedMs = targetMinutes * 60000;
+    if (totalAllowedMs <= 0) return 100;
+    return Math.min(200, Math.max(0, (elapsedMs / totalAllowedMs) * 100));
+  }
+
+  const { businessMinutes } = calculateElapsedBusinessMinutes(
+    schedule,
+    new Date(startedAt),
+    currentTime
+  );
+
+  const effectiveElapsed = Math.max(0, businessMinutes - pauseMinutes);
+  return Math.min(200, Math.max(0, (effectiveElapsed / targetMinutes) * 100));
 }

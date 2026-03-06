@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ISlaPolicy,
   ISlaPolicyInput,
@@ -33,8 +34,8 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Label } from '@alga-psa/ui/components/Label';
-import { Badge } from '@alga-psa/ui/components/Badge';
-import { Plus, Trash2, ChevronDown, X } from 'lucide-react';
+import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
+import { Plus, Trash2, ChevronDown, Search } from 'lucide-react';
 import * as Accordion from '@radix-ui/react-accordion';
 
 interface SlaPolicyFormProps {
@@ -116,6 +117,203 @@ function formatMinutesDisplay(minutes: number | null): string {
   return `${days}d`;
 }
 
+// ---------------------------------------------------------------------------
+// Dropdown multi-select picker (similar to MultiUserPicker pattern)
+// ---------------------------------------------------------------------------
+interface MultiSelectPanelItem {
+  id: string;
+  label: string;
+  render?: React.ReactNode;
+}
+
+interface MultiSelectPanelProps {
+  id: string;
+  label: string;
+  placeholder?: string;
+  searchPlaceholder?: string;
+  items: MultiSelectPanelItem[];
+  selectedIds: string[];
+  onSelectedIdsChange: (ids: string[]) => void;
+}
+
+function MultiSelectPanel({ id, label, placeholder, searchPlaceholder, items, selectedIds, onSelectedIdsChange }: MultiSelectPanelProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [dropdownCoords, setDropdownCoords] = useState({ top: 0, left: 0, width: 250 });
+
+  const filtered = useMemo(() => {
+    if (!search) return items;
+    const q = search.toLowerCase();
+    return items.filter(i => i.label.toLowerCase().includes(q));
+  }, [items, search]);
+
+  const selectedItems = useMemo(() => items.filter(i => selectedIds.includes(i.id)), [items, selectedIds]);
+
+  // Position dropdown
+  const updatePosition = useCallback(() => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    setDropdownCoords({
+      top: rect.bottom + 2,
+      left: rect.left,
+      width: Math.max(rect.width, 280),
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    updatePosition();
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [isOpen, updatePosition]);
+
+  // Focus search on open
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => searchInputRef.current?.focus(), 10);
+    }
+  }, [isOpen]);
+
+  // Click outside to close
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (!dropdownRef.current?.contains(target) && !buttonRef.current?.contains(target)) {
+        setIsOpen(false);
+        setSearch('');
+      }
+    };
+    document.addEventListener('mousedown', handler, true);
+    return () => document.removeEventListener('mousedown', handler, true);
+  }, [isOpen]);
+
+  const handleSelectAll = () => {
+    const filteredIds = filtered.map(i => i.id);
+    onSelectedIdsChange(Array.from(new Set([...selectedIds, ...filteredIds])));
+  };
+
+  const handleDeselectAll = () => {
+    const filteredIds = new Set(filtered.map(i => i.id));
+    onSelectedIdsChange(selectedIds.filter(id => !filteredIds.has(id)));
+  };
+
+  const handleToggle = (id: string) => {
+    if (selectedIds.includes(id)) {
+      onSelectedIdsChange(selectedIds.filter(sid => sid !== id));
+    } else {
+      onSelectedIdsChange([...selectedIds, id]);
+    }
+  };
+
+  const triggerLabel = selectedItems.length === 0
+    ? placeholder || 'Select...'
+    : `${selectedItems.length} selected`;
+
+  const dropdownContent = (
+    <div
+      ref={dropdownRef}
+      className="fixed z-50"
+      style={{ top: dropdownCoords.top, left: dropdownCoords.left, width: dropdownCoords.width }}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <div className="bg-white dark:bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))] overflow-hidden">
+        {/* Search */}
+        <div className="p-2 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))]">
+          <div className="relative">
+            <Input
+              ref={searchInputRef}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={searchPlaceholder || 'Search...'}
+              className="pl-8 h-8 text-sm"
+              autoComplete="off"
+            />
+            <Search className="absolute left-2.5 top-2 h-4 w-4 text-gray-400 pointer-events-none" />
+          </div>
+        </div>
+
+        {/* Select all / Deselect all */}
+        <div className="flex items-center gap-3 px-3 py-1.5 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))] text-xs text-gray-500">
+          <button type="button" onClick={handleSelectAll} className="hover:text-gray-900 underline">
+            Select all{search ? ' visible' : ''}
+          </button>
+          <button type="button" onClick={handleDeselectAll} className="hover:text-gray-900 underline">
+            Deselect all{search ? ' visible' : ''}
+          </button>
+          <span className="ml-auto">{selectedIds.length} selected</span>
+        </div>
+
+        {/* Checkbox list */}
+        <div
+          className="max-h-[280px] overflow-y-auto p-1"
+          onWheel={(e) => {
+            const el = e.currentTarget;
+            const { scrollTop, scrollHeight, clientHeight } = el;
+            const atTop = scrollTop === 0 && e.deltaY < 0;
+            const atBottom = scrollTop + clientHeight >= scrollHeight - 1 && e.deltaY > 0;
+            if (atTop || atBottom) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }}
+        >
+          {filtered.length === 0 ? (
+            <div className="px-3 py-4 text-sm text-gray-500 text-center">
+              {search ? 'No results found' : 'No items available'}
+            </div>
+          ) : (
+            filtered.map(item => (
+              <div
+                key={item.id}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${
+                  selectedIds.includes(item.id) ? 'bg-gray-50 dark:bg-[rgb(var(--color-border-50))]' : ''
+                }`}
+                onClick={() => handleToggle(item.id)}
+              >
+                <Checkbox
+                  id={`msp-${item.id}`}
+                  checked={selectedIds.includes(item.id)}
+                  onChange={() => handleToggle(item.id)}
+                  containerClassName="flex items-center"
+                />
+                {item.render ?? <span className="text-sm truncate">{item.label}</span>}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div>
+      <Label className="mb-1 block">{label}</Label>
+      <Button
+        id={id}
+        ref={buttonRef}
+        type="button"
+        variant="outline"
+        onClick={() => { setIsOpen(!isOpen); setSearch(''); }}
+        className="w-full justify-between min-h-[38px] h-auto"
+      >
+        <span className={selectedItems.length === 0 ? 'text-gray-500' : ''}>
+          {triggerLabel}
+        </span>
+        <ChevronDown className={`h-4 w-4 text-gray-500 ml-2 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </Button>
+      {isOpen && typeof document !== 'undefined' && createPortal(dropdownContent, document.body)}
+    </div>
+  );
+}
+
 export function SlaPolicyForm({ policyId, onSave, onCancel }: SlaPolicyFormProps) {
   // Loading and error states
   const [isLoading, setIsLoading] = useState(true);
@@ -132,7 +330,7 @@ export function SlaPolicyForm({ policyId, onSave, onCancel }: SlaPolicyFormProps
   const [businessHoursSchedules, setBusinessHoursSchedules] = useState<IBusinessHoursSchedule[]>([]);
   const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [allBoards, setAllBoards] = useState<{ board_id: string; name: string }[]>([]);
-  const [allClients, setAllClients] = useState<{ client_id: string; client_name: string }[]>([]);
+  const [allClients, setAllClients] = useState<{ client_id: string; client_name: string; logoUrl: string | null }[]>([]);
 
   // Board/client assignments
   const [selectedBoardIds, setSelectedBoardIds] = useState<string[]>([]);
@@ -164,7 +362,7 @@ export function SlaPolicyForm({ policyId, onSave, onCancel }: SlaPolicyFormProps
         getAllBoards(true).then(boards => boards
           .filter((b): b is typeof b & { board_id: string; board_name: string } => !!b.board_id && !!b.board_name)
           .map(b => ({ board_id: b.board_id, name: b.board_name }))),
-        getAllClients(false).then(clients => clients.map(c => ({ client_id: c.client_id, client_name: c.client_name })))
+        getAllClients(false).then(clients => clients.map(c => ({ client_id: c.client_id, client_name: c.client_name, logoUrl: (c as any).logoUrl ?? null })))
       ]);
 
       setBusinessHoursSchedules(schedules);
@@ -533,7 +731,8 @@ export function SlaPolicyForm({ policyId, onSave, onCancel }: SlaPolicyFormProps
           <CardTitle>Basic Information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
+          {/* Name + Default checkbox */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               id="sla-policy-name"
               label="Policy Name"
@@ -543,107 +742,64 @@ export function SlaPolicyForm({ policyId, onSave, onCancel }: SlaPolicyFormProps
               required
               error={validationErrors.policyName}
             />
-          </div>
-
-          <div>
-            <TextArea
-              id="sla-policy-description"
-              label="Description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional description of this SLA policy"
-            />
-          </div>
-
-          <div className="flex items-center gap-4">
             <Checkbox
               id="sla-policy-is-default"
               label="Set as default policy"
               checked={isDefault}
               onChange={(e) => setIsDefault(e.target.checked)}
+              containerClassName="flex items-center gap-2 md:mt-7"
             />
           </div>
 
-          <div>
-            <CustomSelect
-              id="sla-policy-business-hours"
-              label="Business Hours Schedule"
-              options={businessHoursOptions}
-              value={businessHoursScheduleId}
-              onValueChange={setBusinessHoursScheduleId}
-              placeholder="Select business hours schedule"
-              allowClear
-            />
-          </div>
+          <TextArea
+            id="sla-policy-description"
+            label="Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Optional description of this SLA policy"
+            className="max-w-none"
+          />
 
-          {/* Board assignment */}
-          <div>
-            <Label className="mb-1 block">Assign to Boards</Label>
-            <CustomSelect
-              id="sla-policy-board-picker"
-              options={allBoards
-                .filter(b => !selectedBoardIds.includes(b.board_id))
-                .map(b => ({ value: b.board_id, label: b.name }))}
-              value=""
-              onValueChange={(boardId) => {
-                if (boardId) setSelectedBoardIds(prev => [...prev, boardId]);
-              }}
-              placeholder="Select a board to assign..."
-            />
-            {selectedBoardIds.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {selectedBoardIds.map(id => {
-                  const board = allBoards.find(b => b.board_id === id);
-                  return (
-                    <Badge key={id} variant="secondary" className="gap-1 pr-1">
-                      {board?.name || id}
-                      <button
-                        type="button"
-                        onClick={() => setSelectedBoardIds(prev => prev.filter(bid => bid !== id))}
-                        className="ml-0.5 rounded-full p-0.5 hover:bg-black/10"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          <CustomSelect
+            id="sla-policy-business-hours"
+            label="Business Hours Schedule"
+            options={businessHoursOptions}
+            value={businessHoursScheduleId}
+            onValueChange={setBusinessHoursScheduleId}
+            placeholder="Select business hours schedule"
+            allowClear
+          />
 
-          {/* Client assignment */}
-          <div>
-            <Label className="mb-1 block">Assign to Clients</Label>
-            <CustomSelect
-              id="sla-policy-client-picker"
-              options={allClients
-                .filter(c => !selectedClientIds.includes(c.client_id))
-                .map(c => ({ value: c.client_id, label: c.client_name }))}
-              value=""
-              onValueChange={(clientId) => {
-                if (clientId) setSelectedClientIds(prev => [...prev, clientId]);
-              }}
-              placeholder="Select a client to assign..."
+          {/* Board & Client assignments - two columns */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Board assignment */}
+            <MultiSelectPanel
+              id="sla-policy-boards"
+              label="Assign to Boards"
+              searchPlaceholder="Search boards..."
+              items={allBoards.map(b => ({ id: b.board_id, label: b.name }))}
+              selectedIds={selectedBoardIds}
+              onSelectedIdsChange={setSelectedBoardIds}
             />
-            {selectedClientIds.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {selectedClientIds.map(id => {
-                  const client = allClients.find(c => c.client_id === id);
-                  return (
-                    <Badge key={id} variant="secondary" className="gap-1 pr-1">
-                      {client?.client_name || id}
-                      <button
-                        type="button"
-                        onClick={() => setSelectedClientIds(prev => prev.filter(cid => cid !== id))}
-                        className="ml-0.5 rounded-full p-0.5 hover:bg-black/10"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  );
-                })}
-              </div>
-            )}
+
+            {/* Client assignment */}
+            <MultiSelectPanel
+              id="sla-policy-clients"
+              label="Assign to Clients"
+              searchPlaceholder="Search clients..."
+              items={allClients.map(c => ({
+                id: c.client_id,
+                label: c.client_name,
+                render: (
+                  <div className="flex items-center gap-2 min-w-0">
+                    <ClientAvatar clientId={c.client_id} clientName={c.client_name} logoUrl={c.logoUrl} size="xs" />
+                    <span className="text-sm truncate">{c.client_name}</span>
+                  </div>
+                )
+              }))}
+              selectedIds={selectedClientIds}
+              onSelectedIdsChange={setSelectedClientIds}
+            />
           </div>
         </CardContent>
       </Card>
@@ -652,6 +808,9 @@ export function SlaPolicyForm({ policyId, onSave, onCancel }: SlaPolicyFormProps
       <Card>
         <CardHeader>
           <CardTitle>Response and Resolution Targets</CardTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            Set the maximum time allowed to first respond to and fully resolve tickets for each priority level.
+          </p>
         </CardHeader>
         <CardContent>
           {validationErrors.targets && (
@@ -854,7 +1013,12 @@ export function SlaPolicyForm({ policyId, onSave, onCancel }: SlaPolicyFormProps
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Notification Thresholds</CardTitle>
+            <div>
+              <CardTitle>Notification Thresholds</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Configure when and how to notify team members as SLA deadlines approach or are breached.
+              </p>
+            </div>
             <Button
               id="sla-add-threshold"
               variant="outline"
