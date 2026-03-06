@@ -246,6 +246,18 @@
     "featureIds": ["F023"]
   },
   {
+    "id": "T041A",
+    "description": "`server/src/app/api/secrets/route.ts` imports tenant secret actions from `@alga-psa/tenancy/actions`",
+    "implemented": false,
+    "featureIds": ["F023A"]
+  },
+  {
+    "id": "T041B",
+    "description": "`server/src/app/api/secrets/[name]/route.ts` imports tenant secret actions from `@alga-psa/tenancy/actions`",
+    "implemented": false,
+    "featureIds": ["F023B"]
+  },
+  {
     "id": "T042",
     "description": "`NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4` completes successfully after all 5 tasks",
     "implemented": false,

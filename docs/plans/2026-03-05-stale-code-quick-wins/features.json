@@ -184,6 +184,22 @@
     ]
   },
   {
+    "id": "F023A",
+    "description": "Update `server/src/app/api/secrets/route.ts` to import tenant secret actions from `@alga-psa/tenancy/actions` instead of the deleted server duplicate",
+    "implemented": true,
+    "prdRefs": [
+      "Task 2"
+    ]
+  },
+  {
+    "id": "F023B",
+    "description": "Update `server/src/app/api/secrets/[name]/route.ts` to import tenant secret actions from `@alga-psa/tenancy/actions` instead of the deleted server duplicate",
+    "implemented": false,
+    "prdRefs": [
+      "Task 2"
+    ]
+  },
+  {
     "id": "F024",
     "description": "Verify full build passes (`NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4`) after all tasks",
     "implemented": false,
