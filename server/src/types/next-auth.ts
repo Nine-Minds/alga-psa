@@ -37,6 +37,7 @@ declare module "next-auth" {
             user_type: string;
             clientId?: string;
             contactId?: string;
+            plan?: string;
         };
     }
 

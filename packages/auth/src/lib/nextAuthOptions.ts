@@ -365,6 +365,7 @@ interface ExtendedUser {
     user_type: string;
     clientId?: string;
     contactId?: string;
+    plan?: string;
     deviceInfo?: {
         ip: string;
         userAgent: string;
@@ -1499,7 +1500,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
 
             return true; // Allow sign in
         },
-	        async jwt({ token, user }) {
+	        async jwt({ token, user, trigger }) {
 	            console.log('JWT callback - initial token:', {
 	                id: token.id,
 	                email: token.email,
@@ -1531,6 +1532,22 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
 	                token.user_type = extendedUser.user_type;
 	                token.clientId = extendedUser.clientId;
 	                token.contactId = extendedUser.contactId;
+
+                // Fetch tenant plan on initial sign-in
+                if (extendedUser.tenant) {
+                    try {
+                        const { getAdminConnection } = await import('@alga-psa/db/admin');
+                        const knex = await getAdminConnection();
+                        const tenantRecord = await knex('tenants')
+                            .where('tenant', extendedUser.tenant)
+                            .select('plan')
+                            .first();
+                        token.plan = tenantRecord?.plan ?? undefined;
+                        token.last_plan_check = Date.now();
+                    } catch (error) {
+                        console.error('[auth] Failed to fetch tenant plan:', error);
+                    }
+                }
 	              }
 
 	            // NEW: Create session record on initial sign-in
@@ -1620,6 +1637,31 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
             //
             // If user is deleted/deactivated between requests, they'll be caught at next login
 
+            // Plan refresh: immediate on explicit update(), throttled otherwise (every 5 minutes)
+            if (token.tenant) {
+                const lastPlanCheck = token.last_plan_check as number || 0;
+                const now = Date.now();
+                const PLAN_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
+                const forceRefresh = trigger === 'update';
+                const shouldRefreshPlan = forceRefresh || now - lastPlanCheck > PLAN_CHECK_INTERVAL;
+
+                if (shouldRefreshPlan) {
+                    try {
+                        const { getAdminConnection } = await import('@alga-psa/db/admin');
+                        const knex = await getAdminConnection();
+                        const tenantRecord = await knex('tenants')
+                            .where('tenant', token.tenant)
+                            .select('plan')
+                            .first();
+                        token.plan = tenantRecord?.plan ?? undefined;
+                        token.last_plan_check = now;
+                    } catch (error) {
+                        console.error('[auth] Failed to refresh tenant plan:', error);
+                        // Don't block on plan refresh errors
+                    }
+                }
+            }
+
             const result = {
                 ...token
                 // Token already contains all necessary user data from initial sign-in
@@ -1672,6 +1714,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 user.user_type = token.user_type as string;
                 user.clientId = token.clientId as string;
                 user.contactId = token.contactId as string;
+                user.plan = token.plan as string | undefined;
             }
             logger.trace("Session Object:", session);
             console.log('Session callback - final session.user:', {
@@ -2184,7 +2227,7 @@ export const options: NextAuthConfig = {
 
             return true; // Allow sign in
         },
-        async jwt({ token, user }) {
+        async jwt({ token, user, trigger }) {
             console.log('JWT callback - initial token:', {
                 id: token.id,
                 email: token.email,
@@ -2216,6 +2259,22 @@ export const options: NextAuthConfig = {
 	                token.user_type = extendedUser.user_type;
 	                token.clientId = extendedUser.clientId;
 	                token.contactId = extendedUser.contactId;
+
+                // Fetch tenant plan on initial sign-in
+                if (extendedUser.tenant) {
+                    try {
+                        const { getAdminConnection } = await import('@alga-psa/db/admin');
+                        const knex = await getAdminConnection();
+                        const tenantRecord = await knex('tenants')
+                            .where('tenant', extendedUser.tenant)
+                            .select('plan')
+                            .first();
+                        token.plan = tenantRecord?.plan ?? undefined;
+                        token.last_plan_check = Date.now();
+                    } catch (error) {
+                        console.error('[auth] Failed to fetch tenant plan:', error);
+                    }
+                }
 	              }
 
 	            // NEW: Create session record on initial sign-in
@@ -2305,6 +2364,31 @@ export const options: NextAuthConfig = {
             //
             // If user is deleted/deactivated between requests, they'll be caught at next login
 
+            // Plan refresh: immediate on explicit update(), throttled otherwise (every 5 minutes)
+            if (token.tenant) {
+                const lastPlanCheck = token.last_plan_check as number || 0;
+                const now = Date.now();
+                const PLAN_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
+                const forceRefresh = trigger === 'update';
+                const shouldRefreshPlan = forceRefresh || now - lastPlanCheck > PLAN_CHECK_INTERVAL;
+
+                if (shouldRefreshPlan) {
+                    try {
+                        const { getAdminConnection } = await import('@alga-psa/db/admin');
+                        const knex = await getAdminConnection();
+                        const tenantRecord = await knex('tenants')
+                            .where('tenant', token.tenant)
+                            .select('plan')
+                            .first();
+                        token.plan = tenantRecord?.plan ?? undefined;
+                        token.last_plan_check = now;
+                    } catch (error) {
+                        console.error('[auth] Failed to refresh tenant plan:', error);
+                        // Don't block on plan refresh errors
+                    }
+                }
+            }
+
             const result = {
                 ...token
                 // Token already contains all necessary user data from initial sign-in
@@ -2356,6 +2440,7 @@ export const options: NextAuthConfig = {
                 user.user_type = token.user_type as string;
                 user.clientId = token.clientId as string;
                 user.contactId = token.contactId as string;
+                user.plan = token.plan as string | undefined;
             }
             logger.trace("Session Object:", session);
             console.log('Session callback - final session.user:', {

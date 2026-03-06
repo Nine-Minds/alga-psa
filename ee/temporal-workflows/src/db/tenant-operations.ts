@@ -9,6 +9,7 @@ import type {
 } from '../types/workflow-types.js';
 import { updateSubscriptionMetadata } from '../services/stripe-service.js';
 import { getSecret } from '@alga-psa/core/secrets';
+import { tierFromStripeProduct } from '@ee/lib/stripe/stripeTierMapping.js';
 
 const logger = () => Context.current().log;
 
@@ -37,22 +38,61 @@ export async function createTenantInDB(
         created_at: knex.fn.now(),
         updated_at: knex.fn.now()
       };
-      
+
       // Add license count if provided
       if (input.licenseCount !== undefined) {
         tenantData.licensed_user_count = input.licenseCount;
         tenantData.last_license_update = knex.fn.now();
         tenantData.stripe_event_id = `temporal_${Date.now()}`; // Track that this came from Temporal
       }
-      
+
+      // Resolve plan from Stripe price → product → tier
+      if (input.stripePriceId) {
+        try {
+          const MASTER_TENANT_ID = await getSecret('master_billing_tenant_id', 'MASTER_BILLING_TENANT_ID');
+          if (MASTER_TENANT_ID) {
+            // Join stripe_prices → stripe_products to get product name
+            const priceWithProduct = await trx('stripe_prices as p')
+              .join('stripe_products as prod', function() {
+                this.on('p.stripe_product_id', '=', 'prod.stripe_product_id')
+                    .andOn('p.tenant', '=', 'prod.tenant');
+              })
+              .where({
+                'p.stripe_price_external_id': input.stripePriceId,
+                'p.tenant': MASTER_TENANT_ID
+              })
+              .select('prod.name as product_name')
+              .first();
+
+            if (priceWithProduct?.product_name) {
+              tenantData.plan = tierFromStripeProduct(priceWithProduct.product_name);
+              log.info('Resolved tenant tier from Stripe product', {
+                productName: priceWithProduct.product_name,
+                plan: tenantData.plan
+              });
+            } else {
+              log.warn('Could not resolve product name for price, plan will be NULL', {
+                stripePriceId: input.stripePriceId
+              });
+            }
+          }
+        } catch (error) {
+          log.warn('Failed to resolve tier from Stripe price, plan will be NULL', {
+            stripePriceId: input.stripePriceId,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+
       const tenantResult = await trx('tenants')
         .insert(tenantData)
         .returning('tenant');
-      
+
       const tenantId = tenantResult[0].tenant;
       log.info('Tenant created successfully', {
         tenantId,
-        licenseCount: input.licenseCount
+        licenseCount: input.licenseCount,
+        plan: tenantData.plan
       });
 
       // Insert Stripe customer and subscription if provided

@@ -33,6 +33,7 @@ export async function verifyRegisterUser(token: string): Promise<VerifyResponse>
         client_name: userInfo.clientName,
         email: userInfo.email.toLowerCase(),
         created_at: new Date(),
+        plan: 'pro',
       });
       const superadminRole: IRoleWithPermissions = {
         role_id: 'superadmin',
@@ -238,6 +239,7 @@ export async function registerUser({ username, email, password, clientName }: IU
         client_name: clientName,
         email: email.toLowerCase(),
         created_at: new Date(),
+        plan: 'pro',
       });
       const superadminRole: IRoleWithPermissions = {
         role_id: 'superadmin',
