@@ -42,7 +42,7 @@
   {
     "id": "T006",
     "description": "Grep for `tenant-secret-actions` in `server/src/` returns 0 results (excluding test/docs)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
