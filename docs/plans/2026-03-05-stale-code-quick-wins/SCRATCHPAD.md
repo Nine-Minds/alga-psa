@@ -193,3 +193,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - T025: Verified the T089 assertion now checks formatting avatar utils for getTeamAvatarUrl.
 - T026: Verified the entire packages/media directory has been removed from disk.
 - T027: Confirmed there are no remaining @alga-psa/media references outside docs, plan artifacts, lockfiles, and AI metadata.
+- T028: Re-ran npm install successfully after the dependency cleanup; see /tmp/t028-npm-install.log for the command output from this validation run.

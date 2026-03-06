@@ -219,7 +219,7 @@
   {
     "id": "T028",
     "description": "`npm install` succeeds without errors after dependency changes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
