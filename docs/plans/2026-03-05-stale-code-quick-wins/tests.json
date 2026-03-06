@@ -49,8 +49,8 @@
   },
   {
     "id": "T007",
-    "description": "The functions exported from `@alga-psa/tenancy/actions` match what `SecretsManagement.tsx` and `SecretDialog.tsx` need (listTenantSecrets, createTenantSecret, updateTenantSecret, deleteTenantSecret, getTenantSecretValue)",
-    "implemented": false,
+    "description": "The functions exported from `@alga-psa/tenancy/actions` match what the updated secrets UI and API routes need (listTenantSecrets, createSecret, updateSecret, deleteSecret, getSecretUsage, validateSecretName, getSecretMetadata, secretExists)",
+    "implemented": true,
     "featureIds": [
       "F002",
       "F003"
