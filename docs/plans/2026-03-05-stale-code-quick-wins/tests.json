@@ -361,7 +361,7 @@
   {
     "id": "T042A",
     "description": "`server/src/test/teams-v2-improvements.test.ts` passes after the media-package cleanup",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F016"
