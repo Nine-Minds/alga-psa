@@ -253,7 +253,7 @@
   {
     "id": "T032",
     "description": "`documents` package entityImageService.ts exports `uploadEntityImage`, `deleteEntityImage`, and `EntityType` (confirming the target exports exist for callers)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F007",

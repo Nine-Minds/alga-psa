@@ -197,3 +197,4 @@ NODE_OPTIONS=--max-old-space-size=32768 npx nx run-many -t build --maxParallel=4
 - T029: Re-ran the full Nx build successfully; output captured in /tmp/t029-build.log.
 - T030: Generated a fresh Nx graph and confirmed scripts/check-circular-deps.mjs reports no new cycles against .github/known-cycles.json.
 - T031: Checked all modified source/config files and confirmed none are shim-only re-export files.
+- T032: Verified packages/documents/src/lib/entityImageService.ts exports EntityType, uploadEntityImage, and deleteEntityImage for migrated callers.
