@@ -276,12 +276,6 @@
       "@alga-psa/sla/*": [
         "../packages/sla/src/*"
       ],
-      "@alga-psa/media": [
-        "../packages/media/src"
-      ],
-      "@alga-psa/media/*": [
-        "../packages/media/src/*"
-      ],
       // CE-first: use stubs by default; EE runs are overridden by webpack
       "@enterprise": [
         "../packages/ee/src"

@@ -11,7 +11,7 @@ import {
   startWorkflowRunAction,
   submitWorkflowEventAction,
   listWorkflowRunStepsAction
-} from 'server/src/lib/actions/workflow-runtime-v2-actions';
+} from '@alga-psa/workflows/actions';
 import WorkflowRunSnapshotModelV2 from '@shared/workflow/persistence/workflowRunSnapshotModelV2';
 import {
   ensureWorkflowRuntimeV2TestRegistrations,

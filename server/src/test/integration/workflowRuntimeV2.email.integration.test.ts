@@ -7,7 +7,7 @@ import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { resetWorkflowRuntimeTables } from '../helpers/workflowRuntimeV2TestUtils';
 import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
-import { startWorkflowRunAction } from 'server/src/lib/actions/workflow-runtime-v2-actions';
+import { startWorkflowRunAction } from '@alga-psa/workflows/actions';
 import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
 import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
 import WorkflowRunModelV2 from '@shared/workflow/persistence/workflowRunModelV2';

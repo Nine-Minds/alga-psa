@@ -160,13 +160,15 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       }
     );
 
-    // Register SLA timer handler
-    jobScheduler.registerJobHandler<SlaTimerJobData>(
-      'sla-timer',
-      async (job: Job<SlaTimerJobData>) => {
-        await slaTimerHandler(job.data);
-      }
-    );
+    // Register SLA timer handler (CE only — EE uses Temporal workflows)
+    if (process.env.EDITION !== 'enterprise') {
+      jobScheduler.registerJobHandler<SlaTimerJobData>(
+        'sla-timer',
+        async (job: Job<SlaTimerJobData>) => {
+          await slaTimerHandler(job.data);
+        }
+      );
+    }
 
     // Note: Password reset token cleanup is handled automatically during token operations
     // No pg-boss job needed
@@ -413,6 +415,10 @@ export const scheduleSlaTimerJob = async (
   tenantId: string,
   cronExpression: string = '*/5 * * * *' // Default: every 5 minutes
 ): Promise<string | null> => {
+  // CE only — EE uses Temporal workflows for SLA tracking
+  if (process.env.EDITION === 'enterprise') {
+    return null;
+  }
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<SlaTimerJobData>(
     'sla-timer',

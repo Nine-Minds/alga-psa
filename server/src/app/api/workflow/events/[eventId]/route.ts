@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { handleWorkflowV2ApiError } from 'server/src/lib/api/workflowRuntimeV2Api';
-import { getWorkflowEventAction } from 'server/src/lib/actions/workflow-runtime-v2-actions';
+import { getWorkflowEventAction } from '@alga-psa/workflows/actions';
 
 export async function GET(_: Request, { params }: { params: { eventId: string } }) {
   try {

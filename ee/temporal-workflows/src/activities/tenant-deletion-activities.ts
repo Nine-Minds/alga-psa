@@ -942,6 +942,13 @@ export async function recordPendingDeletion(
       } : null,
     };
 
+    // Remove any previous completed/rolled-back/failed deletion records for this tenant
+    // to avoid violating the unique constraint on the tenant column
+    await adminKnex('pending_tenant_deletions')
+      .where({ tenant: data.tenantId })
+      .whereIn('status', ['deleted', 'rolled_back', 'failed'])
+      .delete();
+
     await adminKnex('pending_tenant_deletions').insert({
       deletion_id: data.deletionId,
       tenant: data.tenantId,

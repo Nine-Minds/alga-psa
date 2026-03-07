@@ -924,6 +924,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         <div className="mr-4">
           <ContactAvatarUpload
             contactId={editedContact.contact_name_id}
+            contactName={editedContact.full_name}
             currentAvatarUrl={avatarUrl}
             onAvatarUpdated={(newAvatarUrl) => {
               console.log("ContactDetails: Avatar URL changed:", newAvatarUrl);

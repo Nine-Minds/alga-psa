@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleWorkflowV2ApiError } from 'server/src/lib/api/workflowRuntimeV2Api';
-import { importWorkflowBundleV1Action } from 'server/src/lib/actions/workflow-runtime-v2-actions';
+import { importWorkflowBundleV1Action } from 'server/src/lib/actions/workflow-bundle-v1-actions';
 
 const parseBoolean = (value: string | null): boolean | undefined => {
   if (value === null) return undefined;

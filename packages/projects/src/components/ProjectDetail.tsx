@@ -1466,7 +1466,10 @@ export default function ProjectDetail({
       const activePhase = selectedPhase || currentPhase;
 
       if (activePhase && newTask.wbs_code.startsWith(activePhase.wbs_code)) {
-        const checklistItems = await getTaskChecklistItems(newTask.task_id);
+        const [checklistItems, taskResources] = await Promise.all([
+          getTaskChecklistItems(newTask.task_id),
+          getTaskResourcesAction(newTask.task_id)
+        ]);
         const taskWithChecklist = { ...newTask, checklist_items: checklistItems };
 
         setProjectTasks((prevTasks) => [...prevTasks, taskWithChecklist]);
@@ -1481,9 +1484,13 @@ export default function ProjectDetail({
           ...prev,
           [newTask.task_id]: newTask.tags || []
         }));
+        setPhaseTaskResources(prev => ({
+          ...prev,
+          [newTask.task_id]: taskResources
+        }));
         setAllProjectTaskResources(prev => ({
           ...prev,
-          [newTask.task_id]: []
+          [newTask.task_id]: taskResources
         }));
         setAllTaskDependencies(prev => ({
           ...prev,

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { buildQboPrivateNoteForPurchaseOrder, buildQuickBooksCsvMemo, buildXeroInvoiceReference, buildXeroCsvReference } from '@alga-psa/billing/services';
-import { extractInvoiceIdFromReference } from 'server/src/lib/services/xeroCsvTaxImportService';
+import { extractInvoiceIdFromReference } from '@alga-psa/integrations/services';
 
 describe('Contract PO accounting export references', () => {
   it('T011: QBO API export uses PrivateNote for PO number', () => {

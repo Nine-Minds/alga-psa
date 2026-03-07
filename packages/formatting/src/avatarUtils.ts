@@ -122,6 +122,16 @@ export async function getClientLogoUrl(
 }
 
 /**
+ * Convenience function to get a team's avatar URL
+ */
+export async function getTeamAvatarUrl(
+  teamId: string,
+  tenant: string
+): Promise<string | null> {
+  return getEntityImageUrl('team', teamId, tenant);
+}
+
+/**
  * Batch function to get image URLs for multiple entities at once.
  * This is more efficient than calling getEntityImageUrl multiple times in a loop.
  *

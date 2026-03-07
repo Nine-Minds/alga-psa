@@ -19,7 +19,7 @@ import {
   publishWorkflowDefinitionAction,
   startWorkflowRunAction,
   getWorkflowRunAction
-} from 'server/src/lib/actions/workflow-runtime-v2-actions';
+} from '@alga-psa/workflows/actions';
 import { NextRequest } from 'next/server';
 import { GET as exportBundleRoute } from 'server/src/app/api/workflow-definitions/[workflowId]/export/route';
 import { POST as importBundleRoute } from 'server/src/app/api/workflow-definitions/import/route';

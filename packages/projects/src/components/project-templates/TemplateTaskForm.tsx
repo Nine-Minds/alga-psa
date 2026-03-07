@@ -20,6 +20,7 @@ import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { TaskTypeSelector } from '../TaskTypeSelector';
 import { ListChecks, Link2, Plus, Trash2, Ban, GitBranch } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import {
@@ -328,7 +329,7 @@ export function TemplateTaskForm({
     }
 
     if (additionalAgents.length > 0 && !assignedTo) {
-      setError('Primary agent is required when additional agents are assigned');
+      toast.error('Primary agent is required when additional agents are assigned');
       return;
     }
 
@@ -758,11 +759,7 @@ export function TemplateTaskForm({
                 <MultiUserAndTeamPicker
                   values={additionalAgents}
                   onValuesChange={(newValues) => {
-                    if (newValues.length > 0 && !assignedTo) {
-                      setError('Primary agent is required when additional agents are assigned');
-                    } else {
-                      setError(null);
-                    }
+                    setError(null);
                     setAdditionalAgents(newValues);
                   }}
                   onTeamValuesChange={(selectedTeamIds) => {

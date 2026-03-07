@@ -86,9 +86,10 @@ exports.seed = async function (knex, tenantId) {
                     'timeentry:create:msp', 'timeentry:read:msp', 'timeentry:update:msp',
                     'timesheet:read:msp', 'timesheet:update:msp', 'timesheet:read_all:msp', 'timesheet:submit:msp',
                     'user_schedule:read:msp',
-                    'ticket_settings:read:msp'
+                    'ticket_settings:read:msp',
+                    'sla_policy:read:msp'
                 ];
-                
+
                 rolePermissionIds = technicianPermissions
                     .map(key => permissionMap.get(key))
                     .filter(id => id !== undefined);
@@ -114,9 +115,10 @@ exports.seed = async function (knex, tenantId) {
                     'user:read:msp', 'user:invite:msp',
                     'user_schedule:read:msp',
                     'user_settings:read:msp',
-                    'billing_settings:read:msp'
+                    'billing_settings:read:msp',
+                    'sla_policy:read:msp', 'sla_policy:update:msp'
                 ];
-                
+
                 rolePermissionIds = projectManagerPermissions
                     .map(key => permissionMap.get(key))
                     .filter(id => id !== undefined);

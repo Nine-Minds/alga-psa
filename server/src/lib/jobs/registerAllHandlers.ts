@@ -297,21 +297,23 @@ export async function registerAllJobHandlers(
   );
 
   // ============================================================================
-  // SLA HANDLERS
+  // SLA HANDLERS (CE only — EE uses Temporal workflows)
   // ============================================================================
 
-  // SLA timer handler - checks SLA thresholds and sends notifications
-  JobHandlerRegistry.register<SlaTimerJobData & BaseJobData>(
-    {
-      name: 'sla-timer',
-      handler: async (_jobId, data) => {
-        await slaTimerHandler(data);
+  if (!includeEnterprise) {
+    // SLA timer handler - checks SLA thresholds and sends notifications
+    JobHandlerRegistry.register<SlaTimerJobData & BaseJobData>(
+      {
+        name: 'sla-timer',
+        handler: async (_jobId, data) => {
+          await slaTimerHandler(data);
+        },
+        retry: { maxAttempts: 2 },
+        timeoutMs: 300000, // 5 minutes
       },
-      retry: { maxAttempts: 2 },
-      timeoutMs: 300000, // 5 minutes
-    },
-    registerOpts
-  );
+      registerOpts
+    );
+  }
 
   // ============================================================================
   // ENTERPRISE-ONLY HANDLERS

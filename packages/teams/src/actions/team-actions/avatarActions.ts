@@ -3,7 +3,8 @@
 import Team from '../../models/team';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { uploadEntityImage, deleteEntityImage, getTeamAvatarUrl } from '@alga-psa/media';
+import { uploadEntityImage, deleteEntityImage } from '@alga-psa/documents';
+import { getTeamAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import type { Knex } from 'knex';
 
 interface ActionResult {

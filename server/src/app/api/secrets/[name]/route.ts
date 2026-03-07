@@ -13,7 +13,7 @@ import {
   secretExists,
   updateSecret,
   deleteSecret
-} from '@/lib/actions/tenant-secret-actions';
+} from '@alga-psa/tenancy/actions';
 
 type RouteParams = {
   params: Promise<{ name: string }>;

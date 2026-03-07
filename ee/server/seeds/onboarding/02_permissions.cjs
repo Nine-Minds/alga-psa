@@ -178,6 +178,12 @@ exports.seed = async function(knex, tenantId) {
         { resource: 'account_management', action: 'update', msp: true, client: false, description: 'Manage account and subscription settings' },
         { resource: 'account_management', action: 'delete', msp: true, client: false, description: 'Cancel subscription and delete account' },
 
+        // SLA policy permissions
+        { resource: 'sla_policy', action: 'create', msp: true, client: false, description: 'Create SLA policies' },
+        { resource: 'sla_policy', action: 'read', msp: true, client: false, description: 'View SLA policies' },
+        { resource: 'sla_policy', action: 'update', msp: true, client: false, description: 'Update SLA policies' },
+        { resource: 'sla_policy', action: 'delete', msp: true, client: false, description: 'Delete SLA policies' },
+
         // Client Portal Permissions
         { resource: 'billing', action: 'read', msp: false, client: true, description: 'View billing information in client portal' },
         { resource: 'billing', action: 'create', msp: false, client: true, description: 'Create billing entries in client portal' },

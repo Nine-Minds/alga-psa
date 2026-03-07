@@ -12,7 +12,7 @@ import {
   listTenantSecrets,
   createSecret,
   getSecretUsage
-} from '@/lib/actions/tenant-secret-actions';
+} from '@alga-psa/tenancy/actions';
 
 /**
  * GET /api/secrets

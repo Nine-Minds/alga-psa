@@ -22,12 +22,14 @@ const deleteContactAvatar = async (
 
 interface ContactAvatarUploadProps {
   contactId: string;
+  contactName: string;
   currentAvatarUrl?: string | null;
   onAvatarUpdated?: (newUrl: string | null) => void;
 }
 
 export default function ContactAvatarUpload({
   contactId,
+  contactName,
   currentAvatarUrl,
   onAvatarUpdated,
 }: ContactAvatarUploadProps) {
@@ -35,7 +37,7 @@ export default function ContactAvatarUpload({
     <EntityImageUpload
       entityType="contact"
       entityId={contactId}
-      entityName=""
+      entityName={contactName}
       imageUrl={currentAvatarUrl || null}
       onImageChange={onAvatarUpdated}
       uploadAction={uploadContactAvatar}

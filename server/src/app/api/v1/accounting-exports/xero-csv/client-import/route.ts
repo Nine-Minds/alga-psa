@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
-import { getXeroCsvClientSyncService, ClientImportOptions } from 'server/src/lib/services/xeroCsvClientSyncService';
+import { getXeroCsvClientSyncService, ClientImportOptions } from '@alga-psa/integrations/services';
 import logger from '@alga-psa/core/logger';
 
 export async function POST(request: NextRequest) {
