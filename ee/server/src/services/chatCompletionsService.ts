@@ -35,6 +35,7 @@ const MAX_TOOL_RESULT_CHARS = 12000;
 const TOOL_RESULT_PREVIEW_ITEMS = 3;
 const TOOL_RESULT_PREVIEW_KEYS = 12;
 const TOOL_RESULT_PREVIEW_DEPTH = 3;
+const INVALID_TOOL_ARGUMENTS_PREVIEW_CHARS = 400;
 
 export type ChatCompletionMessage = {
   role: 'user' | 'assistant' | 'function';
@@ -141,6 +142,16 @@ interface ExecuteCompletionParams {
   cookieHeader?: string;
 }
 
+type ParsedToolArgumentsResult =
+  | {
+      ok: true;
+      value: Record<string, unknown>;
+    }
+  | {
+      ok: false;
+      message: string;
+    };
+
 type StreamedToolCallState = {
   id?: string;
   name?: string;
@@ -212,13 +223,15 @@ export class ChatCompletionsService {
       if (toolCalls.length > 0) {
         const toolCall = toolCalls[0];
         const functionName = toolCall.function?.name;
-        const parsedArgs = this.ensureArguments(toolCall.function?.arguments);
         const toolCallId = toolCall.id ?? uuid();
 
         if (!functionName) {
           yield { type: 'done' };
           return;
         }
+
+        const parsedArgsResult = this.parseToolArguments(toolCall.function?.arguments);
+        const parsedArgs = parsedArgsResult.ok ? parsedArgsResult.value : {};
 
         const assistantMessage: ChatCompletionMessage = {
           role: 'assistant',
@@ -232,6 +245,19 @@ export class ChatCompletionsService {
           tool_call_id: toolCallId,
         };
         conversation = [...conversation, assistantMessage];
+
+        if (!parsedArgsResult.ok) {
+          conversation = [
+            ...conversation,
+            {
+              role: 'function',
+              name: functionName,
+              content: JSON.stringify({ error: parsedArgsResult.message }),
+              tool_call_id: toolCallId,
+            },
+          ];
+          continue;
+        }
 
         if (functionName === SEARCH_TOOL_NAME) {
           const results = this.searchRegistry(parsedArgs.query, parsedArgs.limit);
@@ -747,7 +773,6 @@ export class ChatCompletionsService {
       if (toolCalls.length > 0) {
         const toolCall = toolCalls[0];
         const functionName = toolCall.function?.name;
-        const parsedArgs = this.ensureArguments(toolCall.function?.arguments);
         const toolCallId = toolCall.id ?? uuid();
 
         if (!functionName) {
@@ -756,6 +781,9 @@ export class ChatCompletionsService {
             error: 'The assistant attempted to call an unknown function.',
           };
         }
+
+        const parsedArgsResult = this.parseToolArguments(toolCall.function?.arguments);
+        const parsedArgs = parsedArgsResult.ok ? parsedArgsResult.value : {};
 
         const assistantMessage: ChatCompletionMessage = {
           role: 'assistant',
@@ -770,6 +798,17 @@ export class ChatCompletionsService {
         };
 
         conversation = [...conversation, assistantMessage];
+
+        if (!parsedArgsResult.ok) {
+          const functionMessage: ChatCompletionMessage = {
+            role: 'function',
+            name: functionName,
+            content: JSON.stringify({ error: parsedArgsResult.message }),
+            tool_call_id: toolCallId,
+          };
+          conversation = [...conversation, functionMessage];
+          continue;
+        }
 
         if (functionName === SEARCH_TOOL_NAME) {
           const results = this.searchRegistry(parsedArgs.query, parsedArgs.limit);
@@ -949,6 +988,53 @@ export class ChatCompletionsService {
     }
 
     return {};
+  }
+
+  private static parseToolArguments(args: unknown): ParsedToolArgumentsResult {
+    if (!args) {
+      return {
+        ok: true,
+        value: {},
+      };
+    }
+
+    if (typeof args === 'object' && !Array.isArray(args)) {
+      return {
+        ok: true,
+        value: args as Record<string, unknown>,
+      };
+    }
+
+    if (typeof args === 'string') {
+      try {
+        const parsed = JSON.parse(args);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+          return {
+            ok: false,
+            message:
+              'Tool arguments must be a valid JSON object. Retry the same function call with a JSON object only.',
+          };
+        }
+        return {
+          ok: true,
+          value: parsed as Record<string, unknown>,
+        };
+      } catch (error) {
+        console.error('[ChatCompletionsService] Failed to parse arguments string', error);
+        return {
+          ok: false,
+          message: `Tool arguments were invalid JSON. Retry the same function call with a valid JSON object only. Raw arguments preview: ${JSON.stringify(
+            args.slice(0, INVALID_TOOL_ARGUMENTS_PREVIEW_CHARS),
+          )}`,
+        };
+      }
+    }
+
+    return {
+      ok: false,
+      message:
+        'Tool arguments must be a valid JSON object. Retry the same function call with a JSON object only.',
+    };
   }
 
   private static normalizeConversationHistory(messages: ChatCompletionMessage[]): ChatCompletionMessage[] {

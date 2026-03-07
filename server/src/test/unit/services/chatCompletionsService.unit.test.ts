@@ -392,6 +392,81 @@ describe('ChatCompletionsService (unit)', () => {
     ]);
   });
 
+  it('retries streamed tool calls when the model emits invalid JSON arguments', async () => {
+    process.env.AI_CHAT_PROVIDER = 'openrouter';
+    setSecrets({
+      OPENROUTER_API_KEY: 'openrouter-key',
+      OPENROUTER_CHAT_MODEL: 'openrouter/model',
+    });
+
+    openAiCreateSpy
+      .mockResolvedValueOnce(
+        buildChunkStream([
+          {
+            choices: [
+              {
+                index: 0,
+                delta: {
+                  tool_calls: [
+                    {
+                      index: 0,
+                      id: 'tool-call-invalid-json',
+                      type: 'function',
+                      function: {
+                        name: 'call_api_endpoint',
+                        arguments: '{"entryId":"tickets.list","query":{"status":"open"',
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        buildChunkStream([
+          {
+            choices: [
+              {
+                index: 0,
+                delta: {
+                  content: 'Recovered after retry.',
+                },
+              },
+            ],
+          },
+        ]),
+      );
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const streamedEvents: Array<{ type: string; delta?: string }> = [];
+    for await (const event of ChatCompletionsService.createStructuredCompletionStream([
+      { role: 'user', content: 'Execute tickets list' },
+    ])) {
+      streamedEvents.push(event as { type: string; delta?: string });
+    }
+
+    expect(streamedEvents).toEqual(
+      expect.arrayContaining([
+        { type: 'content_delta', delta: 'Recovered after retry.' },
+        { type: 'done' },
+      ]),
+    );
+    expect(openAiCreateSpy).toHaveBeenCalledTimes(2);
+    const retryRequest = openAiCreateSpy.mock.calls[1]?.[0] as Record<string, unknown>;
+    expect(retryRequest.messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'function',
+          name: 'call_api_endpoint',
+          content: expect.stringContaining('Tool arguments were invalid JSON. Retry the same function call with a valid JSON object only.'),
+        }),
+      ]),
+    );
+  });
+
   it('appends assistant reasoning_content during tool-call proposal turns', async () => {
     process.env.AI_CHAT_PROVIDER = 'openrouter';
     setSecrets({
@@ -434,6 +509,62 @@ describe('ChatCompletionsService (unit)', () => {
         expect.objectContaining({
           role: 'assistant',
           reasoning_content: 'Need to fetch ticket data before response.',
+        }),
+      ]),
+    );
+  });
+
+  it('retries non-stream tool calls when the model emits invalid JSON arguments', async () => {
+    process.env.AI_CHAT_PROVIDER = 'openrouter';
+    setSecrets({
+      OPENROUTER_API_KEY: 'openrouter-key',
+      OPENROUTER_CHAT_MODEL: 'openrouter/model',
+    });
+
+    openAiCreateSpy
+      .mockResolvedValueOnce(
+        buildCompletion({
+          content: 'Preparing execution',
+          tool_calls: [
+            {
+              id: 'tool-call-invalid-json-non-stream',
+              type: 'function',
+              function: {
+                name: 'call_api_endpoint',
+                arguments: '{"entryId":"tickets.list","query":{"status":"open"',
+              },
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        buildCompletion({
+          content: 'Recovered after retry.',
+        }),
+      );
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const result = await (ChatCompletionsService as any).processModelInteraction({
+      messages: [{ role: 'user', content: 'Execute tickets list' }],
+      chatId: 'chat-1',
+      baseUrl: 'https://example.invalid',
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+    });
+
+    expect(result).toMatchObject({
+      type: 'assistant_message',
+      message: expect.objectContaining({ content: 'Recovered after retry.' }),
+    });
+    expect(openAiCreateSpy).toHaveBeenCalledTimes(2);
+    const retryRequest = openAiCreateSpy.mock.calls[1]?.[0] as Record<string, unknown>;
+    expect(retryRequest.messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: 'function',
+          name: 'call_api_endpoint',
+          content: expect.stringContaining('Tool arguments were invalid JSON. Retry the same function call with a valid JSON object only.'),
         }),
       ]),
     );
