@@ -317,6 +317,46 @@ describe('POST /api/chat/v1/completions/stream (structured events)', () => {
     expect(output).not.toContain('"delta":"second"');
   });
 
+  it('does not log invalid controller state when the client cancels the response body', async () => {
+    isExperimentalFeatureEnabledMock.mockResolvedValue(true);
+    createStructuredCompletionStreamMock.mockResolvedValue(
+      (async function* () {
+        yield { type: 'content_delta', delta: 'first' };
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        yield { type: 'content_delta', delta: 'second' };
+        yield { type: 'done' };
+      })(),
+    );
+
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    vi.resetModules();
+    const { POST } = await import('@/app/api/chat/v1/completions/stream/route');
+
+    const response = await POST(
+      makeRequest({
+        messages: [{ role: 'user', content: 'stream then cancel' }],
+      }),
+    );
+
+    const reader = response.body?.getReader();
+    expect(reader).toBeDefined();
+
+    await reader!.read();
+    await reader!.cancel();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(
+      consoleErrorSpy.mock.calls.some((call) =>
+        call.some(
+          (arg) =>
+            typeof arg === 'string' &&
+            (arg.includes('Invalid state') || arg.includes('Failed to close SSE controller')),
+        ),
+      ),
+    ).toBe(false);
+  });
+
   it('returns 400 for malformed messages payload', async () => {
     isExperimentalFeatureEnabledMock.mockResolvedValue(true);
 

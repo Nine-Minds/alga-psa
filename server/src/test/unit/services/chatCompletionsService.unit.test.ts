@@ -34,6 +34,10 @@ vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: getCurrentUserMock,
 }));
 
+vi.mock('@alga-psa/user-composition/actions', () => ({
+  getCurrentUser: getCurrentUserMock,
+}));
+
 vi.mock('@ee/chat/registry/apiRegistry.indexer', () => ({
   getRegistry: getRegistryMock,
 }));
@@ -464,6 +468,75 @@ describe('ChatCompletionsService (unit)', () => {
           content: expect.stringContaining('Tool arguments were invalid JSON. Retry the same function call with a valid JSON object only.'),
         }),
       ]),
+    );
+  });
+
+  it('logs raw tool arguments with stream context when JSON parsing fails', async () => {
+    process.env.AI_CHAT_PROVIDER = 'openrouter';
+    setSecrets({
+      OPENROUTER_API_KEY: 'openrouter-key',
+      OPENROUTER_CHAT_MODEL: 'openrouter/model',
+    });
+
+    openAiCreateSpy
+      .mockResolvedValueOnce(
+        buildChunkStream([
+          {
+            choices: [
+              {
+                index: 0,
+                delta: {
+                  tool_calls: [
+                    {
+                      index: 0,
+                      id: 'tool-call-log-context',
+                      type: 'function',
+                      function: {
+                        name: 'call_api_endpoint',
+                        arguments: '{"entryId":"tickets.list","query":{"status":"open"',
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        buildChunkStream([
+          {
+            choices: [
+              {
+                index: 0,
+                delta: {
+                  content: 'Recovered.',
+                },
+              },
+            ],
+          },
+        ]),
+      );
+
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    for await (const _event of ChatCompletionsService.createStructuredCompletionStream([
+      { role: 'user', content: 'Execute tickets list' },
+    ])) {
+      // drain stream
+    }
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      '[ChatCompletionsService] Failed to parse tool arguments',
+      expect.objectContaining({
+        source: 'stream',
+        functionName: 'call_api_endpoint',
+        toolCallId: 'tool-call-log-context',
+        rawArguments: '{"entryId":"tickets.list","query":{"status":"open"',
+        rawArgumentsLength: expect.any(Number),
+      }),
+      expect.any(SyntaxError),
     );
   });
 
