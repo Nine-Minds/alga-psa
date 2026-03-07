@@ -1,0 +1,78 @@
+# Scratchpad — Microsoft Teams Integration V1
+
+- Plan slug: `microsoft-teams-integration-v1`
+- Created: `2026-03-07`
+
+## What This Is
+
+Keep a lightweight, continuously-updated log of discoveries and decisions made while implementing this plan.
+
+Prefer short bullets. Append new entries as you learn things, and also *update earlier notes* when a decision changes or an open question is resolved.
+
+## Decisions
+
+- (2026-03-07) V1 scope is MSP users only; client-portal Teams experiences are out of scope.
+- (2026-03-07) Teams will use the tenant-owned Microsoft provider configuration model rather than introducing a Teams-only credential store.
+- (2026-03-07) Microsoft integration settings should expand from a singleton config into named Microsoft profiles.
+- (2026-03-07) Teams will bind to one selected Microsoft profile at tenant admin setup time; end users do not choose a profile.
+- (2026-03-07) Notification scope is simplified for v1: personal Teams activity-feed notifications only, no channel/chat routing.
+- (2026-03-07) Bot scope is personal-first and command-first, not a general chatbot.
+- (2026-03-07) Teams should be treated as one tenant integration with four surfaces, not four separate products.
+- (2026-03-07) Shared command/action execution and shared notification payload generation should be reused across Teams surfaces to avoid duplicate implementations.
+- (2026-03-07) Microsoft profile migration will be lazy and app-driven instead of a secret-provider-aware SQL migration: the first profile-aware read/write backfills a default profile from legacy tenant secrets and leaves legacy keys in place for compatibility.
+- (2026-03-07) Default-profile compatibility will be maintained by mirroring the selected default profile back to legacy tenant secrets (`microsoft_client_id`, `microsoft_client_secret`, `microsoft_tenant_id`) until consumer-binding work lands.
+- (2026-03-07) Profile secrets stay out of SQL. The database stores profile metadata plus a deterministic tenant secret reference (`microsoft_profile_<profile_id>_client_secret`).
+
+## Discoveries / Constraints
+
+- (2026-03-07) `packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.tsx` already anchors tenant-owned Microsoft config for Outlook inbound email, Outlook calendar, and MSP SSO; this is the right place to evolve toward named profiles.
+- (2026-03-07) `packages/auth/src/lib/nextAuthOptions.ts` already uses Azure AD / Microsoft OAuth and can resolve tenant-specific Microsoft credentials through MSP SSO resolution.
+- (2026-03-07) `packages/auth/src/lib/sso/mspSsoResolution.ts` already supports tenant-aware Microsoft provider discovery/resolution for MSP SSO.
+- (2026-03-07) Existing in-app notifications already store `link` and metadata, and UI components open specific PSA tickets/tasks/documents from those links.
+- (2026-03-07) Existing notification/deep-link infrastructure can be reused for Teams notification payloads instead of building a second record-linking system.
+- (2026-03-07) Existing event/workflow infrastructure is a better trigger source for Teams notifications than adding a Teams-specific event bus.
+- (2026-03-07) Existing extension iframe surfaces are useful precedent for embedded UI and auth forwarding, but they are not a native substitute for Teams bot/message-extension surfaces.
+- (2026-03-07) Existing Microsoft integration flows for email, calendar, and Entra already establish tenant-secret and Graph API patterns that Teams can reuse.
+- (2026-03-07) Existing Microsoft consumers still read the legacy tenant-secret keys directly. Introducing profiles without default-secret mirroring would break Outlook email, Outlook calendar, and MSP SSO compatibility.
+- (2026-03-07) `packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.tsx` already gives the right long-term home for Microsoft profile management: `Integrations -> Providers`, not a new top-level settings tab.
+- (2026-03-07) The first backend slice is complete: `F001-F014`, `F016-F018`, and `T001-T028`, `T031-T036` now pass against the new profile-aware action layer. `F015`/`T029-T030` remain open until consumer bindings exist beyond the default-compatibility path.
+
+## Commands / Runbooks
+
+- (2026-03-07) Scaffolded plan folder with: `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/scaffold_plan.py "Microsoft Teams Integration V1" --slug microsoft-teams-integration-v1`
+- (2026-03-07) Backend verification commands:
+  - `cd server && npx vitest run --config vitest.config.ts ../packages/integrations/src/actions/integrations/microsoftActions.test.ts ../packages/integrations/src/actions/integrations/providerReadiness.test.ts`
+  - `pnpm --dir packages/integrations typecheck`
+- (2026-03-07) Relevant local references:
+  - `packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.tsx`
+  - `packages/integrations/src/actions/integrations/microsoftActions.ts`
+  - `packages/integrations/src/actions/integrations/providerReadiness.ts`
+  - `packages/auth/src/lib/nextAuthOptions.ts`
+  - `packages/auth/src/lib/sso/mspSsoResolution.ts`
+  - `packages/notifications/src/actions/internal-notification-actions/internalNotificationActions.ts`
+  - `server/src/lib/utils/notificationLinkResolver.ts`
+  - `server/src/lib/eventBus`
+  - `server/migrations/20260307120000_create_microsoft_profiles.cjs`
+
+## Links / References
+
+- Microsoft Teams docs used during investigation:
+  - Tabs overview: `https://learn.microsoft.com/en-us/microsoftteams/platform/tabs/what-are-tabs`
+  - Tab SSO overview: `https://learn.microsoft.com/en-us/microsoftteams/platform/tabs/how-to/authentication/tab-sso-overview`
+  - Tab SSO manifest: `https://learn.microsoft.com/en-us/microsoftteams/platform/tabs/how-to/authentication/tab-sso-manifest`
+  - Bot SSO overview: `https://learn.microsoft.com/en-us/microsoftteams/platform/bots/how-to/authentication/bot-sso-overview`
+  - Bot SSO manifest: `https://learn.microsoft.com/en-us/microsoftteams/platform/bots/how-to/authentication/bot-sso-manifest`
+  - Activity feed notifications: `https://learn.microsoft.com/en-us/microsoftteams/platform/tabs/send-activity-feed-notification`
+  - Deep links: `https://learn.microsoft.com/en-us/microsoftteams/platform/concepts/build-and-test/deep-links`
+  - Search commands: `https://learn.microsoft.com/en-us/microsoftteams/platform/messaging-extensions/how-to/search-commands/define-search-command`
+  - Action commands: `https://learn.microsoft.com/en-us/microsoftteams/platform/messaging-extensions/how-to/action-commands/define-action-command`
+  - Dialogs / task modules: `https://learn.microsoft.com/en-us/microsoftteams/platform/task-modules-and-cards/task-modules/invoking-task-modules`
+- Existing related plans:
+  - `ee/docs/plans/2026-02-23-msp-tenant-first-sso-provider-resolution`
+  - `ee/docs/plans/2026-02-20-entra-integration-phase-1`
+
+## Open Questions
+
+- Do existing Microsoft consumers beyond Teams need explicit per-consumer profile selection UX in v1, or is a default-binding compatibility path sufficient initially?
+- How much approval behavior belongs in Teams quick actions versus deep-linking into the tab?
+- What exact tenant-by-tenant Teams app packaging and distribution flow should be used across local/dev/staging/prod?

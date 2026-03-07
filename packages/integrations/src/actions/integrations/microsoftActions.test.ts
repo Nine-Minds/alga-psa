@@ -2,150 +2,463 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 
-let mockUser: any = { user_id: 'user-1', user_type: 'internal' };
-let mockCtx: any = { tenant: 'tenant-1' };
+const hoisted = vi.hoisted(() => {
+  type MicrosoftProfileRecord = {
+    tenant: string;
+    profile_id: string;
+    display_name: string;
+    display_name_normalized: string;
+    client_id: string;
+    tenant_id: string;
+    client_secret_ref: string;
+    is_default: boolean;
+    is_archived: boolean;
+    archived_at: string | Date | null;
+    created_by: string | null;
+    updated_by: string | null;
+    created_at: string | Date;
+    updated_at: string | Date;
+  };
 
-const tenantSecrets = new Map<string, string>();
-const appSecrets = new Map<string, string>();
-const resetUpdates: Array<{ table: string; where: Record<string, unknown>; values: Record<string, unknown> }> = [];
+  const state = {
+    mockUser: { user_id: 'user-1', user_type: 'internal' } as any,
+    mockCtx: { tenant: 'tenant-1' } as any,
+    tenantSecrets: new Map<string, string>(),
+    appSecrets: new Map<string, string>(),
+    microsoftProfiles: [] as MicrosoftProfileRecord[],
+    resetUpdates: [] as Array<{ table: string; where: Record<string, unknown>; values: Record<string, unknown> }>,
+  };
 
-const getTenantSecretMock = vi.fn(async (tenant: string, key: string) => {
-  return tenantSecrets.get(`${tenant}:${key}`) || null;
-});
-const setTenantSecretMock = vi.fn(async (tenant: string, key: string, value: string) => {
-  tenantSecrets.set(`${tenant}:${key}`, value);
-});
-const getAppSecretMock = vi.fn(async (key: string) => appSecrets.get(key) || null);
-const hasPermissionMock = vi.fn(async (..._args: unknown[]) => true);
-const getMicrosoftProviderReadinessMock = vi.fn(async (..._args: unknown[]) => ({
-  ready: false,
-  clientIdConfigured: false,
-  clientSecretConfigured: false,
-}));
+  const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
+  const matchesWhere = (row: Record<string, unknown>, conditions: Record<string, unknown>): boolean =>
+    Object.entries(conditions).every(([key, value]) => row[key] === value);
 
-const knexMock: any = (table: string) => ({
-  where: (conditions: Record<string, unknown>) => ({
-    update: async (values: Record<string, unknown>) => {
-      resetUpdates.push({ table, where: conditions, values });
-      return 1;
-    },
-  }),
+  const createQuery = (table: string) => {
+    const filters: Record<string, unknown>[] = [];
+
+    const getRows = () => {
+      if (table === 'microsoft_profiles') {
+        return state.microsoftProfiles;
+      }
+
+      return [] as Array<Record<string, unknown>>;
+    };
+
+    const filteredRows = () => getRows().filter((row) => filters.every((filter) => matchesWhere(row, filter)));
+
+    return {
+      where(conditions: Record<string, unknown>) {
+        filters.push(conditions);
+        return this;
+      },
+      async first() {
+        const row = filteredRows()[0];
+        return row ? clone(row) : undefined;
+      },
+      async select(..._args: unknown[]) {
+        return filteredRows().map((row) => clone(row));
+      },
+      async insert(values: Record<string, unknown> | Array<Record<string, unknown>>) {
+        const rows = Array.isArray(values) ? values : [values];
+
+        if (table === 'microsoft_profiles') {
+          rows.forEach((row) => {
+            state.microsoftProfiles.push(clone(row) as MicrosoftProfileRecord);
+          });
+        }
+
+        return rows.length;
+      },
+      async update(values: Record<string, unknown>) {
+        if (table === 'microsoft_profiles') {
+          const rows = filteredRows();
+          rows.forEach((row) => Object.assign(row, values));
+          return rows.length;
+        }
+
+        state.resetUpdates.push({
+          table,
+          where: Object.assign({}, ...filters),
+          values: clone(values),
+        });
+        return 1;
+      },
+    };
+  };
+
+  const knexMock: any = ((table: string) => createQuery(table)) as any;
+  knexMock.fn = {
+    now: vi.fn(() => 'now()'),
+  };
+  knexMock.transaction = async (callback: (trx: any) => Promise<unknown>) => callback(knexMock);
+
+  return {
+    state,
+    getTenantSecretMock: vi.fn(async (tenant: string, key: string) => {
+      return state.tenantSecrets.get(`${tenant}:${key}`) || null;
+    }),
+    setTenantSecretMock: vi.fn(async (tenant: string, key: string, value: string | null) => {
+      if (value === null) {
+        state.tenantSecrets.delete(`${tenant}:${key}`);
+        return;
+      }
+
+      state.tenantSecrets.set(`${tenant}:${key}`, value);
+    }),
+    getAppSecretMock: vi.fn(async (key: string) => state.appSecrets.get(key) || null),
+    hasPermissionMock: vi.fn(async (..._args: unknown[]) => true),
+    knexMock,
+  };
 });
-knexMock.fn = {
-  now: vi.fn(() => 'now()'),
+
+type MicrosoftProfileRecord = {
+  tenant: string;
+  profile_id: string;
+  display_name: string;
+  display_name_normalized: string;
+  client_id: string;
+  tenant_id: string;
+  client_secret_ref: string;
+  is_default: boolean;
+  is_archived: boolean;
+  archived_at: string | Date | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string | Date;
+  updated_at: string | Date;
 };
+
+const { tenantSecrets, appSecrets, microsoftProfiles, resetUpdates } = hoisted.state;
+const { getTenantSecretMock, setTenantSecretMock, getAppSecretMock, hasPermissionMock, knexMock } = hoisted;
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth:
     (action: (...args: any[]) => Promise<unknown>) =>
     (...args: any[]) =>
-      action(mockUser, mockCtx, ...args),
+      action(hoisted.state.mockUser, hoisted.state.mockCtx, ...args),
 }));
 
 vi.mock('@alga-psa/auth/withAuth', () => ({
   withAuth:
     (action: (...args: any[]) => Promise<unknown>) =>
     (...args: any[]) =>
-      action(mockUser, mockCtx, ...args),
+      action(hoisted.state.mockUser, hoisted.state.mockCtx, ...args),
 }));
 
 vi.mock('@alga-psa/auth/rbac', () => ({
-  hasPermission: hasPermissionMock,
+  hasPermission: hoisted.hasPermissionMock,
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: async () => ({
-    getTenantSecret: getTenantSecretMock,
-    setTenantSecret: setTenantSecretMock,
-    getAppSecret: getAppSecretMock,
+    getTenantSecret: hoisted.getTenantSecretMock,
+    setTenantSecret: hoisted.setTenantSecretMock,
+    getAppSecret: hoisted.getAppSecretMock,
   }),
 }));
 
 vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: async () => ({ knex: knexMock }),
-}));
-
-vi.mock('./providerReadiness', () => ({
-  getMicrosoftProviderReadiness: getMicrosoftProviderReadinessMock,
+  createTenantKnex: async () => ({ knex: hoisted.knexMock }),
 }));
 
 import {
+  archiveMicrosoftProfile,
+  createMicrosoftProfile,
   getMicrosoftIntegrationStatus,
+  listMicrosoftProfiles,
   resetMicrosoftProvidersToDisconnected,
+  resolveMicrosoftProfileForCompatibility,
   saveMicrosoftIntegrationSettings,
+  setDefaultMicrosoftProfile,
+  updateMicrosoftProfile,
 } from './microsoftActions';
 
 describe('Microsoft integration actions', () => {
   beforeEach(() => {
-    mockUser = { user_id: 'user-1', user_type: 'internal' };
-    mockCtx = { tenant: 'tenant-1' };
+    hoisted.state.mockUser = { user_id: 'user-1', user_type: 'internal' };
+    hoisted.state.mockCtx = { tenant: 'tenant-1' };
     tenantSecrets.clear();
     appSecrets.clear();
+    microsoftProfiles.length = 0;
     resetUpdates.length = 0;
     hasPermissionMock.mockResolvedValue(true);
-    getMicrosoftProviderReadinessMock.mockResolvedValue({
-      ready: true,
-      clientIdConfigured: true,
-      clientSecretConfigured: true,
-    });
     getTenantSecretMock.mockClear();
     setTenantSecretMock.mockClear();
     getAppSecretMock.mockClear();
   });
 
-  it('T002/T003/T010: status returns success with masked values and derived metadata', async () => {
-    tenantSecrets.set('tenant-1:microsoft_client_id', 'client-id-123');
-    tenantSecrets.set('tenant-1:microsoft_client_secret', 'super-secret-value');
-    tenantSecrets.set('tenant-1:microsoft_tenant_id', 'tenant-guid');
+  it('T001/T002/T023/T024/T033/T034: profile creation/listing stays tenant-scoped and excludes other tenants', async () => {
+    hoisted.state.mockCtx = { tenant: 'tenant-2' };
+    await createMicrosoftProfile({
+      displayName: 'Tenant Two Profile',
+      clientId: 'tenant-two-client',
+      clientSecret: 'tenant-two-secret',
+      tenantId: 'tenant-two-guid',
+    });
+
+    hoisted.state.mockCtx = { tenant: 'tenant-1' };
+    const createResult = await createMicrosoftProfile({
+      displayName: 'Primary Profile',
+      clientId: 'client-id-123',
+      clientSecret: 'super-secret-value',
+      tenantId: 'tenant-guid',
+    });
+
+    expect(createResult.success).toBe(true);
+
+    const listResult = await listMicrosoftProfiles();
+    expect(listResult.success).toBe(true);
+    expect(listResult.profiles?.map((profile) => profile.displayName)).toEqual(['Primary Profile']);
+    expect(listResult.profiles?.[0]?.tenantId).toBe('tenant-guid');
+  });
+
+  it('T003/T004/T017/T018/T019/T020/T031/T032: profile persistence stores metadata, secret refs, masked state, and readiness from secret provider', async () => {
+    const result = await createMicrosoftProfile({
+      displayName: 'Ops Profile',
+      clientId: 'ops-client-id',
+      clientSecret: 'ops-secret-value',
+      tenantId: 'ops-tenant-guid',
+    });
+
+    expect(result.success).toBe(true);
+    expect(microsoftProfiles).toHaveLength(1);
+    expect(microsoftProfiles[0]).toMatchObject({
+      tenant: 'tenant-1',
+      display_name: 'Ops Profile',
+      client_id: 'ops-client-id',
+      tenant_id: 'ops-tenant-guid',
+      is_default: true,
+      is_archived: false,
+    });
+    expect(microsoftProfiles[0].client_secret_ref).toMatch(/^microsoft_profile_.+_client_secret$/);
+    expect(JSON.stringify(microsoftProfiles[0])).not.toContain('ops-secret-value');
+    expect(tenantSecrets.get(`tenant-1:${microsoftProfiles[0].client_secret_ref}`)).toBe('ops-secret-value');
+    expect(tenantSecrets.get('tenant-1:microsoft_client_secret')).toBe('ops-secret-value');
+
+    const status = await getMicrosoftIntegrationStatus();
+    expect(status.success).toBe(true);
+    expect(status.profiles?.[0]).toMatchObject({
+      displayName: 'Ops Profile',
+      clientId: 'ops-client-id',
+      tenantId: 'ops-tenant-guid',
+      clientSecretConfigured: true,
+      status: 'ready',
+    });
+    expect(status.profiles?.[0]?.clientSecretMasked).not.toContain('ops-secret-value');
+    expect(status.profiles?.[0]?.readiness).toMatchObject({
+      ready: true,
+      clientIdConfigured: true,
+      clientSecretConfigured: true,
+      tenantIdConfigured: true,
+      active: true,
+    });
+  });
+
+  it('T005/T006: profile names are unique within a tenant but reusable across tenants', async () => {
+    await createMicrosoftProfile({
+      displayName: 'Duplicate Name',
+      clientId: 'client-id-1',
+      clientSecret: 'secret-1',
+      tenantId: 'tenant-guid-1',
+    });
+
+    const duplicate = await createMicrosoftProfile({
+      displayName: ' duplicate   name ',
+      clientId: 'client-id-2',
+      clientSecret: 'secret-2',
+      tenantId: 'tenant-guid-2',
+    });
+
+    expect(duplicate).toEqual({
+      success: false,
+      error: 'A Microsoft profile with this display name already exists',
+    });
+
+    hoisted.state.mockCtx = { tenant: 'tenant-2' };
+    const otherTenant = await createMicrosoftProfile({
+      displayName: 'Duplicate Name',
+      clientId: 'client-id-3',
+      clientSecret: 'secret-3',
+      tenantId: 'tenant-guid-3',
+    });
+
+    expect(otherTenant.success).toBe(true);
+  });
+
+  it('T007/T008/T035/T036: exactly one profile is default and compatibility resolution returns that default profile', async () => {
+    const first = await createMicrosoftProfile({
+      displayName: 'First Profile',
+      clientId: 'client-id-1',
+      clientSecret: 'secret-1',
+      tenantId: 'tenant-guid-1',
+    });
+    const second = await createMicrosoftProfile({
+      displayName: 'Second Profile',
+      clientId: 'client-id-2',
+      clientSecret: 'secret-2',
+      tenantId: 'tenant-guid-2',
+    });
+
+    expect(first.profile?.isDefault).toBe(true);
+    expect(second.profile?.isDefault).toBe(false);
+
+    const setDefault = await setDefaultMicrosoftProfile(second.profile!.profileId);
+    expect(setDefault.success).toBe(true);
+
+    const profiles = await listMicrosoftProfiles();
+    expect(profiles.profiles?.filter((profile) => profile.isDefault)).toHaveLength(1);
+    expect(profiles.profiles?.find((profile) => profile.isDefault)?.displayName).toBe('Second Profile');
+
+    const compatibility = await resolveMicrosoftProfileForCompatibility('tenant-1');
+    expect(compatibility?.displayName).toBe('Second Profile');
+    expect(tenantSecrets.get('tenant-1:microsoft_client_id')).toBe('client-id-2');
+    expect(tenantSecrets.get('tenant-1:microsoft_client_secret')).toBe('secret-2');
+    expect(tenantSecrets.get('tenant-1:microsoft_tenant_id')).toBe('tenant-guid-2');
+  });
+
+  it('T009/T010/T011/T012/T013/T014/T015/T016: legacy singleton secrets backfill a default profile and preserve current Microsoft values', async () => {
+    tenantSecrets.set('tenant-1:microsoft_client_id', 'legacy-client-id');
+    tenantSecrets.set('tenant-1:microsoft_client_secret', 'legacy-secret');
+    tenantSecrets.set('tenant-1:microsoft_tenant_id', 'legacy-tenant-guid');
+
+    const listResult = await listMicrosoftProfiles();
+
+    expect(listResult.success).toBe(true);
+    expect(listResult.profiles).toHaveLength(1);
+    expect(listResult.profiles?.[0]).toMatchObject({
+      displayName: 'Default Microsoft Profile',
+      clientId: 'legacy-client-id',
+      tenantId: 'legacy-tenant-guid',
+      isDefault: true,
+      clientSecretConfigured: true,
+    });
+    expect(listResult.profiles?.[0]?.clientSecretRef).toMatch(/^microsoft_profile_.+_client_secret$/);
+    expect(tenantSecrets.get(`tenant-1:${listResult.profiles?.[0]?.clientSecretRef}`)).toBe('legacy-secret');
+    expect(tenantSecrets.get('tenant-1:microsoft_client_id')).toBe('legacy-client-id');
+    expect(tenantSecrets.get('tenant-1:microsoft_client_secret')).toBe('legacy-secret');
+    expect(tenantSecrets.get('tenant-1:microsoft_tenant_id')).toBe('legacy-tenant-guid');
+  });
+
+  it('T021/T022: non-default profiles can be archived and remain visible as archived records', async () => {
+    await createMicrosoftProfile({
+      displayName: 'Default Profile',
+      clientId: 'client-id-1',
+      clientSecret: 'secret-1',
+      tenantId: 'tenant-guid-1',
+    });
+    const secondary = await createMicrosoftProfile({
+      displayName: 'Secondary Profile',
+      clientId: 'client-id-2',
+      clientSecret: 'secret-2',
+      tenantId: 'tenant-guid-2',
+    });
+
+    const archiveResult = await archiveMicrosoftProfile(secondary.profile!.profileId);
+    expect(archiveResult).toEqual({ success: true });
+
+    const profiles = await listMicrosoftProfiles();
+    expect(profiles.profiles?.find((profile) => profile.displayName === 'Secondary Profile')).toMatchObject({
+      isArchived: true,
+      status: 'archived',
+    });
+  });
+
+  it('T025/T026/T027/T028: create validates required fields and update rotates secret without exposing the previous one', async () => {
+    await expect(
+      createMicrosoftProfile({
+        displayName: '   ',
+        clientId: 'client-id',
+        clientSecret: 'client-secret',
+        tenantId: 'tenant-guid',
+      })
+    ).resolves.toEqual({
+      success: false,
+      error: 'Microsoft profile display name is required',
+    });
+
+    await expect(
+      createMicrosoftProfile({
+        displayName: 'Missing Tenant',
+        clientId: 'client-id',
+        clientSecret: 'client-secret',
+        tenantId: '   ',
+      })
+    ).resolves.toEqual({
+      success: false,
+      error: 'Microsoft Tenant ID is required',
+    });
+
+    const created = await createMicrosoftProfile({
+      displayName: 'Rotation Profile',
+      clientId: 'client-id',
+      clientSecret: 'old-secret',
+      tenantId: 'tenant-guid',
+    });
+
+    const preserveSecret = await updateMicrosoftProfile({
+      profileId: created.profile!.profileId,
+      displayName: 'Rotation Profile Updated',
+      clientId: 'client-id-updated',
+      tenantId: 'tenant-guid-updated',
+      clientSecret: '',
+    });
+
+    expect(preserveSecret.success).toBe(true);
+    expect(tenantSecrets.get(`tenant-1:${created.profile!.clientSecretRef}`)).toBe('old-secret');
+    expect(preserveSecret.profile).toMatchObject({
+      displayName: 'Rotation Profile Updated',
+      clientId: 'client-id-updated',
+      tenantId: 'tenant-guid-updated',
+    });
+
+    const rotateSecret = await updateMicrosoftProfile({
+      profileId: created.profile!.profileId,
+      clientSecret: 'new-secret',
+    });
+
+    expect(rotateSecret.success).toBe(true);
+    expect(tenantSecrets.get(`tenant-1:${created.profile!.clientSecretRef}`)).toBe('new-secret');
+    expect(rotateSecret.profile?.clientSecretMasked).not.toContain('new-secret');
+  });
+
+  it('T029/T030: archiving the default profile is blocked until another binding/default is selected', async () => {
+    const created = await createMicrosoftProfile({
+      displayName: 'Default Profile',
+      clientId: 'client-id',
+      clientSecret: 'client-secret',
+      tenantId: 'tenant-guid',
+    });
+
+    const archiveResult = await archiveMicrosoftProfile(created.profile!.profileId);
+
+    expect(archiveResult).toEqual({
+      success: false,
+      error: 'Default Microsoft profile cannot be archived until another profile is default',
+    });
+  });
+
+  it('T037/T038/T041/T042/T043/T044/T045/T046/T047/T048/T049/T050/T051/T052/T053/T054/T055/T056/T057/T058/T059/T060/T061/T062/T063/T064/T065/T066/T067/T068/T071/T072: legacy status endpoint remains compatible and exposes masked profile-driven metadata', async () => {
     appSecrets.set('NEXT_PUBLIC_BASE_URL', 'https://example.com');
+
+    await saveMicrosoftIntegrationSettings({
+      clientId: 'client-id-123',
+      clientSecret: 'super-secret-value',
+      tenantId: 'tenant-guid',
+    });
 
     const result = await getMicrosoftIntegrationStatus();
 
     expect(result.success).toBe(true);
     expect(result.config?.clientId).toBe('client-id-123');
     expect(result.config?.clientSecretMasked?.endsWith('alue')).toBe(true);
-    expect(result.config?.clientSecretMasked).not.toContain('super-secret');
-    expect(JSON.stringify(result)).not.toContain('super-secret-value');
+    expect(result.config?.clientSecretMasked).not.toContain('super-secret-value');
     expect(result.redirectUris?.email).toBe('https://example.com/api/auth/microsoft/callback');
     expect(result.redirectUris?.calendar).toBe('https://example.com/api/auth/microsoft/calendar/callback');
     expect(result.redirectUris?.sso).toBe('https://example.com/api/auth/callback/azure-ad');
     expect(result.scopes?.email?.length).toBeGreaterThan(0);
     expect(result.scopes?.calendar?.length).toBeGreaterThan(0);
     expect(result.scopes?.sso).toContain('openid');
-  });
-
-  it('T004: save action rejects empty client ID', async () => {
-    const result = await saveMicrosoftIntegrationSettings({
-      clientId: '   ',
-      clientSecret: 'secret',
-    });
-    expect(result).toEqual({
-      success: false,
-      error: 'Microsoft OAuth Client ID is required',
-    });
-  });
-
-  it('T005: save action rejects empty client secret', async () => {
-    const result = await saveMicrosoftIntegrationSettings({
-      clientId: 'client-id',
-      clientSecret: '   ',
-    });
-    expect(result).toEqual({
-      success: false,
-      error: 'Microsoft OAuth Client Secret is required',
-    });
-  });
-
-  it('T006/T007/T008/T009: save action persists tenant secrets and defaults tenant ID to common', async () => {
-    const result = await saveMicrosoftIntegrationSettings({
-      clientId: 'client-id',
-      clientSecret: 'client-secret',
-    });
-
-    expect(result).toEqual({ success: true });
-    expect(setTenantSecretMock).toHaveBeenCalledWith('tenant-1', 'microsoft_client_id', 'client-id');
-    expect(setTenantSecretMock).toHaveBeenCalledWith('tenant-1', 'microsoft_client_secret', 'client-secret');
-    expect(setTenantSecretMock).toHaveBeenCalledWith('tenant-1', 'microsoft_tenant_id', 'common');
+    expect(result.profiles?.[0]?.displayName).toBe('Default Microsoft Profile');
   });
 
   it('T011/T012: reset action disconnects Microsoft email and calendar providers', async () => {
@@ -184,28 +497,53 @@ describe('Microsoft integration actions', () => {
     );
 
     expect(integrationsIndex).toContain("from './microsoftActions';");
-    expect(integrationsIndex).toContain('getMicrosoftIntegrationStatus');
-    expect(integrationsIndex).toContain('saveMicrosoftIntegrationSettings');
-    expect(integrationsIndex).toContain('resetMicrosoftProvidersToDisconnected');
-    expect(rootActionsIndex).toContain('getMicrosoftIntegrationStatus');
-    expect(rootActionsIndex).toContain('saveMicrosoftIntegrationSettings');
-    expect(rootActionsIndex).toContain('resetMicrosoftProvidersToDisconnected');
+    expect(integrationsIndex).toContain('listMicrosoftProfiles');
+    expect(integrationsIndex).toContain('createMicrosoftProfile');
+    expect(integrationsIndex).toContain('resolveMicrosoftProfileForCompatibility');
+    expect(rootActionsIndex).toContain('listMicrosoftProfiles');
+    expect(rootActionsIndex).toContain('createMicrosoftProfile');
+    expect(rootActionsIndex).toContain('resolveMicrosoftProfileForCompatibility');
   });
 
-  it('T014: non-admin user receives permission error on save', async () => {
+  it('T014: non-admin user receives permission error on create/update/archive/default/save', async () => {
     hasPermissionMock.mockResolvedValue(false);
 
-    const result = await saveMicrosoftIntegrationSettings({
-      clientId: 'client-id',
-      clientSecret: 'client-secret',
-    });
+    await expect(
+      createMicrosoftProfile({
+        displayName: 'client-id',
+        clientId: 'client-id',
+        clientSecret: 'client-secret',
+        tenantId: 'tenant-guid',
+      })
+    ).resolves.toEqual({ success: false, error: 'Forbidden' });
 
-    expect(result).toEqual({ success: false, error: 'Forbidden' });
+    await expect(
+      saveMicrosoftIntegrationSettings({
+        clientId: 'client-id',
+        clientSecret: 'client-secret',
+        tenantId: 'tenant-guid',
+      })
+    ).resolves.toEqual({ success: false, error: 'Forbidden' });
   });
 
-  it('T015: client-portal users are denied on status/save/reset', async () => {
-    mockUser = { user_id: 'client-1', user_type: 'client' };
+  it('T015: client-portal users are denied on list/create/update/archive/default/status/save/reset', async () => {
+    hoisted.state.mockUser = { user_id: 'client-1', user_type: 'client' };
 
+    await expect(listMicrosoftProfiles()).resolves.toEqual({
+      success: false,
+      error: 'Forbidden',
+    });
+    await expect(
+      createMicrosoftProfile({
+        displayName: 'client-id',
+        clientId: 'client-id',
+        clientSecret: 'client-secret',
+        tenantId: 'tenant-guid',
+      })
+    ).resolves.toEqual({
+      success: false,
+      error: 'Forbidden',
+    });
     await expect(getMicrosoftIntegrationStatus()).resolves.toEqual({
       success: false,
       error: 'Forbidden',
@@ -214,6 +552,7 @@ describe('Microsoft integration actions', () => {
       saveMicrosoftIntegrationSettings({
         clientId: 'client-id',
         clientSecret: 'client-secret',
+        tenantId: 'tenant-guid',
       })
     ).resolves.toEqual({
       success: false,

@@ -100,6 +100,12 @@ export {
 } from './integrations/googleActions';
 export {
   getMicrosoftIntegrationStatus,
+  listMicrosoftProfiles,
+  createMicrosoftProfile,
+  updateMicrosoftProfile,
+  archiveMicrosoftProfile,
+  setDefaultMicrosoftProfile,
+  resolveMicrosoftProfileForCompatibility,
   saveMicrosoftIntegrationSettings,
   resetMicrosoftProvidersToDisconnected
 } from './integrations/microsoftActions';
