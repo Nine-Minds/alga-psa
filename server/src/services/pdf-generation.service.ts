@@ -11,7 +11,6 @@ import type { InvoiceViewModel as DbInvoiceViewModel, IInvoiceCharge } from 'ser
 import type { DateValue, InvoiceTemplateAst, WasmInvoiceViewModel } from '@alga-psa/types';
 import { browserPoolService, BrowserPoolService } from './browser-pool.service';
 import { IDocument } from 'server/src/interfaces/document.interface';
-import { getDocument } from '@alga-psa/documents/actions/documentActions';
 import { convertBlockContentToHTML } from '@alga-psa/formatting/blocknoteUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { StorageProviderFactory, generateStoragePath } from '@alga-psa/storage';
@@ -19,7 +18,6 @@ import { FileStoreModel } from 'server/src/models/storage';
 import logger from '@alga-psa/core/logger';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { buildDocumentGeneratedPayload } from '@shared/workflow/streams/domainEventBuilders/documentGeneratedEventBuilders';
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface PDFGenerationOptions {
   invoiceId?: string;
@@ -83,10 +81,7 @@ export class PDFGenerationService {
       entityId = options.documentId;
       sourceType = 'document';
 
-      const document = await runWithTenant(this.tenant, () => getDocument(options.documentId!));
-      if (isActionPermissionError(document)) {
-        throw new Error(document.permissionError);
-      }
+      const document = await this.getDocumentRecord(options.documentId);
       if (!document) {
         throw new Error(`Document ${options.documentId} not found.`);
       }
@@ -165,6 +160,18 @@ export class PDFGenerationService {
       return date.toISOString();
     }
     return String(date);
+  }
+
+  private async getDocumentRecord(documentId: string): Promise<IDocument | null> {
+    const { knex } = await createTenantKnex();
+    const document = await knex<IDocument>('documents')
+      .where({
+        document_id: documentId,
+        tenant: this.tenant,
+      })
+      .first();
+
+    return document ?? null;
   }
 
   private async mapInvoiceDataToViewModel(dbData: DbInvoiceViewModel): Promise<WasmInvoiceViewModel> {
@@ -285,10 +292,7 @@ export class PDFGenerationService {
   private async getDocumentHtml(documentId: string): Promise<string> {
     return runWithTenant(this.tenant, async () => {
       const { knex } = await createTenantKnex();
-      const document = await getDocument(documentId);
-      if (isActionPermissionError(document)) {
-        throw new Error(document.permissionError);
-      }
+      const document = await this.getDocumentRecord(documentId);
       
       if (!document) {
         throw new Error(`Document ${documentId} not found`);
