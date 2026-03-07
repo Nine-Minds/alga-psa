@@ -246,13 +246,14 @@ export class ChatCompletionsService {
         };
         conversation = [...conversation, assistantMessage];
 
-        if (!parsedArgsResult.ok) {
+        if (parsedArgsResult.ok === false) {
+          const parseErrorMessage = parsedArgsResult.message;
           conversation = [
             ...conversation,
             {
               role: 'function',
               name: functionName,
-              content: JSON.stringify({ error: parsedArgsResult.message }),
+              content: JSON.stringify({ error: parseErrorMessage }),
               tool_call_id: toolCallId,
             },
           ];
@@ -799,11 +800,12 @@ export class ChatCompletionsService {
 
         conversation = [...conversation, assistantMessage];
 
-        if (!parsedArgsResult.ok) {
+        if (parsedArgsResult.ok === false) {
+          const parseErrorMessage = parsedArgsResult.message;
           const functionMessage: ChatCompletionMessage = {
             role: 'function',
             name: functionName,
-            content: JSON.stringify({ error: parsedArgsResult.message }),
+            content: JSON.stringify({ error: parseErrorMessage }),
             tool_call_id: toolCallId,
           };
           conversation = [...conversation, functionMessage];
