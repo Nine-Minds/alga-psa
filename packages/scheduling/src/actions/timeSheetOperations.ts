@@ -31,6 +31,33 @@ interface TimeEntriesInfo {
   total_hours: number | string | null;
 }
 
+interface TimePeriodSummaryRow {
+  hours_entered: number | string | null;
+  days_logged: number | string | null;
+  last_entry_date?: string | Date | null;
+}
+
+function parseNumericValue(value: number | string | null | undefined): number {
+  if (value == null) {
+    return 0;
+  }
+
+  const parsed = typeof value === 'number' ? value : Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function toDateOnlyString(value: string | Date | null | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  return value.slice(0, 10);
+}
+
 export const fetchTimeSheets = withAuth(async (user, { tenant }): Promise<ITimeSheet[]> => {
   const currentUserId = user.user_id;
 
@@ -193,28 +220,67 @@ export const fetchTimePeriods = withAuth(async (user, { tenant }, userId: string
 
   await assertCanActOnBehalf(user, tenant, validatedParams.userId, db);
 
+  const timeEntrySummaries = db('time_sheets as summary_ts')
+    .join('time_periods as summary_tp', function() {
+      this.on('summary_ts.period_id', '=', 'summary_tp.period_id')
+          .andOn('summary_ts.tenant', '=', 'summary_tp.tenant');
+    })
+    .leftJoin('time_entries as te', function() {
+      this.on('summary_ts.id', '=', 'te.time_sheet_id')
+          .andOn('summary_ts.tenant', '=', 'te.tenant')
+          .andOn(db.raw('COALESCE(te.work_date, DATE(te.start_time)) >= summary_tp.start_date'))
+          .andOn(db.raw('COALESCE(te.work_date, DATE(te.start_time)) < summary_tp.end_date'));
+    })
+    .where({
+      'summary_ts.tenant': tenant,
+      'summary_ts.user_id': validatedParams.userId
+    })
+    .groupBy('summary_ts.period_id', 'summary_ts.tenant')
+    .select(
+      'summary_ts.period_id',
+      'summary_ts.tenant',
+      db.raw('COALESCE(SUM(EXTRACT(EPOCH FROM (te.end_time - te.start_time)) / 3600.0), 0) as hours_entered'),
+      db.raw('COUNT(DISTINCT COALESCE(te.work_date, DATE(te.start_time))) as days_logged'),
+      db.raw('MAX(COALESCE(te.work_date, DATE(te.start_time))) as last_entry_date')
+    )
+    .as('tes');
+
   const periods = await db('time_periods as tp')
     .leftJoin('time_sheets as ts', function() {
       this.on('tp.period_id', '=', 'ts.period_id')
           .andOn('tp.tenant', '=', 'ts.tenant')
           .andOn('ts.user_id', '=', db.raw('?', [validatedParams.userId]));
     })
+    .leftJoin(timeEntrySummaries, function() {
+      this.on('tp.period_id', '=', 'tes.period_id')
+          .andOn('tp.tenant', '=', 'tes.tenant');
+    })
     .where({ 'tp.tenant': tenant })
     .orderBy('tp.start_date', 'desc')
     .select(
       'tp.*',
       'ts.approval_status',
-      db.raw('COALESCE(ts.approval_status, ?) as timeSheetStatus', ['DRAFT'])
+      db.raw('COALESCE(ts.approval_status, ?) as timeSheetStatus', ['DRAFT']),
+      'tes.hours_entered',
+      'tes.days_logged',
+      'tes.last_entry_date'
     );
 
   console.log('Fetched periods:', periods);
 
-  return periods.map((period): ITimePeriodWithStatusView => ({
-    ...period,
-    start_date: toPlainDate(period.start_date).toString(),
-    end_date: toPlainDate(period.end_date).toString(),
-    timeSheetStatus: (period.approval_status || period.timeSheetStatus || 'DRAFT') as TimeSheetStatus
-  }));
+  return periods.map((period): ITimePeriodWithStatusView => {
+    const summary = period as typeof period & TimePeriodSummaryRow;
+
+    return {
+      ...period,
+      start_date: toPlainDate(period.start_date).toString(),
+      end_date: toPlainDate(period.end_date).toString(),
+      timeSheetStatus: (period.approval_status || period.timeSheetStatus || 'DRAFT') as TimeSheetStatus,
+      hoursEntered: parseNumericValue(summary.hours_entered),
+      daysLogged: parseNumericValue(summary.days_logged),
+      lastEntryDate: toDateOnlyString(summary.last_entry_date)
+    };
+  });
 });
 
 export const fetchOrCreateTimeSheet = withAuth(async (user, { tenant }, userId: string, periodId: string): Promise<ITimeSheetView> => {

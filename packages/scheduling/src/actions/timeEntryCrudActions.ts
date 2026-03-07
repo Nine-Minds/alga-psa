@@ -28,6 +28,16 @@ function captureAnalytics(_event: string, _properties?: Record<string, any>, _us
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
 }
 
+const NON_BILLABLE_FALLBACK_WORK_ITEM_ID = '__non_billable__';
+
+function normalizeFetchedWorkItemId(entry: Pick<ITimeEntry, 'work_item_id' | 'work_item_type'>): string {
+  if (entry.work_item_type === 'non_billable_category' && !entry.work_item_id) {
+    return NON_BILLABLE_FALLBACK_WORK_ITEM_ID;
+  }
+
+  return entry.work_item_id;
+}
+
 export const fetchTimeEntriesForTimeSheet = withAuth(async (
   user,
   { tenant },
@@ -64,6 +74,7 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
 
   // Fetch work item details for these time entries
   const workItemDetails = await Promise.all(timeEntries.map(async (entry): Promise<IWorkItem> => {
+    const normalizedWorkItemId = normalizeFetchedWorkItemId(entry);
     let workItem;
     switch (entry.work_item_type) {
       case 'ticket':
@@ -98,8 +109,8 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
         break;
       case 'non_billable_category':
         workItem = {
-          work_item_id: entry.work_item_id,
-          name: entry.work_item_id,
+          work_item_id: normalizedWorkItemId,
+          name: entry.notes?.trim() || 'Non-billable',
           description: '',
           type: 'non_billable_category',
         };
@@ -198,19 +209,24 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
 
   const workItemMap = new Map(workItemDetails.map((item): [string, IWorkItem] => [item.work_item_id, item]));
 
-  return timeEntries.map((entry): ITimeEntryWithWorkItem => ({
-    ...entry,
-    date: new Date(entry.start_time),
-    start_time: formatISO(entry.start_time),
-    end_time: formatISO(entry.end_time),
-    updated_at: formatISO(entry.updated_at),
-    created_at: formatISO(entry.created_at),
-    // work_date is a DATE column - convert to ISO string (YYYY-MM-DD)
-    work_date: entry.work_date instanceof Date
-      ? entry.work_date.toISOString().slice(0, 10)
-      : (typeof entry.work_date === 'string' ? entry.work_date.slice(0, 10) : undefined),
-    workItem: workItemMap.get(entry.work_item_id),
-  }));
+  return timeEntries.map((entry): ITimeEntryWithWorkItem => {
+    const normalizedWorkItemId = normalizeFetchedWorkItemId(entry);
+
+    return {
+      ...entry,
+      work_item_id: normalizedWorkItemId,
+      date: new Date(entry.start_time),
+      start_time: formatISO(entry.start_time),
+      end_time: formatISO(entry.end_time),
+      updated_at: formatISO(entry.updated_at),
+      created_at: formatISO(entry.created_at),
+      // work_date is a DATE column - convert to ISO string (YYYY-MM-DD)
+      work_date: entry.work_date instanceof Date
+        ? entry.work_date.toISOString().slice(0, 10)
+        : (typeof entry.work_date === 'string' ? entry.work_date.slice(0, 10) : undefined),
+      workItem: workItemMap.get(normalizedWorkItemId),
+    };
+  });
 });
 
 export const saveTimeEntry = withAuth(async (
@@ -316,9 +332,9 @@ export const saveTimeEntry = withAuth(async (
 
       if (
         work_date < periodStart ||
-        work_date > periodEnd ||
+        work_date >= periodEnd ||
         end_work_date < periodStart ||
-        end_work_date > periodEnd
+        end_work_date >= periodEnd
       ) {
         throw new Error('Time entry must fall within the time period for the time sheet');
       }
