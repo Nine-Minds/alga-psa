@@ -26,6 +26,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Plus, Edit2, Trash2, MapPin, Star } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useToast } from '@alga-psa/ui';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -236,6 +237,31 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
   );
 };
 
+const ReadOnlyLocationSummarySkeleton: React.FC = () => {
+  return (
+    <div className="space-y-3" aria-hidden="true">
+      {Array.from({ length: 2 }).map((_, index) => (
+        <Card key={`location-skeleton-${index}`} className="relative">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-4 w-4 rounded-full" />
+              <Skeleton className="h-5 w-40" />
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0 space-y-3">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-4/5" />
+            <div className="flex gap-2">
+              <Skeleton className="h-5 w-16 rounded-full" />
+              <Skeleton className="h-5 w-20 rounded-full" />
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+};
+
 const initialFormData: LocationFormData = {
   location_name: '',
   address_line1: '',
@@ -259,6 +285,7 @@ const initialFormData: LocationFormData = {
 export default function ClientLocations({ clientId, isEditing }: ClientLocationsProps) {
   const { t } = useTranslation('common');
   const [locations, setLocations] = useState<IClientLocation[]>([]);
+  const [isLocationsLoading, setIsLocationsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<IClientLocation | null>(null);
   const [formData, setFormData] = useState<LocationFormData>(initialFormData);
@@ -439,6 +466,7 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
   };
 
   const loadLocations = async () => {
+    setIsLocationsLoading(true);
     try {
       const fetchedLocations = await getClientLocations(clientId);
       setLocations(fetchedLocations);
@@ -449,6 +477,8 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
         description: t('clients.locations.errors.loadLocations', 'Failed to load client locations'),
         variant: 'destructive',
       });
+    } finally {
+      setIsLocationsLoading(false);
     }
   };
 
@@ -651,6 +681,10 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
 
   // Read-only mode - show all locations
   if (!isEditing) {
+    if (isLocationsLoading) {
+      return <ReadOnlyLocationSummarySkeleton />;
+    }
+
     if (locations.length === 0) {
       return (
         <div className="text-center py-4 text-gray-500">

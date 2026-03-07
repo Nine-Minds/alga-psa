@@ -147,7 +147,6 @@ interface FinancialAnalytics {
  */
 export class FinancialService extends BaseService<ITransaction> {
   private taxService: TaxService;
-  private billingEngine: BillingEngineClass;
 
   constructor() {
     super({
@@ -160,7 +159,6 @@ export class FinancialService extends BaseService<ITransaction> {
     });
     
     this.taxService = new TaxService();
-    this.billingEngine = new BillingEngineClass();
   }
 
   /**
@@ -1021,7 +1019,8 @@ export class FinancialService extends BaseService<ITransaction> {
       await this.validatePermissions('read', 'billing', context);
     }
     
-    const result = await this.billingEngine.calculateBilling(
+    const billingEngine = new BillingEngineClass();
+    const result = await billingEngine.calculateBilling(
       clientId,
       periodStart,
       periodEnd,

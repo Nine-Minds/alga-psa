@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '@alga-psa/db';
 import {
   IBillingPeriod,
   IBillingResult,
@@ -28,10 +29,9 @@ import {
 // Use the Temporal polyfill for all date arithmetic and plain‐date handling
 import { Temporal } from '@js-temporal/polyfill';
 import { ISO8601String } from 'server/src/types/types.d';
-import { getNextBillingDate } from '@alga-psa/billing/actions/billingAndTax'; // Removed getClientTaxRate
 import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
 import { computeWorkDateFields, resolveUserTimeZone } from 'server/src/lib/utils/workDate';
-import { getClientById, getClientDefaultTaxRegionCode } from '@alga-psa/clients/actions';
+import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from '@alga-psa/shared/billingClients';
 import { IClient } from 'server/src/interfaces';
 import { get } from 'http';
 // Removed TaxService import as it's no longer directly used here
@@ -50,6 +50,7 @@ import { getCurrencySymbol } from 'server/src/constants/currency';
 export class BillingEngine {
   private knex: Knex;
   private tenant: string | null;
+  private readonly clientDefaultTaxRegionCodeCache = new Map<string, string | null>();
 
   constructor() {
     this.knex = null as any;
@@ -65,6 +66,79 @@ export class BillingEngine {
       this.knex = knex;
       this.tenant = tenant;
     }
+  }
+
+  private isTransactionKnex(knex: Knex | Knex.Transaction): knex is Knex.Transaction {
+    return typeof (knex as Knex.Transaction).commit === 'function'
+      && typeof (knex as Knex.Transaction).rollback === 'function';
+  }
+
+  private async withPinnedTransaction<T>(callback: (trx: Knex.Transaction) => Promise<T>): Promise<T> {
+    await this.initKnex();
+
+    if (this.isTransactionKnex(this.knex)) {
+      return callback(this.knex);
+    }
+
+    return withTransaction(this.knex, async (trx) => {
+      const previousKnex = this.knex;
+      this.knex = trx;
+      try {
+        return await callback(trx);
+      } finally {
+        this.knex = previousKnex;
+      }
+    });
+  }
+
+  private getNextBillingDateForCycle(
+    currentEndDate: ISO8601String,
+    billingCycle: BillingCycleType
+  ): ISO8601String {
+    const currentDate = toPlainDate(currentEndDate);
+    let nextDate: Temporal.PlainDate;
+
+    switch (billingCycle) {
+      case 'weekly':
+        nextDate = currentDate.add({ days: 7 });
+        break;
+      case 'bi-weekly':
+        nextDate = currentDate.add({ days: 14 });
+        break;
+      case 'monthly':
+        nextDate = currentDate.add({ months: 1 });
+        break;
+      case 'quarterly':
+        nextDate = currentDate.add({ months: 3 });
+        break;
+      case 'semi-annually':
+        nextDate = currentDate.add({ months: 6 });
+        break;
+      case 'annually':
+        nextDate = currentDate.add({ years: 1 });
+        break;
+      default:
+        nextDate = currentDate.add({ months: 1 });
+        break;
+    }
+
+    return toISODate(nextDate);
+  }
+
+  private async getClientDefaultTaxRegionCode(clientId: string): Promise<string | null> {
+    await this.initKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
+    const cacheKey = `${this.tenant}:${clientId}`;
+    if (this.clientDefaultTaxRegionCodeCache.has(cacheKey)) {
+      return this.clientDefaultTaxRegionCodeCache.get(cacheKey) ?? null;
+    }
+
+    const taxRegionCode = await getClientDefaultTaxRegionCodeShared(this.knex, this.tenant, clientId);
+    this.clientDefaultTaxRegionCodeCache.set(cacheKey, taxRegionCode);
+    return taxRegionCode;
   }
 
   /**
@@ -140,9 +214,18 @@ export class BillingEngine {
   }
 
   async calculateBilling(clientId: string, startDate: ISO8601String, endDate: ISO8601String, billingCycleId: string): Promise<IBillingResult & { error?: string }> {
+    this.clientDefaultTaxRegionCodeCache.clear();
+    return this.withPinnedTransaction(async () => {
+      return this.calculateBillingInternal(clientId, startDate, endDate, billingCycleId);
+    });
+  }
+
+  private async calculateBillingInternal(clientId: string, startDate: ISO8601String, endDate: ISO8601String, billingCycleId: string): Promise<IBillingResult & { error?: string }> {
     try {
       await this.initKnex();
-      const client = await getClientById(clientId);
+      const client = await this.knex<IClient>('clients')
+        .where({ client_id: clientId, tenant: this.tenant! })
+        .first();
       console.log(`Calculating billing for client ${client?.client_name} (${clientId}) using billingCycleId: ${billingCycleId}`);
 
       // Fetch the specific billing cycle record
@@ -196,8 +279,8 @@ export class BillingEngine {
         periodStartDate = toISODate(effectivePlainDate); // Start date is the effective date
         // Need client billing frequency to calculate end date accurately
         // Use the cycle's effective date to determine the relevant frequency
-        const clientContractLineFrequency = await this.getBillingCycle(clientId, periodStartDate);
-        const nextBillingDate = await getNextBillingDate(clientId, periodStartDate); // Pass the determined start date
+        const clientBillingCycle = await this.getBillingCycle(clientId, periodStartDate) as BillingCycleType;
+        const nextBillingDate = this.getNextBillingDateForCycle(periodStartDate, clientBillingCycle);
         // Billing periods are treated as [start, end) (end exclusive).
         // The end date is the start of the next cycle.
         periodEndDate = toISODate(toPlainDate(nextBillingDate));
@@ -1037,7 +1120,7 @@ export class BillingEngine {
         // ***** START OF CORRECTED BLOCK *****
         if (!client.is_tax_exempt && isTaxable) {
           // Use the region derived from tax_rate_id, fallback to client default ONLY if service region is null
-          const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? '';
+          const effectiveTaxRegion = serviceTaxRegion ?? await this.getClientDefaultTaxRegionCode(client.client_id) ?? '';
           if (effectiveTaxRegion) {
             // Use TaxService to calculate tax
             // allocatedAmount is already in cents
@@ -1126,7 +1209,7 @@ export class BillingEngine {
           // Let's re-fetch it here for clarity, although it was calculated during allocation.
           // Ideally, the allocation object would carry the derived taxRegion.
           // For now, re-derive:
-          tax_region: (await this.getTaxInfoFromService(planService)).taxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined, // Use derived region, fallback to client default lookup
+          tax_region: (await this.getTaxInfoFromService(planService)).taxRegion ?? await this.getClientDefaultTaxRegionCode(client.client_id) ?? undefined, // Use derived region, fallback to client default lookup
           // planId: clientContractLine.contract_line_id, // Removed - planId not part of IFixedPriceCharge
           client_contract_line_id: clientContractLine.client_contract_line_id, // Link back to the plan assignment
 
@@ -1183,7 +1266,7 @@ export class BillingEngine {
           type: 'fixed',
           tax_amount: 0,
           tax_rate: 0,
-          tax_region: serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined, // Use derived region, fallback to client default lookup
+          tax_region: serviceTaxRegion ?? await this.getClientDefaultTaxRegionCode(client.client_id) ?? undefined, // Use derived region, fallback to client default lookup
           is_taxable: isTaxable, // Use derived value
           // Use plan-level settings fetched earlier, even if plan type isn't strictly 'Fixed' now
           // This maintains consistency if a plan type was changed.
@@ -1470,7 +1553,7 @@ export class BillingEngine {
       // Calculate tax amount (will be recalculated later in invoiceService, but set initial values)
       let taxAmount = 0;
       let taxRate = 0;
-      const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
+      const effectiveTaxRegion = serviceTaxRegion ?? await this.getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
 
       if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
         try {
@@ -1645,7 +1728,7 @@ export class BillingEngine {
       // Calculate tax amount (will be recalculated later)
       let taxAmount = 0;
       let taxRate = 0;
-      const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
+      const effectiveTaxRegion = serviceTaxRegion ?? await this.getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
 
       if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
         try {
@@ -1781,7 +1864,7 @@ export class BillingEngine {
       // Calculate tax amount (will be recalculated later)
       let taxAmount = 0;
       let taxRate = 0;
-      const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
+      const effectiveTaxRegion = serviceTaxRegion ?? await this.getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
 
       if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
         try {
@@ -1863,7 +1946,7 @@ export class BillingEngine {
       // Calculate tax amount (will be recalculated later)
       let taxAmount = 0;
       let taxRate = 0;
-      const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
+      const effectiveTaxRegion = serviceTaxRegion ?? await this.getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
 
       if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
         try {
@@ -2003,7 +2086,7 @@ export class BillingEngine {
 
       let taxAmount = 0;
       let taxRate = 0;
-      const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
+      const effectiveTaxRegion = serviceTaxRegion ?? await this.getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
 
       if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
         try {
@@ -2152,7 +2235,7 @@ export class BillingEngine {
         // Calculate tax amount (will be recalculated later)
         let taxAmount = 0;
         let taxRate = 0;
-        const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
+        const effectiveTaxRegion = serviceTaxRegion ?? await this.getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
 
         if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
           try {
