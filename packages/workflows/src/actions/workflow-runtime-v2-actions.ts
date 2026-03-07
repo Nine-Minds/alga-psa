@@ -16,6 +16,7 @@ import {
   getSchemaRegistry,
   initializeWorkflowRuntimeV2,
   applyRedactions,
+  isWorkflowEventTrigger,
   validateWorkflowDefinition,
   validateInputMapping,
   resolveInputMapping,
@@ -470,11 +471,10 @@ const computeValidation = async (params: {
   };
 
   const trigger = (definition as any)?.trigger;
-  const isEventTrigger = trigger?.type === 'event' && typeof trigger?.eventName === 'string' && trigger.eventName.length > 0;
-  if (isEventTrigger) {
+  if (isWorkflowEventTrigger(trigger) && trigger.eventName.length > 0) {
     const eventName = String(trigger.eventName);
     const schemaRegistry = getSchemaRegistry();
-    const overrideSource = typeof trigger?.sourcePayloadSchemaRef === 'string' && trigger.sourcePayloadSchemaRef.trim()
+    const overrideSource = typeof trigger.sourcePayloadSchemaRef === 'string' && trigger.sourcePayloadSchemaRef.trim()
       ? String(trigger.sourcePayloadSchemaRef).trim()
       : null;
     const catalog = tenant ? await EventCatalogModel.getByEventType(knex, eventName, tenant) : null;
@@ -489,7 +489,7 @@ const computeValidation = async (params: {
       errors.push(buildUnknownTriggerSourceSchemaRefError(eventName));
     }
 
-    const mapping = trigger?.payloadMapping;
+    const mapping = trigger.payloadMapping;
     const mappingProvided = mapping && typeof mapping === 'object' && Object.keys(mapping).length > 0;
     const refsMatch = !!payloadSchemaRef && !!sourceRef && sourceRef === payloadSchemaRef;
 
@@ -1439,8 +1439,7 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
   const payloadSchemaProvenance = payloadSchemaMode === 'pinned' ? 'pinned' : 'inferred';
   if (payloadSchemaMode === 'inferred') {
     const trigger = (definition as any)?.trigger;
-    const isEventTrigger = trigger?.type === 'event' && typeof trigger?.eventName === 'string' && trigger.eventName.length > 0;
-    if (!isEventTrigger) {
+    if (!isWorkflowEventTrigger(trigger) || trigger.eventName.length === 0) {
       return {
         ok: false,
         errors: [{
@@ -1452,17 +1451,15 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
         warnings: []
       };
     }
-    if (isEventTrigger) {
-      const eventName = String(trigger.eventName);
-      const overrideSource = typeof trigger?.sourcePayloadSchemaRef === 'string' && trigger.sourcePayloadSchemaRef.trim()
-        ? String(trigger.sourcePayloadSchemaRef).trim()
-        : null;
-      const catalog = tenant ? await EventCatalogModel.getByEventType(knex, eventName, tenant) : null;
-      const catalogRef = typeof (catalog as any)?.payload_schema_ref === 'string' ? String((catalog as any).payload_schema_ref) : null;
-      const sourceRef = overrideSource ?? catalogRef;
-      if (sourceRef && typeof sourceRef === 'string' && sourceRef.trim()) {
-        (definition as any).payloadSchemaRef = sourceRef.trim();
-      }
+    const eventName = String(trigger.eventName);
+    const overrideSource = typeof trigger.sourcePayloadSchemaRef === 'string' && trigger.sourcePayloadSchemaRef.trim()
+      ? String(trigger.sourcePayloadSchemaRef).trim()
+      : null;
+    const catalog = tenant ? await EventCatalogModel.getByEventType(knex, eventName, tenant) : null;
+    const catalogRef = typeof (catalog as any)?.payload_schema_ref === 'string' ? String((catalog as any).payload_schema_ref) : null;
+    const sourceRef = overrideSource ?? catalogRef;
+    if (sourceRef && typeof sourceRef === 'string' && sourceRef.trim()) {
+      (definition as any).payloadSchemaRef = sourceRef.trim();
     }
   }
 
@@ -1618,15 +1615,16 @@ export const startWorkflowRunAction = withAuth(async (user, { tenant }, input: u
       : (typeof workflow.payload_schema_ref === 'string' ? workflow.payload_schema_ref : null);
 
   const trigger = (definition as any)?.trigger ?? workflow.trigger ?? null;
-  const triggerMapping = trigger?.payloadMapping as any | undefined;
+  const eventTrigger = isWorkflowEventTrigger(trigger) ? trigger : null;
+  const triggerMapping = eventTrigger?.payloadMapping as any | undefined;
   const triggerMappingProvided = triggerMapping && typeof triggerMapping === 'object' && Object.keys(triggerMapping).length > 0;
   const inputIsSourcePayload = typeof (parsed as any).sourcePayloadSchemaRef === 'string' && String((parsed as any).sourcePayloadSchemaRef).trim().length > 0;
 
   let effectiveSourceSchemaRef: string | null = null;
   if (inputIsSourcePayload) {
     effectiveSourceSchemaRef = String((parsed as any).sourcePayloadSchemaRef).trim();
-  } else if (typeof trigger?.sourcePayloadSchemaRef === 'string' && trigger.sourcePayloadSchemaRef.trim()) {
-    effectiveSourceSchemaRef = String(trigger.sourcePayloadSchemaRef).trim();
+  } else if (typeof eventTrigger?.sourcePayloadSchemaRef === 'string' && eventTrigger.sourcePayloadSchemaRef.trim()) {
+    effectiveSourceSchemaRef = String(eventTrigger.sourcePayloadSchemaRef).trim();
   } else if (tenant && parsed.eventType) {
     try {
       const entry = await EventCatalogModel.getByEventType(knex, parsed.eventType, tenant);
@@ -1661,7 +1659,7 @@ export const startWorkflowRunAction = withAuth(async (user, { tenant }, input: u
       const resolved = await resolveInputMapping(triggerMapping, {
         expressionContext: {
           event: {
-            name: parsed.eventType ?? trigger?.eventName ?? null,
+            name: parsed.eventType ?? eventTrigger?.eventName ?? null,
             correlationKey: 'manual',
             payload: parsed.payload ?? {},
             payloadSchemaRef: effectiveSourceSchemaRef
@@ -2732,7 +2730,7 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
 
   const triggered = await WorkflowDefinitionModelV2.list(knex);
   const matching = triggered.filter(
-    (workflow) => workflow.trigger?.eventName === parsed.eventName && workflow.status === 'published'
+    (workflow) => isWorkflowEventTrigger(workflow.trigger as any) && workflow.trigger.eventName === parsed.eventName && workflow.status === 'published'
   );
 
   const schemaRegistry = getSchemaRegistry();
@@ -2748,14 +2746,15 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
       ?? (typeof workflow.payload_schema_ref === 'string' ? workflow.payload_schema_ref : null);
 
     const trigger = latestDefinition?.trigger ?? workflow.trigger ?? null;
-    const overrideSourceSchemaRef = typeof trigger?.sourcePayloadSchemaRef === 'string' ? trigger.sourcePayloadSchemaRef : null;
+    const eventTrigger = isWorkflowEventTrigger(trigger) ? trigger : null;
+    const overrideSourceSchemaRef = typeof eventTrigger?.sourcePayloadSchemaRef === 'string' ? eventTrigger.sourcePayloadSchemaRef : null;
     const effectiveSourceSchemaRef = overrideSourceSchemaRef ?? sourcePayloadSchemaRef;
 
     if (!effectiveSourceSchemaRef) {
       continue;
     }
 
-    const payloadMapping = trigger?.payloadMapping as any | undefined;
+    const payloadMapping = eventTrigger?.payloadMapping as any | undefined;
     const mappingProvided = payloadMapping && typeof payloadMapping === 'object' && Object.keys(payloadMapping).length > 0;
     const refsMatch = !!workflowPayloadSchemaRef && effectiveSourceSchemaRef === workflowPayloadSchemaRef;
     if (!mappingProvided && !refsMatch) {

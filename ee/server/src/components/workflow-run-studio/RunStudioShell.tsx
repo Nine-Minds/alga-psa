@@ -23,7 +23,7 @@ import {
 } from '@alga-psa/workflows/actions';
 import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
-import type { WorkflowDefinition, Step } from '@shared/workflow/runtime';
+import { isWorkflowEventTrigger, type WorkflowDefinition, type Step } from '@shared/workflow/runtime';
 import type { IfBlock, ForEachBlock, TryCatchBlock, NodeStep } from '@shared/workflow/runtime';
 import {
   PipelineStart,
@@ -883,7 +883,7 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
               </div>
               <div>
                 <div className="text-[11px] uppercase text-gray-400">Trigger</div>
-                <div>{definition?.trigger?.eventName ?? 'Manual'}</div>
+                <div>{isWorkflowEventTrigger(definition?.trigger) ? definition.trigger.eventName : 'Manual'}</div>
               </div>
               <div>
                 <div className="text-[11px] uppercase text-gray-400">Event Type</div>

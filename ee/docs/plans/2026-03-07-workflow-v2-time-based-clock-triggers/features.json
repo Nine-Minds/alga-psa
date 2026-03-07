@@ -1,0 +1,164 @@
+[
+  {
+    "id": "F001",
+    "description": "Extend the shared Workflow V2 trigger schema to support one-time schedule and recurring schedule trigger variants while preserving no-trigger as an absent trigger",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F002",
+    "description": "Update workflow create and update server-action schemas to accept the new time-trigger variants",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F003",
+    "description": "Enforce EE-only availability for time-triggered workflows in server-side create, update, and publish paths",
+    "implemented": false,
+    "prdRefs": ["Goals", "Security / Permissions"]
+  },
+  {
+    "id": "F004",
+    "description": "Register a fixed synthetic payload schema contract for time-triggered workflow runs",
+    "implemented": false,
+    "prdRefs": ["Goals", "Data / API / Integrations"]
+  },
+  {
+    "id": "F005",
+    "description": "Require pinned payload schema mode for time-triggered workflows and block inferred mode",
+    "implemented": false,
+    "prdRefs": ["Goals", "Requirements"]
+  },
+  {
+    "id": "F006",
+    "description": "Validate one-time schedule trigger definitions including required future timestamp semantics",
+    "implemented": false,
+    "prdRefs": ["Requirements"]
+  },
+  {
+    "id": "F007",
+    "description": "Validate recurring schedule trigger definitions including timezone and 5-field cron syntax with no seconds support",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Non-functional Requirements"]
+  },
+  {
+    "id": "F008",
+    "description": "Replace trigger-type heuristics in workflow list and query paths with real persisted trigger type values",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F009",
+    "description": "Add a trigger-type selector to Workflow Designer with No trigger, Event, One-time schedule, and Recurring schedule options",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F010",
+    "description": "Add Workflow Designer configuration UI for one-time schedule triggers",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F011",
+    "description": "Add Workflow Designer configuration UI for recurring schedule triggers with timezone selection and 5-field cron guidance",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F012",
+    "description": "Hide event catalog and trigger-mapping controls when a workflow uses a time trigger",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F013",
+    "description": "Show the fixed time-trigger payload contract in Workflow Designer when a time trigger is selected",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes", "Data / API / Integrations"]
+  },
+  {
+    "id": "F014",
+    "description": "Add an EE workflow schedule state table for time-trigger registration and lifecycle tracking",
+    "implemented": false,
+    "prdRefs": ["Data / API / Integrations", "Non-functional Requirements"]
+  },
+  {
+    "id": "F015",
+    "description": "Persist job-runner identifiers and schedule lifecycle state for registered workflow schedules",
+    "implemented": false,
+    "prdRefs": ["Data / API / Integrations", "Observability"]
+  },
+  {
+    "id": "F016",
+    "description": "Extract a shared workflow launcher service that centralizes run-start behavior across trigger types",
+    "implemented": false,
+    "prdRefs": ["Goals", "Requirements"]
+  },
+  {
+    "id": "F017",
+    "description": "Refactor the existing event-trigger ingress path to use the shared launcher service",
+    "implemented": false,
+    "prdRefs": ["Goals", "Requirements"]
+  },
+  {
+    "id": "F018",
+    "description": "Add an EE job handler that starts one-time scheduled workflow runs through the shared launcher",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F019",
+    "description": "Add an EE job handler that starts recurring scheduled workflow runs through the shared launcher",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F020",
+    "description": "Register one-time scheduled jobs when a published workflow uses a one-time time trigger",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F021",
+    "description": "Register recurring schedules when a published workflow uses a recurring time trigger",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F022",
+    "description": "Cancel or disable registered time-trigger jobs when workflows are paused, deleted, or changed away from time triggers",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F023",
+    "description": "Atomically reschedule published time-trigger registrations when trigger configuration changes",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Non-functional Requirements"]
+  },
+  {
+    "id": "F024",
+    "description": "Ensure one-time schedules fire at most once and transition to a completed state after firing",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F025",
+    "description": "Persist time-trigger run provenance so workflow run APIs and UI can distinguish one-time and recurring clock starts",
+    "implemented": false,
+    "prdRefs": ["Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F026",
+    "description": "Update workflow runs and workflow summary UI to display time-trigger labels and schedule state for time-triggered workflows",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F027",
+    "description": "Add duplicate-fire protection so retries or repeated delivery of the same schedule fire cannot create duplicate workflow runs",
+    "implemented": false,
+    "prdRefs": ["Non-functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  }
+]
