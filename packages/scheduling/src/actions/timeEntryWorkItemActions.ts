@@ -13,6 +13,12 @@ import {
   AddWorkItemParams
 } from './timeEntrySchemas'; // Import schemas
 
+const NON_BILLABLE_FALLBACK_WORK_ITEM_ID = '__non_billable__';
+
+function normalizeNonBillableWorkItemId(workItemId: string | null | undefined): string {
+  return workItemId || NON_BILLABLE_FALLBACK_WORK_ITEM_ID;
+}
+
 export const fetchWorkItemsForTimeSheet = withAuth(async (
   user,
   { tenant },
@@ -147,7 +153,32 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
       db.raw("'interaction' as type")
     );
 
-  return [...tickets, ...projectTasks, ...adHocEntries, ...interactions].map((item): IWorkItem => ({
+  const nonBillableEntries = await db('time_entries')
+    .where({
+      'time_entries.work_item_type': 'non_billable_category',
+      'time_entries.time_sheet_id': validatedParams.timeSheetId,
+      'time_entries.tenant': tenant
+    })
+    .select('work_item_id', 'notes');
+
+  const nonBillableWorkItems = Array.from(
+    nonBillableEntries.reduce((map, entry) => {
+      const workItemId = normalizeNonBillableWorkItemId(entry.work_item_id);
+
+      if (!map.has(workItemId)) {
+        map.set(workItemId, {
+          work_item_id: workItemId,
+          name: entry.notes?.trim() || 'Non-billable',
+          description: '',
+          type: 'non_billable_category'
+        });
+      }
+
+      return map;
+    }, new Map<string, Pick<IWorkItem, 'work_item_id' | 'name' | 'description' | 'type'>>()).values()
+  );
+
+  return [...tickets, ...projectTasks, ...adHocEntries, ...interactions, ...nonBillableWorkItems].map((item): IWorkItem => ({
     ...item,
     is_billable: item.type !== 'non_billable_category',
     ticket_number: item.type === 'ticket' ? item.ticket_number : undefined

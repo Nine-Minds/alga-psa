@@ -5,7 +5,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { formatISO } from 'date-fns';
+import { format, formatISO, parseISO } from 'date-fns';
 import { Temporal } from '@js-temporal/polyfill';
 
 // Helper to get the last inclusive day from an exclusive end_date
@@ -31,6 +31,31 @@ const statusBadgeConfig: Record<string, { variant: 'outline' | 'secondary' | 'su
 
 const getStatusBadgeConfig = (status: string) =>
   statusBadgeConfig[status] ?? { variant: 'outline' as const, label: 'Unknown' };
+
+function formatPeriodRange(startDate: string, endDate: string): string {
+  return `${startDate.slice(0, 10)} - ${getLastInclusiveDay(endDate)}`;
+}
+
+function formatHoursEntered(hoursEntered: number): string {
+  const formatted = new Intl.NumberFormat(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1
+  }).format(hoursEntered);
+
+  return `${formatted}h`;
+}
+
+function formatDaysLogged(daysLogged: number): string {
+  return `${daysLogged} ${daysLogged === 1 ? 'day' : 'days'}`;
+}
+
+function formatLastEntryDate(lastEntryDate?: string): string {
+  if (!lastEntryDate) {
+    return 'No entries';
+  }
+
+  return format(parseISO(lastEntryDate), 'EEE, MMM d');
+}
 
 export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodListProps) {
   const router = useRouter();
@@ -69,22 +94,15 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
         data={timePeriods}
         columns={[
           {
-            title: 'Start Date',
+            title: 'Period',
             dataIndex: 'start_date',
-            width: '25%',
-            render: (value) => value.slice(0, 10)
-          },
-          {
-            title: 'End Date',
-            dataIndex: 'end_date',
-            width: '25%',
-            // Show the last inclusive day (end_date is exclusive - the day AFTER the period)
-            render: (value) => getLastInclusiveDay(value)
+            width: '28%',
+            render: (_, record) => formatPeriodRange(record.start_date, record.end_date)
           },
           {
             title: 'Status',
             dataIndex: 'timeSheetStatus',
-            width: '25%',
+            width: '20%',
             render: (status: TimeSheetStatus, record) => {
               const config = getStatusBadgeConfig(status);
               return (
@@ -98,6 +116,24 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
                 </div>
               );
             }
+          },
+          {
+            title: 'Hours Entered',
+            dataIndex: 'hoursEntered',
+            width: '14%',
+            render: (hoursEntered: number) => formatHoursEntered(hoursEntered)
+          },
+          {
+            title: 'Days Logged',
+            dataIndex: 'daysLogged',
+            width: '12%',
+            render: (daysLogged: number) => formatDaysLogged(daysLogged)
+          },
+          {
+            title: 'Last Entry',
+            dataIndex: 'lastEntryDate',
+            width: '16%',
+            render: (lastEntryDate?: string) => formatLastEntryDate(lastEntryDate)
           },
           {
             title: 'Actions',
