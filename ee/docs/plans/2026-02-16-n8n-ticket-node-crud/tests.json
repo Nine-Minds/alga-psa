@@ -1,0 +1,362 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: package metadata satisfies n8n community node naming rules and points to built node entry files.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: build script emits compiled node and credential artifacts without TypeScript compile errors.",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: credential definition exposes exactly `baseUrl` and secret `apiKey` fields.",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: request helper normalizes base URL with/without trailing slash and avoids double slashes in request paths.",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: request helper injects `x-api-key` for every outbound request and never logs raw key values.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F017"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: resource selector displays Ticket, Client, Board, Status, and Priority resources in node UI.",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: operation selector shows only valid operations for each resource.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Unit: Ticket Create operation builds `POST /api/v1/tickets` payload with required fields mapped correctly.",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Unit: Ticket Create operation includes optional fields only when provided.",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Integration: Ticket Create returns created ticket body from API `data` wrapper.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F016"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Unit: Ticket Get operation sends `GET /api/v1/tickets/{id}` and rejects empty id before request.",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F026"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Integration: Ticket Get returns expected ticket object from API response.",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F016"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Unit: Ticket List operation serializes page/limit/sort/order/filter params into `GET /api/v1/tickets` query string.",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Integration: Ticket List preserves pagination metadata in node output.",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F016"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Unit: Ticket Search operation serializes query + optional search filters to `GET /api/v1/tickets/search`.",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Integration: Ticket Search returns matching result set and handles empty data array gracefully.",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F016"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Unit: Ticket Update operation sends `PUT /api/v1/tickets/{id}` with only provided mutable fields.",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Integration: Ticket Update returns updated ticket object for downstream nodes.",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F016"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Unit: Ticket Update Status operation sends `PUT /api/v1/tickets/{id}/status` with `status_id` payload.",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Unit: Ticket Update Assignment operation sends `PUT /api/v1/tickets/{id}/assignment` with `assigned_to` payload.",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Unit: Ticket Delete operation sends `DELETE /api/v1/tickets/{id}`.",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Integration: Ticket Delete converts HTTP 204 response to `{ success: true, id, deleted: true }` output.",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Unit: response normalizer unwraps `{ data: ... }` for single-object responses.",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Unit: response normalizer unwraps `{ data: [...] }` and includes pagination when provided.",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Unit: 401 API response is surfaced as invalid/missing API key with API details in error output.",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Unit: 403 API response is surfaced as permission error with API details in error output.",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Unit: 404 API response is surfaced as not-found error with API details in error output.",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Unit: 400 API response is surfaced as validation/reference error with API details in error output.",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Integration: Continue On Fail mode emits item-level error objects and continues processing remaining items.",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Unit: Client helper operation maps to `GET /api/v1/clients` and returns list output.",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Unit: Board helper operation maps to `GET /api/v1/boards` and returns list output.",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Unit: Status helper operation maps to `GET /api/v1/statuses` and returns list output.",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Unit: Priority helper operation maps to `GET /api/v1/priorities` and returns list output.",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Integration: load-options for `client_id` returns label/value pairs from clients API.",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Integration: load-options for `board_id` returns label/value pairs from boards API.",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Integration: load-options for `status_id` returns label/value pairs from statuses API.",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Integration: load-options for `priority_id` returns label/value pairs from priorities API.",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Unit: when load-options call fails, required ID fields remain manually editable and operation can still execute.",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Unit: ticket create/update UI groups required fields separately from optional additional fields.",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "Unit: operation validation blocks outbound call when required ticket IDs or search query are missing.",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "Docs: README includes credential setup, operation matrix, and ticket field requirements.",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "Docs: installation section covers self-hosted npm/manual install paths and unverified-node cloud limitation.",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "Docs: example workflows include one create->update-assignment flow and one search->update-status flow.",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "Release: initial npm publish produces installable package version and release notes reflecting supported operations.",
+    "implemented": false,
+    "featureIds": [
+      "F030"
+    ]
+  }
+]

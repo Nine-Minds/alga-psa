@@ -1,0 +1,47 @@
+{
+  "name": "n8n-nodes-alga-psa",
+  "version": "0.1.2",
+  "description": "Alga PSA community node for n8n",
+  "license": "MIT",
+  "main": "dist/nodes/AlgaPsa/AlgaPsa.node.js",
+  "types": "dist/nodes/AlgaPsa/AlgaPsa.node.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "examples"
+  ],
+  "keywords": [
+    "n8n-community-node-package",
+    "n8n",
+    "alga",
+    "psa"
+  ],
+  "homepage": "https://github.com/alga-psa/alga-psa",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alga-psa/alga-psa.git"
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "npm run clean && tsc -p tsconfig.json && mkdir -p dist/nodes/AlgaPsa && cp nodes/AlgaPsa/avatar-purple.png dist/nodes/AlgaPsa/avatar-purple.png",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --config vitest.config.ts"
+  },
+  "dependencies": {
+    "n8n-workflow": "^1.90.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.24",
+    "typescript": "^5.7.3",
+    "vitest": "^4.0.18"
+  },
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/AlgaPsaApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/AlgaPsa/AlgaPsa.node.js"
+    ]
+  }
+}

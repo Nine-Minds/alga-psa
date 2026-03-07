@@ -1,0 +1,265 @@
+[
+  {
+    "id": "F001",
+    "description": "Scaffold a dedicated n8n node package using valid community-node package naming and structure for npm distribution.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Configure package build metadata and scripts so compiled node + credential definitions are emitted in installable form.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Implement `AlgaPsaApi` credential with required fields `baseUrl` and `apiKey`.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Implement shared HTTP request helper that normalizes base URL and injects the `x-api-key` header for every call.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Implement single `Alga PSA` node shell with resource selector for Ticket, Client, Board, Status, and Priority.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Implement operation routing so each resource only displays and executes its supported operations.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Implement Ticket Create operation mapped to `POST /api/v1/tickets` with required and optional payload fields.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Implement Ticket Get operation mapped to `GET /api/v1/tickets/{id}`.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Implement Ticket List operation mapped to `GET /api/v1/tickets` with pagination and filter parameters.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Implement Ticket Search operation mapped to `GET /api/v1/tickets/search` with query and optional search filters.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Implement Ticket Update operation mapped to `PUT /api/v1/tickets/{id}` with partial update payload support.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Implement Ticket Update Status operation mapped to `PUT /api/v1/tickets/{id}/status`.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Implement Ticket Update Assignment operation mapped to `PUT /api/v1/tickets/{id}/assignment`.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Implement Ticket Delete operation mapped to `DELETE /api/v1/tickets/{id}`.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Normalize delete responses into a non-empty success object for downstream n8n nodes.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Normalize successful API responses so node output consistently unwraps/returns `data` and includes pagination metadata when present.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Map API failures (400/401/403/404/409/500) into actionable n8n errors including `error.code`, `error.message`, and `error.details`.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Support n8n Continue On Fail behavior so item-level errors can be emitted without aborting whole workflow when configured.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Implement Client helper resource with List operation mapped to `GET /api/v1/clients`.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Summary"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Implement Board helper resource with List operation mapped to `GET /api/v1/boards`.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Summary"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Implement Status helper resource with List operation mapped to `GET /api/v1/statuses`.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Summary"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Implement Priority helper resource with List operation mapped to `GET /api/v1/priorities`.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Summary"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Implement dynamic load-options for `client_id`, `board_id`, `status_id`, and `priority_id` in ticket create/update.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Implement manual UUID fallback entry path for required lookup fields when load-options cannot be resolved.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Implement ticket form field organization so required fields are prominent and optional fields are grouped under additional options.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Implement explicit operation parameter validation for required IDs and query terms before outbound API calls.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Write package README with credential setup, operation list, and usage examples for ticket CRUD and helper lookups.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Document self-hosted installation paths for npm community nodes and note unverified-node availability constraints.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Provide two minimal example workflow definitions: create->update-assignment and search->update-status.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Publish initial npm package release and create release notes describing supported resources/operations and installation steps.",
+    "implemented": false,
+    "prdRefs": [
+      "Goals",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  }
+]
