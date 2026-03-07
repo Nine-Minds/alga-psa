@@ -119,11 +119,53 @@ function encodeSseData(encoder: TextEncoder, payload: unknown): Uint8Array {
   return encoder.encode(`data: ${JSON.stringify(payload)}\n\n`);
 }
 
-function tryEnqueue(controller: ReadableStreamDefaultController<Uint8Array>, chunk: Uint8Array) {
+type StreamControllerState = {
+  closed: boolean;
+  doneSent: boolean;
+};
+
+function isInvalidStateError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: unknown }).code === 'ERR_INVALID_STATE'
+  );
+}
+
+function tryEnqueue(
+  controller: ReadableStreamDefaultController<Uint8Array>,
+  controllerState: StreamControllerState,
+  chunk: Uint8Array,
+) {
+  if (controllerState.closed) {
+    return;
+  }
   try {
     controller.enqueue(chunk);
-  } catch {
-    // Stream likely closed/cancelled already.
+  } catch (error) {
+    controllerState.closed = true;
+    if (!isInvalidStateError(error)) {
+      console.error('[chat completions stream] Failed to enqueue SSE chunk', error);
+    }
+  }
+}
+
+function tryClose(
+  controller: ReadableStreamDefaultController<Uint8Array>,
+  controllerState: StreamControllerState,
+) {
+  if (controllerState.closed) {
+    return;
+  }
+  try {
+    controller.close();
+  } catch (error) {
+    if (!isInvalidStateError(error)) {
+      console.error('[chat completions stream] Failed to close SSE controller', error);
+    }
+  } finally {
+    controllerState.closed = true;
   }
 }
 
@@ -172,6 +214,10 @@ export async function POST(req: NextRequest) {
   }
 
   const encoder = new TextEncoder();
+  const controllerState: StreamControllerState = {
+    closed: false,
+    doneSent: false,
+  };
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       (async () => {
@@ -183,7 +229,6 @@ export async function POST(req: NextRequest) {
           { signal: req.signal },
         );
 
-        let doneSent = false;
         for await (const event of completionStream) {
           if (req.signal.aborted) {
             break;
@@ -195,6 +240,7 @@ export async function POST(req: NextRequest) {
             if (token.length > 0) {
               tryEnqueue(
                 controller,
+                controllerState,
                 encodeSseData(encoder, {
                   type: 'content_delta',
                   delta: token,
@@ -211,6 +257,7 @@ export async function POST(req: NextRequest) {
             if (token.length > 0) {
               tryEnqueue(
                 controller,
+                controllerState,
                 encodeSseData(encoder, {
                   type: 'reasoning_delta',
                   delta: token,
@@ -221,33 +268,46 @@ export async function POST(req: NextRequest) {
           }
 
           if (eventType === 'function_proposed') {
-            tryEnqueue(controller, encodeSseData(encoder, event));
+            tryEnqueue(controller, controllerState, encodeSseData(encoder, event));
             continue;
           }
 
           if (eventType === 'done') {
-            doneSent = true;
+            controllerState.doneSent = true;
             tryEnqueue(
               controller,
+              controllerState,
               encodeSseData(encoder, { type: 'done', content: '', done: true }),
             );
             continue;
           }
         }
 
-        if (!req.signal.aborted && !doneSent) {
+        if (!req.signal.aborted && !controllerState.doneSent) {
           tryEnqueue(
             controller,
+            controllerState,
             encodeSseData(encoder, { type: 'done', content: '', done: true }),
           );
         }
       })()
         .catch((error) => {
-          console.error('[chat completions stream] Streaming error', error);
+          console.error('[chat completions stream] Streaming error', {
+            error,
+            requestAborted: req.signal.aborted,
+            controllerClosed: controllerState.closed,
+            doneSent: controllerState.doneSent,
+          });
         })
         .finally(() => {
-          controller.close();
+          tryClose(controller, controllerState);
         });
+    },
+    cancel() {
+      // The response body can be cancelled by the client before the background task finishes.
+      // Mark it closed so background cleanup/enqueue paths become no-ops.
+      controllerState.closed = true;
+      return undefined;
     },
   });
 

@@ -152,6 +152,12 @@ type ParsedToolArgumentsResult =
       message: string;
     };
 
+type ToolArgumentParseContext = {
+  source: 'stream' | 'non_stream';
+  functionName?: string;
+  toolCallId?: string;
+};
+
 type StreamedToolCallState = {
   id?: string;
   name?: string;
@@ -230,7 +236,11 @@ export class ChatCompletionsService {
           return;
         }
 
-        const parsedArgsResult = this.parseToolArguments(toolCall.function?.arguments);
+        const parsedArgsResult = this.parseToolArguments(toolCall.function?.arguments, {
+          source: 'stream',
+          functionName,
+          toolCallId,
+        });
         const parsedArgs = parsedArgsResult.ok ? parsedArgsResult.value : {};
 
         const assistantMessage: ChatCompletionMessage = {
@@ -783,7 +793,11 @@ export class ChatCompletionsService {
           };
         }
 
-        const parsedArgsResult = this.parseToolArguments(toolCall.function?.arguments);
+        const parsedArgsResult = this.parseToolArguments(toolCall.function?.arguments, {
+          source: 'non_stream',
+          functionName,
+          toolCallId,
+        });
         const parsedArgs = parsedArgsResult.ok ? parsedArgsResult.value : {};
 
         const assistantMessage: ChatCompletionMessage = {
@@ -992,7 +1006,10 @@ export class ChatCompletionsService {
     return {};
   }
 
-  private static parseToolArguments(args: unknown): ParsedToolArgumentsResult {
+  private static parseToolArguments(
+    args: unknown,
+    context: ToolArgumentParseContext,
+  ): ParsedToolArgumentsResult {
     if (!args) {
       return {
         ok: true,
@@ -1011,6 +1028,11 @@ export class ChatCompletionsService {
       try {
         const parsed = JSON.parse(args);
         if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+          this.logToolArgumentParseFailure(
+            context,
+            args,
+            'Tool arguments parsed successfully but were not a JSON object.',
+          );
           return {
             ok: false,
             message:
@@ -1022,7 +1044,12 @@ export class ChatCompletionsService {
           value: parsed as Record<string, unknown>,
         };
       } catch (error) {
-        console.error('[ChatCompletionsService] Failed to parse arguments string', error);
+        this.logToolArgumentParseFailure(
+          context,
+          args,
+          error instanceof Error ? error.message : String(error),
+          error,
+        );
         return {
           ok: false,
           message: `Tool arguments were invalid JSON. Retry the same function call with a valid JSON object only. Raw arguments preview: ${JSON.stringify(
@@ -1037,6 +1064,26 @@ export class ChatCompletionsService {
       message:
         'Tool arguments must be a valid JSON object. Retry the same function call with a JSON object only.',
     };
+  }
+
+  private static logToolArgumentParseFailure(
+    context: ToolArgumentParseContext,
+    rawArguments: unknown,
+    failure: string,
+    error?: unknown,
+  ) {
+    console.error(
+      '[ChatCompletionsService] Failed to parse tool arguments',
+      {
+        source: context.source,
+        functionName: context.functionName ?? null,
+        toolCallId: context.toolCallId ?? null,
+        rawArguments,
+        rawArgumentsLength: typeof rawArguments === 'string' ? rawArguments.length : null,
+        failure,
+      },
+      error,
+    );
   }
 
   private static normalizeConversationHistory(messages: ChatCompletionMessage[]): ChatCompletionMessage[] {
