@@ -28,6 +28,7 @@ import { CalendarIntegrationsSettings } from '@alga-psa/integrations/components'
 import { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
 import { MicrosoftIntegrationSettings } from './MicrosoftIntegrationSettings';
 import { MspSsoLoginDomainsSettings } from './MspSsoLoginDomainsSettings';
+import { TeamsIntegrationSettings } from './TeamsIntegrationSettings';
 import dynamic from 'next/dynamic';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
@@ -196,6 +197,7 @@ const IntegrationsSettingsPage: React.FC = () => {
               </Card>
               <GoogleIntegrationSettings />
               <MicrosoftIntegrationSettings />
+              <TeamsIntegrationSettings />
               <MspSsoLoginDomainsSettings />
             </div>
           ),

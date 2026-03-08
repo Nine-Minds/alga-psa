@@ -306,4 +306,16 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     await user.click(screen.getByRole('button', { name: 'Microsoft Entra' }));
     expect(window.open).toHaveBeenCalledWith('https://entra.microsoft.com/', '_blank');
   });
+
+  it('T071/T072: links directly from Microsoft profile management to the Teams setup surface', async () => {
+    const user = userEvent.setup();
+    window.location.hash = '';
+
+    render(<MicrosoftIntegrationSettings />);
+
+    expect(await screen.findByText('Primary Profile')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Open Teams Setup' }));
+
+    expect(window.location.hash).toBe('#teams-integration-settings');
+  });
 });

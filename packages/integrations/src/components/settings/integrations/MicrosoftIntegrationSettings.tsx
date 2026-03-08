@@ -348,7 +348,7 @@ export function MicrosoftIntegrationSettings() {
 
   return (
     <>
-      <Card>
+      <Card id="microsoft-profile-manager">
         <CardHeader>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-2">
@@ -366,6 +366,16 @@ export function MicrosoftIntegrationSettings() {
               >
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Microsoft Entra
+              </Button>
+              <Button
+                id="microsoft-open-teams-setup"
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  window.location.hash = 'teams-integration-settings';
+                }}
+              >
+                Open Teams Setup
               </Button>
               <Button id="microsoft-settings-refresh" type="button" variant="outline" onClick={load} disabled={loading}>
                 <RefreshCw className="mr-2 h-4 w-4" />

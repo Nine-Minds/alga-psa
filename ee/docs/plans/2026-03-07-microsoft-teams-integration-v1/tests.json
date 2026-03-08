@@ -562,7 +562,7 @@
   {
     "id": "T071",
     "description": "Happy path: Microsoft settings UI: the Teams setup surface can be reached directly from profile management.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
@@ -570,7 +570,7 @@
   {
     "id": "T072",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the teams setup surface can be reached directly from profile management.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
@@ -754,7 +754,7 @@
   {
     "id": "T095",
     "description": "Happy path: Teams setup: a tenant-admin Teams setup UI exists.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F048"
     ]
@@ -762,7 +762,7 @@
   {
     "id": "T096",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: a tenant-admin teams setup ui exists.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F048"
     ]
@@ -882,7 +882,7 @@
   {
     "id": "T111",
     "description": "Happy path: Teams setup: the UI links back to Microsoft profile management when no eligible profile exists or the selected profile is invalid.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056"
     ]
@@ -890,7 +890,7 @@
   {
     "id": "T112",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the ui links back to microsoft profile management when no eligible profile exists or the selected profile is invalid.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056"
     ]
@@ -898,7 +898,7 @@
   {
     "id": "T113",
     "description": "Happy path: Teams setup: the settings navigation includes a Teams integration entry.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057"
     ]
@@ -906,7 +906,7 @@
   {
     "id": "T114",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the settings navigation includes a teams integration entry.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057"
     ]
@@ -914,7 +914,7 @@
   {
     "id": "T115",
     "description": "Happy path: Teams setup: a tenant without an eligible Microsoft profile receives a guided setup state instead of a blank error.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ]
@@ -922,7 +922,7 @@
   {
     "id": "T116",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: a tenant without an eligible microsoft profile receives a guided setup state instead of a blank error.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ]

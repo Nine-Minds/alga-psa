@@ -25,6 +25,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) The Microsoft settings screen should become a profile manager in `Integrations -> Providers`, with one card per profile and shared app-registration guidance rendered inline instead of a separate Teams-only credential editor.
 - (2026-03-07) Until explicit consumer-binding records ship, the UI will surface compatibility bindings by treating the active default profile as the current source for Email, Calendar, and MSP SSO.
 - (2026-03-07) Teams registration guidance will be generated from deployment base URL plus profile client ID, including tab/bot/message-extension callback URLs and a derived Teams application ID URI (`api://<host>/teams/<clientId>`).
+- (2026-03-07) The first Teams setup slice should live in `Integrations -> Providers` next to Microsoft profile management so admins can move between shared Microsoft credential setup and Teams setup without a separate navigation model.
+- (2026-03-07) Until the tenant-scoped Teams integration record exists, the Teams settings UI should be a guided readiness card: list Microsoft profiles already ready for Teams and route tenants with no eligible profile back to Microsoft profile management.
 
 ## Discoveries / Constraints
 
@@ -40,6 +42,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) `packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.tsx` already gives the right long-term home for Microsoft profile management: `Integrations -> Providers`, not a new top-level settings tab.
 - (2026-03-07) The backend compatibility guard is sufficient for `F015`/`T029-T030`: archiving the default profile is blocked until another profile is made default, which preserves the active compatibility binding.
 - (2026-03-07) The second slice is complete: `F019-F035` and `T037-T070` pass with the profile manager UI, per-profile readiness/rendering, inline registration guidance, refresh, default switching, and archive confirmation.
+- (2026-03-07) There was no existing Teams admin settings surface in the repo; `packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.tsx` `Providers` is the right mount point for the first Teams setup card.
+- (2026-03-07) The shared `Button` component does not expose custom ids reliably in the jsdom contract harness, so the Teams settings contract test uses role/name queries for refresh actions.
+- (2026-03-07) The third slice is complete: `F036`, `F048`, `F056`, `F057`, `F058` and `T071`, `T072`, `T095`, `T096`, `T111`, `T112`, `T113`, `T114`, `T115`, `T116` pass with a Providers-mounted Teams setup card, hash-based navigation between Microsoft profiles and Teams setup, and guided remediation when no eligible profile exists.
 
 ## Commands / Runbooks
 
@@ -50,9 +55,15 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) UI verification commands:
   - `cd server && npx vitest run --config vitest.config.ts ../packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.contract.test.tsx`
   - `cd server && npx vitest run --config vitest.config.ts ../packages/integrations/src/actions/integrations/microsoftActions.test.ts ../packages/integrations/src/actions/integrations/providerReadiness.test.ts ../packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.contract.test.tsx`
+  - `cd server && npx vitest run --config vitest.config.ts ../packages/integrations/src/components/settings/integrations/TeamsIntegrationSettings.contract.test.tsx ../packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.providers.test.ts`
+  - `cd server && npx vitest run --config vitest.config.ts ../packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.contract.test.tsx ../packages/integrations/src/components/settings/integrations/TeamsIntegrationSettings.contract.test.tsx ../packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.providers.test.ts`
 - (2026-03-07) Relevant local references:
   - `packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.tsx`
   - `packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.contract.test.tsx`
+  - `packages/integrations/src/components/settings/integrations/TeamsIntegrationSettings.tsx`
+  - `packages/integrations/src/components/settings/integrations/TeamsIntegrationSettings.contract.test.tsx`
+  - `packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.tsx`
+  - `packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.providers.test.ts`
   - `packages/integrations/src/actions/integrations/microsoftActions.ts`
   - `packages/integrations/src/actions/integrations/providerReadiness.ts`
   - `packages/auth/src/lib/nextAuthOptions.ts`
@@ -61,6 +72,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `server/src/lib/utils/notificationLinkResolver.ts`
   - `server/src/lib/eventBus`
   - `server/migrations/20260307120000_create_microsoft_profiles.cjs`
+- (2026-03-07) The focused vitest slice still emits pre-existing React `act(...)` warnings from `MicrosoftIntegrationSettings.contract.test.tsx`; the tests pass, but the harness remains noisy.
+- (2026-03-07) Next unchecked feature after this slice is `F037` (tenant-scoped Microsoft-profile consumer binding model).
 
 ## Links / References
 

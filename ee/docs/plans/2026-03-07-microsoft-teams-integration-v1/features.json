@@ -317,7 +317,7 @@
   {
     "id": "F036",
     "description": "Microsoft settings UI: the Teams setup surface can be reached directly from profile management.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -425,7 +425,7 @@
   {
     "id": "F048",
     "description": "Teams setup: a tenant-admin Teams setup UI exists.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -497,7 +497,7 @@
   {
     "id": "F056",
     "description": "Teams setup: the UI links back to Microsoft profile management when no eligible profile exists or the selected profile is invalid.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -506,7 +506,7 @@
   {
     "id": "F057",
     "description": "Teams setup: the settings navigation includes a Teams integration entry.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -515,7 +515,7 @@
   {
     "id": "F058",
     "description": "Teams setup: a tenant without an eligible Microsoft profile receives a guided setup state instead of a blank error.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
