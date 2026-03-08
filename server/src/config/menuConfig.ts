@@ -111,12 +111,10 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'Documents',
         icon: FileText,
-        href: '/msp/documents'
-      },
-      {
-        name: 'Knowledge Base',
-        icon: BookOpen,
-        href: '/msp/knowledge-base'
+        subItems: [
+          { name: 'All Documents', icon: FileText, href: '/msp/documents' },
+          { name: 'Knowledge Base', icon: BookOpen, href: '/msp/knowledge-base' }
+        ]
       },
       {
         name: 'Assets',

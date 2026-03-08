@@ -7,7 +7,7 @@ import {
   logShareAccess,
   incrementDownloadCount,
 } from '@alga-psa/documents/actions';
-import { getCurrentUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 
 /**
  * GET /api/share/[token]
