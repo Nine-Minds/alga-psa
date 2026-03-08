@@ -110,6 +110,14 @@ export interface TeamsAppManifest {
       templateText: string;
     }>;
   };
+  authorization?: {
+    permissions: {
+      resourceSpecific: Array<{
+        type: 'Application' | 'Delegated';
+        name: string;
+      }>;
+    };
+  };
   permissions: string[];
   validDomains: string[];
   webApplicationInfo: {
@@ -440,6 +448,16 @@ function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: Microso
         { type: 'workEscalated', description: 'Escalation notification', templateText: '{item} was escalated' },
         { type: 'slaRiskDetected', description: 'SLA risk notification', templateText: '{item} is at SLA risk' },
       ],
+    },
+    authorization: {
+      permissions: {
+        resourceSpecific: [
+          {
+            type: 'Application',
+            name: 'TeamsActivity.Send.User',
+          },
+        ],
+      },
     },
     permissions: ['identity', 'messageTeamMembers'],
     validDomains: [host, 'token.botframework.com'],

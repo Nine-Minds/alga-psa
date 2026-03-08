@@ -3362,7 +3362,7 @@
   {
     "id": "T421",
     "description": "Happy path: Teams notifications: a Teams delivery channel exists alongside existing PSA notification generation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F211"
     ]
@@ -3370,7 +3370,7 @@
   {
     "id": "T422",
     "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: a teams delivery channel exists alongside existing psa notification generation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F211"
     ]
@@ -3378,7 +3378,7 @@
   {
     "id": "T423",
     "description": "Happy path: Teams notifications: tenant Teams setup stores category preferences for supported personal notifications.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F212"
     ]
@@ -3386,7 +3386,7 @@
   {
     "id": "T424",
     "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: tenant teams setup stores category preferences for supported personal notifications.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F212"
     ]
@@ -3394,7 +3394,7 @@
   {
     "id": "T425",
     "description": "Happy path: Teams notifications: Teams delivery reuses existing notification payload generation rather than introducing a separate trigger catalog.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F213"
     ]
@@ -3402,7 +3402,7 @@
   {
     "id": "T426",
     "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: teams delivery reuses existing notification payload generation rather than introducing a separate trigger catalog.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F213"
     ]
@@ -3410,7 +3410,7 @@
   {
     "id": "T427",
     "description": "Happy path: Teams notifications: Teams delivery reuses existing PSA deep-link resolution rather than building a second link system.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F214"
     ]
@@ -3418,7 +3418,7 @@
   {
     "id": "T428",
     "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: teams delivery reuses existing psa deep-link resolution rather than building a second link system.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F214"
     ]
@@ -3426,7 +3426,7 @@
   {
     "id": "T429",
     "description": "Happy path: Teams notifications: recipient resolution can map an eligible PSA MSP user to a Teams user identity.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F215"
     ]
@@ -3434,7 +3434,7 @@
   {
     "id": "T430",
     "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: recipient resolution can map an eligible psa msp user to a teams user identity.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F215"
     ]
@@ -3442,7 +3442,7 @@
   {
     "id": "T431",
     "description": "Happy path: Teams notifications: delivery only targets users who have a valid Teams linkage/setup state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F216"
     ]
@@ -3450,7 +3450,7 @@
   {
     "id": "T432",
     "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: delivery only targets users who have a valid teams linkage/setup state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F216"
     ]
@@ -3458,7 +3458,7 @@
   {
     "id": "T433",
     "description": "Happy path: Teams notifications: assignment-related events can trigger personal activity-feed notifications.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F217"
     ]
@@ -3466,7 +3466,7 @@
   {
     "id": "T434",
     "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: assignment-related events can trigger personal activity-feed notifications.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F217"
     ]
@@ -3474,7 +3474,7 @@
   {
     "id": "T435",
     "description": "Happy path: Teams notifications: customer-reply events can trigger personal activity-feed notifications.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F218"
     ]
@@ -3482,7 +3482,7 @@
   {
     "id": "T436",
     "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: customer-reply events can trigger personal activity-feed notifications.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F218"
     ]
@@ -3490,7 +3490,7 @@
   {
     "id": "T437",
     "description": "Happy path: Teams notifications: approval-request events can trigger personal activity-feed notifications.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F219"
     ]
@@ -3498,7 +3498,7 @@
   {
     "id": "T438",
     "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: approval-request events can trigger personal activity-feed notifications.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F219"
     ]
@@ -3506,7 +3506,7 @@
   {
     "id": "T439",
     "description": "Happy path: Teams notifications: escalation events can trigger personal activity-feed notifications.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F220"
     ]
@@ -3514,7 +3514,7 @@
   {
     "id": "T440",
     "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: escalation events can trigger personal activity-feed notifications.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F220"
     ]
@@ -3522,7 +3522,7 @@
   {
     "id": "T441",
     "description": "Happy path: Teams notifications: SLA-risk events can trigger personal activity-feed notifications.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F221"
     ]
@@ -3530,7 +3530,7 @@
   {
     "id": "T442",
     "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: sla-risk events can trigger personal activity-feed notifications.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F221"
     ]
@@ -3538,7 +3538,7 @@
   {
     "id": "T443",
     "description": "Happy path: Teams notifications: payloads include enough title/body/entity context to identify the work item in Teams.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F222"
     ]
@@ -3546,7 +3546,7 @@
   {
     "id": "T444",
     "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: payloads include enough title/body/entity context to identify the work item in teams.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F222"
     ]
@@ -3554,7 +3554,7 @@
   {
     "id": "T445",
     "description": "Happy path: Teams notifications: payloads include deep links to the exact PSA record or workflow destination.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F223"
     ]
@@ -3562,7 +3562,7 @@
   {
     "id": "T446",
     "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: payloads include deep links to the exact psa record or workflow destination.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F223"
     ]
@@ -3570,7 +3570,7 @@
   {
     "id": "T447",
     "description": "Happy path: Teams notifications: category disablement at the tenant level suppresses Teams delivery for that category.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F224"
     ]
@@ -3578,7 +3578,7 @@
   {
     "id": "T448",
     "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: category disablement at the tenant level suppresses teams delivery for that category.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F224"
     ]
@@ -3586,7 +3586,7 @@
   {
     "id": "T449",
     "description": "Happy path: Teams notifications: missing user linkage suppresses Teams delivery without breaking the underlying PSA event.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F225"
     ]
@@ -3594,7 +3594,7 @@
   {
     "id": "T450",
     "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: missing user linkage suppresses teams delivery without breaking the underlying psa event.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F225"
     ]
@@ -3602,7 +3602,7 @@
   {
     "id": "T451",
     "description": "Happy path: Teams notifications: delivery state is captured in a reusable sent/delivered/failed model where available.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F226"
     ]
@@ -3610,7 +3610,7 @@
   {
     "id": "T452",
     "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: delivery state is captured in a reusable sent/delivered/failed model where available.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F226"
     ]
@@ -3618,7 +3618,7 @@
   {
     "id": "T453",
     "description": "Happy path: Teams notifications: clicking a notification opens the intended Teams tab or PSA web deep link destination.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F227"
     ]
@@ -3626,7 +3626,7 @@
   {
     "id": "T454",
     "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: clicking a notification opens the intended teams tab or psa web deep link destination.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F227"
     ]
@@ -3634,7 +3634,7 @@
   {
     "id": "T455",
     "description": "Happy path: Teams notifications: no queue-to-channel or board-to-channel mapping is required in v1.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F228"
     ]
@@ -3642,7 +3642,7 @@
   {
     "id": "T456",
     "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: no queue-to-channel or board-to-channel mapping is required in v1.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F228"
     ]
@@ -3650,7 +3650,7 @@
   {
     "id": "T457",
     "description": "Happy path: Teams notifications: Teams delivery remains personal-notification-only in v1.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F229"
     ]
@@ -3658,7 +3658,7 @@
   {
     "id": "T458",
     "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: teams delivery remains personal-notification-only in v1.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F229"
     ]
@@ -3666,7 +3666,7 @@
   {
     "id": "T459",
     "description": "Happy path: Teams notifications: the existing event bus/workflow infrastructure remains the notification trigger source.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F230"
     ]
@@ -3674,7 +3674,7 @@
   {
     "id": "T460",
     "description": "Guard: disabled categories, missing user linkage, and failed delivery prerequisites suppress or fail safely for teams notifications: the existing event bus/workflow infrastructure remains the notification trigger source.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F230"
     ]

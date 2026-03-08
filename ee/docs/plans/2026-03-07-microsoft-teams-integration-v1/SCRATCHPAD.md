@@ -266,6 +266,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Ticket message-to-update provenance is simplest when stored on the created `comments.metadata` payload, so the shared `TicketService.addComment(...)` contract now needs to accept optional metadata for both internal notes and customer-visible replies.
 - (2026-03-07) A generic `Continue in Teams tab` action can be attached to message-action task modules whenever `teams_integrations` already has `appId` plus `packageMetadata.baseUrl`; if those install artifacts are missing, the task flow should remain functional without the handoff button.
 - (2026-03-07) `createTicketFromMessage` and `updateFromMessage` task-module UIs can stay in `teamsMessageExtensionHandler.ts`, but their submit paths should route through dedicated registry actions (`create_ticket_from_message`, `update_from_message`) so message-driven workflows share the same idempotency, permission, and result-link plumbing as the rest of Teams.
+- (2026-03-07) The cleanest Teams notification slice is a second delivery channel hanging off `packages/notifications/src/realtime/internalNotificationBroadcaster.ts`, so existing internal notification producers and workflow-triggered notification rows do not need Teams-specific fanout logic.
+- (2026-03-07) Teams activity-feed delivery can reuse the existing `internal_notifications.link` PSA URL by converting it with `buildTeamsPersonalTabDeepLinkFromPsaUrl(...)`; no notification-specific destination mapping table is needed.
+- (2026-03-07) Category routing for Teams notifications is easiest to derive from the notification row itself: template names cover assignment/customer-reply/SLA, while approval requests can be recognized from approval-style PSA links.
+- (2026-03-07) Delivering personal Teams activity-feed notifications requires the Teams app manifest to request the `TeamsActivity.Send.User` application RSC permission in addition to the existing activity declaration.
 
 ## Progress Log
 
@@ -360,4 +364,11 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Verified Teams quick-action adaptive-card flows with:
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/quickActions/teamsQuickActionHandler.test.ts src/app/api/teams/quick-actions/route.test.ts`
   - `pnpm --dir server exec tsc -p tsconfig.json --noEmit --pretty false`
-- (2026-03-07) Next unchecked feature after this slice is `F211` (Teams notifications: a Teams delivery channel exists alongside existing PSA notification generation).
+- (2026-03-07) Verified Teams notification delivery channel, Graph payload mapping, and manifest permission handoff with:
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/internal-notifications/teamsNotificationDelivery.test.ts src/test/unit/internal-notifications/internalNotificationBroadcaster.test.ts ../packages/integrations/src/actions/integrations/teamsPackageActions.test.ts`
+  - `pnpm --dir packages/notifications typecheck`
+  - `pnpm --dir server exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-07) Next unchecked feature after this slice is `F231` (Permissions: only authorized tenant admins can manage Microsoft profiles and Teams setup).
+
+- (2026-03-07) Completed `F211` through `F230` by adding `packages/notifications/src/realtime/teamsNotificationDelivery.ts` and refactoring `packages/notifications/src/realtime/internalNotificationBroadcaster.ts` so every internal notification can attempt an independent Teams activity-feed delivery path alongside Redis in-app delivery, gated by active Teams setup, personal-notification capability/category settings, linked Microsoft accounts, and tenant-selected Teams profile credentials.
+- (2026-03-07) Completed `T421` through `T460` with `server/src/test/unit/internal-notifications/teamsNotificationDelivery.test.ts`, `server/src/test/unit/internal-notifications/internalNotificationBroadcaster.test.ts`, and updated `packages/integrations/src/actions/integrations/teamsPackageActions.test.ts`, covering category classification, Teams deep-link reuse, recipient linkage, sent/delivered/failed workflow events, safe suppression on disabled/missing prerequisites, channel independence from Redis delivery, and the required Teams manifest permission for activity-feed sends.

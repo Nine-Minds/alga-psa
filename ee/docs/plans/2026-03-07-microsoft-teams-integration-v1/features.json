@@ -2010,7 +2010,7 @@
   {
     "id": "F211",
     "description": "Teams notifications: a Teams delivery channel exists alongside existing PSA notification generation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements",
@@ -2020,7 +2020,7 @@
   {
     "id": "F212",
     "description": "Teams notifications: tenant Teams setup stores category preferences for supported personal notifications.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements",
@@ -2030,7 +2030,7 @@
   {
     "id": "F213",
     "description": "Teams notifications: Teams delivery reuses existing notification payload generation rather than introducing a separate trigger catalog.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements",
@@ -2040,7 +2040,7 @@
   {
     "id": "F214",
     "description": "Teams notifications: Teams delivery reuses existing PSA deep-link resolution rather than building a second link system.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements",
@@ -2050,7 +2050,7 @@
   {
     "id": "F215",
     "description": "Teams notifications: recipient resolution can map an eligible PSA MSP user to a Teams user identity.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements",
@@ -2060,7 +2060,7 @@
   {
     "id": "F216",
     "description": "Teams notifications: delivery only targets users who have a valid Teams linkage/setup state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements",
@@ -2070,7 +2070,7 @@
   {
     "id": "F217",
     "description": "Teams notifications: assignment-related events can trigger personal activity-feed notifications.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements",
@@ -2080,7 +2080,7 @@
   {
     "id": "F218",
     "description": "Teams notifications: customer-reply events can trigger personal activity-feed notifications.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements",
@@ -2090,7 +2090,7 @@
   {
     "id": "F219",
     "description": "Teams notifications: approval-request events can trigger personal activity-feed notifications.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements",
@@ -2100,7 +2100,7 @@
   {
     "id": "F220",
     "description": "Teams notifications: escalation events can trigger personal activity-feed notifications.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements",
@@ -2110,7 +2110,7 @@
   {
     "id": "F221",
     "description": "Teams notifications: SLA-risk events can trigger personal activity-feed notifications.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements",
@@ -2120,7 +2120,7 @@
   {
     "id": "F222",
     "description": "Teams notifications: payloads include enough title/body/entity context to identify the work item in Teams.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements",
@@ -2130,7 +2130,7 @@
   {
     "id": "F223",
     "description": "Teams notifications: payloads include deep links to the exact PSA record or workflow destination.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements",
@@ -2140,7 +2140,7 @@
   {
     "id": "F224",
     "description": "Teams notifications: category disablement at the tenant level suppresses Teams delivery for that category.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements",
@@ -2150,7 +2150,7 @@
   {
     "id": "F225",
     "description": "Teams notifications: missing user linkage suppresses Teams delivery without breaking the underlying PSA event.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements",
@@ -2160,7 +2160,7 @@
   {
     "id": "F226",
     "description": "Teams notifications: delivery state is captured in a reusable sent/delivered/failed model where available.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements",
@@ -2170,7 +2170,7 @@
   {
     "id": "F227",
     "description": "Teams notifications: clicking a notification opens the intended Teams tab or PSA web deep link destination.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements",
@@ -2180,7 +2180,7 @@
   {
     "id": "F228",
     "description": "Teams notifications: no queue-to-channel or board-to-channel mapping is required in v1.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements",
@@ -2190,7 +2190,7 @@
   {
     "id": "F229",
     "description": "Teams notifications: Teams delivery remains personal-notification-only in v1.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements",
@@ -2200,7 +2200,7 @@
   {
     "id": "F230",
     "description": "Teams notifications: the existing event bus/workflow infrastructure remains the notification trigger source.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements",

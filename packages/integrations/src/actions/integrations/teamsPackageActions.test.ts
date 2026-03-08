@@ -227,6 +227,16 @@ describe('Teams app package actions', () => {
     expect(result.package?.manifest.composeExtensions[0]?.commands[0]?.contexts).toEqual(['compose', 'commandBox']);
     expect(result.package?.manifest.composeExtensions[0]?.commands[1]?.contexts).toEqual(['message']);
     expect(result.package?.manifest.activities.activityTypes).toHaveLength(5);
+    expect(result.package?.manifest.authorization).toEqual({
+      permissions: {
+        resourceSpecific: [
+          {
+            type: 'Application',
+            name: 'TeamsActivity.Send.User',
+          },
+        ],
+      },
+    });
     expect(JSON.stringify(result.package?.manifest)).not.toContain('channel-routing');
     expect(result.package?.deepLinks.ticketTemplate).toContain(encodeURIComponent('https://tenant.example.com/msp/tickets/{ticketId}'));
     expect(result.package?.deepLinks.projectTaskTemplate).toContain(encodeURIComponent('https://tenant.example.com/msp/projects/{projectId}?taskId=%7BtaskId%7D'));
