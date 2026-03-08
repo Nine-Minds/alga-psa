@@ -114,7 +114,7 @@
   {
     "id": "F015",
     "description": "MSP page title: /msp/contacts/[id] — title: 'Contact Details' (generateMetadata)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3c"
     ]
