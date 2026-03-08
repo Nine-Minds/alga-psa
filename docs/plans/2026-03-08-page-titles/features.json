@@ -562,7 +562,7 @@
   {
     "id": "F071",
     "description": "MSP page title: /msp/share_document — title: 'Share Document'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
