@@ -298,7 +298,7 @@
   {
     "id": "T025",
     "description": "Verify EE Client Portal extension route exports generateMetadata with title 'Extension'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F115"
     ]
