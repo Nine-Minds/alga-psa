@@ -98,7 +98,7 @@
   {
     "id": "F013",
     "description": "MSP page title: /msp/clients/[id] — title: 'Client Details' (generateMetadata)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3c"
     ]

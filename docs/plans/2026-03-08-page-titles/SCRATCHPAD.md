@@ -60,3 +60,4 @@
 - (2026-03-08) F010: MSP page title: /msp/tickets — title: 'Tickets'
 - (2026-03-08) F011: MSP page title: /msp/tickets/[id] — title: 'Ticket Details' (generateMetadata)
 - (2026-03-08) F012: MSP page title: /msp/clients — title: 'Clients'
+- (2026-03-08) F013: MSP page title: /msp/clients/[id] — title: 'Client Details' (generateMetadata)
