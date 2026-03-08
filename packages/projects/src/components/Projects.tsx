@@ -38,6 +38,7 @@ import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-c
 import Drawer from '@alga-psa/ui/components/Drawer';
 import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
 import { ApplyTemplateDialog } from './project-templates/ApplyTemplateDialog';
+import { QuickAddContact } from '@alga-psa/clients/components';
 
 interface ProjectsProps {
   initialProjects: IProject[];
@@ -74,6 +75,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
   // New filter states
   const [filterClientId, setFilterClientId] = useState<string | null>(null);
   const [filterContactId, setFilterContactId] = useState<string | null>(null);
+  const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const [filterManagerId, setFilterManagerId] = useState<string | null>(null);
   const [filterDeadline, setFilterDeadline] = useState<DeadlineFilterValue | undefined>(undefined);
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
@@ -615,6 +617,26 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
             clientId={filterClientId || undefined}
             placeholder="Filter by contact"
             buttonWidth="fit"
+            onAddNew={() => setIsQuickAddContactOpen(true)}
+          />
+          <QuickAddContact
+            isOpen={isQuickAddContactOpen}
+            onClose={() => setIsQuickAddContactOpen(false)}
+            onContactAdded={(newContact) => {
+              setContacts((prevContacts) => {
+                const existingIndex = prevContacts.findIndex((contact) => contact.contact_name_id === newContact.contact_name_id);
+                if (existingIndex >= 0) {
+                  const nextContacts = [...prevContacts];
+                  nextContacts[existingIndex] = newContact;
+                  return nextContacts;
+                }
+                return [...prevContacts, newContact];
+              });
+              setFilterContactId(newContact.contact_name_id);
+              setIsQuickAddContactOpen(false);
+            }}
+            clients={clients}
+            selectedClientId={filterClientId || undefined}
           />
 
           {/* Project Manager filter */}

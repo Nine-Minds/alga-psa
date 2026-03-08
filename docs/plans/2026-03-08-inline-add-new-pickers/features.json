@@ -74,7 +74,7 @@
   {
     "id": "F010",
     "description": "Projects (list/filter) wires ContactPicker onAddNew to open QuickAddContact",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2"
     ]

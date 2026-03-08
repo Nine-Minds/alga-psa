@@ -129,3 +129,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `npx tsc -p packages/clients/tsconfig.json --noEmit`
 - 2026-03-08 F009: Wired `packages/projects/src/components/ProjectQuickAdd.tsx` to open `QuickAddContact` from the project contact picker once a client is selected, merge the created contact into local state, and auto-select it in the form.
 - Validation: `npx tsc -p packages/projects/tsconfig.json --noEmit`
+- 2026-03-08 F010: Wired `packages/projects/src/components/Projects.tsx` contact filter to open `QuickAddContact`, append the created contact to the cached filter data, and auto-select that contact in the active filter state.
+- Validation: `npx tsc -p packages/projects/tsconfig.json --noEmit`
