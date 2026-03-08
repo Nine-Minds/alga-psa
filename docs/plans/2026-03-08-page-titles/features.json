@@ -42,7 +42,7 @@
   {
     "id": "F006",
     "description": "MSP page title: /msp/dashboard — title: 'Dashboard'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
