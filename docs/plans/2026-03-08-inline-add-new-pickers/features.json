@@ -274,7 +274,7 @@
   {
     "id": "F035",
     "description": "TicketDetails wires CategoryPicker onAddNew to open QuickAddCategory with board context",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-8"
     ]
