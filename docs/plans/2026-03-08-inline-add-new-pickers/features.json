@@ -170,7 +170,7 @@
   {
     "id": "F022",
     "description": "QuickAddAsset wires ClientPicker onAddNew to open QuickAddClient and auto-selects new client",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4"
     ]

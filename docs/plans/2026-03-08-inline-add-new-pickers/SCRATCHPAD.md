@@ -154,3 +154,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `npx tsc -p packages/billing/tsconfig.json --noEmit`
 - 2026-03-08 F021: Wired `packages/billing/src/components/billing-dashboard/ManualInvoices.tsx` to keep a local `clientOptions` cache, expose `QuickAddClient` from the invoice client picker, merge created clients, and auto-select the new client for manual invoice creation.
 - Validation: `npx tsc -p packages/billing/tsconfig.json --noEmit`
+- 2026-03-08 F022: Wired `packages/assets/src/components/QuickAddAsset.tsx` client picker to open `QuickAddClient`, merge newly created clients into local state, and auto-select the client so asset creation can continue without leaving the modal.
+- Validation: `npx tsc -p packages/assets/tsconfig.json --noEmit`

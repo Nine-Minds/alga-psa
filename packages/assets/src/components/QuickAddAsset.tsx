@@ -11,6 +11,7 @@ import type { CreateAssetRequest, IClient } from '@alga-psa/types';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { getAllClientsForAssets } from '../actions/clientLookupActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { QuickAddClient } from '@alga-psa/clients/components';
 
 interface QuickAddAssetProps {
   clientId?: string;
@@ -74,6 +75,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
 
   const handleClose = () => {
     setOpen(false);
@@ -471,8 +473,26 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                     onFilterStateChange={setClientFilterState}
                     clientTypeFilter={clientTypeFilter}
                     onClientTypeFilterChange={setClientTypeFilter}
+                    onAddNew={() => setIsQuickAddClientOpen(true)}
                   />
                 </div>
+                <QuickAddClient
+                  open={isQuickAddClientOpen}
+                  onOpenChange={setIsQuickAddClientOpen}
+                  onClientAdded={(newClient) => {
+                    setClients((prevClients) => {
+                      const existingIndex = prevClients.findIndex((client) => client.client_id === newClient.client_id);
+                      if (existingIndex >= 0) {
+                        const nextClients = [...prevClients];
+                        nextClients[existingIndex] = newClient;
+                        return nextClients;
+                      }
+                      return [...prevClients, newClient];
+                    });
+                    setSelectedClientId(newClient.client_id);
+                    clearErrorIfSubmitted();
+                  }}
+                />
               </div>
             )}
 
