@@ -6,6 +6,14 @@ import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";
 import { featureFlags } from "@/lib/feature-flags/featureFlags";
 import { MspLayoutClient } from "./MspLayoutClient";
 
+
+export const metadata = {
+  title: {
+    template: '%s | Alga PSA',
+    default: 'Dashboard | Alga PSA',
+  },
+};
+
 export default async function MspLayout({
   children,
 }: Readonly<{

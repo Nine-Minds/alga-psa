@@ -10,6 +10,13 @@ import { getContactPortalPermissions } from '@alga-psa/auth/actions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
 
+
+export async function generateMetadata() {
+  return {
+    title: 'Contact Details',
+  };
+}
+
 interface ContactDetailPageProps {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;

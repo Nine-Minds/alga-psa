@@ -1,2 +1,5 @@
-export { default } from '@alga-psa/scheduling/components/schedule/SchedulePage';
+export const metadata = {
+  title: 'Schedule',
+};
 
+export { default } from '@alga-psa/scheduling/components/schedule/SchedulePage';

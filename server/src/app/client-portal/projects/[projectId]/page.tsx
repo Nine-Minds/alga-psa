@@ -4,6 +4,13 @@ import { ProjectDetailsContainer } from '@alga-psa/client-portal/components';
 import logger from '@alga-psa/core/logger';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
+
+export async function generateMetadata() {
+  return {
+    title: 'Project Details',
+  };
+}
+
 interface ProjectPageProps {
   params: Promise<{
     projectId: string;

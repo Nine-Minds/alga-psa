@@ -8,6 +8,13 @@ import AssociatedAssets from '@alga-psa/assets/components/AssociatedAssets';
 import { MspTicketDetailsContainerClient } from '@alga-psa/msp-composition/tickets';
 
 
+
+export async function generateMetadata() {
+  return {
+    title: 'Ticket Details',
+  };
+}
+
 interface TicketDetailsPageProps {
   params: Promise<{
     id: string;

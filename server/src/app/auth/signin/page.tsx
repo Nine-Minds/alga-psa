@@ -1,6 +1,11 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@alga-psa/auth';
 
+
+export const metadata = {
+  title: 'Sign In',
+};
+
 export default async function SignIn({
   searchParams,
 }: {

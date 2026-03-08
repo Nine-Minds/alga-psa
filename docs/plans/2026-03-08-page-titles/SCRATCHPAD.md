@@ -42,3 +42,10 @@
 ## Open Questions
 
 - Should EE pages (ee/server/src/app/msp/) also get title metadata? Likely yes for consistency.
+- (2026-03-08) Audit correction: `/msp/documents` exists on disk and needed explicit metadata despite the original scratch note.
+- (2026-03-08) Audit discovery: `/test-routing` had no title metadata and needed a public-page title entry.
+- (2026-03-08) EE builds use standalone `ee/server` app layouts, so matching root/MSP/Client Portal metadata templates were required there too.
+- (2026-03-08) Validation runbook: `npm --prefix server run test -- src/test/unit/app/pageTitles.metadata.test.ts` verifies title coverage from source.
+- (2026-03-08) Validation runbook: `NODE_OPTIONS='--max-old-space-size=8192' npm --prefix server run typecheck && NODE_OPTIONS='--max-old-space-size=8192' npm --prefix ee/server run typecheck` passes.
+- (2026-03-08) Build blocker: `npm run build` and `npm --prefix ee/server run build` fail on pre-existing missing-module issues in `@alga-psa/product-extension-actions`, `@alga-psa/storage/StorageService`, and `packages/workflows` exports.
+- (2026-03-08) F001: Root layout: change generateMetadata() title from static string to template object with `template: '%s | Alga PSA'` and `default: 'Alga PSA'`

@@ -2,6 +2,13 @@ import { redirect } from 'next/navigation';
 import { getClientPortalInvoicePaymentLink } from '@alga-psa/client-portal/actions/clientPaymentActions';
 import { PaymentRedirect } from '@alga-psa/client-portal/components';
 
+
+export async function generateMetadata() {
+  return {
+    title: 'Pay Invoice',
+  };
+}
+
 interface PayInvoicePageProps {
   params: {
     invoiceId: string;

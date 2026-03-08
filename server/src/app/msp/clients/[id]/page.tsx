@@ -6,6 +6,13 @@ import { notFound } from 'next/navigation';
 import { ClientDetails } from '@alga-psa/clients';
 import { getSurveyClientSummary } from '@alga-psa/surveys/actions/survey-actions/surveyDashboardActions';
 
+
+export async function generateMetadata() {
+  return {
+    title: 'Client Details',
+  };
+}
+
 const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
 

@@ -1,5 +1,9 @@
 import { redirect } from 'next/navigation';
 
+export const metadata = {
+  title: 'Settings',
+};
+
 export default function SettingsIndex({
   searchParams,
 }: {
@@ -13,4 +17,3 @@ export default function SettingsIndex({
   // Default to extensions for now (EE focuses on Extensions settings)
   redirect('/msp/settings/extensions');
 }
-

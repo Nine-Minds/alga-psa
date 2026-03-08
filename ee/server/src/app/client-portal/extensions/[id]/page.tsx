@@ -5,6 +5,12 @@ import DockerExtensionIframe from '@product/extensions/ee/DockerExtensionIframe'
 import { getInstallInfo } from '@ee/lib/actions/extensionDomainActions';
 import { buildExtUiSrc } from 'server/src/lib/extensions/assets/url.shared';
 
+export async function generateMetadata() {
+  return {
+    title: 'Extension',
+  };
+}
+
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 

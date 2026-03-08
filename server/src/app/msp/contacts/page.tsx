@@ -1,3 +1,7 @@
+export const metadata = {
+  title: 'Contacts',
+};
+
 // server/src/app/msp/contacts/page.tsx
 import React from 'react';
 import type { IClient } from '@alga-psa/types';

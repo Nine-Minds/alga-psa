@@ -1,5 +1,12 @@
 import WorkflowAutomationGate from '../../_components/WorkflowAutomationGate';
 
+
+export async function generateMetadata() {
+  return {
+    title: 'Edit Workflow',
+  };
+}
+
 interface WorkflowEditorPageProps {
   params: Promise<{
     workflowId: string;

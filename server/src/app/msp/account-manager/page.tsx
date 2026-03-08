@@ -1,3 +1,7 @@
+export const metadata = {
+  title: 'Account Manager',
+};
+
 // server/src/app/msp/account-manager/page.tsx
 
 import { AccountManagerDashboard } from '@alga-psa/clients';

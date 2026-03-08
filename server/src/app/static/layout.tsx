@@ -1,3 +1,9 @@
+export const metadata = {
+  title: {
+    default: 'Alga PSA',
+  },
+};
+
 export default function StaticLayout({
   children,
 }: Readonly<{

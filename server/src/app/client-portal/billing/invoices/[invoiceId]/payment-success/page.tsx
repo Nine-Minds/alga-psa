@@ -1,6 +1,13 @@
 import { Suspense } from 'react';
 import { PaymentSuccessContent } from '@alga-psa/client-portal/components';
 
+
+export async function generateMetadata() {
+  return {
+    title: 'Payment Success',
+  };
+}
+
 interface PaymentSuccessPageProps {
   params: {
     invoiceId: string;

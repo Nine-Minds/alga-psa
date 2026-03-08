@@ -1,3 +1,10 @@
+export const metadata = {
+  title: {
+    template: '%s | Alga PSA',
+    default: 'Alga PSA',
+  },
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
@@ -5,4 +12,3 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
-

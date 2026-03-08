@@ -1,6 +1,11 @@
 import React from 'react';
 import TechnicianDispatchDashboard from '@alga-psa/scheduling/components/technician-dispatch/TechnicianDispatchDashboard';
 
+
+export const metadata = {
+  title: 'Technician Dispatch',
+};
+
 export default function TechnicianDispatchPage() {
   return (
     <div className="h-screen w-full">

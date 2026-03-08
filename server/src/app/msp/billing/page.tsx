@@ -6,6 +6,11 @@ import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import type { IDocument } from '@alga-psa/types';
 
+
+export const metadata = {
+  title: 'Billing',
+};
+
 interface BillingPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }

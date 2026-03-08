@@ -8,6 +8,10 @@ import {
 } from '@alga-psa/auth/lib/mspRememberedEmail';
 import { UserSession } from '@alga-psa/db/models/UserSession';
 
+export const metadata = {
+  title: 'MSP Sign In',
+};
+
 export default async function MspSignInPage({
   searchParams,
 }: {

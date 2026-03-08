@@ -3,6 +3,11 @@ import { getSession, getSessionWithRevocationCheck } from '@alga-psa/auth';
 import { Card } from '@alga-psa/ui/components/Card';
 import CollabTestPageClient from './CollabTestPageClient';
 
+
+export const metadata = {
+  title: 'Collaboration Test',
+};
+
 export default async function CollabTestPage() {
   const session =
     (await getSessionWithRevocationCheck()) ??

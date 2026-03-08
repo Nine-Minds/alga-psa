@@ -2,6 +2,11 @@ import { getCurrentUser } from "@alga-psa/user-composition/actions";
 import { getTeams } from '@alga-psa/teams/actions';
 import TimeTrackingClient from '@alga-psa/scheduling/components/time-management/time-entry/TimeTrackingClient';
 
+
+export const metadata = {
+  title: 'Time Entry',
+};
+
 export default async function TimeTrackingPage() {
   const currentUser = await getCurrentUser();
   const teamsData = currentUser ? await getTeams() : [];

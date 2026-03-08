@@ -31,7 +31,10 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     metadataBase,
-    title: "MSP Application",
+    title: {
+      template: '%s | Alga PSA',
+      default: 'Alga PSA',
+    },
     keywords: "MSP, Managed Service Provider, IT Services, Network Management, Cloud Services",
     authors: [{ name: "Nine Minds" }],
     description: "Managed Service Provider Application",

@@ -4,6 +4,13 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { AssetDetailView } from '@alga-psa/assets/components/AssetDetailView';
 import { getSession } from '@alga-psa/auth';
 
+
+export async function generateMetadata() {
+  return {
+    title: 'Asset Details',
+  };
+}
+
 interface Props {
   params: Promise<{
     asset_id: string;

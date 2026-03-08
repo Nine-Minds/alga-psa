@@ -2,6 +2,11 @@ import SystemMonitoringWrapper from '@alga-psa/ui/components/system-monitoring/S
 import FeatureFlagPageWrapper from '@alga-psa/ui/components/feature-flags/FeatureFlagPageWrapper';
 import EmailLogsClient from './EmailLogsClient';
 
+
+export const metadata = {
+  title: 'Email Logs',
+};
+
 export const dynamic = 'force-dynamic';
 
 export default async function EmailLogsPage() {

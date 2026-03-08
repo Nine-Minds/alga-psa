@@ -2,631 +2,921 @@
   {
     "id": "F001",
     "description": "Root layout: change generateMetadata() title from static string to template object with `template: '%s | Alga PSA'` and `default: 'Alga PSA'`",
-    "implemented": false,
-    "prdRefs": ["Phase 1"]
+    "implemented": true,
+    "prdRefs": [
+      "Phase 1"
+    ]
   },
   {
     "id": "F002",
     "description": "MSP layout: add metadata export with `template: '%s | Alga PSA'` and `default: 'Dashboard | Alga PSA'`",
     "implemented": false,
-    "prdRefs": ["Phase 2"]
+    "prdRefs": [
+      "Phase 2"
+    ]
   },
   {
     "id": "F003",
     "description": "Client Portal layout: add metadata export with `template: '%s | Client Portal'` and `default: 'Dashboard | Client Portal'`",
     "implemented": false,
-    "prdRefs": ["Phase 2"]
+    "prdRefs": [
+      "Phase 2"
+    ]
   },
   {
     "id": "F004",
     "description": "Auth layout: add metadata export with `template: '%s | Alga PSA'` and `default: 'Sign In | Alga PSA'`",
     "implemented": false,
-    "prdRefs": ["Phase 2"]
+    "prdRefs": [
+      "Phase 2"
+    ]
   },
   {
     "id": "F005",
     "description": "Static layout: add metadata export with `default: 'Alga PSA'`",
     "implemented": false,
-    "prdRefs": ["Phase 2"]
+    "prdRefs": [
+      "Phase 2"
+    ]
   },
   {
     "id": "F006",
     "description": "MSP page title: /msp/dashboard — title: 'Dashboard'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F007",
     "description": "MSP page title: /msp/account — title: 'Account'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F008",
     "description": "MSP page title: /msp/account-manager — title: 'Account Manager'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F009",
     "description": "MSP page title: /msp/profile — title: 'Profile'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F010",
     "description": "MSP page title: /msp/tickets — title: 'Tickets'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F011",
     "description": "MSP page title: /msp/tickets/[id] — title: 'Ticket Details' (generateMetadata)",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F012",
     "description": "MSP page title: /msp/clients — title: 'Clients'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F013",
     "description": "MSP page title: /msp/clients/[id] — title: 'Client Details' (generateMetadata)",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F014",
     "description": "MSP page title: /msp/contacts — title: 'Contacts'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F015",
     "description": "MSP page title: /msp/contacts/[id] — title: 'Contact Details' (generateMetadata)",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F016",
     "description": "MSP page title: /msp/contacts/[id]/activity — title: 'Contact Activity' (generateMetadata)",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F017",
     "description": "MSP page title: /msp/projects — title: 'Projects'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F018",
     "description": "MSP page title: /msp/projects/[id] — title: 'Project Details' (generateMetadata)",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F019",
     "description": "MSP page title: /msp/projects/templates — title: 'Project Templates'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F020",
     "description": "MSP page title: /msp/projects/templates/create — title: 'Create Template'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F021",
     "description": "MSP page title: /msp/projects/templates/[templateId] — title: 'Template Details' (generateMetadata)",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F022",
     "description": "MSP page title: /msp/assets — title: 'Assets'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F023",
     "description": "MSP page title: /msp/assets/[asset_id] — title: 'Asset Details' (generateMetadata)",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F024",
     "description": "MSP page title: /msp/assets/[asset_id]/edit — verify existing metadata 'Edit Asset' is compatible with template",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F025",
     "description": "MSP page title: /msp/assets/automation — title: 'Asset Automation'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F026",
     "description": "MSP page title: /msp/assets/imports — title: 'Asset Imports'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F027",
     "description": "MSP page title: /msp/assets/integrations — title: 'Asset Integrations'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F028",
     "description": "MSP page title: /msp/assets/maintenance — title: 'Asset Maintenance'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F029",
     "description": "MSP page title: /msp/assets/policies — title: 'Asset Policies'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F030",
     "description": "MSP page title: /msp/billing — title: 'Billing'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F031",
     "description": "MSP page title: /msp/billing/credits — title: 'Credits'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F032",
     "description": "MSP page title: /msp/time-entry — title: 'Time Entry'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F033",
     "description": "MSP page title: /msp/time-entry/timesheet/[id] — title: 'Timesheet' (generateMetadata)",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F034",
     "description": "MSP page title: /msp/time-sheet-approvals — title: 'Timesheet Approvals'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F035",
     "description": "MSP page title: /msp/chat — title: 'Chat'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F036",
     "description": "MSP page title: /msp/email-logs — title: 'Email Logs'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F037",
     "description": "MSP page title: /msp/schedule — title: 'Schedule'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F038",
     "description": "MSP page title: /msp/jobs — title: 'Jobs'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F039",
     "description": "MSP page title: /msp/technician-dispatch — title: 'Technician Dispatch'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F040",
     "description": "MSP page title: /msp/surveys — title: 'Surveys'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F041",
     "description": "MSP page title: /msp/surveys/dashboard — title: 'Survey Dashboard'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F042",
     "description": "MSP page title: /msp/surveys/analytics — title: 'Survey Analytics'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F043",
     "description": "MSP page title: /msp/surveys/responses — title: 'Survey Responses'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F044",
     "description": "MSP page title: /msp/surveys/responses/[id] — title: 'Response Details' (generateMetadata)",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F045",
     "description": "MSP page title: /msp/surveys/settings — title: 'Survey Settings'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F046",
     "description": "MSP page title: /msp/workflow-editor — title: 'Workflow Editor'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F047",
     "description": "MSP page title: /msp/workflow-editor/new — title: 'New Workflow'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F048",
     "description": "MSP page title: /msp/workflow-editor/[workflowId] — title: 'Edit Workflow' (generateMetadata)",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F049",
     "description": "MSP page title: /msp/workflow-control — title: 'Workflow Control'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F050",
     "description": "MSP page title: /msp/workflows — title: 'Workflows'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F051",
     "description": "MSP page title: /msp/workflows/[executionId] — title: 'Workflow Execution' (generateMetadata)",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F052",
     "description": "MSP page title: /msp/workflows/runs/[runId] — title: 'Workflow Run' (generateMetadata)",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F053",
     "description": "MSP page title: /msp/automation-hub — title: 'Automation Hub'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F054",
     "description": "MSP page title: /msp/settings — title: 'Settings'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F055",
     "description": "MSP page title: /msp/settings/extensions — title: 'Extension Settings'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F056",
     "description": "MSP page title: /msp/settings/extensions/install — title: 'Install Extension'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F057",
     "description": "MSP page title: /msp/settings/extensions/[id] — title: 'Extension Settings' (generateMetadata)",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F058",
     "description": "MSP page title: /msp/settings/extensions/[id]/settings — title: 'Extension Configuration' (generateMetadata)",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F059",
     "description": "MSP page title: /msp/settings/integrations/qbo/callback — title: 'QuickBooks Integration'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F060",
     "description": "MSP page title: /msp/settings/notifications — title: 'Notification Settings'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F061",
     "description": "MSP page title: /msp/settings/sla — title: 'SLA Settings'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F062",
     "description": "MSP page title: /msp/security-settings — title: 'Security Settings'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F063",
     "description": "MSP page title: /msp/extensions — title: 'Extensions'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F064",
     "description": "MSP page title: /msp/extensions/[id] — verify existing re-exported metadata from @product/extensions/entry is compatible",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F065",
     "description": "MSP page title: /msp/extensions/[id]/debug — title: 'Extension Debug' (generateMetadata)",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F066",
     "description": "MSP page title: /msp/licenses/purchase — title: 'Purchase Licenses'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F067",
     "description": "MSP page title: /msp/licenses/purchase/success — title: 'Purchase Success'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F068",
     "description": "MSP page title: /msp/reports — title: 'Reports'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F069",
     "description": "MSP page title: /msp/user-activities — title: 'User Activities'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F070",
     "description": "MSP page title: /msp/onboarding — title: 'Onboarding'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F071",
     "description": "MSP page title: /msp/share_document — title: 'Share Document'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F072",
     "description": "MSP page title: /msp/test — title: 'Test'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F073",
     "description": "MSP page title: /msp/test/ui-kit — title: 'UI Kit'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F074",
     "description": "MSP page title: /msp/test/collab — title: 'Collaboration Test'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F075",
     "description": "MSP page title: /msp/test/onboarding — title: 'Onboarding Test'",
     "implemented": false,
-    "prdRefs": ["Phase 3a"]
+    "prdRefs": [
+      "Phase 3a"
+    ]
   },
   {
     "id": "F076",
     "description": "Client Portal page title: /client-portal/dashboard — title: 'Dashboard'",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F077",
     "description": "Client Portal page title: /client-portal/account — title: 'Account'",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F078",
     "description": "Client Portal page title: /client-portal/profile — title: 'Profile'",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F079",
     "description": "Client Portal page title: /client-portal/appointments — title: 'Appointments'",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F080",
     "description": "Client Portal page title: /client-portal/appointments/[appointmentRequestId] — title: 'Appointment Details' (generateMetadata)",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F081",
     "description": "Client Portal page title: /client-portal/billing — title: 'Billing'",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F082",
     "description": "Client Portal page title: /client-portal/billing/invoices/[invoiceId]/pay — title: 'Pay Invoice' (generateMetadata)",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F083",
     "description": "Client Portal page title: /client-portal/billing/invoices/[invoiceId]/payment-success — title: 'Payment Success' (generateMetadata)",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F084",
     "description": "Client Portal page title: /client-portal/client-settings — verify existing 'Company Settings' metadata in layout.tsx is compatible",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F085",
     "description": "Client Portal page title: /client-portal/tickets — title: 'Tickets'",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F086",
     "description": "Client Portal page title: /client-portal/tickets/[ticketId] — title: 'Ticket Details' (generateMetadata)",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F087",
     "description": "Client Portal page title: /client-portal/projects — title: 'Projects'",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F088",
     "description": "Client Portal page title: /client-portal/projects/[projectId] — title: 'Project Details' (generateMetadata)",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F089",
     "description": "Client Portal page title: /client-portal/extensions/[id] — verify existing re-exported metadata is compatible",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
   },
   {
     "id": "F090",
     "description": "Auth page title: /auth/signin — title: 'Sign In'",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F091",
     "description": "Auth page title: /auth/register — title: 'Register'",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F092",
     "description": "Auth page title: /auth/verify — verify existing 'Verify Email' metadata in layout.tsx is compatible",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F093",
     "description": "Auth page title: /auth/verify-email — title: 'Verify Email'",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F094",
     "description": "Auth page title: /auth/check-email — title: 'Check Email'",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F095",
     "description": "Auth page title: /auth/portal/setup — title: 'Portal Setup'",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F096",
     "description": "Auth page title: /auth/msp/signin — title: 'MSP Sign In'",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F097",
     "description": "Auth page title: /auth/msp/forgot-password — title: 'Forgot Password'",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F098",
     "description": "Auth page title: /auth/client-portal/signin — title: 'Client Portal Sign In'",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F099",
     "description": "Auth page title: /auth/client-portal/forgot-password — title: 'Forgot Password'",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F100",
     "description": "Auth page title: /auth/client-portal/handoff — title: 'Signing In'",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F101",
     "description": "Auth page title: /auth/password-reset/confirmation — title: 'Password Reset'",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F102",
     "description": "Auth page title: /auth/password-reset/set-new-password — title: 'Set New Password'",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F103",
     "description": "Static page title: /static/master_terms — title: 'Master Terms'",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F104",
     "description": "Static page title: /static/privacy_policy — title: 'Privacy Policy'",
     "implemented": false,
-    "prdRefs": ["Phase 3b"]
+    "prdRefs": [
+      "Phase 3b"
+    ]
   },
   {
     "id": "F105",
     "description": "Public page title: /surveys/respond/[token] — verify existing generateMetadata() is compatible with root template",
     "implemented": false,
-    "prdRefs": ["Phase 3c"]
+    "prdRefs": [
+      "Phase 3c"
+    ]
+  },
+  {
+    "id": "F106",
+    "description": "MSP page title: /msp/documents — title: 'Documents'",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F107",
+    "description": "Public page title: /test-routing — title: 'Test Routing'",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F108",
+    "description": "EE root layout: add metadata title template `'%s | Alga PSA'` and default `'Alga PSA'`",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F109",
+    "description": "EE MSP layout: add metadata template `'%s | Alga PSA'` and default `'Dashboard | Alga PSA'`",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F110",
+    "description": "EE Client Portal layout: add metadata template `'%s | Client Portal'` and default `'Dashboard | Client Portal'`",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F111",
+    "description": "EE MSP page title: /msp/chat — title: 'Chat'",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F112",
+    "description": "EE MSP page title: /msp/licenses/purchase — title: 'Purchase Licenses'",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F113",
+    "description": "EE MSP page title: /msp/licenses/purchase/success — title: 'Purchase Success'",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F114",
+    "description": "EE MSP page title: /msp/settings — title: 'Settings'",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F115",
+    "description": "EE Client Portal page title: /client-portal/extensions/[id] — title: 'Extension' (generateMetadata)",
+    "implemented": false,
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
   }
 ]

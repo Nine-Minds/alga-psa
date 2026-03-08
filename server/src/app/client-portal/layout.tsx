@@ -4,6 +4,14 @@ import { ClientPortalLayoutClient } from "./ClientPortalLayoutClient";
 import { getTenantBrandingByTenantId } from "@alga-psa/tenancy/actions";
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";
 
+
+export const metadata = {
+  title: {
+    template: '%s | Client Portal',
+    default: 'Dashboard | Client Portal',
+  },
+};
+
 export default async function Layout({
   children,
 }: Readonly<{

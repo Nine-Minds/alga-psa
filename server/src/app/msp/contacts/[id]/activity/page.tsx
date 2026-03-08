@@ -1,3 +1,9 @@
+export async function generateMetadata() {
+  return {
+    title: 'Contact Activity',
+  };
+}
+
 // server/src/app/msp/contacts/[id]/activity/page.tsx
 import { InteractionsFeed } from '@alga-psa/clients';
 import { getInteractionsForEntity } from '@alga-psa/clients/actions';

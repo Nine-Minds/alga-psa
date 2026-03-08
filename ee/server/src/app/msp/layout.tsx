@@ -4,6 +4,13 @@ import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";
 import { featureFlags } from "server/src/lib/feature-flags/featureFlags";
 import { MspLayoutClient } from "./MspLayoutClient";
 
+export const metadata = {
+  title: {
+    template: '%s | Alga PSA',
+    default: 'Dashboard | Alga PSA',
+  },
+};
+
 /**
  * MSP Layout for Enterprise Edition
  * 

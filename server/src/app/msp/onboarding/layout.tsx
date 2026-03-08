@@ -1,5 +1,10 @@
 import { Toaster } from 'react-hot-toast';
 
+
+export const metadata = {
+  title: 'Onboarding',
+};
+
 export default function OnboardingLayout({
   children,
 }: {

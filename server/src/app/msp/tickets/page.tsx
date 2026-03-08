@@ -5,6 +5,11 @@ import { getTeams } from '@alga-psa/teams/actions';
 import type { ITicketListFilters } from '@alga-psa/types';
 import { MspTicketsPageClient } from '@alga-psa/msp-composition/tickets';
 
+
+export const metadata = {
+  title: 'Tickets',
+};
+
 interface TicketsPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }

@@ -9,6 +9,13 @@ import WorkflowEventTimeline from '@alga-psa/workflows/components/WorkflowEventT
 import WorkflowActionsList from '@alga-psa/workflows/components/WorkflowActionsList';
 import WorkflowControls from '@alga-psa/workflows/components/WorkflowControls';
 
+
+export async function generateMetadata() {
+  return {
+    title: 'Workflow Execution',
+  };
+}
+
 export const dynamic = 'force-dynamic';
 
 interface WorkflowDetailPageProps {

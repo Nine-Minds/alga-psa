@@ -5,6 +5,11 @@ import type { AssetListResponse } from '@alga-psa/types';
 import { MspAssetDashboardClient } from '@alga-psa/msp-composition/assets';
 import { getSession } from '@alga-psa/auth';
 
+
+export const metadata = {
+  title: 'Assets',
+};
+
 export default async function AssetsPage() {
   const session = await getSession();
   if (!session?.user) {

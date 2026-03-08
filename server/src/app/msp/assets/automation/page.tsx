@@ -1,5 +1,10 @@
 import { FeaturePlaceholder } from '@alga-psa/ui/components/feature-flags/FeaturePlaceholder';
 
+
+export const metadata = {
+  title: 'Asset Automation',
+};
+
 export default function AssetAutomationPage() {
   return (
     <div className="h-full w-full flex items-center justify-center bg-white">

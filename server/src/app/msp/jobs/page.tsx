@@ -3,6 +3,11 @@ import { JobMetricsDisplay, RecentJobsDataTable } from '@alga-psa/jobs/component
 import SystemMonitoringWrapper from '@alga-psa/ui/components/system-monitoring/SystemMonitoringWrapper';
 import { Card } from '@alga-psa/ui/components/Card';
 
+
+export const metadata = {
+  title: 'Jobs',
+};
+
 export const dynamic = 'force-dynamic';
 
 export default async function JobMonitorPage() {

@@ -3,6 +3,11 @@ import { getAllClientsForProjects, getProjects } from '@alga-psa/projects/action
 import type { IClient, IProject } from '@alga-psa/types';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
+
+export const metadata = {
+  title: 'Projects',
+};
+
 export default async function ProjectsPage() {
   const [projectsResult, clientsData] = await Promise.all([
     getProjects(),

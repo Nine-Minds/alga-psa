@@ -6,6 +6,11 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Users } from 'lucide-react';
 import { getSession } from '@alga-psa/auth';
 
+
+export const metadata = {
+  title: 'Timesheet Approvals',
+};
+
 export default async function TimeSheetApprovalsPage() {
   const session = await getSession();
   console.log('session', session);
