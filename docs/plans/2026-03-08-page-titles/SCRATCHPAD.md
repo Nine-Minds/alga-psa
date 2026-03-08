@@ -123,3 +123,4 @@
 - (2026-03-08) F073: MSP page title: /msp/test/ui-kit — title: 'UI Kit'
 - (2026-03-08) F074: MSP page title: /msp/test/collab — title: 'Collaboration Test'
 - (2026-03-08) F075: MSP page title: /msp/test/onboarding — title: 'Onboarding Test'
+- (2026-03-08) F076: Client Portal page title: /client-portal/dashboard — title: 'Dashboard'

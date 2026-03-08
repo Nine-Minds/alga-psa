@@ -602,7 +602,7 @@
   {
     "id": "F076",
     "description": "Client Portal page title: /client-portal/dashboard — title: 'Dashboard'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3b"
     ]
