@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import { ContactDetails } from '@alga-psa/clients';
 import type { IDocument } from '@alga-psa/types';
@@ -10,14 +11,18 @@ import { getContactPortalPermissions } from '@alga-psa/auth/actions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import type { Metadata } from 'next';
 
+const getCachedContact = cache((id: string) => getContactByContactNameId(id));
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   try {
     const { id } = await params;
-    const contact = await getContactByContactNameId(id);
+    const contact = await getCachedContact(id);
     if (contact) {
       return { title: contact.full_name };
     }
-  } catch {}
+  } catch (error) {
+    console.error('[generateMetadata] Failed to fetch contact title:', error);
+  }
   return { title: 'Contact Details' };
 }
 
@@ -46,8 +51,8 @@ const ContactDetailPage = async ({ params, searchParams }: ContactDetailPageProp
       );
     }
 
-    // Fetch contact data
-    const contact = await getContactByContactNameId(id);
+    // Fetch contact data (uses React.cache — deduped with generateMetadata)
+    const contact = await getCachedContact(id);
     if (!contact) {
       return notFound();
     }

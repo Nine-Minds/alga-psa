@@ -1,9 +1,12 @@
+import { cache } from 'react';
 import { getAssetDetailBundle } from '@alga-psa/assets/actions/assetActions';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { AssetDetailView } from '@alga-psa/assets/components/AssetDetailView';
 import { getSession } from '@alga-psa/auth';
 import type { Metadata } from 'next';
+
+const getCachedAssetBundle = cache((id: string) => getAssetDetailBundle(id));
 
 interface Props {
   params: Promise<{
@@ -14,11 +17,13 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
     const { asset_id } = await params;
-    const bundle = await getAssetDetailBundle(asset_id);
+    const bundle = await getCachedAssetBundle(asset_id);
     if (bundle.asset?.name) {
       return { title: bundle.asset.name };
     }
-  } catch {}
+  } catch (error) {
+    console.error('[generateMetadata] Failed to fetch asset title:', error);
+  }
   return { title: 'Asset Details' };
 }
 
@@ -38,7 +43,7 @@ export default async function AssetPage({ params }: Props) {
   }
 
   try {
-    const bundle = await getAssetDetailBundle(resolvedParams.asset_id);
+    const bundle = await getCachedAssetBundle(resolvedParams.asset_id);
     if (!bundle.asset) {
       return <div>Asset not found</div>;
     }

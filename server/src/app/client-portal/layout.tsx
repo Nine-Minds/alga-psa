@@ -5,6 +5,8 @@ import { getTenantBrandingByTenantId } from "@alga-psa/tenancy/actions";
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";
 import type { Metadata } from 'next';
 
+// This template overrides the root layout's template for all /client-portal/* pages.
+// The default includes the suffix because defaults bypass their own template.
 export const metadata: Metadata = {
   title: {
     template: '%s | Client Portal',

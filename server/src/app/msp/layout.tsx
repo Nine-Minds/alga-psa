@@ -7,6 +7,9 @@ import { featureFlags } from "@/lib/feature-flags/featureFlags";
 import { MspLayoutClient } from "./MspLayoutClient";
 import type { Metadata } from 'next';
 
+// This template overrides the root layout's template for all /msp/* pages.
+// The default includes the suffix because defaults bypass their own template
+// (i.e. 'Dashboard | Alga PSA' is rendered literally, not wrapped by the template).
 export const metadata: Metadata = {
   title: {
     template: '%s | Alga PSA',

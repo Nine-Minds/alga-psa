@@ -1,9 +1,12 @@
 import React from 'react';
+import { cache } from 'react';
 import { getClientProjectDetails } from '@alga-psa/client-portal/actions';
 import { ProjectDetailsContainer } from '@alga-psa/client-portal/components';
 import logger from '@alga-psa/core/logger';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import type { Metadata } from 'next';
+
+const getCachedProject = cache((id: string) => getClientProjectDetails(id));
 
 interface ProjectPageProps {
   params: Promise<{
@@ -14,11 +17,13 @@ interface ProjectPageProps {
 export async function generateMetadata({ params }: ProjectPageProps): Promise<Metadata> {
   try {
     const { projectId } = await params;
-    const project = await getClientProjectDetails(projectId);
+    const project = await getCachedProject(projectId);
     if (project) {
       return { title: project.project_name };
     }
-  } catch {}
+  } catch (error) {
+    console.error('[generateMetadata] Failed to fetch project title:', error);
+  }
   return { title: 'Project Details' };
 }
 
@@ -27,8 +32,8 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   const { projectId } = resolvedParams;
 
   try {
-    // Fetch project details server-side
-    const project = await getClientProjectDetails(projectId);
+    // Fetch project details server-side (uses React.cache — deduped with generateMetadata)
+    const project = await getCachedProject(projectId);
 
     if (!project) {
       return (

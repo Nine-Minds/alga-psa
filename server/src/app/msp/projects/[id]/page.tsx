@@ -8,7 +8,9 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     if (project && 'project_name' in project) {
       return { title: project.project_name };
     }
-  } catch {}
+  } catch (error) {
+    console.error('[generateMetadata] Failed to fetch project title:', error);
+  }
   return { title: 'Project Details' };
 }
 
