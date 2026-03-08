@@ -154,7 +154,7 @@
   {
     "id": "T020",
     "description": "Clicking ClientPicker '+ Add new client' calls onAddNew and closes dropdown",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]

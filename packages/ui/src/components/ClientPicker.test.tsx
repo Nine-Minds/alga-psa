@@ -87,4 +87,17 @@ describe('ClientPicker', () => {
 
     expect(screen.queryByRole('button', { name: /\+ add new client/i })).toBeNull();
   });
+
+  it('T020: clicking add button calls onAddNew and closes the dropdown', () => {
+    const onAddNew = vi.fn();
+    renderPicker({ onAddNew });
+
+    openPicker();
+    expect(screen.getByRole('button', { name: /\+ add new client/i })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /\+ add new client/i }));
+
+    expect(onAddNew).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: /\+ add new client/i })).toBeNull();
+  });
 });
