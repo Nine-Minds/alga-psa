@@ -85,7 +85,7 @@ describe('route title metadata coverage', () => {
 
   it('T005: Static layout exports the Alga PSA default title', () => {
     const content = read('server/src/app/static/layout.tsx');
-    expect(content).toContain("default: 'Alga PSA'");
+    expect(content).toContain("title: 'Alga PSA'");
   });
 
   it('T006: static MSP routes export the expected titles', () => {
