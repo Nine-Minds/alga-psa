@@ -1,0 +1,44 @@
+# Scratchpad — Dynamic Browser Tab Titles
+
+- Plan slug: `page-titles`
+- Created: `2026-03-08`
+
+## Decisions
+
+- (2026-03-08) Use Next.js metadata template pattern — zero runtime cost, built-in support.
+- (2026-03-08) Client Portal gets `| Client Portal` suffix to distinguish from MSP tabs.
+- (2026-03-08) Phase 4 (entity name fetching) deferred — keep initial scope to static titles + route params.
+- (2026-03-08) Dynamic pages use generic titles like "Ticket Details" rather than fetching entity names.
+
+## Discoveries / Constraints
+
+- (2026-03-08) Root layout uses `generateMetadata()` (async) — must keep title.template inside the function return, not switch to static `metadata` export.
+- (2026-03-08) 5 files already have metadata exports:
+  - `server/src/app/auth/verify/layout.tsx` — `title: 'Verify Email'` (string format, compatible)
+  - `server/src/app/client-portal/client-settings/layout.tsx` — `title: 'Company Settings'` (string format, compatible)
+  - `server/src/app/msp/assets/[asset_id]/edit/page.tsx` — `title: 'Edit Asset'` (string format, compatible)
+  - `server/src/app/msp/extensions/[id]/page.tsx` — re-exports from `@product/extensions/entry` (verify)
+  - `server/src/app/surveys/respond/[token]/page.tsx` — uses `generateMetadata()` with translation
+- (2026-03-08) EE directory has 3 additional extension pages with metadata in `ee/server/src/app/msp/`
+- (2026-03-08) EE directory has 3 MSP pages without metadata: chat, licenses/purchase, licenses/purchase/success
+- (2026-03-08) Client portal `extensions/[id]/page.tsx` also re-exports from `@product/extensions/entry`
+- (2026-03-08) Pages listed in original plan but NOT found on disk: `/msp/knowledge-base`, `/msp/documents`, `/client-portal/knowledge-base`, `/client-portal/documents`, `/share/[token]`. Skip these.
+- (2026-03-08) MSP layout, Client Portal layout, Auth layout, Static layout are all server components — safe to add metadata exports.
+
+## Commands / Runbooks
+
+- Validate plan: `python scripts/validate_plan.py docs/plans/2026-03-08-page-titles`
+
+## Links / References
+
+- Original plan: `.ai/page-title-plan.md`
+- Root layout: `server/src/app/layout.tsx` (line 24: `generateMetadata()`)
+- MSP layout: `server/src/app/msp/layout.tsx`
+- Client Portal layout: `server/src/app/client-portal/layout.tsx`
+- Auth layout: `server/src/app/auth/layout.tsx`
+- Static layout: `server/src/app/static/layout.tsx`
+- Next.js metadata template docs: https://nextjs.org/docs/app/building-your-application/optimizing/metadata#title
+
+## Open Questions
+
+- Should EE pages (ee/server/src/app/msp/) also get title metadata? Likely yes for consistency.
