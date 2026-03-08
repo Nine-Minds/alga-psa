@@ -238,3 +238,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddCategory.test.tsx -t T032`
 - 2026-03-08 T033: Extended `QuickAddCategory.test.tsx` to verify top-level category creation is blocked with `Board is required for top-level categories` when no board is selected.
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddCategory.test.tsx -t T033`
+- 2026-03-08 T034: Extended `QuickAddCategory.test.tsx` to verify that omitting the `boards` prop triggers an internal `getAllBoards()` fetch and populates the board selector from the fetched data.
+- Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddCategory.test.tsx -t T034`

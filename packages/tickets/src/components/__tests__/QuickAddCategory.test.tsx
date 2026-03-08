@@ -171,4 +171,11 @@ describe('QuickAddCategory', () => {
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Board is required for top-level categories'));
     expect(createCategoryMock).not.toHaveBeenCalled();
   });
+
+  it('T034: fetches boards internally when boards prop is not provided', async () => {
+    renderDialog({ boards: undefined });
+
+    await waitFor(() => expect(getAllBoardsMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByRole('option', { name: 'Support' })).toBeInTheDocument());
+  });
 });
