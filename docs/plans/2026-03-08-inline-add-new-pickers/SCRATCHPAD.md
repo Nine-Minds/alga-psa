@@ -152,3 +152,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `npx tsc -p packages/projects/tsconfig.json --noEmit`
 - 2026-03-08 F020: Wired `packages/billing/src/components/billing-dashboard/contracts/wizard-steps/ContractBasicsStep.tsx` to open `QuickAddClient` from the contract client picker, merge created clients into the billing client cache, and immediately update wizard state (including default currency) to the new client.
 - Validation: `npx tsc -p packages/billing/tsconfig.json --noEmit`
+- 2026-03-08 F021: Wired `packages/billing/src/components/billing-dashboard/ManualInvoices.tsx` to keep a local `clientOptions` cache, expose `QuickAddClient` from the invoice client picker, merge created clients, and auto-select the new client for manual invoice creation.
+- Validation: `npx tsc -p packages/billing/tsconfig.json --noEmit`

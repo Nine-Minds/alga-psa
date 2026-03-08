@@ -21,6 +21,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { PlusIcon, MinusCircleIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { formatCurrency } from '@alga-psa/core';
+import { QuickAddClient } from '@alga-psa/clients/components';
 
 // Use a constant for environment check since process.env is not available
 const IS_DEVELOPMENT = typeof window !== 'undefined' &&
@@ -137,6 +138,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   onGenerateSuccess,
   invoice, // This is the initial invoice prop
 }) => {
+  const [clientOptions, setClientOptions] = useState<IClient[]>(clients);
   const [selectedClient, setSelectedClient] = useState<string | null>(
     invoice?.client_id || null
   );
@@ -191,6 +193,11 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const [loading, setLoading] = useState(false);
   const [isPrepayment, setIsPrepayment] = useState(false);
   const [expirationDate, setExpirationDate] = useState<string>('');
+  const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
+
+  useEffect(() => {
+    setClientOptions(clients);
+  }, [clients]);
 
   // Effect to fetch items when the invoice prop initially changes
   useEffect(() => {
@@ -589,7 +596,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   console.log('[Render] Rendering ManualInvoicesContent. currentInvoiceData items:', currentInvoiceData?.invoice_charges?.length);
 
   // Get currency code from invoice data, selected client, or default to USD
-  const selectedClientData = clients.find(c => c.client_id === (currentInvoiceData?.client_id || selectedClient));
+  const selectedClientData = clientOptions.find(c => c.client_id === (currentInvoiceData?.client_id || selectedClient));
   const currencyCode = currentInvoiceData?.currencyCode || selectedClientData?.default_currency_code || 'USD';
 
   const serviceOptions: ServiceOption[] = services
@@ -659,7 +666,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               <div className="mb-6">
                 <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Client</label>
                 <div className="text-[rgb(var(--color-text-900))]">
-                  {clients.find(c => c.client_id === currentInvoiceData.client_id)?.client_name || 'Unknown Client'}
+                  {clientOptions.find(c => c.client_id === currentInvoiceData.client_id)?.client_name || 'Unknown Client'}
                 </div>
               </div>
             )}
@@ -690,13 +697,30 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                   <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Client</label>
                   <ClientPicker
                     id='client-picker'
-                    clients={clients}
+                    clients={clientOptions}
                     selectedClientId={selectedClient}
                     onSelect={setSelectedClient}
                     filterState={filterState}
                     onFilterStateChange={setFilterState}
                     clientTypeFilter={clientTypeFilter}
                     onClientTypeFilterChange={setClientTypeFilter}
+                    onAddNew={() => setIsQuickAddClientOpen(true)}
+                  />
+                  <QuickAddClient
+                    open={isQuickAddClientOpen}
+                    onOpenChange={setIsQuickAddClientOpen}
+                    onClientAdded={(newClient) => {
+                      setClientOptions((prevClients) => {
+                        const existingIndex = prevClients.findIndex((client) => client.client_id === newClient.client_id);
+                        if (existingIndex >= 0) {
+                          const nextClients = [...prevClients];
+                          nextClients[existingIndex] = newClient;
+                          return nextClients;
+                        }
+                        return [...prevClients, newClient];
+                      });
+                      setSelectedClient(newClient.client_id);
+                    }}
                   />
                 </div>
               )}
