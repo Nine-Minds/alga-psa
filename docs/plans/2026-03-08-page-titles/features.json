@@ -490,7 +490,7 @@
   {
     "id": "F062",
     "description": "MSP page title: /msp/security-settings — title: 'Security Settings'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
