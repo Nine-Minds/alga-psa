@@ -153,3 +153,4 @@
 - (2026-03-08) F103: Static page title: /static/master_terms — title: 'Master Terms'
 - (2026-03-08) F104: Static page title: /static/privacy_policy — title: 'Privacy Policy'
 - (2026-03-08) F105: Public page title: /surveys/respond/[token] — verify existing generateMetadata() is compatible with root template
+- (2026-03-08) F106: MSP page title: /msp/documents — title: 'Documents'

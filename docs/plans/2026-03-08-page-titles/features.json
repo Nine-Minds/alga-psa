@@ -842,7 +842,7 @@
   {
     "id": "F106",
     "description": "MSP page title: /msp/documents — title: 'Documents'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria"
     ]
