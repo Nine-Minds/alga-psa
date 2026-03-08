@@ -1,5 +1,8 @@
 import { createTenantKnex, getUserWithRoles } from '@alga-psa/db';
+import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 import { NextResponse } from 'next/server';
+import { ServerEventPublisher } from '@alga-psa/event-bus';
+import { TicketModel } from '@shared/models/ticketModel';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { ContactService } from 'server/src/lib/api/services/ContactService';
 import { TicketService } from 'server/src/lib/api/services/TicketService';
@@ -91,6 +94,13 @@ interface TeamsMessageExtensionAttachment {
   };
 }
 
+interface TeamsAdaptiveCardAction {
+  type: 'Action.OpenUrl' | 'Action.Submit';
+  title: string;
+  url?: string;
+  data?: Record<string, unknown>;
+}
+
 interface TeamsMessageExtensionComposeResponse {
   composeExtension: {
     type: 'result' | 'message';
@@ -116,6 +126,7 @@ interface TeamsTaskModuleResponse {
             type: 'AdaptiveCard';
             version: '1.5';
             body: Array<Record<string, unknown>>;
+            actions?: TeamsAdaptiveCardAction[];
           };
         };
   };
@@ -287,9 +298,11 @@ function getMessagePayload(activity: TeamsMessageExtensionActivity): TeamsMessag
 }
 
 function buildMessagePreview(activity: TeamsMessageExtensionActivity): {
+  messageId: string | null;
   author: string | null;
   subject: string | null;
   summary: string | null;
+  bodyText: string | null;
   linkToMessage: string | null;
 } | null {
   const payload = getMessagePayload(activity);
@@ -297,6 +310,7 @@ function buildMessagePreview(activity: TeamsMessageExtensionActivity): {
     return null;
   }
 
+  const messageId = normalizeOptionalString(payload.id);
   const subject = normalizeOptionalString(payload.subject) || normalizeOptionalString(payload.summary);
   const bodyText = normalizeOptionalString(stripHtml(payload.body?.content || ''));
   const summary = bodyText ? truncateText(bodyText, 280) : null;
@@ -308,16 +322,370 @@ function buildMessagePreview(activity: TeamsMessageExtensionActivity): {
   }
 
   return {
+    messageId,
     author,
     subject,
     summary,
+    bodyText,
     linkToMessage,
+  };
+}
+
+type TeamsCreateTicketFormOptions = {
+  boards: Array<{ id: string; title: string; defaultPriorityId: string | null }>;
+  statuses: Array<{ id: string; title: string }>;
+  clients: Array<{ id: string; title: string }>;
+  contacts: Array<{ id: string; title: string; clientId: string | null }>;
+  defaultBoardId: string | null;
+  defaultStatusId: string | null;
+};
+
+function buildChoiceSetChoices(
+  rows: Array<{ id: string; title: string }>,
+  options: { includeEmpty?: { title: string; value?: string } } = {}
+): Array<{ title: string; value: string }> {
+  const choices = options.includeEmpty ? [{ title: options.includeEmpty.title, value: options.includeEmpty.value ?? '' }] : [];
+  return choices.concat(rows.map((row) => ({ title: row.title, value: row.id })));
+}
+
+function buildTicketTitleFromPreview(preview: NonNullable<ReturnType<typeof buildMessagePreview>>): string {
+  return preview.subject || preview.summary || (preview.author ? `Teams message from ${preview.author}` : 'Teams message');
+}
+
+function buildTicketDescriptionFromPreview(preview: NonNullable<ReturnType<typeof buildMessagePreview>>): string {
+  const sections: string[] = [];
+
+  if (preview.author) {
+    sections.push(`From: ${preview.author}`);
+  }
+
+  if (preview.subject) {
+    sections.push(`Subject: ${preview.subject}`);
+  }
+
+  if (preview.bodyText) {
+    sections.push(preview.bodyText);
+  } else if (preview.summary) {
+    sections.push(preview.summary);
+  }
+
+  if (preview.linkToMessage) {
+    sections.push(`Source message: ${preview.linkToMessage}`);
+  }
+
+  return sections.join('\n\n').trim();
+}
+
+function getActionData(activity: TeamsMessageExtensionActivity): Record<string, unknown> {
+  const raw = activity.value?.data;
+  return raw && typeof raw === 'object' ? raw : {};
+}
+
+function getActionDataString(activity: TeamsMessageExtensionActivity, key: string): string | null {
+  const rawValue = getActionData(activity)[key];
+  return typeof rawValue === 'string' ? normalizeOptionalString(rawValue) : null;
+}
+
+async function loadCreateTicketFormOptions(tenantId: string): Promise<TeamsCreateTicketFormOptions> {
+  const { knex } = await createTenantKnex(tenantId);
+
+  const [boards, statuses, clients, contacts] = await Promise.all([
+    (await knex('boards')
+      .where({ tenant: tenantId, is_inactive: false })
+      .select('board_id', 'board_name', 'default_priority_id', 'is_default')
+      .orderBy('is_default', 'desc')
+      .orderBy('display_order', 'asc')
+      .orderBy('board_name', 'asc')
+      .limit(25)) as Array<{
+      board_id?: string | null;
+      board_name?: string | null;
+      default_priority_id?: string | null;
+      is_default?: boolean | null;
+    }>,
+    (await knex('statuses')
+      .where({ tenant: tenantId, status_type: 'ticket', is_closed: false })
+      .select('status_id', 'name', 'is_default')
+      .orderBy('is_default', 'desc')
+      .orderBy('name', 'asc')
+      .limit(25)) as Array<{ status_id?: string | null; name?: string | null; is_default?: boolean | null }>,
+    (await knex('clients')
+      .where({ tenant: tenantId, is_inactive: false })
+      .select('client_id', 'client_name')
+      .orderBy('client_name', 'asc')
+      .limit(25)) as Array<{ client_id?: string | null; client_name?: string | null }>,
+    (await knex('contacts as c')
+      .leftJoin('clients as comp', function joinClients() {
+        this.on('c.client_id', '=', 'comp.client_id').andOn('c.tenant', '=', 'comp.tenant');
+      })
+      .where('c.tenant', tenantId)
+      .where('c.is_inactive', false)
+      .select('c.contact_name_id', 'c.full_name', 'c.client_id', 'comp.client_name')
+      .orderBy('c.full_name', 'asc')
+      .limit(25)) as Array<{
+      contact_name_id?: string | null;
+      full_name?: string | null;
+      client_id?: string | null;
+      client_name?: string | null;
+    }>,
+  ]);
+
+  const normalizedBoards = boards
+    .map((row) => ({
+      id: normalizeOptionalString(row.board_id),
+      title: normalizeOptionalString(row.board_name),
+      defaultPriorityId: normalizeOptionalString(row.default_priority_id),
+      isDefault: Boolean(row.is_default),
+    }))
+    .filter((row): row is { id: string; title: string; defaultPriorityId: string | null; isDefault: boolean } => Boolean(row.id && row.title));
+
+  const normalizedStatuses = statuses
+    .map((row) => ({
+      id: normalizeOptionalString(row.status_id),
+      title: normalizeOptionalString(row.name),
+      isDefault: Boolean(row.is_default),
+    }))
+    .filter((row): row is { id: string; title: string; isDefault: boolean } => Boolean(row.id && row.title));
+
+  const normalizedClients = clients
+    .map((row) => ({
+      id: normalizeOptionalString(row.client_id),
+      title: normalizeOptionalString(row.client_name),
+    }))
+    .filter((row): row is { id: string; title: string } => Boolean(row.id && row.title));
+
+  const normalizedContacts = contacts
+    .map((row) => {
+      const fullName = normalizeOptionalString(row.full_name);
+      const clientName = normalizeOptionalString(row.client_name);
+      return {
+        id: normalizeOptionalString(row.contact_name_id),
+        title: fullName ? (clientName ? `${fullName} (${clientName})` : fullName) : null,
+        clientId: normalizeOptionalString(row.client_id),
+      };
+    })
+    .filter((row): row is { id: string; title: string; clientId: string | null } => Boolean(row.id && row.title));
+
+  return {
+    boards: normalizedBoards.map(({ id, title, defaultPriorityId }) => ({ id, title, defaultPriorityId })),
+    statuses: normalizedStatuses.map(({ id, title }) => ({ id, title })),
+    clients: normalizedClients,
+    contacts: normalizedContacts,
+    defaultBoardId: normalizedBoards.find((row) => row.isDefault)?.id || normalizedBoards[0]?.id || null,
+    defaultStatusId: normalizedStatuses.find((row) => row.isDefault)?.id || normalizedStatuses[0]?.id || null,
+  };
+}
+
+async function resolveDefaultPriorityIdForBoard(
+  tenantId: string,
+  boardId: string
+): Promise<string | null> {
+  const { knex } = await createTenantKnex(tenantId);
+  const board = (await knex('boards')
+    .where({ tenant: tenantId, board_id: boardId, is_inactive: false })
+    .select('default_priority_id', 'priority_type')
+    .first()) as { default_priority_id?: string | null; priority_type?: string | null } | null;
+
+  const boardDefaultPriorityId = normalizeOptionalString(board?.default_priority_id);
+  if (boardDefaultPriorityId) {
+    return boardDefaultPriorityId;
+  }
+
+  const desiredPriorityType = normalizeOptionalString(board?.priority_type) || 'custom';
+  const primaryPriority = (await knex('priorities')
+    .select('priority_id')
+    .where({ tenant: tenantId, item_type: 'ticket' })
+    .where(function filterPriorityType() {
+      if (desiredPriorityType === 'itil') {
+        this.where('is_from_itil_standard', true);
+      } else {
+        this.where(function filterCustomPriorities() {
+          this.whereNull('is_from_itil_standard').orWhere('is_from_itil_standard', false);
+        });
+      }
+    })
+    .orderByRaw(
+      desiredPriorityType === 'itil'
+        ? "CASE WHEN itil_priority_level = 3 THEN 0 ELSE 1 END, order_number ASC, priority_name ASC"
+        : 'order_number ASC, priority_name ASC'
+    )
+    .first()) as { priority_id?: string | null } | null;
+
+  if (normalizeOptionalString(primaryPriority?.priority_id)) {
+    return normalizeOptionalString(primaryPriority?.priority_id);
+  }
+
+  const fallbackPriority = (await knex('priorities')
+    .select('priority_id')
+    .where({ tenant: tenantId, item_type: 'ticket' })
+    .orderBy('order_number', 'asc')
+    .orderBy('priority_name', 'asc')
+    .first()) as { priority_id?: string | null } | null;
+
+  return normalizeOptionalString(fallbackPriority?.priority_id);
+}
+
+async function findTicketByMessageActionIdempotencyKey(
+  tenantId: string,
+  idempotencyKey: string
+): Promise<{ ticketId: string; ticketNumber: string | null; title: string | null } | null> {
+  const { knex } = await createTenantKnex(tenantId);
+  const row = (await knex('tickets')
+    .where({ tenant: tenantId })
+    .whereRaw("(attributes::jsonb ->> 'idempotency_key') = ?", [idempotencyKey])
+    .select('ticket_id', 'ticket_number', 'title')
+    .first()) as { ticket_id?: string | null; ticket_number?: string | null; title?: string | null } | null;
+
+  const ticketId = normalizeOptionalString(row?.ticket_id);
+  if (!ticketId) {
+    return null;
+  }
+
+  return {
+    ticketId,
+    ticketNumber: normalizeOptionalString(row?.ticket_number),
+    title: normalizeOptionalString(row?.title),
+  };
+}
+
+async function validateCreateTicketMessageSelection(params: {
+  tenantId: string;
+  boardId: string;
+  statusId: string;
+  clientId: string;
+  contactId: string | null;
+}): Promise<{ success: true } | { success: false; message: string }> {
+  const { knex } = await createTenantKnex(params.tenantId);
+
+  const [board, status, client, contact] = await Promise.all([
+    knex('boards')
+      .where({ tenant: params.tenantId, board_id: params.boardId, is_inactive: false })
+      .select('board_id')
+      .first(),
+    knex('statuses')
+      .where({ tenant: params.tenantId, status_id: params.statusId, status_type: 'ticket', is_closed: false })
+      .select('status_id')
+      .first(),
+    knex('clients')
+      .where({ tenant: params.tenantId, client_id: params.clientId, is_inactive: false })
+      .select('client_id')
+      .first(),
+    params.contactId
+      ? knex('contacts')
+          .where({ tenant: params.tenantId, contact_name_id: params.contactId, is_inactive: false })
+          .select('contact_name_id', 'client_id')
+          .first()
+      : Promise.resolve(null),
+  ]);
+
+  if (!board) {
+    return {
+      success: false,
+      message: 'Select an active PSA board before creating a ticket from this Teams message.',
+    };
+  }
+
+  if (!status) {
+    return {
+      success: false,
+      message: 'Select an open PSA status before creating a ticket from this Teams message.',
+    };
+  }
+
+  if (!client) {
+    return {
+      success: false,
+      message: 'Select an active PSA client before creating a ticket from this Teams message.',
+    };
+  }
+
+  if (params.contactId) {
+    const resolvedContactId = normalizeOptionalString((contact as { contact_name_id?: string | null } | null)?.contact_name_id);
+    const resolvedContactClientId = normalizeOptionalString((contact as { client_id?: string | null } | null)?.client_id);
+
+    if (!resolvedContactId) {
+      return {
+        success: false,
+        message: 'Select a valid PSA contact or clear the contact field before creating a ticket from this Teams message.',
+      };
+    }
+
+    if (resolvedContactClientId && resolvedContactClientId !== params.clientId) {
+      return {
+        success: false,
+        message: 'The selected PSA contact does not belong to the selected client.',
+      };
+    }
+  }
+
+  return { success: true };
+}
+
+async function buildCreatedTicketTaskResponse(params: {
+  tenantId: string;
+  user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>;
+  ticketId: string;
+  ticketNumber: string | null;
+  fallbackTitle: string;
+}): Promise<TeamsMessageExtensionResponse> {
+  const openResult = await executeTeamsAction({
+    actionId: 'open_record',
+    surface: MESSAGE_EXTENSION_SURFACE,
+    tenantId: params.tenantId,
+    user: params.user,
+    target: {
+      entityType: 'ticket',
+      ticketId: params.ticketId,
+    },
+  });
+
+  const body: Array<Record<string, unknown>> = [
+    {
+      type: 'TextBlock',
+      text: params.ticketNumber ? `Created ticket ${params.ticketNumber}` : 'Created ticket from Teams message',
+      wrap: true,
+      weight: 'Bolder',
+      size: 'Medium',
+    },
+    {
+      type: 'TextBlock',
+      text: openResult.success ? openResult.summary.text : params.fallbackTitle,
+      wrap: true,
+      spacing: 'Small',
+    },
+  ];
+
+  const actions: TeamsAdaptiveCardAction[] = openResult.success
+    ? openResult.links.map((link) => ({
+        type: 'Action.OpenUrl',
+        title: link.label,
+        url: link.url,
+      }))
+    : [];
+
+  return {
+    task: {
+      type: 'continue',
+      value: {
+        title: 'Ticket created',
+        width: 'medium',
+        height: 'medium',
+        card: {
+          type: 'AdaptiveCard',
+          version: '1.5',
+          body,
+          ...(actions.length > 0 ? { actions } : {}),
+        },
+      },
+    },
   };
 }
 
 function buildActionTaskResponse(params: {
   commandId: 'createTicketFromMessage' | 'updateFromMessage';
   preview: NonNullable<ReturnType<typeof buildMessagePreview>>;
+  createTicketFormOptions?: TeamsCreateTicketFormOptions;
+  idempotencyKey?: string | null;
+  messagePayload?: TeamsMessagePayload | null;
 }): TeamsMessageExtensionResponse {
   const title =
     params.commandId === 'createTicketFromMessage'
@@ -325,7 +693,7 @@ function buildActionTaskResponse(params: {
       : 'Update PSA record from Teams message';
   const guidance =
     params.commandId === 'createTicketFromMessage'
-      ? 'Review the selected Teams message before the ticket-create workflow is completed in a follow-up slice.'
+      ? 'Capture the Teams message as a PSA ticket with the minimum required context.'
       : 'Review the selected Teams message before the PSA update workflow is completed in a follow-up slice.';
 
   const body: Array<Record<string, unknown>> = [
@@ -365,13 +733,80 @@ function buildActionTaskResponse(params: {
     });
   }
 
-  body.push({
-    type: 'TextBlock',
-    text: guidance,
-    wrap: true,
-    spacing: 'Medium',
-    isSubtle: true,
-  });
+  if (params.commandId === 'createTicketFromMessage' && params.createTicketFormOptions) {
+    body.push(
+      {
+        type: 'Input.Text',
+        id: 'title',
+        label: 'Ticket title',
+        value: buildTicketTitleFromPreview(params.preview),
+        isRequired: true,
+        errorMessage: 'Ticket title is required.',
+      },
+      {
+        type: 'Input.Text',
+        id: 'description',
+        label: 'Ticket details',
+        value: buildTicketDescriptionFromPreview(params.preview),
+        isMultiline: true,
+        isRequired: true,
+        errorMessage: 'Ticket details are required.',
+      },
+      {
+        type: 'Input.ChoiceSet',
+        id: 'boardId',
+        label: 'Board',
+        value: params.createTicketFormOptions.defaultBoardId || '',
+        isRequired: true,
+        errorMessage: 'Select a board.',
+        style: 'compact',
+        choices: buildChoiceSetChoices(params.createTicketFormOptions.boards),
+      },
+      {
+        type: 'Input.ChoiceSet',
+        id: 'statusId',
+        label: 'Status',
+        value: params.createTicketFormOptions.defaultStatusId || '',
+        isRequired: true,
+        errorMessage: 'Select a status.',
+        style: 'compact',
+        choices: buildChoiceSetChoices(params.createTicketFormOptions.statuses),
+      },
+      {
+        type: 'Input.ChoiceSet',
+        id: 'clientId',
+        label: 'Client',
+        isRequired: true,
+        errorMessage: 'Select a client.',
+        style: 'compact',
+        choices: buildChoiceSetChoices(params.createTicketFormOptions.clients),
+      },
+      {
+        type: 'Input.ChoiceSet',
+        id: 'contactId',
+        label: 'Contact (optional)',
+        style: 'compact',
+        choices: buildChoiceSetChoices(params.createTicketFormOptions.contacts, {
+          includeEmpty: { title: 'No contact', value: '' },
+        }),
+      },
+      {
+        type: 'TextBlock',
+        text: 'The ticket uses your tenant defaults for assignment and priority unless the selected board defines a different default priority.',
+        wrap: true,
+        spacing: 'Medium',
+        isSubtle: true,
+      }
+    );
+  } else {
+    body.push({
+      type: 'TextBlock',
+      text: guidance,
+      wrap: true,
+      spacing: 'Medium',
+      isSubtle: true,
+    });
+  }
 
   if (params.preview.linkToMessage) {
     body.push({
@@ -394,6 +829,22 @@ function buildActionTaskResponse(params: {
           type: 'AdaptiveCard',
           version: '1.5',
           body,
+          ...(params.commandId === 'createTicketFromMessage' && params.createTicketFormOptions
+            ? {
+                actions: [
+                  {
+                    type: 'Action.Submit',
+                    title: 'Create ticket',
+                    data: {
+                      commandId: params.commandId,
+                      commandContext: 'message',
+                      idempotencyKey: params.idempotencyKey || crypto.randomUUID(),
+                      ...(params.messagePayload ? { messagePayload: params.messagePayload } : {}),
+                    },
+                  },
+                ],
+              }
+            : {}),
         },
       },
     },
@@ -702,6 +1153,117 @@ async function handleQueryRequest(
   };
 }
 
+async function handleCreateTicketFromMessageSubmit(params: {
+  activity: TeamsMessageExtensionActivity;
+  tenantId: string;
+  user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>;
+  preview: NonNullable<ReturnType<typeof buildMessagePreview>>;
+}): Promise<TeamsMessageExtensionResponse> {
+  if (!(await hasPermission(params.user, 'ticket', 'create'))) {
+    return buildTaskMessageResponse('You do not have permission to create PSA tickets from Teams messages.');
+  }
+
+  const idempotencyKey = getActionDataString(params.activity, 'idempotencyKey');
+  if (!idempotencyKey) {
+    return buildTaskMessageResponse(
+      'Reopen the Teams message action before creating a ticket so the submission can be applied safely once.'
+    );
+  }
+
+  const existingTicket = await findTicketByMessageActionIdempotencyKey(params.tenantId, idempotencyKey);
+  if (existingTicket) {
+    return buildCreatedTicketTaskResponse({
+      tenantId: params.tenantId,
+      user: params.user,
+      ticketId: existingTicket.ticketId,
+      ticketNumber: existingTicket.ticketNumber,
+      fallbackTitle: existingTicket.title || buildTicketTitleFromPreview(params.preview),
+    });
+  }
+
+  const title = getActionDataString(params.activity, 'title') || buildTicketTitleFromPreview(params.preview);
+  const description = getActionDataString(params.activity, 'description') || buildTicketDescriptionFromPreview(params.preview);
+  const boardId = getActionDataString(params.activity, 'boardId');
+  const statusId = getActionDataString(params.activity, 'statusId');
+  const clientId = getActionDataString(params.activity, 'clientId');
+  const contactId = getActionDataString(params.activity, 'contactId');
+
+  if (!title) {
+    return buildTaskMessageResponse('Enter a ticket title before creating a PSA ticket from this Teams message.');
+  }
+
+  if (!description) {
+    return buildTaskMessageResponse('Enter ticket details before creating a PSA ticket from this Teams message.');
+  }
+
+  if (!boardId || !statusId || !clientId) {
+    return buildTaskMessageResponse(
+      'Select a PSA board, open status, and client before creating a ticket from this Teams message.'
+    );
+  }
+
+  const validatedSelection = await validateCreateTicketMessageSelection({
+    tenantId: params.tenantId,
+    boardId,
+    statusId,
+    clientId,
+    contactId,
+  });
+  if (!validatedSelection.success) {
+    return buildTaskMessageResponse(validatedSelection.message);
+  }
+
+  const priorityId = await resolveDefaultPriorityIdForBoard(params.tenantId, boardId);
+  if (!priorityId) {
+    return buildTaskMessageResponse(
+      'The selected PSA board does not have a usable default priority. Update board priority defaults before creating a ticket from Teams.'
+    );
+  }
+
+  const { knex } = await createTenantKnex(params.tenantId);
+  const createdTicket = await knex.transaction(async (trx: any) =>
+    TicketModel.createTicketWithRetry(
+      {
+        title,
+        description,
+        client_id: clientId,
+        contact_id: contactId || undefined,
+        board_id: boardId,
+        status_id: statusId,
+        priority_id: priorityId,
+        entered_by: params.user.user_id,
+        source: 'teams_message_extension',
+        ticket_origin: 'internal',
+        attributes: {
+          idempotency_key: idempotencyKey,
+          teams_message_source: {
+            message_id: params.preview.messageId,
+            subject: params.preview.subject,
+            summary: params.preview.summary,
+            author: params.preview.author,
+            link_to_message: params.preview.linkToMessage,
+          },
+        },
+      },
+      params.tenantId,
+      trx,
+      {},
+      new ServerEventPublisher(),
+      new ServerAnalyticsTracker(),
+      params.user.user_id,
+      3
+    )
+  );
+
+  return buildCreatedTicketTaskResponse({
+    tenantId: params.tenantId,
+    user: params.user,
+    ticketId: createdTicket.ticket_id,
+    ticketNumber: normalizeOptionalString(createdTicket.ticket_number),
+    fallbackTitle: createdTicket.title,
+  });
+}
+
 async function handleActionRequest(
   activity: TeamsMessageExtensionActivity,
   tenantId: string
@@ -729,17 +1291,50 @@ async function handleActionRequest(
     return buildTaskMessageResponse(invokingUser.message);
   }
 
+  if (commandId === 'createTicketFromMessage' && !(await hasPermission(invokingUser.user, 'ticket', 'create'))) {
+    return buildTaskMessageResponse('You do not have permission to create PSA tickets from Teams messages.');
+  }
+
   if (normalizeOptionalString(activity.name) === 'composeExtension/submitAction') {
+    if (commandId === 'createTicketFromMessage') {
+      return handleCreateTicketFromMessageSubmit({
+        activity,
+        tenantId,
+        user: invokingUser.user,
+        preview,
+      });
+    }
+
     return buildTaskMessageResponse(
-      commandId === 'createTicketFromMessage'
-        ? 'The Teams message-to-ticket handoff is ready. Continue in the Alga PSA personal tab while inline submission is completed in a follow-up slice.'
-        : 'The Teams message-to-update handoff is ready. Continue in the Alga PSA personal tab while inline submission is completed in a follow-up slice.'
+      'The Teams message-to-update handoff is ready. Continue in the Alga PSA personal tab while inline submission is completed in a follow-up slice.'
     );
+  }
+
+  if (commandId === 'createTicketFromMessage') {
+    const createTicketFormOptions = await loadCreateTicketFormOptions(tenantId);
+    if (
+      createTicketFormOptions.boards.length === 0 ||
+      createTicketFormOptions.statuses.length === 0 ||
+      createTicketFormOptions.clients.length === 0
+    ) {
+      return buildTaskMessageResponse(
+        'Teams ticket creation needs at least one active PSA board, one open ticket status, and one active client before a message can be converted into a ticket.'
+      );
+    }
+
+    return buildActionTaskResponse({
+      commandId,
+      preview,
+      createTicketFormOptions,
+      idempotencyKey: crypto.randomUUID(),
+      messagePayload: getMessagePayload(activity),
+    });
   }
 
   return buildActionTaskResponse({
     commandId,
     preview,
+    messagePayload: getMessagePayload(activity),
   });
 }
 

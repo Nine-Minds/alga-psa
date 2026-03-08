@@ -16,6 +16,7 @@ const {
   executeTeamsActionMock,
   listAvailableTeamsActionsMock,
   listPendingApprovalsForTeamsMock,
+  createTicketWithRetryMock,
 } = vi.hoisted(() => ({
   resolveTeamsTenantContextMock: vi.fn(),
   resolveTeamsLinkedUserMock: vi.fn(),
@@ -25,6 +26,7 @@ const {
   executeTeamsActionMock: vi.fn(),
   listAvailableTeamsActionsMock: vi.fn(),
   listPendingApprovalsForTeamsMock: vi.fn(),
+  createTicketWithRetryMock: vi.fn(),
 }));
 
 vi.mock('server/src/lib/teams/resolveTeamsTenantContext', () => ({
@@ -62,6 +64,12 @@ vi.mock('server/src/lib/teams/actions/teamsActionRegistry', () => ({
 
 vi.mock('server/src/lib/teams/approvals/queryPendingApprovalsForTeams', () => ({
   listPendingApprovalsForTeams: listPendingApprovalsForTeamsMock,
+}));
+
+vi.mock('@shared/models/ticketModel', () => ({
+  TicketModel: {
+    createTicketWithRetry: createTicketWithRetryMock,
+  },
 }));
 
 function buildUser(overrides: Partial<IUserWithRoles> = {}): IUserWithRoles {
@@ -105,6 +113,83 @@ function buildActivity(overrides: Partial<TeamsMessageExtensionActivity> = {}): 
   };
 }
 
+function createMockQuery(rows: any[]) {
+  const chain: any = {
+    leftJoin: vi.fn().mockReturnThis(),
+    join: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    whereILike: vi.fn().mockReturnThis(),
+    whereRaw: vi.fn().mockReturnThis(),
+    whereNull: vi.fn().mockReturnThis(),
+    orWhere: vi.fn().mockReturnThis(),
+    orWhereILike: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockReturnThis(),
+    orderByRaw: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockImplementation(async (count?: number) => (typeof count === 'number' ? rows.slice(0, count) : rows)),
+    first: vi.fn().mockImplementation(async () => rows[0] ?? null),
+  };
+
+  return chain;
+}
+
+function createTenantKnexFixture(overrides: Partial<Record<string, any[]>> = {}) {
+  const tables: Record<string, any[]> = {
+    'project_tasks as pt': [
+      {
+        task_id: 'task-1',
+        project_id: 'project-1',
+      },
+    ],
+    boards: [
+      {
+        board_id: 'board-1',
+        board_name: 'Help Desk',
+        default_priority_id: 'priority-1',
+        is_default: true,
+      },
+    ],
+    statuses: [
+      {
+        status_id: 'status-1',
+        name: 'New',
+        is_default: true,
+      },
+    ],
+    clients: [
+      {
+        client_id: 'client-1',
+        client_name: 'Contoso',
+      },
+    ],
+    'contacts as c': [
+      {
+        contact_name_id: 'contact-1',
+        full_name: 'Taylor Nguyen',
+        client_id: 'client-1',
+        client_name: 'Contoso',
+      },
+    ],
+    contacts: [
+      {
+        contact_name_id: 'contact-1',
+        client_id: 'client-1',
+      },
+    ],
+    priorities: [
+      {
+        priority_id: 'priority-1',
+      },
+    ],
+    tickets: [],
+    ...overrides,
+  };
+
+  const knex: any = vi.fn((tableName: string) => createMockQuery(tables[tableName] ?? []));
+  knex.transaction = vi.fn(async (callback: (trx: any) => Promise<any>) => callback(knex));
+  return { knex };
+}
+
 describe('teamsMessageExtensionHandler', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -131,6 +216,13 @@ describe('teamsMessageExtensionHandler', () => {
     getUserWithRolesMock.mockResolvedValue(buildUser());
     hasPermissionMock.mockResolvedValue(true);
     listAvailableTeamsActionsMock.mockResolvedValue([]);
+    createTicketWithRetryMock.mockResolvedValue({
+      ticket_id: 'ticket-created-1',
+      ticket_number: 'T-4001',
+      title: 'VPN outage from Teams',
+      tenant: 'tenant-1',
+      entered_at: '2026-03-07T12:00:00.000Z',
+    });
     listPendingApprovalsForTeamsMock.mockResolvedValue([
       {
         id: 'approval-1',
@@ -141,20 +233,7 @@ describe('teamsMessageExtensionHandler', () => {
         period_end_date: '2026-03-08',
       },
     ]);
-    createTenantKnexMock.mockResolvedValue({
-      knex: vi.fn(() => ({
-        join: vi.fn().mockReturnThis(),
-        where: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        orderBy: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockResolvedValue([
-          {
-            task_id: 'task-1',
-            project_id: 'project-1',
-          },
-        ]),
-      })),
-    });
+    createTenantKnexMock.mockResolvedValue(createTenantKnexFixture());
     executeTeamsActionMock.mockImplementation(async ({ target }: { target: { entityType: string; ticketId?: string; taskId?: string; contactId?: string; approvalId?: string } }) => ({
       success: true,
       actionId: 'open_record',
@@ -313,7 +392,7 @@ describe('teamsMessageExtensionHandler', () => {
     expect(invalidContextResponse.composeExtension.text).toContain('compose and command box contexts only');
   });
 
-  it('T321/T322/T341/T342: action commands resolve Teams-authenticated context from message scope and return a task-module response for supported commands', async () => {
+  it('T321/T341/T357/T359/T361: create-ticket action builds a Teams task card with captured message context and minimal ticket fields', async () => {
     const response = await handleTeamsMessageExtensionActivity(
       buildActivity({
         name: 'composeExtension/fetchTask',
@@ -358,11 +437,36 @@ describe('teamsMessageExtensionHandler', () => {
         expect.objectContaining({ text: 'Create ticket from Teams message' }),
         expect.objectContaining({ text: 'From: Morgan Message' }),
         expect.objectContaining({ text: 'Subject: VPN outage from Teams' }),
+        expect.objectContaining({ id: 'title', value: 'VPN outage from Teams' }),
+        expect.objectContaining({ id: 'description', value: expect.stringContaining('The VPN has been down since 9 AM.') }),
+        expect.objectContaining({ id: 'boardId', choices: [{ title: 'Help Desk', value: 'board-1' }] }),
+        expect.objectContaining({ id: 'statusId', choices: [{ title: 'New', value: 'status-1' }] }),
+        expect.objectContaining({ id: 'clientId', choices: [{ title: 'Contoso', value: 'client-1' }] }),
+        expect.objectContaining({
+          id: 'contactId',
+          choices: expect.arrayContaining([{ title: 'Taylor Nguyen (Contoso)', value: 'contact-1' }]),
+        }),
+      ])
+    );
+    expect((response as any).task.value.card.actions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'Action.Submit',
+          title: 'Create ticket',
+          data: expect.objectContaining({
+            commandId: 'createTicketFromMessage',
+            commandContext: 'message',
+            messagePayload: expect.objectContaining({
+              id: 'message-1',
+            }),
+            idempotencyKey: expect.any(String),
+          }),
+        }),
       ])
     );
   });
 
-  it('T322/T342: action commands reject unsupported contexts or missing message payloads with recoverable task messages', async () => {
+  it('T322/T342/T358/T360/T362: action commands reject unsupported contexts, missing message payloads, missing setup options, and missing create permission with recoverable task messages', async () => {
     const wrongContextResponse = await handleTeamsMessageExtensionActivity(
       buildActivity({
         name: 'composeExtension/fetchTask',
@@ -388,6 +492,45 @@ describe('teamsMessageExtensionHandler', () => {
       { tenantIdHint: 'tenant-1' }
     );
 
+    createTenantKnexMock.mockResolvedValueOnce(
+      createTenantKnexFixture({
+        boards: [],
+      })
+    );
+    const missingSetupResponse = await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        name: 'composeExtension/fetchTask',
+        value: {
+          commandId: 'createTicketFromMessage',
+          commandContext: 'message',
+          messagePayload: {
+            subject: 'VPN outage from Teams',
+          },
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    hasPermissionMock.mockImplementation(async (_user: IUserWithRoles, resource: string, action?: string) => {
+      if (resource === 'ticket' && action === 'create') {
+        return false;
+      }
+      return true;
+    });
+    const forbiddenCreateResponse = await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        name: 'composeExtension/fetchTask',
+        value: {
+          commandId: 'createTicketFromMessage',
+          commandContext: 'message',
+          messagePayload: {
+            subject: 'VPN outage from Teams',
+          },
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
     expect(wrongContextResponse).toEqual({
       task: {
         type: 'message',
@@ -398,6 +541,271 @@ describe('teamsMessageExtensionHandler', () => {
       task: {
         type: 'message',
         value: 'Select a Teams message with usable content before starting this PSA workflow.',
+      },
+    });
+    expect(missingSetupResponse).toEqual({
+      task: {
+        type: 'message',
+        value:
+          'Teams ticket creation needs at least one active PSA board, one open ticket status, and one active client before a message can be converted into a ticket.',
+      },
+    });
+    expect(forbiddenCreateResponse).toEqual({
+      task: {
+        type: 'message',
+        value: 'You do not have permission to create PSA tickets from Teams messages.',
+      },
+    });
+  });
+
+  it('T357/T359/T361/T363/T365: submitAction creates a ticket from the Teams message, stores source metadata, and returns deep-link confirmation', async () => {
+    const response = await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        name: 'composeExtension/submitAction',
+        value: {
+          commandId: 'createTicketFromMessage',
+          commandContext: 'message',
+          messagePayload: {
+            id: 'message-1',
+            subject: 'VPN outage from Teams',
+            body: {
+              content: '<div>The VPN has been down since 9 AM.</div>',
+            },
+            from: {
+              user: {
+                displayName: 'Morgan Message',
+              },
+            },
+            linkToMessage: 'https://teams.example.test/messages/1',
+          },
+          data: {
+            commandId: 'createTicketFromMessage',
+            commandContext: 'message',
+            idempotencyKey: 'teams-message-1',
+            title: 'VPN outage from Teams',
+            description: 'The VPN has been down since 9 AM.',
+            boardId: 'board-1',
+            statusId: 'status-1',
+            clientId: 'client-1',
+            contactId: 'contact-1',
+            messagePayload: {
+              id: 'message-1',
+            },
+          },
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    expect(createTicketWithRetryMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'VPN outage from Teams',
+        description: 'The VPN has been down since 9 AM.',
+        board_id: 'board-1',
+        status_id: 'status-1',
+        client_id: 'client-1',
+        contact_id: 'contact-1',
+        priority_id: 'priority-1',
+        source: 'teams_message_extension',
+        attributes: expect.objectContaining({
+          idempotency_key: 'teams-message-1',
+          teams_message_source: expect.objectContaining({
+            message_id: 'message-1',
+            subject: 'VPN outage from Teams',
+            author: 'Morgan Message',
+            link_to_message: 'https://teams.example.test/messages/1',
+          }),
+        }),
+      }),
+      'tenant-1',
+      expect.any(Function),
+      {},
+      expect.any(Object),
+      expect.any(Object),
+      'user-1',
+      3
+    );
+    expect(executeTeamsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: 'open_record',
+        surface: 'message_extension',
+        target: {
+          entityType: 'ticket',
+          ticketId: 'ticket-created-1',
+        },
+      })
+    );
+    expect(response).toMatchObject({
+      task: {
+        type: 'continue',
+        value: {
+          title: 'Ticket created',
+          card: {
+            actions: expect.arrayContaining([
+              expect.objectContaining({ type: 'Action.OpenUrl', title: 'Open in Teams tab', url: 'https://teams.test/ticket' }),
+              expect.objectContaining({ type: 'Action.OpenUrl', title: 'Open in full PSA', url: '/msp/ticket' }),
+            ]),
+          },
+        },
+      },
+    });
+  });
+
+  it('T358/T360/T362/T364/T366: submitAction rejects missing or invalid create-ticket inputs with recoverable task messages', async () => {
+    const missingFieldsResponse = await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        name: 'composeExtension/submitAction',
+        value: {
+          commandId: 'createTicketFromMessage',
+          commandContext: 'message',
+          messagePayload: {
+            subject: 'VPN outage from Teams',
+            body: {
+              content: '<div>The VPN has been down since 9 AM.</div>',
+            },
+          },
+          data: {
+            commandId: 'createTicketFromMessage',
+            commandContext: 'message',
+            idempotencyKey: 'teams-message-2',
+            title: 'VPN outage from Teams',
+          },
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    const mismatchedContactKnex = createTenantKnexFixture({
+      contacts: [
+        {
+          contact_name_id: 'contact-1',
+          client_id: 'client-2',
+        },
+      ],
+    });
+    createTenantKnexMock.mockResolvedValueOnce(mismatchedContactKnex);
+    createTenantKnexMock.mockResolvedValueOnce(mismatchedContactKnex);
+    const mismatchedContactResponse = await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        name: 'composeExtension/submitAction',
+        value: {
+          commandId: 'createTicketFromMessage',
+          commandContext: 'message',
+          messagePayload: {
+            subject: 'VPN outage from Teams',
+            body: {
+              content: '<div>The VPN has been down since 9 AM.</div>',
+            },
+          },
+          data: {
+            commandId: 'createTicketFromMessage',
+            commandContext: 'message',
+            idempotencyKey: 'teams-message-3',
+            title: 'VPN outage from Teams',
+            description: 'The VPN has been down since 9 AM.',
+            boardId: 'board-1',
+            statusId: 'status-1',
+            clientId: 'client-1',
+            contactId: 'contact-1',
+          },
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    expect(missingFieldsResponse).toEqual({
+      task: {
+        type: 'message',
+        value: 'Select a PSA board, open status, and client before creating a ticket from this Teams message.',
+      },
+    });
+    expect(mismatchedContactResponse).toEqual({
+      task: {
+        type: 'message',
+        value: 'The selected PSA contact does not belong to the selected client.',
+      },
+    });
+  });
+
+  it('T367/T368: submitAction replays duplicate create-ticket submissions safely and rejects missing idempotency state', async () => {
+    createTenantKnexMock.mockResolvedValueOnce(
+      createTenantKnexFixture({
+        tickets: [
+          {
+            ticket_id: 'ticket-created-1',
+            ticket_number: 'T-4001',
+            title: 'VPN outage from Teams',
+          },
+        ],
+      })
+    );
+    const duplicateResponse = await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        name: 'composeExtension/submitAction',
+        value: {
+          commandId: 'createTicketFromMessage',
+          commandContext: 'message',
+          messagePayload: {
+            subject: 'VPN outage from Teams',
+            body: {
+              content: '<div>The VPN has been down since 9 AM.</div>',
+            },
+          },
+          data: {
+            commandId: 'createTicketFromMessage',
+            commandContext: 'message',
+            idempotencyKey: 'teams-message-4',
+            title: 'VPN outage from Teams',
+            description: 'The VPN has been down since 9 AM.',
+            boardId: 'board-1',
+            statusId: 'status-1',
+            clientId: 'client-1',
+          },
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    const missingIdempotencyResponse = await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        name: 'composeExtension/submitAction',
+        value: {
+          commandId: 'createTicketFromMessage',
+          commandContext: 'message',
+          messagePayload: {
+            subject: 'VPN outage from Teams',
+            body: {
+              content: '<div>The VPN has been down since 9 AM.</div>',
+            },
+          },
+          data: {
+            commandId: 'createTicketFromMessage',
+            commandContext: 'message',
+            title: 'VPN outage from Teams',
+            description: 'The VPN has been down since 9 AM.',
+            boardId: 'board-1',
+            statusId: 'status-1',
+            clientId: 'client-1',
+          },
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    expect(createTicketWithRetryMock).not.toHaveBeenCalled();
+    expect(duplicateResponse).toMatchObject({
+      task: {
+        type: 'continue',
+        value: {
+          title: 'Ticket created',
+        },
+      },
+    });
+    expect(missingIdempotencyResponse).toEqual({
+      task: {
+        type: 'message',
+        value:
+          'Reopen the Teams message action before creating a ticket so the submission can be applied safely once.',
       },
     });
   });

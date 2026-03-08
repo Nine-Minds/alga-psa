@@ -1708,7 +1708,7 @@
   {
     "id": "F179",
     "description": "Message action `create ticket from message`: supports creating a new PSA ticket from a Teams message.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements"
@@ -1717,7 +1717,7 @@
   {
     "id": "F180",
     "description": "Message action `create ticket from message`: captures subject/summary/body data from the Teams message context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements"
@@ -1726,7 +1726,7 @@
   {
     "id": "F181",
     "description": "Message action `create ticket from message`: supports minimal admin-approved ticket fields such as board, status, and client/contact context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements"
@@ -1735,7 +1735,7 @@
   {
     "id": "F182",
     "description": "Message action `create ticket from message`: stores Teams source-message reference metadata with the created work item.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements"
@@ -1744,7 +1744,7 @@
   {
     "id": "F183",
     "description": "Message action `create ticket from message`: confirms success with a deep link to the created ticket.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements"
@@ -1753,7 +1753,7 @@
   {
     "id": "F184",
     "description": "Message action `create ticket from message`: guards against duplicate submit behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements"

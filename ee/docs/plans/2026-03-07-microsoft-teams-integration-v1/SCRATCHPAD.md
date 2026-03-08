@@ -260,6 +260,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) The current message-action transport is intentionally a handoff foundation: it preserves Teams-authenticated message context and shows a task-module preview while later slices add actual message-to-ticket and message-to-update mutations.
 - (2026-03-07) Teams message-extension pagination can use native `queryOptions.skip/count` windowing instead of a custom continuation token; for the merged multi-entity result set, fetching up to `skip + count` per entity and slicing centrally is sufficient for the first paged slice.
 - (2026-03-07) The cleanest way to surface message-extension quick actions is to reuse `listAvailableTeamsActions(...)` per search hit and append only currently available mutation titles to the shared `open_record` card summary, which keeps result cards aligned with tenant allowed-action settings without introducing premature action buttons.
+- (2026-03-07) The first inline Teams message-to-ticket slice can stay inside `teamsMessageExtensionHandler.ts` as long as it still reuses the shared ticket model for creation, tenant default board/status/priority configuration, and shared `open_record` link mapping for confirmation.
+- (2026-03-07) Storing Teams message provenance plus the submit idempotency key in `tickets.attributes` is the smallest migration-free way to satisfy message-source auditability and duplicate-submit replay for Teams message actions.
 
 ## Progress Log
 
@@ -306,6 +308,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Verified Teams message-extension shared surface metadata and PSA-first search access patterns with:
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/messageExtension/teamsMessageExtensionHandler.test.ts`
   - `pnpm --dir server exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-07) Verified Teams message-to-ticket task-card creation, inline submit, message metadata persistence, and duplicate-submit replay with:
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/messageExtension/teamsMessageExtensionHandler.test.ts`
+  - `pnpm --dir server exec tsc -p tsconfig.json --noEmit --pretty false`
 
 - (2026-03-07) Completed `F140`, `F141`, `F142`, and `F143` by teaching `server/src/lib/teams/bot/teamsBotHandler.ts` to parse `assign ticket` commands, default `assign ticket <ticket-id>` to self-assignment, resolve other assignees from active internal users with explicit `user:read` gating, and return the shared action result with an assignee-specific success summary plus Teams-tab/full-PSA links.
 - (2026-03-07) Completed `F144`, `F145`, and `F146` by teaching the same bot handler to parse `add note <ticket-id>: <note>`, preserve ticket context when the note body is missing, execute the shared `add_note` Teams action, and return the saved-note confirmation with follow-up deep links.
@@ -330,4 +335,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Completed `T333`, `T334`, `T339`, and `T340` with handler coverage for available-action summaries plus suppression of unavailable tenant-disabled actions.
 - (2026-03-07) Completed `F177` and `F178` by asserting message-extension search continues to invoke the shared Teams action layer with `surface: 'message_extension'` while reusing existing PSA ticket, contact, task, and approval access paths instead of introducing a Teams-only index.
 - (2026-03-07) Completed `T353`, `T354`, `T355`, and `T356` with handler coverage for shared invoking-surface metadata plus explicit assertions against `TicketService.search`, `ContactService.search`, tenant task queries, and `listPendingApprovalsForTeams(...)`.
-- (2026-03-07) Next unchecked feature after this slice is `F179` (Message action `create ticket from message`: supports creating a new PSA ticket from a Teams message).
+- (2026-03-07) Completed `F179`, `F180`, and `F181` by extending `server/src/lib/teams/messageExtension/teamsMessageExtensionHandler.ts` so `createTicketFromMessage` now returns a real adaptive-card task form with captured message subject/body context, tenant-backed board/status/client/contact choices, and default-backed ticket field handling for inline ticket creation.
+- (2026-03-07) Completed `F182`, `F183`, and `F184` by executing inline ticket creation through the shared ticket model, storing Teams source-message/idempotency metadata in `tickets.attributes`, replaying duplicate submits safely by that idempotency key, and reusing shared `open_record` result links for post-create Teams-tab/full-PSA confirmation.
+- (2026-03-07) Completed `T357` through `T368` with handler coverage for create-ticket task-card rendering, permission/setup guards, inline ticket creation, source-metadata persistence, confirmation deep links, invalid input recovery, and duplicate-submit replay.
+- (2026-03-07) Next unchecked feature after this slice is `F185` (Message action `update from message`: supports targeting an existing ticket).
