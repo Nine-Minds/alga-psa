@@ -35,7 +35,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-08) Importing `@shared/workflow/runtime` from the new schedule actions eagerly loads workflow runtime initialization exports, which in turn pull unrelated email/storage dependencies into Vitest resolution. Direct imports from the schema registry and schema modules avoid that coupling. Key files: `packages/workflows/src/actions/workflow-schedule-v2-actions.ts`, `shared/workflow/runtime/index.ts`.
 - (2026-03-08) The new backend checkpoint covers persistence, migration, CRUD actions, validation guards, permission checks, and tenant-scoped list/get flows, but not publish-time rebinding/revalidation or runner launch payload changes yet. Keep `F005` and `F016`-`F020` false until that lifecycle work lands.
 - (2026-03-08) The EE server DB-backed harness started hitting `KnexTimeoutError` during database recreation after multiple suite runs against the shared local Postgres container. For the publish lifecycle slice, unit coverage around the publish action and schedule lifecycle was faster and more reliable than retrying the saturated DB harness.
-- (2026-03-08) The new schedules UI test harness is stable for exact per-test Vitest runs, but broad shuffled runs of the whole file still hang around the text-search case. Keep `T034` false until that harness issue is resolved or the search assertions are reworked.
+- (2026-03-08) The initial schedules dialog payload-mode implementation had two self-referential sync bugs: form mode kept reparsing `payloadText` into fresh objects, and JSON mode kept rewriting `formValue` from unchanged text. Converting mode switches into explicit handlers removed those loops and stabilized the full schedules UI suite. Key file: `packages/workflows/src/components/automation-hub/WorkflowScheduleDialog.tsx`.
 
 ## Implementation Log
 
@@ -50,6 +50,8 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-08) Completed `T025`-`T028` with unit coverage proving one-time and recurring schedules now launch with saved payload input, provenance metadata is retained, and invalid payloads at fire time are recorded as schedule errors without pretending the launch succeeded. Key file: `server/src/test/unit/workflowScheduledRunHandlers.unit.test.ts`.
 - (2026-03-08) Completed `F021`-`F027` and `F030` by adding a `Schedules` tab to Automation Hub, wiring a server-backed schedules list with workflow/trigger/status filters, row-level edit/pause/resume/delete actions, and a create/edit dialog with workflow selection, one-time `runAt`, recurring `cron + timezone`, and inline payload validation. Key files: `packages/workflows/src/components/automation-hub/AutomationHub.tsx`, `packages/workflows/src/components/automation-hub/Schedules.tsx`, `packages/workflows/src/components/automation-hub/WorkflowScheduleDialog.tsx`, `packages/workflows/src/actions/index.ts`.
 - (2026-03-08) Completed `T029`-`T033` with client-side Vitest coverage for the new Automation Hub schedules tab, list columns, and workflow/trigger/status filters. Key files: `packages/workflows/src/components/automation-hub/AutomationHub.schedules.test.tsx`, `packages/workflows/src/components/automation-hub/Schedules.test.tsx`.
+- (2026-03-08) Completed `F028`-`F029` by finishing the reusable payload editor in the schedule dialog: schema-driven form mode now exposes labeled controls, JSON mode switches explicitly instead of looping state, and both modes operate against the workflow schema loaded from `getWorkflowSchemaAction`. Key file: `packages/workflows/src/components/automation-hub/WorkflowScheduleDialog.tsx`.
+- (2026-03-08) Completed `T034`-`T046` with a now-stable full schedules UI suite covering text search, edit/pause/resume/delete row actions, dialog required fields, one-time and recurring timing controls, schema-driven form fields, JSON editing, invalid payload blocking, and inferred-schema eligibility messaging. Key files: `packages/workflows/src/components/automation-hub/Schedules.test.tsx`, `packages/workflows/src/components/automation-hub/AutomationHub.schedules.test.tsx`.
 
 ## Commands / Runbooks
 
@@ -78,6 +80,9 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-08) Verify exact schedules list UI cases without the broad shuffled suite:
   - `cd server && npx vitest run ../packages/workflows/src/components/automation-hub/Schedules.test.tsx -t "shows schedule name, workflow, trigger type, timing, status, and error columns" --coverage=false`
   - `cd server && npx vitest run ../packages/workflows/src/components/automation-hub/Schedules.test.tsx -t "filters the schedules list by status" --coverage=false`
+- (2026-03-08) Verify the full schedules UI suite after payload-mode state fixes:
+  - `cd server && npx vitest run ../packages/workflows/src/components/automation-hub/Schedules.test.tsx --coverage=false`
+  - `cd server && npx vitest run ../packages/workflows/src/components/automation-hub/AutomationHub.schedules.test.tsx --coverage=false`
 
 ## Links / References
 

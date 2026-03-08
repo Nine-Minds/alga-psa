@@ -380,22 +380,6 @@ export default function WorkflowScheduleDialog({
   }, [isOpen, payloadSchema, payloadTouched]);
 
   useEffect(() => {
-    if (!isOpen) return;
-    if (payloadMode === 'form') {
-      try {
-        setFormValue(JSON.parse(payloadText || '{}'));
-        setJsonError(null);
-      } catch (error) {
-        setJsonError(error instanceof Error ? error.message : 'Invalid JSON');
-      }
-      return;
-    }
-
-    setPayloadText(JSON.stringify(formValue ?? {}, null, 2));
-    setJsonError(null);
-  }, [formValue, isOpen, payloadMode, payloadText]);
-
-  useEffect(() => {
     if (!payloadSchema) {
       setSchemaErrors([]);
       return;
@@ -480,6 +464,28 @@ export default function WorkflowScheduleDialog({
   const updateFormValue = (updater: (previous: unknown) => unknown) => {
     setPayloadTouched(true);
     setFormValue((previous: unknown) => updater(previous));
+  };
+
+  const handlePayloadModeChange = (nextMode: 'form' | 'json') => {
+    if (nextMode === payloadMode) {
+      return;
+    }
+
+    if (nextMode === 'json') {
+      setPayloadText(JSON.stringify(formValue ?? {}, null, 2));
+      setJsonError(null);
+      setPayloadMode('json');
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(payloadText || '{}');
+      setFormValue(parsed);
+      setJsonError(null);
+      setPayloadMode('form');
+    } catch (error) {
+      setJsonError(error instanceof Error ? error.message : 'Invalid JSON');
+    }
   };
 
   const renderField = (
@@ -612,6 +618,7 @@ export default function WorkflowScheduleDialog({
           </label>
           <div className="flex items-center gap-2">
             <Switch
+              aria-label={label}
               checked={Boolean(value)}
               onCheckedChange={(checked) => updateFormValue((previous) => setValueAtPath(previous, path, checked))}
             />
@@ -642,6 +649,7 @@ export default function WorkflowScheduleDialog({
         </label>
         <Input
           id={`schedule-form-${fieldPath}`}
+          aria-label={label}
           type={inputType}
           value={value == null ? '' : String(value)}
           onChange={(event) => {
@@ -839,7 +847,7 @@ export default function WorkflowScheduleDialog({
                     id="schedule-dialog-mode-form"
                     variant={payloadMode === 'form' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setPayloadMode('form')}
+                    onClick={() => handlePayloadModeChange('form')}
                   >
                     Form Mode
                   </Button>
@@ -847,7 +855,7 @@ export default function WorkflowScheduleDialog({
                     id="schedule-dialog-mode-json"
                     variant={payloadMode === 'json' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setPayloadMode('json')}
+                    onClick={() => handlePayloadModeChange('json')}
                   >
                     JSON Mode
                   </Button>

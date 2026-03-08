@@ -306,7 +306,8 @@ vi.mock('@alga-psa/ui/components/Input', () => ({
     value,
     onChange,
     type = 'text',
-    disabled
+    disabled,
+    ...props
   }: {
     label?: string;
     id?: string;
@@ -314,10 +315,18 @@ vi.mock('@alga-psa/ui/components/Input', () => ({
     onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
     type?: string;
     disabled?: boolean;
+    [key: string]: unknown;
   }) => (
     <label>
       {label ?? id}
-      <input aria-label={label ?? id ?? 'input'} id={id} type={type} value={value ?? ''} onChange={onChange} disabled={disabled} />
+      <input
+        aria-label={(props['aria-label'] as string | undefined) ?? label ?? id ?? 'input'}
+        id={id}
+        type={type}
+        value={value ?? ''}
+        onChange={onChange}
+        disabled={disabled}
+      />
     </label>
   )
 }));
@@ -339,13 +348,15 @@ vi.mock('@alga-psa/ui/components/TextArea', () => ({
 vi.mock('@alga-psa/ui/components/Switch', () => ({
   Switch: ({
     checked,
-    onCheckedChange
+    onCheckedChange,
+    ...props
   }: {
     checked: boolean;
     onCheckedChange: (value: boolean) => void;
+    [key: string]: unknown;
   }) => (
     <input
-      aria-label="switch"
+      aria-label={(props['aria-label'] as string | undefined) ?? "switch"}
       type="checkbox"
       checked={checked}
       onChange={(event) => onCheckedChange(event.target.checked)}
