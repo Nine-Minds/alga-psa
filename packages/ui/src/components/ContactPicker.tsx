@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Input } from './Input';
-import { ChevronDown, Search } from 'lucide-react';
+import { ChevronDown, Plus, Search } from 'lucide-react';
 import ContactAvatar from './ContactAvatar';
 import type { IContact } from '@alga-psa/types';
 import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
@@ -25,6 +25,7 @@ interface ContactPickerProps {
   size?: 'sm' | 'lg';
   labelStyle?: 'bold' | 'medium' | 'normal' | 'none';
   modal?: boolean;
+  onAddNew?: () => void;
 }
 
 export const ContactPicker = ({
@@ -39,6 +40,7 @@ export const ContactPicker = ({
   className = '',
   buttonWidth = 'full',
   modal = true,
+  onAddNew,
   "data-automation-type": dataAutomationType = 'picker',
 }: ContactPickerProps & AutomationProps) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -110,7 +112,7 @@ export const ContactPicker = ({
     const spaceBelow = viewportHeight - buttonRect.bottom;
     const spaceAbove = buttonRect.top;
 
-    const baseHeight = 40 + 40 + 16;
+    const baseHeight = 40 + 40 + 16 + (onAddNew ? 49 : 0);
     const itemsHeight = Math.min(filteredContacts.length, 5) * 36;
     const estimatedDropdownHeight = baseHeight + itemsHeight + 10;
 
@@ -141,7 +143,7 @@ export const ContactPicker = ({
         window.removeEventListener('resize', updateDropdownPosition);
       };
     }
-  }, [isOpen, filteredContacts.length]);
+  }, [isOpen, filteredContacts.length, onAddNew]);
 
   const toggleDropdown = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -158,6 +160,14 @@ export const ContactPicker = ({
     e.stopPropagation();
     onValueChange(contactId);
     setIsOpen(false);
+  };
+
+  const handleAddNew = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSearchTerm('');
+    setIsOpen(false);
+    onAddNew?.();
   };
 
 
@@ -359,6 +369,19 @@ export const ContactPicker = ({
                   ))
                 )}
               </div>
+              {onAddNew && (
+                <>
+                  <div className="border-t border-gray-200" />
+                  <button
+                    type="button"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-gray-100 cursor-pointer"
+                    onClick={handleAddNew}
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>+ Add new contact</span>
+                  </button>
+                </>
+              )}
             </div>,
             document.body
           )}

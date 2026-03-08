@@ -107,3 +107,7 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 7. **Part 5c** — TreeSelect + CategoryPicker onAddNew
 8. **Part 5d** — CategoryPicker consumers (4 files)
 9. **Verify** — run existing tests, manual smoke test
+
+## Progress Log
+- 2026-03-08 F001: Added optional `onAddNew` support to `packages/ui/src/components/ContactPicker.tsx` and rendered the bottom separator/button using the PRD styling pattern. Included the dropdown height estimate update so the portal positions correctly when the new action is present.
+- Validation: `cd packages/ui && npx vitest run --config vitest.config.ts src/components/ContactPicker.test.tsx`

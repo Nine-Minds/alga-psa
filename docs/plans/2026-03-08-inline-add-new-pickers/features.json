@@ -2,211 +2,281 @@
   {
     "id": "F001",
     "description": "ContactPicker accepts optional onAddNew prop and renders separator + '+ Add new contact' button at bottom of contact list when provided",
-    "implemented": false,
-    "prdRefs": ["FR-1"]
+    "implemented": true,
+    "prdRefs": [
+      "FR-1"
+    ]
   },
   {
     "id": "F002",
     "description": "ContactPicker button calls onAddNew() and closes the dropdown (setIsOpen(false))",
     "implemented": false,
-    "prdRefs": ["FR-1"]
+    "prdRefs": [
+      "FR-1"
+    ]
   },
   {
     "id": "F003",
     "description": "ContactPicker renders identically to current when onAddNew is not provided (backward compatible)",
     "implemented": false,
-    "prdRefs": ["FR-1"]
+    "prdRefs": [
+      "FR-1"
+    ]
   },
   {
     "id": "F004",
     "description": "QuickAddTicket wires ContactPicker onAddNew to open QuickAddContact dialog with selectedClientId pre-filled",
     "implemented": false,
-    "prdRefs": ["FR-2"]
+    "prdRefs": [
+      "FR-2"
+    ]
   },
   {
     "id": "F005",
     "description": "QuickAddTicket auto-selects newly created contact after QuickAddContact dialog closes",
     "implemented": false,
-    "prdRefs": ["FR-2"]
+    "prdRefs": [
+      "FR-2"
+    ]
   },
   {
     "id": "F006",
     "description": "TicketProperties wires ContactPicker onAddNew to open QuickAddContact with ticket's company_id",
     "implemented": false,
-    "prdRefs": ["FR-2"]
+    "prdRefs": [
+      "FR-2"
+    ]
   },
   {
     "id": "F007",
     "description": "QuickAddInteraction wires ContactPicker onAddNew to open QuickAddContact with selectedClientId",
     "implemented": false,
-    "prdRefs": ["FR-2"]
+    "prdRefs": [
+      "FR-2"
+    ]
   },
   {
     "id": "F008",
     "description": "OverallInteractionsFeed wires ContactPicker onAddNew to open QuickAddContact",
     "implemented": false,
-    "prdRefs": ["FR-2"]
+    "prdRefs": [
+      "FR-2"
+    ]
   },
   {
     "id": "F009",
     "description": "ProjectQuickAdd wires ContactPicker onAddNew to open QuickAddContact with selectedClientId",
     "implemented": false,
-    "prdRefs": ["FR-2"]
+    "prdRefs": [
+      "FR-2"
+    ]
   },
   {
     "id": "F010",
     "description": "Projects (list/filter) wires ContactPicker onAddNew to open QuickAddContact",
     "implemented": false,
-    "prdRefs": ["FR-2"]
+    "prdRefs": [
+      "FR-2"
+    ]
   },
   {
     "id": "F011",
     "description": "ClientDetails wires ContactPicker onAddNew to open QuickAddContact with clientId",
     "implemented": false,
-    "prdRefs": ["FR-2"]
+    "prdRefs": [
+      "FR-2"
+    ]
   },
   {
     "id": "F012",
     "description": "BillingConfigForm wires ContactPicker onAddNew to open QuickAddContact",
     "implemented": false,
-    "prdRefs": ["FR-2"]
+    "prdRefs": [
+      "FR-2"
+    ]
   },
   {
     "id": "F013",
     "description": "UserManagement wires ContactPicker onAddNew to open QuickAddContact",
     "implemented": false,
-    "prdRefs": ["FR-2"]
+    "prdRefs": [
+      "FR-2"
+    ]
   },
   {
     "id": "F014",
     "description": "EntraReconciliationQueue wires ContactPicker onAddNew to open QuickAddContact",
     "implemented": false,
-    "prdRefs": ["FR-2"]
+    "prdRefs": [
+      "FR-2"
+    ]
   },
   {
     "id": "F015",
     "description": "ClientPicker accepts optional onAddNew prop and renders separator + '+ Add new client' button at bottom of client list when provided",
     "implemented": false,
-    "prdRefs": ["FR-3"]
+    "prdRefs": [
+      "FR-3"
+    ]
   },
   {
     "id": "F016",
     "description": "ClientPicker button calls onAddNew() and closes the dropdown",
     "implemented": false,
-    "prdRefs": ["FR-3"]
+    "prdRefs": [
+      "FR-3"
+    ]
   },
   {
     "id": "F017",
     "description": "ClientPicker renders identically to current when onAddNew is not provided (backward compatible)",
     "implemented": false,
-    "prdRefs": ["FR-3"]
+    "prdRefs": [
+      "FR-3"
+    ]
   },
   {
     "id": "F018",
     "description": "QuickAddTicket wires ClientPicker onAddNew to open QuickAddClient dialog and auto-selects new client",
     "implemented": false,
-    "prdRefs": ["FR-4"]
+    "prdRefs": [
+      "FR-4"
+    ]
   },
   {
     "id": "F019",
     "description": "ProjectQuickAdd wires ClientPicker onAddNew to open QuickAddClient and auto-selects new client",
     "implemented": false,
-    "prdRefs": ["FR-4"]
+    "prdRefs": [
+      "FR-4"
+    ]
   },
   {
     "id": "F020",
     "description": "ContractBasicsStep wires ClientPicker onAddNew to open QuickAddClient and auto-selects new client",
     "implemented": false,
-    "prdRefs": ["FR-4"]
+    "prdRefs": [
+      "FR-4"
+    ]
   },
   {
     "id": "F021",
     "description": "ManualInvoices wires ClientPicker onAddNew to open QuickAddClient and auto-selects new client",
     "implemented": false,
-    "prdRefs": ["FR-4"]
+    "prdRefs": [
+      "FR-4"
+    ]
   },
   {
     "id": "F022",
     "description": "QuickAddAsset wires ClientPicker onAddNew to open QuickAddClient and auto-selects new client",
     "implemented": false,
-    "prdRefs": ["FR-4"]
+    "prdRefs": [
+      "FR-4"
+    ]
   },
   {
     "id": "F023",
     "description": "QuickAddCategory component extracted from CategoriesSettings inline dialog into packages/tickets/src/components/QuickAddCategory.tsx",
     "implemented": false,
-    "prdRefs": ["FR-5"]
+    "prdRefs": [
+      "FR-5"
+    ]
   },
   {
     "id": "F024",
     "description": "QuickAddCategory accepts preselectedBoardId prop and hides board selector when provided",
     "implemented": false,
-    "prdRefs": ["FR-5"]
+    "prdRefs": [
+      "FR-5"
+    ]
   },
   {
     "id": "F025",
     "description": "QuickAddCategory shows category name input, board selector (when no preselectedBoardId), and optional parent category dropdown",
     "implemented": false,
-    "prdRefs": ["FR-5"]
+    "prdRefs": [
+      "FR-5"
+    ]
   },
   {
     "id": "F026",
     "description": "QuickAddCategory uses createCategory action and calls onCategoryCreated callback on success",
     "implemented": false,
-    "prdRefs": ["FR-5"]
+    "prdRefs": [
+      "FR-5"
+    ]
   },
   {
     "id": "F027",
     "description": "QuickAddCategory fetches boards internally if not provided via props",
     "implemented": false,
-    "prdRefs": ["FR-5"]
+    "prdRefs": [
+      "FR-5"
+    ]
   },
   {
     "id": "F028",
     "description": "CategoriesSettings refactored to use QuickAddCategory component instead of inline dialog JSX",
     "implemented": false,
-    "prdRefs": ["FR-6"]
+    "prdRefs": [
+      "FR-6"
+    ]
   },
   {
     "id": "F029",
     "description": "CategoriesSettings behavior unchanged after refactor (create and edit both work)",
     "implemented": false,
-    "prdRefs": ["FR-6"]
+    "prdRefs": [
+      "FR-6"
+    ]
   },
   {
     "id": "F030",
     "description": "TreeSelect accepts optional onAddNew prop and renders separator + button at bottom of options list",
     "implemented": false,
-    "prdRefs": ["FR-7"]
+    "prdRefs": [
+      "FR-7"
+    ]
   },
   {
     "id": "F031",
     "description": "CategoryPicker accepts optional onAddNew prop and passes it through to TreeSelect",
     "implemented": false,
-    "prdRefs": ["FR-7"]
+    "prdRefs": [
+      "FR-7"
+    ]
   },
   {
     "id": "F032",
     "description": "QuickAddTicket wires CategoryPicker onAddNew to open QuickAddCategory with boardId pre-selected, auto-selects new category",
     "implemented": false,
-    "prdRefs": ["FR-8"]
+    "prdRefs": [
+      "FR-8"
+    ]
   },
   {
     "id": "F033",
     "description": "TicketInfo wires CategoryPicker onAddNew to open QuickAddCategory with ticket's board_id, auto-selects new category",
     "implemented": false,
-    "prdRefs": ["FR-8"]
+    "prdRefs": [
+      "FR-8"
+    ]
   },
   {
     "id": "F034",
     "description": "TicketingDashboard wires CategoryPicker onAddNew to open QuickAddCategory",
     "implemented": false,
-    "prdRefs": ["FR-8"]
+    "prdRefs": [
+      "FR-8"
+    ]
   },
   {
     "id": "F035",
     "description": "TicketDetails wires CategoryPicker onAddNew to open QuickAddCategory with board context",
     "implemented": false,
-    "prdRefs": ["FR-8"]
+    "prdRefs": [
+      "FR-8"
+    ]
   }
 ]
