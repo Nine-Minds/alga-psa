@@ -153,4 +153,35 @@ describe('designerStore.loadWorkspace (legacy nodes[] import)', () => {
     expect(nativeStyle?.width).toBe('200px');
     expect(nativeStyle?.height).toBe('48px');
   });
+
+  it('defaults transforms to an empty workspace when older snapshots do not provide them', () => {
+    useInvoiceDesignerStore.getState().loadWorkspace({
+      rootId: 'doc-1',
+      nodesById: {
+        'doc-1': {
+          id: 'doc-1',
+          type: 'document',
+          props: { name: 'Document', metadata: {}, layout: { display: 'flex' }, style: {} },
+          children: ['page-1'],
+        },
+        'page-1': {
+          id: 'page-1',
+          type: 'page',
+          props: { name: 'Page 1', metadata: {}, layout: { display: 'flex' }, style: {} },
+          children: [],
+        },
+      },
+      snapToGrid: true,
+      gridSize: 8,
+      showGuides: true,
+      showRulers: true,
+      canvasScale: 1,
+    });
+
+    expect(useInvoiceDesignerStore.getState().transforms).toEqual({
+      sourceBindingId: '',
+      outputBindingId: '',
+      operations: [],
+    });
+  });
 });

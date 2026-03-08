@@ -17,11 +17,16 @@ import type {
   DesignerComponentType,
   DesignerContainerLayout,
   DesignerNodeStyle,
+  DesignerTransformWorkspace,
   DesignerWorkspaceSnapshot,
 } from '../state/designerStore';
-import { DOCUMENT_NODE_ID } from '../state/designerStore';
+import { createEmptyDesignerTransformWorkspace, DOCUMENT_NODE_ID } from '../state/designerStore';
 import { getDefinition } from '../constants/componentCatalog';
 import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
+import {
+  toInvoiceTemplateTransformPipeline,
+  validateDesignerTransformWorkspace,
+} from '../transforms/transformWorkspace';
 
 type WorkspaceNode = DesignerWorkspaceSnapshot['nodesById'][string];
 
@@ -29,6 +34,8 @@ type UnknownRecord = Record<string, unknown>;
 
 const isRecord = (value: unknown): value is UnknownRecord =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const cloneJson = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 
 const asTrimmedString = (value: unknown): string =>
   typeof value === 'string' ? value.trim() : '';
@@ -743,16 +750,36 @@ const createBaseNode = (node: WorkspaceNode): Pick<InvoiceTemplateNode, 'id' | '
   style: createNodeStyle(node),
 });
 
+const resolveCollectionSourceBindingId = (
+  collectionPath: string,
+  registerCollectionBinding: (path: string) => string,
+  transformOutputBindingId?: string
+): string => {
+  const normalizedTransformOutputBindingId = normalizeInvoiceBindingPath(transformOutputBindingId ?? '');
+  return collectionPath === normalizedTransformOutputBindingId && normalizedTransformOutputBindingId.length > 0
+    ? normalizedTransformOutputBindingId
+    : registerCollectionBinding(collectionPath);
+};
+
 const mapDesignerNodeToAstNode = (
   node: WorkspaceNode,
   nodesById: Map<string, WorkspaceNode>,
   registerValueBinding: (path: string) => string,
-  registerCollectionBinding: (path: string) => string
+  registerCollectionBinding: (path: string) => string,
+  transformOutputBindingId?: string
 ): InvoiceTemplateNode | null => {
   const children = node.children
     .map((childId) => nodesById.get(childId))
     .filter((child): child is WorkspaceNode => Boolean(child))
-    .map((child) => mapDesignerNodeToAstNode(child, nodesById, registerValueBinding, registerCollectionBinding))
+    .map((child) =>
+      mapDesignerNodeToAstNode(
+        child,
+        nodesById,
+        registerValueBinding,
+        registerCollectionBinding,
+        transformOutputBindingId
+      )
+    )
     .filter((child): child is InvoiceTemplateNode => Boolean(child));
 
   switch (node.type) {
@@ -761,7 +788,13 @@ const mapDesignerNodeToAstNode = (
       for (const childId of node.children) {
         const childNode = nodesById.get(childId);
         if (!childNode) continue;
-        const mappedChild = mapDesignerNodeToAstNode(childNode, nodesById, registerValueBinding, registerCollectionBinding);
+        const mappedChild = mapDesignerNodeToAstNode(
+          childNode,
+          nodesById,
+          registerValueBinding,
+          registerCollectionBinding,
+          transformOutputBindingId
+        );
         if (!mappedChild) continue;
 
         const childMetadata = getWorkspaceNodeMetadata(childNode);
@@ -861,7 +894,11 @@ const mapDesignerNodeToAstNode = (
     case 'dynamic-table': {
       const metadata = getWorkspaceNodeMetadata(node);
       const collectionPath = resolveCollectionPath(node);
-      const sourceBindingId = registerCollectionBinding(collectionPath);
+      const sourceBindingId = resolveCollectionSourceBindingId(
+        collectionPath,
+        registerCollectionBinding,
+        transformOutputBindingId
+      );
       return {
         ...createBaseNode(node),
         type: 'dynamic-table',
@@ -912,7 +949,13 @@ const mapDesignerNodeToAstNode = (
         return {
           ...createBaseNode(node),
           type: 'totals',
-          sourceBinding: { bindingId: registerCollectionBinding(sourceBindingPath) },
+          sourceBinding: {
+            bindingId: resolveCollectionSourceBindingId(
+              sourceBindingPath,
+              registerCollectionBinding,
+              transformOutputBindingId
+            ),
+          },
           rows:
             rows.length > 0
               ? rows
@@ -1084,8 +1127,25 @@ export const exportWorkspaceToInvoiceTemplateAst = (
     return bindingId;
   };
 
+  const workspaceTransforms = isRecord(workspace.transforms)
+    ? (workspace.transforms as DesignerTransformWorkspace)
+    : createEmptyDesignerTransformWorkspace();
+  const transformIssues = validateDesignerTransformWorkspace(workspaceTransforms);
+  if (transformIssues.length > 0) {
+    const firstIssue = transformIssues[0];
+    if (firstIssue) {
+      throw new Error(firstIssue.message);
+    }
+  }
+  const exportedTransforms = toInvoiceTemplateTransformPipeline(workspaceTransforms);
   const layout = root
-    ? mapDesignerNodeToAstNode(root, nodesById, registerValueBinding, registerCollectionBinding)
+    ? mapDesignerNodeToAstNode(
+        root,
+        nodesById,
+        registerValueBinding,
+        registerCollectionBinding,
+        workspaceTransforms.outputBindingId
+      )
     : null;
 
   return {
@@ -1101,6 +1161,7 @@ export const exportWorkspaceToInvoiceTemplateAst = (
       values: valueBindings,
       collections: collectionBindings,
     },
+    ...(exportedTransforms ? { transforms: cloneJson(exportedTransforms) } : {}),
     layout: layout && layout.type === 'document'
       ? layout
       : {
@@ -1477,6 +1538,7 @@ export const importInvoiceTemplateAstToWorkspace = (
 
       return nodesById;
     })(),
+    transforms: ast.transforms ? cloneJson(ast.transforms) : createEmptyDesignerTransformWorkspace(),
     snapToGrid: true,
     gridSize: 8,
     showGuides: true,

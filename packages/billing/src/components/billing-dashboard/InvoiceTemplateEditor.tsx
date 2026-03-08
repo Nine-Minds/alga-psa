@@ -35,7 +35,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const [editorHeight, setEditorHeight] = useState<string | number>('320px');
   const [editorTab, setEditorTab] = useState<'visual' | 'code'>('visual');
-  const [visualWorkspaceTab, setVisualWorkspaceTab] = useState<'design' | 'preview'>('design');
+  const [visualWorkspaceTab, setVisualWorkspaceTab] = useState<'design' | 'transforms' | 'preview'>('design');
   const designerLoadWorkspace = useInvoiceDesignerStore((state) => state.loadWorkspace);
   const designerResetWorkspace = useInvoiceDesignerStore((state) => state.resetWorkspace);
   const designerExportWorkspace = useInvoiceDesignerStore((state) => state.exportWorkspace);
@@ -45,6 +45,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
   const designerShowGuides = useInvoiceDesignerStore((state) => state.showGuides);
   const designerShowRulers = useInvoiceDesignerStore((state) => state.showRulers);
   const designerCanvasScale = useInvoiceDesignerStore((state) => state.canvasScale);
+  const designerTransforms = useInvoiceDesignerStore((state) => state.transforms);
   const [designerHydratedFor, setDesignerHydratedFor] = useState<string | null>(null);
   const generatedCodeViewSource = useMemo(() => {
     try {
@@ -60,6 +61,7 @@ const InvoiceTemplateEditor: React.FC<InvoiceTemplateEditorProps> = ({ templateI
     designerShowGuides,
     designerShowRulers,
     designerSnapToGrid,
+    designerTransforms,
   ]);
 
   // Effect for fetching template data

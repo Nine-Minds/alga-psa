@@ -6,6 +6,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { DesignerSchemaInspector } from './DesignerSchemaInspector';
+import { exportWorkspaceToInvoiceTemplateAst } from '../ast/workspaceAst';
 import { DesignCanvas } from '../canvas/DesignCanvas';
 import { useInvoiceDesignerStore } from '../state/designerStore';
 import type { DesignerNode } from '../state/designerStore';
@@ -15,7 +16,56 @@ afterEach(() => cleanup());
 const noop = () => {};
 const tableRootSelector = '[data-automation-id="designer-canvas-node-table-1"]';
 
-const mountTableInspectorAndCanvas = (columns: Array<Record<string, unknown>>) => {
+const findDynamicTableNode = (node: any): any | null => {
+  if (!node || typeof node !== 'object') {
+    return null;
+  }
+  if (node.type === 'dynamic-table') {
+    return node;
+  }
+  if (!Array.isArray(node.children)) {
+    return null;
+  }
+  for (const child of node.children) {
+    const match = findDynamicTableNode(child);
+    if (match) {
+      return match;
+    }
+  }
+  return null;
+};
+
+const selectCustomOption = async (triggerId: string, optionText: string) => {
+  const trigger = document.getElementById(triggerId);
+  expect(trigger).toBeTruthy();
+  if (!trigger) return;
+  act(() => {
+    fireEvent.click(trigger);
+  });
+  const options = await screen.findAllByRole('option');
+  const option = options.find((candidate) => candidate.textContent?.trim() === optionText) ?? null;
+  expect(option).toBeTruthy();
+  if (!option) return;
+  act(() => {
+    fireEvent.click(option);
+  });
+};
+
+const mountTableInspectorAndCanvas = ({
+  columns,
+  nodeType = 'table',
+  sourceBindingId,
+  transforms,
+}: {
+  columns: Array<Record<string, unknown>>;
+  nodeType?: 'table' | 'dynamic-table';
+  sourceBindingId?: string;
+  transforms?: {
+    sourceBindingId: string;
+    outputBindingId: string;
+    operations: Array<Record<string, unknown>>;
+  };
+}) => {
   act(() => {
     const store = useInvoiceDesignerStore.getState();
     store.loadWorkspace({
@@ -46,17 +96,29 @@ const mountTableInspectorAndCanvas = (columns: Array<Record<string, unknown>>) =
         },
         'table-1': {
           id: 'table-1',
-          type: 'table',
+          type: nodeType,
           props: {
             name: 'Table',
             metadata: {
               columns,
+              ...(sourceBindingId ? { collectionBindingKey: sourceBindingId } : {}),
             },
             style: { width: '520px', height: '220px' },
           },
           children: [],
         },
       },
+      transforms: transforms
+        ? {
+            sourceBindingId: transforms.sourceBindingId,
+            outputBindingId: transforms.outputBindingId,
+            operations: transforms.operations as any,
+          }
+        : {
+            sourceBindingId: '',
+            outputBindingId: '',
+            operations: [],
+          },
       snapToGrid: false,
       gridSize: 8,
       showGuides: false,
@@ -105,12 +167,24 @@ const mountTableInspectorAndCanvas = (columns: Array<Record<string, unknown>>) =
 
 describe('TableEditorWidget (schema widget integration)', () => {
   beforeEach(() => {
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: () => undefined,
+    });
+    Object.defineProperty(HTMLElement.prototype, 'hasPointerCapture', {
+      configurable: true,
+      value: () => false,
+    });
+    Object.defineProperty(HTMLElement.prototype, 'releasePointerCapture', {
+      configurable: true,
+      value: () => undefined,
+    });
     useInvoiceDesignerStore.getState().resetWorkspace();
   });
 
   it('updates metadata.columns via schema widget and the canvas preview reflects the change', async () => {
     // Empty columns triggers the canvas fallback headers until we add one via the widget.
-    mountTableInspectorAndCanvas([]);
+    mountTableInspectorAndCanvas({ columns: [] });
     const initialTableRoot = document.querySelector(tableRootSelector) as HTMLElement | null;
     expect(initialTableRoot).toBeTruthy();
     if (!initialTableRoot) return;
@@ -137,7 +211,7 @@ describe('TableEditorWidget (schema widget integration)', () => {
   });
 
   it('quick add presets provide guided column creation and legend hints', async () => {
-    mountTableInspectorAndCanvas([]);
+    mountTableInspectorAndCanvas({ columns: [] });
 
     expect(screen.getByText('Field key reference')).toBeTruthy();
 
@@ -163,11 +237,11 @@ describe('TableEditorWidget (schema widget integration)', () => {
   });
 
   it('reorders columns with move up/down controls', async () => {
-    mountTableInspectorAndCanvas([
+    mountTableInspectorAndCanvas({ columns: [
       { id: 'col-description', header: 'Description', key: 'item.description', type: 'text', width: 280 },
       { id: 'col-quantity', header: 'Qty', key: 'item.quantity', type: 'number', width: 90 },
       { id: 'col-amount', header: 'Amount', key: 'item.total', type: 'currency', width: 140 },
-    ]);
+    ] });
 
     fireEvent.click(screen.getByRole('button', { name: 'Move col-quantity up' }));
 
@@ -187,7 +261,7 @@ describe('TableEditorWidget (schema widget integration)', () => {
   });
 
   it('reorders columns that include undefined optional metadata from AST imports', async () => {
-    mountTableInspectorAndCanvas([
+    mountTableInspectorAndCanvas({ columns: [
       {
         id: 'description',
         header: 'Description',
@@ -212,7 +286,7 @@ describe('TableEditorWidget (schema widget integration)', () => {
         format: 'currency',
         style: { inline: { textAlign: 'right' } },
       },
-    ]);
+    ] });
 
     fireEvent.click(screen.getByRole('button', { name: 'Move quantity up' }));
 
@@ -223,6 +297,87 @@ describe('TableEditorWidget (schema widget integration)', () => {
       expect(Object.prototype.hasOwnProperty.call(columns[1], 'type')).toBe(false);
       expect(Object.prototype.hasOwnProperty.call(columns[1], 'format')).toBe(false);
       expect(Object.prototype.hasOwnProperty.call(columns[1], 'style')).toBe(false);
+    });
+  });
+
+  it('lets dynamic tables switch their source binding to the authored transforms output binding', async () => {
+    mountTableInspectorAndCanvas({
+      nodeType: 'dynamic-table',
+      sourceBindingId: 'items',
+      columns: [{ id: 'col-description', header: 'Description', key: 'item.description', type: 'text', width: 280 }],
+      transforms: {
+        sourceBindingId: 'items',
+        outputBindingId: 'items.grouped',
+        operations: [
+          { id: 'group-category', type: 'group', key: 'category', label: 'Category' },
+          { id: 'aggregate-sum', type: 'aggregate', aggregations: [{ id: 'sumTotal', op: 'sum', path: 'total' }] },
+        ],
+      },
+    });
+
+    await selectCustomOption('designer-table-source-binding', 'items.grouped (Transforms output)');
+
+    await waitFor(() => {
+      const updated = useInvoiceDesignerStore.getState().nodesById['table-1'];
+      expect((updated.props as any)?.metadata?.collectionBindingKey).toBe('items.grouped');
+    });
+
+    const ast = exportWorkspaceToInvoiceTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
+    const table = findDynamicTableNode(ast.layout);
+    expect(table?.type).toBe('dynamic-table');
+    if (!table || table.type !== 'dynamic-table') return;
+    expect(table.repeat.sourceBinding.bindingId).toContain('items.grouped');
+  });
+
+  it('offers grouped transform row paths in the column mapping UI when the transforms output binding is selected', async () => {
+    mountTableInspectorAndCanvas({
+      nodeType: 'dynamic-table',
+      sourceBindingId: 'items.grouped',
+      columns: [{ id: 'col-description', header: 'Description', key: 'item.description', type: 'text', width: 280 }],
+      transforms: {
+        sourceBindingId: 'items',
+        outputBindingId: 'items.grouped',
+        operations: [
+          { id: 'group-category', type: 'group', key: 'category', label: 'Category' },
+          { id: 'aggregate-sum', type: 'aggregate', aggregations: [{ id: 'sumTotal', op: 'sum', path: 'total' }] },
+        ],
+      },
+    });
+
+    expect(screen.getAllByText('item.key').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('item.aggregates.sumTotal').length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'item.aggregates.sumTotal' })[0]!);
+
+    await waitFor(() => {
+      const updated = useInvoiceDesignerStore.getState().nodesById['table-1'];
+      const columns = (updated.props as any)?.metadata?.columns;
+      expect(columns[0]?.key).toBe('item.aggregates.sumTotal');
+    });
+  });
+
+  it('refreshes available column mapping suggestions when the table source binding changes shape', async () => {
+    mountTableInspectorAndCanvas({
+      nodeType: 'dynamic-table',
+      sourceBindingId: 'items.grouped',
+      columns: [{ id: 'col-description', header: 'Description', key: 'item.description', type: 'text', width: 280 }],
+      transforms: {
+        sourceBindingId: 'items',
+        outputBindingId: 'items.grouped',
+        operations: [
+          { id: 'group-category', type: 'group', key: 'category', label: 'Category' },
+          { id: 'aggregate-sum', type: 'aggregate', aggregations: [{ id: 'sumTotal', op: 'sum', path: 'total' }] },
+        ],
+      },
+    });
+
+    expect(screen.getAllByText('item.aggregates.sumTotal').length).toBeGreaterThan(0);
+
+    await selectCustomOption('designer-table-source-binding', 'items (Transforms source)');
+
+    await waitFor(() => {
+      expect(screen.queryAllByText('item.aggregates.sumTotal')).toHaveLength(0);
+      expect(screen.getAllByText('item.description').length).toBeGreaterThan(0);
     });
   });
 });

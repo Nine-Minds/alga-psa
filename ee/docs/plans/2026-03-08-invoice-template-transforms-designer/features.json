@@ -1,0 +1,146 @@
+[
+  {
+    "id": "F001",
+    "description": "Add a top-level Transforms tab to the invoice template editor beside Design and Preview.",
+    "implemented": true,
+    "prdRefs": ["FR-001"]
+  },
+  {
+    "id": "F002",
+    "description": "Preserve the existing Design and Preview workspace flows when the new Transforms tab is added.",
+    "implemented": true,
+    "prdRefs": ["FR-001", "NFR-002"]
+  },
+  {
+    "id": "F003",
+    "description": "Extend designer workspace/store state to represent template-level transform authoring data as first-class state.",
+    "implemented": true,
+    "prdRefs": ["FR-002"]
+  },
+  {
+    "id": "F004",
+    "description": "Import existing templateAst.transforms into workspace state when a template is loaded.",
+    "implemented": true,
+    "prdRefs": ["FR-003"]
+  },
+  {
+    "id": "F005",
+    "description": "Export workspace transform state back into templateAst.transforms during preview/save AST generation.",
+    "implemented": true,
+    "prdRefs": ["FR-004", "NFR-001"]
+  },
+  {
+    "id": "F006",
+    "description": "Keep templates with no transforms safe to load, edit, preview, and save without behavior changes.",
+    "implemented": true,
+    "prdRefs": ["FR-005", "NFR-002"]
+  },
+  {
+    "id": "F007",
+    "description": "Provide a source collection selector that lists any collection binding available in the template.",
+    "implemented": true,
+    "prdRefs": ["FR-006"]
+  },
+  {
+    "id": "F008",
+    "description": "Show source collection metadata and discovered fields using sample/preview data when available.",
+    "implemented": true,
+    "prdRefs": ["FR-007"]
+  },
+  {
+    "id": "F009",
+    "description": "Render transform pipeline cards in authored order with selection state for inspector editing.",
+    "implemented": true,
+    "prdRefs": ["FR-008"]
+  },
+  {
+    "id": "F010",
+    "description": "Support adding, deleting, duplicating, and reordering transform operations in the pipeline.",
+    "implemented": true,
+    "prdRefs": ["FR-008"]
+  },
+  {
+    "id": "F011",
+    "description": "Support visual authoring of filter operations.",
+    "implemented": true,
+    "prdRefs": ["FR-009"]
+  },
+  {
+    "id": "F012",
+    "description": "Support visual authoring of sort operations.",
+    "implemented": true,
+    "prdRefs": ["FR-010"]
+  },
+  {
+    "id": "F013",
+    "description": "Support visual authoring of group operations.",
+    "implemented": true,
+    "prdRefs": ["FR-011"]
+  },
+  {
+    "id": "F014",
+    "description": "Support visual authoring of aggregate operations with one or more aggregate definitions.",
+    "implemented": true,
+    "prdRefs": ["FR-012"]
+  },
+  {
+    "id": "F015",
+    "description": "Let the user author and persist a transform output binding ID.",
+    "implemented": true,
+    "prdRefs": ["FR-013"]
+  },
+  {
+    "id": "F016",
+    "description": "Show a live transformed-output preview that reflects flat rows or grouped rows depending on pipeline state.",
+    "implemented": true,
+    "prdRefs": ["FR-014"]
+  },
+  {
+    "id": "F017",
+    "description": "Expose grouped row fields such as key and aggregates in the output preview so users can map layout columns correctly.",
+    "implemented": true,
+    "prdRefs": ["FR-014", "FR-016"]
+  },
+  {
+    "id": "F018",
+    "description": "Allow dynamic-table nodes to bind their source collection to the transform output binding.",
+    "implemented": true,
+    "prdRefs": ["FR-015"]
+  },
+  {
+    "id": "F019",
+    "description": "Expose transformed row paths in table column mapping/binding UI for transformed and grouped outputs.",
+    "implemented": true,
+    "prdRefs": ["FR-016"]
+  },
+  {
+    "id": "F020",
+    "description": "Prevent illegal transform sequences in the UI before save when the evaluator would reject them.",
+    "implemented": true,
+    "prdRefs": ["FR-017"]
+  },
+  {
+    "id": "F021",
+    "description": "Surface transform-specific validation or evaluation errors inline in the Transforms tab.",
+    "implemented": true,
+    "prdRefs": ["FR-018"]
+  },
+  {
+    "id": "F022",
+    "description": "Ensure authoritative preview compilation/rendering respects authored transforms.",
+    "implemented": true,
+    "prdRefs": ["FR-019"]
+  },
+  {
+    "id": "F023",
+    "description": "Include the generated transforms block in the read-only AST code tab.",
+    "implemented": true,
+    "prdRefs": ["FR-020"]
+  },
+  {
+    "id": "F024",
+    "description": "Preserve transform configuration through load -> edit -> save -> reopen round-trips in the visual editor.",
+    "implemented": true,
+    "prdRefs": ["FR-021", "NFR-001"]
+  }
+]

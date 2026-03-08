@@ -103,6 +103,25 @@ const invoiceData = {
   total: 220,
 };
 
+const transformedInvoiceData = {
+  invoiceNumber: 'INV-9002',
+  issueDate: '2026-02-01',
+  dueDate: '2026-02-15',
+  currencyCode: 'USD',
+  poNumber: null,
+  customer: { name: 'Acme Co.', address: '123 Main' },
+  tenantClient: { name: 'Northwind MSP', address: '400 SW Main', logoUrl: null },
+  items: [
+    { id: 'item-1', description: 'Consulting', category: 'Services', quantity: 2, unitPrice: 100, total: 200 },
+    { id: 'item-2', description: 'Support', category: 'Services', quantity: 1, unitPrice: 100, total: 100 },
+    { id: 'item-3', description: 'Equipment', category: 'Products', quantity: 1, unitPrice: 30, total: 30 },
+    { id: 'item-4', description: 'Discount', category: 'Adjustments', quantity: 1, unitPrice: -15, total: -15 },
+  ],
+  subtotal: 315,
+  tax: 31.5,
+  total: 346.5,
+};
+
 describe('invoiceTemplatePreview authoritative AST integration', () => {
   it('executes AST validation + evaluator + renderer path without requiring compilation', async () => {
     const actionResult = await (runAuthoritativeInvoiceTemplatePreview as any)(
@@ -262,5 +281,81 @@ describe('invoiceTemplatePreview authoritative AST integration', () => {
         }),
       ])
     );
+  });
+
+  it('compiles and renders grouped transform output through the authoritative preview path', async () => {
+    const transformedWorkspace: DesignerWorkspaceSnapshot = {
+      ...workspace,
+      nodesById: {
+        ...workspace.nodesById,
+        'items-table': {
+          ...workspace.nodesById['items-table'],
+          props: {
+            ...workspace.nodesById['items-table'].props,
+            metadata: {
+              collectionBindingKey: 'items.grouped',
+              columns: [
+                { id: 'category', header: 'Category', key: 'item.key' },
+                { id: 'rolled-up-total', header: 'Rolled Up Total', key: 'item.aggregates.sumTotal' },
+              ],
+            },
+          },
+        },
+      },
+      transforms: {
+        sourceBindingId: 'items',
+        outputBindingId: 'items.grouped',
+        operations: [
+          {
+            id: 'filter-positive',
+            type: 'filter',
+            predicate: {
+              type: 'comparison',
+              path: 'total',
+              op: 'gt',
+              value: 0,
+            },
+          },
+          {
+            id: 'sort-category',
+            type: 'sort',
+            keys: [{ path: 'category', direction: 'asc' }],
+          },
+          {
+            id: 'group-category',
+            type: 'group',
+            key: 'category',
+          },
+          {
+            id: 'aggregate-total',
+            type: 'aggregate',
+            aggregations: [{ id: 'sumTotal', op: 'sum', path: 'total' }],
+          },
+        ],
+      },
+    };
+
+    const actionResult = await (runAuthoritativeInvoiceTemplatePreview as any)(
+      { id: 'test-user' },
+      { tenant: 'test-tenant' },
+      {
+        workspace: transformedWorkspace,
+        invoiceData: transformedInvoiceData,
+      }
+    );
+
+    expect(actionResult.success).toBe(true);
+    expect(actionResult.compile.status).toBe('success');
+    expect(actionResult.render.status).toBe('success');
+    expect(actionResult.generatedSource).toContain('"transforms"');
+    expect(actionResult.generatedSource).toContain('"type": "filter"');
+    expect(actionResult.generatedSource).toContain('"type": "sort"');
+    expect(actionResult.generatedSource).toContain('"type": "group"');
+    expect(actionResult.generatedSource).toContain('"type": "aggregate"');
+    expect(actionResult.render.html).toContain('Services');
+    expect(actionResult.render.html).toContain('Products');
+    expect(actionResult.render.html).toContain('300');
+    expect(actionResult.render.html).toContain('30');
+    expect(actionResult.render.html).not.toContain('Adjustments');
   });
 });

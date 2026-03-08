@@ -53,6 +53,17 @@ describe('designerStore.exportWorkspace', () => {
           children: [],
         },
       },
+      transforms: {
+        sourceBindingId: 'collection.items',
+        outputBindingId: 'transformed.items',
+        operations: [
+          {
+            id: 'sort-total',
+            type: 'sort',
+            keys: [{ path: 'total', direction: 'desc' }],
+          },
+        ],
+      },
       snapToGrid: false,
       gridSize: 12,
       showGuides: true,
@@ -71,6 +82,7 @@ describe('designerStore.exportWorkspace', () => {
       'showGuides',
       'showRulers',
       'snapToGrid',
+      'transforms',
     ]);
 
     // No legacy `nodes` array or per-node typed fields are persisted.
@@ -89,6 +101,15 @@ describe('designerStore.exportWorkspace', () => {
     expect((exportedText.props as any).position).toBeUndefined();
     expect((exportedText.props as any).size).toBeUndefined();
     expect((exportedText.props as any).metadata).toMatchObject({ text: 'Hello' });
+    expect(exported.transforms).toMatchObject({
+      sourceBindingId: 'collection.items',
+      outputBindingId: 'transformed.items',
+      operations: [
+        {
+          id: 'sort-total',
+          type: 'sort',
+        },
+      ],
+    });
   });
 });
-
