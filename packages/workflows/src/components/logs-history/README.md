@@ -1,6 +1,6 @@
 # Workflow Execution History and Logs View
 
-This directory contains components for displaying detailed workflow execution history and logs in the Automation Hub project.
+This directory contains components for displaying detailed workflow execution history and logs in the workflow control panel.
 
 ## Components
 
@@ -30,12 +30,12 @@ A comprehensive logs view that combines events and action results into a unified
 
 ## Usage
 
-The logs and history view is accessible from the Automation Hub navigation under "Logs & History". The page displays a table of workflow executions by default. Clicking on a workflow execution row navigates to the detailed view for that execution.
+The run history view is accessible from the workflow control panel under "Runs". The page displays a table of workflow executions by default. Clicking on a workflow execution row navigates to the detailed view for that execution.
 
 ### URL Structure
 
-- List view: `/msp/automation-hub/logs-history`
-- Detail view: `/msp/automation-hub/logs-history?executionId={execution_id}`
+- List view: `/msp/workflow-control?section=runs`
+- Detail view: `/msp/workflows/{execution_id}`
 
 ## Implementation Details
 

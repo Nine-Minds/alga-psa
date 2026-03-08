@@ -102,7 +102,7 @@ export default function Schedules() {
         nextParams.delete(key);
       }
     });
-    router.replace(`/msp/automation-hub?${nextParams.toString()}`, { scroll: false });
+    router.replace(`/msp/workflow-control?${nextParams.toString()}`, { scroll: false });
   };
 
   useEffect(() => {

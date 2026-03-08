@@ -266,7 +266,7 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
               <Button
                 id="browse-templates-button"
                 variant="outline"
-                onClick={() => router.push("/msp/automation-hub?tab=template-library")}
+                onClick={() => router.push("/msp/workflow-control?section=template-library")}
               >
                 <BookTemplate className="h-4 w-4 mr-2" />
                 Browse Templates

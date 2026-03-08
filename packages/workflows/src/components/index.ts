@@ -19,7 +19,6 @@ export { default as WorkflowExecutionLogs } from './logs-history/WorkflowExecuti
 export { default as DynamicReactFlow } from './visualization/DynamicReactFlow';
 export { default as WorkflowVisualizer } from './visualization/WorkflowVisualizer';
 
-export { default as AutomationHub } from './automation-hub/AutomationHub';
 export { TaskForm } from './workflow/TaskForm';
 export { default as EventTriggerDialog } from './events-catalog/EventTriggerDialog';
 export { default as TemplatePreview } from './template-library/TemplatePreview';

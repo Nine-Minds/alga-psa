@@ -27,7 +27,7 @@ const experimentalFeatureDefinitions: ExperimentalFeatureDefinition[] = [
   {
     key: 'workflowAutomation',
     name: 'Workflow Automation',
-    description: 'Enable experimental workflow automation features in Automation Hub.',
+    description: 'Enable experimental workflow automation features in the workflow control panel and editor.',
   },
 ];
 

@@ -13,8 +13,7 @@ export default function LogsHistory() {
   const executionId = searchParams?.get('executionId') || null;
 
   const handleBack = () => {
-    // Navigate back to the list view by removing the executionId query parameter
-    router.push('/msp/automation-hub?tab=logs-history');
+    router.push('/msp/workflow-control?section=runs');
   };
 
   return (

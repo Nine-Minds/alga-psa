@@ -11,7 +11,7 @@ export default function LogsHistoryWorkflowTable() {
 
   // Override the default row click behavior to navigate within the Logs & History page
   const handleRowClick = (row: IWorkflowExecution) => {
-    router.push(`/msp/automation-hub?tab=logs-history&executionId=${row.execution_id}`);
+    router.push(`/msp/workflows/${row.execution_id}`);
   };
 
   // Create a custom wrapper around WorkflowExecutionsTable to override its behavior
@@ -30,7 +30,7 @@ export default function LogsHistoryWorkflowTable() {
                   className="text-gray-900 hover:text-blue-600 hover:underline cursor-pointer"
                   onClick={(e) => {
                     e.stopPropagation();
-                    router.push(`/msp/automation-hub?tab=logs-history&executionId=${record.execution_id}`);
+                    router.push(`/msp/workflows/${record.execution_id}`);
                   }}
                 >
                   {value}

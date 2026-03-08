@@ -503,7 +503,7 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                 <Button
                   id="browse-templates-button"
                   variant="outline"
-                  onClick={() => router.push('/msp/automation-hub?tab=template-library')}
+                  onClick={() => router.push('/msp/workflow-control?section=template-library')}
                 >
                   <BookTemplate className="h-4 w-4 mr-2" />
                   Browse Templates
@@ -531,7 +531,7 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
               <div className="mt-6 flex space-x-4">
                 <Button
                   id="browse-templates-empty-button"
-                  onClick={() => router.push('/msp/automation-hub?tab=template-library')}
+                  onClick={() => router.push('/msp/workflow-control?section=template-library')}
                   variant="outline"
                 >
                   <BookTemplate className="h-4 w-4 mr-2" />

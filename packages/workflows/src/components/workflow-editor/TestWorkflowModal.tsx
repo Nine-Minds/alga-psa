@@ -228,8 +228,7 @@ export default function TestWorkflowModal({ isOpen, onClose, workflowCode, workf
           toast.success("Workflow test started successfully");
           
           if (result.executionId) {
-            // Generate link to logs and history screen
-            const logsUrl = `/msp/automation-hub?tab=logs&executionId=${result.executionId}`;
+            const logsUrl = `/msp/workflows/${result.executionId}`;
             
             // Show success notification with link
             toast.success(

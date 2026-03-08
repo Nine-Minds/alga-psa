@@ -48,7 +48,7 @@ export default function WorkflowControls({ execution }: WorkflowControlsProps) {
         id="back-to-workflows-button"
         variant="outline"
         size="sm"
-        onClick={() => router.push('/msp/automation-hub?tab=logs-history')}
+        onClick={() => router.push('/msp/workflow-control?section=runs')}
       >
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back

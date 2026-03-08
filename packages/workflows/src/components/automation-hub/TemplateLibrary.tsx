@@ -17,8 +17,6 @@ export default function TemplateLibrary() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [templatesDisabled, setTemplatesDisabled] = useState(true); // Disable template cards initially
-  
   // Template preview state
   const [previewTemplate, setPreviewTemplate] = useState<TemplateData | null>(null);
   const [previewMode, setPreviewMode] = useState<'preview' | 'create'>('preview');
@@ -154,13 +152,8 @@ export default function TemplateLibrary() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredTemplates.map((template) => (
-              <Card key={template.template_id} className={`p-4 border border-gray-200 relative ${templatesDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                {templatesDisabled && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10 rounded-md">
-                    <p className="text-lg font-semibold text-gray-800">Coming Soon</p>
-                  </div>
-                )}
-                <div className={`${templatesDisabled ? 'pointer-events-none' : ''}`}>
+              <Card key={template.template_id} className="p-4 border border-gray-200 relative">
+                <div>
                   <h3 className="text-lg font-medium mb-2">{template.name}</h3>
                   <p className="text-gray-600 text-sm mb-3">{template.description}</p>
                   {template.category && (
@@ -185,7 +178,6 @@ export default function TemplateLibrary() {
                       variant="outline"
                       size="sm"
                       onClick={() => handlePreview(template)}
-                      disabled={templatesDisabled} // Disable button
                     >
                       Preview
                     </Button>
@@ -193,7 +185,6 @@ export default function TemplateLibrary() {
                       id={`use-${template.template_id}-button`}
                       size="sm"
                       onClick={() => handleUseTemplate(template)}
-                      disabled={templatesDisabled} // Disable button
                     >
                       Use Template
                     </Button>

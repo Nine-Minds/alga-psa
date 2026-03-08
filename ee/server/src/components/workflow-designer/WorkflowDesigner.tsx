@@ -48,6 +48,8 @@ import WorkflowRunDialog from './WorkflowRunDialog';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
 import WorkflowListV2 from '@alga-psa/workflows/components/automation-hub/WorkflowList';
 import EventsCatalogV2 from '@alga-psa/workflows/components/automation-hub/EventsCatalogV2';
+import TemplateLibrary from '@alga-psa/workflows/components/automation-hub/TemplateLibrary';
+import Schedules from '@alga-psa/workflows/components/automation-hub/Schedules';
 import { MappingPanel, type ActionInputField } from './mapping';
 import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema as ExprJsonSchema } from './expression-editor';
 import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
@@ -295,10 +297,12 @@ type WorkflowDesignerProps = {
   isNew?: boolean;
 };
 
-type ControlPanelTab = 'Runs' | 'Events' | 'Event Catalog' | 'Dead Letter';
+type ControlPanelTab = 'Template Library' | 'Schedules' | 'Runs' | 'Events' | 'Event Catalog' | 'Dead Letter';
 
 const mapSectionToControlPanelTab = (section: string | null, canAdmin: boolean): ControlPanelTab => {
   const raw = (section ?? '').trim().toLowerCase();
+  if (raw === 'template-library' || raw === 'template_library' || raw === 'templates') return 'Template Library';
+  if (raw === 'schedules') return 'Schedules';
   if (raw === 'events') return 'Events';
   if (raw === 'event-catalog' || raw === 'events-catalog' || raw === 'event_catalog') return 'Event Catalog';
   if ((raw === 'dead-letter' || raw === 'deadletter' || raw === 'dead_letter') && canAdmin) return 'Dead Letter';
@@ -306,6 +310,8 @@ const mapSectionToControlPanelTab = (section: string | null, canAdmin: boolean):
 };
 
 const mapControlPanelTabToSection = (tab: string): string => {
+  if (tab === 'Template Library') return 'template-library';
+  if (tab === 'Schedules') return 'schedules';
   if (tab === 'Events') return 'events';
   if (tab === 'Event Catalog') return 'event-catalog';
   if (tab === 'Dead Letter') return 'dead-letter';
@@ -3586,14 +3592,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                               disabled={!canManage}
                             />
                             <div className="mt-1 text-xs text-gray-500">
-                              Choose whether this workflow starts manually or from an event. Reusable schedules are managed in Automation Hub.
+                              Choose whether this workflow starts manually or from an event. Reusable schedules are managed in the Workflow Control Panel.
                             </div>
                           </div>
 
                           <div className="space-y-3">
                             {currentTriggerSelection === 'manual' && (
                               <div className="rounded border border-dashed border-gray-300 bg-gray-50 px-3 py-3 text-xs text-gray-600">
-                                This workflow has no trigger. It can still be run manually and scheduled from Automation Hub once it has a pinned payload schema and a published version.
+                                This workflow has no trigger. It can still be run manually and scheduled from the Workflow Control Panel once it has a pinned payload schema and a published version.
                               </div>
                             )}
 
@@ -4611,10 +4617,22 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       <EventsCatalogV2 />
     </div>
   );
+  const templateLibraryContent = (
+    <div className="h-full min-h-0 overflow-y-auto px-6 py-4">
+      <TemplateLibrary />
+    </div>
+  );
+  const schedulesContent = (
+    <div className="h-full min-h-0 overflow-y-auto px-6 py-4">
+      <Schedules />
+    </div>
+  );
   const isControlPanelMode = mode === 'control-panel';
   const isEditorDesignerMode = mode === 'editor-designer';
 
   const controlPanelTabs = [
+    { label: 'Template Library', content: templateLibraryContent },
+    { label: 'Schedules', content: schedulesContent },
     { label: 'Runs', content: runListContent },
     { label: 'Events', content: eventListContent },
     { label: 'Event Catalog', content: eventCatalogContent },
@@ -4630,7 +4648,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
   const pageDescription =
     isControlPanelMode
-      ? 'Monitor runs, events, the event catalog, and dead-letter runs.'
+      ? 'Manage templates, schedules, runs, events, and the event catalog.'
       : isEditorDesignerMode
         ? 'Build and maintain workflow automations.'
         : 'Choose a workflow to edit or create a new workflow.';
@@ -4671,25 +4689,6 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   {workflowValidationBadge.label}
                   {currentValidationErrors.length > 0 && <span>({currentValidationErrors.length})</span>}
                 </span>
-              )}
-              {canManage && (
-                <Button
-                  id="workflow-designer-open-schedules"
-                  variant="outline"
-                  onClick={() => {
-                    if (!activeWorkflowId) {
-                      router.push('/msp/automation-hub?tab=schedules');
-                      return;
-                    }
-                    const params = new URLSearchParams({
-                      tab: 'schedules',
-                      scheduleWorkflowId: activeWorkflowId
-                    });
-                    router.push(`/msp/automation-hub?${params.toString()}`);
-                  }}
-                >
-                  Schedules
-                </Button>
               )}
               {canManage && (
                 <Button

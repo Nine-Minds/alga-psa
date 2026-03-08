@@ -21,6 +21,7 @@ import {
   Zap,
   MousePointer,
   FileText,
+  BookTemplate,
   Clock,
   History,
   CheckSquare,
@@ -113,6 +114,7 @@ interface WorkflowListProps {
   onSelectWorkflow?: (workflowId: string) => void;
   onCreateNew?: () => void;
   onOpenEventCatalog?: () => void;
+  onOpenTemplateLibrary?: () => void;
   editorBasePath?: string;
   controlPanelBasePath?: string;
 }
@@ -183,6 +185,7 @@ export default function WorkflowList({
   onSelectWorkflow,
   onCreateNew,
   onOpenEventCatalog,
+  onOpenTemplateLibrary,
   editorBasePath = '/msp/workflow-editor',
   controlPanelBasePath = '/msp/workflow-control'
 }: WorkflowListProps) {
@@ -377,6 +380,15 @@ export default function WorkflowList({
       return;
     }
     router.push(`${controlPanelBasePath}?section=event-catalog`);
+  };
+
+  const handleOpenTemplateLibrary = () => {
+    clearSearchDebounce();
+    if (onOpenTemplateLibrary) {
+      onOpenTemplateLibrary();
+      return;
+    }
+    router.push(`${controlPanelBasePath}?section=template-library`);
   };
 
   // Bulk selection handlers
@@ -818,6 +830,14 @@ export default function WorkflowList({
             >
               <Zap className="w-4 h-4 mr-2" />
               Event Catalog
+            </Button>
+            <Button
+              id="workflow-list-open-template-library-btn"
+              variant="outline"
+              onClick={handleOpenTemplateLibrary}
+            >
+              <BookTemplate className="w-4 h-4 mr-2" />
+              New From Template
             </Button>
             <Button
               id="create-workflow-btn"
