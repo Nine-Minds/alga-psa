@@ -79,4 +79,12 @@ describe('ClientPicker', () => {
     expect(addButton).toBeTruthy();
     expect(addButton.previousElementSibling?.className).toContain('border-t');
   });
+
+  it('T019: does not render add button when onAddNew is omitted', () => {
+    renderPicker();
+
+    openPicker();
+
+    expect(screen.queryByRole('button', { name: /\+ add new client/i })).toBeNull();
+  });
 });

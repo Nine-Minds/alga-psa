@@ -146,7 +146,7 @@
   {
     "id": "T019",
     "description": "ClientPicker does NOT render '+ Add new client' button when onAddNew prop is omitted",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
