@@ -339,7 +339,7 @@
   {
     "id": "T043",
     "description": "TicketInfo: clicking '+ Add new category' opens QuickAddCategory with ticket's board_id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
