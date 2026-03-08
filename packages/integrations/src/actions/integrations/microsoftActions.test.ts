@@ -20,12 +20,41 @@ const hoisted = vi.hoisted(() => {
     updated_at: string | Date;
   };
 
+  type MicrosoftConsumerBindingRecord = {
+    tenant: string;
+    consumer_type: 'msp_sso' | 'email' | 'calendar' | 'teams';
+    profile_id: string;
+    created_by: string | null;
+    updated_by: string | null;
+    created_at: string | Date;
+    updated_at: string | Date;
+  };
+
+  type TeamsIntegrationRecord = {
+    tenant: string;
+    selected_profile_id: string | null;
+    install_status: 'not_configured' | 'install_pending' | 'active' | 'error';
+    enabled_capabilities: string[];
+    notification_categories: string[];
+    allowed_actions: string[];
+    app_id?: string | null;
+    bot_id?: string | null;
+    package_metadata?: Record<string, unknown> | null;
+    last_error: string | null;
+    created_by: string | null;
+    updated_by: string | null;
+    created_at: string | Date;
+    updated_at: string | Date;
+  };
+
   const state = {
     mockUser: { user_id: 'user-1', user_type: 'internal' } as any,
     mockCtx: { tenant: 'tenant-1' } as any,
     tenantSecrets: new Map<string, string>(),
     appSecrets: new Map<string, string>(),
     microsoftProfiles: [] as MicrosoftProfileRecord[],
+    microsoftConsumerBindings: [] as MicrosoftConsumerBindingRecord[],
+    teamsIntegrations: [] as TeamsIntegrationRecord[],
     resetUpdates: [] as Array<{ table: string; where: Record<string, unknown>; values: Record<string, unknown> }>,
   };
 
@@ -39,6 +68,12 @@ const hoisted = vi.hoisted(() => {
     const getRows = () => {
       if (table === 'microsoft_profiles') {
         return state.microsoftProfiles;
+      }
+      if (table === 'microsoft_profile_consumer_bindings') {
+        return state.microsoftConsumerBindings;
+      }
+      if (table === 'teams_integrations') {
+        return state.teamsIntegrations;
       }
 
       return [] as Array<Record<string, unknown>>;
@@ -66,11 +101,25 @@ const hoisted = vi.hoisted(() => {
             state.microsoftProfiles.push(clone(row) as MicrosoftProfileRecord);
           });
         }
+        if (table === 'microsoft_profile_consumer_bindings') {
+          rows.forEach((row) => {
+            state.microsoftConsumerBindings.push(clone(row) as MicrosoftConsumerBindingRecord);
+          });
+        }
+        if (table === 'teams_integrations') {
+          rows.forEach((row) => {
+            state.teamsIntegrations.push(clone(row) as TeamsIntegrationRecord);
+          });
+        }
 
         return rows.length;
       },
       async update(values: Record<string, unknown>) {
-        if (table === 'microsoft_profiles') {
+        if (
+          table === 'microsoft_profiles' ||
+          table === 'microsoft_profile_consumer_bindings' ||
+          table === 'teams_integrations'
+        ) {
           const rows = filteredRows();
           rows.forEach((row) => Object.assign(row, values));
           return rows.length;
@@ -82,6 +131,22 @@ const hoisted = vi.hoisted(() => {
           values: clone(values),
         });
         return 1;
+      },
+      async delete() {
+        const rows = filteredRows();
+        if (table === 'microsoft_profiles') {
+          const remaining = state.microsoftProfiles.filter((row) => !rows.includes(row as never));
+          state.microsoftProfiles.splice(0, state.microsoftProfiles.length, ...remaining);
+        }
+        if (table === 'microsoft_profile_consumer_bindings') {
+          const remaining = state.microsoftConsumerBindings.filter((row) => !rows.includes(row as never));
+          state.microsoftConsumerBindings.splice(0, state.microsoftConsumerBindings.length, ...remaining);
+        }
+        if (table === 'teams_integrations') {
+          const remaining = state.teamsIntegrations.filter((row) => !rows.includes(row as never));
+          state.teamsIntegrations.splice(0, state.teamsIntegrations.length, ...remaining);
+        }
+        return rows.length;
       },
     };
   };
@@ -128,7 +193,7 @@ type MicrosoftProfileRecord = {
   updated_at: string | Date;
 };
 
-const { tenantSecrets, appSecrets, microsoftProfiles, resetUpdates } = hoisted.state;
+const { tenantSecrets, appSecrets, microsoftProfiles, resetUpdates, microsoftConsumerBindings, teamsIntegrations } = hoisted.state;
 const { getTenantSecretMock, setTenantSecretMock, getAppSecretMock, hasPermissionMock, knexMock } = hoisted;
 
 vi.mock('@alga-psa/auth', () => ({
@@ -164,6 +229,7 @@ vi.mock('@alga-psa/db', () => ({
 import {
   archiveMicrosoftProfile,
   createMicrosoftProfile,
+  deleteMicrosoftProfile,
   getMicrosoftIntegrationStatus,
   listMicrosoftProfiles,
   resetMicrosoftProvidersToDisconnected,
@@ -180,6 +246,8 @@ describe('Microsoft integration actions', () => {
     tenantSecrets.clear();
     appSecrets.clear();
     microsoftProfiles.length = 0;
+    microsoftConsumerBindings.length = 0;
+    teamsIntegrations.length = 0;
     resetUpdates.length = 0;
     hasPermissionMock.mockResolvedValue(true);
     getTenantSecretMock.mockClear();
@@ -567,6 +635,102 @@ describe('Microsoft integration actions', () => {
     await expect(resetMicrosoftProvidersToDisconnected()).resolves.toEqual({
       success: false,
       error: 'Forbidden',
+    });
+  });
+
+  it('T475/T476: archiving a Teams-selected profile is blocked until Teams is rebound or deactivated', async () => {
+    await createMicrosoftProfile({
+      displayName: 'Default Profile',
+      clientId: 'default-client-id',
+      clientSecret: 'default-secret',
+      tenantId: 'tenant-guid-1',
+    });
+    const teamsProfile = await createMicrosoftProfile({
+      displayName: 'Teams Profile',
+      clientId: 'teams-client-id',
+      clientSecret: 'teams-secret',
+      tenantId: 'tenant-guid-2',
+    });
+
+    teamsIntegrations.push({
+      tenant: 'tenant-1',
+      selected_profile_id: teamsProfile.profile!.profileId,
+      install_status: 'active',
+      enabled_capabilities: ['personal_tab'],
+      notification_categories: ['assignment'],
+      allowed_actions: ['assign_ticket'],
+      app_id: 'teams-client-id',
+      bot_id: 'teams-client-id',
+      package_metadata: { fileName: 'teams.zip' },
+      last_error: null,
+      created_by: 'user-1',
+      updated_by: 'user-1',
+      created_at: new Date('2026-03-07T10:00:00.000Z'),
+      updated_at: new Date('2026-03-07T10:00:00.000Z'),
+    });
+
+    await expect(archiveMicrosoftProfile(teamsProfile.profile!.profileId)).resolves.toEqual({
+      success: false,
+      error: 'Microsoft profile is still bound to Teams and cannot be archived until Teams is rebound or deactivated',
+    });
+
+    teamsIntegrations[0].install_status = 'not_configured';
+
+    await expect(archiveMicrosoftProfile(teamsProfile.profile!.profileId)).resolves.toEqual({
+      success: true,
+    });
+  });
+
+  it('T477/T478: deleting a Teams-selected profile is blocked while active and clears inactive Teams references before removing the profile', async () => {
+    await createMicrosoftProfile({
+      displayName: 'Default Profile',
+      clientId: 'default-client-id',
+      clientSecret: 'default-secret',
+      tenantId: 'tenant-guid-1',
+    });
+    const removable = await createMicrosoftProfile({
+      displayName: 'Removable Teams Profile',
+      clientId: 'removable-client-id',
+      clientSecret: 'removable-secret',
+      tenantId: 'tenant-guid-2',
+    });
+
+    teamsIntegrations.push({
+      tenant: 'tenant-1',
+      selected_profile_id: removable.profile!.profileId,
+      install_status: 'active',
+      enabled_capabilities: ['personal_tab'],
+      notification_categories: ['assignment'],
+      allowed_actions: ['assign_ticket'],
+      app_id: 'removable-client-id',
+      bot_id: 'removable-client-id',
+      package_metadata: { fileName: 'teams.zip' },
+      last_error: null,
+      created_by: 'user-1',
+      updated_by: 'user-1',
+      created_at: new Date('2026-03-07T10:00:00.000Z'),
+      updated_at: new Date('2026-03-07T10:00:00.000Z'),
+    });
+
+    await expect(deleteMicrosoftProfile(removable.profile!.profileId)).resolves.toEqual({
+      success: false,
+      error: 'Microsoft profile is still bound to Teams and cannot be deleted until Teams is rebound or deactivated',
+    });
+
+    teamsIntegrations[0].install_status = 'not_configured';
+
+    await expect(deleteMicrosoftProfile(removable.profile!.profileId)).resolves.toEqual({
+      success: true,
+    });
+    expect(microsoftProfiles.find((profile) => profile.profile_id === removable.profile!.profileId)).toBeUndefined();
+    expect(tenantSecrets.get(`tenant-1:${removable.profile!.clientSecretRef}`)).toBeUndefined();
+    expect(teamsIntegrations[0]).toMatchObject({
+      selected_profile_id: null,
+      app_id: null,
+      bot_id: null,
+      package_metadata: null,
+      last_error: null,
+      install_status: 'not_configured',
     });
   });
 });

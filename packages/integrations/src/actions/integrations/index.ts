@@ -7,6 +7,7 @@ export {
   setMicrosoftConsumerBinding,
   updateMicrosoftProfile,
   archiveMicrosoftProfile,
+  deleteMicrosoftProfile,
   setDefaultMicrosoftProfile,
   resolveMicrosoftProfileForConsumer,
   resolveMicrosoftProfileForCompatibility,

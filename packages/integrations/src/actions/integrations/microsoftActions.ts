@@ -46,6 +46,20 @@ interface MicrosoftConsumerBindingRow {
   updated_at: string | Date;
 }
 
+interface TeamsIntegrationSelectionRow {
+  tenant: string;
+  selected_profile_id: string | null;
+  install_status: 'not_configured' | 'install_pending' | 'active' | 'error';
+  app_id?: string | null;
+  bot_id?: string | null;
+  package_metadata?: Record<string, unknown> | null;
+  last_error?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string | Date;
+  updated_at?: string | Date;
+}
+
 export interface MicrosoftProfileSummary {
   profileId: string;
   displayName: string;
@@ -176,6 +190,32 @@ function getMicrosoftProfileSecretRef(profileId: string): string {
   return `microsoft_profile_${profileId}_client_secret`;
 }
 
+function formatConsumerLabels(labels: string[]): string {
+  if (labels.length === 0) {
+    return '';
+  }
+  if (labels.length === 1) {
+    return labels[0];
+  }
+  if (labels.length === 2) {
+    return `${labels[0]} and ${labels[1]}`;
+  }
+
+  return `${labels.slice(0, -1).join(', ')}, and ${labels[labels.length - 1]}`;
+}
+
+function buildMicrosoftProfileInUseError(
+  operation: 'archived' | 'deleted',
+  consumerLabels: string[]
+): string {
+  const action =
+    consumerLabels.length === 1 && consumerLabels[0] === 'Teams'
+      ? 'until Teams is rebound or deactivated'
+      : 'until those bindings are changed';
+
+  return `Microsoft profile is still bound to ${formatConsumerLabels(consumerLabels)} and cannot be ${operation} ${action}`;
+}
+
 function isClientPortalUser(user: any): boolean {
   return user?.user_type === 'client';
 }
@@ -220,6 +260,64 @@ async function getMicrosoftConsumerBindingRow(
     .first();
 
   return row || undefined;
+}
+
+async function getTeamsIntegrationSelectionRow(
+  knex: any,
+  tenant: string,
+  profileId: string
+): Promise<TeamsIntegrationSelectionRow | undefined> {
+  const row = await knex('teams_integrations')
+    .where({ tenant, selected_profile_id: profileId })
+    .first();
+
+  return row || undefined;
+}
+
+async function listBlockingMicrosoftProfileConsumers(
+  knex: any,
+  tenant: string,
+  profileId: string
+): Promise<string[]> {
+  const labels = new Set<string>();
+  const bindings = await knex('microsoft_profile_consumer_bindings')
+    .where({ tenant, profile_id: profileId })
+    .select('*');
+
+  for (const binding of bindings as MicrosoftConsumerBindingRow[]) {
+    labels.add(getMicrosoftConsumerLabel(binding.consumer_type));
+  }
+
+  const teamsIntegration = await getTeamsIntegrationSelectionRow(knex, tenant, profileId);
+  if (teamsIntegration && teamsIntegration.install_status !== 'not_configured') {
+    labels.add('Teams');
+  }
+
+  return [...labels].sort((left, right) => left.localeCompare(right));
+}
+
+async function clearInactiveTeamsProfileSelection(
+  knex: any,
+  tenant: string,
+  profileId: string,
+  userId?: string | null
+): Promise<void> {
+  const teamsIntegration = await getTeamsIntegrationSelectionRow(knex, tenant, profileId);
+  if (!teamsIntegration || teamsIntegration.install_status !== 'not_configured') {
+    return;
+  }
+
+  await knex('teams_integrations')
+    .where({ tenant, selected_profile_id: profileId })
+    .update({
+      selected_profile_id: null,
+      app_id: null,
+      bot_id: null,
+      package_metadata: null,
+      last_error: null,
+      updated_by: userId || null,
+      updated_at: new Date(),
+    });
 }
 
 function hasLegacyMicrosoftConfig(values: {
@@ -641,6 +739,13 @@ async function archiveMicrosoftProfileInternal(
     if (existing.is_default) {
       return { success: false, error: 'Default Microsoft profile cannot be archived until another profile is default' };
     }
+    const blockingConsumers = await listBlockingMicrosoftProfileConsumers(knex, tenant, profileId);
+    if (blockingConsumers.length > 0) {
+      return {
+        success: false,
+        error: buildMicrosoftProfileInUseError('archived', blockingConsumers),
+      };
+    }
 
     await knex('microsoft_profiles')
       .where({ tenant, profile_id: profileId })
@@ -654,6 +759,49 @@ async function archiveMicrosoftProfileInternal(
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Failed to archive Microsoft profile' };
+  }
+}
+
+async function deleteMicrosoftProfileInternal(
+  user: any,
+  tenant: string,
+  profileId: string
+): Promise<{ success: boolean; error?: string }> {
+  if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
+  if (!(await canManageMicrosoftSettings(user))) return { success: false, error: 'Forbidden' };
+  if (!profileId) return { success: false, error: 'Microsoft profile ID is required' };
+
+  try {
+    const { knex } = await createTenantKnex();
+    const secretProvider = await getSecretProviderInstance();
+
+    await ensureLegacyMicrosoftProfileBackfill(knex, tenant, secretProvider, user?.user_id);
+
+    const existing = await getMicrosoftProfileRow(knex, tenant, profileId);
+    if (!existing) return { success: false, error: 'Microsoft profile not found' };
+    if (existing.is_default) {
+      return { success: false, error: 'Default Microsoft profile cannot be deleted until another profile is default' };
+    }
+
+    const blockingConsumers = await listBlockingMicrosoftProfileConsumers(knex, tenant, profileId);
+    if (blockingConsumers.length > 0) {
+      return {
+        success: false,
+        error: buildMicrosoftProfileInUseError('deleted', blockingConsumers),
+      };
+    }
+
+    await clearInactiveTeamsProfileSelection(knex, tenant, profileId, user?.user_id);
+
+    await knex('microsoft_profiles')
+      .where({ tenant, profile_id: profileId })
+      .delete();
+
+    await secretProvider.setTenantSecret(tenant, existing.client_secret_ref, null);
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to delete Microsoft profile' };
   }
 }
 
@@ -739,6 +887,10 @@ export const updateMicrosoftProfile = withAuth(async (user, { tenant }, input: {
 
 export const archiveMicrosoftProfile = withAuth(async (user, { tenant }, profileId: string) =>
   archiveMicrosoftProfileInternal(user, tenant, profileId)
+);
+
+export const deleteMicrosoftProfile = withAuth(async (user, { tenant }, profileId: string) =>
+  deleteMicrosoftProfileInternal(user, tenant, profileId)
 );
 
 export const setDefaultMicrosoftProfile = withAuth(async (user, { tenant }, profileId: string) =>

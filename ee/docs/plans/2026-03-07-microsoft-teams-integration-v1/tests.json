@@ -3682,7 +3682,7 @@
   {
     "id": "T461",
     "description": "Happy path: Permissions: only authorized tenant admins can manage Microsoft profiles and Teams setup.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F231"
     ]
@@ -3690,7 +3690,7 @@
   {
     "id": "T462",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for permissions: only authorized tenant admins can manage microsoft profiles and teams setup.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F231"
     ]
@@ -3698,7 +3698,7 @@
   {
     "id": "T463",
     "description": "Happy path: Permissions: tab, bot, message extension, and quick actions all enforce existing PSA authorization rules for the target entity/action.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F232"
     ]
@@ -3706,7 +3706,7 @@
   {
     "id": "T464",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for permissions: tab, bot, message extension, and quick actions all enforce existing psa authorization rules for the target entity/action.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F232"
     ]
@@ -3714,7 +3714,7 @@
   {
     "id": "T465",
     "description": "Happy path: Permissions: read-only users cannot execute mutating Teams actions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F233"
     ]
@@ -3722,7 +3722,7 @@
   {
     "id": "T466",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for permissions: read-only users cannot execute mutating teams actions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F233"
     ]
@@ -3730,7 +3730,7 @@
   {
     "id": "T467",
     "description": "Happy path: Permissions: records outside the user's tenant or scope never appear in Teams search or lookup results.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F234"
     ]
@@ -3738,7 +3738,7 @@
   {
     "id": "T468",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for permissions: records outside the user's tenant or scope never appear in teams search or lookup results.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F234"
     ]
@@ -3746,7 +3746,7 @@
   {
     "id": "T469",
     "description": "Happy path: Compatibility: migrating to named Microsoft profiles preserves current email, calendar, and MSP SSO behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F235"
     ]
@@ -3754,7 +3754,7 @@
   {
     "id": "T470",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for compatibility: migrating to named microsoft profiles preserves current email, calendar, and msp sso behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F235"
     ]
@@ -3762,7 +3762,7 @@
   {
     "id": "T471",
     "description": "Happy path: Compatibility: a default Microsoft profile binding exists immediately after migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F236"
     ]
@@ -3770,7 +3770,7 @@
   {
     "id": "T472",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for compatibility: a default microsoft profile binding exists immediately after migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F236"
     ]
@@ -3778,7 +3778,7 @@
   {
     "id": "T473",
     "description": "Happy path: Compatibility: rebinding Teams to a different Microsoft profile does not silently rebind unrelated Microsoft consumers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F237"
     ]
@@ -3786,7 +3786,7 @@
   {
     "id": "T474",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for compatibility: rebinding teams to a different microsoft profile does not silently rebind unrelated microsoft consumers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F237"
     ]
@@ -3794,7 +3794,7 @@
   {
     "id": "T475",
     "description": "Happy path: Compatibility: archiving the currently selected Teams profile is blocked until Teams is rebound or deactivated.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F238"
     ]
@@ -3802,7 +3802,7 @@
   {
     "id": "T476",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for compatibility: archiving the currently selected teams profile is blocked until teams is rebound or deactivated.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F238"
     ]
@@ -3810,7 +3810,7 @@
   {
     "id": "T477",
     "description": "Happy path: Compatibility: deleting the currently selected Teams profile is blocked until Teams is rebound or deactivated.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F239"
     ]
@@ -3818,7 +3818,7 @@
   {
     "id": "T478",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for compatibility: deleting the currently selected teams profile is blocked until teams is rebound or deactivated.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F239"
     ]
@@ -3826,7 +3826,7 @@
   {
     "id": "T479",
     "description": "Happy path: Compatibility: switching the selected Teams profile invalidates stale Teams auth or install readiness state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F240"
     ]
@@ -3834,7 +3834,7 @@
   {
     "id": "T480",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for compatibility: switching the selected teams profile invalidates stale teams auth or install readiness state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F240"
     ]
@@ -3842,7 +3842,7 @@
   {
     "id": "T481",
     "description": "Happy path: Permissions: client-portal user sign-in attempts are rejected explicitly for Teams v1.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F241"
     ]
@@ -3850,7 +3850,7 @@
   {
     "id": "T482",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for permissions: client-portal user sign-in attempts are rejected explicitly for teams v1.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F241"
     ]
@@ -3858,7 +3858,7 @@
   {
     "id": "T483",
     "description": "Happy path: Fallback: a tenant without Teams install/setup receives guided readiness messaging instead of raw errors in Teams surfaces.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F242"
     ]
@@ -3866,7 +3866,7 @@
   {
     "id": "T484",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for fallback: a tenant without teams install/setup receives guided readiness messaging instead of raw errors in teams surfaces.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F242"
     ]
@@ -3874,7 +3874,7 @@
   {
     "id": "T485",
     "description": "Happy path: Fallback: unsupported bot contexts return a clear personal-scope guidance response.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F243"
     ]
@@ -3882,7 +3882,7 @@
   {
     "id": "T486",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for fallback: unsupported bot contexts return a clear personal-scope guidance response.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F243"
     ]
@@ -3890,7 +3890,7 @@
   {
     "id": "T487",
     "description": "Happy path: Fallback: unsupported commands return a help response rather than a dead end.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F244"
     ]
@@ -3898,7 +3898,7 @@
   {
     "id": "T488",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for fallback: unsupported commands return a help response rather than a dead end.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F244"
     ]
@@ -3906,7 +3906,7 @@
   {
     "id": "T489",
     "description": "Happy path: Fallback: selected profiles missing required Teams setup or consent show actionable admin remediation state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F245"
     ]
@@ -3914,7 +3914,7 @@
   {
     "id": "T490",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for fallback: selected profiles missing required teams setup or consent show actionable admin remediation state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F245"
     ]
@@ -3922,7 +3922,7 @@
   {
     "id": "T491",
     "description": "Happy path: Fallback: Teams actions are unavailable when the selected profile or Teams integration is inactive.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F246"
     ]
@@ -3930,7 +3930,7 @@
   {
     "id": "T492",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for fallback: teams actions are unavailable when the selected profile or teams integration is inactive.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F246"
     ]
@@ -3938,7 +3938,7 @@
   {
     "id": "T493",
     "description": "Happy path: Fallback: both bot and message extension respect the tenant's allowed-action configuration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F247"
     ]
@@ -3946,7 +3946,7 @@
   {
     "id": "T494",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for fallback: both bot and message extension respect the tenant's allowed-action configuration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F247"
     ]
@@ -3954,7 +3954,7 @@
   {
     "id": "T495",
     "description": "Happy path: Compatibility: legacy singleton Microsoft settings APIs keep a migration-safe compatibility path while profile-based consumers are introduced.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F248"
     ]
@@ -3962,7 +3962,7 @@
   {
     "id": "T496",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for compatibility: legacy singleton microsoft settings apis keep a migration-safe compatibility path while profile-based consumers are introduced.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F248"
     ]

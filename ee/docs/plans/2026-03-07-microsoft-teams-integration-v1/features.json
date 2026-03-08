@@ -2210,7 +2210,7 @@
   {
     "id": "F231",
     "description": "Permissions: only authorized tenant admins can manage Microsoft profiles and Teams setup.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Rollout / Migration",
@@ -2220,7 +2220,7 @@
   {
     "id": "F232",
     "description": "Permissions: tab, bot, message extension, and quick actions all enforce existing PSA authorization rules for the target entity/action.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Rollout / Migration",
@@ -2230,7 +2230,7 @@
   {
     "id": "F233",
     "description": "Permissions: read-only users cannot execute mutating Teams actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Rollout / Migration",
@@ -2240,7 +2240,7 @@
   {
     "id": "F234",
     "description": "Permissions: records outside the user's tenant or scope never appear in Teams search or lookup results.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Rollout / Migration",
@@ -2250,7 +2250,7 @@
   {
     "id": "F235",
     "description": "Compatibility: migrating to named Microsoft profiles preserves current email, calendar, and MSP SSO behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Rollout / Migration",
@@ -2260,7 +2260,7 @@
   {
     "id": "F236",
     "description": "Compatibility: a default Microsoft profile binding exists immediately after migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Rollout / Migration",
@@ -2270,7 +2270,7 @@
   {
     "id": "F237",
     "description": "Compatibility: rebinding Teams to a different Microsoft profile does not silently rebind unrelated Microsoft consumers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Rollout / Migration",
@@ -2280,7 +2280,7 @@
   {
     "id": "F238",
     "description": "Compatibility: archiving the currently selected Teams profile is blocked until Teams is rebound or deactivated.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Rollout / Migration",
@@ -2290,7 +2290,7 @@
   {
     "id": "F239",
     "description": "Compatibility: deleting the currently selected Teams profile is blocked until Teams is rebound or deactivated.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Rollout / Migration",
@@ -2300,7 +2300,7 @@
   {
     "id": "F240",
     "description": "Compatibility: switching the selected Teams profile invalidates stale Teams auth or install readiness state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Rollout / Migration",
@@ -2310,7 +2310,7 @@
   {
     "id": "F241",
     "description": "Permissions: client-portal user sign-in attempts are rejected explicitly for Teams v1.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Rollout / Migration",
@@ -2320,7 +2320,7 @@
   {
     "id": "F242",
     "description": "Fallback: a tenant without Teams install/setup receives guided readiness messaging instead of raw errors in Teams surfaces.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Rollout / Migration",
@@ -2330,7 +2330,7 @@
   {
     "id": "F243",
     "description": "Fallback: unsupported bot contexts return a clear personal-scope guidance response.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Rollout / Migration",
@@ -2340,7 +2340,7 @@
   {
     "id": "F244",
     "description": "Fallback: unsupported commands return a help response rather than a dead end.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Rollout / Migration",
@@ -2350,7 +2350,7 @@
   {
     "id": "F245",
     "description": "Fallback: selected profiles missing required Teams setup or consent show actionable admin remediation state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Rollout / Migration",
@@ -2360,7 +2360,7 @@
   {
     "id": "F246",
     "description": "Fallback: Teams actions are unavailable when the selected profile or Teams integration is inactive.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Rollout / Migration",
@@ -2370,7 +2370,7 @@
   {
     "id": "F247",
     "description": "Fallback: both bot and message extension respect the tenant's allowed-action configuration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Rollout / Migration",
@@ -2380,7 +2380,7 @@
   {
     "id": "F248",
     "description": "Compatibility: legacy singleton Microsoft settings APIs keep a migration-safe compatibility path while profile-based consumers are introduced.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Rollout / Migration",

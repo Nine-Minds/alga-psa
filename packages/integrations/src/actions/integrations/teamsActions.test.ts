@@ -27,12 +27,23 @@ const hoisted = vi.hoisted(() => {
     updated_at: string | Date;
   };
 
+  type MicrosoftConsumerBindingRecord = {
+    tenant: string;
+    consumer_type: 'msp_sso' | 'email' | 'calendar' | 'teams';
+    profile_id: string;
+    created_by: string | null;
+    updated_by: string | null;
+    created_at: string | Date;
+    updated_at: string | Date;
+  };
+
   const state = {
     mockUser: { user_id: 'user-1', user_type: 'internal' } as any,
     mockCtx: { tenant: 'tenant-1' } as any,
     tenantSecrets: new Map<string, string>(),
     microsoftProfiles: [] as MicrosoftProfileRecord[],
     teamsIntegrations: [] as TeamsIntegrationRecord[],
+    microsoftConsumerBindings: [] as MicrosoftConsumerBindingRecord[],
   };
 
   const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -48,6 +59,9 @@ const hoisted = vi.hoisted(() => {
       }
       if (table === 'teams_integrations') {
         return state.teamsIntegrations;
+      }
+      if (table === 'microsoft_profile_consumer_bindings') {
+        return state.microsoftConsumerBindings;
       }
       return [] as Array<Record<string, unknown>>;
     };
@@ -67,6 +81,9 @@ const hoisted = vi.hoisted(() => {
         const rows = Array.isArray(values) ? values : [values];
         if (table === 'teams_integrations') {
           rows.forEach((row) => state.teamsIntegrations.push(clone(row) as TeamsIntegrationRecord));
+        }
+        if (table === 'microsoft_profile_consumer_bindings') {
+          rows.forEach((row) => state.microsoftConsumerBindings.push(clone(row) as MicrosoftConsumerBindingRecord));
         }
         return rows.length;
       },
@@ -93,7 +110,7 @@ const hoisted = vi.hoisted(() => {
   };
 });
 
-const { microsoftProfiles, teamsIntegrations, tenantSecrets } = hoisted.state;
+const { microsoftProfiles, teamsIntegrations, microsoftConsumerBindings, tenantSecrets } = hoisted.state;
 const { hasPermissionMock, knexMock } = hoisted;
 
 vi.mock('@alga-psa/auth/withAuth', () => ({
@@ -161,6 +178,7 @@ describe('Teams integration actions', () => {
     hoisted.state.mockCtx = { tenant: 'tenant-1' };
     microsoftProfiles.length = 0;
     teamsIntegrations.length = 0;
+    microsoftConsumerBindings.length = 0;
     tenantSecrets.clear();
     hasPermissionMock.mockResolvedValue(true);
   });
@@ -349,5 +367,129 @@ describe('Teams integration actions', () => {
         lastError: null,
       },
     });
+  });
+
+  it('T461/T462: only tenant admins can load or save Teams setup state', async () => {
+    hasPermissionMock.mockResolvedValue(false);
+
+    await expect(getTeamsIntegrationStatus()).resolves.toEqual({
+      success: false,
+      error: 'Forbidden',
+    });
+    await expect(
+      saveTeamsIntegrationSettings({
+        installStatus: 'install_pending',
+      })
+    ).resolves.toEqual({
+      success: false,
+      error: 'Forbidden',
+    });
+
+    hoisted.state.mockUser = { user_id: 'client-1', user_type: 'client' };
+
+    await expect(getTeamsIntegrationStatus()).resolves.toEqual({
+      success: false,
+      error: 'Forbidden',
+    });
+    await expect(
+      saveTeamsIntegrationSettings({
+        installStatus: 'install_pending',
+      })
+    ).resolves.toEqual({
+      success: false,
+      error: 'Forbidden',
+    });
+  });
+
+  it('T473/T474/T479/T480: rebinding Teams invalidates stale install state without changing unrelated Microsoft consumer bindings', async () => {
+    addMicrosoftProfile({
+      tenant: 'tenant-1',
+      profileId: 'profile-1',
+      clientId: 'tenant-one-client',
+      tenantId: 'tenant-one-guid',
+      secretRef: 'tenant-one-secret-ref',
+    });
+    addMicrosoftProfile({
+      tenant: 'tenant-1',
+      profileId: 'profile-2',
+      clientId: 'tenant-two-client',
+      tenantId: 'tenant-two-guid',
+      secretRef: 'tenant-two-secret-ref',
+    });
+    tenantSecrets.set('tenant-1:tenant-one-secret-ref', 'tenant-one-secret');
+    tenantSecrets.set('tenant-1:tenant-two-secret-ref', 'tenant-two-secret');
+
+    microsoftConsumerBindings.push(
+      {
+        tenant: 'tenant-1',
+        consumer_type: 'email',
+        profile_id: 'profile-1',
+        created_by: 'user-1',
+        updated_by: 'user-1',
+        created_at: new Date('2026-03-07T10:00:00.000Z'),
+        updated_at: new Date('2026-03-07T10:00:00.000Z'),
+      },
+      {
+        tenant: 'tenant-1',
+        consumer_type: 'calendar',
+        profile_id: 'profile-1',
+        created_by: 'user-1',
+        updated_by: 'user-1',
+        created_at: new Date('2026-03-07T10:00:00.000Z'),
+        updated_at: new Date('2026-03-07T10:00:00.000Z'),
+      },
+      {
+        tenant: 'tenant-1',
+        consumer_type: 'msp_sso',
+        profile_id: 'profile-1',
+        created_by: 'user-1',
+        updated_by: 'user-1',
+        created_at: new Date('2026-03-07T10:00:00.000Z'),
+        updated_at: new Date('2026-03-07T10:00:00.000Z'),
+      }
+    );
+    teamsIntegrations.push({
+      tenant: 'tenant-1',
+      selected_profile_id: 'profile-1',
+      install_status: 'active',
+      enabled_capabilities: ['personal_tab'],
+      notification_categories: ['assignment'],
+      allowed_actions: ['assign_ticket'],
+      app_id: 'tenant-one-client',
+      bot_id: 'tenant-one-client',
+      package_metadata: {
+        fileName: 'alga-psa-teams-tenant-1.zip',
+      },
+      last_error: null,
+      created_by: 'user-1',
+      updated_by: 'user-1',
+      created_at: new Date('2026-03-07T10:00:00.000Z'),
+      updated_at: new Date('2026-03-07T10:00:00.000Z'),
+    });
+
+    const saved = await saveTeamsIntegrationSettings({
+      selectedProfileId: 'profile-2',
+      installStatus: 'active',
+    });
+
+    expect(saved).toEqual({
+      success: true,
+      integration: {
+        selectedProfileId: 'profile-2',
+        installStatus: 'install_pending',
+        enabledCapabilities: ['personal_tab'],
+        notificationCategories: ['assignment'],
+        allowedActions: ['assign_ticket'],
+        appId: null,
+        botId: null,
+        packageMetadata: null,
+        lastError: null,
+      },
+    });
+    expect(microsoftConsumerBindings).toEqual([
+      expect.objectContaining({ consumer_type: 'email', profile_id: 'profile-1' }),
+      expect.objectContaining({ consumer_type: 'calendar', profile_id: 'profile-1' }),
+      expect.objectContaining({ consumer_type: 'msp_sso', profile_id: 'profile-1' }),
+    ]);
   });
 });
