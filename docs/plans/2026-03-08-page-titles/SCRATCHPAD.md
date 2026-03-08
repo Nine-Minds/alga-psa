@@ -55,3 +55,4 @@
 - (2026-03-08) F005: Static layout: add metadata export with `default: 'Alga PSA'`
 - (2026-03-08) F006: MSP page title: /msp/dashboard — title: 'Dashboard'
 - (2026-03-08) F007: MSP page title: /msp/account — title: 'Account'
+- (2026-03-08) F008: MSP page title: /msp/account-manager — title: 'Account Manager'

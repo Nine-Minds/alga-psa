@@ -58,7 +58,7 @@
   {
     "id": "F008",
     "description": "MSP page title: /msp/account-manager — title: 'Account Manager'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
