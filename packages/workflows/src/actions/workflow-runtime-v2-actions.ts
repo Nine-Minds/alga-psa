@@ -39,6 +39,7 @@ import WorkflowRunWaitModelV2 from '@shared/workflow/persistence/workflowRunWait
 import WorkflowActionInvocationModelV2 from '@shared/workflow/persistence/workflowActionInvocationModelV2';
 import WorkflowRuntimeEventModelV2 from '@shared/workflow/persistence/workflowRuntimeEventModelV2';
 import WorkflowRunLogModelV2 from '@shared/workflow/persistence/workflowRunLogModelV2';
+import type { WorkflowScheduleStateRecord } from '@shared/workflow/persistence/workflowScheduleStateModel';
 import {
   buildDesiredWorkflowSchedule,
   deleteWorkflowScheduleState,
@@ -1007,6 +1008,25 @@ const requireWorkflowPermission = async (
   throwHttpError(403, 'Forbidden');
 };
 
+const loadWorkflowScheduleStateMap = async (
+  knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
+  workflowIds: string[],
+  tenant?: string | null
+): Promise<Map<string, WorkflowScheduleStateRecord>> => {
+  if (!workflowIds.length) return new Map();
+
+  const query = knex<WorkflowScheduleStateRecord>('tenant_workflow_schedule')
+    .select('*')
+    .whereIn('workflow_id', workflowIds);
+
+  if (tenant) {
+    query.andWhere('tenant_id', tenant);
+  }
+
+  const rows = await query;
+  return new Map(rows.map((row) => [row.workflow_id, row]));
+};
+
 const auditWorkflowEvent = async (
   knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
   user: AuthUser,
@@ -1040,6 +1060,7 @@ export const listWorkflowDefinitionsAction = withAuth(async (user, { tenant }) =
   const records = await WorkflowDefinitionModelV2.list(knex);
   const workflowIds = records.map((record) => record.workflow_id);
   const publishedVersionMap = new Map<string, number | null>();
+  const scheduleStateMap = await loadWorkflowScheduleStateMap(knex, workflowIds, tenant);
   if (workflowIds.length) {
     const rows = await knex('workflow_definition_versions')
       .select('workflow_id')
@@ -1054,7 +1075,8 @@ export const listWorkflowDefinitionsAction = withAuth(async (user, { tenant }) =
 
   const enrichedRecords = records.map((record) => ({
     ...record,
-    published_version: publishedVersionMap.get(record.workflow_id) ?? null
+    published_version: publishedVersionMap.get(record.workflow_id) ?? null,
+    schedule_state: scheduleStateMap.get(record.workflow_id) ?? null
   }));
   const canAdmin = await hasPermission(user, 'workflow', 'admin', knex);
   if (canAdmin) {
@@ -1153,9 +1175,15 @@ export const listWorkflowDefinitionsPagedAction = withAuth(async (user, { tenant
   itemsQuery.orderBy('wd.workflow_id', 'asc');
 
   const rows = await itemsQuery.limit(pageSize).offset(offset);
+  const scheduleStateMap = await loadWorkflowScheduleStateMap(
+    knex,
+    (rows as any[]).map((row) => row.workflow_id),
+    tenant
+  );
   const items = (rows as any[]).map((row) => ({
     ...row,
-    published_version: row.published_version == null ? null : Number(row.published_version)
+    published_version: row.published_version == null ? null : Number(row.published_version),
+    schedule_state: scheduleStateMap.get(row.workflow_id) ?? null
   }));
 
   // Aggregate counts (unfiltered, but respecting visibility rules).
@@ -1985,6 +2013,20 @@ export const getWorkflowRunAction = withAuth(async (user, { tenant }, input: unk
   };
 });
 
+export const getWorkflowScheduleStateAction = withAuth(async (user, { tenant }, input: unknown) => {
+  const parsed = WorkflowIdInput.parse(input);
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+
+  const workflow = await WorkflowDefinitionModelV2.getById(knex, parsed.workflowId);
+  if (!workflow) {
+    return throwHttpError(404, 'Not found');
+  }
+
+  const scheduleStateMap = await loadWorkflowScheduleStateMap(knex, [parsed.workflowId], tenant);
+  return scheduleStateMap.get(parsed.workflowId) ?? null;
+});
+
 export const listWorkflowRunsAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = ListWorkflowRunsInput.parse(input);
   const { knex } = await createTenantKnex();
@@ -2001,6 +2043,8 @@ export const listWorkflowRunsAction = withAuth(async (user, { tenant }, input: u
       'workflow_runs.tenant_id',
       'workflow_runs.status',
       'workflow_runs.node_path',
+      'workflow_runs.trigger_type',
+      'workflow_runs.trigger_metadata_json',
       'workflow_runs.source_payload_schema_ref',
       'workflow_runs.trigger_mapping_applied',
       'workflow_runs.started_at',
@@ -3024,6 +3068,12 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
       workflowVersion: latest.version,
       payload: workflowPayload,
       tenantId: tenant,
+      triggerType: 'event',
+      triggerMetadata: {
+        eventType: parsed.eventName,
+        sourcePayloadSchemaRef: effectiveSourceSchemaRef,
+        triggerMappingApplied: mappingApplied
+      },
       eventType: parsed.eventName,
       sourcePayloadSchemaRef: effectiveSourceSchemaRef,
       triggerMappingApplied: mappingApplied,

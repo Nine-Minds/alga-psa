@@ -55,7 +55,7 @@ describe('Workflow scheduled run handlers', () => {
     updateScheduleState.mockReset();
   });
 
-  it('T008/T026/T035/T037/T038: one-time handler launches once, emits the fixed clock payload contract, and marks the schedule completed', async () => {
+  it('T008/T026/T035/T037/T038/T043: one-time handler emits the fixed contract, marks the schedule completed, and ignores repeat delivery', async () => {
     scheduleRecord = {
       id: 'schedule-1',
       tenant_id: 'tenant-1',
@@ -68,6 +68,12 @@ describe('Workflow scheduled run handlers', () => {
       enabled: true,
       status: 'scheduled'
     };
+
+    await workflowOneTimeScheduledRunHandler('job-1', {
+      tenantId: 'tenant-1',
+      workflowId: 'workflow-1',
+      scheduleId: 'schedule-1'
+    });
 
     await workflowOneTimeScheduledRunHandler('job-1', {
       tenantId: 'tenant-1',
@@ -89,8 +95,15 @@ describe('Workflow scheduled run handlers', () => {
       workflowId: 'workflow-1',
       workflowVersion: 4,
       tenantId: 'tenant-1',
+      triggerType: 'schedule',
+      triggerMetadata: expect.objectContaining({
+        ...payload,
+        fireKey: 'workflow-schedule-fire:schedule-1:job-1'
+      }),
+      triggerFireKey: 'workflow-schedule-fire:schedule-1:job-1',
       sourcePayloadSchemaRef: WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF,
-      execute: true
+      execute: true,
+      executionKey: 'workflow-schedule-fire:schedule-1:job-1'
     });
     expect(payload).toMatchObject({
       triggerType: 'schedule',
@@ -109,6 +122,7 @@ describe('Workflow scheduled run handlers', () => {
         job_id: null,
         runner_schedule_id: null,
         next_fire_at: null,
+        last_fire_key: 'workflow-schedule-fire:schedule-1:job-1',
         last_run_status: 'success',
         last_error: null
       })
@@ -121,7 +135,7 @@ describe('Workflow scheduled run handlers', () => {
     });
   });
 
-  it('T027: recurring handler launches through the shared launcher with recurring clock metadata', async () => {
+  it('T027/T036/T044: recurring handler launches once per fire, ignores duplicate delivery, and still launches later occurrences', async () => {
     scheduleRecord = {
       id: 'schedule-2',
       tenant_id: 'tenant-1',
@@ -135,21 +149,47 @@ describe('Workflow scheduled run handlers', () => {
       status: 'scheduled'
     };
 
-    await workflowRecurringScheduledRunHandler('job-2', {
+    await workflowRecurringScheduledRunHandler('job-service-2', {
       tenantId: 'tenant-1',
       workflowId: 'workflow-2',
-      scheduleId: 'schedule-2'
+      scheduleId: 'schedule-2',
+      jobExecutionId: 'fire-1'
     });
 
-    expect(launchPublishedWorkflowRun).toHaveBeenCalledTimes(1);
+    await workflowRecurringScheduledRunHandler('job-service-2', {
+      tenantId: 'tenant-1',
+      workflowId: 'workflow-2',
+      scheduleId: 'schedule-2',
+      jobExecutionId: 'fire-1'
+    });
+
+    await workflowRecurringScheduledRunHandler('job-service-2', {
+      tenantId: 'tenant-1',
+      workflowId: 'workflow-2',
+      scheduleId: 'schedule-2',
+      jobExecutionId: 'fire-2'
+    });
+
+    expect(launchPublishedWorkflowRun).toHaveBeenCalledTimes(2);
     const payload = launchPublishedWorkflowRun.mock.calls[0]?.[1]?.payload;
 
     expect(launchPublishedWorkflowRun.mock.calls[0]?.[1]).toMatchObject({
       workflowId: 'workflow-2',
       workflowVersion: 7,
       tenantId: 'tenant-1',
+      triggerType: 'recurring',
+      triggerMetadata: expect.objectContaining({
+        ...payload,
+        fireKey: 'workflow-schedule-fire:schedule-2:fire-1'
+      }),
+      triggerFireKey: 'workflow-schedule-fire:schedule-2:fire-1',
       sourcePayloadSchemaRef: WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF,
-      execute: true
+      execute: true,
+      executionKey: 'workflow-schedule-fire:schedule-2:fire-1'
+    });
+    expect(launchPublishedWorkflowRun.mock.calls[1]?.[1]).toMatchObject({
+      triggerFireKey: 'workflow-schedule-fire:schedule-2:fire-2',
+      executionKey: 'workflow-schedule-fire:schedule-2:fire-2'
     });
     expect(payload).toMatchObject({
       triggerType: 'recurring',
@@ -165,6 +205,7 @@ describe('Workflow scheduled run handlers', () => {
     expect(updateScheduleState).toHaveBeenCalledWith(
       'schedule-2',
       expect.objectContaining({
+        last_fire_key: 'workflow-schedule-fire:schedule-2:fire-2',
         last_run_status: 'success',
         last_error: null
       })

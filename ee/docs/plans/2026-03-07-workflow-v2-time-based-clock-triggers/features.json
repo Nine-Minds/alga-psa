@@ -146,19 +146,19 @@
   {
     "id": "F025",
     "description": "Persist time-trigger run provenance so workflow run APIs and UI can distinguish one-time and recurring clock starts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F026",
     "description": "Update workflow runs and workflow summary UI to display time-trigger labels and schedule state for time-triggered workflows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F027",
     "description": "Add duplicate-fire protection so retries or repeated delivery of the same schedule fire cannot create duplicate workflow runs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Non-functional Requirements", "Acceptance Criteria (Definition of Done)"]
   }
 ]

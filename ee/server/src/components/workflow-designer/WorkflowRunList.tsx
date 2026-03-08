@@ -22,17 +22,29 @@ import {
   resumeWorkflowRunAction
 } from '@alga-psa/workflows/actions';
 import WorkflowRunDetails from './WorkflowRunDetails';
+import {
+  getWorkflowRunTriggerLabel,
+  getWorkflowScheduleStatusBadgeClass,
+  getWorkflowScheduleStatusLabel,
+  isTimeTriggeredRun
+} from './workflowRunTriggerPresentation';
 
 type WorkflowDefinitionSummary = {
   workflow_id: string;
   name: string;
   trigger?: Record<string, unknown> | null;
+  schedule_state?: WorkflowScheduleStateSummary | null;
   payload_schema_ref?: string | null;
   published_version?: number | null;
   validation_status?: string | null;
   is_paused?: boolean;
   concurrency_limit?: number | null;
   is_system?: boolean;
+};
+
+type WorkflowScheduleStateSummary = {
+  status?: 'scheduled' | 'paused' | 'disabled' | 'completed' | 'failed' | null;
+  enabled?: boolean;
 };
 
 type WorkflowRunListItem = {
@@ -42,6 +54,7 @@ type WorkflowRunListItem = {
   workflow_version: number;
   tenant_id?: string | null;
   status: string;
+  trigger_type?: 'event' | 'schedule' | 'recurring' | null;
   source_payload_schema_ref?: string | null;
   trigger_mapping_applied?: boolean | null;
   started_at: string;
@@ -201,15 +214,20 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
         map.set(definition.workflow_id, null);
         return;
       }
-      const eventName = (trigger as any)?.eventName;
-      if (eventName) {
-        map.set(definition.workflow_id, `Event: ${eventName}`);
-        return;
-      }
-      map.set(definition.workflow_id, JSON.stringify(trigger));
+      map.set(
+        definition.workflow_id,
+        getWorkflowRunTriggerLabel(
+          typeof (trigger as any)?.type === 'string' ? (trigger as any).type : null,
+          typeof (trigger as any)?.eventName === 'string' ? (trigger as any).eventName : null
+        )
+      );
     });
     return map;
   }, [definitions]);
+  const workflowScheduleStateMap = useMemo(
+    () => new Map(definitions.map((definition) => [definition.workflow_id, definition.schedule_state ?? null])),
+    [definitions]
+  );
 
   const activeDefinition = useMemo(
     () => definitions.find((definition) => definition.workflow_id === filters.workflowId) ?? null,
@@ -712,7 +730,25 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                       {run.run_id}
                     </Link>
                   </TableCell>
-                  <TableCell>{run.workflow_name ?? run.workflow_id}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-1">
+                      <span>{run.workflow_name ?? run.workflow_id}</span>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <Badge className="bg-gray-100 text-gray-700 border-gray-200 text-[10px]">
+                          {run.trigger_type
+                            ? getWorkflowRunTriggerLabel(run.trigger_type)
+                            : (workflowTriggerMap.get(run.workflow_id) ?? 'Manual')}
+                        </Badge>
+                        {isTimeTriggeredRun(run.trigger_type) && workflowScheduleStateMap.get(run.workflow_id)?.status ? (
+                          <Badge
+                            className={`text-[10px] ${getWorkflowScheduleStatusBadgeClass(workflowScheduleStateMap.get(run.workflow_id)?.status)}`}
+                          >
+                            {getWorkflowScheduleStatusLabel(workflowScheduleStateMap.get(run.workflow_id)?.status)}
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </div>
+                  </TableCell>
                   <TableCell>{run.workflow_version}</TableCell>
                   {showTenantColumn && <TableCell className="text-xs text-gray-500">{run.tenant_id ?? '—'}</TableCell>}
                   <TableCell className="text-xs">

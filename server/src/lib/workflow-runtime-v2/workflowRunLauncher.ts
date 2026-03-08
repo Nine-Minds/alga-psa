@@ -3,13 +3,19 @@ import type { Knex } from 'knex';
 import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
 import type { WorkflowDefinitionVersionRecord } from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
 import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
+import WorkflowRunModelV2 from '@shared/workflow/persistence/workflowRunModelV2';
 import { WorkflowRuntimeV2, getSchemaRegistry } from '@shared/workflow/runtime';
+
+const WORKFLOW_RUN_TRIGGER_FIRE_KEY_UNIQUE = 'workflow_runs_trigger_fire_key_unique';
 
 export type WorkflowRunLaunchRequest = {
   workflowId: string;
   tenantId: string | null;
   payload: Record<string, unknown>;
   workflowVersion?: number | null;
+  triggerType?: 'event' | 'schedule' | 'recurring' | null;
+  triggerMetadata?: Record<string, unknown> | null;
+  triggerFireKey?: string | null;
   eventType?: string | null;
   sourcePayloadSchemaRef?: string | null;
   triggerMappingApplied?: boolean;
@@ -33,6 +39,11 @@ async function resolveVersionRecord(
   const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflowId);
   return versions[0] ?? null;
 }
+
+const isTriggerFireKeyDuplicateError = (error: unknown): boolean => {
+  const candidate = error as { code?: string; constraint?: string } | null;
+  return candidate?.code === '23505' && candidate?.constraint === WORKFLOW_RUN_TRIGGER_FIRE_KEY_UNIQUE;
+};
 
 export async function launchPublishedWorkflowRun(
   knex: Knex,
@@ -77,16 +88,47 @@ export async function launchPublishedWorkflowRun(
     }
   }
 
+  if (request.triggerFireKey) {
+    const existingRun = await WorkflowRunModelV2.getByTriggerFireKey(knex, request.triggerFireKey);
+    if (existingRun) {
+      return {
+        runId: existingRun.run_id,
+        workflowVersion: existingRun.workflow_version
+      };
+    }
+  }
+
   const runtime = new WorkflowRuntimeV2();
-  const runId = await runtime.startRun(knex, {
-    workflowId: request.workflowId,
-    version: versionRecord.version,
-    payload: request.payload,
-    tenantId: request.tenantId,
-    eventType: request.eventType ?? null,
-    sourcePayloadSchemaRef: request.sourcePayloadSchemaRef ?? null,
-    triggerMappingApplied: Boolean(request.triggerMappingApplied)
-  });
+  let runId: string;
+
+  try {
+    runId = await runtime.startRun(knex, {
+      workflowId: request.workflowId,
+      version: versionRecord.version,
+      payload: request.payload,
+      tenantId: request.tenantId,
+      triggerType: request.triggerType ?? null,
+      triggerMetadata: request.triggerMetadata ?? null,
+      triggerFireKey: request.triggerFireKey ?? null,
+      eventType: request.eventType ?? null,
+      sourcePayloadSchemaRef: request.sourcePayloadSchemaRef ?? null,
+      triggerMappingApplied: Boolean(request.triggerMappingApplied)
+    });
+  } catch (error) {
+    if (!request.triggerFireKey || !isTriggerFireKeyDuplicateError(error)) {
+      throw error;
+    }
+
+    const existingRun = await WorkflowRunModelV2.getByTriggerFireKey(knex, request.triggerFireKey);
+    if (!existingRun) {
+      throw error;
+    }
+
+    return {
+      runId: existingRun.run_id,
+      workflowVersion: existingRun.workflow_version
+    };
+  }
 
   if (request.execute !== false) {
     await runtime.executeRun(

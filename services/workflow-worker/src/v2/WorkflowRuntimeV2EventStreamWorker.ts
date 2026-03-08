@@ -196,6 +196,12 @@ export class WorkflowRuntimeV2EventStreamWorker {
         workflowVersion: latest.version,
         payload,
         tenantId: event.tenant,
+        triggerType: 'event',
+        triggerMetadata: {
+          eventType: event.event_type,
+          sourcePayloadSchemaRef: payloadSchemaRef ?? workflowPayloadSchemaRef,
+          triggerMappingApplied: false
+        },
         eventType: event.event_type,
         sourcePayloadSchemaRef: payloadSchemaRef ?? workflowPayloadSchemaRef,
         triggerMappingApplied: false,

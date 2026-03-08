@@ -14,6 +14,7 @@ import {
   getWorkflowRunAction,
   getWorkflowDefinitionVersionAction,
   getWorkflowRunSummaryMetadataAction,
+  getWorkflowScheduleStateAction,
   listWorkflowRunsAction,
   listWorkflowRunLogsAction,
   listWorkflowRunStepsAction,
@@ -23,7 +24,7 @@ import {
 } from '@alga-psa/workflows/actions';
 import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
-import { isWorkflowEventTrigger, type WorkflowDefinition, type Step } from '@shared/workflow/runtime';
+import { type WorkflowDefinition, type Step } from '@shared/workflow/runtime';
 import type { IfBlock, ForEachBlock, TryCatchBlock, NodeStep } from '@shared/workflow/runtime';
 import {
   PipelineStart,
@@ -31,6 +32,12 @@ import {
   getStepTypeColor,
   getStepTypeIcon
 } from '../workflow-designer/pipeline/PipelineComponents';
+import {
+  getWorkflowRunTriggerLabel,
+  getWorkflowScheduleStatusBadgeClass,
+  getWorkflowScheduleStatusLabel,
+  isTimeTriggeredRun
+} from '../workflow-designer/workflowRunTriggerPresentation';
 
 type WorkflowRunRecord = {
   run_id: string;
@@ -39,12 +46,18 @@ type WorkflowRunRecord = {
   tenant_id?: string | null;
   status: string;
   node_path?: string | null;
+  trigger_type?: 'event' | 'schedule' | 'recurring' | null;
+  trigger_metadata_json?: Record<string, unknown> | null;
   event_type?: string | null;
   input_json?: Record<string, unknown> | null;
   resume_event_name?: string | null;
   started_at: string;
   updated_at: string;
   completed_at?: string | null;
+};
+
+type WorkflowScheduleStateSummary = {
+  status?: 'scheduled' | 'paused' | 'disabled' | 'completed' | 'failed' | null;
 };
 
 type WorkflowRunSummary = {
@@ -151,6 +164,7 @@ const statusBadgeClasses: Record<string, string> = {
 
 const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
   const [run, setRun] = useState<WorkflowRunRecord | null>(null);
+  const [scheduleState, setScheduleState] = useState<WorkflowScheduleStateSummary | null>(null);
   const [definition, setDefinition] = useState<WorkflowDefinition | null>(null);
   const [runSummary, setRunSummary] = useState<WorkflowRunSummary | null>(null);
   const [summaryMetadata, setSummaryMetadata] = useState<WorkflowRunSummaryMetadata | null>(null);
@@ -196,6 +210,16 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
       const data = await getWorkflowRunAction({ runId });
       setRun(data as WorkflowRunRecord);
       try {
+        if (data?.workflow_id) {
+          const nextScheduleState = await getWorkflowScheduleStateAction({ workflowId: data.workflow_id });
+          setScheduleState((nextScheduleState ?? null) as WorkflowScheduleStateSummary | null);
+        } else {
+          setScheduleState(null);
+        }
+      } catch {
+        setScheduleState(null);
+      }
+      try {
         const runResult = await listWorkflowRunsAction({ runId, limit: 1, cursor: 0 });
         setRunSummary((runResult?.runs?.[0] ?? null) as WorkflowRunSummary | null);
       } catch {
@@ -240,6 +264,12 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
     fetchStepsAndLogs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runId]);
+
+  const triggerLabel = useMemo(
+    () => getWorkflowRunTriggerLabel(run?.trigger_type ?? null, run?.event_type ?? null),
+    [run?.event_type, run?.trigger_type]
+  );
+  const triggerMetadata = (run?.trigger_metadata_json ?? null) as Record<string, unknown> | null;
 
   useEffect(() => {
     getCurrentUserPermissions()
@@ -883,12 +913,34 @@ const RunStudioShell: React.FC<RunStudioShellProps> = ({ runId }) => {
               </div>
               <div>
                 <div className="text-[11px] uppercase text-gray-400">Trigger</div>
-                <div>{isWorkflowEventTrigger(definition?.trigger) ? definition.trigger.eventName : 'Manual'}</div>
+                <div>{triggerLabel}</div>
               </div>
-              <div>
-                <div className="text-[11px] uppercase text-gray-400">Event Type</div>
-                <div className="font-mono">{run?.event_type ?? '-'}</div>
-              </div>
+              {run?.event_type && (
+                <div>
+                  <div className="text-[11px] uppercase text-gray-400">Event Type</div>
+                  <div className="font-mono">{run.event_type}</div>
+                </div>
+              )}
+              {isTimeTriggeredRun(run?.trigger_type) && (
+                <div>
+                  <div className="text-[11px] uppercase text-gray-400">Schedule State</div>
+                  <Badge className={getWorkflowScheduleStatusBadgeClass(scheduleState?.status)}>
+                    {getWorkflowScheduleStatusLabel(scheduleState?.status)}
+                  </Badge>
+                </div>
+              )}
+              {isTimeTriggeredRun(run?.trigger_type) && typeof triggerMetadata?.scheduledFor === 'string' && (
+                <div>
+                  <div className="text-[11px] uppercase text-gray-400">Scheduled For</div>
+                  <div>{new Date(String(triggerMetadata.scheduledFor)).toLocaleString()}</div>
+                </div>
+              )}
+              {run?.trigger_type === 'recurring' && typeof triggerMetadata?.cron === 'string' && (
+                <div>
+                  <div className="text-[11px] uppercase text-gray-400">Cron</div>
+                  <div className="font-mono">{String(triggerMetadata.cron)}</div>
+                </div>
+              )}
               {run?.status === 'WAITING' && (
                 <div>
                   <div className="text-[11px] uppercase text-gray-400">Waiting For</div>

@@ -149,6 +149,12 @@ describe('Workflow event launcher routing', () => {
         workflowId: 'workflow-1',
         workflowVersion: 3,
         tenantId: 'tenant-1',
+        triggerType: 'event',
+        triggerMetadata: {
+          eventType: 'PING',
+          sourcePayloadSchemaRef: TEST_SCHEMA_REF,
+          triggerMappingApplied: false
+        },
         eventType: 'PING',
         sourcePayloadSchemaRef: TEST_SCHEMA_REF,
         triggerMappingApplied: false,

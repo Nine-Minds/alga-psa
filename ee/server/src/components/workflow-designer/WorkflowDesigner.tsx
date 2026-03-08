@@ -113,6 +113,18 @@ type WorkflowDefinitionRecord = {
   failure_rate_min_runs?: number | null;
   retention_policy_override?: Record<string, unknown> | null;
   published_version?: number | null;
+  schedule_state?: {
+    status?: 'scheduled' | 'paused' | 'disabled' | 'completed' | 'failed' | null;
+    enabled?: boolean;
+    trigger_type?: 'schedule' | 'recurring' | null;
+    run_at?: string | null;
+    cron?: string | null;
+    timezone?: string | null;
+    last_fire_at?: string | null;
+    next_fire_at?: string | null;
+    last_run_status?: string | null;
+    last_error?: string | null;
+  } | null;
 };
 
 type NodeRegistryItem = {
@@ -4810,6 +4822,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         workflow_id: definition.workflow_id,
         name: definition.name,
         trigger: definition.trigger ?? null,
+        schedule_state: definition.schedule_state ?? null,
         payload_schema_ref: definition.payload_schema_ref,
         published_version: definition.published_version ?? null,
         validation_status: definition.validation_status ?? null,

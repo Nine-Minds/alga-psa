@@ -12,6 +12,9 @@ export interface WorkflowScheduledRunJobData extends BaseJobData {
   scheduleId: string;
 }
 
+const buildWorkflowScheduleFireKey = (scheduleId: string, jobId: string): string =>
+  `workflow-schedule-fire:${scheduleId}:${jobId}`;
+
 const buildClockPayload = (params: {
   scheduleId: string;
   workflowId: string;
@@ -36,6 +39,7 @@ const buildClockPayload = (params: {
 
 async function runScheduledWorkflow(
   expectedTriggerType: 'schedule' | 'recurring',
+  jobId: string,
   data: WorkflowScheduledRunJobData
 ): Promise<void> {
   const { knex, tenant } = await createTenantKnex(data.tenantId);
@@ -44,6 +48,15 @@ async function runScheduledWorkflow(
     return;
   }
   if (!schedule.enabled || schedule.trigger_type !== expectedTriggerType) {
+    return;
+  }
+
+  const fireExecutionId =
+    typeof data.jobExecutionId === 'string' && data.jobExecutionId.trim().length > 0
+      ? data.jobExecutionId.trim()
+      : jobId;
+  const fireKey = buildWorkflowScheduleFireKey(schedule.id, fireExecutionId);
+  if (schedule.last_fire_key === fireKey && schedule.last_run_status === 'success') {
     return;
   }
 
@@ -63,9 +76,15 @@ async function runScheduledWorkflow(
       workflowVersion: schedule.workflow_version,
       tenantId: tenant,
       payload,
+      triggerType: schedule.trigger_type,
+      triggerMetadata: {
+        ...payload,
+        fireKey
+      },
+      triggerFireKey: fireKey,
       sourcePayloadSchemaRef: WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF,
       execute: true,
-      executionKey: `${expectedTriggerType}-${schedule.id}-${Date.now()}`
+      executionKey: fireKey
     });
 
     const successState = schedule.trigger_type === 'schedule'
@@ -84,28 +103,30 @@ async function runScheduledWorkflow(
       last_fire_at: payload.firedAt,
       last_run_status: 'success',
       last_error: null,
+      last_fire_key: fireKey,
       ...successState
     });
   } catch (error) {
     await WorkflowScheduleStateModel.update(knex, schedule.id, {
       last_fire_at: payload.firedAt,
       last_run_status: 'error',
-      last_error: error instanceof Error ? error.message : String(error)
+      last_error: error instanceof Error ? error.message : String(error),
+      last_fire_key: fireKey
     }).catch(() => undefined);
     throw error;
   }
 }
 
 export async function workflowOneTimeScheduledRunHandler(
-  _jobId: string,
+  jobId: string,
   data: WorkflowScheduledRunJobData
 ): Promise<void> {
-  await runScheduledWorkflow('schedule', data);
+  await runScheduledWorkflow('schedule', jobId, data);
 }
 
 export async function workflowRecurringScheduledRunHandler(
-  _jobId: string,
+  jobId: string,
   data: WorkflowScheduledRunJobData
 ): Promise<void> {
-  await runScheduledWorkflow('recurring', data);
+  await runScheduledWorkflow('recurring', jobId, data);
 }
