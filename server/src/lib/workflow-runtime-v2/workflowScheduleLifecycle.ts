@@ -30,6 +30,10 @@ export type PersistedWorkflowScheduleFields = {
   desired: DesiredWorkflowSchedule;
 };
 
+export type WorkflowSchedulePayloadValidationResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
 type WorkflowScheduleJobData = {
   tenantId: string;
   workflowId: string;
@@ -88,6 +92,34 @@ const buildDesiredScheduleFromExisting = (
     timezone: existing.timezone ?? null,
     enabled,
     status: toDesiredScheduleStatus(enabled)
+  };
+};
+
+const buildDesiredScheduleForPublishedWorkflowVersion = (
+  existing: WorkflowScheduleStateRecord,
+  workflowVersion: number
+): DesiredWorkflowSchedule | null => {
+  if (existing.trigger_type === 'schedule' && !existing.run_at) return null;
+  if (existing.trigger_type === 'recurring' && !existing.cron) return null;
+
+  const enabled = Boolean(existing.enabled);
+  const status: WorkflowScheduleStateStatus =
+    existing.status === 'completed'
+      ? 'completed'
+      : existing.status === 'disabled'
+        ? 'disabled'
+        : enabled
+          ? 'scheduled'
+          : 'paused';
+
+  return {
+    triggerType: existing.trigger_type,
+    workflowVersion,
+    runAt: existing.run_at ?? null,
+    cron: existing.cron ?? null,
+    timezone: existing.timezone ?? null,
+    enabled,
+    status
   };
 };
 
@@ -407,6 +439,71 @@ export async function deleteWorkflowScheduleStateById(
 
   await cancelScheduledWorkflow(params.tenantId, existing);
   await WorkflowScheduleStateModel.deleteById(knex, params.scheduleId);
+}
+
+export async function revalidateExternalWorkflowSchedulesForPublishedVersion(
+  knex: Knex,
+  params: {
+    tenantId: string;
+    workflowId: string;
+    workflowVersion: number;
+    validatePayload: (
+      payload: Record<string, unknown> | unknown[]
+    ) => Promise<WorkflowSchedulePayloadValidationResult> | WorkflowSchedulePayloadValidationResult;
+  }
+): Promise<{
+  validScheduleIds: string[];
+  invalidScheduleIds: string[];
+}> {
+  const schedules = await WorkflowScheduleStateModel.listByWorkflowId(knex, params.workflowId);
+  const validScheduleIds: string[] = [];
+  const invalidScheduleIds: string[] = [];
+
+  for (const schedule of schedules) {
+    const payload = (schedule.payload_json ?? {}) as Record<string, unknown> | unknown[];
+    const validation = await params.validatePayload(payload);
+
+    if (!validation.ok) {
+      await cancelScheduledWorkflow(params.tenantId, schedule).catch(() => undefined);
+      await WorkflowScheduleStateModel.update(knex, schedule.id, {
+        enabled: false,
+        status: 'failed',
+        job_id: null,
+        runner_schedule_id: null,
+        last_error: validation.message
+      });
+      invalidScheduleIds.push(schedule.id);
+      continue;
+    }
+
+    const desired = buildDesiredScheduleForPublishedWorkflowVersion(schedule, params.workflowVersion);
+    if (!desired) {
+      await cancelScheduledWorkflow(params.tenantId, schedule).catch(() => undefined);
+      await WorkflowScheduleStateModel.update(knex, schedule.id, {
+        enabled: false,
+        status: 'failed',
+        job_id: null,
+        runner_schedule_id: null,
+        last_error: 'Workflow schedule is missing required timing details'
+      });
+      invalidScheduleIds.push(schedule.id);
+      continue;
+    }
+
+    await updateExternalWorkflowScheduleState(knex, {
+      tenantId: params.tenantId,
+      scheduleId: schedule.id,
+      record: {
+        workflowId: schedule.workflow_id,
+        name: schedule.name,
+        payloadJson: payload,
+        desired
+      }
+    });
+    validScheduleIds.push(schedule.id);
+  }
+
+  return { validScheduleIds, invalidScheduleIds };
 }
 
 export async function syncWorkflowScheduleState(

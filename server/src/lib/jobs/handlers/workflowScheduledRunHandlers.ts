@@ -1,7 +1,3 @@
-import {
-  WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF,
-  type WorkflowClockTriggerPayload
-} from '@shared/workflow/runtime';
 import WorkflowScheduleStateModel from '@shared/workflow/persistence/workflowScheduleStateModel';
 import { createTenantKnex } from 'server/src/lib/db';
 import type { BaseJobData } from '../interfaces';
@@ -28,20 +24,22 @@ const toIsoDateTime = (value: unknown): string | null => {
   return null;
 };
 
-const buildClockPayload = (params: {
+const buildScheduleTriggerMetadata = (params: {
   scheduleId: string;
+  scheduleName: string;
   workflowId: string;
   workflowVersion: number;
   triggerType: 'schedule' | 'recurring';
   runAt?: string | null;
   cron?: string | null;
   timezone?: string | null;
-}): WorkflowClockTriggerPayload => {
+}) => {
   const firedAt = new Date().toISOString();
   const scheduledFor = toIsoDateTime(params.runAt) ?? firedAt;
   return {
     triggerType: params.triggerType,
     scheduleId: params.scheduleId,
+    scheduleName: params.scheduleName,
     scheduledFor,
     firedAt,
     timezone: params.timezone ?? 'UTC',
@@ -74,8 +72,10 @@ async function runScheduledWorkflow(
     return;
   }
 
-  const payload = buildClockPayload({
+  const payload = (schedule.payload_json ?? {}) as Record<string, unknown>;
+  const triggerMetadata = buildScheduleTriggerMetadata({
     scheduleId: schedule.id,
+    scheduleName: schedule.name,
     workflowId: schedule.workflow_id,
     workflowVersion: schedule.workflow_version,
     triggerType: schedule.trigger_type,
@@ -92,11 +92,10 @@ async function runScheduledWorkflow(
       payload,
       triggerType: schedule.trigger_type,
       triggerMetadata: {
-        ...payload,
+        ...triggerMetadata,
         fireKey
       },
       triggerFireKey: fireKey,
-      sourcePayloadSchemaRef: WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF,
       execute: true,
       executionKey: fireKey
     });
@@ -114,7 +113,7 @@ async function runScheduledWorkflow(
         };
 
     await WorkflowScheduleStateModel.update(knex, schedule.id, {
-      last_fire_at: payload.firedAt,
+      last_fire_at: triggerMetadata.firedAt,
       last_run_status: 'success',
       last_error: null,
       last_fire_key: fireKey,
@@ -122,7 +121,7 @@ async function runScheduledWorkflow(
     });
   } catch (error) {
     await WorkflowScheduleStateModel.update(knex, schedule.id, {
-      last_fire_at: payload.firedAt,
+      last_fire_at: triggerMetadata.firedAt,
       last_run_status: 'error',
       last_error: error instanceof Error ? error.message : String(error),
       last_fire_key: fireKey

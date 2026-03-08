@@ -19,6 +19,8 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-08) Workflow editor trigger options should become `No trigger` and `Event`; one-time and recurring trigger authoring moves out of the editor.
 - (2026-03-08) Schedule payload authoring should reuse the existing schema-driven form/json patterns from the run dialog instead of creating a new payload editor from scratch.
 - (2026-03-08) External schedule server actions should register only payload schemas, not the full workflow runtime, so schedule validation does not drag in unrelated action/node dependencies during request handling or test startup.
+- (2026-03-08) The publish path must only invoke legacy inline schedule sync when either the old or new workflow definition uses an inline time trigger; otherwise it will accidentally disable external schedules on non-time-trigger workflows.
+- (2026-03-08) Scheduled execution should pass `tenant_workflow_schedule.payload_json` straight through as workflow run input and move timing details into `trigger_metadata_json`; the old synthetic clock contract is now provenance-only data.
 
 ## Discoveries / Constraints
 
@@ -31,6 +33,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-08) The prior 2026-03-07 plan describes the inline time-trigger approach and is already marked implemented, so this redesign needs its own plan folder instead of overwriting that historical plan.
 - (2026-03-08) Importing `@shared/workflow/runtime` from the new schedule actions eagerly loads workflow runtime initialization exports, which in turn pull unrelated email/storage dependencies into Vitest resolution. Direct imports from the schema registry and schema modules avoid that coupling. Key files: `packages/workflows/src/actions/workflow-schedule-v2-actions.ts`, `shared/workflow/runtime/index.ts`.
 - (2026-03-08) The new backend checkpoint covers persistence, migration, CRUD actions, validation guards, permission checks, and tenant-scoped list/get flows, but not publish-time rebinding/revalidation or runner launch payload changes yet. Keep `F005` and `F016`-`F020` false until that lifecycle work lands.
+- (2026-03-08) The EE server DB-backed harness started hitting `KnexTimeoutError` during database recreation after multiple suite runs against the shared local Postgres container. For the publish lifecycle slice, unit coverage around the publish action and schedule lifecycle was faster and more reliable than retrying the saturated DB harness.
 
 ## Implementation Log
 
@@ -39,6 +42,10 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-08) Completed `F006`-`F015` by adding external schedule persistence helpers, lifecycle wrappers, zod action schemas, and tenant-scoped server actions for list/get/create/update/pause/resume/delete with published-version, pinned-schema, and payload validation guards. Key files: `server/src/lib/workflow-runtime-v2/workflowScheduleLifecycle.ts`, `packages/workflows/src/actions/workflow-schedule-v2-schemas.ts`, `packages/workflows/src/actions/workflow-schedule-v2-actions.ts`.
 - (2026-03-08) Completed `F036` in the action layer by requiring workflow read permission for list/get and workflow manage permission for create/update/pause/resume/delete, plus explicit tenant checks before reading or mutating schedule records.
 - (2026-03-08) Completed `T001`-`T020` and `T054` with new DB-backed migration and action integration suites covering migration safety, persisted `name` and `payload_json`, create/edit flows for one-time and recurring schedules, pause/resume/delete, published-version and pinned-schema guards, payload validation failures, and tenant-scoped global listing. Key files: `ee/server/src/__tests__/integration/workflow-external-schedules.migration.integration.test.ts`, `ee/server/src/__tests__/integration/workflow-external-schedules.actions.integration.test.ts`.
+- (2026-03-08) Completed `F005` and `F016`-`F018` by adding publish-time external schedule revalidation that updates `workflow_version` for valid schedules, preserves invalid schedules with `status=failed` and validation errors, and avoids running the legacy inline schedule sync for non-time-trigger workflows. Key files: `packages/workflows/src/actions/workflow-runtime-v2-actions.ts`, `server/src/lib/workflow-runtime-v2/workflowScheduleLifecycle.ts`.
+- (2026-03-08) Completed `T021`-`T024` with unit coverage on `publishWorkflowDefinitionAction`, using in-memory persistence mocks to verify valid-only rebinding, mixed validity handling, and per-schedule revalidation across all attached schedules. Key file: `server/src/test/unit/workflowExternalSchedulesPublishLifecycle.unit.test.ts`.
+- (2026-03-08) Completed `F019`-`F020` by updating the scheduled run handlers to send saved schedule payload JSON into `launchPublishedWorkflowRun` while preserving schedule/timing provenance in trigger metadata. Key file: `server/src/lib/jobs/handlers/workflowScheduledRunHandlers.ts`.
+- (2026-03-08) Completed `T025`-`T028` with unit coverage proving one-time and recurring schedules now launch with saved payload input, provenance metadata is retained, and invalid payloads at fire time are recorded as schedule errors without pretending the launch succeeded. Key file: `server/src/test/unit/workflowScheduledRunHandlers.unit.test.ts`.
 
 ## Commands / Runbooks
 
@@ -58,6 +65,10 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
   - `npx tsc -p ee/server/tsconfig.json --noEmit`
 - (2026-03-08) Verify the new external schedule integration suites against the local Postgres container:
   - `DB_HOST=localhost DB_PORT=55433 DB_PASSWORD_ADMIN=postpass123 DB_PASSWORD_SERVER=postpass123 npx vitest run --config vitest.config.ts src/__tests__/integration/workflow-external-schedules.migration.integration.test.ts src/__tests__/integration/workflow-external-schedules.actions.integration.test.ts`
+- (2026-03-08) Verify publish-time external schedule rebinding logic with the server unit harness:
+  - `cd server && npx vitest run src/test/unit/workflowExternalSchedulesPublishLifecycle.unit.test.ts`
+- (2026-03-08) Verify scheduled-run payload handoff and provenance behavior:
+  - `cd server && npx vitest run src/test/unit/workflowScheduledRunHandlers.unit.test.ts`
 
 ## Links / References
 
@@ -67,10 +78,13 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - Schedule persistence model: `shared/workflow/persistence/workflowScheduleStateModel.ts`
 - External schedule action schemas: `packages/workflows/src/actions/workflow-schedule-v2-schemas.ts`
 - External schedule actions: `packages/workflows/src/actions/workflow-schedule-v2-actions.ts`
+- Publish action: `packages/workflows/src/actions/workflow-runtime-v2-actions.ts`
 - Workflow editor: `ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`
 - Workflow run dialog: `ee/server/src/components/workflow-designer/WorkflowRunDialog.tsx`
 - Schedule lifecycle: `server/src/lib/workflow-runtime-v2/workflowScheduleLifecycle.ts`
 - Scheduled run handlers: `server/src/lib/jobs/handlers/workflowScheduledRunHandlers.ts`
+- Publish lifecycle unit test: `server/src/test/unit/workflowExternalSchedulesPublishLifecycle.unit.test.ts`
+- Scheduled run handler unit test: `server/src/test/unit/workflowScheduledRunHandlers.unit.test.ts`
 - Automation Hub tabs: `packages/workflows/src/components/automation-hub/AutomationHub.tsx`
 
 ## Open Questions

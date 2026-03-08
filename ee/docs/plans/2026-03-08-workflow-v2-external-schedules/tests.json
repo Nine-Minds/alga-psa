@@ -122,49 +122,49 @@
   {
     "id": "T021",
     "description": "Publish lifecycle: valid schedules rebind to the newest published workflow version",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F017"]
   },
   {
     "id": "T022",
     "description": "Publish lifecycle: invalid schedules are preserved and marked non-runnable when the new published version rejects their saved payload",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F018"]
   },
   {
     "id": "T023",
     "description": "Publish lifecycle: revalidation runs for every schedule attached to the workflow, not just one schedule",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F017"]
   },
   {
     "id": "T024",
     "description": "Publish lifecycle: a workflow with mixed valid and invalid schedules only rebinds the valid ones",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F017", "F018"]
   },
   {
     "id": "T025",
     "description": "Runner: one-time schedule launch passes schedule payload_json as workflow input_json",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {
     "id": "T026",
     "description": "Runner: recurring schedule launch passes schedule payload_json as workflow input_json",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {
     "id": "T027",
     "description": "Runner: schedule launch still stores schedule provenance metadata on the workflow run",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {
     "id": "T028",
     "description": "Runner: invalid saved payload at fire time does not start execution and records schedule error state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018", "F019", "F020"]
   },
   {

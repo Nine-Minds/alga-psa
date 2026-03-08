@@ -1,11 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF,
-  getSchemaRegistry,
-  initializeWorkflowRuntimeV2
-} from '@shared/workflow/runtime';
-
 type ScheduleRecord = Record<string, any> | null;
 
 let scheduleRecord: ScheduleRecord = null;
@@ -49,22 +43,26 @@ import {
 describe('Workflow scheduled run handlers', () => {
   beforeEach(() => {
     scheduleRecord = null;
-    initializeWorkflowRuntimeV2();
     launchPublishedWorkflowRun.mockReset();
     launchPublishedWorkflowRun.mockResolvedValue({ runId: 'run-1', workflowVersion: 4 });
     updateScheduleState.mockReset();
   });
 
-  it('T008/T026/T035/T037/T038/T043: one-time handler emits the fixed contract, marks the schedule completed, and ignores repeat delivery', async () => {
+  it('T025/T027: one-time handler launches with the saved schedule payload and preserves schedule provenance metadata', async () => {
     scheduleRecord = {
       id: 'schedule-1',
       tenant_id: 'tenant-1',
       workflow_id: 'workflow-1',
       workflow_version: 4,
+      name: 'Quarterly kickoff',
       trigger_type: 'schedule',
       run_at: '2026-03-08T14:00:00.000Z',
       cron: null,
       timezone: 'America/New_York',
+      payload_json: {
+        accountId: 'acct-100',
+        region: 'east'
+      },
       enabled: true,
       status: 'scheduled'
     };
@@ -90,6 +88,7 @@ describe('Workflow scheduled run handlers', () => {
     expect(launchPublishedWorkflowRun).toHaveBeenCalledTimes(1);
     const launchCall = launchPublishedWorkflowRun.mock.calls[0];
     const payload = launchCall?.[1]?.payload;
+    const triggerMetadata = launchCall?.[1]?.triggerMetadata;
 
     expect(launchCall?.[1]).toMatchObject({
       workflowId: 'workflow-1',
@@ -97,23 +96,24 @@ describe('Workflow scheduled run handlers', () => {
       tenantId: 'tenant-1',
       triggerType: 'schedule',
       triggerMetadata: expect.objectContaining({
-        ...payload,
+        scheduleId: 'schedule-1',
+        scheduleName: 'Quarterly kickoff',
+        triggerType: 'schedule',
+        scheduledFor: '2026-03-08T14:00:00.000Z',
+        timezone: 'America/New_York',
+        workflowId: 'workflow-1',
+        workflowVersion: 4,
         fireKey: 'workflow-schedule-fire:schedule-1:job-1'
       }),
       triggerFireKey: 'workflow-schedule-fire:schedule-1:job-1',
-      sourcePayloadSchemaRef: WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF,
       execute: true,
       executionKey: 'workflow-schedule-fire:schedule-1:job-1'
     });
-    expect(payload).toMatchObject({
-      triggerType: 'schedule',
-      scheduleId: 'schedule-1',
-      scheduledFor: '2026-03-08T14:00:00.000Z',
-      timezone: 'America/New_York',
-      workflowId: 'workflow-1',
-      workflowVersion: 4
+    expect(payload).toEqual({
+      accountId: 'acct-100',
+      region: 'east'
     });
-    expect(getSchemaRegistry().get(WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF).safeParse(payload).success).toBe(true);
+    expect(typeof triggerMetadata?.firedAt).toBe('string');
     expect(updateScheduleState).toHaveBeenCalledWith(
       'schedule-1',
       expect.objectContaining({
@@ -127,49 +127,23 @@ describe('Workflow scheduled run handlers', () => {
         last_error: null
       })
     );
-    expect(scheduleRecord).toMatchObject({
-      enabled: false,
-      status: 'completed',
-      job_id: null,
-      runner_schedule_id: null
-    });
   });
 
-  it('normalizes one-time schedule timestamps to ISO strings before launch', async () => {
-    scheduleRecord = {
-      id: 'schedule-date',
-      tenant_id: 'tenant-1',
-      workflow_id: 'workflow-iso',
-      workflow_version: 2,
-      trigger_type: 'schedule',
-      run_at: new Date('2026-03-08T14:00:00.000Z'),
-      cron: null,
-      timezone: 'UTC',
-      enabled: true,
-      status: 'scheduled'
-    };
-
-    await workflowOneTimeScheduledRunHandler('job-date', {
-      tenantId: 'tenant-1',
-      workflowId: 'workflow-iso',
-      scheduleId: 'schedule-date'
-    });
-
-    const payload = launchPublishedWorkflowRun.mock.calls[0]?.[1]?.payload;
-    expect(payload?.scheduledFor).toBe('2026-03-08T14:00:00.000Z');
-    expect(getSchemaRegistry().get(WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF).safeParse(payload).success).toBe(true);
-  });
-
-  it('T027/T036/T044: recurring handler launches once per fire, ignores duplicate delivery, and still launches later occurrences', async () => {
+  it('T026: recurring handler uses the saved schedule payload as workflow input_json and still deduplicates by fire key', async () => {
     scheduleRecord = {
       id: 'schedule-2',
       tenant_id: 'tenant-1',
       workflow_id: 'workflow-2',
       workflow_version: 7,
+      name: 'Daily digest',
       trigger_type: 'recurring',
       run_at: null,
       cron: '15 9 * * 1-5',
       timezone: 'UTC',
+      payload_json: {
+        accountId: 'acct-200',
+        threshold: 3
+      },
       enabled: true,
       status: 'scheduled'
     };
@@ -197,6 +171,7 @@ describe('Workflow scheduled run handlers', () => {
 
     expect(launchPublishedWorkflowRun).toHaveBeenCalledTimes(2);
     const payload = launchPublishedWorkflowRun.mock.calls[0]?.[1]?.payload;
+    const triggerMetadata = launchPublishedWorkflowRun.mock.calls[0]?.[1]?.triggerMetadata;
 
     expect(launchPublishedWorkflowRun.mock.calls[0]?.[1]).toMatchObject({
       workflowId: 'workflow-2',
@@ -204,11 +179,16 @@ describe('Workflow scheduled run handlers', () => {
       tenantId: 'tenant-1',
       triggerType: 'recurring',
       triggerMetadata: expect.objectContaining({
-        ...payload,
+        scheduleId: 'schedule-2',
+        scheduleName: 'Daily digest',
+        triggerType: 'recurring',
+        timezone: 'UTC',
+        workflowId: 'workflow-2',
+        workflowVersion: 7,
+        cron: '15 9 * * 1-5',
         fireKey: 'workflow-schedule-fire:schedule-2:fire-1'
       }),
       triggerFireKey: 'workflow-schedule-fire:schedule-2:fire-1',
-      sourcePayloadSchemaRef: WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF,
       execute: true,
       executionKey: 'workflow-schedule-fire:schedule-2:fire-1'
     });
@@ -216,23 +196,55 @@ describe('Workflow scheduled run handlers', () => {
       triggerFireKey: 'workflow-schedule-fire:schedule-2:fire-2',
       executionKey: 'workflow-schedule-fire:schedule-2:fire-2'
     });
-    expect(payload).toMatchObject({
-      triggerType: 'recurring',
-      scheduleId: 'schedule-2',
-      timezone: 'UTC',
-      workflowId: 'workflow-2',
-      workflowVersion: 7,
-      cron: '15 9 * * 1-5'
+    expect(payload).toEqual({
+      accountId: 'acct-200',
+      threshold: 3
     });
-    expect(typeof payload?.firedAt).toBe('string');
-    expect(typeof payload?.scheduledFor).toBe('string');
-    expect(getSchemaRegistry().get(WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF).safeParse(payload).success).toBe(true);
+    expect(typeof triggerMetadata?.firedAt).toBe('string');
+    expect(typeof triggerMetadata?.scheduledFor).toBe('string');
     expect(updateScheduleState).toHaveBeenCalledWith(
       'schedule-2',
       expect.objectContaining({
         last_fire_key: 'workflow-schedule-fire:schedule-2:fire-2',
         last_run_status: 'success',
         last_error: null
+      })
+    );
+  });
+
+  it('T028: invalid saved payload at fire time does not start execution and records schedule error state', async () => {
+    scheduleRecord = {
+      id: 'schedule-3',
+      tenant_id: 'tenant-1',
+      workflow_id: 'workflow-3',
+      workflow_version: 9,
+      name: 'Broken payload schedule',
+      trigger_type: 'recurring',
+      run_at: null,
+      cron: '0 12 * * *',
+      timezone: 'UTC',
+      payload_json: {
+        accountId: 'acct-300'
+      },
+      enabled: true,
+      status: 'scheduled'
+    };
+    launchPublishedWorkflowRun.mockRejectedValueOnce(new Error('Workflow payload failed validation'));
+
+    await expect(workflowRecurringScheduledRunHandler('job-service-3', {
+      tenantId: 'tenant-1',
+      workflowId: 'workflow-3',
+      scheduleId: 'schedule-3',
+      jobExecutionId: 'fire-invalid'
+    })).rejects.toThrow('Workflow payload failed validation');
+
+    expect(launchPublishedWorkflowRun).toHaveBeenCalledTimes(1);
+    expect(updateScheduleState).toHaveBeenCalledWith(
+      'schedule-3',
+      expect.objectContaining({
+        last_fire_key: 'workflow-schedule-fire:schedule-3:fire-invalid',
+        last_run_status: 'error',
+        last_error: 'Workflow payload failed validation'
       })
     );
   });

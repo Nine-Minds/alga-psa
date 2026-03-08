@@ -26,7 +26,7 @@
   {
     "id": "F005",
     "description": "Preserve workflow_version binding on each schedule and update it when the latest published version changes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements"]
   },
   {
@@ -92,31 +92,31 @@
   {
     "id": "F016",
     "description": "Revalidate all schedules when a workflow publishes a new latest version",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "Requirements"]
   },
   {
     "id": "F017",
     "description": "Automatically rebind valid schedules to the latest published workflow version",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements"]
   },
   {
     "id": "F018",
     "description": "Preserve invalid schedules after publish and mark them non-runnable with validation errors",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements", "Observability"]
   },
   {
     "id": "F019",
     "description": "Update scheduled job handlers to launch workflows with the saved schedule payload instead of the fixed clock payload contract",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "Requirements"]
   },
   {
     "id": "F020",
     "description": "Keep schedule provenance metadata on workflow runs even though input_json comes from the saved static schedule payload",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Data / API / Integrations"]
   },
   {

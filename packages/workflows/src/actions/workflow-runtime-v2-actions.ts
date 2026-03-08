@@ -43,6 +43,7 @@ import type { WorkflowScheduleStateRecord } from '@shared/workflow/persistence/w
 import {
   buildDesiredWorkflowSchedule,
   deleteWorkflowScheduleState,
+  revalidateExternalWorkflowSchedulesForPublishedVersion,
   syncWorkflowScheduleState
 } from 'server/src/lib/workflow-runtime-v2/workflowScheduleLifecycle';
 import {
@@ -112,6 +113,23 @@ const hashDefinition = (definition: Record<string, unknown>) => {
   } catch {
     return null;
   }
+};
+
+const formatSchedulePayloadValidationMessage = (issues: Array<{ path?: Array<string | number>; message?: string }>): string => {
+  if (!issues.length) {
+    return 'Schedule payload failed validation against the latest published workflow schema.';
+  }
+
+  return issues
+    .slice(0, 5)
+    .map((issue) => {
+      const path = Array.isArray(issue.path) && issue.path.length > 0 ? issue.path.join('.') : 'payload';
+      const message = typeof issue.message === 'string' && issue.message.trim()
+        ? issue.message.trim()
+        : 'Invalid value';
+      return `${path}: ${message}`;
+    })
+    .join('; ');
 };
 
 type ValidationStatus = 'valid' | 'warning' | 'error';
@@ -1767,11 +1785,35 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
   });
 
   if (tenant) {
-    await syncWorkflowScheduleState(knex, {
-      tenantId: tenant,
-      workflowId: parsed.workflowId,
-      desired: buildDesiredWorkflowSchedule(definition as any, record.version, !(workflow.is_paused ?? false))
-    });
+    const nextTriggerIsTimeTrigger = isWorkflowTimeTrigger((definition as any)?.trigger);
+    const previousTriggerIsTimeTrigger = isWorkflowTimeTrigger((workflow as any)?.trigger);
+
+    if (nextTriggerIsTimeTrigger || previousTriggerIsTimeTrigger) {
+      await syncWorkflowScheduleState(knex, {
+        tenantId: tenant,
+        workflowId: parsed.workflowId,
+        desired: buildDesiredWorkflowSchedule(definition as any, record.version, !(workflow.is_paused ?? false))
+      });
+    }
+
+    if (!nextTriggerIsTimeTrigger) {
+      await revalidateExternalWorkflowSchedulesForPublishedVersion(knex, {
+        tenantId: tenant,
+        workflowId: parsed.workflowId,
+        workflowVersion: record.version,
+        validatePayload: async (payload) => {
+          const validationResult = schemaRegistry.get(definition.payloadSchemaRef).safeParse(payload);
+          if (validationResult.success) {
+            return { ok: true };
+          }
+
+          return {
+            ok: false,
+            message: formatSchedulePayloadValidationMessage(validationResult.error.issues)
+          };
+        }
+      });
+    }
   }
 
   await auditWorkflowEvent(knex, user, {
