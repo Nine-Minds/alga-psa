@@ -149,3 +149,4 @@
 - (2026-03-08) F099: Auth page title: /auth/client-portal/forgot-password — title: 'Forgot Password'
 - (2026-03-08) F100: Auth page title: /auth/client-portal/handoff — title: 'Signing In'
 - (2026-03-08) F101: Auth page title: /auth/password-reset/confirmation — title: 'Password Reset'
+- (2026-03-08) F102: Auth page title: /auth/password-reset/set-new-password — title: 'Set New Password'

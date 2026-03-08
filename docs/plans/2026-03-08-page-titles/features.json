@@ -810,7 +810,7 @@
   {
     "id": "F102",
     "description": "Auth page title: /auth/password-reset/set-new-password — title: 'Set New Password'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3b"
     ]
