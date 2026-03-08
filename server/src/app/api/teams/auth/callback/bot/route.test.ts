@@ -103,4 +103,21 @@ describe('GET /api/teams/auth/callback/bot', () => {
     await expect(forbiddenResponse.text()).resolves.toContain('"status":"forbidden"');
     await expect(forbiddenResponse.text()).resolves.toContain('Microsoft Teams access is available only to MSP users in v1.');
   });
+
+  it('T182: keeps not-configured bot auth responses distinct from unauthenticated redirects and forbidden access payloads', async () => {
+    resolveTeamsTabAuthStateMock.mockResolvedValue({
+      status: 'not_configured',
+      tenantId: 'tenant-1',
+      message: 'Teams is not configured for this tenant',
+    });
+
+    const response = await GET(
+      new Request('https://example.com/api/teams/auth/callback/bot?tenantId=tenant-1') as any
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.text()).resolves.toContain('"surface":"bot"');
+    await expect(response.text()).resolves.toContain('"status":"not_configured"');
+    await expect(response.text()).resolves.toContain('Teams is not configured for this tenant');
+  });
 });

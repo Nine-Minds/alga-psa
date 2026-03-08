@@ -74,6 +74,12 @@ describe('resolveTeamsMicrosoftProviderConfig', () => {
     hoisted.state.teamsIntegrations.length = 0;
     hoisted.state.microsoftProfiles.length = 0;
     hoisted.state.tenantSecrets.clear();
+    delete process.env.AZURE_AD_CLIENT_ID;
+    delete process.env.AZURE_AD_CLIENT_SECRET;
+    delete process.env.AZURE_AD_TENANT_ID;
+    delete process.env.MICROSOFT_CLIENT_ID;
+    delete process.env.MICROSOFT_CLIENT_SECRET;
+    delete process.env.MICROSOFT_TENANT_ID;
   });
 
   it('T149: resolves Microsoft credentials from the Teams-selected tenant profile instead of any unrelated global fallback path', async () => {
@@ -116,6 +122,80 @@ describe('resolveTeamsMicrosoftProviderConfig', () => {
   });
 
   it('T150: returns Teams-safe not-configured and invalid-profile states when the tenant setup or selected profile cannot support auth', async () => {
+    await expect(resolveTeamsMicrosoftProviderConfig('tenant-1')).resolves.toEqual({
+      status: 'not_configured',
+      tenantId: 'tenant-1',
+      message: 'Teams is not configured for this tenant',
+    });
+
+    hoisted.state.teamsIntegrations.push({
+      tenant: 'tenant-1',
+      selected_profile_id: 'archived-profile',
+      install_status: 'active',
+    });
+    hoisted.state.microsoftProfiles.push({
+      tenant: 'tenant-1',
+      profile_id: 'archived-profile',
+      client_id: 'archived-client',
+      tenant_id: 'archived-tenant',
+      client_secret_ref: 'archived-secret-ref',
+      is_archived: true,
+    });
+
+    await expect(resolveTeamsMicrosoftProviderConfig('tenant-1')).resolves.toEqual({
+      status: 'invalid_profile',
+      tenantId: 'tenant-1',
+      profileId: 'archived-profile',
+      message: 'Selected Teams Microsoft profile is missing or archived',
+    });
+  });
+
+  it('T179: prefers the tenant-selected Teams profile over broad app-level Microsoft environment credentials for Teams auth', async () => {
+    process.env.AZURE_AD_CLIENT_ID = 'global-client-id';
+    process.env.AZURE_AD_CLIENT_SECRET = 'global-client-secret';
+    process.env.AZURE_AD_TENANT_ID = 'global-tenant-id';
+    process.env.MICROSOFT_CLIENT_ID = 'global-microsoft-client-id';
+    process.env.MICROSOFT_CLIENT_SECRET = 'global-microsoft-client-secret';
+    process.env.MICROSOFT_TENANT_ID = 'global-microsoft-tenant-id';
+
+    hoisted.state.teamsIntegrations.push({
+      tenant: 'tenant-1',
+      selected_profile_id: 'profile-2',
+      install_status: 'active',
+    });
+    hoisted.state.microsoftProfiles.push({
+      tenant: 'tenant-1',
+      profile_id: 'profile-2',
+      client_id: 'teams-client-id',
+      tenant_id: 'teams-tenant-guid',
+      client_secret_ref: 'teams-secret-ref',
+      is_archived: false,
+    });
+    hoisted.state.tenantSecrets.set('tenant-1:teams-secret-ref', 'teams-secret');
+
+    const result = await resolveTeamsMicrosoftProviderConfig('tenant-1');
+
+    expect(result).toEqual({
+      status: 'ready',
+      tenantId: 'tenant-1',
+      profileId: 'profile-2',
+      clientId: 'teams-client-id',
+      clientSecret: 'teams-secret',
+      microsoftTenantId: 'teams-tenant-guid',
+    });
+    expect(result.clientId).not.toBe(process.env.AZURE_AD_CLIENT_ID);
+    expect(result.clientId).not.toBe(process.env.MICROSOFT_CLIENT_ID);
+    expect(result.clientSecret).not.toBe(process.env.AZURE_AD_CLIENT_SECRET);
+    expect(result.clientSecret).not.toBe(process.env.MICROSOFT_CLIENT_SECRET);
+    expect(result.microsoftTenantId).not.toBe(process.env.AZURE_AD_TENANT_ID);
+    expect(result.microsoftTenantId).not.toBe(process.env.MICROSOFT_TENANT_ID);
+  });
+
+  it('T180: does not fall back to broad app-level Microsoft environment credentials when the Teams-selected profile is missing or invalid', async () => {
+    process.env.AZURE_AD_CLIENT_ID = 'global-client-id';
+    process.env.AZURE_AD_CLIENT_SECRET = 'global-client-secret';
+    process.env.AZURE_AD_TENANT_ID = 'global-tenant-id';
+
     await expect(resolveTeamsMicrosoftProviderConfig('tenant-1')).resolves.toEqual({
       status: 'not_configured',
       tenantId: 'tenant-1',

@@ -1410,7 +1410,7 @@
   {
     "id": "T177",
     "description": "Happy path: Teams identity: authorization checks still run after Teams authentication before entity access is granted.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F089"
     ]
@@ -1418,7 +1418,7 @@
   {
     "id": "T178",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: authorization checks still run after teams authentication before entity access is granted.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F089"
     ]
@@ -1426,7 +1426,7 @@
   {
     "id": "T179",
     "description": "Happy path: Teams identity: the selected profile takes precedence over broad app/global Microsoft env credentials for Teams-specific flows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F090"
     ]
@@ -1434,7 +1434,7 @@
   {
     "id": "T180",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: the selected profile takes precedence over broad app/global microsoft env credentials for teams-specific flows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F090"
     ]
@@ -1442,7 +1442,7 @@
   {
     "id": "T181",
     "description": "Happy path: Teams identity: Teams surface handlers can distinguish unauthenticated, unauthorized, and not-configured tenant states.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F091"
     ]
@@ -1450,7 +1450,7 @@
   {
     "id": "T182",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: teams surface handlers can distinguish unauthenticated, unauthorized, and not-configured tenant states.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F091"
     ]

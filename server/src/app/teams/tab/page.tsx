@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { Card } from '@alga-psa/ui/components/Card';
 import { buildTeamsReauthPath } from 'server/src/lib/teams/buildTeamsReauthUrl';
+import { resolveTeamsTabAccessState } from 'server/src/lib/teams/resolveTeamsTabAccessState';
 import { resolveTeamsTabAuthState } from 'server/src/lib/teams/resolveTeamsTabAuthState';
 import {
   describeTeamsTabDestination,
@@ -63,6 +64,19 @@ export default async function TeamsTabPage({ searchParams }: TeamsTabPageProps) 
           <h1 className="text-lg font-semibold text-gray-900">Teams tab unavailable</h1>
           <p>{state.message}</p>
           <p>Ask a PSA administrator to finish Teams setup, then reopen the tab.</p>
+        </div>
+      </Card>
+    );
+  }
+
+  const accessState = await resolveTeamsTabAccessState(state, destination);
+  if (accessState.status !== 'ready') {
+    return (
+      <Card className="m-6 p-6 text-sm text-gray-700">
+        <div className="space-y-2">
+          <h1 className="text-lg font-semibold text-gray-900">Requested Teams record unavailable</h1>
+          <p>{accessState.message}</p>
+          <p>Return to your Teams work list or open the full PSA app if you need a different record.</p>
         </div>
       </Card>
     );

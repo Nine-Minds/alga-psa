@@ -126,6 +126,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/resolveTeamsTabAuthState.test.ts src/test/unit/app/teams/tab/page.test.tsx src/app/api/teams/auth/callback/bot/route.test.ts src/app/api/teams/auth/callback/message-extension/route.test.ts src/test/unit/lib/teams/buildTeamsReauthUrl.test.ts src/test/unit/lib/teams/resolveTeamsTabDestination.test.ts src/test/unit/lib/teams/resolveTeamsLinkedUser.test.ts`
 - (2026-03-07) Verified Teams profile-rebind invalidation with:
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/resolveTeamsTabAuthState.test.ts`
+- (2026-03-07) Verified Teams tab destination access gating and state distinction with:
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/app/teams/tab/page.test.tsx src/app/api/teams/auth/callback/bot/route.test.ts src/test/unit/lib/teams/resolveTeamsTabAccessState.test.ts src/test/unit/lib/teams/resolveTeamsTabAuthState.test.ts`
+- (2026-03-07) Verified Teams selected-profile precedence over broad Microsoft env credentials with:
+  - `cd packages/auth && npx vitest run --config vitest.config.ts src/lib/sso/teamsMicrosoftProviderResolution.test.ts`
 
 ## Progress Log
 
@@ -157,6 +161,12 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Completed `T173` and `T174` with Teams auth-state, Teams tab page, and bot callback tests covering slug-based tenant resolution on vanity-host-style entry points plus safe rejection when the slug resolves to the wrong tenant.
 - (2026-03-07) Completed `F088` by verifying that `server/src/lib/teams/resolveTeamsTabAuthState.ts` re-reads Teams profile binding state per request, so stale Microsoft-tenant assumptions are rejected immediately after a Teams profile rebind.
 - (2026-03-07) Completed `T175` and `T176` with a focused Teams auth-state regression test that simulates a tenant profile rebind between requests and asserts the old Teams Microsoft tenant hint is rejected on the next request.
+- (2026-03-07) Completed `F089` by adding `server/src/lib/teams/resolveTeamsTabAccessState.ts` and wiring `server/src/app/teams/tab/page.tsx` through it so a ready Teams SSO session still has to pass existing PSA permission checks plus tenant-scoped entity lookup before ticket, project-task, contact, time-entry, or approval destinations are treated as accessible.
+- (2026-03-07) Completed `T177` and `T178` with focused access-resolver and Teams-tab page tests covering allowed destination access, permission-denied short-circuiting, tenant-scoped not-found handling, and Teams-safe fallback rendering after authentication succeeds.
+- (2026-03-07) Completed `F090` by verifying the existing `packages/auth/src/lib/sso/teamsMicrosoftProviderResolution.ts` implementation already resolves Teams auth exclusively from the tenant-selected Teams Microsoft profile instead of broad app/global Microsoft environment credentials.
+- (2026-03-07) Completed `T179` and `T180` with explicit resolver regression tests asserting Teams ignores broad Microsoft env credentials both when a valid selected profile exists and when Teams setup/profile state is missing or invalid.
+- (2026-03-07) Completed `F091` by verifying the Teams tab page and Teams bot auth callback keep `unauthenticated`, `forbidden`, and `not_configured` outcomes distinct at the surface boundary instead of collapsing them into one generic failure path.
+- (2026-03-07) Completed `T181` and `T182` with surface-level tests covering not-configured Teams tab rendering and not-configured bot auth callback payloads alongside the existing unauthenticated redirect and forbidden-access cases.
   - `server/migrations/20260307120000_create_microsoft_profiles.cjs`
   - `server/migrations/20260307143000_create_microsoft_profile_consumer_bindings.cjs`
   - `server/migrations/20260307153000_create_teams_integrations.cjs`
@@ -164,7 +174,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `server/src/test/unit/migrations/teamsIntegrationsMigration.test.ts`
 - (2026-03-07) The focused vitest slice still emits pre-existing React `act(...)` warnings from `MicrosoftIntegrationSettings.contract.test.tsx`; the tests pass, but the harness remains noisy.
 - (2026-03-07) The Teams setup contract tests currently emit similar non-blocking React `act(...)` warnings while asserting async save flows; the tests pass, but the harness remains noisy.
-- (2026-03-07) Next unchecked feature after this slice is `F089` (authorization checks still run after Teams authentication before entity access is granted).
+- (2026-03-07) Next unchecked feature after this slice is `F092` (Teams-facing auth errors remain safe to show inside Teams UI constraints).
 
 ## Links / References
 

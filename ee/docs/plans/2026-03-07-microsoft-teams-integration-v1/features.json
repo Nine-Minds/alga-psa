@@ -808,7 +808,7 @@
   {
     "id": "F089",
     "description": "Teams identity: authorization checks still run after Teams authentication before entity access is granted.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Security / Permissions",
@@ -818,7 +818,7 @@
   {
     "id": "F090",
     "description": "Teams identity: the selected profile takes precedence over broad app/global Microsoft env credentials for Teams-specific flows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Security / Permissions",
@@ -828,7 +828,7 @@
   {
     "id": "F091",
     "description": "Teams identity: Teams surface handlers can distinguish unauthenticated, unauthorized, and not-configured tenant states.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Security / Permissions",
