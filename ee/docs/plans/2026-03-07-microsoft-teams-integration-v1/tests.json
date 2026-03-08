@@ -1330,7 +1330,7 @@
   {
     "id": "T167",
     "description": "Happy path: Teams identity: requests from the wrong Microsoft / Teams tenant are rejected for the PSA tenant.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084"
     ]
@@ -1338,7 +1338,7 @@
   {
     "id": "T168",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: requests from the wrong microsoft / teams tenant are rejected for the psa tenant.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084"
     ]

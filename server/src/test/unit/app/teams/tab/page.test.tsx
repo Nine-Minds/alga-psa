@@ -37,7 +37,10 @@ describe('TeamsTabPage', () => {
       searchParams: Promise.resolve({ page: 'ticket', ticketId: '12345' }),
     });
 
-    expect(resolveTeamsTabAuthStateMock).toHaveBeenCalledWith({ expectedTenantId: undefined });
+    expect(resolveTeamsTabAuthStateMock).toHaveBeenCalledWith({
+      expectedTenantId: undefined,
+      expectedMicrosoftTenantId: undefined,
+    });
     expect(redirectMock).toHaveBeenCalledWith(
       '/auth/msp/signin?callbackUrl=%2Fteams%2Ftab%3Fpage%3Dticket%26ticketId%3D12345'
     );
@@ -55,11 +58,14 @@ describe('TeamsTabPage', () => {
     });
 
     const result = await TeamsTabPage({
-      searchParams: Promise.resolve({ tenantId: 'tenant-1' }),
+      searchParams: Promise.resolve({ tenantId: 'tenant-1', tid: 'entra-tenant-1' }),
     });
 
     expect(redirectMock).not.toHaveBeenCalled();
-    expect(resolveTeamsTabAuthStateMock).toHaveBeenCalledWith({ expectedTenantId: 'tenant-1' });
+    expect(resolveTeamsTabAuthStateMock).toHaveBeenCalledWith({
+      expectedTenantId: 'tenant-1',
+      expectedMicrosoftTenantId: 'entra-tenant-1',
+    });
     expect((result as any)?.props?.['data-teams-tab-state']).toBe('ready');
   });
 

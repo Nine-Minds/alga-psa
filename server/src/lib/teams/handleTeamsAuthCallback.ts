@@ -125,12 +125,22 @@ function getExpectedTenantId(request: NextRequest | Request): string | null {
   return requestUrl.searchParams.get('tenantId') || requestUrl.searchParams.get('tenant');
 }
 
+function getExpectedMicrosoftTenantId(request: NextRequest | Request): string | null {
+  const requestUrl = getRequestUrl(request);
+  return (
+    requestUrl.searchParams.get('microsoftTenantId') ||
+    requestUrl.searchParams.get('teamsTenantId') ||
+    requestUrl.searchParams.get('tid')
+  );
+}
+
 export async function handleTeamsAuthCallback(
   request: NextRequest | Request,
   surface: TeamsAuthCallbackSurface
 ): Promise<NextResponse> {
   const state = await resolveTeamsTabAuthState({
     expectedTenantId: getExpectedTenantId(request),
+    expectedMicrosoftTenantId: getExpectedMicrosoftTenantId(request),
   });
 
   if (state.status === 'unauthenticated') {

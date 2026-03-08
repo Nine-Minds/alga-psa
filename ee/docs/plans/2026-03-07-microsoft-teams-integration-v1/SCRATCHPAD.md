@@ -49,6 +49,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) The auth package needed to export `resolveTeamsMicrosoftProviderConfig` through `packages/auth/src/lib/sso/index.ts` so new Teams server surfaces can reuse the tenant-selected Microsoft profile resolver without unsupported deep imports.
 - (2026-03-07) The Teams auth callback URIs surfaced in Microsoft profile guidance (`/api/teams/auth/callback/tab|bot|message-extension`) were still missing, and `/api/teams/auth/*` would have been blocked by middleware API-key enforcement until explicitly exempted.
 - (2026-03-07) The existing SSO account-link registry already stores tenant-scoped Microsoft provider account IDs, so Teams user mapping can reuse `findOAuthAccountLink('microsoft', providerAccountId)` plus the `users` table instead of introducing a separate Teams linkage table in the first identity slice.
+- (2026-03-07) Teams runtime entry points can receive a Microsoft/Teams tenant claim hint (`microsoftTenantId`, `teamsTenantId`, or `tid`) even before richer Teams SDK bootstrap lands, so the shared auth resolver can reject requests whose Teams tenant context does not match the tenant-selected Microsoft profile.
 - (2026-03-07) Existing Microsoft consumers still read the legacy tenant-secret keys directly. Introducing profiles without default-secret mirroring would break Outlook email, Outlook calendar, and MSP SSO compatibility.
 - (2026-03-07) `packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.tsx` already gives the right long-term home for Microsoft profile management: `Integrations -> Providers`, not a new top-level settings tab.
 - (2026-03-07) The backend compatibility guard is sufficient for `F015`/`T029-T030`: archiving the default profile is blocked until another profile is made default, which preserves the active compatibility binding.
@@ -111,6 +112,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/resolveTeamsTabAuthState.test.ts src/test/unit/app/teams/tab/page.test.tsx src/app/api/teams/auth/callback/bot/route.test.ts src/app/api/teams/auth/callback/message-extension/route.test.ts`
 - (2026-03-07) Verified Teams linked-user resolution with:
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/resolveTeamsLinkedUser.test.ts src/test/unit/lib/teams/resolveTeamsTabAuthState.test.ts src/test/unit/app/teams/tab/page.test.tsx src/app/api/teams/auth/callback/bot/route.test.ts src/app/api/teams/auth/callback/message-extension/route.test.ts`
+- (2026-03-07) Verified Teams Microsoft-tenant mismatch rejection with:
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/resolveTeamsTabAuthState.test.ts src/test/unit/app/teams/tab/page.test.tsx src/app/api/teams/auth/callback/bot/route.test.ts src/app/api/teams/auth/callback/message-extension/route.test.ts src/test/unit/lib/teams/resolveTeamsLinkedUser.test.ts`
 
 ## Progress Log
 
@@ -132,6 +135,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Completed `T157`, `T158`, `T159`, `T160`, `T161`, `T162`, `T163`, and `T164` by extending the Teams auth-state unit coverage to assert MSP-only acceptance, client-user rejection, revocation-checked session reuse, and admin-readable not-configured/invalid-profile failures.
 - (2026-03-07) Completed `F083` by adding `server/src/lib/teams/resolveTeamsLinkedUser.ts`, which resolves a tenant-scoped Microsoft provider account link back to the matching internal PSA user and rejects missing, cross-tenant, or client-user mappings safely.
 - (2026-03-07) Completed `T165` and `T166` with focused coverage in `server/src/test/unit/lib/teams/resolveTeamsLinkedUser.test.ts` for linked-user resolution plus missing-identity, cross-tenant, and client-user rejection paths.
+- (2026-03-07) Completed `F084` by extending `server/src/lib/teams/resolveTeamsTabAuthState.ts` to compare incoming Teams Microsoft-tenant hints against the tenant-selected Teams Microsoft profile and reject mismatches centrally.
+- (2026-03-07) Completed `T167` and `T168` by extending Teams auth-state, tab-page, and auth-callback tests to cover matching tenant claims and wrong-Microsoft-tenant rejection behavior.
   - `server/migrations/20260307120000_create_microsoft_profiles.cjs`
   - `server/migrations/20260307143000_create_microsoft_profile_consumer_bindings.cjs`
   - `server/migrations/20260307153000_create_teams_integrations.cjs`
@@ -139,7 +144,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `server/src/test/unit/migrations/teamsIntegrationsMigration.test.ts`
 - (2026-03-07) The focused vitest slice still emits pre-existing React `act(...)` warnings from `MicrosoftIntegrationSettings.contract.test.tsx`; the tests pass, but the harness remains noisy.
 - (2026-03-07) The Teams setup contract tests currently emit similar non-blocking React `act(...)` warnings while asserting async save flows; the tests pass, but the harness remains noisy.
-- (2026-03-07) Next unchecked feature after this slice is `F084` (requests from the wrong Microsoft / Teams tenant are rejected for the PSA tenant).
+- (2026-03-07) Next unchecked feature after this slice is `F085` (deep-link entry points can bootstrap the destination without a separate PSA sign-in prompt inside Teams).
 
 ## Links / References
 

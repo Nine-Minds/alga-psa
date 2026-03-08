@@ -56,10 +56,15 @@ describe('GET /api/teams/auth/callback/message-extension', () => {
     });
 
     const response = await GET(
-      new Request('https://example.com/api/teams/auth/callback/message-extension?tenantId=tenant-1') as any
+      new Request(
+        'https://example.com/api/teams/auth/callback/message-extension?tenantId=tenant-1&tid=entra-tenant-1'
+      ) as any
     );
 
-    expect(resolveTeamsTabAuthStateMock).toHaveBeenCalledWith({ expectedTenantId: 'tenant-1' });
+    expect(resolveTeamsTabAuthStateMock).toHaveBeenCalledWith({
+      expectedTenantId: 'tenant-1',
+      expectedMicrosoftTenantId: 'entra-tenant-1',
+    });
     expect(response.status).toBe(200);
     await expect(response.text()).resolves.toContain('"surface":"message_extension"');
     await expect(response.text()).resolves.toContain('"status":"ready"');

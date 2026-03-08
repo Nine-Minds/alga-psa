@@ -22,7 +22,7 @@ describe('resolveTeamsTabAuthState', () => {
     getSessionMock.mockResolvedValue(null);
   });
 
-  it('T151/T157/T161: resolves the Teams tab to the authenticated MSP user and tenant through the existing revocation-checked MSP session path', async () => {
+  it('T151/T157/T161/T167: resolves the Teams tab to the authenticated MSP user and tenant through the existing revocation-checked MSP session path and accepts the matching Microsoft tenant claim', async () => {
     getSessionWithRevocationCheckMock.mockResolvedValue({
       user: {
         id: 'user-1',
@@ -39,7 +39,9 @@ describe('resolveTeamsTabAuthState', () => {
       microsoftTenantId: 'entra-tenant-1',
     });
 
-    await expect(resolveTeamsTabAuthState()).resolves.toEqual({
+    await expect(
+      resolveTeamsTabAuthState({ expectedMicrosoftTenantId: 'ENTRA-TENANT-1' })
+    ).resolves.toEqual({
       status: 'ready',
       tenantId: 'tenant-1',
       userId: 'user-1',
@@ -53,7 +55,7 @@ describe('resolveTeamsTabAuthState', () => {
     expect(resolveTeamsMicrosoftProviderConfigMock).toHaveBeenCalledWith('tenant-1');
   });
 
-  it('T152/T158/T159/T160/T162: rejects unauthenticated, wrong-tenant, unauthorized, and client-user Teams requests', async () => {
+  it('T152/T158/T159/T160/T162/T168: rejects unauthenticated, wrong-tenant, wrong-Microsoft-tenant, unauthorized, and client-user Teams requests', async () => {
     getSessionWithRevocationCheckMock.mockResolvedValue(null);
 
     await expect(resolveTeamsTabAuthState()).resolves.toEqual({
@@ -89,6 +91,23 @@ describe('resolveTeamsTabAuthState', () => {
       reason: 'wrong_tenant',
       tenantId: 'tenant-1',
       message: 'This Teams tab request does not match your PSA tenant.',
+    });
+
+    resolveTeamsMicrosoftProviderConfigMock.mockResolvedValueOnce({
+      status: 'ready',
+      tenantId: 'tenant-1',
+      profileId: 'profile-1',
+      microsoftTenantId: 'entra-tenant-1',
+    });
+
+    await expect(
+      resolveTeamsTabAuthState({ expectedMicrosoftTenantId: 'entra-tenant-2' })
+    ).resolves.toEqual({
+      status: 'forbidden',
+      reason: 'wrong_microsoft_tenant',
+      tenantId: 'tenant-1',
+      message:
+        'This Teams request was issued for a different Microsoft tenant than the one configured for this PSA tenant.',
     });
 
     getSessionWithRevocationCheckMock.mockResolvedValue({

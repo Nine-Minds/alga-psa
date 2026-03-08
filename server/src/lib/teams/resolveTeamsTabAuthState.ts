@@ -4,7 +4,12 @@ import {
   resolveTeamsMicrosoftProviderConfig,
 } from '@alga-psa/auth';
 
-type TeamsTabForbiddenReason = 'missing_tenant' | 'client_user' | 'wrong_tenant' | 'unauthorized';
+type TeamsTabForbiddenReason =
+  | 'missing_tenant'
+  | 'client_user'
+  | 'wrong_tenant'
+  | 'wrong_microsoft_tenant'
+  | 'unauthorized';
 
 export type TeamsTabAuthState =
   | {
@@ -34,10 +39,16 @@ export type TeamsTabAuthState =
 
 interface ResolveTeamsTabAuthStateOptions {
   expectedTenantId?: string | null;
+  expectedMicrosoftTenantId?: string | null;
 }
 
 function normalizeOptionalString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function normalizeTenantClaim(value: string | null): string | null {
+  const normalized = normalizeOptionalString(value);
+  return normalized ? normalized.toLowerCase() : null;
 }
 
 export async function resolveTeamsTabAuthState(
@@ -102,6 +113,22 @@ export async function resolveTeamsTabAuthState(
         (provider.status === 'not_configured'
           ? 'Teams has not been configured for this tenant yet.'
           : 'The selected Teams Microsoft profile is not ready.'),
+    };
+  }
+
+  const expectedMicrosoftTenantId = normalizeTenantClaim(options.expectedMicrosoftTenantId);
+  const resolvedMicrosoftTenantId = normalizeTenantClaim(provider.microsoftTenantId || 'common');
+  if (
+    expectedMicrosoftTenantId &&
+    resolvedMicrosoftTenantId &&
+    resolvedMicrosoftTenantId !== 'common' &&
+    expectedMicrosoftTenantId !== resolvedMicrosoftTenantId
+  ) {
+    return {
+      status: 'forbidden',
+      reason: 'wrong_microsoft_tenant',
+      tenantId,
+      message: 'This Teams request was issued for a different Microsoft tenant than the one configured for this PSA tenant.',
     };
   }
 

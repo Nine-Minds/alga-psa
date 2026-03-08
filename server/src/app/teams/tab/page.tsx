@@ -10,6 +10,14 @@ function getSingleSearchParam(value: string | string[] | undefined): string | un
   return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
 }
 
+function getExpectedMicrosoftTenantId(params?: Record<string, string | string[] | undefined>): string | undefined {
+  return (
+    getSingleSearchParam(params?.microsoftTenantId) ||
+    getSingleSearchParam(params?.teamsTenantId) ||
+    getSingleSearchParam(params?.tid)
+  );
+}
+
 function buildTeamsTabCallbackUrl(params?: Record<string, string | string[] | undefined>): string {
   const query = new URLSearchParams();
 
@@ -36,6 +44,7 @@ export default async function TeamsTabPage({ searchParams }: TeamsTabPageProps) 
   const params = searchParams ? await searchParams : undefined;
   const state = await resolveTeamsTabAuthState({
     expectedTenantId: getSingleSearchParam(params?.tenantId) ?? getSingleSearchParam(params?.tenant),
+    expectedMicrosoftTenantId: getExpectedMicrosoftTenantId(params),
   });
 
   if (state.status === 'unauthenticated') {

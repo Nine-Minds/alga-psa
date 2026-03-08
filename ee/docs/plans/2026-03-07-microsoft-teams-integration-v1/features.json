@@ -758,7 +758,7 @@
   {
     "id": "F084",
     "description": "Teams identity: requests from the wrong Microsoft / Teams tenant are rejected for the PSA tenant.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Security / Permissions",
