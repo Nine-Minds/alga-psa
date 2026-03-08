@@ -226,3 +226,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd packages/assets && npx vitest run --config vitest.config.ts src/components/QuickAddAsset.quick-add-client.contract.test.ts`
 - 2026-03-08 T027: Added `packages/tickets/src/components/__tests__/QuickAddCategory.test.tsx` with a jsdom harness for `QuickAddCategory`, starting by verifying the create dialog renders the required category-name input.
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddCategory.test.tsx -t T027`
+- 2026-03-08 T028: Extended `QuickAddCategory.test.tsx` to verify the board selector is visible in create mode when no `preselectedBoardId` is supplied.
+- Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddCategory.test.tsx -t T028`

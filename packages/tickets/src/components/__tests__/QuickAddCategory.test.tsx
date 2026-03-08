@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import QuickAddCategory from '../QuickAddCategory';
 import type { IBoard, ITicketCategory } from '@alga-psa/types';
 
@@ -98,5 +98,11 @@ describe('QuickAddCategory', () => {
 
     expect(screen.getByLabelText(/category name/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/enter category name/i)).toBeInTheDocument();
+  });
+
+  it('T028: shows board selector when preselectedBoardId is not provided', () => {
+    renderDialog();
+
+    expect(screen.getByRole('combobox', { name: /select a board/i })).toBeInTheDocument();
   });
 });
