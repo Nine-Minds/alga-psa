@@ -218,7 +218,7 @@
   {
     "id": "F028",
     "description": "CategoriesSettings refactored to use QuickAddCategory component instead of inline dialog JSX",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-6"
     ]

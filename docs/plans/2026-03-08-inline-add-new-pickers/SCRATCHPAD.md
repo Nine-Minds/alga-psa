@@ -166,3 +166,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
 - 2026-03-08 F027: `QuickAddCategory` loads boards internally via `getAllBoards` when the consumer does not pass a board list, while still honoring injected board data from settings or inline ticket forms.
 - Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
+- 2026-03-08 F028: Refactored `packages/tickets/src/components/settings/CategoriesSettings.tsx` so add-category now uses the extracted `QuickAddCategory` component, while the settings page still owns the edit-only dialog markup and refreshes category data after create.
+- Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
