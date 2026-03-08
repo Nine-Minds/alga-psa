@@ -3,7 +3,7 @@
 import { memo, useMemo } from 'react';
 import { parseISO } from 'date-fns';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Eye, Pencil, Trash2 } from 'lucide-react';
 import { Clock } from 'lucide-react';
 import { TimeEntryReadOnlyProps } from './types';
 import { formatTimeForInput, getServiceById } from './utils';
@@ -40,8 +40,21 @@ const TimeEntryReadOnly = memo(function TimeEntryReadOnly({
           </>
         )}
       </div>
-      {isEditable && (
-        <div className="flex space-x-2">
+      <div className="flex space-x-2">
+        {!isEditable && (
+          <Button
+            id={`${id}-view-entry-${index}-btn`}
+            onClick={() => onEdit(index)}
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            title="View entry details"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+        )}
+        {isEditable && (
+          <>
           <Button
             id={`${id}-edit-entry-${index}-btn`}
             onClick={() => onEdit(index)}
@@ -60,8 +73,9 @@ const TimeEntryReadOnly = memo(function TimeEntryReadOnly({
           >
             <Trash2 className="h-4 w-4" />
           </Button>
-        </div>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 });

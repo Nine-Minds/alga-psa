@@ -83,7 +83,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     end_date: Temporal.PlainDate.from(props.timePeriod.end_date.slice(0, 10))
   };
 
-  const lastNoteInputRef = useRef<HTMLInputElement>(null);
+  const lastNoteInputRef = useRef<HTMLTextAreaElement>(null);
   const [shouldFocusNotes, setShouldFocusNotes] = useState(false);
   const hasSetInitialEditingIndex = useRef(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; index: number | null }>({
@@ -319,7 +319,11 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     }
   };
 
-  const handleDeleteEntry = useCallback(async (index: number) => {
+  const handleDeleteEntry = async (index: number) => {
+    if (!isEditable) {
+      return;
+    }
+
     const entry = entries[index];
     if (!entry.entry_id) {
       // For new entries that haven't been saved, delete without confirmation
@@ -327,7 +331,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     } else {
       setDeleteConfirmation({ isOpen: true, index });
     }
-  }, [entries]);
+  };
 
   const handleCancel = useCallback(() => {
     // For new entries that were never saved, don't show confirmation - just close
@@ -346,6 +350,11 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
   }, [entries, onClose]);
 
   const handleSaveAll = useCallback(async () => {
+    if (!isEditable) {
+      onClose();
+      return;
+    }
+
     // Find the first entry that needs to be saved
     const entryToSave = entries.findIndex(entry => entry.isDirty || entry.isNew);
     if (entryToSave !== -1) {
@@ -353,71 +362,76 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     } else {
       onClose();
     }
-  }, [entries, handleSaveEntry, onClose]);
+  }, [entries, handleSaveEntry, isEditable, onClose]);
 
-  const title = existingEntries && existingEntries.length > 0 
-    ? `Edit Time Entries for ${workItem.name}`
+  const hasExistingEntries = Boolean(existingEntries && existingEntries.length > 0);
+  const title = hasExistingEntries
+    ? `${isEditable ? 'Edit' : 'View'} Time Entries for ${workItem.name}`
     : `Add New Time Entry for ${workItem.name}`;
   const content = (
     <ReflectionContainer id={id} label={title}>
-      {inDrawer && <h2 className="text-lg font-semibold mb-4">{title}</h2>}
-      {isLoading ? (
-        <TimeEntrySkeletons />
-      ) : existingEntries && existingEntries.length > 0 ? (
-        <TimeEntryList
-          id={id}
-          entries={entries}
-          services={services}
-          taxRegions={taxRegions}
-          timeInputs={timeInputs}
-          editingIndex={editingIndex}
-          totalDurations={totalDurations}
-          isEditable={isEditable}
-          lastNoteInputRef={lastNoteInputRef}
-          onSave={handleSaveEntry}
-          onDelete={handleDeleteEntry}
-          onEdit={setEditingIndex}
-          onUpdateEntry={updateEntry}
-          onUpdateTimeInputs={updateTimeInputs}
-          onAddEntry={handleAddEntry}
-          date={date}
-        />
-      ) : (
-        <div className="mt-2">
-          <SingleTimeEntryForm
+      <div className="mx-auto w-full max-w-[35rem]">
+        {inDrawer && <h2 className="mb-4 text-lg font-semibold">{title}</h2>}
+        {isLoading ? (
+          <TimeEntrySkeletons />
+        ) : existingEntries && existingEntries.length > 0 ? (
+          <TimeEntryList
             id={id}
-            entry={entries[0]}
+            entries={entries}
             services={services}
             taxRegions={taxRegions}
             timeInputs={timeInputs}
-            totalDuration={totalDurations[0] || 0}
+            editingIndex={editingIndex}
+            totalDurations={totalDurations}
             isEditable={isEditable}
             lastNoteInputRef={lastNoteInputRef}
+            onSave={handleSaveEntry}
             onDelete={handleDeleteEntry}
+            onEdit={setEditingIndex}
             onUpdateEntry={updateEntry}
             onUpdateTimeInputs={updateTimeInputs}
+            onAddEntry={handleAddEntry}
             date={date}
-            isNewEntry={!existingEntries || existingEntries.length === 0}
           />
-        </div>
-      )}
+        ) : (
+          <div className="mt-2">
+            <SingleTimeEntryForm
+              id={id}
+              entry={entries[0]}
+              services={services}
+              taxRegions={taxRegions}
+              timeInputs={timeInputs}
+              totalDuration={totalDurations[0] || 0}
+              isEditable={isEditable}
+              lastNoteInputRef={lastNoteInputRef}
+              onDelete={handleDeleteEntry}
+              onUpdateEntry={updateEntry}
+              onUpdateTimeInputs={updateTimeInputs}
+              date={date}
+              isNewEntry={!existingEntries || existingEntries.length === 0}
+            />
+          </div>
+        )}
 
-      <DialogFooter>
-        <Button
-          id={`${id}-cancel-dialog-btn`}
-          onClick={handleCancel}
-          variant="outline"
-        >
-          Cancel
-        </Button>
-        <Button
-          id={`${id}-save-dialog-btn`}
-          onClick={handleSaveAll}
-          variant="default"
-        >
-          Save
-        </Button>
-      </DialogFooter>
+        <DialogFooter>
+          <Button
+            id={`${id}-cancel-dialog-btn`}
+            onClick={handleCancel}
+            variant="outline"
+          >
+            {isEditable ? 'Cancel' : 'Close'}
+          </Button>
+          {isEditable && (
+            <Button
+              id={`${id}-save-dialog-btn`}
+              onClick={handleSaveAll}
+              variant="default"
+            >
+              Save
+            </Button>
+          )}
+        </DialogFooter>
+      </div>
     </ReflectionContainer>
   );
 
@@ -435,7 +449,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
           data-automation-id={id}
           data-automation-type="time-entry-dialog"
         >
-          <DialogContent className="w-full max-w-4xl">
+          <DialogContent className="w-full max-w-2xl">
             {content}
           </DialogContent>
         </Dialog>

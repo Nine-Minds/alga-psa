@@ -13,7 +13,7 @@ interface SingleTimeEntryFormProps {
   timeInputs: TimeInputs;
   totalDuration: number;
   isEditable: boolean;
-  lastNoteInputRef: React.RefObject<HTMLInputElement | null>;
+  lastNoteInputRef: React.RefObject<HTMLTextAreaElement | null>;
   onSave?: (index: number) => Promise<void>;
   onDelete: (index: number) => Promise<void>;
   onUpdateEntry: (index: number, entry: ITimeEntryWithNew) => void;
