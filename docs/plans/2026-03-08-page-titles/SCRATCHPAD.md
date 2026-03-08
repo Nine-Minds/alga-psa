@@ -71,3 +71,4 @@
 - (2026-03-08) F021: MSP page title: /msp/projects/templates/[templateId] — title: 'Template Details' (generateMetadata)
 - (2026-03-08) F022: MSP page title: /msp/assets — title: 'Assets'
 - (2026-03-08) F023: MSP page title: /msp/assets/[asset_id] — title: 'Asset Details' (generateMetadata)
+- (2026-03-08) F024: MSP page title: /msp/assets/[asset_id]/edit — verify existing metadata 'Edit Asset' is compatible with template

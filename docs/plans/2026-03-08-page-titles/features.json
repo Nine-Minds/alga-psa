@@ -186,7 +186,7 @@
   {
     "id": "F024",
     "description": "MSP page title: /msp/assets/[asset_id]/edit — verify existing metadata 'Edit Asset' is compatible with template",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3c"
     ]
