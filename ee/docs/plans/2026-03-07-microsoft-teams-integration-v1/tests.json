@@ -1394,7 +1394,7 @@
   {
     "id": "T175",
     "description": "Happy path: Teams identity: rebinding Teams to a new Microsoft profile invalidates stale auth assumptions for future requests.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F088"
     ]
@@ -1402,7 +1402,7 @@
   {
     "id": "T176",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: rebinding teams to a new microsoft profile invalidates stale auth assumptions for future requests.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F088"
     ]

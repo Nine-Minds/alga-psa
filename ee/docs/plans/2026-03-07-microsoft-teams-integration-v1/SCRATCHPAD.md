@@ -53,6 +53,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Generated Teams personal-tab deep links already encode destination context as a `context` JSON payload, so the runtime `/teams/tab` entry point needs to understand that payload rather than only flat query params.
 - (2026-03-07) Teams tab and callback entry points were independently constructing MSP sign-in redirects; a shared Teams reauth URL helper is safer because it guarantees consistent callback preservation and gives Teams flows an explicit `teamsReauth=1` marker instead of surfacing generic auth failures.
 - (2026-03-07) Teams entry points can arrive with `tenant=<slug>` rather than a raw tenant UUID. The shared Teams auth resolver needs to translate tenant slugs to tenant IDs before enforcing same-tenant checks, otherwise valid vanity-host or slug-based deep links are rejected.
+- (2026-03-07) Teams auth state already re-resolves the selected Teams Microsoft profile on every request instead of caching profile identity in the session, so a Teams profile rebind can invalidate stale Microsoft-tenant assumptions immediately as long as the request still carries the old tenant hint.
 - (2026-03-07) Existing Microsoft consumers still read the legacy tenant-secret keys directly. Introducing profiles without default-secret mirroring would break Outlook email, Outlook calendar, and MSP SSO compatibility.
 - (2026-03-07) `packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.tsx` already gives the right long-term home for Microsoft profile management: `Integrations -> Providers`, not a new top-level settings tab.
 - (2026-03-07) The backend compatibility guard is sufficient for `F015`/`T029-T030`: archiving the default profile is blocked until another profile is made default, which preserves the active compatibility binding.
@@ -123,6 +124,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/buildTeamsReauthUrl.test.ts src/test/unit/lib/teams/resolveTeamsTabDestination.test.ts src/test/unit/app/teams/tab/page.test.tsx src/test/unit/lib/teams/resolveTeamsTabAuthState.test.ts src/app/api/teams/auth/callback/bot/route.test.ts src/app/api/teams/auth/callback/message-extension/route.test.ts src/test/unit/lib/teams/resolveTeamsLinkedUser.test.ts`
 - (2026-03-07) Verified Teams tenant-slug resolution with:
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/resolveTeamsTabAuthState.test.ts src/test/unit/app/teams/tab/page.test.tsx src/app/api/teams/auth/callback/bot/route.test.ts src/app/api/teams/auth/callback/message-extension/route.test.ts src/test/unit/lib/teams/buildTeamsReauthUrl.test.ts src/test/unit/lib/teams/resolveTeamsTabDestination.test.ts src/test/unit/lib/teams/resolveTeamsLinkedUser.test.ts`
+- (2026-03-07) Verified Teams profile-rebind invalidation with:
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/resolveTeamsTabAuthState.test.ts`
 
 ## Progress Log
 
@@ -152,6 +155,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Completed `T171` and `T172` with focused reauth URL helper coverage plus tab/bot callback tests asserting expired or invalid Teams sessions redirect to Teams-safe reauth URLs instead of leaking raw auth failures.
 - (2026-03-07) Completed `F087` by extending `server/src/lib/teams/resolveTeamsTabAuthState.ts` to resolve tenant slugs via `getTenantIdBySlug` before comparing Teams entry-point tenant hints to the authenticated MSP tenant.
 - (2026-03-07) Completed `T173` and `T174` with Teams auth-state, Teams tab page, and bot callback tests covering slug-based tenant resolution on vanity-host-style entry points plus safe rejection when the slug resolves to the wrong tenant.
+- (2026-03-07) Completed `F088` by verifying that `server/src/lib/teams/resolveTeamsTabAuthState.ts` re-reads Teams profile binding state per request, so stale Microsoft-tenant assumptions are rejected immediately after a Teams profile rebind.
+- (2026-03-07) Completed `T175` and `T176` with a focused Teams auth-state regression test that simulates a tenant profile rebind between requests and asserts the old Teams Microsoft tenant hint is rejected on the next request.
   - `server/migrations/20260307120000_create_microsoft_profiles.cjs`
   - `server/migrations/20260307143000_create_microsoft_profile_consumer_bindings.cjs`
   - `server/migrations/20260307153000_create_teams_integrations.cjs`
@@ -159,7 +164,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `server/src/test/unit/migrations/teamsIntegrationsMigration.test.ts`
 - (2026-03-07) The focused vitest slice still emits pre-existing React `act(...)` warnings from `MicrosoftIntegrationSettings.contract.test.tsx`; the tests pass, but the harness remains noisy.
 - (2026-03-07) The Teams setup contract tests currently emit similar non-blocking React `act(...)` warnings while asserting async save flows; the tests pass, but the harness remains noisy.
-- (2026-03-07) Next unchecked feature after this slice is `F088` (rebinding Teams to a new Microsoft profile invalidates stale auth assumptions for future requests).
+- (2026-03-07) Next unchecked feature after this slice is `F089` (authorization checks still run after Teams authentication before entity access is granted).
 
 ## Links / References
 

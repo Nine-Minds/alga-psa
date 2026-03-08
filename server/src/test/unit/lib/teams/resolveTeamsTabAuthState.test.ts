@@ -170,4 +170,46 @@ describe('resolveTeamsTabAuthState', () => {
       message: 'Selected Teams Microsoft profile is missing or archived',
     });
   });
+
+  it('T175/T176: re-reads the currently selected Teams Microsoft profile on each request so rebinding invalidates stale tenant assumptions', async () => {
+    getSessionWithRevocationCheckMock.mockResolvedValue({
+      user: {
+        id: 'user-4',
+        tenant: 'tenant-1',
+        user_type: 'internal',
+      },
+    });
+
+    resolveTeamsMicrosoftProviderConfigMock.mockResolvedValueOnce({
+      status: 'ready',
+      tenantId: 'tenant-1',
+      profileId: 'profile-1',
+      microsoftTenantId: 'entra-tenant-1',
+    });
+
+    await expect(
+      resolveTeamsTabAuthState({ expectedMicrosoftTenantId: 'entra-tenant-1' })
+    ).resolves.toMatchObject({
+      status: 'ready',
+      profileId: 'profile-1',
+      microsoftTenantId: 'entra-tenant-1',
+    });
+
+    resolveTeamsMicrosoftProviderConfigMock.mockResolvedValueOnce({
+      status: 'ready',
+      tenantId: 'tenant-1',
+      profileId: 'profile-2',
+      microsoftTenantId: 'entra-tenant-2',
+    });
+
+    await expect(
+      resolveTeamsTabAuthState({ expectedMicrosoftTenantId: 'entra-tenant-1' })
+    ).resolves.toEqual({
+      status: 'forbidden',
+      reason: 'wrong_microsoft_tenant',
+      tenantId: 'tenant-1',
+      message:
+        'This Teams request was issued for a different Microsoft tenant than the one configured for this PSA tenant.',
+    });
+  });
 });
