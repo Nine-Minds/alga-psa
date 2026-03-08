@@ -618,7 +618,7 @@
   {
     "id": "F078",
     "description": "Client Portal page title: /client-portal/profile — title: 'Profile'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3b"
     ]
