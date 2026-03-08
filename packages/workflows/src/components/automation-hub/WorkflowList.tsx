@@ -105,7 +105,7 @@ export interface WorkflowDefinitionListItem {
 }
 
 type StatusFilter = 'all' | 'active' | 'draft' | 'paused';
-type TriggerFilter = 'all' | 'event' | 'scheduled' | 'manual';
+type TriggerFilter = 'all' | 'event' | 'schedule' | 'recurring' | 'scheduled' | 'manual';
 type WorkflowCounts = { total: number; active: number; draft: number; paused: number };
 type SortableColumnId = 'name' | 'status' | 'updated_at' | 'created_at';
 
@@ -150,11 +150,14 @@ const getStatusLabel = (status: string, isPaused?: boolean): string => {
 const getTriggerIcon = (trigger?: Record<string, unknown> | null) => {
   if (!trigger) return <MousePointer className="w-4 h-4 text-[rgb(var(--color-text-400))]" />;
 
-  const eventName = trigger.eventName as string | undefined;
-  if (eventName?.includes('schedule') || eventName?.includes('cron')) {
+  const triggerType = trigger.type as string | undefined;
+  if (triggerType === 'schedule') {
     return <Calendar className="w-4 h-4 text-[rgb(var(--color-secondary-500))]" />;
   }
-  if (eventName) {
+  if (triggerType === 'recurring') {
+    return <Clock className="w-4 h-4 text-[rgb(var(--color-secondary-500))]" />;
+  }
+  if (triggerType === 'event') {
     return <Zap className="w-4 h-4 text-[rgb(var(--color-accent-500))]" />;
   }
   return <MousePointer className="w-4 h-4 text-[rgb(var(--color-text-400))]" />;
@@ -163,11 +166,14 @@ const getTriggerIcon = (trigger?: Record<string, unknown> | null) => {
 const getTriggerLabel = (trigger?: Record<string, unknown> | null): string => {
   if (!trigger) return 'Manual';
 
-  const eventName = trigger.eventName as string | undefined;
-  if (eventName?.includes('schedule') || eventName?.includes('cron')) {
-    return 'Scheduled';
+  const triggerType = trigger.type as string | undefined;
+  if (triggerType === 'schedule') {
+    return 'One-time schedule';
   }
-  if (eventName) {
+  if (triggerType === 'recurring') {
+    return 'Recurring schedule';
+  }
+  if (triggerType === 'event') {
     return 'Event';
   }
   return 'Manual';
@@ -225,7 +231,8 @@ export default function WorkflowList({
   const triggerOptions = [
     { value: 'all', label: 'All triggers' },
     { value: 'event', label: 'Event-based' },
-    { value: 'scheduled', label: 'Scheduled' },
+    { value: 'schedule', label: 'One-time schedule' },
+    { value: 'recurring', label: 'Recurring schedule' },
     { value: 'manual', label: 'Manual' }
   ];
 

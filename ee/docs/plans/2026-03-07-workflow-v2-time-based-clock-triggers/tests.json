@@ -92,13 +92,13 @@
   {
     "id": "T016",
     "description": "List API: workflows with one-time schedule triggers are reported with a real schedule trigger type rather than heuristic event matching",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
     "id": "T017",
     "description": "List API: workflows with recurring schedule triggers are reported with a real recurring trigger type rather than heuristic event matching",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {

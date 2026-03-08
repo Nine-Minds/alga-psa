@@ -34,6 +34,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-07) Direct `trigger.eventName` and `trigger.sourcePayloadSchemaRef` access already exists in shared bundling, runtime actions, and run-studio UI; widening the trigger union requires explicit event-trigger narrowing at those call sites.
 - (2026-03-07) `payload_schema_mode` is persisted on the workflow definition record, not on publish input. That means publish must explicitly reject time-trigger definitions if an older draft is still marked `inferred`.
 - (2026-03-07) Local Workflow V2 integration tests in this worktree could not use the usual DB-backed harness because PostgreSQL was unavailable on `localhost:5438`; a mock-backed unit suite was a better fit for publish-path validation coverage.
+- (2026-03-07) The paged workflow list action still filtered `scheduled` workflows by checking `trigger.eventName` for `schedule`/`cron` substrings. Real trigger filtering needs to key off `trigger.type`.
 
 ## Commands / Runbooks
 
@@ -54,6 +55,9 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-07) Validate time-trigger publish/contract slice:
   - `cd server && pnpm vitest run src/test/unit/workflowTimeTriggerSchemas.unit.test.ts src/test/unit/workflowTimeTriggerPublishValidation.unit.test.ts --config vitest.config.ts`
   - `pnpm exec eslint shared/workflow/runtime/types.ts shared/workflow/runtime/init.ts shared/workflow/runtime/index.ts shared/workflow/runtime/schemas/workflowClockTriggerSchema.ts server/src/lib/features.ts packages/workflows/src/actions/workflow-runtime-v2-actions.ts server/src/test/unit/workflowTimeTriggerPublishValidation.unit.test.ts`
+- (2026-03-07) Validate workflow list trigger-type filtering:
+  - `cd server && pnpm vitest run src/test/unit/workflowDefinitionListTriggerFilters.unit.test.ts --config vitest.config.ts`
+  - `pnpm exec eslint packages/workflows/src/actions/workflow-runtime-v2-schemas.ts packages/workflows/src/actions/workflow-runtime-v2-actions.ts packages/workflows/src/components/automation-hub/WorkflowList.tsx server/src/test/unit/workflowDefinitionListTriggerFilters.unit.test.ts`
 
 ## Progress Log
 
@@ -69,6 +73,11 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
   - Publish now rejects CE time-trigger workflows and rejects any time-trigger publish attempt that still uses inferred payload schema mode.
   - Added publish-time validation for one-time schedules (`runAt` required, valid ISO timestamp, future-only) and recurring schedules (valid 5-field cron, valid IANA timezone).
   - Added `server/src/test/unit/workflowTimeTriggerPublishValidation.unit.test.ts` to cover EE gating, fixed schema resolution, inferred-mode rejection, and one-time/recurring validation behavior without depending on a local PostgreSQL harness.
+- (2026-03-07) Completed F008 and T016-T017.
+  - Replaced workflow-definition list filtering on `trigger.eventName` substring heuristics with direct `trigger.type` comparisons.
+  - Preserved backward compatibility for legacy `trigger=scheduled` URLs by mapping that filter to both `schedule` and `recurring` trigger types.
+  - Updated the workflow list UI to label and iconize `event`, `schedule`, `recurring`, and `manual` directly from persisted trigger types.
+  - Added `server/src/test/unit/workflowDefinitionListTriggerFilters.unit.test.ts` to verify one-time and recurring filters hit the real `trigger.type` query path and return the corresponding trigger types intact.
 
 ## Links / References
 

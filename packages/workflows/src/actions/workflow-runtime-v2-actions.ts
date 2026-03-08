@@ -1092,14 +1092,13 @@ export const listWorkflowDefinitionsPagedAction = withAuth(async (user, { tenant
     }
 
     if (trigger !== 'all') {
-      const eventNameExpr = "coalesce(wd.trigger->>'eventName', '')";
-      const scheduledExpr = `lower(${eventNameExpr}) like '%schedule%' or lower(${eventNameExpr}) like '%cron%'`;
+      const triggerTypeExpr = "coalesce(wd.trigger->>'type', '')";
       if (trigger === 'manual') {
-        qb.andWhereRaw(`${eventNameExpr} = ''`);
+        qb.andWhereRaw(`${triggerTypeExpr} = ''`);
       } else if (trigger === 'scheduled') {
-        qb.andWhereRaw(`${eventNameExpr} <> '' and (${scheduledExpr})`);
-      } else if (trigger === 'event') {
-        qb.andWhereRaw(`${eventNameExpr} <> '' and not (${scheduledExpr})`);
+        qb.andWhereRaw(`${triggerTypeExpr} in (?, ?)`, ['schedule', 'recurring']);
+      } else {
+        qb.andWhereRaw(`${triggerTypeExpr} = ?`, [trigger]);
       }
     }
   };

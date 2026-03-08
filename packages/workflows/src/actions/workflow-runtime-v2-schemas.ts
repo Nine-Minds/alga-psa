@@ -106,7 +106,7 @@ export const ListWorkflowDefinitionsPagedInput = z.object({
   pageSize: pageSizeNumber.default(20),
   search: z.string().optional(),
   status: z.enum(['all', 'active', 'draft', 'paused']).optional(),
-  trigger: z.enum(['all', 'event', 'scheduled', 'manual']).optional(),
+  trigger: z.enum(['all', 'event', 'schedule', 'recurring', 'scheduled', 'manual']).optional(),
   sortBy: z.enum(['name', 'status', 'updated_at', 'created_at']).optional(),
   sortDirection: z.enum(['asc', 'desc']).optional()
 });

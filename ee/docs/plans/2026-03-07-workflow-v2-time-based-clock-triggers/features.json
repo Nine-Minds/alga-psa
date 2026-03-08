@@ -44,7 +44,7 @@
   {
     "id": "F008",
     "description": "Replace trigger-type heuristics in workflow list and query paths with real persisted trigger type values",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Rollout / Migration"]
   },
   {
