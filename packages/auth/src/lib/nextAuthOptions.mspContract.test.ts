@@ -60,4 +60,12 @@ describe('NextAuth MSP SSO contract', () => {
     expect(source).toContain('teamsTenantId: tenantId');
     expect(source).toContain('teamsMicrosoftOnly: true');
   });
+
+  it('T265/T266: shared MSP SSO and non-Teams auth paths depend on the shared Teams auth wrapper rather than importing EE Teams auth modules directly', () => {
+    expect(source).toContain('import { resolveTeamsMicrosoftProviderConfig } from "./sso/teamsMicrosoftProviderResolution";');
+    expect(source).not.toContain('ee/server/src/lib/auth/teamsMicrosoftProviderResolution');
+    expect(source).toContain('GoogleProvider({');
+    expect(source).toContain('AzureADProvider({');
+    expect(source).toContain('async function buildAuthOptions(');
+  });
 });

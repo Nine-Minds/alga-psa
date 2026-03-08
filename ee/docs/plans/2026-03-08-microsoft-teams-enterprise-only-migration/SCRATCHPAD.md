@@ -48,6 +48,9 @@ Prefer short bullets. Append new entries as the migration progresses and revise 
 - (2026-03-08) The schema ownership integration test cannot execute copied migrations from `/tmp` because some migrations rely on package resolution and source-relative asset reads. The final harness builds a merged EE migration directory out of symlinked migration files so the original module and asset paths still resolve.
 - (2026-03-08) Fresh-schema validation now runs against actual migrated databases: CE uses shared migrations only, while EE uses shared migrations plus only the two Teams EE migration files. This avoids unrelated EE-only platform prerequisites like `vector` while still proving the Teams ownership boundary.
 - (2026-03-08) Developers with pre-migration local databases should reset or recreate their local DBs instead of trying to preserve old shared Teams tables. The new contract is fresh-install ownership, not an in-place backfill for unreleased Teams data.
+- (2026-03-08) The EE ownership contract now explicitly asserts three non-obvious boundaries: concrete Teams runtime files live under `ee/server`, Microsoft profile CRUD/settings remain shared-only with no EE duplicate implementation, and the Teams runtime still binds through `teams_integrations.selected_profile_id` back to shared `microsoft_profiles` instead of inventing a second credential model.
+- (2026-03-08) Shared CE route delegators now explicitly cover Teams quick-action POSTs plus bot/message-extension auth callback GETs, so CE returns the standard EE-only payload and EE delegates those routes without touching Teams runtime logic in shared code.
+- (2026-03-08) The shared notification broadcaster remains the source of truth for the existing Redis in-app channel and passes the same internal-notification payload into the Teams delivery wrapper as an additional channel, rather than creating a Teams-specific notification generation path.
 - (2026-03-08) `packages/integrations/src/actions/integrations/teamsActions.ts` and `packages/integrations/src/actions/integrations/teamsPackageActions.ts` are still shared server-action entrypoints for Teams settings/runtime/package behavior, so they need shared CE-safe gating before any deeper EE extraction.
 - (2026-03-08) `server/src/app/teams/tab/page.tsx`, `server/src/app/api/teams/bot/messages/route.ts`, `server/src/app/api/teams/message-extension/query/route.ts`, `server/src/app/api/teams/quick-actions/route.ts`, and the three `server/src/app/api/teams/auth/callback/*/route.ts` files are still active shared runtime entrypoints; none has a Teams-specific EE delegator yet.
 - (2026-03-08) `packages/notifications/src/realtime/internalNotificationBroadcaster.ts` remains the shared notification fan-out entrypoint, but `packages/notifications/src/realtime/teamsNotificationDelivery.ts` is now only a shared availability-gated wrapper that delegates into `ee/server/src/lib/notifications/teamsNotificationDelivery.ts`.
@@ -91,6 +94,16 @@ Prefer short bullets. Append new entries as the migration progresses and revise 
     Run from `/Users/roberisaacs/alga-psa.worktrees/feature/teams-integration/server`
   - `DB_PORT=55433 pnpm vitest run --coverage.enabled false src/test/integration/teamsMigrationOwnership.integration.test.ts`
     Run from `/Users/roberisaacs/alga-psa.worktrees/feature/teams-integration/server`
+- (2026-03-08) Validate EE ownership/package boundaries with:
+  - `pnpm vitest run --coverage.enabled false src/test/unit/lib/teams/teamsRuntimeOwnership.contract.test.ts src/test/unit/api/teamsRoutes.delegator.test.ts`
+    Run from `/Users/roberisaacs/alga-psa.worktrees/feature/teams-integration/server`
+  - `../../node_modules/.bin/vitest run --coverage.enabled false src/actions/integrations/teamsPackageActions.test.ts`
+    Run from `/Users/roberisaacs/alga-psa.worktrees/feature/teams-integration/packages/integrations`
+- (2026-03-08) Validate auth and notification wrapper behavior with:
+  - `pnpm vitest run --coverage.enabled false src/test/unit/api/teamsRoutes.delegator.test.ts src/test/unit/lib/teams/quickActions/teamsQuickActionHandler.test.ts src/test/unit/internal-notifications/internalNotificationBroadcaster.test.ts`
+    Run from `/Users/roberisaacs/alga-psa.worktrees/feature/teams-integration/server`
+  - `../../node_modules/.bin/vitest run --config vitest.config.ts src/lib/nextAuthOptions.mspContract.test.ts src/lib/sso/teamsMicrosoftProviderResolution.test.ts`
+    Run from `/Users/roberisaacs/alga-psa.worktrees/feature/teams-integration/packages/auth`
 - (2026-03-08) Recommended verification slices once implementation starts:
   - settings visibility tests for CE vs EE flag-off vs EE flag-on
   - Teams route wrapper tests for unavailable, disabled, and delegated cases

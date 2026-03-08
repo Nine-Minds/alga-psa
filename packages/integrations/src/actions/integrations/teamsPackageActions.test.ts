@@ -218,7 +218,7 @@ describe('Teams app package actions', () => {
     expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 
-  it('T117/T119/T121/T123/T125/T127/T129/T131/T133/T135/T137/T141/T147/T349: returns Teams manifest metadata with declared surfaces, app identity, install state, environment base URL, and focused lookup/message-action command definitions', async () => {
+  it('T117/T119/T121/T123/T125/T127/T129/T131/T133/T135/T137/T141/T147/T207/T208/T209/T210/T349: returns Teams manifest metadata with declared surfaces, app identity, install state, environment base URL, and focused lookup/message-action command definitions', async () => {
     appSecrets.set('NEXT_PUBLIC_BASE_URL', 'https://tenant.example.com/');
     addMicrosoftProfile({
       tenant: 'tenant-1',
@@ -367,7 +367,7 @@ describe('Teams app package actions', () => {
     });
   });
 
-  it('T211: converts notification-style PSA record URLs into Teams personal-tab deep links so activity-feed notifications can target the correct destination without duplicating record-link rules', () => {
+  it('T211/T301: converts notification-style PSA record URLs into Teams personal-tab deep links so activity-feed notifications can target the correct destination without duplicating record-link rules', () => {
     expect(
       buildTeamsPersonalTabDeepLinkFromPsaUrl(
         'https://tenant.example.com',
@@ -393,7 +393,7 @@ describe('Teams app package actions', () => {
     ).toContain(encodeURIComponent('{"page":"approval","approvalId":"approval-2"}'));
   });
 
-  it('T212: falls back notification-style Teams deep links to my-work when the PSA URL is malformed or not a supported Teams destination', () => {
+  it('T212/T302: falls back notification-style Teams deep links to my-work when the PSA URL is malformed or not a supported Teams destination', () => {
     const unsupported = buildTeamsPersonalTabDeepLinkFromPsaUrl(
       'https://tenant.example.com',
       'teams-client-id',

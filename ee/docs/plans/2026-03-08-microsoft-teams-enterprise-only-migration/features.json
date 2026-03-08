@@ -893,7 +893,7 @@
   {
     "id": "F100",
     "description": "EE ownership: EE Teams modules are named and placed so future engineers can identify them as enterprise-only without inspecting internals.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -902,7 +902,7 @@
   {
     "id": "F101",
     "description": "EE ownership: enterprise-only import aliases or package entrypoints are used consistently for Teams runtime modules.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -911,7 +911,7 @@
   {
     "id": "F102",
     "description": "EE ownership: the migration does not create duplicate EE implementations for Microsoft profile management that already lives in shared code.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -920,7 +920,7 @@
   {
     "id": "F103",
     "description": "EE ownership: the migration does not create a second Teams integration model separate from the existing Teams tenant integration concept.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -929,7 +929,7 @@
   {
     "id": "F104",
     "description": "EE ownership: the migration keeps Teams as one EE integration spanning tab, bot, message extension, and notifications rather than fragmenting it into separate EE subsystems.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -938,7 +938,7 @@
   {
     "id": "F105",
     "description": "EE ownership: the migration keeps shared Microsoft profiles as the only supported credential source for Teams.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -947,7 +947,7 @@
   {
     "id": "F106",
     "description": "EE ownership: the migration does not add channel/chat notification routing or other new product scope while moving code to EE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1028,7 +1028,7 @@
   {
     "id": "F115",
     "description": "Server actions: Teams quick-action submit actions return EE-unavailable results in CE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1037,7 +1037,7 @@
   {
     "id": "F116",
     "description": "Server actions: Teams quick-action submit actions return disabled results in EE when the tenant flag is off.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1046,7 +1046,7 @@
   {
     "id": "F117",
     "description": "Server actions: Teams quick-action submit actions delegate into EE implementations when Teams is enabled.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1190,7 +1190,7 @@
   {
     "id": "F133",
     "description": "Auth boundary: shared MSP SSO and non-Teams Microsoft auth paths continue to function without depending on EE Teams modules.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"
@@ -1244,7 +1244,7 @@
   {
     "id": "F139",
     "description": "Auth boundary: CE does not attempt Teams auth callback flows after the migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"
@@ -1253,7 +1253,7 @@
   {
     "id": "F140",
     "description": "Auth boundary: EE flag-off state does not attempt Teams auth callback flows after the migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"
@@ -1262,7 +1262,7 @@
   {
     "id": "F141",
     "description": "Notification boundary: shared internal notification generation remains the source of truth for payloads and record links.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"
@@ -1334,7 +1334,7 @@
   {
     "id": "F149",
     "description": "Notification boundary: non-Teams notification channels remain unaffected by the Teams EE extraction.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"
@@ -1343,7 +1343,7 @@
   {
     "id": "F150",
     "description": "Notification boundary: the migration preserves the simplification cascade that Teams notifications are just another delivery channel for existing notification payloads.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"
@@ -1352,7 +1352,7 @@
   {
     "id": "F151",
     "description": "Notification boundary: the migration does not add channel-targeted notification routing while moving delivery to EE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"

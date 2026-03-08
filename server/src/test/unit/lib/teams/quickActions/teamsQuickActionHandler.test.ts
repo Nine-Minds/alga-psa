@@ -338,7 +338,7 @@ describe('teamsQuickActionHandler', () => {
     });
   });
 
-  it('T407/T409/T411: submit validates inputs through the quick-action form, calls the shared action layer, and returns success confirmations', async () => {
+  it('T233/T234/T407/T409/T411: submit validates inputs through the quick-action form, calls the shared action layer, and returns success confirmations', async () => {
     await handleTeamsQuickActionActivity(
       buildActivity({
         name: 'task/submit',

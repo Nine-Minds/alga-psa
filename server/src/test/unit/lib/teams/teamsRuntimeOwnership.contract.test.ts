@@ -9,7 +9,7 @@ function repoPath(relativePath: string): string {
 }
 
 describe('teams runtime EE ownership', () => {
-  it('T167/T169/T171/T173/T185/T187/T197/T357: keeps concrete Teams runtime helpers under ee/server ownership', () => {
+  it('T167/T169/T171/T173/T185/T187/T197/T199/T200/T201/T202/T357: keeps concrete Teams runtime helpers under ee/server ownership with explicit EE naming and entrypoints', () => {
     expect(fs.existsSync(repoPath('server/src/lib/teams/bot/teamsBotHandler.ts'))).toBe(false);
     expect(fs.existsSync(repoPath('server/src/lib/teams/messageExtension/teamsMessageExtensionHandler.ts'))).toBe(false);
     expect(fs.existsSync(repoPath('server/src/lib/teams/quickActions/teamsQuickActionHandler.ts'))).toBe(false);
@@ -33,6 +33,44 @@ describe('teams runtime EE ownership', () => {
     expect(fs.existsSync(repoPath('ee/server/src/lib/teams/resolveTeamsTenantContext.ts'))).toBe(true);
     expect(fs.existsSync(repoPath('ee/server/src/lib/teams/handleTeamsAuthCallback.ts'))).toBe(true);
     expect(fs.existsSync(repoPath('ee/server/src/lib/teams/resolveTeamsTabAuthState.ts'))).toBe(true);
+  });
+
+  it('T193/T194/T203/T204: keeps Microsoft profile management shared instead of duplicating it under EE Teams ownership', () => {
+    expect(fs.existsSync(repoPath('packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.tsx'))).toBe(
+      true
+    );
+    expect(fs.existsSync(repoPath('packages/integrations/src/actions/integrations/microsoftActions.ts'))).toBe(true);
+
+    expect(fs.existsSync(repoPath('ee/server/src/components/settings/integrations/MicrosoftIntegrationSettings.tsx'))).toBe(
+      false
+    );
+    expect(fs.existsSync(repoPath('ee/server/src/lib/actions/integrations/microsoftActions.ts'))).toBe(false);
+  });
+
+  it('T205/T206: keeps Teams on one tenant integration model backed by the selected shared Microsoft profile instead of introducing a second EE-only credential model', () => {
+    const eeTeamsActionsSource = fs.readFileSync(
+      repoPath('ee/server/src/lib/actions/integrations/teamsActions.ts'),
+      'utf8'
+    );
+    const eeTeamsPackageActionsSource = fs.readFileSync(
+      repoPath('ee/server/src/lib/actions/integrations/teamsPackageActions.ts'),
+      'utf8'
+    );
+    const eeTeamsNotificationSource = fs.readFileSync(
+      repoPath('ee/server/src/lib/notifications/teamsNotificationDelivery.ts'),
+      'utf8'
+    );
+    const eeTeamsTenantContextSource = fs.readFileSync(
+      repoPath('ee/server/src/lib/teams/resolveTeamsTenantContext.ts'),
+      'utf8'
+    );
+
+    expect(eeTeamsActionsSource).toContain("knex('teams_integrations')");
+    expect(eeTeamsPackageActionsSource).toContain('selected_profile_id');
+    expect(eeTeamsNotificationSource).toContain("knex('microsoft_profiles')");
+    expect(eeTeamsTenantContextSource).toContain("teams.selected_profile_id");
+    expect(eeTeamsTenantContextSource).toContain("profiles.profile_id");
+    expect(fs.existsSync(repoPath('ee/server/src/lib/actions/integrations/teamsMicrosoftActions.ts'))).toBe(false);
   });
 
   it('T175/T177/T179/T221: keeps Teams package and action-registry implementations under EE while leaving a shared wrapper entrypoint', () => {
