@@ -182,3 +182,4 @@
 - (2026-03-08) T017: Verify existing metadata compatibility: /surveys/respond/[token] generateMetadata() returns a string title (works with root template)
 - (2026-03-08) T018: TypeScript: no type errors introduced by metadata exports (run tsc --noEmit)
 - (2026-03-08) T020: Verify no page uses client-side document.title for setting titles
+- (2026-03-08) T021: Verify pages without explicit metadata fall back to their section layout default title

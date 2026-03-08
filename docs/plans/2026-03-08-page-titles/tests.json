@@ -258,7 +258,7 @@
   {
     "id": "T021",
     "description": "Verify pages without explicit metadata fall back to their section layout default title",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F003",
