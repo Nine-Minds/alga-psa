@@ -166,3 +166,4 @@
 - (2026-03-08) T001: Verify root layout generateMetadata() returns title object with template '%s | Alga PSA' and default 'Alga PSA'
 - (2026-03-08) T002: Verify MSP layout exports metadata with template '%s | Alga PSA' and default 'Dashboard | Alga PSA'
 - (2026-03-08) T003: Verify Client Portal layout exports metadata with template '%s | Client Portal' and default 'Dashboard | Client Portal'
+- (2026-03-08) T004: Verify Auth layout exports metadata with template '%s | Alga PSA' and default 'Sign In | Alga PSA'

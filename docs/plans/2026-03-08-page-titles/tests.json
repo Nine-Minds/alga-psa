@@ -26,7 +26,7 @@
   {
     "id": "T004",
     "description": "Verify Auth layout exports metadata with template '%s | Alga PSA' and default 'Sign In | Alga PSA'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
