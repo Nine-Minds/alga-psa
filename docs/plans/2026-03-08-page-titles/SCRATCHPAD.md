@@ -126,3 +126,4 @@
 - (2026-03-08) F076: Client Portal page title: /client-portal/dashboard — title: 'Dashboard'
 - (2026-03-08) F077: Client Portal page title: /client-portal/account — title: 'Account'
 - (2026-03-08) F078: Client Portal page title: /client-portal/profile — title: 'Profile'
+- (2026-03-08) F079: Client Portal page title: /client-portal/appointments — title: 'Appointments'

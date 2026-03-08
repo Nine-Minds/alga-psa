@@ -626,7 +626,7 @@
   {
     "id": "F079",
     "description": "Client Portal page title: /client-portal/appointments — title: 'Appointments'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3b"
     ]
