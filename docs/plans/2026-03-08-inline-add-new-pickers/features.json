@@ -114,7 +114,7 @@
   {
     "id": "F015",
     "description": "ClientPicker accepts optional onAddNew prop and renders separator + '+ Add new client' button at bottom of client list when provided",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3"
     ]

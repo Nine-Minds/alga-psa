@@ -140,3 +140,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation attempt: `npx esbuild server/src/components/settings/general/UserManagement.tsx --bundle --platform=node --format=esm --tsconfig=server/tsconfig.json --outfile=/tmp/user-management-check.js` reached unrelated asset/font resolution errors outside this change.
 - 2026-03-08 F014: Wired `ee/server/src/components/settings/integrations/EntraReconciliationQueue.tsx` to load clients, pass `onAddNew` into each queue row's `ContactPicker`, open a shared `QuickAddContact` with the row's mapped client preselected, append the created contact into `allContacts`, and auto-select it for that queue item.
 - Validation: `npx tsc -p ee/server/tsconfig.json --noEmit`
+- 2026-03-08 F015: Added optional `onAddNew` support to `packages/ui/src/components/ClientPicker.tsx` and rendered the bottom separator/button using the same utility-class pattern as `ContactPicker`/`EditableServiceTypeSelect`.
+- Validation: `npx tsc -p packages/ui/tsconfig.json --noEmit`
