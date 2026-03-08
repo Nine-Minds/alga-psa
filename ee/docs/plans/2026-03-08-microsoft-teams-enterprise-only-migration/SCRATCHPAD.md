@@ -18,6 +18,7 @@ Prefer short bullets. Append new entries as the migration progresses and revise 
 - (2026-03-08) Shared Microsoft profiles remain shared because they support email, calendar, and MSP SSO in addition to Teams.
 - (2026-03-08) Teams-specific schema moves to `ee/server/migrations`.
 - (2026-03-08) Existing local/dev Teams data is disposable; no production-style backfill path is required.
+- (2026-03-08) Shared Teams schema migrations are deleted rather than tombstoned; fresh CE installs stop before creating Teams tables, while fresh EE installs add the Teams tables by layering the EE migration files on top of shared history.
 - (2026-03-08) The Entra CE-stub plus EE-delegation pattern is the precedent for Teams route and settings ownership.
 - (2026-03-08) Use one availability helper for settings, routes, actions, and notification delivery to avoid drift.
 - (2026-03-08) Canonical unavailable copy for CE wrappers: `Microsoft Teams integration is only available in Enterprise Edition.`
@@ -43,6 +44,10 @@ Prefer short bullets. Append new entries as the migration progresses and revise 
 - (2026-03-08) `packages/auth/src/lib/sso/teamsMicrosoftProviderResolution.ts` is now a shared fail-closed wrapper that delegates into `ee/server/src/lib/auth/teamsMicrosoftProviderResolution.ts`; the old shared resolver used by Teams tab auth/runtime now lives under EE, while shared `@alga-psa/auth` exports remain stable.
 - (2026-03-08) `server/src/lib/teams/buildTeamsReauthUrl.ts` moved to `ee/server/src/lib/teams/buildTeamsReauthUrl.ts` because it is only used by Teams auth-callback surfaces; `ee/server/src/lib/teams/handleTeamsAuthCallback.ts` now imports the EE helper directly.
 - (2026-03-08) `server/src/lib/teams/resolveTeamsLinkedUser.ts`, `server/src/lib/teams/buildTeamsFullPsaUrl.ts`, `server/src/lib/teams/resolveTeamsTabDestination.ts`, and `server/src/lib/teams/resolveTeamsTabAccessState.ts` were still shared Teams-only helpers after the first EE route split. They now live under `ee/server/src/lib/teams/*`, and the EE tab page plus action registry import the EE copies directly.
+- (2026-03-08) Shared Teams schema ownership now stops at Microsoft profile infrastructure: `server/migrations/20260307153000_create_teams_integrations.cjs` and `server/migrations/20260307193000_add_teams_package_metadata.cjs` were removed, and the same filenames now live under `ee/server/migrations/`.
+- (2026-03-08) The schema ownership integration test cannot execute copied migrations from `/tmp` because some migrations rely on package resolution and source-relative asset reads. The final harness builds a merged EE migration directory out of symlinked migration files so the original module and asset paths still resolve.
+- (2026-03-08) Fresh-schema validation now runs against actual migrated databases: CE uses shared migrations only, while EE uses shared migrations plus only the two Teams EE migration files. This avoids unrelated EE-only platform prerequisites like `vector` while still proving the Teams ownership boundary.
+- (2026-03-08) Developers with pre-migration local databases should reset or recreate their local DBs instead of trying to preserve old shared Teams tables. The new contract is fresh-install ownership, not an in-place backfill for unreleased Teams data.
 - (2026-03-08) `packages/integrations/src/actions/integrations/teamsActions.ts` and `packages/integrations/src/actions/integrations/teamsPackageActions.ts` are still shared server-action entrypoints for Teams settings/runtime/package behavior, so they need shared CE-safe gating before any deeper EE extraction.
 - (2026-03-08) `server/src/app/teams/tab/page.tsx`, `server/src/app/api/teams/bot/messages/route.ts`, `server/src/app/api/teams/message-extension/query/route.ts`, `server/src/app/api/teams/quick-actions/route.ts`, and the three `server/src/app/api/teams/auth/callback/*/route.ts` files are still active shared runtime entrypoints; none has a Teams-specific EE delegator yet.
 - (2026-03-08) `packages/notifications/src/realtime/internalNotificationBroadcaster.ts` remains the shared notification fan-out entrypoint, but `packages/notifications/src/realtime/teamsNotificationDelivery.ts` is now only a shared availability-gated wrapper that delegates into `ee/server/src/lib/notifications/teamsNotificationDelivery.ts`.
@@ -81,6 +86,11 @@ Prefer short bullets. Append new entries as the migration progresses and revise 
   - `sed -n '1,240p' server/src/app/api/integrations/entra/_ceStub.ts`
 - (2026-03-08) Validate this plan folder with:
   - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-03-08-microsoft-teams-enterprise-only-migration`
+- (2026-03-08) Validate schema ownership with:
+  - `pnpm vitest run --coverage.enabled false src/test/unit/migrations/teamsIntegrationsMigration.test.ts src/test/unit/migrations/teamsPackageMetadataMigration.test.ts`
+    Run from `/Users/roberisaacs/alga-psa.worktrees/feature/teams-integration/server`
+  - `DB_PORT=55433 pnpm vitest run --coverage.enabled false src/test/integration/teamsMigrationOwnership.integration.test.ts`
+    Run from `/Users/roberisaacs/alga-psa.worktrees/feature/teams-integration/server`
 - (2026-03-08) Recommended verification slices once implementation starts:
   - settings visibility tests for CE vs EE flag-off vs EE flag-on
   - Teams route wrapper tests for unavailable, disabled, and delegated cases
@@ -145,6 +155,13 @@ Prefer short bullets. Append new entries as the migration progresses and revise 
   - `ee/server/src/lib/teams/teamsDeepLinks.ts`
   - `server/src/test/unit/internal-notifications/teamsNotificationDelivery.test.ts`
   - `server/src/test/unit/internal-notifications/teamsNotificationDelivery.wrapper.test.ts`
+- Teams schema ownership split:
+  - `server/test-utils/dbConfig.ts`
+  - `server/src/test/unit/migrations/teamsIntegrationsMigration.test.ts`
+  - `server/src/test/unit/migrations/teamsPackageMetadataMigration.test.ts`
+  - `server/src/test/integration/teamsMigrationOwnership.integration.test.ts`
+  - `ee/server/migrations/20260307153000_create_teams_integrations.cjs`
+  - `ee/server/migrations/20260307193000_add_teams_package_metadata.cjs`
 - Shared feature-flag registry:
   - `packages/core/src/lib/features.ts`
 

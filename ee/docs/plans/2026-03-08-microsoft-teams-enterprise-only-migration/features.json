@@ -1379,7 +1379,7 @@
   {
     "id": "F154",
     "description": "Schema ownership: shared migration history no longer contains active ownership of Teams integration tables.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Data / API / Integrations"
@@ -1388,7 +1388,7 @@
   {
     "id": "F155",
     "description": "Schema ownership: shared migration history no longer contains active ownership of Teams package metadata columns or tables.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Data / API / Integrations"
@@ -1397,7 +1397,7 @@
   {
     "id": "F156",
     "description": "Schema ownership: EE migration history creates the Teams integration tables required for Teams tenant setup.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Data / API / Integrations"
@@ -1406,7 +1406,7 @@
   {
     "id": "F157",
     "description": "Schema ownership: EE migration history creates the Teams package metadata storage required for Teams manifest/install status.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Data / API / Integrations"
@@ -1415,7 +1415,7 @@
   {
     "id": "F158",
     "description": "Schema ownership: shared migration history continues to create Microsoft profile tables.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Data / API / Integrations"
@@ -1424,7 +1424,7 @@
   {
     "id": "F159",
     "description": "Schema ownership: shared migration history continues to create Microsoft profile consumer-binding tables.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Data / API / Integrations"
@@ -1433,7 +1433,7 @@
   {
     "id": "F160",
     "description": "Schema ownership: fresh CE installs do not create Teams-specific schema.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Data / API / Integrations"
@@ -1442,7 +1442,7 @@
   {
     "id": "F161",
     "description": "Schema ownership: fresh EE installs do create Teams-specific schema.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Data / API / Integrations"
@@ -1451,7 +1451,7 @@
   {
     "id": "F162",
     "description": "Schema ownership: CE migration validation asserts the absence of Teams tables.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Data / API / Integrations"
@@ -1460,7 +1460,7 @@
   {
     "id": "F163",
     "description": "Schema ownership: EE migration validation asserts the presence of Teams tables.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Data / API / Integrations"
@@ -1469,7 +1469,7 @@
   {
     "id": "F164",
     "description": "Schema ownership: Teams table creation remains tenant-scoped and aligned with the existing Teams integration data model after moving to EE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Data / API / Integrations"
@@ -1478,7 +1478,7 @@
   {
     "id": "F165",
     "description": "Schema ownership: Teams package metadata persistence remains tenant-scoped after moving to EE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Data / API / Integrations"
@@ -1487,7 +1487,7 @@
   {
     "id": "F166",
     "description": "Schema ownership: the migration plan does not include a production backfill for current dev/test Teams rows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Data / API / Integrations"
@@ -1496,7 +1496,7 @@
   {
     "id": "F167",
     "description": "Schema ownership: any current shared Teams tables can be dropped or ignored in local/dev reset flows without preservation guarantees.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Data / API / Integrations"
@@ -1505,7 +1505,7 @@
   {
     "id": "F168",
     "description": "Schema ownership: the migration notes expected handling for developers whose local databases still have pre-migration shared Teams tables.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Data / API / Integrations"
@@ -1514,7 +1514,7 @@
   {
     "id": "F169",
     "description": "Schema ownership: the migration does not move shared Microsoft profile secrets or bindings into EE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Data / API / Integrations"
@@ -1523,7 +1523,7 @@
   {
     "id": "F170",
     "description": "Schema ownership: the migration does not create duplicate copies of Microsoft profile tables inside EE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Data / API / Integrations"
@@ -1532,7 +1532,7 @@
   {
     "id": "F171",
     "description": "Schema ownership: Teams schema tests run against migrated databases rather than source-string-only assertions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Data / API / Integrations"
@@ -1541,7 +1541,7 @@
   {
     "id": "F172",
     "description": "Schema ownership: the plan records whether shared migration files are deleted, tombstoned, or replaced with no-op compatibility markers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Data / API / Integrations"
@@ -1550,7 +1550,7 @@
   {
     "id": "F173",
     "description": "Schema ownership: the final schema boundary leaves no ambiguity about whether Teams is CE or EE at the database layer.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Data / API / Integrations"

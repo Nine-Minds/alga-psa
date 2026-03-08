@@ -8,7 +8,7 @@ function readRepoFile(relativePathFromRepoRoot: string): string {
 }
 
 describe('teams integrations migration', () => {
-  const migration = readRepoFile('server/migrations/20260307153000_create_teams_integrations.cjs');
+  const migration = readRepoFile('ee/server/migrations/20260307153000_create_teams_integrations.cjs');
 
   it('T083/T084: creates a tenant-scoped Teams integration record and drops it on rollback', () => {
     expect(migration).toContain("createTable('teams_integrations'");

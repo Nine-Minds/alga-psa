@@ -2450,7 +2450,7 @@
   {
     "id": "T307",
     "description": "Happy path: Schema ownership: shared migration history no longer contains active ownership of Teams integration tables.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F154"
     ]
@@ -2458,7 +2458,7 @@
   {
     "id": "T308",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for schema ownership: shared migration history no longer contains active ownership of Teams integration tables.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F154"
     ]
@@ -2466,7 +2466,7 @@
   {
     "id": "T309",
     "description": "Happy path: Schema ownership: shared migration history no longer contains active ownership of Teams package metadata columns or tables.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F155"
     ]
@@ -2474,7 +2474,7 @@
   {
     "id": "T310",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for schema ownership: shared migration history no longer contains active ownership of Teams package metadata columns or tables.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F155"
     ]
@@ -2482,7 +2482,7 @@
   {
     "id": "T311",
     "description": "Happy path: Schema ownership: EE migration history creates the Teams integration tables required for Teams tenant setup.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F156"
     ]
@@ -2490,7 +2490,7 @@
   {
     "id": "T312",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for schema ownership: EE migration history creates the Teams integration tables required for Teams tenant setup.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F156"
     ]
@@ -2498,7 +2498,7 @@
   {
     "id": "T313",
     "description": "Happy path: Schema ownership: EE migration history creates the Teams package metadata storage required for Teams manifest/install status.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F157"
     ]
@@ -2506,7 +2506,7 @@
   {
     "id": "T314",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for schema ownership: EE migration history creates the Teams package metadata storage required for Teams manifest/install status.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F157"
     ]
@@ -2514,7 +2514,7 @@
   {
     "id": "T315",
     "description": "Happy path: Schema ownership: shared migration history continues to create Microsoft profile tables.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F158"
     ]
@@ -2522,7 +2522,7 @@
   {
     "id": "T316",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for schema ownership: shared migration history continues to create Microsoft profile tables.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F158"
     ]
@@ -2530,7 +2530,7 @@
   {
     "id": "T317",
     "description": "Happy path: Schema ownership: shared migration history continues to create Microsoft profile consumer-binding tables.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F159"
     ]
@@ -2538,7 +2538,7 @@
   {
     "id": "T318",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for schema ownership: shared migration history continues to create Microsoft profile consumer-binding tables.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F159"
     ]
@@ -2546,7 +2546,7 @@
   {
     "id": "T319",
     "description": "Happy path: Schema ownership: fresh CE installs do not create Teams-specific schema.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F160"
     ]
@@ -2554,7 +2554,7 @@
   {
     "id": "T320",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for schema ownership: fresh CE installs do not create Teams-specific schema.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F160"
     ]
@@ -2562,7 +2562,7 @@
   {
     "id": "T321",
     "description": "Happy path: Schema ownership: fresh EE installs do create Teams-specific schema.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F161"
     ]
@@ -2570,7 +2570,7 @@
   {
     "id": "T322",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for schema ownership: fresh EE installs do create Teams-specific schema.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F161"
     ]
@@ -2578,7 +2578,7 @@
   {
     "id": "T323",
     "description": "Happy path: Schema ownership: CE migration validation asserts the absence of Teams tables.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F162"
     ]
@@ -2586,7 +2586,7 @@
   {
     "id": "T324",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for schema ownership: CE migration validation asserts the absence of Teams tables.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F162"
     ]
@@ -2594,7 +2594,7 @@
   {
     "id": "T325",
     "description": "Happy path: Schema ownership: EE migration validation asserts the presence of Teams tables.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F163"
     ]
@@ -2602,7 +2602,7 @@
   {
     "id": "T326",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for schema ownership: EE migration validation asserts the presence of Teams tables.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F163"
     ]
@@ -2610,7 +2610,7 @@
   {
     "id": "T327",
     "description": "Happy path: Schema ownership: Teams table creation remains tenant-scoped and aligned with the existing Teams integration data model after moving to EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F164"
     ]
@@ -2618,7 +2618,7 @@
   {
     "id": "T328",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for schema ownership: Teams table creation remains tenant-scoped and aligned with the existing Teams integration data model after moving to EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F164"
     ]
@@ -2626,7 +2626,7 @@
   {
     "id": "T329",
     "description": "Happy path: Schema ownership: Teams package metadata persistence remains tenant-scoped after moving to EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F165"
     ]
@@ -2634,7 +2634,7 @@
   {
     "id": "T330",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for schema ownership: Teams package metadata persistence remains tenant-scoped after moving to EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F165"
     ]
@@ -2642,7 +2642,7 @@
   {
     "id": "T331",
     "description": "Happy path: Schema ownership: the migration plan does not include a production backfill for current dev/test Teams rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F166"
     ]
@@ -2650,7 +2650,7 @@
   {
     "id": "T332",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for schema ownership: the migration plan does not include a production backfill for current dev/test Teams rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F166"
     ]
@@ -2658,7 +2658,7 @@
   {
     "id": "T333",
     "description": "Happy path: Schema ownership: any current shared Teams tables can be dropped or ignored in local/dev reset flows without preservation guarantees.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F167"
     ]
@@ -2666,7 +2666,7 @@
   {
     "id": "T334",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for schema ownership: any current shared Teams tables can be dropped or ignored in local/dev reset flows without preservation guarantees.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F167"
     ]
@@ -2674,7 +2674,7 @@
   {
     "id": "T335",
     "description": "Happy path: Schema ownership: the migration notes expected handling for developers whose local databases still have pre-migration shared Teams tables.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F168"
     ]
@@ -2682,7 +2682,7 @@
   {
     "id": "T336",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for schema ownership: the migration notes expected handling for developers whose local databases still have pre-migration shared Teams tables.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F168"
     ]
@@ -2690,7 +2690,7 @@
   {
     "id": "T337",
     "description": "Happy path: Schema ownership: the migration does not move shared Microsoft profile secrets or bindings into EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F169"
     ]
@@ -2698,7 +2698,7 @@
   {
     "id": "T338",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for schema ownership: the migration does not move shared Microsoft profile secrets or bindings into EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F169"
     ]
@@ -2706,7 +2706,7 @@
   {
     "id": "T339",
     "description": "Happy path: Schema ownership: the migration does not create duplicate copies of Microsoft profile tables inside EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F170"
     ]
@@ -2714,7 +2714,7 @@
   {
     "id": "T340",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for schema ownership: the migration does not create duplicate copies of Microsoft profile tables inside EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F170"
     ]
@@ -2722,7 +2722,7 @@
   {
     "id": "T341",
     "description": "Happy path: Schema ownership: Teams schema tests run against migrated databases rather than source-string-only assertions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F171"
     ]
@@ -2730,7 +2730,7 @@
   {
     "id": "T342",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for schema ownership: Teams schema tests run against migrated databases rather than source-string-only assertions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F171"
     ]
@@ -2738,7 +2738,7 @@
   {
     "id": "T343",
     "description": "Happy path: Schema ownership: the plan records whether shared migration files are deleted, tombstoned, or replaced with no-op compatibility markers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F172"
     ]
@@ -2746,7 +2746,7 @@
   {
     "id": "T344",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for schema ownership: the plan records whether shared migration files are deleted, tombstoned, or replaced with no-op compatibility markers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F172"
     ]
@@ -2754,7 +2754,7 @@
   {
     "id": "T345",
     "description": "Happy path: Schema ownership: the final schema boundary leaves no ambiguity about whether Teams is CE or EE at the database layer.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F173"
     ]
@@ -2762,7 +2762,7 @@
   {
     "id": "T346",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for schema ownership: the final schema boundary leaves no ambiguity about whether Teams is CE or EE at the database layer.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F173"
     ]
@@ -3547,7 +3547,7 @@
   {
     "id": "T439",
     "description": "Fresh CE schema validation confirms Teams tables are absent while Microsoft profile tables remain present.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F153",
       "F157",
@@ -3558,7 +3558,7 @@
   {
     "id": "T440",
     "description": "Fresh EE schema validation confirms Teams tables are present alongside shared Microsoft profile tables.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F155",
       "F156",

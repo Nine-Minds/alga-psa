@@ -8,7 +8,7 @@ function readRepoFile(relativePathFromRepoRoot: string): string {
 }
 
 describe('teams package metadata migration', () => {
-  const migration = readRepoFile('server/migrations/20260307193000_add_teams_package_metadata.cjs');
+  const migration = readRepoFile('ee/server/migrations/20260307193000_add_teams_package_metadata.cjs');
 
   it('T139/T140: adds and removes Teams app/package metadata columns on the tenant integration record', () => {
     expect(migration).toContain("hasColumn('teams_integrations', 'app_id')");
