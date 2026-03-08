@@ -200,3 +200,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd packages/projects && npx vitest run --config vitest.config.ts src/components/Projects.quick-add-contact.contract.test.ts`
 - 2026-03-08 T014: Added `packages/clients/src/components/clients/ClientDetails.quick-add-contact.contract.test.ts` to lock the default-contact picker wiring that opens `QuickAddContact` for the current client and immediately applies the created contact as the new default.
 - Validation: `cd packages/clients && npx vitest run --config vitest.config.ts src/components/clients/ClientDetails.quick-add-contact.contract.test.ts`
+- 2026-03-08 T015: Added `packages/clients/src/components/clients/BillingConfigForm.quick-add-contact.contract.test.ts` to preserve the billing-contact picker wiring that opens `QuickAddContact`, passes the current `clientId`, and clears fallback billing email when a new contact is created.
+- Validation: `cd packages/clients && npx vitest run --config vitest.config.ts src/components/clients/BillingConfigForm.quick-add-contact.contract.test.ts`
