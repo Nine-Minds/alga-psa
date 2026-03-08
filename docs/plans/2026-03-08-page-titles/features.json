@@ -218,7 +218,7 @@
   {
     "id": "F028",
     "description": "MSP page title: /msp/assets/maintenance — title: 'Asset Maintenance'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
