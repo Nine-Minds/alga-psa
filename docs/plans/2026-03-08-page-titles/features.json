@@ -130,7 +130,7 @@
   {
     "id": "F017",
     "description": "MSP page title: /msp/projects — title: 'Projects'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
