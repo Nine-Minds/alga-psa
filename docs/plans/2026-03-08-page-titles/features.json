@@ -50,7 +50,7 @@
   {
     "id": "F007",
     "description": "MSP page title: /msp/account — title: 'Account'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
