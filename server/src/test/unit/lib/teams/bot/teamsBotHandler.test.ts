@@ -49,7 +49,7 @@ vi.mock('@alga-psa/integrations/actions/integrations/teamsActions', () => ({
   getTeamsIntegrationExecutionState: getTeamsIntegrationExecutionStateMock,
 }));
 
-vi.mock('server/src/lib/teams/actions/teamsActionRegistry', () => ({
+vi.mock('../../../../../../../ee/server/src/lib/teams/actions/teamsActionRegistry', () => ({
   executeTeamsAction: executeTeamsActionMock,
   listAvailableTeamsActions: listAvailableTeamsActionsMock,
 }));

@@ -46,7 +46,7 @@ vi.mock('server/src/lib/teams/resolveTeamsLinkedUser', () => ({
   resolveTeamsLinkedUser: resolveTeamsLinkedUserMock,
 }));
 
-vi.mock('server/src/lib/teams/actions/teamsActionRegistry', () => ({
+vi.mock('../../../../../../../ee/server/src/lib/teams/actions/teamsActionRegistry', () => ({
   executeTeamsAction: executeTeamsActionMock,
   listAvailableTeamsActions: listAvailableTeamsActionsMock,
 }));

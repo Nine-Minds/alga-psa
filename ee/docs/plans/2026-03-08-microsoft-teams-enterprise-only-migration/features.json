@@ -785,7 +785,7 @@
   {
     "id": "F088",
     "description": "EE ownership: concrete Teams package manifest generation lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -794,7 +794,7 @@
   {
     "id": "F089",
     "description": "EE ownership: concrete Teams install-status and package metadata logic lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -803,7 +803,7 @@
   {
     "id": "F090",
     "description": "EE ownership: concrete Teams quick-action registry logic lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -956,7 +956,7 @@
   {
     "id": "F107",
     "description": "Server actions: shared Teams server-action modules stop exporting concrete Teams behavior directly from CE-owned paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -965,7 +965,7 @@
   {
     "id": "F108",
     "description": "Server actions: shared Teams server-action entrypoints become EE-unavailable stubs or EE delegators where external imports require a stable path.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -974,7 +974,7 @@
   {
     "id": "F109",
     "description": "Server actions: Teams package actions return EE-unavailable results in CE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -983,7 +983,7 @@
   {
     "id": "F110",
     "description": "Server actions: Teams package actions return disabled results in EE when the tenant flag is off.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -992,7 +992,7 @@
   {
     "id": "F111",
     "description": "Server actions: Teams package actions delegate into EE implementations when Teams is enabled.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1055,7 +1055,7 @@
   {
     "id": "F118",
     "description": "Server actions: Teams action modules call the shared Teams availability helper before reading Teams tenant state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1064,7 +1064,7 @@
   {
     "id": "F119",
     "description": "Server actions: Teams action result types remain stable across CE stubs and EE implementations so UI callers do not need edition-specific type handling.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1118,7 +1118,7 @@
   {
     "id": "F125",
     "description": "Server actions: Teams action wrappers preserve existing result-shape semantics for success, failure, unavailable, and disabled cases.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1127,7 +1127,7 @@
   {
     "id": "F126",
     "description": "Server actions: teams package generation still depends on shared Microsoft profile selection state rather than duplicating profile data.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"

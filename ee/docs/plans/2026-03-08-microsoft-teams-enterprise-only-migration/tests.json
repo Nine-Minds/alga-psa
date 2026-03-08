@@ -1394,7 +1394,7 @@
   {
     "id": "T175",
     "description": "Happy path: EE ownership: concrete Teams package manifest generation lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F088"
     ]
@@ -1402,7 +1402,7 @@
   {
     "id": "T176",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for eE ownership: concrete Teams package manifest generation lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F088"
     ]
@@ -1410,7 +1410,7 @@
   {
     "id": "T177",
     "description": "Happy path: EE ownership: concrete Teams install-status and package metadata logic lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F089"
     ]
@@ -1418,7 +1418,7 @@
   {
     "id": "T178",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for eE ownership: concrete Teams install-status and package metadata logic lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F089"
     ]
@@ -1426,7 +1426,7 @@
   {
     "id": "T179",
     "description": "Happy path: EE ownership: concrete Teams quick-action registry logic lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F090"
     ]
@@ -1434,7 +1434,7 @@
   {
     "id": "T180",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for eE ownership: concrete Teams quick-action registry logic lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F090"
     ]
@@ -1698,7 +1698,7 @@
   {
     "id": "T213",
     "description": "Happy path: Server actions: shared Teams server-action modules stop exporting concrete Teams behavior directly from CE-owned paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F107"
     ]
@@ -1706,7 +1706,7 @@
   {
     "id": "T214",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for server actions: shared Teams server-action modules stop exporting concrete Teams behavior directly from CE-owned paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F107"
     ]
@@ -1714,7 +1714,7 @@
   {
     "id": "T215",
     "description": "Happy path: Server actions: shared Teams server-action entrypoints become EE-unavailable stubs or EE delegators where external imports require a stable path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F108"
     ]
@@ -1722,7 +1722,7 @@
   {
     "id": "T216",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for server actions: shared Teams server-action entrypoints become EE-unavailable stubs or EE delegators where external imports require a stable path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F108"
     ]
@@ -1730,7 +1730,7 @@
   {
     "id": "T217",
     "description": "Happy path: Server actions: Teams package actions return EE-unavailable results in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F109"
     ]
@@ -1738,7 +1738,7 @@
   {
     "id": "T218",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for server actions: Teams package actions return EE-unavailable results in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F109"
     ]
@@ -1746,7 +1746,7 @@
   {
     "id": "T219",
     "description": "Happy path: Server actions: Teams package actions return disabled results in EE when the tenant flag is off.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F110"
     ]
@@ -1754,7 +1754,7 @@
   {
     "id": "T220",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for server actions: Teams package actions return disabled results in EE when the tenant flag is off.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F110"
     ]
@@ -1762,7 +1762,7 @@
   {
     "id": "T221",
     "description": "Happy path: Server actions: Teams package actions delegate into EE implementations when Teams is enabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F111"
     ]
@@ -1770,7 +1770,7 @@
   {
     "id": "T222",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for server actions: Teams package actions delegate into EE implementations when Teams is enabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F111"
     ]
@@ -1874,7 +1874,7 @@
   {
     "id": "T235",
     "description": "Happy path: Server actions: Teams action modules call the shared Teams availability helper before reading Teams tenant state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F118"
     ]
@@ -1882,7 +1882,7 @@
   {
     "id": "T236",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for server actions: Teams action modules call the shared Teams availability helper before reading Teams tenant state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F118"
     ]
@@ -1890,7 +1890,7 @@
   {
     "id": "T237",
     "description": "Happy path: Server actions: Teams action result types remain stable across CE stubs and EE implementations so UI callers do not need edition-specific type handling.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F119"
     ]
@@ -1898,7 +1898,7 @@
   {
     "id": "T238",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for server actions: Teams action result types remain stable across CE stubs and EE implementations so UI callers do not need edition-specific type handling.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F119"
     ]
@@ -1986,7 +1986,7 @@
   {
     "id": "T249",
     "description": "Happy path: Server actions: Teams action wrappers preserve existing result-shape semantics for success, failure, unavailable, and disabled cases.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F125"
     ]
@@ -1994,7 +1994,7 @@
   {
     "id": "T250",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for server actions: Teams action wrappers preserve existing result-shape semantics for success, failure, unavailable, and disabled cases.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F125"
     ]
@@ -2002,7 +2002,7 @@
   {
     "id": "T251",
     "description": "Happy path: Server actions: teams package generation still depends on shared Microsoft profile selection state rather than duplicating profile data.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F126"
     ]
@@ -2010,7 +2010,7 @@
   {
     "id": "T252",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for server actions: teams package generation still depends on shared Microsoft profile selection state rather than duplicating profile data.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F126"
     ]

@@ -12,7 +12,7 @@ import {
   normalizeTeamsActionRequest,
   resetTeamsActionIdempotencyCache,
   resolveTeamsActionTarget,
-} from 'server/src/lib/teams/actions/teamsActionRegistry';
+} from '../../../../../../../ee/server/src/lib/teams/actions/teamsActionRegistry';
 
 const {
   getTeamsIntegrationExecutionStateMock,

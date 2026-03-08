@@ -65,7 +65,7 @@ vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: hasPermissionMock,
 }));
 
-vi.mock('server/src/lib/teams/actions/teamsActionRegistry', () => ({
+vi.mock('../../../../../../../ee/server/src/lib/teams/actions/teamsActionRegistry', () => ({
   executeTeamsAction: executeTeamsActionMock,
   listAvailableTeamsActions: listAvailableTeamsActionsMock,
   listTeamsActionDefinitions: () => [

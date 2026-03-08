@@ -13,7 +13,7 @@ import {
   type TeamsActionResult,
   type TeamsActionResultItem,
   type TeamsActionSurface,
-} from 'server/src/lib/teams/actions/teamsActionRegistry';
+} from '../actions/teamsActionRegistry';
 import { resolveTeamsLinkedUser } from 'server/src/lib/teams/resolveTeamsLinkedUser';
 import { resolveTeamsTenantContext } from '../resolveTeamsTenantContext';
 

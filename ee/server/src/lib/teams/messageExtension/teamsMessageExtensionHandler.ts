@@ -16,7 +16,7 @@ import {
   type TeamsActionLink,
   type TeamsActionResult,
   type TeamsActionSurface,
-} from 'server/src/lib/teams/actions/teamsActionRegistry';
+} from '../actions/teamsActionRegistry';
 import { listPendingApprovalsForTeams } from 'server/src/lib/teams/approvals/queryPendingApprovalsForTeams';
 import { resolveTeamsLinkedUser } from 'server/src/lib/teams/resolveTeamsLinkedUser';
 import { resolveTeamsTenantContext } from '../resolveTeamsTenantContext';

@@ -115,7 +115,7 @@ vi.mock('@alga-psa/core', async () => {
   };
 });
 
-vi.mock('./providerReadiness', () => ({
+vi.mock('@alga-psa/integrations/actions/integrations/providerReadiness', () => ({
   getMicrosoftProfileReadiness: vi.fn(async (tenant: string, config: any) => {
     const secret = tenantSecrets.get(`${tenant}:${config.clientSecretRef}`) || null;
     const ready = Boolean(config.clientId && config.tenantId && secret && !config.isArchived);
