@@ -1378,7 +1378,7 @@
   {
     "id": "T173",
     "description": "Happy path: Teams identity: tenant resolution works correctly for Teams entry points across multiple vanity hosts or tenant slugs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F087"
     ]
@@ -1386,7 +1386,7 @@
   {
     "id": "T174",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: tenant resolution works correctly for teams entry points across multiple vanity hosts or tenant slugs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F087"
     ]

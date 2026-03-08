@@ -44,7 +44,7 @@ describe('GET /api/teams/auth/callback/bot', () => {
     resolveTeamsTabAuthStateMock.mockReset();
   });
 
-  it('T153: returns a Teams bot auth callback payload with resolved tenant and MSP user context', async () => {
+  it('T153/T173: returns a Teams bot auth callback payload with resolved tenant and MSP user context for slug-based or vanity-host entry points', async () => {
     resolveTeamsTabAuthStateMock.mockResolvedValue({
       status: 'ready',
       tenantId: 'tenant-1',
@@ -57,12 +57,12 @@ describe('GET /api/teams/auth/callback/bot', () => {
 
     const response = await GET(
       new Request(
-        'https://example.com/api/teams/auth/callback/bot?tenantId=tenant-1&tid=entra-tenant-1'
+        'https://desk.example.com/api/teams/auth/callback/bot?tenant=acme-helpdesk&tid=entra-tenant-1'
       ) as any
     );
 
     expect(resolveTeamsTabAuthStateMock).toHaveBeenCalledWith({
-      expectedTenantId: 'tenant-1',
+      expectedTenantId: 'acme-helpdesk',
       expectedMicrosoftTenantId: 'entra-tenant-1',
     });
     expect(response.status).toBe(200);

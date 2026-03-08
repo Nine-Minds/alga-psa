@@ -3,6 +3,7 @@ import {
   getSessionWithRevocationCheck,
   resolveTeamsMicrosoftProviderConfig,
 } from '@alga-psa/auth';
+import { getTenantIdBySlug, isValidTenantSlug } from '@alga-psa/db';
 
 type TeamsTabForbiddenReason =
   | 'missing_tenant'
@@ -51,6 +52,19 @@ function normalizeTenantClaim(value: string | null): string | null {
   return normalized ? normalized.toLowerCase() : null;
 }
 
+async function resolveExpectedTenantId(value: string | null): Promise<string | null> {
+  const normalized = normalizeOptionalString(value);
+  if (!normalized) {
+    return null;
+  }
+
+  if (!isValidTenantSlug(normalized)) {
+    return normalized;
+  }
+
+  return (await getTenantIdBySlug(normalized.toLowerCase())) || normalized;
+}
+
 export async function resolveTeamsTabAuthState(
   options: ResolveTeamsTabAuthStateOptions = {}
 ): Promise<TeamsTabAuthState> {
@@ -83,7 +97,7 @@ export async function resolveTeamsTabAuthState(
     };
   }
 
-  const expectedTenantId = normalizeOptionalString(options.expectedTenantId);
+  const expectedTenantId = await resolveExpectedTenantId(normalizeOptionalString(options.expectedTenantId));
   if (expectedTenantId && expectedTenantId !== tenantId) {
     return {
       status: 'forbidden',

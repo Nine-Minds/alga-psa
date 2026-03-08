@@ -61,7 +61,7 @@ describe('TeamsTabPage', () => {
 
     const result = await TeamsTabPage({
       searchParams: Promise.resolve({
-        tenantId: 'tenant-1',
+        tenant: 'acme-helpdesk',
         tid: 'entra-tenant-1',
         context: JSON.stringify({ page: 'ticket', ticketId: '12345' }),
       }),
@@ -69,7 +69,7 @@ describe('TeamsTabPage', () => {
 
     expect(redirectMock).not.toHaveBeenCalled();
     expect(resolveTeamsTabAuthStateMock).toHaveBeenCalledWith({
-      expectedTenantId: 'tenant-1',
+      expectedTenantId: 'acme-helpdesk',
       expectedMicrosoftTenantId: 'entra-tenant-1',
     });
     expect((result as any)?.props?.['data-teams-tab-state']).toBe('ready');

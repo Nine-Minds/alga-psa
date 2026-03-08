@@ -3,12 +3,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const getSessionMock = vi.fn();
 const getSessionWithRevocationCheckMock = vi.fn();
 const resolveTeamsMicrosoftProviderConfigMock = vi.fn();
+const getTenantIdBySlugMock = vi.fn();
 
 vi.mock('@alga-psa/auth', () => ({
   getSession: (...args: unknown[]) => getSessionMock(...args),
   getSessionWithRevocationCheck: (...args: unknown[]) => getSessionWithRevocationCheckMock(...args),
   resolveTeamsMicrosoftProviderConfig: (...args: unknown[]) =>
     resolveTeamsMicrosoftProviderConfigMock(...args),
+}));
+
+vi.mock('@alga-psa/db', () => ({
+  getTenantIdBySlug: (...args: unknown[]) => getTenantIdBySlugMock(...args),
+  isValidTenantSlug: (value: string) => value.includes('-'),
 }));
 
 const { resolveTeamsTabAuthState } = await import('server/src/lib/teams/resolveTeamsTabAuthState');
@@ -19,10 +25,11 @@ describe('resolveTeamsTabAuthState', () => {
     getSessionMock.mockReset();
     getSessionWithRevocationCheckMock.mockReset();
     resolveTeamsMicrosoftProviderConfigMock.mockReset();
+    getTenantIdBySlugMock.mockReset();
     getSessionMock.mockResolvedValue(null);
   });
 
-  it('T151/T157/T161/T167: resolves the Teams tab to the authenticated MSP user and tenant through the existing revocation-checked MSP session path and accepts the matching Microsoft tenant claim', async () => {
+  it('T151/T157/T161/T167/T173: resolves the Teams tab to the authenticated MSP user and tenant through the existing revocation-checked MSP session path, accepts the matching Microsoft tenant claim, and resolves tenant slugs correctly', async () => {
     getSessionWithRevocationCheckMock.mockResolvedValue({
       user: {
         id: 'user-1',
@@ -32,6 +39,7 @@ describe('resolveTeamsTabAuthState', () => {
         email: 'taylor@example.com',
       },
     });
+    getTenantIdBySlugMock.mockResolvedValue('tenant-1');
     resolveTeamsMicrosoftProviderConfigMock.mockResolvedValue({
       status: 'ready',
       tenantId: 'tenant-1',
@@ -40,7 +48,10 @@ describe('resolveTeamsTabAuthState', () => {
     });
 
     await expect(
-      resolveTeamsTabAuthState({ expectedMicrosoftTenantId: 'ENTRA-TENANT-1' })
+      resolveTeamsTabAuthState({
+        expectedTenantId: 'acme-helpdesk',
+        expectedMicrosoftTenantId: 'ENTRA-TENANT-1',
+      })
     ).resolves.toEqual({
       status: 'ready',
       tenantId: 'tenant-1',
@@ -55,7 +66,7 @@ describe('resolveTeamsTabAuthState', () => {
     expect(resolveTeamsMicrosoftProviderConfigMock).toHaveBeenCalledWith('tenant-1');
   });
 
-  it('T152/T158/T159/T160/T162/T168: rejects unauthenticated, wrong-tenant, wrong-Microsoft-tenant, unauthorized, and client-user Teams requests', async () => {
+  it('T152/T158/T159/T160/T162/T168/T174: rejects unauthenticated, wrong-tenant, wrong-Microsoft-tenant, unresolved tenant-slug, unauthorized, and client-user Teams requests', async () => {
     getSessionWithRevocationCheckMock.mockResolvedValue(null);
 
     await expect(resolveTeamsTabAuthState()).resolves.toEqual({
@@ -85,8 +96,9 @@ describe('resolveTeamsTabAuthState', () => {
         user_type: 'internal',
       },
     });
+    getTenantIdBySlugMock.mockResolvedValueOnce('tenant-2');
 
-    await expect(resolveTeamsTabAuthState({ expectedTenantId: 'tenant-2' })).resolves.toEqual({
+    await expect(resolveTeamsTabAuthState({ expectedTenantId: 'acme-helpdesk' })).resolves.toEqual({
       status: 'forbidden',
       reason: 'wrong_tenant',
       tenantId: 'tenant-1',
