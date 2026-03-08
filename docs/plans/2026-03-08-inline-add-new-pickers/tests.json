@@ -162,7 +162,7 @@
   {
     "id": "T021",
     "description": "QuickAddTicket: clicking '+ Add new client' opens QuickAddClient dialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]

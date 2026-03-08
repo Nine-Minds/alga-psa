@@ -212,3 +212,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd packages/ui && npx vitest run --config vitest.config.ts src/components/ClientPicker.test.tsx -t T019`
 - 2026-03-08 T020: Extended `packages/ui/src/components/ClientPicker.test.tsx` to verify that clicking `+ Add new client` calls the consumer callback exactly once and closes the dropdown portal.
 - Validation: `cd packages/ui && npx vitest run --config vitest.config.ts src/components/ClientPicker.test.tsx -t T020`
+- 2026-03-08 T021: Extended `packages/tickets/src/components/__tests__/QuickAddTicketPrefill.test.tsx` so the mocked `ClientPicker` exposes `+ Add new client` and the mocked `QuickAddClient` dialog, then verified that clicking the picker action opens the client quick-add dialog.
+- Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddTicketPrefill.test.tsx -t T021`

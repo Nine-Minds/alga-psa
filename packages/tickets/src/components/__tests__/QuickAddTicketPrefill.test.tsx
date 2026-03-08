@@ -65,13 +65,23 @@ vi.mock('../../actions/clientLookupActions', () => ({
 
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   __esModule: true,
-  ClientPicker: function ClientPickerMock({ onSelect, selectedClientId }: any) {
+  ClientPicker: function ClientPickerMock({ onSelect, selectedClientId, onAddNew, clients }: any) {
     useEffect(() => {
       if (!selectedClientId) {
         onSelect('client-1');
       }
     }, []);
-    return <div data-testid="client-picker" />;
+    return (
+      <div data-testid="client-picker">
+        <div data-testid="client-picker-value">{selectedClientId}</div>
+        <div data-testid="client-picker-count">{clients.length}</div>
+        {onAddNew ? (
+          <button type="button" onClick={onAddNew}>
+            + Add new client
+          </button>
+        ) : null}
+      </div>
+    );
   },
 }));
 
@@ -114,7 +124,27 @@ vi.mock('@alga-psa/clients/components', () => ({
         </div>
       );
     },
-    QuickAddClient: () => null,
+    QuickAddClient: ({ open, onClientAdded }: any) => {
+      if (!open) {
+        return null;
+      }
+
+      return (
+        <div data-testid="quick-add-client-dialog">
+          <button
+            type="button"
+            onClick={() => onClientAdded({
+              client_id: 'client-new',
+              client_name: 'New Client',
+              client_type: 'company',
+              is_inactive: false,
+            })}
+          >
+            Create Client
+          </button>
+        </div>
+      );
+    },
 }));
 
 vi.mock('@alga-psa/ui/components/UserPicker', () => ({
@@ -326,6 +356,20 @@ describe('QuickAddTicket prefills', () => {
     await waitFor(() => expect(screen.queryByTestId('quick-add-contact-dialog')).not.toBeInTheDocument());
     await waitFor(() => expect(screen.getByTestId('contact-picker-count')).toHaveTextContent('1'));
     expect(screen.getByTestId('contact-picker-value')).toHaveTextContent('contact-new');
+  });
+
+  it('T021: clicking add new client opens QuickAddClient dialog', async () => {
+    render(
+      <QuickAddTicket
+        open={true}
+        onOpenChange={() => undefined}
+        onTicketAdded={() => undefined}
+      />
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /\+ add new client/i }, { timeout: 5000 }));
+
+    expect(screen.getByTestId('quick-add-client-dialog')).toBeInTheDocument();
   });
 
 });
