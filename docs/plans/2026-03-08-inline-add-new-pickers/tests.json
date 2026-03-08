@@ -243,7 +243,7 @@
   {
     "id": "T031",
     "description": "QuickAddCategory calls createCategory action on submit and invokes onCategoryCreated callback",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]

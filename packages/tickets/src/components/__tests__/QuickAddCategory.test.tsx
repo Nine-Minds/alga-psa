@@ -81,17 +81,23 @@ describe('QuickAddCategory', () => {
     getAllBoardsMock.mockResolvedValue(boards);
   });
 
-  const renderDialog = (props: Partial<React.ComponentProps<typeof QuickAddCategory>> = {}) =>
-    render(
+  const renderDialog = (props: Partial<React.ComponentProps<typeof QuickAddCategory>> = {}) => {
+    const onClose = vi.fn();
+    const onCategoryCreated = vi.fn();
+
+    const view = render(
       <QuickAddCategory
         isOpen={true}
-        onClose={vi.fn()}
-        onCategoryCreated={vi.fn()}
+        onClose={onClose}
+        onCategoryCreated={onCategoryCreated}
         boards={boards}
         categories={categories}
         {...props}
-      />,
+      />
     );
+
+    return { ...view, onClose, onCategoryCreated };
+  };
 
   it('T027: renders with category name input field', () => {
     renderDialog();
@@ -120,5 +126,29 @@ describe('QuickAddCategory', () => {
     expect(screen.getByRole('option', { name: 'Hardware' })).toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Software' })).toBeNull();
     expect(screen.queryByRole('option', { name: 'Laptop' })).toBeNull();
+  });
+
+  it('T031: calls createCategory on submit and invokes onCategoryCreated callback', async () => {
+    const createdCategory = {
+      category_id: 'cat-new',
+      category_name: 'Networking',
+      board_id: 'board-1',
+      parent_category: null,
+    } as ITicketCategory;
+    createCategoryMock.mockResolvedValue(createdCategory);
+
+    const { onCategoryCreated } = renderDialog();
+
+    fireEvent.change(screen.getByLabelText(/category name/i), { target: { value: 'Networking' } });
+    fireEvent.change(screen.getByRole('combobox', { name: /select a board/i }), { target: { value: 'board-1' } });
+    fireEvent.click(screen.getByRole('button', { name: /^create$/i }));
+
+    await waitFor(() => expect(createCategoryMock).toHaveBeenCalledWith({
+      category_name: 'Networking',
+      display_order: 0,
+      board_id: 'board-1',
+      parent_category: undefined,
+    }));
+    expect(onCategoryCreated).toHaveBeenCalledWith(createdCategory);
   });
 });
