@@ -341,6 +341,8 @@ export default function DocumentUpload({
                     })
                     : t('documents.folderSelector.defaultDescription', 'Choose where to save this document')
             }
+            entityId={entityId}
+            entityType={entityType}
         />
         </>
     );

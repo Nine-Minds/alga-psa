@@ -1874,6 +1874,8 @@ const Documents = ({
           title={tDoc('folderSelector.newDocumentTitle', 'Select Folder for New Document')}
           description={tDoc('folderSelector.newDocumentDescription', 'Choose where to save this new document')}
           namespace={namespace}
+          entityId={entityId}
+          entityType={entityType}
         />
 
         {/* Folder Selector Modal for Moving Documents (Entity Mode) */}
@@ -1894,6 +1896,8 @@ const Documents = ({
               : tDoc('folderSelector.moveDescription', 'Select destination folder')
           }
           namespace={namespace}
+          entityId={entityId}
+          entityType={entityType}
         />
 
         {/* Preview Modal for Images/Videos/PDFs */}

@@ -2454,11 +2454,9 @@ async function _getFolderTreeInternal(
     explicitFolderQuery
       .andWhere('entity_id', entityId)
       .andWhere('entity_type', entityType);
-  } else {
-    explicitFolderQuery
-      .whereNull('entity_id')
-      .whereNull('entity_type');
   }
+  // When no entity scope, show ALL folders (unscoped + entity-scoped) so the
+  // global Documents page remains a complete view of every document.
 
   const explicitFolders = await explicitFolderQuery.orderBy('folder_path', 'asc');
 
@@ -2494,14 +2492,9 @@ async function _getFolderTreeInternal(
         .andWhere('da.entity_id', entityId)
         .andWhere('da.entity_type', entityType);
     });
-  } else {
-    implicitFoldersQuery.whereNotExists(function() {
-      this.select('*')
-        .from('document_associations as da')
-        .whereRaw('da.document_id = documents.document_id')
-        .andWhere('da.tenant', tenant);
-    });
   }
+  // When no entity scope, don't filter — include all documents' folder paths
+  // so the global Documents page shows everything.
 
   const implicitFolders = await implicitFoldersQuery.groupBy('folder_path');
 
@@ -2538,29 +2531,67 @@ export const getFolderTree = withAuth(async (
  * Get list of all folder paths (for folder selector)
  * @returns Promise<string[]> - Array of folder paths
  */
-export const getFolders = withAuth(async (user, { tenant }): Promise<string[] | ActionPermissionError> => {
+export const getFolders = withAuth(async (
+  user,
+  { tenant },
+  entityId?: string | null,
+  entityType?: string | null
+): Promise<string[] | ActionPermissionError> => {
   if (!(await hasPermission(user, 'document', 'read'))) {
     return permissionError('Permission denied');
   }
 
   const { knex } = await createTenantKnex();
+  const hasEntityScope = Boolean(entityId && entityType);
 
   // Get explicit folders from document_folders table
-  const explicitFolders = await knex('document_folders')
+  const explicitFolderQuery = knex('document_folders')
     .select('folder_path')
-    .where('tenant', tenant)
-    .orderBy('folder_path', 'asc');
+    .where('tenant', tenant);
 
+  if (hasEntityScope) {
+    // Entity context: show this entity's folders + global (unscoped) folders
+    explicitFolderQuery.where(function() {
+      this.where(function() {
+        this.where('entity_id', entityId).andWhere('entity_type', entityType);
+      }).orWhere(function() {
+        this.whereNull('entity_id').whereNull('entity_type');
+      });
+    });
+  }
+  // No entity scope: show all folders
+
+  const explicitFolders = await explicitFolderQuery.orderBy('folder_path', 'asc');
   const explicitPaths = explicitFolders.map((row: any) => row.folder_path);
 
   // Get implicit folder paths from documents
-  const implicitFolders = await knex('documents')
+  const implicitFoldersQuery = knex('documents')
     .select('folder_path')
     .where('tenant', tenant)
     .whereNotNull('folder_path')
-    .andWhere('folder_path', '!=', '')
-    .groupBy('folder_path');
+    .andWhere('folder_path', '!=', '');
 
+  if (hasEntityScope) {
+    // Entity context: show folders from this entity's docs + unassociated docs
+    implicitFoldersQuery.where(function() {
+      this.whereExists(function() {
+        this.select('*')
+          .from('document_associations as da')
+          .whereRaw('da.document_id = documents.document_id')
+          .andWhere('da.tenant', tenant)
+          .andWhere('da.entity_id', entityId)
+          .andWhere('da.entity_type', entityType);
+      }).orWhereNotExists(function() {
+        this.select('*')
+          .from('document_associations as da')
+          .whereRaw('da.document_id = documents.document_id')
+          .andWhere('da.tenant', tenant);
+      });
+    });
+  }
+  // No entity scope: show all documents' folder paths
+
+  const implicitFolders = await implicitFoldersQuery.groupBy('folder_path');
   const implicitPaths = implicitFolders.map((row: any) => row.folder_path);
 
   // Merge both lists (remove duplicates) and sort
@@ -2614,11 +2645,21 @@ export const getDocumentsByFolder = withAuth(async (
         .whereIn('da.entity_type', allowedEntityTypes);
     });
   } else {
-    query = query.whereNotExists(function() {
-      this.select('*')
-        .from('document_associations as da')
-        .whereRaw('da.document_id = d.document_id')
-        .andWhere('da.tenant', tenant);
+    // Global view: show documents with no associations OR associations the user has permission for
+    query = query.where(function() {
+      this.whereNotExists(function() {
+        this.select('*')
+          .from('document_associations as da')
+          .whereRaw('da.document_id = d.document_id')
+          .andWhere('da.tenant', tenant);
+      })
+      .orWhereExists(function() {
+        this.select('*')
+          .from('document_associations as da')
+          .whereRaw('da.document_id = d.document_id')
+          .andWhere('da.tenant', tenant)
+          .whereIn('da.entity_type', allowedEntityTypes);
+      });
     });
   }
 

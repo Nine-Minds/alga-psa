@@ -475,6 +475,8 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
             setPendingFile(null);
           }}
           onSelectFolder={handleFolderSelected}
+          entityId={taskId}
+          entityType="project_task"
         />
       </>
     );
@@ -567,6 +569,8 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
           setPendingFile(null);
         }}
         onSelectFolder={handleFolderSelected}
+        entityId={taskId}
+        entityType="project_task"
       />
     </>
   );

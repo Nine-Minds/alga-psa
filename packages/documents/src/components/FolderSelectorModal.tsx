@@ -16,6 +16,8 @@ interface FolderSelectorModalProps {
   title?: string;
   description?: string;
   namespace?: 'common' | 'features/documents';
+  entityId?: string;
+  entityType?: string;
 }
 
 export default function FolderSelectorModal({
@@ -24,7 +26,9 @@ export default function FolderSelectorModal({
   onSelectFolder,
   title: titleProp,
   description: descriptionProp,
-  namespace = 'common'
+  namespace = 'common',
+  entityId,
+  entityType
 }: FolderSelectorModalProps) {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [folders, setFolders] = useState<string[]>([]);
@@ -62,7 +66,7 @@ export default function FolderSelectorModal({
   const loadFolders = async () => {
     setLoading(true);
     try {
-      const folderList = await getFolders();
+      const folderList = await getFolders(entityId, entityType);
       if (isActionPermissionError(folderList)) {
         handleError(folderList.permissionError);
         setFolders([]);
@@ -102,7 +106,7 @@ export default function FolderSelectorModal({
         ? `${newFolderParent}/${newFolderName.trim()}`
         : `/${newFolderName.trim()}`;
 
-      const createResult = await createFolder(folderPath);
+      const createResult = await createFolder(folderPath, entityId, entityType);
       if (isActionPermissionError(createResult)) {
         handleError(createResult.permissionError);
         return;

@@ -29,6 +29,7 @@ import {
     Share2
 } from 'lucide-react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import VisibilityToggle from './VisibilityToggle';
 
@@ -726,104 +727,109 @@ function DocumentStorageCardComponent({
                 </div>
 
                 {!hideActions && (
-                    <div className="mt-4 pt-3 flex flex-col space-y-1.5 items-end border-t border-[rgb(var(--color-border-100))]">
-                        <Button
-                            id={`download-document-${document.document_id}-button`}
-                            variant="ghost"
-                            size="sm"
-                            onClick={async (e) => {
-                                e.stopPropagation();
-                                const isPdfTarget = document.type_name === 'text/plain' ||
-                                                    document.type_name === 'text/markdown' ||
-                                                    (!document.type_name && !document.file_id);
-                                
-                                let downloadUrl = '#';
-                                if (isPdfTarget) {
-                                    downloadUrl = `/api/documents/download/${document.document_id}?format=pdf`;
-                                } else if (document.document_id) {
-                                    downloadUrl = `/api/documents/download/${document.document_id}`;
-                                }
-                                
-                                if (downloadUrl !== '#') {
-                                    const filename = isPdfTarget ? 
-                                        `${document.document_name || 'document'}.pdf` : 
-                                        (document.document_name || 'download');
-                                    try {
-                                        await downloadDocument(downloadUrl, filename, true);
-                                    } catch (error) {
-                                        console.error('Download failed:', error);
-                                    }
-                                }
-                            }}
-                            disabled={isLoading}
-                            className="text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] inline-flex items-center"
-                        >
-                            <Download className="w-4 h-4 mr-2" />
-                            {t('documents.download', 'Download')}
-                        </Button>
-                        {onShare && (
+                    <div className="mt-4 pt-3 flex flex-row flex-wrap gap-1 justify-end border-t border-[rgb(var(--color-border-100))]">
+                        <Tooltip content={t('documents.download', 'Download')}>
                             <Button
-                                id={`share-document-${document.document_id}-button`}
+                                id={`download-document-${document.document_id}-button`}
                                 variant="ghost"
                                 size="sm"
-                                onClick={(e) => {
+                                onClick={async (e) => {
                                     e.stopPropagation();
-                                    onShare(document);
+                                    const isPdfTarget = document.type_name === 'text/plain' ||
+                                                        document.type_name === 'text/markdown' ||
+                                                        (!document.type_name && !document.file_id);
+
+                                    let downloadUrl = '#';
+                                    if (isPdfTarget) {
+                                        downloadUrl = `/api/documents/download/${document.document_id}?format=pdf`;
+                                    } else if (document.document_id) {
+                                        downloadUrl = `/api/documents/download/${document.document_id}`;
+                                    }
+
+                                    if (downloadUrl !== '#') {
+                                        const filename = isPdfTarget ?
+                                            `${document.document_name || 'document'}.pdf` :
+                                            (document.document_name || 'download');
+                                        try {
+                                            await downloadDocument(downloadUrl, filename, true);
+                                        } catch (error) {
+                                            console.error('Download failed:', error);
+                                        }
+                                    }
                                 }}
                                 disabled={isLoading}
-                                className="text-[rgb(var(--color-text-600))] hover:text-blue-600 hover:bg-blue-500/10 inline-flex items-center"
+                                className="text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] p-1.5"
                             >
-                                <Share2 className="w-4 h-4 mr-2" />
-                                {t('documents.share', 'Share')}
+                                <Download className="w-4 h-4" />
                             </Button>
+                        </Tooltip>
+                        {onShare && (
+                            <Tooltip content={t('documents.share', 'Share')}>
+                                <Button
+                                    id={`share-document-${document.document_id}-button`}
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onShare(document);
+                                    }}
+                                    disabled={isLoading}
+                                    className="text-[rgb(var(--color-text-600))] hover:text-blue-600 hover:bg-blue-500/10 p-1.5"
+                                >
+                                    <Share2 className="w-4 h-4" />
+                                </Button>
+                            </Tooltip>
                         )}
                         {showDisassociate && onDisassociate && (
-                            <Button
-                                id={`disassociate-document-${document.document_id}-button`}
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                    e.stopPropagation(); // Prevent event bubbling to parent
-                                    handleDisassociate();
-                                }}
-                                disabled={isLoading}
-                                className="text-[rgb(var(--color-text-600))] hover:text-orange-600 hover:bg-orange-500/10 inline-flex items-center"
-                            >
-                                <Unlink className="w-4 h-4 mr-2" />
-                                {isLoading ? t('common.loading', 'Loading...') : t('documents.detach', 'Detach')}
-                            </Button>
+                            <Tooltip content={t('documents.detach', 'Detach')}>
+                                <Button
+                                    id={`disassociate-document-${document.document_id}-button`}
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDisassociate();
+                                    }}
+                                    disabled={isLoading}
+                                    className="text-[rgb(var(--color-text-600))] hover:text-orange-600 hover:bg-orange-500/10 p-1.5"
+                                >
+                                    <Unlink className="w-4 h-4" />
+                                </Button>
+                            </Tooltip>
                         )}
                         {showMove && onMove && (
-                            <Button
-                                id={`move-document-${document.document_id}-button`}
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                    e.stopPropagation(); // Prevent event bubbling to parent
-                                    onMove(document);
-                                }}
-                                disabled={isLoading}
-                                className="text-[rgb(var(--color-text-600))] hover:text-purple-600 hover:bg-purple-500/10 inline-flex items-center"
-                            >
-                                <FolderInput className="w-4 h-4 mr-2" />
-                                {isLoading ? t('common.loading', 'Loading...') : t('documents.move', 'Move')}
-                            </Button>
+                            <Tooltip content={t('documents.move', 'Move')}>
+                                <Button
+                                    id={`move-document-${document.document_id}-button`}
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onMove(document);
+                                    }}
+                                    disabled={isLoading}
+                                    className="text-[rgb(var(--color-text-600))] hover:text-purple-600 hover:bg-purple-500/10 p-1.5"
+                                >
+                                    <FolderInput className="w-4 h-4" />
+                                </Button>
+                            </Tooltip>
                         )}
                         {onDelete && (
-                            <Button
-                                id={`delete-document-${document.document_id}-button`}
-                                variant="ghost"
-                                size="sm"
-                                onClick={(e) => {
-                                    e.stopPropagation(); // Prevent event bubbling to parent
-                                    handleDelete();
-                                }}
-                                disabled={isLoading}
-                                className="text-[rgb(var(--color-text-600))] hover:text-red-600 hover:bg-red-500/10 inline-flex items-center"
-                            >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                {isLoading ? t('common.loading', 'Loading...') : t('documents.deletePermanently', 'Delete Permanently')}
-                            </Button>
+                            <Tooltip content={t('documents.deletePermanently', 'Delete Permanently')}>
+                                <Button
+                                    id={`delete-document-${document.document_id}-button`}
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDelete();
+                                    }}
+                                    disabled={isLoading}
+                                    className="text-[rgb(var(--color-text-600))] hover:text-red-600 hover:bg-red-500/10 p-1.5"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </Button>
+                            </Tooltip>
                         )}
                     </div>
                 )}

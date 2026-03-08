@@ -7,7 +7,7 @@ import { Folder, Home, FolderPlus, X } from 'lucide-react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-export default function FolderSelectorModal({ isOpen, onClose, onSelectFolder, title: titleProp, description: descriptionProp, namespace = 'common' }) {
+export default function FolderSelectorModal({ isOpen, onClose, onSelectFolder, title: titleProp, description: descriptionProp, namespace = 'common', entityId, entityType }) {
   const [selectedFolder, setSelectedFolder] = useState(null);
   const [folders, setFolders] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -36,7 +36,7 @@ export default function FolderSelectorModal({ isOpen, onClose, onSelectFolder, t
     const loadFolders = async () => {
         setLoading(true);
         try {
-            const folderList = await getFolders();
+            const folderList = await getFolders(entityId, entityType);
             if (isActionPermissionError(folderList)) {
                 handleError(folderList.permissionError);
                 setFolders([]);
@@ -72,7 +72,7 @@ export default function FolderSelectorModal({ isOpen, onClose, onSelectFolder, t
             const folderPath = newFolderParent
                 ? `${newFolderParent}/${newFolderName.trim()}`
                 : `/${newFolderName.trim()}`;
-            const createResult = await createFolder(folderPath);
+            const createResult = await createFolder(folderPath, entityId, entityType);
             if (isActionPermissionError(createResult)) {
                 handleError(createResult.permissionError);
                 return;
