@@ -138,7 +138,7 @@
   {
     "id": "F018",
     "description": "MSP page title: /msp/projects/[id] — title: 'Project Details' (generateMetadata)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3c"
     ]
