@@ -346,7 +346,7 @@
   {
     "id": "F044",
     "description": "MSP page title: /msp/surveys/responses/[id] — title: 'Response Details' (generateMetadata)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3c"
     ]
