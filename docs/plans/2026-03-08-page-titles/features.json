@@ -570,7 +570,7 @@
   {
     "id": "F072",
     "description": "MSP page title: /msp/test — title: 'Test'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
