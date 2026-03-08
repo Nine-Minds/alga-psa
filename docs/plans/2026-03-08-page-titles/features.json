@@ -762,7 +762,7 @@
   {
     "id": "F096",
     "description": "Auth page title: /auth/msp/signin — title: 'MSP Sign In'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3b"
     ]
