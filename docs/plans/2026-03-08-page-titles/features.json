@@ -434,7 +434,7 @@
   {
     "id": "F055",
     "description": "MSP page title: /msp/settings/extensions — title: 'Extension Settings'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]

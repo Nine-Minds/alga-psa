@@ -102,3 +102,4 @@
 - (2026-03-08) F052: MSP page title: /msp/workflows/runs/[runId] — title: 'Workflow Run' (generateMetadata)
 - (2026-03-08) F053: MSP page title: /msp/automation-hub — title: 'Automation Hub'
 - (2026-03-08) F054: MSP page title: /msp/settings — title: 'Settings'
+- (2026-03-08) F055: MSP page title: /msp/settings/extensions — title: 'Extension Settings'
