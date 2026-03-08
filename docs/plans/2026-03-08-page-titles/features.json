@@ -426,7 +426,7 @@
   {
     "id": "F054",
     "description": "MSP page title: /msp/settings — title: 'Settings'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
