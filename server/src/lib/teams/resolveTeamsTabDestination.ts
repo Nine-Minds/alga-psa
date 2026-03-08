@@ -37,9 +37,55 @@ function getContextString(context: Record<string, unknown> | null, key: string):
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
 
+export function resolveTeamsTabDestinationFromPsaUrl(psaUrl: string | undefined): TeamsTabDestination {
+  if (!psaUrl) {
+    return { type: 'my_work' };
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(psaUrl, 'https://teams.alga.invalid');
+  } catch {
+    return { type: 'my_work' };
+  }
+
+  const pathname = parsed.pathname.replace(/\/+$/, '');
+  const segments = pathname.split('/').filter(Boolean);
+
+  if (segments[0] !== 'msp') {
+    return { type: 'my_work' };
+  }
+
+  if (segments[1] === 'tickets' && segments[2]) {
+    return { type: 'ticket', ticketId: segments[2] };
+  }
+
+  if (segments[1] === 'projects' && segments[2]) {
+    const taskId = parsed.searchParams.get('taskId')?.trim();
+    return taskId ? { type: 'project_task', projectId: segments[2], taskId } : { type: 'my_work' };
+  }
+
+  if (segments[1] === 'time-sheet-approvals') {
+    const approvalId = parsed.searchParams.get('approvalId')?.trim();
+    return approvalId ? { type: 'approval', approvalId } : { type: 'my_work' };
+  }
+
+  if (segments[1] === 'time-entry' || segments[1] === 'time') {
+    const entryId = parsed.searchParams.get('entryId')?.trim();
+    return entryId ? { type: 'time_entry', entryId } : { type: 'my_work' };
+  }
+
+  if (segments[1] === 'contacts' && segments[2]) {
+    const clientId = parsed.searchParams.get('clientId')?.trim() || undefined;
+    return { type: 'contact', contactId: segments[2], clientId };
+  }
+
+  return { type: 'my_work' };
+}
+
 export function resolveTeamsTabDestination(params?: SearchParams): TeamsTabDestination {
   const context = parseTeamsContext(getSingleSearchParam(params?.context));
-  const page = getContextString(context, 'page') || getSingleSearchParam(params?.page) || 'my_work';
+  const page = getContextString(context, 'page') || getSingleSearchParam(params?.page);
 
   switch (page) {
     case 'ticket': {
@@ -64,9 +110,18 @@ export function resolveTeamsTabDestination(params?: SearchParams): TeamsTabDesti
       const clientId = getContextString(context, 'clientId') || getSingleSearchParam(params?.clientId);
       return contactId ? { type: 'contact', contactId, clientId } : { type: 'my_work' };
     }
-    default:
-      return { type: 'my_work' };
   }
+
+  const notificationLink =
+    getSingleSearchParam(params?.notificationLink) ||
+    getSingleSearchParam(params?.link) ||
+    getSingleSearchParam(params?.webUrl);
+
+  if (notificationLink) {
+    return resolveTeamsTabDestinationFromPsaUrl(notificationLink);
+  }
+
+  return { type: 'my_work' };
 }
 
 export function describeTeamsTabDestination(destination: TeamsTabDestination): {

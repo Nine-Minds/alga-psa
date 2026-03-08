@@ -978,7 +978,7 @@
   {
     "id": "F106",
     "description": "Personal tab: activity-feed notification deep links open the correct tab destination.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",

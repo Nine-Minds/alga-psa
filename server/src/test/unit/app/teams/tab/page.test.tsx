@@ -343,4 +343,28 @@ describe('TeamsTabPage', () => {
       'That contact is unavailable or you no longer have access to it.'
     );
   });
+
+  it('T212: falls back safely when an activity-feed notification link resolves to an unavailable Teams tab destination after authentication succeeds', async () => {
+    resolveTeamsTabAuthStateMock.mockResolvedValue(readyAuthState);
+    resolveTeamsTabAccessStateMock.mockResolvedValue({
+      status: 'forbidden',
+      reason: 'not_found',
+      message: 'That ticket is unavailable or you no longer have access to it.',
+    });
+
+    const result = await TeamsTabPage({
+      searchParams: Promise.resolve({
+        notificationLink: '/msp/tickets/ticket-123',
+      }),
+    });
+
+    expect(resolveTeamsTabAccessStateMock).toHaveBeenCalledWith(readyAuthState, {
+      type: 'ticket',
+      ticketId: 'ticket-123',
+    });
+    expect((result as any)?.props?.['data-teams-tab-destination']).toBe('my_work');
+    expect((result as any)?.props?.['data-teams-tab-requested-destination']).toBe('ticket');
+    expect(collectNormalizedText(result)).toContain('Requested Teams record unavailable');
+    expect(collectNormalizedText(result)).toContain('You landed on your Teams work list instead of ticket ticket-123');
+  });
 });

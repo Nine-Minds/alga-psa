@@ -120,7 +120,10 @@ vi.mock('./providerReadiness', () => ({
   }),
 }));
 
-import { getTeamsAppPackageStatus } from './teamsPackageActions';
+import {
+  buildTeamsPersonalTabDeepLinkFromPsaUrl,
+  getTeamsAppPackageStatus,
+} from './teamsPackageActions';
 
 function addMicrosoftProfile({
   tenant,
@@ -298,5 +301,48 @@ describe('Teams app package actions', () => {
       success: false,
       error: 'Selected Microsoft profile is not ready for Teams package generation',
     });
+  });
+
+  it('T211: converts notification-style PSA record URLs into Teams personal-tab deep links so activity-feed notifications can target the correct destination without duplicating record-link rules', () => {
+    expect(
+      buildTeamsPersonalTabDeepLinkFromPsaUrl(
+        'https://tenant.example.com',
+        'teams-client-id',
+        '/msp/tickets/ticket-123'
+      )
+    ).toContain(encodeURIComponent('{"page":"ticket","ticketId":"ticket-123"}'));
+
+    expect(
+      buildTeamsPersonalTabDeepLinkFromPsaUrl(
+        'https://tenant.example.com',
+        'teams-client-id',
+        '/msp/projects/project-44?taskId=task-88'
+      )
+    ).toContain(encodeURIComponent('{"page":"project_task","projectId":"project-44","taskId":"task-88"}'));
+
+    expect(
+      buildTeamsPersonalTabDeepLinkFromPsaUrl(
+        'https://tenant.example.com',
+        'teams-client-id',
+        '/msp/time-sheet-approvals?approvalId=approval-2'
+      )
+    ).toContain(encodeURIComponent('{"page":"approval","approvalId":"approval-2"}'));
+  });
+
+  it('T212: falls back notification-style Teams deep links to my-work when the PSA URL is malformed or not a supported Teams destination', () => {
+    const unsupported = buildTeamsPersonalTabDeepLinkFromPsaUrl(
+      'https://tenant.example.com',
+      'teams-client-id',
+      '/msp/documents?doc=document-7'
+    );
+
+    const malformed = buildTeamsPersonalTabDeepLinkFromPsaUrl(
+      'https://tenant.example.com',
+      'teams-client-id',
+      'not a url'
+    );
+
+    expect(unsupported).toContain(encodeURIComponent('{"page":"my_work"}'));
+    expect(malformed).toContain(encodeURIComponent('{"page":"my_work"}'));
   });
 });

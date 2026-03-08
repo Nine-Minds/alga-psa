@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   describeTeamsTabDestination,
   resolveTeamsTabDestination,
+  resolveTeamsTabDestinationFromPsaUrl,
 } from 'server/src/lib/teams/resolveTeamsTabDestination';
 
 describe('resolveTeamsTabDestination', () => {
@@ -129,6 +130,58 @@ describe('resolveTeamsTabDestination', () => {
     expect(describeTeamsTabDestination({ type: 'my_work' })).toEqual({
       title: 'My work',
       summary: 'Your Teams personal tab is ready to load your PSA work queue.',
+    });
+  });
+
+  it('T211: derives Teams tab destinations from notification-style PSA record URLs so activity-feed handoffs can open the intended personal-tab destination', () => {
+    expect(resolveTeamsTabDestinationFromPsaUrl('/msp/tickets/ticket-123')).toEqual({
+      type: 'ticket',
+      ticketId: 'ticket-123',
+    });
+    expect(resolveTeamsTabDestinationFromPsaUrl('/msp/projects/project-44?taskId=task-88')).toEqual({
+      type: 'project_task',
+      projectId: 'project-44',
+      taskId: 'task-88',
+    });
+    expect(resolveTeamsTabDestinationFromPsaUrl('/msp/time-sheet-approvals?approvalId=approval-2')).toEqual({
+      type: 'approval',
+      approvalId: 'approval-2',
+    });
+    expect(resolveTeamsTabDestinationFromPsaUrl('/msp/time-entry?entryId=entry-9')).toEqual({
+      type: 'time_entry',
+      entryId: 'entry-9',
+    });
+    expect(resolveTeamsTabDestinationFromPsaUrl('/msp/contacts/contact-5?clientId=client-9')).toEqual({
+      type: 'contact',
+      contactId: 'contact-5',
+      clientId: 'client-9',
+    });
+    expect(
+      resolveTeamsTabDestination({
+        notificationLink: '/msp/tickets/ticket-123',
+      })
+    ).toEqual({
+      type: 'ticket',
+      ticketId: 'ticket-123',
+    });
+  });
+
+  it('T212: falls back safely to my-work when notification-style PSA links are malformed or unsupported before the Teams tab tries to render an entity destination', () => {
+    expect(resolveTeamsTabDestinationFromPsaUrl('not a url')).toEqual({
+      type: 'my_work',
+    });
+    expect(resolveTeamsTabDestinationFromPsaUrl('/msp/projects/project-44')).toEqual({
+      type: 'my_work',
+    });
+    expect(resolveTeamsTabDestinationFromPsaUrl('/msp/documents?doc=document-7')).toEqual({
+      type: 'my_work',
+    });
+    expect(
+      resolveTeamsTabDestination({
+        notificationLink: '/msp/projects/project-44',
+      })
+    ).toEqual({
+      type: 'my_work',
     });
   });
 });

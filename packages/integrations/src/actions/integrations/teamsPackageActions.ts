@@ -240,12 +240,57 @@ function buildTeamsTabContext(destination: TeamsDeepLinkDestination): Record<str
   }
 }
 
+function resolveTeamsDeepLinkDestinationFromPsaUrl(psaUrl: string): TeamsDeepLinkDestination {
+  let parsed: URL;
+  try {
+    parsed = new URL(psaUrl, 'https://teams.alga.invalid');
+  } catch {
+    return { type: 'my_work' };
+  }
+
+  const pathname = parsed.pathname.replace(/\/+$/, '');
+  const segments = pathname.split('/').filter(Boolean);
+
+  if (segments[0] !== 'msp') {
+    return { type: 'my_work' };
+  }
+
+  if (segments[1] === 'tickets' && segments[2]) {
+    return { type: 'ticket', ticketId: segments[2] };
+  }
+
+  if (segments[1] === 'projects' && segments[2]) {
+    const taskId = parsed.searchParams.get('taskId')?.trim();
+    return taskId ? { type: 'project_task', projectId: segments[2], taskId } : { type: 'my_work' };
+  }
+
+  if (segments[1] === 'time-sheet-approvals') {
+    const approvalId = parsed.searchParams.get('approvalId')?.trim();
+    return approvalId ? { type: 'approval', approvalId } : { type: 'my_work' };
+  }
+
+  if (segments[1] === 'time-entry' || segments[1] === 'time') {
+    const entryId = parsed.searchParams.get('entryId')?.trim();
+    return entryId ? { type: 'time_entry', entryId } : { type: 'my_work' };
+  }
+
+  if (segments[1] === 'contacts' && segments[2]) {
+    return { type: 'contact', contactId: segments[2] };
+  }
+
+  return { type: 'my_work' };
+}
+
 export function buildTeamsPersonalTabDeepLink(baseUrl: string, appId: string, destination: TeamsDeepLinkDestination): string {
   const params = new URLSearchParams({
     webUrl: buildTeamsTabWebUrl(baseUrl, destination),
     context: JSON.stringify(buildTeamsTabContext(destination)),
   });
   return `https://teams.microsoft.com/l/entity/${encodeURIComponent(appId)}/${encodeURIComponent(TEAMS_PERSONAL_TAB_ENTITY_ID)}?${params.toString()}`;
+}
+
+export function buildTeamsPersonalTabDeepLinkFromPsaUrl(baseUrl: string, appId: string, psaUrl: string): string {
+  return buildTeamsPersonalTabDeepLink(baseUrl, appId, resolveTeamsDeepLinkDestinationFromPsaUrl(psaUrl));
 }
 
 function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: MicrosoftProfileRow): TeamsAppManifest {

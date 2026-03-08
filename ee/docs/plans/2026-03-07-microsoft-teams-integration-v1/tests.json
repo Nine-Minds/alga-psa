@@ -1682,7 +1682,7 @@
   {
     "id": "T211",
     "description": "Happy path: Personal tab: activity-feed notification deep links open the correct tab destination.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F106"
     ]
@@ -1690,7 +1690,7 @@
   {
     "id": "T212",
     "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: activity-feed notification deep links open the correct tab destination.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F106"
     ]

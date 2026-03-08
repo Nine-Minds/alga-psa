@@ -28,6 +28,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) The first Teams setup slice should live in `Integrations -> Providers` next to Microsoft profile management so admins can move between shared Microsoft credential setup and Teams setup without a separate navigation model.
 - (2026-03-07) Until the tenant-scoped Teams integration record exists, the Teams settings UI should be a guided readiness card: list Microsoft profiles already ready for Teams and route tenants with no eligible profile back to Microsoft profile management.
 - (2026-03-07) Consumer bindings should be lazy and tenant-scoped like Microsoft profile backfill: legacy Microsoft consumers (`email`, `calendar`, `msp_sso`) get compatibility binding rows on first binding-aware access, while `teams` remains explicit-only and never falls back silently.
+- (2026-03-07) Teams activity-feed handoffs should reuse existing PSA internal record URLs as the notification source of truth, then derive the Teams personal-tab destination from those URLs instead of introducing a second notification-only entity mapping format.
 
 ## Discoveries / Constraints
 
@@ -134,6 +135,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/resolveTeamsTabAuthState.test.ts`
 - (2026-03-07) Verified Teams personal-tab default landing and fallback routing with:
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/app/teams/tab/page.test.tsx src/test/unit/lib/teams/resolveTeamsTabDestination.test.ts`
+- (2026-03-07) Verified Teams activity-feed notification deep-link routing with:
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/resolveTeamsTabDestination.test.ts src/test/unit/app/teams/tab/page.test.tsx`
+  - `cd server && npx vitest run --config vitest.config.ts ../packages/integrations/src/actions/integrations/teamsPackageActions.test.ts`
+  - `pnpm --dir packages/integrations typecheck`
 
 ## Progress Log
 
@@ -190,6 +195,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Completed `T207` and `T208` with page assertions proving authorized entity destinations render an embedded PSA route while fallback states intentionally suppress that embed and stay on the safe Teams shell.
 - (2026-03-07) Completed `F105` by keeping the embedded PSA composition on same-origin internal MSP routes that inherit the authenticated MSP session and tenant-scoped host context, avoiding any second auth callback or token-bearing bootstrap channel inside the iframe URL.
 - (2026-03-07) Completed `T209` and `T210` with URL-builder tests asserting embedded PSA routes remain relative `/msp/...` paths without callback/token parameters plus fallback-shell tests that suppress the embed when the requested destination is unavailable.
+- (2026-03-07) Completed `F106` by teaching Teams personal-tab routing and Teams deep-link helpers to derive supported tab destinations from existing PSA notification URLs (`/msp/tickets/...`, `/msp/projects/...?...`, `/msp/time-sheet-approvals?...`, `/msp/time-entry?...`, `/msp/contacts/...`) so activity-feed handoffs can target the exact tab destination without a second notification-specific mapping layer.
+- (2026-03-07) Completed `T211` and `T212` with unit and page coverage for notification-link destination parsing, Teams deep-link generation from PSA URLs, and safe my-work fallback when a notification targets an unsupported or unavailable record.
   - `server/migrations/20260307120000_create_microsoft_profiles.cjs`
   - `server/migrations/20260307143000_create_microsoft_profile_consumer_bindings.cjs`
   - `server/migrations/20260307153000_create_teams_integrations.cjs`
@@ -201,7 +208,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) `npx vitest run --config vitest.config.ts src/test/unit/app/teams/tab/page.test.tsx src/test/unit/lib/teams/resolveTeamsTabDestination.test.ts src/test/unit/lib/teams/buildTeamsFullPsaUrl.test.ts`
 - (2026-03-07) `npx vitest run --config vitest.config.ts src/test/unit/app/teams/tab/page.test.tsx`
 - (2026-03-07) `npx vitest run --config vitest.config.ts src/test/unit/app/teams/tab/page.test.tsx src/test/unit/lib/teams/buildTeamsFullPsaUrl.test.ts`
-- (2026-03-07) Next unchecked feature after this slice is `F106` (Activity-feed notification deep links open the correct tab destination).
+- (2026-03-07) Next unchecked feature after this slice is `F107` (Bot action results can open the correct tab destination).
 
 ## Links / References
 
