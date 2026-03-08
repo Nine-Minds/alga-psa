@@ -586,7 +586,7 @@
   {
     "id": "F074",
     "description": "MSP page title: /msp/test/collab — title: 'Collaboration Test'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
