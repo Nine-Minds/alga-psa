@@ -749,7 +749,7 @@
   {
     "id": "F084",
     "description": "EE ownership: concrete Teams bot command handling lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -758,7 +758,7 @@
   {
     "id": "F085",
     "description": "EE ownership: concrete Teams message-extension search handling lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -767,7 +767,7 @@
   {
     "id": "F086",
     "description": "EE ownership: concrete Teams message-extension action handling lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -776,7 +776,7 @@
   {
     "id": "F087",
     "description": "EE ownership: concrete Teams adaptive-card and dialog submit handling lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -830,7 +830,7 @@
   {
     "id": "F093",
     "description": "EE ownership: concrete Teams tenant-context resolution used only by Teams runtime surfaces lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -839,7 +839,7 @@
   {
     "id": "F094",
     "description": "EE ownership: concrete Teams auth callback helpers used only by Teams runtime surfaces live under EE-owned paths after the migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"

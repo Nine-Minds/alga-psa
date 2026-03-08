@@ -5,7 +5,7 @@ const { handleTeamsMessageExtensionRequestMock } = vi.hoisted(() => ({
   handleTeamsMessageExtensionRequestMock: vi.fn(),
 }));
 
-vi.mock('server/src/lib/teams/messageExtension/teamsMessageExtensionHandler', () => ({
+vi.mock('../../../../../../../ee/server/src/lib/teams/messageExtension/teamsMessageExtensionHandler', () => ({
   handleTeamsMessageExtensionRequest: handleTeamsMessageExtensionRequestMock,
 }));
 

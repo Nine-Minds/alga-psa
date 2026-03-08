@@ -1,4 +1,4 @@
-import { handleTeamsAuthCallback } from 'server/src/lib/teams/handleTeamsAuthCallback';
+import { handleTeamsAuthCallback } from '../../../../../../lib/teams/handleTeamsAuthCallback';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';

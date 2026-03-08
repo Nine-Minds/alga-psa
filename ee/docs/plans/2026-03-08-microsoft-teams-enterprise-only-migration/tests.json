@@ -1330,7 +1330,7 @@
   {
     "id": "T167",
     "description": "Happy path: EE ownership: concrete Teams bot command handling lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084"
     ]
@@ -1338,7 +1338,7 @@
   {
     "id": "T168",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for eE ownership: concrete Teams bot command handling lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084"
     ]
@@ -1346,7 +1346,7 @@
   {
     "id": "T169",
     "description": "Happy path: EE ownership: concrete Teams message-extension search handling lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F085"
     ]
@@ -1354,7 +1354,7 @@
   {
     "id": "T170",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for eE ownership: concrete Teams message-extension search handling lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F085"
     ]
@@ -1362,7 +1362,7 @@
   {
     "id": "T171",
     "description": "Happy path: EE ownership: concrete Teams message-extension action handling lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F086"
     ]
@@ -1370,7 +1370,7 @@
   {
     "id": "T172",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for eE ownership: concrete Teams message-extension action handling lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F086"
     ]
@@ -1378,7 +1378,7 @@
   {
     "id": "T173",
     "description": "Happy path: EE ownership: concrete Teams adaptive-card and dialog submit handling lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F087"
     ]
@@ -1386,7 +1386,7 @@
   {
     "id": "T174",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for eE ownership: concrete Teams adaptive-card and dialog submit handling lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F087"
     ]
@@ -1474,7 +1474,7 @@
   {
     "id": "T185",
     "description": "Happy path: EE ownership: concrete Teams tenant-context resolution used only by Teams runtime surfaces lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F093"
     ]
@@ -1482,7 +1482,7 @@
   {
     "id": "T186",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for eE ownership: concrete Teams tenant-context resolution used only by Teams runtime surfaces lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F093"
     ]
@@ -1490,7 +1490,7 @@
   {
     "id": "T187",
     "description": "Happy path: EE ownership: concrete Teams auth callback helpers used only by Teams runtime surfaces live under EE-owned paths after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F094"
     ]
@@ -1498,7 +1498,7 @@
   {
     "id": "T188",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for eE ownership: concrete Teams auth callback helpers used only by Teams runtime surfaces live under EE-owned paths after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F094"
     ]

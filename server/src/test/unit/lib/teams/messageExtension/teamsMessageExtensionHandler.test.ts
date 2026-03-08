@@ -6,7 +6,7 @@ import {
   handleTeamsMessageExtensionActivity,
   handleTeamsMessageExtensionRequest,
   type TeamsMessageExtensionActivity,
-} from 'server/src/lib/teams/messageExtension/teamsMessageExtensionHandler';
+} from '../../../../../../../ee/server/src/lib/teams/messageExtension/teamsMessageExtensionHandler';
 
 const {
   resolveTeamsTenantContextMock,
@@ -34,7 +34,7 @@ const {
   getTeamsRuntimeAvailabilityMock: vi.fn(),
 }));
 
-vi.mock('server/src/lib/teams/resolveTeamsTenantContext', () => ({
+vi.mock('../../../../../../../ee/server/src/lib/teams/resolveTeamsTenantContext', () => ({
   resolveTeamsTenantContext: resolveTeamsTenantContextMock,
 }));
 
@@ -87,7 +87,7 @@ vi.mock('@shared/models/ticketModel', () => ({
   },
 }));
 
-vi.mock('server/src/lib/teams/getTeamsRuntimeAvailability', () => ({
+vi.mock('../../../../../../../ee/server/src/lib/teams/getTeamsRuntimeAvailability', () => ({
   getTeamsRuntimeAvailability: (...args: unknown[]) => getTeamsRuntimeAvailabilityMock(...args),
 }));
 

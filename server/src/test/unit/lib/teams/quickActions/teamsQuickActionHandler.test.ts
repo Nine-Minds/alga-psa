@@ -3,7 +3,7 @@ import { hasPermission } from 'server/src/lib/auth/rbac';
 import {
   handleTeamsQuickActionActivity,
   handleTeamsQuickActionRequest,
-} from 'server/src/lib/teams/quickActions/teamsQuickActionHandler';
+} from '../../../../../../../ee/server/src/lib/teams/quickActions/teamsQuickActionHandler';
 
 const {
   resolveTeamsTenantContextMock,
@@ -38,7 +38,7 @@ vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: hasPermissionMock,
 }));
 
-vi.mock('server/src/lib/teams/resolveTeamsTenantContext', () => ({
+vi.mock('../../../../../../../ee/server/src/lib/teams/resolveTeamsTenantContext', () => ({
   resolveTeamsTenantContext: resolveTeamsTenantContextMock,
 }));
 
@@ -51,7 +51,7 @@ vi.mock('server/src/lib/teams/actions/teamsActionRegistry', () => ({
   listAvailableTeamsActions: listAvailableTeamsActionsMock,
 }));
 
-vi.mock('server/src/lib/teams/getTeamsRuntimeAvailability', () => ({
+vi.mock('../../../../../../../ee/server/src/lib/teams/getTeamsRuntimeAvailability', () => ({
   getTeamsRuntimeAvailability: (...args: unknown[]) => getTeamsRuntimeAvailabilityMock(...args),
 }));
 

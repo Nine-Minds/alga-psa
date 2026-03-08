@@ -4,7 +4,7 @@ import { getTeamsAvailability, type TeamsAvailability } from '@alga-psa/integrat
 import { buildTeamsReauthPath } from 'server/src/lib/teams/buildTeamsReauthUrl';
 import { buildTeamsFullPsaUrl } from 'server/src/lib/teams/buildTeamsFullPsaUrl';
 import { resolveTeamsTabAccessState } from 'server/src/lib/teams/resolveTeamsTabAccessState';
-import { resolveTeamsTabAuthState } from 'server/src/lib/teams/resolveTeamsTabAuthState';
+import { resolveTeamsTabAuthState } from '../../../lib/teams/resolveTeamsTabAuthState';
 import {
   describeTeamsTabDestination,
   resolveTeamsTabEntrySource,

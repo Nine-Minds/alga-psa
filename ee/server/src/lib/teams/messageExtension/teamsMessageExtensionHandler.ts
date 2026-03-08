@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { ContactService } from 'server/src/lib/api/services/ContactService';
 import { TicketService } from 'server/src/lib/api/services/TicketService';
-import { getTeamsRuntimeAvailability } from 'server/src/lib/teams/getTeamsRuntimeAvailability';
+import { getTeamsRuntimeAvailability } from '../getTeamsRuntimeAvailability';
 import {
   executeTeamsAction,
   listAvailableTeamsActions,
@@ -19,8 +19,8 @@ import {
 } from 'server/src/lib/teams/actions/teamsActionRegistry';
 import { listPendingApprovalsForTeams } from 'server/src/lib/teams/approvals/queryPendingApprovalsForTeams';
 import { resolveTeamsLinkedUser } from 'server/src/lib/teams/resolveTeamsLinkedUser';
-import { resolveTeamsTenantContext } from 'server/src/lib/teams/resolveTeamsTenantContext';
-import { buildTeamsAvailabilityJsonResponse } from 'server/src/lib/teams/teamsAvailabilityResponses';
+import { resolveTeamsTenantContext } from '../resolveTeamsTenantContext';
+import { buildTeamsAvailabilityJsonResponse } from '../teamsAvailabilityResponses';
 
 const MESSAGE_EXTENSION_SURFACE: TeamsActionSurface = 'message_extension';
 const ticketService = new TicketService();

@@ -1,5 +1,5 @@
 import { getTeamsAvailability, type TeamsAvailability } from '@alga-psa/integrations/lib/teamsAvailability';
-import { resolveTeamsTenantContext, type TeamsCapability } from 'server/src/lib/teams/resolveTeamsTenantContext';
+import { resolveTeamsTenantContext, type TeamsCapability } from './resolveTeamsTenantContext';
 
 interface GetTeamsRuntimeAvailabilityInput {
   explicitTenantId?: string | null;

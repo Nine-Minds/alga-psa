@@ -5,7 +5,7 @@ const { handleTeamsQuickActionRequestMock } = vi.hoisted(() => ({
   handleTeamsQuickActionRequestMock: vi.fn(),
 }));
 
-vi.mock('server/src/lib/teams/quickActions/teamsQuickActionHandler', () => ({
+vi.mock('../../../../../../ee/server/src/lib/teams/quickActions/teamsQuickActionHandler', () => ({
   handleTeamsQuickActionRequest: handleTeamsQuickActionRequestMock,
 }));
 

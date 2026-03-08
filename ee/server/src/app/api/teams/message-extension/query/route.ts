@@ -1,4 +1,4 @@
-import { handleTeamsMessageExtensionRequest } from 'server/src/lib/teams/messageExtension/teamsMessageExtensionHandler';
+import { handleTeamsMessageExtensionRequest } from '../../../../../lib/teams/messageExtension/teamsMessageExtensionHandler';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';

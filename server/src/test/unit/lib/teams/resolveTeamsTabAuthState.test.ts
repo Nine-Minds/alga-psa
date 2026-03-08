@@ -17,7 +17,7 @@ vi.mock('@alga-psa/db', () => ({
   isValidTenantSlug: (value: string) => value.includes('-'),
 }));
 
-const { resolveTeamsTabAuthState } = await import('server/src/lib/teams/resolveTeamsTabAuthState');
+const { resolveTeamsTabAuthState } = await import('../../../../../../ee/server/src/lib/teams/resolveTeamsTabAuthState');
 
 describe('resolveTeamsTabAuthState', () => {
   beforeEach(() => {

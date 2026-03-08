@@ -17,7 +17,7 @@ vi.mock('@alga-psa/ui/components/Card', () => ({
   Card: CardMock,
 }));
 
-vi.mock('server/src/lib/teams/resolveTeamsTabAuthState', () => ({
+vi.mock('../../../../../../../ee/server/src/lib/teams/resolveTeamsTabAuthState', () => ({
   resolveTeamsTabAuthState: (...args: unknown[]) => resolveTeamsTabAuthStateMock(...args),
 }));
 

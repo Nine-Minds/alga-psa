@@ -1,4 +1,4 @@
-import { handleTeamsQuickActionRequest } from 'server/src/lib/teams/quickActions/teamsQuickActionHandler';
+import { handleTeamsQuickActionRequest } from '../../../../lib/teams/quickActions/teamsQuickActionHandler';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';

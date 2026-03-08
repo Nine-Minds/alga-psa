@@ -1,8 +1,8 @@
 import { createTenantKnex, getUserWithRoles } from '@alga-psa/db';
 import { NextResponse } from 'next/server';
 import { hasPermission } from 'server/src/lib/auth/rbac';
-import { getTeamsRuntimeAvailability } from 'server/src/lib/teams/getTeamsRuntimeAvailability';
-import { buildTeamsAvailabilityJsonResponse } from 'server/src/lib/teams/teamsAvailabilityResponses';
+import { getTeamsRuntimeAvailability } from '../getTeamsRuntimeAvailability';
+import { buildTeamsAvailabilityJsonResponse } from '../teamsAvailabilityResponses';
 import {
   executeTeamsAction,
   listAvailableTeamsActions,
@@ -12,7 +12,7 @@ import {
   type TeamsActionResult,
 } from 'server/src/lib/teams/actions/teamsActionRegistry';
 import { resolveTeamsLinkedUser } from 'server/src/lib/teams/resolveTeamsLinkedUser';
-import { resolveTeamsTenantContext } from 'server/src/lib/teams/resolveTeamsTenantContext';
+import { resolveTeamsTenantContext } from '../resolveTeamsTenantContext';
 
 const QUICK_ACTION_IDS = ['assign_ticket', 'add_note', 'reply_to_contact', 'log_time', 'approval_response'] as const;
 type QuickActionId = typeof QUICK_ACTION_IDS[number];

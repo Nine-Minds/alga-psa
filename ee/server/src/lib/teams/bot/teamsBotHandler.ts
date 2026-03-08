@@ -2,8 +2,8 @@ import { createTenantKnex, getUserWithRoles } from '@alga-psa/db';
 import { getTeamsIntegrationExecutionState } from '@alga-psa/integrations/actions/integrations/teamsActions';
 import { NextResponse } from 'next/server';
 import { hasPermission } from 'server/src/lib/auth/rbac';
-import { getTeamsRuntimeAvailability } from 'server/src/lib/teams/getTeamsRuntimeAvailability';
-import { buildTeamsAvailabilityJsonResponse } from 'server/src/lib/teams/teamsAvailabilityResponses';
+import { getTeamsRuntimeAvailability } from '../getTeamsRuntimeAvailability';
+import { buildTeamsAvailabilityJsonResponse } from '../teamsAvailabilityResponses';
 import {
   executeTeamsAction,
   listAvailableTeamsActions,
@@ -15,7 +15,7 @@ import {
   type TeamsActionSurface,
 } from 'server/src/lib/teams/actions/teamsActionRegistry';
 import { resolveTeamsLinkedUser } from 'server/src/lib/teams/resolveTeamsLinkedUser';
-import { resolveTeamsTenantContext } from 'server/src/lib/teams/resolveTeamsTenantContext';
+import { resolveTeamsTenantContext } from '../resolveTeamsTenantContext';
 
 export interface TeamsBotActivity {
   type?: string;

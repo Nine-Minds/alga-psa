@@ -4,7 +4,7 @@ import {
   handleTeamsBotActivity,
   handleTeamsBotActivityRequest,
   type TeamsBotActivity,
-} from 'server/src/lib/teams/bot/teamsBotHandler';
+} from '../../../../../../../ee/server/src/lib/teams/bot/teamsBotHandler';
 
 const {
   resolveTeamsTenantContextMock,
@@ -28,7 +28,7 @@ const {
   getTeamsRuntimeAvailabilityMock: vi.fn(),
 }));
 
-vi.mock('server/src/lib/teams/resolveTeamsTenantContext', () => ({
+vi.mock('../../../../../../../ee/server/src/lib/teams/resolveTeamsTenantContext', () => ({
   resolveTeamsTenantContext: resolveTeamsTenantContextMock,
 }));
 
@@ -54,7 +54,7 @@ vi.mock('server/src/lib/teams/actions/teamsActionRegistry', () => ({
   listAvailableTeamsActions: listAvailableTeamsActionsMock,
 }));
 
-vi.mock('server/src/lib/teams/getTeamsRuntimeAvailability', () => ({
+vi.mock('../../../../../../../ee/server/src/lib/teams/getTeamsRuntimeAvailability', () => ({
   getTeamsRuntimeAvailability: (...args: unknown[]) => getTeamsRuntimeAvailabilityMock(...args),
 }));
 
