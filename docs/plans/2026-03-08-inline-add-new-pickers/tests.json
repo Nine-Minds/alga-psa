@@ -10,7 +10,7 @@
   {
     "id": "T002",
     "description": "ContactPicker does NOT render '+ Add new contact' button when onAddNew prop is omitted",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
