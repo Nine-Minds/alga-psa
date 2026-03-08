@@ -442,7 +442,7 @@
   {
     "id": "F056",
     "description": "MSP page title: /msp/settings/extensions/install — title: 'Install Extension'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
