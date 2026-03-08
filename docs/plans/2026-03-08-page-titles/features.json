@@ -386,7 +386,7 @@
   {
     "id": "F049",
     "description": "MSP page title: /msp/workflow-control — title: 'Workflow Control'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
