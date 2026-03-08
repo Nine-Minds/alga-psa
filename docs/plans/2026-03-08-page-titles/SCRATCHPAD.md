@@ -112,3 +112,4 @@
 - (2026-03-08) F062: MSP page title: /msp/security-settings — title: 'Security Settings'
 - (2026-03-08) F063: MSP page title: /msp/extensions — title: 'Extensions'
 - (2026-03-08) F064: MSP page title: /msp/extensions/[id] — verify existing re-exported metadata from @product/extensions/entry is compatible
+- (2026-03-08) F065: MSP page title: /msp/extensions/[id]/debug — title: 'Extension Debug' (generateMetadata)

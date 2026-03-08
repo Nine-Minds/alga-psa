@@ -514,7 +514,7 @@
   {
     "id": "F065",
     "description": "MSP page title: /msp/extensions/[id]/debug — title: 'Extension Debug' (generateMetadata)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3c"
     ]
