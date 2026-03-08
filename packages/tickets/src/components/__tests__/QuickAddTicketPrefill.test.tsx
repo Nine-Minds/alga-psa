@@ -124,7 +124,7 @@ vi.mock('@alga-psa/clients/components', () => ({
         </div>
       );
     },
-    QuickAddClient: ({ open, onClientAdded }: any) => {
+    QuickAddClient: ({ open, onClientAdded, onOpenChange }: any) => {
       if (!open) {
         return null;
       }
@@ -133,12 +133,15 @@ vi.mock('@alga-psa/clients/components', () => ({
         <div data-testid="quick-add-client-dialog">
           <button
             type="button"
-            onClick={() => onClientAdded({
-              client_id: 'client-new',
-              client_name: 'New Client',
-              client_type: 'company',
-              is_inactive: false,
-            })}
+            onClick={() => {
+              onClientAdded({
+                client_id: 'client-new',
+                client_name: 'New Client',
+                client_type: 'company',
+                is_inactive: false,
+              });
+              onOpenChange(false);
+            }}
           >
             Create Client
           </button>
@@ -370,6 +373,26 @@ describe('QuickAddTicket prefills', () => {
     fireEvent.click(await screen.findByRole('button', { name: /\+ add new client/i }, { timeout: 5000 }));
 
     expect(screen.getByTestId('quick-add-client-dialog')).toBeInTheDocument();
+  });
+
+  it('T022: creating a client adds it locally and auto-selects it', async () => {
+    render(
+      <QuickAddTicket
+        open={true}
+        onOpenChange={() => undefined}
+        onTicketAdded={() => undefined}
+      />
+    );
+
+    await screen.findByRole('button', { name: /\+ add new client/i }, { timeout: 5000 });
+    expect(screen.getByTestId('client-picker-count')).toHaveTextContent('1');
+
+    fireEvent.click(screen.getByRole('button', { name: /\+ add new client/i }));
+    fireEvent.click(screen.getByRole('button', { name: /create client/i }));
+
+    await waitFor(() => expect(screen.queryByTestId('quick-add-client-dialog')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('client-picker-count')).toHaveTextContent('2'));
+    expect(screen.getByTestId('client-picker-value')).toHaveTextContent('client-new');
   });
 
 });

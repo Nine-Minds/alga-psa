@@ -170,7 +170,7 @@
   {
     "id": "T022",
     "description": "QuickAddTicket: after creating client via QuickAddClient, new client is added to list and auto-selected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
