@@ -34,7 +34,7 @@
   {
     "id": "F005",
     "description": "QuickAddTicket auto-selects newly created contact after QuickAddContact dialog closes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2"
     ]
