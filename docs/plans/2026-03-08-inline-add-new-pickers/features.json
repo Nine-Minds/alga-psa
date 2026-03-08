@@ -82,7 +82,7 @@
   {
     "id": "F011",
     "description": "ClientDetails wires ContactPicker onAddNew to open QuickAddContact with clientId",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2"
     ]

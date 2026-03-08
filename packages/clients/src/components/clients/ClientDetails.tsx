@@ -70,6 +70,7 @@ import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import QuickAddContact from '../contacts/QuickAddContact';
 import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { ClientLanguagePreference } from './ClientLanguagePreference';
@@ -241,6 +242,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
   const [locationsRefreshKey, setLocationsRefreshKey] = useState(0);
   const [tags, setTags] = useState<ITag[]>([]);
+  const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
+  const [defaultContactOptions, setDefaultContactOptions] = useState<IContact[]>(contacts);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [slaPolicies, setSlaPolicies] = useState<ISlaPolicy[]>([]);
@@ -903,7 +906,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   }, [pathname, memoizedRouter, searchParams]);
 
   const clientActiveContacts = useMemo(() => {
-    return (contacts ?? []).filter((c) => !c?.is_inactive);
+    return (defaultContactOptions ?? []).filter((c) => !c?.is_inactive);
+  }, [defaultContactOptions]);
+
+  useEffect(() => {
+    setDefaultContactOptions(contacts);
   }, [contacts]);
 
   const handleDefaultContactChange = useCallback((contactId: string) => {
@@ -1075,6 +1082,26 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   clientId={editedClient.client_id}
                   label="Default contact"
                   placeholder={clientActiveContacts.length ? "Select default contact" : "No active contacts"}
+                  onAddNew={() => setIsQuickAddContactOpen(true)}
+                />
+                <QuickAddContact
+                  isOpen={isQuickAddContactOpen}
+                  onClose={() => setIsQuickAddContactOpen(false)}
+                  onContactAdded={(newContact) => {
+                    setDefaultContactOptions((prevContacts) => {
+                      const existingIndex = prevContacts.findIndex((contact) => contact.contact_name_id === newContact.contact_name_id);
+                      if (existingIndex >= 0) {
+                        const nextContacts = [...prevContacts];
+                        nextContacts[existingIndex] = newContact;
+                        return nextContacts;
+                      }
+                      return [...prevContacts, newContact];
+                    });
+                    handleDefaultContactChange(newContact.contact_name_id);
+                    setIsQuickAddContactOpen(false);
+                  }}
+                  clients={[editedClient]}
+                  selectedClientId={editedClient.client_id}
                 />
               </FieldContainer>
 
