@@ -42,7 +42,7 @@ import { assignTeamToTicket } from '@alga-psa/tickets/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import type { ITeam } from '@alga-psa/types';
 import { useRouter } from 'next/navigation';
-import { QuickAddContact } from '@alga-psa/clients/components';
+import { QuickAddClient, QuickAddContact } from '@alga-psa/clients/components';
 
 /** Renders a <form> normally, or a plain <div> when embedded to avoid nested form tags. */
 function FormOrDiv({ isEmbedded, onSubmit, children }: { isEmbedded: boolean; onSubmit: (e: React.FormEvent) => void; children: React.ReactNode }) {
@@ -209,6 +209,7 @@ export function QuickAddTicket({
   const [locations, setLocations] = useState<IClientLocation[]>([]);
   const [locationId, setLocationId] = useState<string | null>(null);
   const [isPrefilledClient, setIsPrefilledClient] = useState(false);
+  const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const [quickAddBoardFilterState, setQuickAddBoardFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
@@ -860,6 +861,7 @@ export function QuickAddTicket({
                       clientTypeFilter={clientTypeFilter}
                       onClientTypeFilterChange={setClientTypeFilter}
                       placeholder="Select Client *"
+                      onAddNew={() => setIsQuickAddClientOpen(true)}
                     />
                   </div>
 
@@ -1255,6 +1257,25 @@ export function QuickAddTicket({
         }}
         clients={clients}
         selectedClientId={clientId}
+      />
+      <QuickAddClient
+        open={isQuickAddClientOpen}
+        onOpenChange={setIsQuickAddClientOpen}
+        onClientAdded={(newClient) => {
+          setClients((prevClients) => {
+            const existingIndex = prevClients.findIndex((client) => client.client_id === newClient.client_id);
+            if (existingIndex >= 0) {
+              const nextClients = [...prevClients];
+              nextClients[existingIndex] = newClient;
+              return nextClients;
+            }
+            return [...prevClients, newClient];
+          });
+          setClientId(newClient.client_id);
+          setContactId(null);
+          setSelectedClientType(newClient.client_type === 'company' || newClient.client_type === 'individual' ? newClient.client_type : null);
+          clearErrorIfSubmitted();
+        }}
       />
     </div>
   );

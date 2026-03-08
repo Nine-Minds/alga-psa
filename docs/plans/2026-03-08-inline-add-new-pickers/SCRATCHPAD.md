@@ -146,3 +146,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `npx tsc -p packages/ui/tsconfig.json --noEmit`
 - 2026-03-08 F017: Confirmed `ClientPicker` remains backward compatible because the new separator/button are fully gated behind the optional `onAddNew` prop; consumers that omit it still render the original dropdown content only.
 - Validation: `npx tsc -p packages/ui/tsconfig.json --noEmit`
+- 2026-03-08 F018: Wired `packages/tickets/src/components/QuickAddTicket.tsx` to open `QuickAddClient` from `ClientPicker`, merge new clients into local state, auto-select the created client, and let the existing client-data effect refresh contacts/locations for the new selection.
+- Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
