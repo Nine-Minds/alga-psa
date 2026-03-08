@@ -156,3 +156,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `npx tsc -p packages/billing/tsconfig.json --noEmit`
 - 2026-03-08 F022: Wired `packages/assets/src/components/QuickAddAsset.tsx` client picker to open `QuickAddClient`, merge newly created clients into local state, and auto-select the client so asset creation can continue without leaving the modal.
 - Validation: `npx tsc -p packages/assets/tsconfig.json --noEmit`
+- 2026-03-08 F023: Extracted the create-only category dialog into `packages/tickets/src/components/QuickAddCategory.tsx` and exported it from the tickets component surface, preserving the existing create-form structure (name, board/parent selection, footer actions) as reusable UI.
+- Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`

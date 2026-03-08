@@ -178,7 +178,7 @@
   {
     "id": "F023",
     "description": "QuickAddCategory component extracted from CategoriesSettings inline dialog into packages/tickets/src/components/QuickAddCategory.tsx",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5"
     ]
