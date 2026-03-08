@@ -98,3 +98,4 @@
 - (2026-03-08) F048: MSP page title: /msp/workflow-editor/[workflowId] — title: 'Edit Workflow' (generateMetadata)
 - (2026-03-08) F049: MSP page title: /msp/workflow-control — title: 'Workflow Control'
 - (2026-03-08) F050: MSP page title: /msp/workflows — title: 'Workflows'
+- (2026-03-08) F051: MSP page title: /msp/workflows/[executionId] — title: 'Workflow Execution' (generateMetadata)

@@ -402,7 +402,7 @@
   {
     "id": "F051",
     "description": "MSP page title: /msp/workflows/[executionId] — title: 'Workflow Execution' (generateMetadata)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3c"
     ]
