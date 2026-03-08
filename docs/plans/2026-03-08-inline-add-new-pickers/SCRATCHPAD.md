@@ -121,3 +121,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
 - Test blocker: `packages/tickets` Vitest still resolves deep server/auth imports while loading `QuickAddTicket`, so the new `QuickAddTicketPrefill` assertions for T006-T008 are written but not yet checklisted. I added `vite-tsconfig-paths` plus ticket-package aliases/mocks to reduce the surface, but the suite still bottoms out in unrelated auth/db module resolution.
 - 2026-03-08 F005: `QuickAddTicket` now merges the created contact into local picker state, selects its `contact_name_id`, and closes the dialog after creation.
+- 2026-03-08 F006: Wired `packages/tickets/src/components/ticket/TicketProperties.tsx` to open `QuickAddContact` from the inline contact editor, prefill it with the ticket/client context, and keep a local picker contact list synchronized so newly created contacts can be chosen immediately.
+- Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
