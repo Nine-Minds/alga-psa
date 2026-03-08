@@ -9,11 +9,13 @@ import '@testing-library/jest-dom';
 
 const getMicrosoftIntegrationStatusMock = vi.hoisted(() => vi.fn());
 const getTeamsIntegrationStatusMock = vi.hoisted(() => vi.fn());
+const getTeamsAppPackageStatusMock = vi.hoisted(() => vi.fn());
 const saveTeamsIntegrationSettingsMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/integrations/actions', () => ({
   getMicrosoftIntegrationStatus: (...args: unknown[]) => getMicrosoftIntegrationStatusMock(...args),
   getTeamsIntegrationStatus: (...args: unknown[]) => getTeamsIntegrationStatusMock(...args),
+  getTeamsAppPackageStatus: (...args: unknown[]) => getTeamsAppPackageStatusMock(...args),
   saveTeamsIntegrationSettings: (...args: unknown[]) => saveTeamsIntegrationSettingsMock(...args),
 }));
 
@@ -100,18 +102,55 @@ function buildTeamsStatus(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function buildTeamsPackageStatus(overrides: Record<string, unknown> = {}) {
+  return {
+    success: true,
+    package: {
+      installStatus: 'install_pending',
+      selectedProfileId: 'profile-1',
+      appId: 'primary-client-id',
+      botId: 'primary-client-id',
+      manifestVersion: '1.24',
+      packageVersion: '1.0.0',
+      fileName: 'alga-psa-teams-tenant-1.zip',
+      baseUrl: 'https://psa.example.com',
+      validDomains: ['psa.example.com', 'token.botframework.com'],
+      webApplicationInfo: {
+        id: 'primary-client-id',
+        resource: 'api://psa.example.com/teams/primary-client-id',
+      },
+      manifest: {
+        manifestVersion: '1.24',
+      },
+    },
+    ...overrides,
+  };
+}
+
 describe('TeamsIntegrationSettings contracts', () => {
   beforeEach(() => {
     getMicrosoftIntegrationStatusMock.mockReset();
     getTeamsIntegrationStatusMock.mockReset();
+    getTeamsAppPackageStatusMock.mockReset();
     saveTeamsIntegrationSettingsMock.mockReset();
     getMicrosoftIntegrationStatusMock.mockResolvedValue(buildMicrosoftStatus());
     getTeamsIntegrationStatusMock.mockResolvedValue(buildTeamsStatus());
+    getTeamsAppPackageStatusMock.mockResolvedValue(buildTeamsPackageStatus());
     saveTeamsIntegrationSettingsMock.mockResolvedValue({
       success: true,
       integration: buildTeamsStatus().integration,
     });
     window.location.hash = '';
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      writable: true,
+      value: vi.fn(() => 'blob:teams-manifest'),
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      writable: true,
+      value: vi.fn(),
+    });
   });
 
   it('T095/T096/T109/T110: renders the tenant-admin Teams setup UI, current selections, and refresh path', async () => {
@@ -327,5 +366,45 @@ describe('TeamsIntegrationSettings contracts', () => {
     await user.click(screen.getByRole('button', { name: 'Open Microsoft Profiles' }));
 
     expect(window.location.hash).toBe('#microsoft-profile-manager');
+  });
+
+  it('T145: prepares and presents the tenant package download/install handoff from Teams setup', async () => {
+    const user = userEvent.setup();
+    const anchorClickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+    render(<TeamsIntegrationSettings />);
+
+    await screen.findByText('Teams package handoff');
+    await user.click(screen.getByRole('button', { name: 'Prepare package handoff' }));
+
+    await waitFor(() => {
+      expect(getTeamsAppPackageStatusMock).toHaveBeenCalledTimes(1);
+    });
+
+    expect(await screen.findByText('alga-psa-teams-tenant-1.zip')).toBeInTheDocument();
+    expect(screen.getAllByText('primary-client-id').length).toBeGreaterThan(0);
+    expect(screen.getByText('psa.example.com, token.botframework.com')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Download manifest JSON' }));
+
+    expect((URL.createObjectURL as any)).toHaveBeenCalledTimes(1);
+    expect(anchorClickSpy).toHaveBeenCalledTimes(1);
+    expect((URL.revokeObjectURL as any)).toHaveBeenCalledWith('blob:teams-manifest');
+    anchorClickSpy.mockRestore();
+  });
+
+  it('T146: shows a recoverable package handoff error when package generation cannot proceed', async () => {
+    const user = userEvent.setup();
+    getTeamsAppPackageStatusMock.mockResolvedValueOnce({
+      success: false,
+      error: 'Selected Microsoft profile is not ready for Teams package generation',
+    });
+
+    render(<TeamsIntegrationSettings />);
+
+    await screen.findByText('Teams package handoff');
+    await user.click(screen.getByRole('button', { name: 'Prepare package handoff' }));
+
+    expect(await screen.findByText('Selected Microsoft profile is not ready for Teams package generation')).toBeInTheDocument();
   });
 });

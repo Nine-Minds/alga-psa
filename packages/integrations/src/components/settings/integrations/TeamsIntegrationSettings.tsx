@@ -10,6 +10,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import {
   getMicrosoftIntegrationStatus,
+  getTeamsAppPackageStatus,
   getTeamsIntegrationStatus,
   saveTeamsIntegrationSettings,
 } from '@alga-psa/integrations/actions';
@@ -17,7 +18,9 @@ import {
   AlertTriangle,
   ArrowUpRight,
   CheckCircle2,
+  Download,
   MessageSquareShare,
+  Package,
   RefreshCw,
   Save,
 } from 'lucide-react';
@@ -26,6 +29,8 @@ type MicrosoftIntegrationStatus = Awaited<ReturnType<typeof getMicrosoftIntegrat
 type MicrosoftProfile = NonNullable<MicrosoftIntegrationStatus['profiles']>[number];
 type TeamsIntegrationStatus = Awaited<ReturnType<typeof getTeamsIntegrationStatus>>;
 type TeamsIntegration = NonNullable<TeamsIntegrationStatus['integration']>;
+type TeamsPackageStatus = Awaited<ReturnType<typeof getTeamsAppPackageStatus>>;
+type TeamsPackage = NonNullable<TeamsPackageStatus['package']>;
 
 type TeamsFormState = {
   selectedProfileId: string;
@@ -160,10 +165,13 @@ function toggleValue(values: string[], value: string, checked: boolean): string[
 export function TeamsIntegrationSettings() {
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
+  const [packageLoading, setPackageLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [packageError, setPackageError] = React.useState<string | null>(null);
   const [statusMessage, setStatusMessage] = React.useState<string | null>(null);
   const [microsoftStatus, setMicrosoftStatus] = React.useState<MicrosoftIntegrationStatus | null>(null);
   const [teamsStatus, setTeamsStatus] = React.useState<TeamsIntegrationStatus | null>(null);
+  const [packageStatus, setPackageStatus] = React.useState<TeamsPackage | null>(null);
   const [formState, setFormState] = React.useState<TeamsFormState>(EMPTY_FORM_STATE);
 
   const load = React.useCallback(async () => {
@@ -211,6 +219,9 @@ export function TeamsIntegrationSettings() {
   const selectedProfileInvalid = Boolean(formState.selectedProfileId) && (!selectedProfileRecord || !isTeamsEligible(selectedProfileRecord));
   const canPersist = Boolean(selectedProfile);
   const canDeactivate = installStatus !== 'not_configured';
+  const hasSavedPackageContext = Boolean(currentIntegration?.selectedProfileId)
+    && installStatus !== 'not_configured'
+    && currentIntegration?.selectedProfileId === formState.selectedProfileId;
 
   const teamsScopes = microsoftStatus?.success ? (microsoftStatus.scopes?.teams ?? []) : [];
   const redirectUris = microsoftStatus?.success ? microsoftStatus.redirectUris : undefined;
@@ -257,6 +268,8 @@ export function TeamsIntegrationSettings() {
   const updateSelectedProfile = React.useCallback((selectedProfileId: string) => {
     setStatusMessage(null);
     setError(null);
+    setPackageStatus(null);
+    setPackageError(null);
     setFormState((current) => ({ ...current, selectedProfileId }));
   }, []);
 
@@ -293,11 +306,54 @@ export function TeamsIntegrationSettings() {
         integration: result.integration,
       });
       setFormState(mapIntegrationToForm(result.integration));
+      setPackageStatus(null);
+      setPackageError(null);
       setStatusMessage(successMessage);
     } finally {
       setSaving(false);
     }
   }, [formState, selectedProfile]);
+
+  const loadPackageHandoff = React.useCallback(async () => {
+    if (!hasSavedPackageContext) {
+      setPackageError('Save or activate Teams before generating a tenant package handoff');
+      return;
+    }
+
+    setPackageLoading(true);
+    setPackageError(null);
+
+    try {
+      const result = await getTeamsAppPackageStatus();
+      if (!result.success || !result.package) {
+        setPackageStatus(null);
+        setPackageError(result.error || 'Failed to prepare Teams package handoff');
+        return;
+      }
+
+      setPackageStatus(result.package);
+    } finally {
+      setPackageLoading(false);
+    }
+  }, [hasSavedPackageContext]);
+
+  const downloadManifest = React.useCallback(() => {
+    if (!packageStatus) {
+      return;
+    }
+
+    const blob = new Blob([JSON.stringify(packageStatus.manifest, null, 2)], {
+      type: 'application/json;charset=utf-8',
+    });
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = packageStatus.fileName.replace(/\.zip$/i, '-manifest.json');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(objectUrl);
+  }, [packageStatus]);
 
   return (
     <Card id="teams-integration-settings">
@@ -523,6 +579,79 @@ export function TeamsIntegrationSettings() {
                   </Alert>
                 )}
               </div>
+            </div>
+
+            <div className="rounded-lg border p-4">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Package className="h-4 w-4" />
+                    Teams package handoff
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Prepare the tenant-specific Teams app package summary, then download the manifest snapshot for admin install handoff.
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    id="teams-package-refresh"
+                    type="button"
+                    variant="outline"
+                    onClick={() => void loadPackageHandoff()}
+                    disabled={packageLoading || !hasSavedPackageContext}
+                  >
+                    <Package className="mr-2 h-4 w-4" />
+                    {packageLoading ? 'Preparing…' : packageStatus ? 'Refresh package handoff' : 'Prepare package handoff'}
+                  </Button>
+                  <Button
+                    id="teams-package-download-manifest"
+                    type="button"
+                    variant="outline"
+                    onClick={downloadManifest}
+                    disabled={!packageStatus}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download manifest JSON
+                  </Button>
+                </div>
+              </div>
+
+              {!hasSavedPackageContext && (
+                <Alert className="mt-4">
+                  <AlertDescription>
+                    Save a Teams draft or activate Teams before generating the tenant package handoff.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {packageError && (
+                <Alert className="mt-4" variant="destructive">
+                  <AlertDescription>{packageError}</AlertDescription>
+                </Alert>
+              )}
+
+              {packageStatus && (
+                <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                  <GuidanceBlock
+                    title="Package Summary"
+                    items={[
+                      { label: 'Package file', value: packageStatus.fileName },
+                      { label: 'Install status', value: packageStatus.installStatus },
+                      { label: 'App ID', value: packageStatus.appId },
+                      { label: 'Bot ID', value: packageStatus.botId },
+                    ]}
+                  />
+                  <GuidanceBlock
+                    title="Install Handoff"
+                    items={[
+                      { label: 'Base URL', value: packageStatus.baseUrl },
+                      { label: 'Valid domains', value: packageStatus.validDomains.join(', ') },
+                      { label: 'Resource URI', value: packageStatus.webApplicationInfo.resource },
+                    ]}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="grid gap-4 xl:grid-cols-3">

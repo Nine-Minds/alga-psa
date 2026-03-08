@@ -650,7 +650,7 @@
   {
     "id": "F073",
     "description": "Teams app package: setup surfaces can present a package download or install handoff for the tenant.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"

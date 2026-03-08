@@ -1154,7 +1154,7 @@
   {
     "id": "T145",
     "description": "Happy path: Teams app package: setup surfaces can present a package download or install handoff for the tenant.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F073"
     ]
@@ -1162,7 +1162,7 @@
   {
     "id": "T146",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: setup surfaces can present a package download or install handoff for the tenant.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F073"
     ]
