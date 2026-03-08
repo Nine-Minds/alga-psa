@@ -129,3 +129,4 @@
 - (2026-03-08) F079: Client Portal page title: /client-portal/appointments — title: 'Appointments'
 - (2026-03-08) F080: Client Portal page title: /client-portal/appointments/[appointmentRequestId] — title: 'Appointment Details' (generateMetadata)
 - (2026-03-08) F081: Client Portal page title: /client-portal/billing — title: 'Billing'
+- (2026-03-08) F082: Client Portal page title: /client-portal/billing/invoices/[invoiceId]/pay — title: 'Pay Invoice' (generateMetadata)

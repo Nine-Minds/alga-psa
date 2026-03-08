@@ -650,7 +650,7 @@
   {
     "id": "F082",
     "description": "Client Portal page title: /client-portal/billing/invoices/[invoiceId]/pay — title: 'Pay Invoice' (generateMetadata)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3c"
     ]
