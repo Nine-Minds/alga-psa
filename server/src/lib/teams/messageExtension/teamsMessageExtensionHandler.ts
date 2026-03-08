@@ -1,5 +1,9 @@
 import { createTenantKnex, getUserWithRoles } from '@alga-psa/db';
 import { ServerAnalyticsTracker } from '@alga-psa/analytics';
+import {
+  buildTeamsMessageExtensionResultDeepLinkFromPsaUrl,
+} from '@alga-psa/integrations/actions/integrations/teamsPackageActions';
+import { getTeamsIntegrationExecutionState } from '@alga-psa/integrations/actions/integrations/teamsActions';
 import { NextResponse } from 'next/server';
 import { ServerEventPublisher } from '@alga-psa/event-bus';
 import { TicketModel } from '@shared/models/ticketModel';
@@ -24,6 +28,11 @@ const ticketService = new TicketService();
 const contactService = new ContactService();
 const teamsActionTitleById = new Map(listTeamsActionDefinitions().map((definition) => [definition.id, definition.title]));
 const SEARCH_SURFACED_ACTION_IDS = new Set(['assign_ticket', 'add_note', 'reply_to_contact', 'log_time', 'approval_response']);
+const UPDATE_TARGET_TYPE_VALUES = ['ticket', 'project_task'] as const;
+const UPDATE_ACTION_TYPE_VALUES = ['internal_note', 'customer_reply', 'continue_in_tab'] as const;
+
+type TeamsUpdateTargetType = typeof UPDATE_TARGET_TYPE_VALUES[number];
+type TeamsUpdateActionType = typeof UPDATE_ACTION_TYPE_VALUES[number];
 
 interface TeamsMessageExtensionParameter {
   name?: string | null;
@@ -376,6 +385,20 @@ function buildTicketDescriptionFromPreview(preview: NonNullable<ReturnType<typeo
   return sections.join('\n\n').trim();
 }
 
+function buildUpdateContentFromPreview(preview: NonNullable<ReturnType<typeof buildMessagePreview>>): string {
+  return preview.bodyText || preview.summary || preview.subject || 'Forwarded from a Teams message.';
+}
+
+function buildTeamsMessageSourceMetadata(preview: NonNullable<ReturnType<typeof buildMessagePreview>>): Record<string, string> {
+  return {
+    message_id: preview.messageId || '',
+    subject: preview.subject || '',
+    summary: preview.summary || '',
+    author: preview.author || '',
+    link_to_message: preview.linkToMessage || '',
+  };
+}
+
 function getActionData(activity: TeamsMessageExtensionActivity): Record<string, unknown> {
   const raw = activity.value?.data;
   return raw && typeof raw === 'object' ? raw : {};
@@ -384,6 +407,36 @@ function getActionData(activity: TeamsMessageExtensionActivity): Record<string, 
 function getActionDataString(activity: TeamsMessageExtensionActivity, key: string): string | null {
   const rawValue = getActionData(activity)[key];
   return typeof rawValue === 'string' ? normalizeOptionalString(rawValue) : null;
+}
+
+function getActionDataUpdateTargetType(activity: TeamsMessageExtensionActivity): TeamsUpdateTargetType {
+  const rawValue = getActionDataString(activity, 'targetEntityType');
+  return rawValue === 'project_task' ? 'project_task' : 'ticket';
+}
+
+function getActionDataUpdateType(activity: TeamsMessageExtensionActivity): TeamsUpdateActionType {
+  const rawValue = getActionDataString(activity, 'updateType');
+  if (rawValue === 'customer_reply') {
+    return 'customer_reply';
+  }
+  if (rawValue === 'continue_in_tab') {
+    return 'continue_in_tab';
+  }
+  return 'internal_note';
+}
+
+async function buildMessageExtensionMyWorkLink(tenantId: string): Promise<string | null> {
+  const integration = await getTeamsIntegrationExecutionState(tenantId);
+  const baseUrl = normalizeOptionalString(
+    (integration.packageMetadata as { baseUrl?: string | null } | null | undefined)?.baseUrl ?? null
+  );
+  const appId = normalizeOptionalString(integration.appId);
+
+  if (!baseUrl || !appId) {
+    return null;
+  }
+
+  return buildTeamsMessageExtensionResultDeepLinkFromPsaUrl(baseUrl, appId, `${baseUrl}/teams/tab`);
 }
 
 async function loadCreateTicketFormOptions(tenantId: string): Promise<TeamsCreateTicketFormOptions> {
@@ -680,12 +733,72 @@ async function buildCreatedTicketTaskResponse(params: {
   };
 }
 
+function buildTaskActionsFromTeamsResult(result: TeamsActionResult): TeamsAdaptiveCardAction[] {
+  if (!result.success) {
+    return [];
+  }
+
+  return result.links.map((link) => ({
+    type: 'Action.OpenUrl',
+    title: link.label,
+    url: link.url,
+  }));
+}
+
+function buildTaskResponseFromTeamsActionResult(params: {
+  title: string;
+  result: TeamsActionResult;
+  fallbackText?: string;
+}): TeamsMessageExtensionResponse {
+  if (!params.result.success) {
+    return buildTaskMessageResponse(
+      [params.result.error.message, params.result.error.remediation].filter(Boolean).join(' ').trim()
+    );
+  }
+
+  const body: Array<Record<string, unknown>> = [
+    {
+      type: 'TextBlock',
+      text: params.title,
+      wrap: true,
+      weight: 'Bolder',
+      size: 'Medium',
+    },
+    {
+      type: 'TextBlock',
+      text: params.result.summary.text || params.fallbackText || params.result.summary.title,
+      wrap: true,
+      spacing: 'Small',
+    },
+  ];
+
+  return {
+    task: {
+      type: 'continue',
+      value: {
+        title: params.title,
+        width: 'medium',
+        height: 'medium',
+        card: {
+          type: 'AdaptiveCard',
+          version: '1.5',
+          body,
+          ...(buildTaskActionsFromTeamsResult(params.result).length > 0
+            ? { actions: buildTaskActionsFromTeamsResult(params.result) }
+            : {}),
+        },
+      },
+    },
+  };
+}
+
 function buildActionTaskResponse(params: {
   commandId: 'createTicketFromMessage' | 'updateFromMessage';
   preview: NonNullable<ReturnType<typeof buildMessagePreview>>;
   createTicketFormOptions?: TeamsCreateTicketFormOptions;
   idempotencyKey?: string | null;
   messagePayload?: TeamsMessagePayload | null;
+  extraActions?: TeamsAdaptiveCardAction[];
 }): TeamsMessageExtensionResponse {
   const title =
     params.commandId === 'createTicketFromMessage'
@@ -798,6 +911,65 @@ function buildActionTaskResponse(params: {
         isSubtle: true,
       }
     );
+  } else if (params.commandId === 'updateFromMessage') {
+    body.push(
+      {
+        type: 'Input.ChoiceSet',
+        id: 'targetEntityType',
+        label: 'Target record type',
+        value: 'ticket',
+        isRequired: true,
+        errorMessage: 'Select the PSA record type to update.',
+        style: 'compact',
+        choices: [
+          { title: 'Ticket', value: 'ticket' },
+          { title: 'Project task', value: 'project_task' },
+        ],
+      },
+      {
+        type: 'Input.Text',
+        id: 'targetId',
+        label: 'Target record ID',
+        isRequired: true,
+        errorMessage: 'Enter the PSA ticket or task ID to update.',
+      },
+      {
+        type: 'Input.Text',
+        id: 'projectId',
+        label: 'Project ID (optional)',
+        placeholder: 'Only needed when the Teams link cannot infer the task project.',
+      },
+      {
+        type: 'Input.ChoiceSet',
+        id: 'updateType',
+        label: 'Update action',
+        value: 'internal_note',
+        isRequired: true,
+        errorMessage: 'Select how this Teams message should update PSA.',
+        style: 'compact',
+        choices: [
+          { title: 'Add internal note', value: 'internal_note' },
+          { title: 'Send customer reply', value: 'customer_reply' },
+          { title: 'Continue in Teams tab', value: 'continue_in_tab' },
+        ],
+      },
+      {
+        type: 'Input.Text',
+        id: 'content',
+        label: 'Update content',
+        value: buildUpdateContentFromPreview(params.preview),
+        isMultiline: true,
+        isRequired: true,
+        errorMessage: 'Enter the note or reply content.',
+      },
+      {
+        type: 'TextBlock',
+        text: 'Customer-visible replies only apply to tickets. Project-task updates that need richer context will hand off to the Teams tab.',
+        wrap: true,
+        spacing: 'Medium',
+        isSubtle: true,
+      }
+    );
   } else {
     body.push({
       type: 'TextBlock',
@@ -829,12 +1001,13 @@ function buildActionTaskResponse(params: {
           type: 'AdaptiveCard',
           version: '1.5',
           body,
-          ...(params.commandId === 'createTicketFromMessage' && params.createTicketFormOptions
+          ...((params.commandId === 'createTicketFromMessage' && params.createTicketFormOptions) ||
+          params.commandId === 'updateFromMessage'
             ? {
                 actions: [
                   {
                     type: 'Action.Submit',
-                    title: 'Create ticket',
+                    title: params.commandId === 'createTicketFromMessage' ? 'Create ticket' : 'Update record',
                     data: {
                       commandId: params.commandId,
                       commandContext: 'message',
@@ -842,8 +1015,13 @@ function buildActionTaskResponse(params: {
                       ...(params.messagePayload ? { messagePayload: params.messagePayload } : {}),
                     },
                   },
+                  ...(params.extraActions || []),
                 ],
               }
+            : params.extraActions && params.extraActions.length > 0
+              ? {
+                  actions: params.extraActions,
+                }
             : {}),
         },
       },
@@ -1264,6 +1442,104 @@ async function handleCreateTicketFromMessageSubmit(params: {
   });
 }
 
+async function handleUpdateFromMessageSubmit(params: {
+  activity: TeamsMessageExtensionActivity;
+  tenantId: string;
+  user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>;
+  preview: NonNullable<ReturnType<typeof buildMessagePreview>>;
+}): Promise<TeamsMessageExtensionResponse> {
+  const targetEntityType = getActionDataUpdateTargetType(params.activity);
+  const targetId = getActionDataString(params.activity, 'targetId');
+  const projectId = getActionDataString(params.activity, 'projectId');
+  const updateType = getActionDataUpdateType(params.activity);
+  const content = getActionDataString(params.activity, 'content') || buildUpdateContentFromPreview(params.preview);
+  const idempotencyKey = getActionDataString(params.activity, 'idempotencyKey') || undefined;
+
+  if (!targetId) {
+    return buildTaskMessageResponse('Enter the PSA ticket or task ID before updating a record from this Teams message.');
+  }
+
+  const target: TeamsActionEntityReference =
+    targetEntityType === 'project_task'
+      ? {
+          entityType: 'project_task',
+          taskId: targetId,
+          ...(projectId ? { projectId } : {}),
+        }
+      : {
+          entityType: 'ticket',
+          ticketId: targetId,
+        };
+
+  if (updateType !== 'continue_in_tab' && !content) {
+    return buildTaskMessageResponse('Enter the note or reply content before updating PSA from this Teams message.');
+  }
+
+  if (targetEntityType === 'project_task') {
+    const openResult = await executeTeamsAction({
+      actionId: 'open_record',
+      surface: MESSAGE_EXTENSION_SURFACE,
+      tenantId: params.tenantId,
+      user: params.user,
+      target,
+    });
+
+    return buildTaskResponseFromTeamsActionResult({
+      title: 'Continue in Teams tab',
+      result: openResult,
+      fallbackText:
+        updateType === 'customer_reply'
+          ? 'Customer-visible replies are only supported for tickets from Teams. Open the project task in Teams or full PSA to continue.'
+          : 'Project task updates from Teams open in the Teams tab so you can add the full task context safely.',
+    });
+  }
+
+  if (updateType === 'continue_in_tab') {
+    return buildTaskResponseFromTeamsActionResult({
+      title: 'Continue in Teams tab',
+      result: await executeTeamsAction({
+        actionId: 'open_record',
+        surface: MESSAGE_EXTENSION_SURFACE,
+        tenantId: params.tenantId,
+        user: params.user,
+        target,
+      }),
+      fallbackText: 'Open the ticket in Teams or full PSA to continue this workflow.',
+    });
+  }
+
+  const metadata = buildTeamsMessageSourceMetadata(params.preview);
+  const result = await executeTeamsAction({
+    actionId: updateType === 'customer_reply' ? 'reply_to_contact' : 'add_note',
+    surface: MESSAGE_EXTENSION_SURFACE,
+    tenantId: params.tenantId,
+    user: params.user,
+    target,
+    idempotencyKey,
+    input:
+      updateType === 'customer_reply'
+        ? {
+            ticketId: targetId,
+            reply: content,
+            metadata,
+          }
+        : {
+            ticketId: targetId,
+            note: content,
+            metadata,
+          },
+  });
+
+  return buildTaskResponseFromTeamsActionResult({
+    title: updateType === 'customer_reply' ? 'Ticket reply sent' : 'Ticket updated',
+    result,
+    fallbackText:
+      updateType === 'customer_reply'
+        ? `A customer-visible reply was added to ticket ${targetId}.`
+        : `An internal note was added to ticket ${targetId}.`,
+  });
+}
+
 async function handleActionRequest(
   activity: TeamsMessageExtensionActivity,
   tenantId: string
@@ -1305,9 +1581,12 @@ async function handleActionRequest(
       });
     }
 
-    return buildTaskMessageResponse(
-      'The Teams message-to-update handoff is ready. Continue in the Alga PSA personal tab while inline submission is completed in a follow-up slice.'
-    );
+    return handleUpdateFromMessageSubmit({
+      activity,
+      tenantId,
+      user: invokingUser.user,
+      preview,
+    });
   }
 
   if (commandId === 'createTicketFromMessage') {
@@ -1322,19 +1601,42 @@ async function handleActionRequest(
       );
     }
 
+    const handoffLink = await buildMessageExtensionMyWorkLink(tenantId);
+
     return buildActionTaskResponse({
       commandId,
       preview,
       createTicketFormOptions,
       idempotencyKey: crypto.randomUUID(),
       messagePayload: getMessagePayload(activity),
+      extraActions: handoffLink
+        ? [
+            {
+              type: 'Action.OpenUrl',
+              title: 'Continue in Teams tab',
+              url: handoffLink,
+            },
+          ]
+        : [],
     });
   }
+
+  const handoffLink = await buildMessageExtensionMyWorkLink(tenantId);
 
   return buildActionTaskResponse({
     commandId,
     preview,
     messagePayload: getMessagePayload(activity),
+    idempotencyKey: crypto.randomUUID(),
+    extraActions: handoffLink
+      ? [
+          {
+            type: 'Action.OpenUrl',
+            title: 'Continue in Teams tab',
+            url: handoffLink,
+          },
+        ]
+      : [],
   });
 }
 

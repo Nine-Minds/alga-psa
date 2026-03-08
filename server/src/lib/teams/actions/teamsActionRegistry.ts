@@ -284,11 +284,13 @@ const assignTicketInputSchema = z.object({
 const addNoteInputSchema = z.object({
   ticketId: nonEmptyString,
   note: boundedText('Note'),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 const replyToContactInputSchema = z.object({
   ticketId: nonEmptyString,
   reply: boundedText('Reply'),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 const logTimeInputSchema = z.object({
@@ -1028,6 +1030,7 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
         {
           comment_text: String(normalized.note),
           is_internal: true,
+          metadata: normalized.metadata as Record<string, unknown> | undefined,
         },
         context.serviceContext
       );
@@ -1072,6 +1075,7 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
         {
           comment_text: String(normalized.reply),
           is_internal: false,
+          metadata: normalized.metadata as Record<string, unknown> | undefined,
         },
         context.serviceContext
       );

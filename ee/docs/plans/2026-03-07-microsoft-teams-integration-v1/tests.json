@@ -2946,7 +2946,7 @@
   {
     "id": "T369",
     "description": "Happy path: Message action `update from message`: supports targeting an existing ticket.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F185"
     ]
@@ -2954,7 +2954,7 @@
   {
     "id": "T370",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `update from message`: supports targeting an existing ticket.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F185"
     ]
@@ -2962,7 +2962,7 @@
   {
     "id": "T371",
     "description": "Happy path: Message action `update from message`: supports targeting an existing task when appropriate.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F186"
     ]
@@ -2970,7 +2970,7 @@
   {
     "id": "T372",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `update from message`: supports targeting an existing task when appropriate.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F186"
     ]
@@ -2978,7 +2978,7 @@
   {
     "id": "T373",
     "description": "Happy path: Message action `update from message`: supports appending an internal note derived from the Teams message.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F187"
     ]
@@ -2986,7 +2986,7 @@
   {
     "id": "T374",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `update from message`: supports appending an internal note derived from the teams message.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F187"
     ]
@@ -2994,7 +2994,7 @@
   {
     "id": "T375",
     "description": "Happy path: Message action `update from message`: supports appending a customer-visible reply when the user has permission and the record state allows it.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F188"
     ]
@@ -3002,7 +3002,7 @@
   {
     "id": "T376",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `update from message`: supports appending a customer-visible reply when the user has permission and the record state allows it.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F188"
     ]
@@ -3010,7 +3010,7 @@
   {
     "id": "T377",
     "description": "Happy path: Message action `update from message`: stores Teams source-message reference metadata with the update.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F189"
     ]
@@ -3018,7 +3018,7 @@
   {
     "id": "T378",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `update from message`: stores teams source-message reference metadata with the update.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F189"
     ]
@@ -3026,7 +3026,7 @@
   {
     "id": "T379",
     "description": "Happy path: Message action `update from message`: confirms success with a deep link to the updated record.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F190"
     ]
@@ -3034,7 +3034,7 @@
   {
     "id": "T380",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `update from message`: confirms success with a deep link to the updated record.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F190"
     ]
@@ -3042,7 +3042,7 @@
   {
     "id": "T381",
     "description": "Happy path: Message action `update from message`: validates target-record permission before mutating PSA data.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F191"
     ]
@@ -3050,7 +3050,7 @@
   {
     "id": "T382",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `update from message`: validates target-record permission before mutating psa data.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F191"
     ]
@@ -3058,7 +3058,7 @@
   {
     "id": "T383",
     "description": "Happy path: Message action `update from message`: supports dialog handoff when more fields are needed than fit a one-click action.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F192"
     ]
@@ -3066,7 +3066,7 @@
   {
     "id": "T384",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `update from message`: supports dialog handoff when more fields are needed than fit a one-click action.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F192"
     ]
@@ -3074,7 +3074,7 @@
   {
     "id": "T385",
     "description": "Happy path: Message action `update from message`: prefills action forms from the selected Teams message context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F193"
     ]
@@ -3082,7 +3082,7 @@
   {
     "id": "T386",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `update from message`: prefills action forms from the selected teams message context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F193"
     ]
@@ -3090,7 +3090,7 @@
   {
     "id": "T387",
     "description": "Happy path: Message action `create ticket from message`: can hand off to a richer tab flow when the selected message needs more complex ticket creation context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F194"
     ]
@@ -3098,7 +3098,7 @@
   {
     "id": "T388",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `create ticket from message`: can hand off to a richer tab flow when the selected message needs more complex ticket creation context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F194"
     ]
@@ -3106,7 +3106,7 @@
   {
     "id": "T389",
     "description": "Happy path: Message action `update from message`: can hand off to the personal tab when the mutation is too complex for a dialog.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F195"
     ]
@@ -3114,7 +3114,7 @@
   {
     "id": "T390",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message action `update from message`: can hand off to the personal tab when the mutation is too complex for a dialog.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F195"
     ]

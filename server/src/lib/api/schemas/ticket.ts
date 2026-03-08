@@ -169,7 +169,8 @@ export const createTicketCommentSchema = z.object({
     .min(1, 'Comment text is required')
     .max(5000, 'Comment text is too long (max 5000 characters)'),
   is_internal: z.boolean().optional().default(false),
-  time_spent: z.number().min(0).optional()
+  time_spent: z.number().min(0).optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 export const ticketCommentResponseSchema = z.object({

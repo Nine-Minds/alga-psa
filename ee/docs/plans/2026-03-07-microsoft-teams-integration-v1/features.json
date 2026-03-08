@@ -1762,7 +1762,7 @@
   {
     "id": "F185",
     "description": "Message action `update from message`: supports targeting an existing ticket.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements"
@@ -1771,7 +1771,7 @@
   {
     "id": "F186",
     "description": "Message action `update from message`: supports targeting an existing task when appropriate.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements"
@@ -1780,7 +1780,7 @@
   {
     "id": "F187",
     "description": "Message action `update from message`: supports appending an internal note derived from the Teams message.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements"
@@ -1789,7 +1789,7 @@
   {
     "id": "F188",
     "description": "Message action `update from message`: supports appending a customer-visible reply when the user has permission and the record state allows it.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements"
@@ -1798,7 +1798,7 @@
   {
     "id": "F189",
     "description": "Message action `update from message`: stores Teams source-message reference metadata with the update.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements"
@@ -1807,7 +1807,7 @@
   {
     "id": "F190",
     "description": "Message action `update from message`: confirms success with a deep link to the updated record.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements"
@@ -1816,7 +1816,7 @@
   {
     "id": "F191",
     "description": "Message action `update from message`: validates target-record permission before mutating PSA data.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements"
@@ -1825,7 +1825,7 @@
   {
     "id": "F192",
     "description": "Message action `update from message`: supports dialog handoff when more fields are needed than fit a one-click action.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements"
@@ -1834,7 +1834,7 @@
   {
     "id": "F193",
     "description": "Message action `update from message`: prefills action forms from the selected Teams message context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements"
@@ -1843,7 +1843,7 @@
   {
     "id": "F194",
     "description": "Message action `create ticket from message`: can hand off to a richer tab flow when the selected message needs more complex ticket creation context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements"
@@ -1852,7 +1852,7 @@
   {
     "id": "F195",
     "description": "Message action `update from message`: can hand off to the personal tab when the mutation is too complex for a dialog.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Requirements"

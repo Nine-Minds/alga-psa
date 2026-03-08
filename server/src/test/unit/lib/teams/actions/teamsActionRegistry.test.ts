@@ -462,6 +462,74 @@ describe('teamsActionRegistry', () => {
     expect(updateSpy).not.toHaveBeenCalled();
   });
 
+  it('passes optional Teams message metadata through shared ticket note and reply mutations', async () => {
+    const addCommentSpy = vi.spyOn(TicketService.prototype, 'addComment').mockResolvedValue({ comment_id: 'comment-1' } as any);
+    vi.spyOn(TicketService.prototype, 'getById').mockResolvedValue({ ticket_id: 'ticket-1', title: 'Broken VPN' } as any);
+
+    await executeTeamsAction({
+      actionId: 'add_note',
+      surface: 'message_extension',
+      tenantId: 'tenant-1',
+      user: buildUser(),
+      target: {
+        entityType: 'ticket',
+        ticketId: 'ticket-1',
+      },
+      input: {
+        note: 'Captured from Teams',
+        metadata: {
+          message_id: 'message-1',
+          link_to_message: 'https://teams.example.test/messages/1',
+        },
+      },
+    });
+
+    await executeTeamsAction({
+      actionId: 'reply_to_contact',
+      surface: 'message_extension',
+      tenantId: 'tenant-1',
+      user: buildUser(),
+      target: {
+        entityType: 'ticket',
+        ticketId: 'ticket-1',
+      },
+      input: {
+        reply: 'Customer-ready reply from Teams',
+        metadata: {
+          message_id: 'message-2',
+          link_to_message: 'https://teams.example.test/messages/2',
+        },
+      },
+    });
+
+    expect(addCommentSpy).toHaveBeenNthCalledWith(
+      1,
+      'ticket-1',
+      {
+        comment_text: 'Captured from Teams',
+        is_internal: true,
+        metadata: {
+          message_id: 'message-1',
+          link_to_message: 'https://teams.example.test/messages/1',
+        },
+      },
+      expect.any(Object)
+    );
+    expect(addCommentSpy).toHaveBeenNthCalledWith(
+      2,
+      'ticket-1',
+      {
+        comment_text: 'Customer-ready reply from Teams',
+        is_internal: false,
+        metadata: {
+          message_id: 'message-2',
+          link_to_message: 'https://teams.example.test/messages/2',
+        },
+      },
+      expect.any(Object)
+    );
+  });
+
   it('deduplicates repeated mutation submits by idempotency key so the underlying mutation only runs once', async () => {
     const updateSpy = vi.spyOn(TicketService.prototype, 'update').mockResolvedValue({ ticket_id: 'ticket-1' } as any);
     const addCommentSpy = vi.spyOn(TicketService.prototype, 'addComment').mockResolvedValue({ comment_id: 'comment-1' } as any);

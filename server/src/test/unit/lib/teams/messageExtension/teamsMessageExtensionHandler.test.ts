@@ -12,6 +12,7 @@ const {
   resolveTeamsLinkedUserMock,
   getUserWithRolesMock,
   createTenantKnexMock,
+  getTeamsIntegrationExecutionStateMock,
   hasPermissionMock,
   executeTeamsActionMock,
   listAvailableTeamsActionsMock,
@@ -22,6 +23,7 @@ const {
   resolveTeamsLinkedUserMock: vi.fn(),
   getUserWithRolesMock: vi.fn(),
   createTenantKnexMock: vi.fn(),
+  getTeamsIntegrationExecutionStateMock: vi.fn(),
   hasPermissionMock: vi.fn(),
   executeTeamsActionMock: vi.fn(),
   listAvailableTeamsActionsMock: vi.fn(),
@@ -45,6 +47,16 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
     getUserWithRoles: getUserWithRolesMock,
   };
 });
+
+vi.mock('@alga-psa/integrations/actions/integrations/teamsActions', () => ({
+  getTeamsIntegrationExecutionState: getTeamsIntegrationExecutionStateMock,
+}));
+
+vi.mock('@alga-psa/integrations/actions/integrations/teamsPackageActions', () => ({
+  buildTeamsMessageExtensionResultDeepLinkFromPsaUrl: vi.fn(
+    (_baseUrl: string, _appId: string, psaUrl: string) => `https://teams.test/deeplink?target=${encodeURIComponent(psaUrl)}`
+  ),
+}));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: hasPermissionMock,
@@ -214,6 +226,16 @@ describe('teamsMessageExtensionHandler', () => {
       matchedBy: 'provider_account_id',
     });
     getUserWithRolesMock.mockResolvedValue(buildUser());
+    getTeamsIntegrationExecutionStateMock.mockResolvedValue({
+      selectedProfileId: 'profile-1',
+      installStatus: 'active',
+      enabledCapabilities: ['message_extension', 'personal_tab'],
+      allowedActions: ['assign_ticket', 'add_note', 'reply_to_contact', 'log_time', 'approval_response'],
+      appId: 'teams-app-1',
+      packageMetadata: {
+        baseUrl: 'https://example.test',
+      },
+    });
     hasPermissionMock.mockResolvedValue(true);
     listAvailableTeamsActionsMock.mockResolvedValue([]);
     createTicketWithRetryMock.mockResolvedValue({
@@ -461,6 +483,11 @@ describe('teamsMessageExtensionHandler', () => {
             }),
             idempotencyKey: expect.any(String),
           }),
+        }),
+        expect.objectContaining({
+          type: 'Action.OpenUrl',
+          title: 'Continue in Teams tab',
+          url: 'https://teams.test/deeplink?target=https%3A%2F%2Fexample.test%2Fteams%2Ftab',
         }),
       ])
     );
@@ -806,6 +833,393 @@ describe('teamsMessageExtensionHandler', () => {
         type: 'message',
         value:
           'Reopen the Teams message action before creating a ticket so the submission can be applied safely once.',
+      },
+    });
+  });
+
+  it('T369/T371/T383/T385/T387: update-from-message builds a task card with prefilled content, target fields, and Teams-tab handoff', async () => {
+    const response = await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        name: 'composeExtension/fetchTask',
+        value: {
+          commandId: 'updateFromMessage',
+          commandContext: 'message',
+          messagePayload: {
+            id: 'message-2',
+            subject: 'Follow-up from Teams',
+            body: {
+              content: '<div>Please capture this update on the ticket.</div>',
+            },
+            from: {
+              user: {
+                displayName: 'Jordan Message',
+              },
+            },
+            linkToMessage: 'https://teams.example.test/messages/2',
+          },
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    expect(response).toMatchObject({
+      task: {
+        type: 'continue',
+        value: {
+          title: 'Update PSA record from Teams message',
+        },
+      },
+    });
+    expect((response as any).task.value.card.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ text: 'Update PSA record from Teams message' }),
+        expect.objectContaining({ text: 'From: Jordan Message' }),
+        expect.objectContaining({ text: 'Subject: Follow-up from Teams' }),
+        expect.objectContaining({ id: 'targetEntityType', value: 'ticket' }),
+        expect.objectContaining({ id: 'targetId' }),
+        expect.objectContaining({ id: 'updateType', value: 'internal_note' }),
+        expect.objectContaining({ id: 'content', value: 'Please capture this update on the ticket.' }),
+      ])
+    );
+    expect((response as any).task.value.card.actions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'Action.Submit',
+          title: 'Update record',
+          data: expect.objectContaining({
+            commandId: 'updateFromMessage',
+            commandContext: 'message',
+            idempotencyKey: expect.any(String),
+          }),
+        }),
+        expect.objectContaining({
+          type: 'Action.OpenUrl',
+          title: 'Continue in Teams tab',
+          url: 'https://teams.test/deeplink?target=https%3A%2F%2Fexample.test%2Fteams%2Ftab',
+        }),
+      ])
+    );
+  });
+
+  it('T370/T372/T374/T376/T378/T380: update-from-message rejects missing inputs and surfaces recoverable submission errors', async () => {
+    const missingTargetResponse = await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        name: 'composeExtension/submitAction',
+        value: {
+          commandId: 'updateFromMessage',
+          commandContext: 'message',
+          messagePayload: {
+            subject: 'Follow-up from Teams',
+            body: {
+              content: '<div>Please capture this update on the ticket.</div>',
+            },
+          },
+          data: {
+            commandId: 'updateFromMessage',
+            commandContext: 'message',
+            idempotencyKey: 'update-message-1',
+            updateType: 'internal_note',
+            content: 'Please capture this update on the ticket.',
+          },
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    executeTeamsActionMock.mockResolvedValueOnce({
+      success: false,
+      actionId: 'add_note',
+      surface: 'message_extension',
+      operation: 'mutation',
+      error: {
+        code: 'forbidden',
+        message: 'You do not have permission to add ticket notes from Teams.',
+        remediation: 'Open the full PSA application if you need to continue.',
+      },
+      warnings: [],
+      metadata: {
+        surface: 'message_extension',
+        idempotencyKey: 'update-message-2',
+        idempotentReplay: false,
+        invokingSurface: 'message_extension',
+        businessOperations: ['TicketService.addComment'],
+      },
+    });
+
+    const forbiddenResponse = await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        name: 'composeExtension/submitAction',
+        value: {
+          commandId: 'updateFromMessage',
+          commandContext: 'message',
+          messagePayload: {
+            subject: 'Follow-up from Teams',
+            body: {
+              content: '<div>Please capture this update on the ticket.</div>',
+            },
+          },
+          data: {
+            commandId: 'updateFromMessage',
+            commandContext: 'message',
+            idempotencyKey: 'update-message-2',
+            targetEntityType: 'ticket',
+            targetId: 'ticket-1',
+            updateType: 'internal_note',
+            content: 'Please capture this update on the ticket.',
+          },
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    expect(missingTargetResponse).toEqual({
+      task: {
+        type: 'message',
+        value: 'Enter the PSA ticket or task ID before updating a record from this Teams message.',
+      },
+    });
+    expect(forbiddenResponse).toEqual({
+      task: {
+        type: 'message',
+        value:
+          'You do not have permission to add ticket notes from Teams. Open the full PSA application if you need to continue.',
+      },
+    });
+  });
+
+  it('T369/T373/T377/T379: update-from-message submits ticket note updates through the shared Teams action layer with source metadata and deep links', async () => {
+    const response = await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        name: 'composeExtension/submitAction',
+        value: {
+          commandId: 'updateFromMessage',
+          commandContext: 'message',
+          messagePayload: {
+            id: 'message-3',
+            subject: 'Follow-up from Teams',
+            body: {
+              content: '<div>Please capture this update on the ticket.</div>',
+            },
+            from: {
+              user: {
+                displayName: 'Jordan Message',
+              },
+            },
+            linkToMessage: 'https://teams.example.test/messages/3',
+          },
+          data: {
+            commandId: 'updateFromMessage',
+            commandContext: 'message',
+            idempotencyKey: 'update-message-3',
+            targetEntityType: 'ticket',
+            targetId: 'ticket-1',
+            updateType: 'internal_note',
+            content: 'Please capture this update on the ticket.',
+          },
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    expect(executeTeamsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: 'add_note',
+        surface: 'message_extension',
+        idempotencyKey: 'update-message-3',
+        target: {
+          entityType: 'ticket',
+          ticketId: 'ticket-1',
+        },
+        input: {
+          ticketId: 'ticket-1',
+          note: 'Please capture this update on the ticket.',
+          metadata: expect.objectContaining({
+            message_id: 'message-3',
+            subject: 'Follow-up from Teams',
+            author: 'Jordan Message',
+            link_to_message: 'https://teams.example.test/messages/3',
+          }),
+        },
+      })
+    );
+    expect(response).toMatchObject({
+      task: {
+        type: 'continue',
+        value: {
+          title: 'Ticket updated',
+          card: {
+            actions: expect.arrayContaining([
+              expect.objectContaining({ type: 'Action.OpenUrl', title: 'Open in Teams tab', url: 'https://teams.test/ticket' }),
+              expect.objectContaining({ type: 'Action.OpenUrl', title: 'Open in full PSA', url: '/msp/ticket' }),
+            ]),
+          },
+        },
+      },
+    });
+  });
+
+  it('T375/T381: update-from-message submits customer replies through the shared Teams action layer with the selected ticket target', async () => {
+    await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        name: 'composeExtension/submitAction',
+        value: {
+          commandId: 'updateFromMessage',
+          commandContext: 'message',
+          messagePayload: {
+            id: 'message-4',
+            subject: 'Customer-ready update',
+            body: {
+              content: '<div>We deployed the fix and the user can retry now.</div>',
+            },
+          },
+          data: {
+            commandId: 'updateFromMessage',
+            commandContext: 'message',
+            idempotencyKey: 'update-message-4',
+            targetEntityType: 'ticket',
+            targetId: 'ticket-2',
+            updateType: 'customer_reply',
+            content: 'We deployed the fix and the user can retry now.',
+          },
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    expect(executeTeamsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: 'reply_to_contact',
+        target: {
+          entityType: 'ticket',
+          ticketId: 'ticket-2',
+        },
+        input: expect.objectContaining({
+          ticketId: 'ticket-2',
+          reply: 'We deployed the fix and the user can retry now.',
+        }),
+      })
+    );
+  });
+
+  it('T371/T382/T389: project-task update targets resolve into a Teams-tab handoff instead of an unsafe inline mutation', async () => {
+    const response = await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        name: 'composeExtension/submitAction',
+        value: {
+          commandId: 'updateFromMessage',
+          commandContext: 'message',
+          messagePayload: {
+            id: 'message-5',
+            subject: 'Task update from Teams',
+            body: {
+              content: '<div>Please add this note to the project task.</div>',
+            },
+          },
+          data: {
+            commandId: 'updateFromMessage',
+            commandContext: 'message',
+            idempotencyKey: 'update-message-5',
+            targetEntityType: 'project_task',
+            targetId: 'task-1',
+            projectId: 'project-1',
+            updateType: 'internal_note',
+            content: 'Please add this note to the project task.',
+          },
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    expect(executeTeamsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: 'open_record',
+        target: {
+          entityType: 'project_task',
+          taskId: 'task-1',
+          projectId: 'project-1',
+        },
+      })
+    );
+    expect(response).toMatchObject({
+      task: {
+        type: 'continue',
+        value: {
+          title: 'Continue in Teams tab',
+          card: {
+            actions: expect.arrayContaining([
+              expect.objectContaining({ type: 'Action.OpenUrl', title: 'Open in Teams tab', url: 'https://teams.test/project_task' }),
+              expect.objectContaining({ type: 'Action.OpenUrl', title: 'Open in full PSA', url: '/msp/project_task' }),
+            ]),
+          },
+        },
+      },
+    });
+  });
+
+  it('T384/T386/T388/T390: update/create handoff stays recoverable when Teams-tab deep links cannot be generated or when the selected update path needs richer context', async () => {
+    getTeamsIntegrationExecutionStateMock.mockResolvedValueOnce({
+      selectedProfileId: 'profile-1',
+      installStatus: 'active',
+      enabledCapabilities: ['message_extension', 'personal_tab'],
+      allowedActions: ['assign_ticket', 'add_note', 'reply_to_contact', 'log_time', 'approval_response'],
+      appId: null,
+      packageMetadata: null,
+    });
+
+    const createResponse = await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        name: 'composeExtension/fetchTask',
+        value: {
+          commandId: 'createTicketFromMessage',
+          commandContext: 'message',
+          messagePayload: {
+            subject: 'Fallback create-ticket handoff',
+          },
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    const updateResponse = await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        name: 'composeExtension/submitAction',
+        value: {
+          commandId: 'updateFromMessage',
+          commandContext: 'message',
+          messagePayload: {
+            subject: 'Complex task update',
+            body: {
+              content: '<div>This needs richer task context.</div>',
+            },
+          },
+          data: {
+            commandId: 'updateFromMessage',
+            commandContext: 'message',
+            idempotencyKey: 'update-message-6',
+            targetEntityType: 'ticket',
+            targetId: 'ticket-3',
+            updateType: 'continue_in_tab',
+            content: 'This needs richer task context.',
+          },
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    expect((createResponse as any).task.value.card.actions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'Action.Submit', title: 'Create ticket' }),
+      ])
+    );
+    expect((createResponse as any).task.value.card.actions).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ type: 'Action.OpenUrl', title: 'Continue in Teams tab' })])
+    );
+    expect(updateResponse).toMatchObject({
+      task: {
+        type: 'continue',
+        value: {
+          title: 'Continue in Teams tab',
+        },
       },
     });
   });
