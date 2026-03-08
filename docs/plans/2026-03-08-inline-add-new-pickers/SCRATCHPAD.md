@@ -260,3 +260,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/ticket/__tests__/TicketCategoryConsumer.contract.test.ts -t T043`
 - 2026-03-08 T044: Added `packages/tickets/src/components/TicketingDashboard.category.contract.test.ts` to preserve dashboard filter wiring into `QuickAddCategory`, including board-context preselection and immediate category filter selection after create.
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/TicketingDashboard.category.contract.test.ts -t T044`
+- 2026-03-08 T045: Extended `TicketCategoryConsumer.contract.test.ts` to confirm `TicketDetails` inherits inline category creation via `TicketInfo`, passing through the live ticket and initial category context that `TicketInfo` uses for board-aware quick-add.
+- Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/ticket/__tests__/TicketCategoryConsumer.contract.test.ts -t T045`

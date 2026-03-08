@@ -17,4 +17,14 @@ describe('ticket category consumer wiring contract', () => {
     expect(source).toContain('preselectedBoardId={effectiveBoardId || undefined}');
     expect(source).toContain("handlePendingChange('category_id', newCategory.category_id);");
   });
+
+  it('T045: TicketDetails inherits the add-new category flow through TicketInfo with ticket category context', () => {
+    const ticketInfoSource = read('../TicketInfo.tsx');
+    const ticketDetailsSource = read('../TicketDetails.tsx');
+
+    expect(ticketInfoSource).toContain('preselectedBoardId={effectiveBoardId || undefined}');
+    expect(ticketDetailsSource).toContain('<TicketInfo');
+    expect(ticketDetailsSource).toContain('ticket={ticket}');
+    expect(ticketDetailsSource).toContain('initialCategories={initialCategories}');
+  });
 });

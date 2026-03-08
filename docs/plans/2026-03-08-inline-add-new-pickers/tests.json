@@ -355,7 +355,7 @@
   {
     "id": "T045",
     "description": "TicketDetails: clicking '+ Add new category' opens QuickAddCategory with board context",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
