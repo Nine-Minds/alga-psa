@@ -194,7 +194,7 @@
   {
     "id": "F025",
     "description": "MSP page title: /msp/assets/automation — title: 'Asset Automation'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
