@@ -898,7 +898,7 @@
   {
     "id": "F113",
     "description": "EE MSP page title: /msp/licenses/purchase/success — title: 'Purchase Success'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria"
     ]
