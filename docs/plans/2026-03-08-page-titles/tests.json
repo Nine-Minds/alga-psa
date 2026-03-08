@@ -150,7 +150,7 @@
   {
     "id": "T010",
     "description": "Batch verify: all Auth pages (F090-F102) export 'export const metadata' with correct title strings",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F090",
       "F091",
