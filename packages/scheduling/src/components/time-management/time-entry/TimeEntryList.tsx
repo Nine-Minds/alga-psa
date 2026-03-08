@@ -17,7 +17,7 @@ interface TimeEntryListProps {
   editingIndex: number | null;
   totalDurations: number[];
   isEditable: boolean;
-  lastNoteInputRef: React.RefObject<HTMLInputElement | null>;
+  lastNoteInputRef: React.RefObject<HTMLTextAreaElement | null>;
   onSave: (index: number) => Promise<void>;
   onDelete: (index: number) => Promise<void>;
   onEdit: (index: number) => void;
@@ -59,7 +59,7 @@ const TimeEntryList = memo(function TimeEntryList({
               taxRegions={taxRegions}
               timeInputs={timeInputs}
               totalDuration={totalDurations[index] || 0}
-              onSave={onSave}
+              onSave={isEditable ? onSave : undefined}
               onDelete={onDelete}
               onUpdateEntry={onUpdateEntry}
               onUpdateTimeInputs={onUpdateTimeInputs}
