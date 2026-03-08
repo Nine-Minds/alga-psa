@@ -138,3 +138,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - 2026-03-08 F013: Wired `server/src/components/settings/general/UserManagement.tsx` existing-contact picker to open `QuickAddContact`, append the created contact to the invitation picker state, auto-select it, and prefill the new user form from the created contact.
 - Validation attempt: `npx tsc -p server/tsconfig.json --noEmit` crashed with `Signal(6)` before reporting file-level diagnostics.
 - Validation attempt: `npx esbuild server/src/components/settings/general/UserManagement.tsx --bundle --platform=node --format=esm --tsconfig=server/tsconfig.json --outfile=/tmp/user-management-check.js` reached unrelated asset/font resolution errors outside this change.
+- 2026-03-08 F014: Wired `ee/server/src/components/settings/integrations/EntraReconciliationQueue.tsx` to load clients, pass `onAddNew` into each queue row's `ContactPicker`, open a shared `QuickAddContact` with the row's mapped client preselected, append the created contact into `allContacts`, and auto-select it for that queue item.
+- Validation: `npx tsc -p ee/server/tsconfig.json --noEmit`

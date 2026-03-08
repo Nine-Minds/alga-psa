@@ -106,7 +106,7 @@
   {
     "id": "F014",
     "description": "EntraReconciliationQueue wires ContactPicker onAddNew to open QuickAddContact",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2"
     ]
