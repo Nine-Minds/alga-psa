@@ -314,7 +314,7 @@
   {
     "id": "F040",
     "description": "MSP page title: /msp/surveys — title: 'Surveys'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
