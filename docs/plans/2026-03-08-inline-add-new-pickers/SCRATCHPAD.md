@@ -116,3 +116,4 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - 2026-03-08 T002: Verified the add button stays hidden when `onAddNew` is omitted.
 - 2026-03-08 T003: Verified the add button keeps the requested utility classes and renders a `Plus` icon.
 - 2026-03-08 T004: Verified clicking the add button calls the consumer callback exactly once.
+- 2026-03-08 T005: Verified clicking the add button closes the dropdown portal.
