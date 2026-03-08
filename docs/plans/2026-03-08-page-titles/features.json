@@ -658,7 +658,7 @@
   {
     "id": "F083",
     "description": "Client Portal page title: /client-portal/billing/invoices/[invoiceId]/payment-success — title: 'Payment Success' (generateMetadata)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3c"
     ]
