@@ -45,7 +45,10 @@ import {
   deleteWorkflowScheduleState,
   syncWorkflowScheduleState
 } from 'server/src/lib/workflow-runtime-v2/workflowScheduleLifecycle';
-import { launchPublishedWorkflowRun } from 'server/src/lib/workflow-runtime-v2/workflowRunLauncher';
+import {
+  launchPublishedWorkflowRun,
+  recordFailedWorkflowRunLaunch
+} from 'server/src/lib/workflow-runtime-v2/workflowRunLauncher';
 import { auditLog } from '@alga-psa/db';
 import { analytics } from '@alga-psa/analytics';
 import { EventCatalogModel } from '../models/eventCatalog';
@@ -1950,6 +1953,19 @@ export const startWorkflowRunAction = withAuth(async (user, { tenant }, input: u
   if (schemaRef && schemaRegistry.has(schemaRef)) {
     const validation = schemaRegistry.get(schemaRef).safeParse(finalPayload);
     if (!validation.success) {
+      await recordFailedWorkflowRunLaunch(knex, {
+        workflowId: parsed.workflowId,
+        workflowVersion: versionRecord.version,
+        tenantId: tenant,
+        payload: finalPayload,
+        eventType: parsed.eventType ?? null,
+        sourcePayloadSchemaRef: inputIsSourcePayload ? effectiveSourceSchemaRef : null,
+        triggerMappingApplied,
+        message: 'Payload failed validation',
+        details: {
+          issues: validation.error.issues
+        }
+      });
       return throwHttpError(400, 'Payload failed validation', { issues: validation.error.issues });
     }
   }

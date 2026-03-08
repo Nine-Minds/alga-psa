@@ -4,6 +4,7 @@
 
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { SystemEmailProviderFactory } from '../system/SystemEmailProviderFactory';
 import {
   IEmailProvider,
   IEmailProviderManager,
@@ -28,6 +29,8 @@ export class EmailProviderManager implements IEmailProviderManager {
     logger.info(`[EmailProviderManager] Initializing for tenant: ${tenantId}`);
     
     this.tenantSettings.set(tenantId, tenantSettings);
+    this.providers.delete(tenantId);
+    this.providerCache.delete(this.getSystemProviderCacheKey(tenantId));
     
     // Clear cache for this tenant's providers to ensure fresh config
     if (tenantSettings.providerConfigs) {
@@ -56,6 +59,7 @@ export class EmailProviderManager implements IEmailProviderManager {
       }
     } else {
       logger.warn(`[EmailProviderManager] No enabled provider found for tenant ${tenantId}`);
+      await this.initializeSystemFallbackProvider(tenantId);
     }
   }
 
@@ -285,6 +289,25 @@ export class EmailProviderManager implements IEmailProviderManager {
     }
 
     return trimmed;
+  }
+
+  private async initializeSystemFallbackProvider(tenantId: string): Promise<void> {
+    const provider = await SystemEmailProviderFactory.createProvider();
+    if (!provider) {
+      logger.warn(`[EmailProviderManager] System email provider fallback unavailable for tenant ${tenantId}`);
+      return;
+    }
+
+    this.providers.set(tenantId, provider);
+    this.providerCache.set(this.getSystemProviderCacheKey(tenantId), provider);
+
+    logger.info(
+      `[EmailProviderManager] Using system email provider fallback: ${provider.providerId} (${provider.providerType}) for tenant ${tenantId}`
+    );
+  }
+
+  private getSystemProviderCacheKey(tenantId: string): string {
+    return `system:${tenantId}`;
   }
 
   private async createProvider(config: EmailProviderConfig): Promise<IEmailProvider> {

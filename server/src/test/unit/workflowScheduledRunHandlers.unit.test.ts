@@ -135,6 +135,31 @@ describe('Workflow scheduled run handlers', () => {
     });
   });
 
+  it('normalizes one-time schedule timestamps to ISO strings before launch', async () => {
+    scheduleRecord = {
+      id: 'schedule-date',
+      tenant_id: 'tenant-1',
+      workflow_id: 'workflow-iso',
+      workflow_version: 2,
+      trigger_type: 'schedule',
+      run_at: new Date('2026-03-08T14:00:00.000Z'),
+      cron: null,
+      timezone: 'UTC',
+      enabled: true,
+      status: 'scheduled'
+    };
+
+    await workflowOneTimeScheduledRunHandler('job-date', {
+      tenantId: 'tenant-1',
+      workflowId: 'workflow-iso',
+      scheduleId: 'schedule-date'
+    });
+
+    const payload = launchPublishedWorkflowRun.mock.calls[0]?.[1]?.payload;
+    expect(payload?.scheduledFor).toBe('2026-03-08T14:00:00.000Z');
+    expect(getSchemaRegistry().get(WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF).safeParse(payload).success).toBe(true);
+  });
+
   it('T027/T036/T044: recurring handler launches once per fire, ignores duplicate delivery, and still launches later occurrences', async () => {
     scheduleRecord = {
       id: 'schedule-2',

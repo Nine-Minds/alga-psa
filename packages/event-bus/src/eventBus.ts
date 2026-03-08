@@ -307,10 +307,6 @@ export class EventBus {
     if (this.processingEvents) return;
     this.processingEvents = true;
 
-    // Track last log time to avoid spamming logs
-    let lastSubscriptionLogTime = 0;
-    const subscriptionLogInterval = 60000; // Log subscriptions every 60 seconds
-
     const processEvents = async () => {
       if (!this.processingEvents) return;
 
@@ -318,22 +314,6 @@ export class EventBus {
         const client = await getClient();
         const config = getRedisConfig();
         const subscriptions = this.getActiveSubscriptions();
-
-        // Periodically log active subscriptions for debugging
-        const now = Date.now();
-        if (now - lastSubscriptionLogTime > subscriptionLogInterval) {
-          lastSubscriptionLogTime = now;
-          if (subscriptions.length > 0) {
-            logger.info('[EventBus] Active subscriptions:', {
-              count: subscriptions.length,
-              streams: subscriptions.map(s => s.stream),
-              isConnected,
-              consumerName: this.consumerName
-            });
-          } else {
-            logger.debug('[EventBus] No active subscriptions, waiting for handlers to be registered');
-          }
-        }
 
         if (subscriptions.length === 0) {
           setTimeout(processEvents, 1000);

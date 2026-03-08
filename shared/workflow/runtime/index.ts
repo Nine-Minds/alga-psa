@@ -1,5 +1,6 @@
 export * from './types';
 export * from './init';
+export * from './schemas/emptyWorkflowPayloadSchema';
 export * from './schemas/workflowClockTriggerSchema';
 export { SchemaRegistry, getSchemaRegistry } from './registries/schemaRegistry';
 export { ActionRegistry, getActionRegistryV2 } from './registries/actionRegistry';

@@ -19,7 +19,6 @@ export class CompositeSecretProvider implements ISecretProvider {
     }
     this.readProviders = readProviders;
     this.writeProvider = writeProvider;
-    logger.info(`CompositeSecretProvider initialized with ${readProviders.length} read providers and 1 write provider`);
   }
 
   /**
@@ -35,15 +34,13 @@ export class CompositeSecretProvider implements ISecretProvider {
       try {
         const value = await provider.getAppSecret(name);
         if (value !== undefined) {
-          logger.debug(`CompositeSecretProvider found app secret '${name}' from provider ${i}`);
           return value;
         }
       } catch (error) {
-        logger.warn(`CompositeSecretProvider: read provider ${i} failed for app secret '${name}': ${error}`);
+        logger.warn(`CompositeSecretProvider: read provider ${i} failed for app secret lookup`, error);
         // Continue to next provider on error
       }
     }
-    logger.debug(`CompositeSecretProvider: app secret '${name}' not found in any provider`);
     return undefined;
   }
 
@@ -61,15 +58,13 @@ export class CompositeSecretProvider implements ISecretProvider {
       try {
         const value = await provider.getTenantSecret(tenantId, name);
         if (value !== undefined) {
-          logger.debug(`CompositeSecretProvider found tenant secret '${tenantId}:${name}' from provider ${i}`);
           return value;
         }
       } catch (error) {
-        logger.warn(`CompositeSecretProvider: read provider ${i} failed for tenant secret '${tenantId}:${name}': ${error}`);
+        logger.warn(`CompositeSecretProvider: read provider ${i} failed for tenant secret lookup`, error);
         // Continue to next provider on error
       }
     }
-    logger.debug(`CompositeSecretProvider: tenant secret '${tenantId}:${name}' not found in any provider`);
     return undefined;
   }
 
@@ -83,9 +78,8 @@ export class CompositeSecretProvider implements ISecretProvider {
   async setTenantSecret(tenantId: string, name: string, value: string | null): Promise<void> {
     try {
       await this.writeProvider.setTenantSecret(tenantId, name, value);
-      logger.debug(`CompositeSecretProvider set tenant secret '${tenantId}:${name}' via write provider`);
     } catch (error) {
-      logger.error(`CompositeSecretProvider failed to set tenant secret '${tenantId}:${name}': ${error}`);
+      logger.error('CompositeSecretProvider failed to set tenant secret', error);
       throw error;
     }
   }
@@ -99,9 +93,8 @@ export class CompositeSecretProvider implements ISecretProvider {
   async deleteTenantSecret(tenantId: string, name: string): Promise<void> {
     try {
       await this.writeProvider.deleteTenantSecret(tenantId, name);
-      logger.debug(`CompositeSecretProvider deleted tenant secret '${tenantId}:${name}' via write provider`);
     } catch (error) {
-      logger.error(`CompositeSecretProvider failed to delete tenant secret '${tenantId}:${name}': ${error}`);
+      logger.error('CompositeSecretProvider failed to delete tenant secret', error);
       throw error;
     }
   }

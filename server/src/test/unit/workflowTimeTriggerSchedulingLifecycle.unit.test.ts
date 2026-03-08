@@ -19,7 +19,8 @@ let scheduleSequence = 0;
 const runnerMock = {
   scheduleJobAt: vi.fn(),
   scheduleRecurringJob: vi.fn(),
-  cancelJob: vi.fn()
+  cancelJob: vi.fn(),
+  getJobStatus: vi.fn()
 };
 
 const knexMock: any = vi.fn((table: string) => {
@@ -100,8 +101,8 @@ vi.mock('@alga-psa/auth', () => ({
   preCheckDeletion: vi.fn(async () => ({ canDelete: true, dependencies: [], alternatives: [] }))
 }));
 
-vi.mock('server/src/lib/jobs/JobRunnerFactory', () => ({
-  getJobRunner: vi.fn(async () => runnerMock)
+vi.mock('server/src/lib/jobs/initializeJobRunner', () => ({
+  initializeJobRunner: vi.fn(async () => runnerMock)
 }));
 
 vi.mock('@shared/workflow/persistence/workflowDefinitionModelV2', () => ({
@@ -213,6 +214,7 @@ describe('Workflow time trigger schedule lifecycle unit tests', () => {
       return { jobId: `job-${scheduleSequence}`, externalId: `runner-${scheduleSequence}` };
     });
     runnerMock.cancelJob.mockResolvedValue(true);
+    runnerMock.getJobStatus.mockResolvedValue({ status: 'active' });
     process.env.EDITION = 'ee';
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     initializeWorkflowRuntimeV2();
@@ -433,6 +435,45 @@ describe('Workflow time trigger schedule lifecycle unit tests', () => {
       trigger_type: 'recurring',
       cron: '30 14 * * 1-5',
       timezone: 'America/New_York',
+      job_id: 'job-2',
+      runner_schedule_id: 'runner-2'
+    });
+  });
+
+  it('allows rescheduling when the prior runner job is already terminal', async () => {
+    const createResult = await createWorkflowDefinitionAction({
+      definition: buildDraftDefinition({
+        type: 'schedule',
+        runAt: '2026-03-08T14:00:00.000Z'
+      }),
+      payloadSchemaMode: 'pinned',
+      pinnedPayloadSchemaRef: TEST_SCHEMA_REF
+    });
+    await publishWorkflowDefinitionAction({ workflowId: createResult.workflowId, version: 1 });
+
+    runnerMock.cancelJob.mockResolvedValue(false);
+    runnerMock.getJobStatus.mockResolvedValue({ status: 'failed' });
+
+    await publishWorkflowDefinitionAction({
+      workflowId: createResult.workflowId,
+      version: 2,
+      definition: {
+        ...buildDraftDefinition({
+          type: 'schedule',
+          runAt: '2026-03-10T10:15:00.000Z'
+        }),
+        id: createResult.workflowId,
+        version: 2
+      }
+    });
+
+    expect(runnerMock.cancelJob).toHaveBeenCalledWith('job-1', 'tenant-1');
+    expect(runnerMock.getJobStatus).toHaveBeenCalledWith('job-1', 'tenant-1');
+    expect(scheduleRecord).toMatchObject({
+      workflow_id: createResult.workflowId,
+      workflow_version: 2,
+      trigger_type: 'schedule',
+      run_at: '2026-03-10T10:15:00.000Z',
       job_id: 'job-2',
       runner_schedule_id: 'runner-2'
     });

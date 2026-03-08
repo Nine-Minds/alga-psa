@@ -3,11 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const {
   startRunMock,
   executeRunMock,
-  getByTriggerFireKeyMock
+  getByTriggerFireKeyMock,
+  createRunMock
 } = vi.hoisted(() => ({
   startRunMock: vi.fn(),
   executeRunMock: vi.fn(),
-  getByTriggerFireKeyMock: vi.fn()
+  getByTriggerFireKeyMock: vi.fn(),
+  createRunMock: vi.fn()
 }));
 
 vi.mock('@shared/workflow/persistence/workflowDefinitionModelV2', () => ({
@@ -48,6 +50,7 @@ vi.mock('@shared/workflow/persistence/workflowDefinitionVersionModelV2', () => (
 
 vi.mock('@shared/workflow/persistence/workflowRunModelV2', () => ({
   default: {
+    create: (...args: unknown[]) => createRunMock(...args),
     getByTriggerFireKey: (...args: unknown[]) => getByTriggerFireKeyMock(...args)
   }
 }));
@@ -70,7 +73,10 @@ vi.mock('@shared/workflow/runtime', async (importOriginal) => {
   };
 });
 
-import { launchPublishedWorkflowRun } from 'server/src/lib/workflow-runtime-v2/workflowRunLauncher';
+import {
+  launchPublishedWorkflowRun,
+  recordFailedWorkflowRunLaunch
+} from 'server/src/lib/workflow-runtime-v2/workflowRunLauncher';
 
 describe('Workflow run launcher', () => {
   const knexMock: any = vi.fn((table: string) => {
@@ -89,6 +95,12 @@ describe('Workflow run launcher', () => {
     startRunMock.mockReset();
     executeRunMock.mockReset();
     getByTriggerFireKeyMock.mockReset();
+    createRunMock.mockReset();
+    createRunMock.mockImplementation(async (_knex: unknown, data: Record<string, unknown>) => ({
+      run_id: 'run-created',
+      workflow_version: data.workflow_version,
+      ...data
+    }));
   });
 
   it('T044: duplicate recurring fire keys return the existing run without executing twice', async () => {
@@ -132,5 +144,45 @@ describe('Workflow run launcher', () => {
     expect(startRunMock).toHaveBeenCalledTimes(1);
     expect(executeRunMock).not.toHaveBeenCalled();
     expect(getByTriggerFireKeyMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('records a failed run row for launch-time payload validation failures', async () => {
+    const result = await recordFailedWorkflowRunLaunch(knexMock, {
+      workflowId: 'workflow-1',
+      workflowVersion: 5,
+      tenantId: 'tenant-1',
+      payload: { invalid: true },
+      triggerType: 'schedule',
+      triggerMetadata: { fireKey: 'workflow-schedule-fire:schedule-1:job-1' },
+      triggerFireKey: 'workflow-schedule-fire:schedule-1:job-1',
+      sourcePayloadSchemaRef: 'payload.Clock.v1',
+      message: 'Workflow payload failed validation',
+      details: { issues: [{ path: ['foo'], message: 'Required' }] }
+    });
+
+    expect(result).toEqual({
+      runId: 'run-created',
+      workflowVersion: 5
+    });
+    expect(createRunMock).toHaveBeenCalledWith(
+      knexMock,
+      expect.objectContaining({
+        workflow_id: 'workflow-1',
+        workflow_version: 5,
+        tenant_id: 'tenant-1',
+        status: 'FAILED',
+        trigger_type: 'schedule',
+        trigger_fire_key: 'workflow-schedule-fire:schedule-1:job-1',
+        source_payload_schema_ref: 'payload.Clock.v1',
+        input_json: { invalid: true },
+        error_json: {
+          message: 'Workflow payload failed validation',
+          stage: 'launch',
+          details: {
+            issues: [{ path: ['foo'], message: 'Required' }]
+          }
+        }
+      })
+    );
   });
 });

@@ -500,7 +500,6 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
   const canRunSelected = !!activeDefinition?.workflow_id
     && canManage
     && !!activeDefinition.published_version
-    && activeDefinition.validation_status !== 'error'
     && !activeDefinition.is_paused
     && (!activeDefinition.is_system || canAdmin);
 
@@ -891,7 +890,6 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
         draftVersion={null}
         isSystem={activeDefinition?.is_system ?? false}
         isPaused={activeDefinition?.is_paused ?? false}
-        validationStatus={activeDefinition?.validation_status ?? null}
         concurrencyLimit={activeDefinition?.concurrency_limit ?? null}
         canPublish={false}
       />

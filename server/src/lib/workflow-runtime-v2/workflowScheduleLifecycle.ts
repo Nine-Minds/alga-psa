@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 
 import type { ScheduleJobResult } from 'server/src/lib/jobs/interfaces/IJobRunner';
-import { getJobRunner } from 'server/src/lib/jobs/JobRunnerFactory';
+import { initializeJobRunner } from 'server/src/lib/jobs/initializeJobRunner';
 import type { WorkflowDefinition, WorkflowTimeTrigger } from '@shared/workflow/runtime';
 import WorkflowScheduleStateModel, {
   type WorkflowScheduleStateRecord,
@@ -30,6 +30,8 @@ type WorkflowScheduleJobData = {
 
 const workflowScheduleSingletonKey = (workflowId: string, scheduleId: string): string =>
   `workflow-schedule:${workflowId}:${scheduleId}`;
+
+const TERMINAL_JOB_STATUSES = new Set(['completed', 'failed']);
 
 const isTimeTriggerDefinition = (trigger: WorkflowDefinition['trigger']): trigger is WorkflowTimeTrigger =>
   trigger?.type === 'schedule' || trigger?.type === 'recurring';
@@ -72,7 +74,7 @@ async function scheduleDesiredWorkflow(
 ): Promise<ScheduleJobResult | null> {
   if (!desired.enabled) return null;
 
-  const runner = await getJobRunner();
+  const runner = await initializeJobRunner();
   const jobData: WorkflowScheduleJobData = {
     tenantId,
     workflowId,
@@ -124,11 +126,16 @@ async function cancelScheduledWorkflow(
 ): Promise<void> {
   const jobId = existing.job_id ? String(existing.job_id) : '';
   if (!jobId) return;
-  const runner = await getJobRunner();
+  const runner = await initializeJobRunner();
   const cancelled = await runner.cancelJob(jobId, tenantId);
-  if (!cancelled) {
-    throw new Error('Failed to cancel existing workflow schedule');
+  if (cancelled) return;
+
+  const current = await runner.getJobStatus(jobId, tenantId).catch(() => null);
+  if (!current || TERMINAL_JOB_STATUSES.has(String(current.status).toLowerCase())) {
+    return;
   }
+
+  throw new Error('Failed to cancel existing workflow schedule');
 }
 
 async function restorePreviousScheduleRegistration(

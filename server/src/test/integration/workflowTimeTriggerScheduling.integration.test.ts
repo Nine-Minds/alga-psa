@@ -54,8 +54,8 @@ vi.mock('@alga-psa/auth', () => {
   };
 });
 
-vi.mock('server/src/lib/jobs/JobRunnerFactory', () => ({
-  getJobRunner: vi.fn(async () => runnerMock)
+vi.mock('server/src/lib/jobs/initializeJobRunner', () => ({
+  initializeJobRunner: vi.fn(async () => runnerMock)
 }));
 
 const mockedCreateTenantKnex = vi.mocked(createTenantKnex);

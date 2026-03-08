@@ -82,8 +82,8 @@ import type {
   PublishError,
   InputMapping,
   MappingValue
-} from '@shared/workflow/runtime';
-import { WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF } from '@shared/workflow/runtime';
+} from '@shared/workflow/runtime/client';
+import { WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF } from '@shared/workflow/runtime/client';
 import { validateExpressionSource } from '@shared/workflow/runtime/expressionEngine';
 import { partitionStepExpressionValidations, validateStepExpressions } from './expressionValidation';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -2077,6 +2077,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     () => canManage && (!activeWorkflowRecord?.is_system || canAdmin),
     [activeWorkflowRecord?.is_system, canAdmin, canManage]
   );
+  const hasPublishedVersion = Boolean(activeWorkflowRecord?.published_version);
   const canPublishEnabled =
     canPublishPermission &&
     triggerSchemaPolicy.ok &&
@@ -2084,9 +2085,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     (!triggerRequiresEventCatalog || eventCatalogStatus === 'loaded');
   const canRunEnabled =
     canRunPermission &&
-    triggerSchemaPolicy.ok &&
-    payloadSchemaPolicy.ok &&
-    (!triggerRequiresEventCatalog || eventCatalogStatus === 'loaded');
+    (
+      hasPublishedVersion ||
+      (
+        triggerSchemaPolicy.ok &&
+        payloadSchemaPolicy.ok &&
+        (!triggerRequiresEventCatalog || eventCatalogStatus === 'loaded')
+      )
+    );
 
   const publishDisabledReason = useMemo(() => {
     if (!canPublishPermission) return '';
@@ -2099,12 +2105,13 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
   const runDisabledReason = useMemo(() => {
     if (!canRunPermission) return '';
+    if (hasPublishedVersion) return '';
     if (!triggerSchemaPolicy.ok) return triggerSchemaPolicy.message;
     if (!payloadSchemaPolicy.ok) return payloadSchemaPolicy.message;
     if (triggerRequiresEventCatalog && eventCatalogStatus !== 'loaded') return 'Event catalog is still loading. Running is disabled until it loads.';
     if (registryStatus !== 'loaded' && schemaRefs.length === 0) return 'Schema registry is still loading. Running is disabled until it loads.';
     return '';
-  }, [canRunPermission, eventCatalogStatus, payloadSchemaPolicy, registryStatus, schemaRefs.length, triggerRequiresEventCatalog, triggerSchemaPolicy]);
+  }, [canRunPermission, eventCatalogStatus, hasPublishedVersion, payloadSchemaPolicy, registryStatus, schemaRefs.length, triggerRequiresEventCatalog, triggerSchemaPolicy]);
   const canEditMetadata = useMemo(
     () => canManage && (!activeWorkflowRecord?.is_system || canAdmin),
     [canManage, canAdmin, activeWorkflowRecord]
@@ -2407,6 +2414,15 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       setPayloadSchemaLoadedRef(null);
       return;
     }
+    if (registryStatus !== 'loaded') {
+      return;
+    }
+    if (!schemaRefs.includes(schemaRef)) {
+      setPayloadSchema(null);
+      setPayloadSchemaStatus('error');
+      setPayloadSchemaLoadedRef(schemaRef);
+      return;
+    }
     if (payloadSchemaStatus === 'loading' && payloadSchemaLoadedRef === schemaRef) return;
     try {
       setPayloadSchemaStatus('loading');
@@ -2421,15 +2437,16 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       setPayloadSchemaStatus('error');
       setPayloadSchemaLoadedRef(schemaRef);
     }
-  }, [payloadSchemaLoadedRef, payloadSchemaStatus]);
+  }, [payloadSchemaLoadedRef, payloadSchemaStatus, registryStatus, schemaRefs]);
 
   const ensurePayloadSchemaLoaded = useCallback(async () => {
     const schemaRef = effectivePayloadSchemaRef ?? '';
     if (!schemaRef) return;
+    if (registryStatus !== 'loaded') return;
     if (payloadSchemaStatus === 'loading') return;
     if (payloadSchemaLoadedRef === schemaRef && payloadSchemaStatus === 'loaded' && payloadSchema) return;
     await loadPayloadSchema(schemaRef);
-  }, [effectivePayloadSchemaRef, loadPayloadSchema, payloadSchema, payloadSchemaLoadedRef, payloadSchemaStatus]);
+  }, [effectivePayloadSchemaRef, loadPayloadSchema, payloadSchema, payloadSchemaLoadedRef, payloadSchemaStatus, registryStatus]);
 
   const triggerSourceSchemaRef = useMemo(() => {
     const trigger = activeDefinition?.trigger;
@@ -2459,6 +2476,15 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       setTriggerSourceSchemaLoadedRef(null);
       return;
     }
+    if (registryStatus !== 'loaded') {
+      return;
+    }
+    if (!schemaRefs.includes(schemaRef)) {
+      setTriggerSourceSchema(null);
+      setTriggerSourceSchemaStatus('error');
+      setTriggerSourceSchemaLoadedRef(schemaRef);
+      return;
+    }
     if (triggerSourceSchemaStatus === 'loading' && triggerSourceSchemaLoadedRef === schemaRef) return;
     try {
       setTriggerSourceSchemaStatus('loading');
@@ -2473,14 +2499,15 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       setTriggerSourceSchemaStatus('error');
       setTriggerSourceSchemaLoadedRef(schemaRef);
     }
-  }, [triggerSourceSchemaLoadedRef, triggerSourceSchemaStatus]);
+  }, [registryStatus, schemaRefs, triggerSourceSchemaLoadedRef, triggerSourceSchemaStatus]);
 
   const ensureTriggerSourceSchemaLoaded = useCallback(async () => {
     if (!triggerSourceSchemaRef) return;
+    if (registryStatus !== 'loaded') return;
     if (triggerSourceSchemaStatus === 'loading') return;
     if (triggerSourceSchemaLoadedRef === triggerSourceSchemaRef && triggerSourceSchemaStatus === 'loaded' && triggerSourceSchema) return;
     await loadTriggerSourceSchema(triggerSourceSchemaRef);
-  }, [loadTriggerSourceSchema, triggerSourceSchema, triggerSourceSchemaLoadedRef, triggerSourceSchemaRef, triggerSourceSchemaStatus]);
+  }, [loadTriggerSourceSchema, registryStatus, triggerSourceSchema, triggerSourceSchemaLoadedRef, triggerSourceSchemaRef, triggerSourceSchemaStatus]);
 
   useEffect(() => {
     loadDefinitions();
@@ -4969,7 +4996,6 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   disabled={
                     !activeDefinition
                     || !activeWorkflowId
-                    || activeWorkflowRecord?.validation_status === 'error'
                     || activeWorkflowRecord?.is_paused
                     || !canRunEnabled
                   }
@@ -5008,7 +5034,6 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         draftVersion={activeDefinition?.version ?? null}
         isSystem={activeWorkflowRecord?.is_system ?? false}
         isPaused={activeWorkflowRecord?.is_paused ?? false}
-        validationStatus={activeWorkflowRecord?.validation_status ?? null}
         concurrencyLimit={activeWorkflowRecord?.concurrency_limit ?? null}
         canPublish={canPublishPermission}
         onPublishDraft={handlePublish}

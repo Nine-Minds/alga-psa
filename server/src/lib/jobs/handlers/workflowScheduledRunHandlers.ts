@@ -15,6 +15,19 @@ export interface WorkflowScheduledRunJobData extends BaseJobData {
 const buildWorkflowScheduleFireKey = (scheduleId: string, jobId: string): string =>
   `workflow-schedule-fire:${scheduleId}:${jobId}`;
 
+const toIsoDateTime = (value: unknown): string | null => {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value.toISOString();
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const parsed = new Date(trimmed);
+    return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  }
+  return null;
+};
+
 const buildClockPayload = (params: {
   scheduleId: string;
   workflowId: string;
@@ -25,10 +38,11 @@ const buildClockPayload = (params: {
   timezone?: string | null;
 }): WorkflowClockTriggerPayload => {
   const firedAt = new Date().toISOString();
+  const scheduledFor = toIsoDateTime(params.runAt) ?? firedAt;
   return {
     triggerType: params.triggerType,
     scheduleId: params.scheduleId,
-    scheduledFor: params.runAt ?? firedAt,
+    scheduledFor,
     firedAt,
     timezone: params.timezone ?? 'UTC',
     workflowId: params.workflowId,

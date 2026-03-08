@@ -11,7 +11,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { validateExpressionSource } from '@shared/workflow/runtime/expressionEngine';
 import { listTenantSecrets } from '@alga-psa/tenancy/actions';
-import type { InputMapping, MappingValue, Expr } from '@shared/workflow/runtime';
+import type { InputMapping, MappingValue, Expr } from '@shared/workflow/runtime/client';
 import {
   ExpressionEditor,
   type ExpressionEditorHandle,

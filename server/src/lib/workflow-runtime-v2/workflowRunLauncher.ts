@@ -28,6 +28,21 @@ export type WorkflowRunLaunchResult = {
   workflowVersion: number;
 };
 
+type WorkflowRunLaunchFailureRequest = {
+  workflowId: string;
+  workflowVersion: number;
+  tenantId: string | null;
+  payload: Record<string, unknown>;
+  triggerType?: 'event' | 'schedule' | 'recurring' | null;
+  triggerMetadata?: Record<string, unknown> | null;
+  triggerFireKey?: string | null;
+  eventType?: string | null;
+  sourcePayloadSchemaRef?: string | null;
+  triggerMappingApplied?: boolean;
+  message: string;
+  details?: unknown;
+};
+
 async function resolveVersionRecord(
   knex: Knex,
   workflowId: string,
@@ -44,6 +59,49 @@ const isTriggerFireKeyDuplicateError = (error: unknown): boolean => {
   const candidate = error as { code?: string; constraint?: string } | null;
   return candidate?.code === '23505' && candidate?.constraint === WORKFLOW_RUN_TRIGGER_FIRE_KEY_UNIQUE;
 };
+
+export async function recordFailedWorkflowRunLaunch(
+  knex: Knex,
+  request: WorkflowRunLaunchFailureRequest
+): Promise<WorkflowRunLaunchResult> {
+  if (request.triggerFireKey) {
+    const existingRun = await WorkflowRunModelV2.getByTriggerFireKey(knex, request.triggerFireKey);
+    if (existingRun) {
+      return {
+        runId: existingRun.run_id,
+        workflowVersion: existingRun.workflow_version
+      };
+    }
+  }
+
+  const now = new Date().toISOString();
+  const run = await WorkflowRunModelV2.create(knex, {
+    workflow_id: request.workflowId,
+    workflow_version: request.workflowVersion,
+    tenant_id: request.tenantId,
+    status: 'FAILED',
+    node_path: null,
+    input_json: request.payload,
+    trigger_type: request.triggerType ?? null,
+    trigger_metadata_json: request.triggerMetadata ?? null,
+    trigger_fire_key: request.triggerFireKey ?? null,
+    event_type: request.eventType ?? null,
+    source_payload_schema_ref: request.sourcePayloadSchemaRef ?? null,
+    trigger_mapping_applied: request.triggerMappingApplied ?? false,
+    error_json: {
+      message: request.message,
+      stage: 'launch',
+      ...(request.details !== undefined ? { details: request.details } : {})
+    },
+    started_at: now,
+    completed_at: now
+  });
+
+  return {
+    runId: run.run_id,
+    workflowVersion: run.workflow_version
+  };
+}
 
 export async function launchPublishedWorkflowRun(
   knex: Knex,
@@ -84,6 +142,22 @@ export async function launchPublishedWorkflowRun(
   if (schemaRef && schemaRegistry.has(schemaRef)) {
     const validation = schemaRegistry.get(schemaRef).safeParse(request.payload);
     if (!validation.success) {
+      await recordFailedWorkflowRunLaunch(knex, {
+        workflowId: request.workflowId,
+        workflowVersion: versionRecord.version,
+        tenantId: request.tenantId,
+        payload: request.payload,
+        triggerType: request.triggerType ?? null,
+        triggerMetadata: request.triggerMetadata ?? null,
+        triggerFireKey: request.triggerFireKey ?? null,
+        eventType: request.eventType ?? null,
+        sourcePayloadSchemaRef: request.sourcePayloadSchemaRef ?? null,
+        triggerMappingApplied: request.triggerMappingApplied,
+        message: 'Workflow payload failed validation',
+        details: {
+          issues: validation.error.issues
+        }
+      });
       throw new Error('Workflow payload failed validation');
     }
   }
