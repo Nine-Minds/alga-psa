@@ -224,3 +224,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd packages/billing && npx vitest run --config vitest.config.ts tests/manual-invoices.quick-add-client.contract.test.ts`
 - 2026-03-08 T026: Added `packages/assets/src/components/QuickAddAsset.quick-add-client.contract.test.ts` to preserve the asset quick-add client picker wiring that opens `QuickAddClient`, merges the created client, auto-selects it, and clears validation state.
 - Validation: `cd packages/assets && npx vitest run --config vitest.config.ts src/components/QuickAddAsset.quick-add-client.contract.test.ts`
+- 2026-03-08 T027: Added `packages/tickets/src/components/__tests__/QuickAddCategory.test.tsx` with a jsdom harness for `QuickAddCategory`, starting by verifying the create dialog renders the required category-name input.
+- Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddCategory.test.tsx -t T027`

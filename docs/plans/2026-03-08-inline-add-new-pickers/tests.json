@@ -210,7 +210,7 @@
   {
     "id": "T027",
     "description": "QuickAddCategory component renders with category name input field",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
