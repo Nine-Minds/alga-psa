@@ -10,7 +10,7 @@
   {
     "id": "F002",
     "description": "MSP layout: add metadata export with `template: '%s | Alga PSA'` and `default: 'Dashboard | Alga PSA'`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 2"
     ]

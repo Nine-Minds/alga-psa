@@ -49,3 +49,4 @@
 - (2026-03-08) Validation runbook: `NODE_OPTIONS='--max-old-space-size=8192' npm --prefix server run typecheck && NODE_OPTIONS='--max-old-space-size=8192' npm --prefix ee/server run typecheck` passes.
 - (2026-03-08) Build blocker: `npm run build` and `npm --prefix ee/server run build` fail on pre-existing missing-module issues in `@alga-psa/product-extension-actions`, `@alga-psa/storage/StorageService`, and `packages/workflows` exports.
 - (2026-03-08) F001: Root layout: change generateMetadata() title from static string to template object with `template: '%s | Alga PSA'` and `default: 'Alga PSA'`
+- (2026-03-08) F002: MSP layout: add metadata export with `template: '%s | Alga PSA'` and `default: 'Dashboard | Alga PSA'`
