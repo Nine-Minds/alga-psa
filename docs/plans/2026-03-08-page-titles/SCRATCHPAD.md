@@ -56,3 +56,4 @@
 - (2026-03-08) F006: MSP page title: /msp/dashboard — title: 'Dashboard'
 - (2026-03-08) F007: MSP page title: /msp/account — title: 'Account'
 - (2026-03-08) F008: MSP page title: /msp/account-manager — title: 'Account Manager'
+- (2026-03-08) F009: MSP page title: /msp/profile — title: 'Profile'
