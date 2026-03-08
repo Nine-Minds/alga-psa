@@ -236,7 +236,7 @@ export function TimeSheetListView({
                                         id="add-work-item-button-list"
                                         variant="dashed"
                                         size="sm"
-                                        onClick={onAddWorkItem}
+                                        onClick={() => onAddWorkItem()}
                                     >
                                         <Plus className="h-4 w-4 mr-1.5" />
                                         Add Item
@@ -271,7 +271,7 @@ export function TimeSheetListView({
                                     <Button
                                         id="get-started-button-list"
                                         variant="link"
-                                        onClick={onAddWorkItem}
+                                        onClick={() => onAddWorkItem()}
                                         disabled={!isEditable}
                                     >
                                         Get Started
