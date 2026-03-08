@@ -8,13 +8,11 @@ import Link from 'next/link';
 import WorkflowEventTimeline from '@alga-psa/workflows/components/WorkflowEventTimeline';
 import WorkflowActionsList from '@alga-psa/workflows/components/WorkflowActionsList';
 import WorkflowControls from '@alga-psa/workflows/components/WorkflowControls';
+import type { Metadata } from 'next';
 
-
-export async function generateMetadata() {
-  return {
-    title: 'Workflow Execution',
-  };
-}
+export const metadata: Metadata = {
+  title: 'Workflow Execution',
+};
 
 export const dynamic = 'force-dynamic';
 

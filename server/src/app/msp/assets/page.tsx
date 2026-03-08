@@ -4,9 +4,9 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import type { AssetListResponse } from '@alga-psa/types';
 import { MspAssetDashboardClient } from '@alga-psa/msp-composition/assets';
 import { getSession } from '@alga-psa/auth';
+import type { Metadata } from 'next';
 
-
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Assets',
 };
 

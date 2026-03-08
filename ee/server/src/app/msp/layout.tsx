@@ -3,8 +3,9 @@ import { getSession } from "@alga-psa/auth";
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";
 import { featureFlags } from "server/src/lib/feature-flags/featureFlags";
 import { MspLayoutClient } from "./MspLayoutClient";
+import type { Metadata } from 'next';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: {
     template: '%s | Alga PSA',
     default: 'Dashboard | Alga PSA',

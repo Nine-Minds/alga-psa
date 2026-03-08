@@ -2,9 +2,9 @@ import { Suspense } from 'react';
 import DashboardContainer from '@/components/dashboard/DashboardContainer';
 import { DashboardOnboardingSkeleton, DashboardOnboardingSlot } from '@alga-psa/onboarding/components';
 import { isEnterprise } from '@/lib/features';
+import type { Metadata } from 'next';
 
-
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Dashboard',
 };
 

@@ -1,8 +1,8 @@
-export async function generateMetadata() {
-  return {
-    title: 'Extension Configuration',
-  };
-}
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Extension Configuration',
+};
 
 export default function Layout({
   children,
@@ -11,4 +11,3 @@ export default function Layout({
 }>) {
   return children;
 }
-

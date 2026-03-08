@@ -4,12 +4,11 @@ import ExtensionIframe from '@product/extensions/ee/ExtensionIframe';
 import DockerExtensionIframe from '@product/extensions/ee/DockerExtensionIframe';
 import { getInstallInfo } from '@ee/lib/actions/extensionDomainActions';
 import { buildExtUiSrc } from 'server/src/lib/extensions/assets/url.shared';
+import type { Metadata } from 'next';
 
-export async function generateMetadata() {
-  return {
-    title: 'Extension',
-  };
-}
+export const metadata: Metadata = {
+  title: 'Extension',
+};
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

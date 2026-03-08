@@ -4,13 +4,11 @@ import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { TicketDetailsContainer } from '@alga-psa/client-portal/components';
 import logger from '@alga-psa/core/logger';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import type { Metadata } from 'next';
 
-
-export async function generateMetadata() {
-  return {
-    title: 'Ticket Details',
-  };
-}
+export const metadata: Metadata = {
+  title: 'Ticket Details',
+};
 
 interface TicketPageProps {
   params: Promise<{

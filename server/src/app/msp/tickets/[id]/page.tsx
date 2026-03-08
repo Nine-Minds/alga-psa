@@ -6,14 +6,11 @@ import { TicketDetailsSkeleton } from '@alga-psa/tickets/components/ticket/Ticke
 import { getSurveyTicketSummary } from '@alga-psa/surveys/actions/survey-actions/surveyDashboardActions';
 import AssociatedAssets from '@alga-psa/assets/components/AssociatedAssets';
 import { MspTicketDetailsContainerClient } from '@alga-psa/msp-composition/tickets';
+import type { Metadata } from 'next';
 
-
-
-export async function generateMetadata() {
-  return {
-    title: 'Ticket Details',
-  };
-}
+export const metadata: Metadata = {
+  title: 'Ticket Details',
+};
 
 interface TicketDetailsPageProps {
   params: Promise<{

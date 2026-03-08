@@ -3,9 +3,9 @@ import { getSession, getSessionWithRevocationCheck } from "@alga-psa/auth";
 import { ClientPortalLayoutClient } from "./ClientPortalLayoutClient";
 import { getTenantBrandingByTenantId } from "@alga-psa/tenancy/actions";
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";
+import type { Metadata } from 'next';
 
-
-export const metadata = {
+export const metadata: Metadata = {
   title: {
     template: '%s | Client Portal',
     default: 'Dashboard | Client Portal',

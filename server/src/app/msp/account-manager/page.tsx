@@ -1,10 +1,11 @@
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Account Manager',
 };
 
 // server/src/app/msp/account-manager/page.tsx
 
 import { AccountManagerDashboard } from '@alga-psa/clients';
+import type { Metadata } from 'next';
 
 export default async function AccountManagerPage() {
   // const clients = await Client.getAll();

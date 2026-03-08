@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@alga-psa/auth';
+import type { Metadata } from 'next';
 
-
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Sign In',
 };
 

@@ -1,8 +1,8 @@
-export async function generateMetadata() {
-  return {
-    title: 'Workflow Run',
-  };
-}
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Workflow Run',
+};
 
 export default function Layout({
   children,
@@ -11,4 +11,3 @@ export default function Layout({
 }>) {
   return children;
 }
-

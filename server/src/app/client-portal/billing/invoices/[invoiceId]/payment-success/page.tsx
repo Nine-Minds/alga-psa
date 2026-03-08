@@ -1,12 +1,10 @@
 import { Suspense } from 'react';
 import { PaymentSuccessContent } from '@alga-psa/client-portal/components';
+import type { Metadata } from 'next';
 
-
-export async function generateMetadata() {
-  return {
-    title: 'Payment Success',
-  };
-}
+export const metadata: Metadata = {
+  title: 'Payment Success',
+};
 
 interface PaymentSuccessPageProps {
   params: {

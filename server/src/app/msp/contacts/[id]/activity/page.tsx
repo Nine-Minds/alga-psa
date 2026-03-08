@@ -1,15 +1,13 @@
-export async function generateMetadata() {
-  return {
-    title: 'Contact Activity',
-  };
-}
+export const metadata: Metadata = {
+  title: 'Contact Activity',
+};
 
 // server/src/app/msp/contacts/[id]/activity/page.tsx
 import { InteractionsFeed } from '@alga-psa/clients';
 import { getInteractionsForEntity } from '@alga-psa/clients/actions';
 import ContactModel from 'server/src/lib/models/contact';
 import { getConnection } from 'server/src/lib/db/db';
-
+import type { Metadata } from 'next';
 
 export default async function ContactActivityPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;

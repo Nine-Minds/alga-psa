@@ -1,4 +1,6 @@
-export const metadata = {
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
   title: 'Password Reset',
 };
 
@@ -9,4 +11,3 @@ export default function Layout({
 }>) {
   return children;
 }
-

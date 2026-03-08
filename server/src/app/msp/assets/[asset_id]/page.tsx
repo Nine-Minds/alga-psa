@@ -3,13 +3,11 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { AssetDetailView } from '@alga-psa/assets/components/AssetDetailView';
 import { getSession } from '@alga-psa/auth';
+import type { Metadata } from 'next';
 
-
-export async function generateMetadata() {
-  return {
-    title: 'Asset Details',
-  };
-}
+export const metadata: Metadata = {
+  title: 'Asset Details',
+};
 
 interface Props {
   params: Promise<{

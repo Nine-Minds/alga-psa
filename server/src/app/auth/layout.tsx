@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
+import type { Metadata } from 'next';
 
-
-export const metadata = {
+export const metadata: Metadata = {
   title: {
     template: '%s | Alga PSA',
     default: 'Sign In | Alga PSA',

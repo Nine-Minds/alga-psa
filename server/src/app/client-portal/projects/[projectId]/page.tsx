@@ -3,13 +3,11 @@ import { getClientProjectDetails } from '@alga-psa/client-portal/actions';
 import { ProjectDetailsContainer } from '@alga-psa/client-portal/components';
 import logger from '@alga-psa/core/logger';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import type { Metadata } from 'next';
 
-
-export async function generateMetadata() {
-  return {
-    title: 'Project Details',
-  };
-}
+export const metadata: Metadata = {
+  title: 'Project Details',
+};
 
 interface ProjectPageProps {
   params: Promise<{

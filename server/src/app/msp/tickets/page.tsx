@@ -4,9 +4,9 @@ import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDis
 import { getTeams } from '@alga-psa/teams/actions';
 import type { ITicketListFilters } from '@alga-psa/types';
 import { MspTicketsPageClient } from '@alga-psa/msp-composition/tickets';
+import type { Metadata } from 'next';
 
-
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Tickets',
 };
 

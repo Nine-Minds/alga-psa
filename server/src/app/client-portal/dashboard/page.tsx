@@ -1,7 +1,7 @@
 import { ClientDashboard } from '@alga-psa/client-portal/components';
+import type { Metadata } from 'next';
 
-
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Dashboard',
 };
 

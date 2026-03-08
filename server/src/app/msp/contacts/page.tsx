@@ -1,4 +1,4 @@
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Contacts',
 };
 
@@ -10,6 +10,7 @@ import type { IUser } from '@shared/interfaces/user.interfaces';
 import { getAllClients, getAllContacts } from '@alga-psa/clients/actions';
 import { getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import { ContactsLayout } from '@alga-psa/clients';
+import type { Metadata } from 'next';
 
 export default async function ContactsPage() {
   const [contacts, users, clients] = await Promise.all([

@@ -2,9 +2,9 @@ import { getQueueMetricsAction, getJobDetailsWithHistory } from '@alga-psa/jobs/
 import { JobMetricsDisplay, RecentJobsDataTable } from '@alga-psa/jobs/components';
 import SystemMonitoringWrapper from '@alga-psa/ui/components/system-monitoring/SystemMonitoringWrapper';
 import { Card } from '@alga-psa/ui/components/Card';
+import type { Metadata } from 'next';
 
-
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Jobs',
 };
 

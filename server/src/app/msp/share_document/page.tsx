@@ -1,7 +1,7 @@
 import { TextEditor } from '@alga-psa/ui/editor';
+import type { Metadata } from 'next';
 
-
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Share Document',
 };
 

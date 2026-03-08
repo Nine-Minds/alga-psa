@@ -14,12 +14,10 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { User, Lock } from 'lucide-react';
 
-
 type FormData = {
   password: string;
   confirmPassword: string;
 };
-
 
 const SetNewPasswordContent: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -85,8 +83,6 @@ const SetNewPasswordContent: React.FC = () => {
     setPasswordRequirements(newRequirements);
     setPasswordsMatch(formData.password === formData.confirmPassword);
   }, [formData.password, formData.confirmPassword]);
-
-
 
   const allCriteriaMet = Object.values(passwordRequirements).every(Boolean);
 
@@ -331,7 +327,6 @@ const SetNewPasswordContent: React.FC = () => {
     </div>
   );
 };
-
 
 const SetNewPassword: React.FC = () => {
   return (

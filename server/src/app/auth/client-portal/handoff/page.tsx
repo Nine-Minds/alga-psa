@@ -1,7 +1,7 @@
 import { PortalSessionHandoff } from '@alga-psa/auth/client';
+import type { Metadata } from 'next';
 
-
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Signing In',
 };
 

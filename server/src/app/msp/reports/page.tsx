@@ -1,7 +1,7 @@
 import Reports from '@alga-psa/ui/pages/Reports';
+import type { Metadata } from 'next';
 
-
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Reports',
 };
 

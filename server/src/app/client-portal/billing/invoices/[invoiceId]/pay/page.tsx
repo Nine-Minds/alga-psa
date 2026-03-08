@@ -1,13 +1,11 @@
 import { redirect } from 'next/navigation';
 import { getClientPortalInvoicePaymentLink } from '@alga-psa/client-portal/actions/clientPaymentActions';
 import { PaymentRedirect } from '@alga-psa/client-portal/components';
+import type { Metadata } from 'next';
 
-
-export async function generateMetadata() {
-  return {
-    title: 'Pay Invoice',
-  };
-}
+export const metadata: Metadata = {
+  title: 'Pay Invoice',
+};
 
 interface PayInvoicePageProps {
   params: {

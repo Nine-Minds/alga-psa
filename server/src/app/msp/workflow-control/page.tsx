@@ -1,7 +1,7 @@
 import WorkflowAutomationGate from '../_components/WorkflowAutomationGate';
+import type { Metadata } from 'next';
 
-
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Workflow Control',
 };
 

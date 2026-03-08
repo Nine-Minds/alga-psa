@@ -8,14 +8,11 @@ import { getContactByContactNameId } from '@alga-psa/clients/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { getContactPortalPermissions } from '@alga-psa/auth/actions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import type { Metadata } from 'next';
 
-
-
-export async function generateMetadata() {
-  return {
-    title: 'Contact Details',
-  };
-}
+export const metadata: Metadata = {
+  title: 'Contact Details',
+};
 
 interface ContactDetailPageProps {
   params: Promise<{ id: string }>;

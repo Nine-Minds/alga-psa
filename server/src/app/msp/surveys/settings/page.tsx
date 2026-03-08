@@ -1,7 +1,7 @@
 import SurveySettings from '@alga-psa/surveys/components/SurveySettings';
+import type { Metadata } from 'next';
 
-
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Survey Settings',
 };
 

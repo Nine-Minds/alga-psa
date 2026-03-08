@@ -5,13 +5,11 @@ import TimeSheetClient from '@alga-psa/scheduling/components/time-management/tim
 import { createTenantKnex } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth';
 import { assertCanActOnBehalf, isManagerOfSubject } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
+import type { Metadata } from 'next';
 
-
-export async function generateMetadata() {
-  return {
-    title: 'Timesheet',
-  };
-}
+export const metadata: Metadata = {
+  title: 'Timesheet',
+};
 
 export default async function TimeSheetPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

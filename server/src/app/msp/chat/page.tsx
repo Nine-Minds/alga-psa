@@ -1,7 +1,7 @@
 import { ChatPage } from '@product/chat/entry';
+import type { Metadata } from 'next';
 
-
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Chat',
 };
 

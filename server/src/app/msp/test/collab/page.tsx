@@ -2,9 +2,9 @@ import { redirect } from 'next/navigation';
 import { getSession, getSessionWithRevocationCheck } from '@alga-psa/auth';
 import { Card } from '@alga-psa/ui/components/Card';
 import CollabTestPageClient from './CollabTestPageClient';
+import type { Metadata } from 'next';
 
-
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Collaboration Test',
 };
 
