@@ -1618,7 +1618,7 @@
   {
     "id": "T203",
     "description": "Happy path: Personal tab: the tab offers an \u201copen in full PSA\u201d path when the user needs richer context or unsupported functionality.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F102"
     ]
@@ -1626,7 +1626,7 @@
   {
     "id": "T204",
     "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: the tab offers an \u201copen in full psa\u201d path when the user needs richer context or unsupported functionality.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F102"
     ]
@@ -1634,7 +1634,7 @@
   {
     "id": "T205",
     "description": "Happy path: Personal tab: the Teams tab preserves PSA authorization semantics for every rendered entity or action.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F103"
     ]
@@ -1642,7 +1642,7 @@
   {
     "id": "T206",
     "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: the teams tab preserves psa authorization semantics for every rendered entity or action.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F103"
     ]

@@ -938,7 +938,7 @@
   {
     "id": "F102",
     "description": "Personal tab: the tab offers an \u201copen in full PSA\u201d path when the user needs richer context or unsupported functionality.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -948,7 +948,7 @@
   {
     "id": "F103",
     "description": "Personal tab: the Teams tab preserves PSA authorization semantics for every rendered entity or action.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",

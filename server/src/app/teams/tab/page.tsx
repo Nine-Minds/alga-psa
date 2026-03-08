@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { Card } from '@alga-psa/ui/components/Card';
 import { buildTeamsReauthPath } from 'server/src/lib/teams/buildTeamsReauthUrl';
+import { buildTeamsFullPsaUrl } from 'server/src/lib/teams/buildTeamsFullPsaUrl';
 import { resolveTeamsTabAccessState } from 'server/src/lib/teams/resolveTeamsTabAccessState';
 import { resolveTeamsTabAuthState } from 'server/src/lib/teams/resolveTeamsTabAuthState';
 import {
@@ -53,6 +54,7 @@ function renderTeamsTabShell(options: {
   const requestedDestination = options.requestedDestination || options.destination;
   const requestedDestinationCopy = describeTeamsTabDestination(requestedDestination);
   const isFallback = requestedDestination.type !== options.destination.type;
+  const fullPsaUrl = buildTeamsFullPsaUrl(requestedDestination);
 
   return (
     <div
@@ -81,6 +83,17 @@ function renderTeamsTabShell(options: {
         <p className="text-sm text-gray-600">
           Teams tab SSO is active with Microsoft profile {options.state.profileId}. {destinationCopy.summary}
         </p>
+        {fullPsaUrl ? (
+          <div>
+            <a
+              className="inline-flex items-center rounded-md border border-teal-200 px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50"
+              data-teams-open-full-psa={fullPsaUrl}
+              href={fullPsaUrl}
+            >
+              Open in full PSA
+            </a>
+          </div>
+        ) : null}
       </div>
     </div>
   );

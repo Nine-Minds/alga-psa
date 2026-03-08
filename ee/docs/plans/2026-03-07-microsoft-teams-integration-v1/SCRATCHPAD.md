@@ -182,6 +182,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Completed `F100` by changing destination copy from generic bootstrap text to entity-specific titles and summaries so the initial Teams tab load visibly confirms the intended PSA entity.
 - (2026-03-07) Completed `F101` by changing post-auth record-access failures from a dead-end error card into a safe `my_work` fallback shell with explanatory messaging about the unavailable requested destination.
 - (2026-03-07) Completed `T201` and `T202` with page tests asserting unavailable ticket/project-task/approval/time-entry/contact links land on the `my_work` fallback shell and preserve the requested-destination context in user-facing remediation copy.
+- (2026-03-07) Completed `F102` by adding a shared Teams full-PSA URL builder and surfacing an `Open in full PSA` handoff from the tab shell for ticket, project-task, approval, time-entry, and contact destinations, including fallback states that still preserve the originally requested record URL.
+- (2026-03-07) Completed `T203` and `T204` with a focused URL-builder test plus page assertions covering visible full-PSA handoff links for entity destinations and omission of that link for the default `my_work` landing.
+- (2026-03-07) Completed `F103` by reconciling the plan with the existing access-state gate: the Teams tab only renders a destination after PSA permission checks and tenant-scoped entity resolution succeed, and otherwise falls back safely instead of rendering unauthorized content.
+- (2026-03-07) Completed `T205` and `T206` against the existing `resolveTeamsTabAccessState` happy/guard coverage and the tab-page fallback tests that already exercise authorization-preserving behavior for ready versus unavailable destinations.
   - `server/migrations/20260307120000_create_microsoft_profiles.cjs`
   - `server/migrations/20260307143000_create_microsoft_profile_consumer_bindings.cjs`
   - `server/migrations/20260307153000_create_teams_integrations.cjs`
@@ -190,7 +194,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) The focused vitest slice still emits pre-existing React `act(...)` warnings from `MicrosoftIntegrationSettings.contract.test.tsx`; the tests pass, but the harness remains noisy.
 - (2026-03-07) The Teams setup contract tests currently emit similar non-blocking React `act(...)` warnings while asserting async save flows; the tests pass, but the harness remains noisy.
 - (2026-03-07) `npx vitest run --config vitest.config.ts src/test/unit/app/teams/tab/page.test.tsx src/test/unit/lib/teams/resolveTeamsTabDestination.test.ts`
-- (2026-03-07) Next unchecked feature after this slice is `F102` (Teams tab offers an “open in full PSA” path for richer context or unsupported functionality).
+- (2026-03-07) `npx vitest run --config vitest.config.ts src/test/unit/app/teams/tab/page.test.tsx src/test/unit/lib/teams/resolveTeamsTabDestination.test.ts src/test/unit/lib/teams/buildTeamsFullPsaUrl.test.ts`
+- (2026-03-07) Next unchecked feature after this slice is `F104` (Teams tab prefers reusing existing PSA screens/components instead of building parallel Teams-only record UIs).
 
 ## Links / References
 
