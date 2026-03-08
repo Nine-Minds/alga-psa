@@ -252,3 +252,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd packages/ui && npx vitest run --config vitest.config.ts src/components/TreeSelect.contract.test.ts -t T039`
 - 2026-03-08 T040: Added `packages/tickets/src/components/CategoryPicker.contract.test.ts` to lock the `CategoryPicker` passthrough wiring into `TreeSelect`, including the category-specific add-new label.
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/CategoryPicker.contract.test.ts -t T040`
+- 2026-03-08 T041: Extended `QuickAddTicketPrefill.test.tsx` with `CategoryPicker`/`QuickAddCategory` mocks so the ticket form now verifies `+ Add new category` opens the category quick-add dialog with `board-1` preselected.
+- Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddTicketPrefill.test.tsx -t T041`

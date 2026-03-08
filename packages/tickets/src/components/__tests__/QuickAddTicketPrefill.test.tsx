@@ -99,6 +99,46 @@ vi.mock('@alga-psa/ui/components/ContactPicker', () => ({
   )
 }));
 
+vi.mock('../CategoryPicker', () => ({
+  CategoryPicker: ({ onAddNew, categories, selectedCategories }: any) => (
+    <div data-testid="category-picker">
+      <div data-testid="category-picker-value">{selectedCategories?.[0] || ''}</div>
+      <div data-testid="category-picker-count">{categories.length}</div>
+      {onAddNew ? (
+        <button type="button" onClick={onAddNew}>
+          + Add new category
+        </button>
+      ) : null}
+    </div>
+  )
+}));
+
+vi.mock('../QuickAddCategory', () => ({
+  __esModule: true,
+  default: ({ isOpen, preselectedBoardId, onCategoryCreated }: any) => {
+    if (!isOpen) {
+      return null;
+    }
+
+    return (
+      <div data-testid="quick-add-category-dialog">
+        <div data-testid="quick-add-category-board">{preselectedBoardId}</div>
+        <button
+          type="button"
+          onClick={() => onCategoryCreated({
+            category_id: 'category-new',
+            category_name: 'Networking',
+            board_id: preselectedBoardId,
+            parent_category: null,
+          })}
+        >
+          Create Category
+        </button>
+      </div>
+    );
+  },
+}));
+
 vi.mock('@alga-psa/clients/components', () => ({
     __esModule: true,
     QuickAddContact: ({ isOpen, selectedClientId, onContactAdded }: any) => {
@@ -393,6 +433,21 @@ describe('QuickAddTicket prefills', () => {
     await waitFor(() => expect(screen.queryByTestId('quick-add-client-dialog')).not.toBeInTheDocument());
     await waitFor(() => expect(screen.getByTestId('client-picker-count')).toHaveTextContent('2'));
     expect(screen.getByTestId('client-picker-value')).toHaveTextContent('client-new');
+  });
+
+  it('T041: clicking add new category opens QuickAddCategory with the selected board id', async () => {
+    render(
+      <QuickAddTicket
+        open={true}
+        onOpenChange={() => undefined}
+        onTicketAdded={() => undefined}
+      />
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: /\+ add new category/i }, { timeout: 5000 }));
+
+    expect(screen.getByTestId('quick-add-category-dialog')).toBeInTheDocument();
+    expect(screen.getByTestId('quick-add-category-board')).toHaveTextContent('board-1');
   });
 
 });

@@ -323,7 +323,7 @@
   {
     "id": "T041",
     "description": "QuickAddTicket: clicking '+ Add new category' opens QuickAddCategory with boardId pre-selected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
