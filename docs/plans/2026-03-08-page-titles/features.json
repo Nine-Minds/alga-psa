@@ -890,7 +890,7 @@
   {
     "id": "F112",
     "description": "EE MSP page title: /msp/licenses/purchase — title: 'Purchase Licenses'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria"
     ]
