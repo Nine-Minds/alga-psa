@@ -194,7 +194,7 @@
   {
     "id": "F025",
     "description": "QuickAddCategory shows category name input, board selector (when no preselectedBoardId), and optional parent category dropdown",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5"
     ]

@@ -160,3 +160,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
 - 2026-03-08 F024: `QuickAddCategory` now accepts `preselectedBoardId`, seeds the create form with that board, and hides the board selector whenever the consumer already knows the board context.
 - Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
+- 2026-03-08 F025: `QuickAddCategory` renders the required category-name input, conditionally shows the board selector, and keeps the optional parent-category dropdown filtered to top-level categories with board-aware labels/inheritance.
+- Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
