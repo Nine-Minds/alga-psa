@@ -690,7 +690,7 @@
   {
     "id": "F087",
     "description": "Client Portal page title: /client-portal/projects — title: 'Projects'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3b"
     ]
