@@ -172,7 +172,7 @@ describe('TeamsIntegrationSettings contracts', () => {
     cleanup();
   });
 
-  it('T189/T190: keeps the concrete Teams settings UI in ee/server while the CE stub stays inert', () => {
+  it('T084/T189/T190: keeps the concrete Teams settings UI in ee/server while the CE stub stays inert', () => {
     const ceStubSource = fs.readFileSync(ceStubTeamsSettingsPath, 'utf8');
 
     expect(fs.existsSync(eeTeamsSettingsPath)).toBe(true);
@@ -180,7 +180,7 @@ describe('TeamsIntegrationSettings contracts', () => {
     expect(ceStubSource).toContain('return null');
   });
 
-  it('T087/T091/T092: preserves the tenant-admin Teams setup concepts, current selections, and refresh path', async () => {
+  it('T087/T089/T090/T091/T092/T093/T094: preserves the tenant-admin Teams setup concepts, current selections, and refresh path without introducing user-scoped profile selection', async () => {
     const user = userEvent.setup();
     render(<TeamsIntegrationSettings />);
 

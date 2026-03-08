@@ -210,7 +210,7 @@
   {
     "id": "T027",
     "description": "Happy path: Availability model: Teams admin UI visibility is driven by the shared availability helper rather than ad hoc local checks.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
@@ -218,7 +218,7 @@
   {
     "id": "T028",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for availability model: Teams admin UI visibility is driven by the shared availability helper rather than ad hoc local checks.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
@@ -282,7 +282,7 @@
   {
     "id": "T036",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for availability model: CE always resolves Teams availability to disabled regardless of tenant flag state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
@@ -298,7 +298,7 @@
   {
     "id": "T038",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for availability model: EE with the feature flag disabled resolves Teams availability to disabled without exposing active behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
@@ -314,7 +314,7 @@
   {
     "id": "T040",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for availability model: EE with the feature flag enabled and valid tenant context resolves Teams availability to enabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
@@ -330,7 +330,7 @@
   {
     "id": "T042",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for availability model: unavailable states distinguish `ce_unavailable`, `flag_disabled`, and `tenant_not_configured` rather than collapsing everything into one generic failure.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
@@ -402,7 +402,7 @@
   {
     "id": "T051",
     "description": "Happy path: Availability model: the migration introduces no second Teams rollout flag for separate runtime/UI behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
@@ -410,7 +410,7 @@
   {
     "id": "T052",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for availability model: the migration introduces no second Teams rollout flag for separate runtime/UI behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
@@ -418,7 +418,7 @@
   {
     "id": "T053",
     "description": "Happy path: Availability model: the migration does not repurpose unrelated existing flags such as `teams-v2` for Teams integration ownership gating.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]
@@ -426,7 +426,7 @@
   {
     "id": "T054",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for availability model: the migration does not repurpose unrelated existing flags such as `teams-v2` for Teams integration ownership gating.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]
@@ -490,7 +490,7 @@
   {
     "id": "T062",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for settings IA: remove the Teams integration surface from the shared `Providers` category.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
@@ -506,7 +506,7 @@
   {
     "id": "T064",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for settings IA: keep `MicrosoftIntegrationSettings` in the shared `Providers` category because Microsoft profiles remain shared infrastructure.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
@@ -522,7 +522,7 @@
   {
     "id": "T066",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for settings IA: add the Teams integration surface to the `Communication` category.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
@@ -538,7 +538,7 @@
   {
     "id": "T068",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for settings IA: keep existing Inbound Email configuration in `Communication` while adding Teams alongside it.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
@@ -554,7 +554,7 @@
   {
     "id": "T070",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for settings IA: the shared settings page composes the Teams card through an EE-safe wrapper rather than importing the concrete shared Teams component directly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
@@ -570,7 +570,7 @@
   {
     "id": "T072",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for settings IA: the Teams settings wrapper only renders a Teams card when edition and flag checks pass.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
@@ -586,7 +586,7 @@
   {
     "id": "T074",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for settings IA: the Teams settings wrapper renders nothing in CE so Teams is not discoverable in the settings UI.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037"
     ]
@@ -618,7 +618,7 @@
   {
     "id": "T078",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for settings IA: the `Communication` tab description is updated so Teams fits the communication/inbox/collaboration grouping rather than provider credentials.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039"
     ]
@@ -626,7 +626,7 @@
   {
     "id": "T079",
     "description": "Happy path: Settings IA: the `Providers` tab description no longer implies that Teams setup belongs there.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040"
     ]
@@ -634,7 +634,7 @@
   {
     "id": "T080",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for settings IA: the `Providers` tab description no longer implies that Teams setup belongs there.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040"
     ]
@@ -650,7 +650,7 @@
   {
     "id": "T082",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for settings IA: the settings integration index no longer exports a CE-shaped Teams settings component.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041"
     ]
@@ -666,7 +666,7 @@
   {
     "id": "T084",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for settings IA: Teams settings entry points are renamed or wrapped so their ownership clearly indicates EE-only behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042"
     ]
@@ -706,7 +706,7 @@
   {
     "id": "T089",
     "description": "Happy path: Settings IA: no user-scoped Teams profile selector is introduced during the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045"
     ]
@@ -714,7 +714,7 @@
   {
     "id": "T090",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for settings IA: no user-scoped Teams profile selector is introduced during the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045"
     ]
@@ -738,7 +738,7 @@
   {
     "id": "T093",
     "description": "Happy path: Settings IA: Teams settings visibility does not depend on whether a tenant already has Teams data in the database.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047"
     ]
@@ -746,7 +746,7 @@
   {
     "id": "T094",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for settings IA: Teams settings visibility does not depend on whether a tenant already has Teams data in the database.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047"
     ]
@@ -762,7 +762,7 @@
   {
     "id": "T096",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for settings IA: the shared settings page no longer imports `TeamsIntegrationSettings` from a CE package path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F048"
     ]
@@ -770,7 +770,7 @@
   {
     "id": "T097",
     "description": "Happy path: Settings IA: EE settings composition uses a wrapper or entry module consistent with the existing Entra pattern.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F049"
     ]
@@ -778,7 +778,7 @@
   {
     "id": "T098",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for settings IA: EE settings composition uses a wrapper or entry module consistent with the existing Entra pattern.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F049"
     ]
@@ -810,7 +810,7 @@
   {
     "id": "T102",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for settings IA: Teams settings tests assert the new category placement instead of the historical provider placement.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ]
@@ -834,7 +834,7 @@
   {
     "id": "T105",
     "description": "Happy path: Settings IA: the migration does not move Microsoft profile management into EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053"
     ]
@@ -842,7 +842,7 @@
   {
     "id": "T106",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for settings IA: the migration does not move Microsoft profile management into EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053"
     ]
@@ -850,7 +850,7 @@
   {
     "id": "T107",
     "description": "Happy path: Settings IA: the migration does not add a second Teams settings surface in another settings area.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054"
     ]
@@ -858,7 +858,7 @@
   {
     "id": "T108",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for settings IA: the migration does not add a second Teams settings surface in another settings area.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054"
     ]
@@ -1234,7 +1234,7 @@
   {
     "id": "T155",
     "description": "Happy path: Route boundary: shared route wrappers cache EE dynamic imports safely so repeated requests do not reload modules unnecessarily.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F078"
     ]
@@ -1242,7 +1242,7 @@
   {
     "id": "T156",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for route boundary: shared route wrappers cache EE dynamic imports safely so repeated requests do not reload modules unnecessarily.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F078"
     ]
@@ -1266,7 +1266,7 @@
   {
     "id": "T159",
     "description": "Happy path: Route boundary: shared route wrappers do not import EE modules eagerly in CE builds.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080"
     ]
@@ -1274,7 +1274,7 @@
   {
     "id": "T160",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for route boundary: shared route wrappers do not import EE modules eagerly in CE builds.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080"
     ]
@@ -1298,7 +1298,7 @@
   {
     "id": "T163",
     "description": "Happy path: Route boundary: no remaining shared route directly executes Teams business logic after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F082"
     ]
@@ -1306,7 +1306,7 @@
   {
     "id": "T164",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for route boundary: no remaining shared route directly executes Teams business logic after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F082"
     ]
@@ -1314,7 +1314,7 @@
   {
     "id": "T165",
     "description": "Happy path: EE ownership: concrete Teams tab rendering logic lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F083"
     ]
@@ -1322,7 +1322,7 @@
   {
     "id": "T166",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for eE ownership: concrete Teams tab rendering logic lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F083"
     ]
@@ -1450,7 +1450,7 @@
   {
     "id": "T182",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for eE ownership: concrete Teams notification delivery logic lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F091"
     ]
@@ -1466,7 +1466,7 @@
   {
     "id": "T184",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for eE ownership: concrete Teams deep-link composition used only by Teams runtime surfaces lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F092"
     ]
@@ -1906,7 +1906,7 @@
   {
     "id": "T239",
     "description": "Happy path: Server actions: runtime constants and helpers needed by both UI and action code live outside `use server` files.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F120"
     ]
@@ -1914,7 +1914,7 @@
   {
     "id": "T240",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for server actions: runtime constants and helpers needed by both UI and action code live outside `use server` files.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F120"
     ]
@@ -1922,7 +1922,7 @@
   {
     "id": "T241",
     "description": "Happy path: Server actions: CE action wrappers do not pull enterprise-only modules into client bundles.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F121"
     ]
@@ -1930,7 +1930,7 @@
   {
     "id": "T242",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for server actions: CE action wrappers do not pull enterprise-only modules into client bundles.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F121"
     ]
@@ -1938,7 +1938,7 @@
   {
     "id": "T243",
     "description": "Happy path: Server actions: shared action indexes no longer make Teams look like a CE-managed provider integration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F122"
     ]
@@ -1946,7 +1946,7 @@
   {
     "id": "T244",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for server actions: shared action indexes no longer make Teams look like a CE-managed provider integration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F122"
     ]
@@ -1954,7 +1954,7 @@
   {
     "id": "T245",
     "description": "Happy path: Server actions: any shared consumer-binding helpers remain shared and are not moved into EE just because Teams uses them.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F123"
     ]
@@ -1962,7 +1962,7 @@
   {
     "id": "T246",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for server actions: any shared consumer-binding helpers remain shared and are not moved into EE just because Teams uses them.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F123"
     ]
@@ -1970,7 +1970,7 @@
   {
     "id": "T247",
     "description": "Happy path: Server actions: Teams-specific provider-resolution helpers used only for Teams runtime behavior are moved out of shared auth action surfaces.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F124"
     ]
@@ -1978,7 +1978,7 @@
   {
     "id": "T248",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for server actions: Teams-specific provider-resolution helpers used only for Teams runtime behavior are moved out of shared auth action surfaces.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F124"
     ]
@@ -2050,7 +2050,7 @@
   {
     "id": "T257",
     "description": "Happy path: Server actions: shared CE code no longer uses Teams action modules as a source of reusable runtime constants.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F129"
     ]
@@ -2058,7 +2058,7 @@
   {
     "id": "T258",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for server actions: shared CE code no longer uses Teams action modules as a source of reusable runtime constants.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F129"
     ]
@@ -2066,7 +2066,7 @@
   {
     "id": "T259",
     "description": "Happy path: Server actions: the migration explicitly tests the `use server` export shape of migrated Teams action modules.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F130"
     ]
@@ -2074,7 +2074,7 @@
   {
     "id": "T260",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for server actions: the migration explicitly tests the `use server` export shape of migrated Teams action modules.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F130"
     ]
@@ -2314,7 +2314,7 @@
   {
     "id": "T290",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for notification boundary: EE flag-on notification broadcasting can reach Teams delivery through EE-owned code.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F145"
     ]
@@ -2330,7 +2330,7 @@
   {
     "id": "T292",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for notification boundary: shared notification broadening does not import concrete Teams delivery modules directly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F146"
     ]
@@ -2338,7 +2338,7 @@
   {
     "id": "T293",
     "description": "Happy path: Notification boundary: Teams-specific notification templates or feed payload helpers used only for Teams delivery are EE-owned.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F147"
     ]
@@ -2346,7 +2346,7 @@
   {
     "id": "T294",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for notification boundary: Teams-specific notification templates or feed payload helpers used only for Teams delivery are EE-owned.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F147"
     ]
@@ -2434,7 +2434,7 @@
   {
     "id": "T305",
     "description": "Happy path: Notification boundary: CE builds do not include Teams notification runtime by accident through shared notification imports.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F153"
     ]
@@ -2442,7 +2442,7 @@
   {
     "id": "T306",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for notification boundary: CE builds do not include Teams notification runtime by accident through shared notification imports.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F153"
     ]
@@ -2778,7 +2778,7 @@
   {
     "id": "T348",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for cleanup: the shared integrations component index no longer exports an active Teams settings component.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F174"
     ]
@@ -2794,7 +2794,7 @@
   {
     "id": "T350",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for cleanup: the shared integrations settings page no longer imports Teams from a CE-owned component path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F175"
     ]
@@ -2802,7 +2802,7 @@
   {
     "id": "T351",
     "description": "Happy path: Cleanup: shared route trees no longer contain active Teams business logic in page or API handlers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F176"
     ]
@@ -2810,7 +2810,7 @@
   {
     "id": "T352",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for cleanup: shared route trees no longer contain active Teams business logic in page or API handlers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F176"
     ]
@@ -2818,7 +2818,7 @@
   {
     "id": "T353",
     "description": "Happy path: Cleanup: shared notifications runtime no longer imports concrete Teams delivery code.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F177"
     ]
@@ -2826,7 +2826,7 @@
   {
     "id": "T354",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for cleanup: shared notifications runtime no longer imports concrete Teams delivery code.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F177"
     ]
@@ -2834,7 +2834,7 @@
   {
     "id": "T355",
     "description": "Happy path: Cleanup: shared auth indexes no longer expose concrete Teams-only runtime modules when a wrapper would suffice.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F178"
     ]
@@ -2842,7 +2842,7 @@
   {
     "id": "T356",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for cleanup: shared auth indexes no longer expose concrete Teams-only runtime modules when a wrapper would suffice.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F178"
     ]
@@ -2866,7 +2866,7 @@
   {
     "id": "T359",
     "description": "Happy path: Cleanup: comments and file names are updated so Teams enterprise ownership is obvious to future maintainers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F180"
     ]
@@ -2874,7 +2874,7 @@
   {
     "id": "T360",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for cleanup: comments and file names are updated so Teams enterprise ownership is obvious to future maintainers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F180"
     ]
@@ -2882,7 +2882,7 @@
   {
     "id": "T361",
     "description": "Happy path: Cleanup: no settings copy still tells admins to configure Teams from the Providers tab.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F181"
     ]
@@ -2890,7 +2890,7 @@
   {
     "id": "T362",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for cleanup: no settings copy still tells admins to configure Teams from the Providers tab.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F181"
     ]
@@ -2898,7 +2898,7 @@
   {
     "id": "T363",
     "description": "Happy path: Cleanup: no test names still describe Teams as a Providers-category integration unless they are historical references.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F182"
     ]
@@ -2906,7 +2906,7 @@
   {
     "id": "T364",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for cleanup: no test names still describe Teams as a Providers-category integration unless they are historical references.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F182"
     ]
@@ -2914,7 +2914,7 @@
   {
     "id": "T365",
     "description": "Happy path: Cleanup: no docs introduced by this migration claim that Teams is available in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F183"
     ]
@@ -2922,7 +2922,7 @@
   {
     "id": "T366",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for cleanup: no docs introduced by this migration claim that Teams is available in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F183"
     ]
@@ -2930,7 +2930,7 @@
   {
     "id": "T367",
     "description": "Happy path: Cleanup: no shared package barrel accidentally re-exports enterprise Teams code.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F184"
     ]
@@ -2938,7 +2938,7 @@
   {
     "id": "T368",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for cleanup: no shared package barrel accidentally re-exports enterprise Teams code.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F184"
     ]
@@ -2946,7 +2946,7 @@
   {
     "id": "T369",
     "description": "Happy path: Cleanup: no EE module imports shared Teams code that is itself trying to import back into EE recursively.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F185"
     ]
@@ -2954,7 +2954,7 @@
   {
     "id": "T370",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for cleanup: no EE module imports shared Teams code that is itself trying to import back into EE recursively.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F185"
     ]
@@ -2962,7 +2962,7 @@
   {
     "id": "T371",
     "description": "Happy path: Cleanup: stale temporary wrappers created during migration are removed before the work is considered complete.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F186"
     ]
@@ -2970,7 +2970,7 @@
   {
     "id": "T372",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for cleanup: stale temporary wrappers created during migration are removed before the work is considered complete.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F186"
     ]
@@ -2978,7 +2978,7 @@
   {
     "id": "T373",
     "description": "Happy path: Compatibility: shared Microsoft profile CRUD still works in CE after the Teams extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F187"
     ]
@@ -2986,7 +2986,7 @@
   {
     "id": "T374",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for compatibility: shared Microsoft profile CRUD still works in CE after the Teams extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F187"
     ]
@@ -2994,7 +2994,7 @@
   {
     "id": "T375",
     "description": "Happy path: Compatibility: shared Microsoft profile CRUD still works in EE after the Teams extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F188"
     ]
@@ -3002,7 +3002,7 @@
   {
     "id": "T376",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for compatibility: shared Microsoft profile CRUD still works in EE after the Teams extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F188"
     ]
@@ -3010,7 +3010,7 @@
   {
     "id": "T377",
     "description": "Happy path: Compatibility: shared default-profile compatibility behavior for email/calendar/MSP SSO remains intact after the Teams extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F189"
     ]
@@ -3018,7 +3018,7 @@
   {
     "id": "T378",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for compatibility: shared default-profile compatibility behavior for email/calendar/MSP SSO remains intact after the Teams extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F189"
     ]
@@ -3026,7 +3026,7 @@
   {
     "id": "T379",
     "description": "Happy path: Compatibility: Teams remains able to bind to a selected Microsoft profile through the shared consumer-binding model after the extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F190"
     ]
@@ -3034,7 +3034,7 @@
   {
     "id": "T380",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for compatibility: Teams remains able to bind to a selected Microsoft profile through the shared consumer-binding model after the extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F190"
     ]
@@ -3042,7 +3042,7 @@
   {
     "id": "T381",
     "description": "Happy path: Compatibility: the migration does not change tenant-admin permission requirements for managing Microsoft profiles.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F191"
     ]
@@ -3050,7 +3050,7 @@
   {
     "id": "T382",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for compatibility: the migration does not change tenant-admin permission requirements for managing Microsoft profiles.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F191"
     ]
@@ -3058,7 +3058,7 @@
   {
     "id": "T383",
     "description": "Happy path: Compatibility: the migration does not change tenant-admin permission requirements for managing Teams setup; it only changes ownership and placement.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F192"
     ]
@@ -3066,7 +3066,7 @@
   {
     "id": "T384",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for compatibility: the migration does not change tenant-admin permission requirements for managing Teams setup; it only changes ownership and placement.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F192"
     ]
@@ -3074,7 +3074,7 @@
   {
     "id": "T385",
     "description": "Happy path: Compatibility: CE tenants without Teams remain unaffected in behavior and schema after the extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F193"
     ]
@@ -3082,7 +3082,7 @@
   {
     "id": "T386",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for compatibility: CE tenants without Teams remain unaffected in behavior and schema after the extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F193"
     ]
@@ -3090,7 +3090,7 @@
   {
     "id": "T387",
     "description": "Happy path: Compatibility: EE tenants with the feature flag off remain unaffected in behavior while Teams code remains unavailable.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F194"
     ]
@@ -3098,7 +3098,7 @@
   {
     "id": "T388",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for compatibility: EE tenants with the feature flag off remain unaffected in behavior while Teams code remains unavailable.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F194"
     ]
@@ -3106,7 +3106,7 @@
   {
     "id": "T389",
     "description": "Happy path: Compatibility: EE tenants with the feature flag on can still use the same Teams v1 surface set after the extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F195"
     ]
@@ -3114,7 +3114,7 @@
   {
     "id": "T390",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for compatibility: EE tenants with the feature flag on can still use the same Teams v1 surface set after the extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F195"
     ]
@@ -3122,7 +3122,7 @@
   {
     "id": "T391",
     "description": "Happy path: Compatibility: the migration preserves the single-integration mental model for Teams across tab, bot, message extension, and notifications.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F196"
     ]
@@ -3130,7 +3130,7 @@
   {
     "id": "T392",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for compatibility: the migration preserves the single-integration mental model for Teams across tab, bot, message extension, and notifications.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F196"
     ]
@@ -3138,7 +3138,7 @@
   {
     "id": "T393",
     "description": "Happy path: Compatibility: the migration does not broaden Teams support to client users, channel-first workflows, or channel-targeted notifications.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F197"
     ]
@@ -3146,7 +3146,7 @@
   {
     "id": "T394",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for compatibility: the migration does not broaden Teams support to client users, channel-first workflows, or channel-targeted notifications.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F197"
     ]
@@ -3154,7 +3154,7 @@
   {
     "id": "T395",
     "description": "Happy path: Test infrastructure: add or update fixture helpers that can simulate CE, EE flag-off, and EE flag-on states for Teams settings and routes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F198"
     ]
@@ -3162,7 +3162,7 @@
   {
     "id": "T396",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for test infrastructure: add or update fixture helpers that can simulate CE, EE flag-off, and EE flag-on states for Teams settings and routes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F198"
     ]
@@ -3170,7 +3170,7 @@
   {
     "id": "T397",
     "description": "Happy path: Test infrastructure: add or update fixture helpers that can simulate Teams availability checks without requiring live PostHog access.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F199"
     ]
@@ -3178,7 +3178,7 @@
   {
     "id": "T398",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for test infrastructure: add or update fixture helpers that can simulate Teams availability checks without requiring live PostHog access.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F199"
     ]
@@ -3186,7 +3186,7 @@
   {
     "id": "T399",
     "description": "Happy path: Test infrastructure: add or update fixture helpers that can simulate fresh CE versus fresh EE migration states.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F200"
     ]
@@ -3194,7 +3194,7 @@
   {
     "id": "T400",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for test infrastructure: add or update fixture helpers that can simulate fresh CE versus fresh EE migration states.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F200"
     ]
@@ -3202,7 +3202,7 @@
   {
     "id": "T401",
     "description": "Happy path: Test infrastructure: add or update fixture helpers that can simulate Teams-disabled wrapper results consistently across settings, actions, and routes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F201"
     ]
@@ -3210,7 +3210,7 @@
   {
     "id": "T402",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for test infrastructure: add or update fixture helpers that can simulate Teams-disabled wrapper results consistently across settings, actions, and routes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F201"
     ]
@@ -3226,7 +3226,7 @@
   {
     "id": "T404",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for test infrastructure: contract tests are added or updated for settings placement in Communication vs Providers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F202"
     ]
@@ -3282,7 +3282,7 @@
   {
     "id": "T411",
     "description": "Happy path: Test infrastructure: contract tests are added or updated for shared Microsoft profile compatibility after extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F206"
     ]
@@ -3290,7 +3290,7 @@
   {
     "id": "T412",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for test infrastructure: contract tests are added or updated for shared Microsoft profile compatibility after extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F206"
     ]
@@ -3298,7 +3298,7 @@
   {
     "id": "T413",
     "description": "Happy path: Test infrastructure: contract tests are added or updated for schema ownership boundaries between shared and EE migrations.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F207"
     ]
@@ -3306,7 +3306,7 @@
   {
     "id": "T414",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for test infrastructure: contract tests are added or updated for schema ownership boundaries between shared and EE migrations.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F207"
     ]
@@ -3314,7 +3314,7 @@
   {
     "id": "T415",
     "description": "Happy path: Test infrastructure: scratchpad runbooks list the focused commands needed to validate settings, routes, actions, and migrations for this extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F208"
     ]
@@ -3322,7 +3322,7 @@
   {
     "id": "T416",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for test infrastructure: scratchpad runbooks list the focused commands needed to validate settings, routes, actions, and migrations for this extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F208"
     ]
@@ -3330,7 +3330,7 @@
   {
     "id": "T417",
     "description": "Happy path: Acceptance: the migration is not complete until Teams is invisible in CE, visible only in EE Communication when flagged on, and database ownership clearly matches that split.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F209"
     ]
@@ -3338,7 +3338,7 @@
   {
     "id": "T418",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for acceptance: the migration is not complete until Teams is invisible in CE, visible only in EE Communication when flagged on, and database ownership clearly matches that split.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F209"
     ]
@@ -3488,7 +3488,7 @@
   {
     "id": "T433",
     "description": "CE action wrappers return EE-unavailable results for Teams settings, package, and quick-action submissions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F108",
       "F111",
@@ -3499,7 +3499,7 @@
   {
     "id": "T434",
     "description": "EE flag-off action wrappers return disabled results for Teams settings, package, and quick-action submissions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F109",
       "F112",
@@ -3510,7 +3510,7 @@
   {
     "id": "T435",
     "description": "Teams action modules continue to satisfy Next.js `use server` export constraints after helper extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F121",
       "F130"
@@ -3519,7 +3519,7 @@
   {
     "id": "T436",
     "description": "CE notification broadcasts never attempt Teams delivery after the extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F142",
       "F143",
@@ -3529,7 +3529,7 @@
   {
     "id": "T437",
     "description": "EE flag-off notification broadcasts never attempt Teams delivery after the extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F144",
       "F151"
@@ -3569,7 +3569,7 @@
   {
     "id": "T441",
     "description": "Shared Microsoft profile CRUD remains available in CE after the Teams extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F187",
       "F188",
@@ -3579,7 +3579,7 @@
   {
     "id": "T442",
     "description": "Shared Microsoft profile CRUD remains available in EE after the Teams extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F187",
       "F188",
@@ -3589,7 +3589,7 @@
   {
     "id": "T443",
     "description": "EE flag-on tenants can still access the Teams v1 surface set after the extraction without new product scope.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F094",
       "F145",
@@ -3601,7 +3601,7 @@
   {
     "id": "T444",
     "description": "The migration validator and scratchpad runbooks cover settings, routes, actions, and schema verification commands.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F206",
       "F207",

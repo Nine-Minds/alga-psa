@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 describe('IntegrationsSettingsPage providers tab', () => {
-  it('keeps Teams out of Providers and renders the EE-safe Teams wrapper from Communication', () => {
+  it('T061/T062/T063/T064/T065/T066/T067/T068/T069/T070/T077/T078/T079/T080/T095/T096/T101/T102/T105/T106/T107/T108/T361/T362: keeps Teams out of Providers, keeps Microsoft shared there, and routes Teams visibility through Communication copy and the EE-safe wrapper', () => {
     const filePath = path.join(__dirname, 'IntegrationsSettingsPage.tsx');
     const source = fs.readFileSync(filePath, 'utf8');
 
@@ -21,9 +21,16 @@ describe('IntegrationsSettingsPage providers tab', () => {
     expect(source).toContain("id: 'communication'");
     expect(source).toContain("id: 'teams'");
     expect(source).toContain('component: TeamsEnterpriseIntegrationSettings');
+    expect(source).toContain(
+      "Connect inbox and collaboration surfaces for ticket processing, operator workflows, and Microsoft Teams access."
+    );
+    expect(source).toContain(
+      "Configure shared provider credentials used by email, calendar, SSO, and other integrations."
+    );
+    expect(source).not.toContain('Configure Teams from the Providers tab');
   });
 
-  it('exports the EE-safe Teams settings wrapper instead of the legacy shared Teams card from the integrations index', () => {
+  it('T081/T082/T347/T348/T349/T350/T363/T364: exports the EE-safe Teams settings wrapper instead of any legacy shared Teams card naming', () => {
     const filePath = path.join(__dirname, 'index.ts');
     const source = fs.readFileSync(filePath, 'utf8');
 

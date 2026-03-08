@@ -198,7 +198,7 @@ describe('Microsoft consumer binding actions', () => {
     expect(microsoftConsumerBindings.filter((binding) => binding.tenant === 'tenant-2')).toHaveLength(3);
   });
 
-  it('T075/T076/T077/T078: supports MSP SSO, email, calendar, and Teams bindings with one selected profile per consumer', async () => {
+  it('T075/T076/T077/T078/T245/T246/T379/T380/T411/T412: supports MSP SSO, email, calendar, and Teams bindings with one selected profile per consumer through the shared binding model', async () => {
     const primary = await createMicrosoftProfile({
       displayName: 'Primary Profile',
       clientId: 'primary-client-id',

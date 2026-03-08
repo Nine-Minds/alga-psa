@@ -255,7 +255,7 @@ describe('Microsoft integration actions', () => {
     getAppSecretMock.mockClear();
   });
 
-  it('T001/T002/T023/T024/T033/T034: profile creation/listing stays tenant-scoped and excludes other tenants', async () => {
+  it('T001/T002/T023/T024/T033/T034/T373/T375: profile creation/listing stays tenant-scoped and excludes other tenants', async () => {
     hoisted.state.mockCtx = { tenant: 'tenant-2' };
     await createMicrosoftProfile({
       displayName: 'Tenant Two Profile',
@@ -354,7 +354,7 @@ describe('Microsoft integration actions', () => {
     expect(otherTenant.success).toBe(true);
   });
 
-  it('T007/T008/T035/T036: exactly one profile is default and compatibility resolution returns that default profile', async () => {
+  it('T007/T008/T035/T036/T377/T378: exactly one profile is default and compatibility resolution returns that default profile', async () => {
     const first = await createMicrosoftProfile({
       displayName: 'First Profile',
       clientId: 'client-id-1',
@@ -560,7 +560,7 @@ describe('Microsoft integration actions', () => {
   });
 
   it('T013: Microsoft actions are exported from integrations action indexes', () => {
-    const repoRoot = path.resolve(process.cwd(), '..');
+    const repoRoot = path.resolve(process.cwd(), '../..');
     const integrationsIndex = fs.readFileSync(
       path.resolve(repoRoot, 'packages/integrations/src/actions/integrations/index.ts'),
       'utf8'
@@ -579,7 +579,7 @@ describe('Microsoft integration actions', () => {
     expect(rootActionsIndex).toContain('resolveMicrosoftProfileForCompatibility');
   });
 
-  it('T014: non-admin user receives permission error on create/update/archive/default/save', async () => {
+  it('T014/T381/T382: non-admin user receives permission error on create/update/archive/default/save', async () => {
     hasPermissionMock.mockResolvedValue(false);
 
     await expect(
@@ -636,6 +636,43 @@ describe('Microsoft integration actions', () => {
       success: false,
       error: 'Forbidden',
     });
+  });
+
+  it('T373/T374/T375/T376/T441/T442: shared Microsoft profile CRUD remains available in both CE and EE editions because the actions stay edition-agnostic', async () => {
+    const originalEdition = process.env.NEXT_PUBLIC_EDITION;
+
+    try {
+      process.env.NEXT_PUBLIC_EDITION = 'community';
+
+      const ceCreate = await createMicrosoftProfile({
+        displayName: 'CE Profile',
+        clientId: 'ce-client-id',
+        clientSecret: 'ce-secret',
+        tenantId: 'ce-tenant-guid',
+      });
+      expect(ceCreate.success).toBe(true);
+      expect((await listMicrosoftProfiles()).profiles?.map((profile) => profile.displayName)).toContain('CE Profile');
+
+      microsoftProfiles.length = 0;
+      tenantSecrets.clear();
+
+      process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+
+      const eeCreate = await createMicrosoftProfile({
+        displayName: 'EE Profile',
+        clientId: 'ee-client-id',
+        clientSecret: 'ee-secret',
+        tenantId: 'ee-tenant-guid',
+      });
+      expect(eeCreate.success).toBe(true);
+      expect((await listMicrosoftProfiles()).profiles?.map((profile) => profile.displayName)).toContain('EE Profile');
+    } finally {
+      if (originalEdition === undefined) {
+        delete process.env.NEXT_PUBLIC_EDITION;
+      } else {
+        process.env.NEXT_PUBLIC_EDITION = originalEdition;
+      }
+    }
   });
 
   it('T475/T476: archiving a Teams-selected profile is blocked until Teams is rebound or deactivated', async () => {

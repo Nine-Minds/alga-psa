@@ -189,7 +189,7 @@ describe('Teams app package actions', () => {
     }
   });
 
-  it('T031/T035: returns EE-unavailable package results in CE mode before loading Teams state', async () => {
+  it('T031/T035/T433: returns EE-unavailable package results in CE mode before loading Teams state', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'community';
 
     const result = await getTeamsAppPackageStatus();
@@ -202,7 +202,7 @@ describe('Teams app package actions', () => {
     expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 
-  it('T032/T037: returns flag-disabled package results before loading Teams state when the tenant flag is off', async () => {
+  it('T032/T037/T434: returns flag-disabled package results before loading Teams state when the tenant flag is off', async () => {
     isFeatureFlagEnabledMock.mockResolvedValue(false);
 
     const result = await getTeamsAppPackageStatus();
@@ -218,7 +218,7 @@ describe('Teams app package actions', () => {
     expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 
-  it('T117/T119/T121/T123/T125/T127/T129/T131/T133/T135/T137/T141/T147/T207/T208/T209/T210/T349: returns Teams manifest metadata with declared surfaces, app identity, install state, environment base URL, and focused lookup/message-action command definitions', async () => {
+  it('T117/T119/T121/T123/T125/T127/T129/T131/T133/T135/T137/T141/T147/T207/T208/T209/T210/T349/T389/T390/T391/T392/T393/T394/T443: returns Teams manifest metadata with the full EE-only v1 surface set and no broadened product scope', async () => {
     appSecrets.set('NEXT_PUBLIC_BASE_URL', 'https://tenant.example.com/');
     addMicrosoftProfile({
       tenant: 'tenant-1',

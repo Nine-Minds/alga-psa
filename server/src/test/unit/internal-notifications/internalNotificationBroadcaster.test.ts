@@ -65,7 +65,7 @@ describe('internalNotificationBroadcaster', () => {
     });
   });
 
-  it('T281/T282/T299/T300/T421: attempts Teams delivery alongside the existing Redis in-app delivery path', async () => {
+  it('T281/T282/T290/T299/T300/T421: attempts Teams delivery alongside the existing Redis in-app delivery path', async () => {
     const notification = makeNotification();
 
     await broadcastNotification(notification);
@@ -103,7 +103,7 @@ describe('internalNotificationBroadcaster', () => {
     );
   });
 
-  it('T196/T297/T298/T303/T304: keeps the Redis in-app broadcast path working when Teams EE delivery is unavailable', async () => {
+  it('T196/T297/T298/T303/T304/T436/T437: keeps the Redis in-app broadcast path working when Teams EE delivery is unavailable', async () => {
     hoisted.deliverTeamsNotificationMock.mockResolvedValue({
       status: 'skipped',
       reason: 'delivery_unavailable',

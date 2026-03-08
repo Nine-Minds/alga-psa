@@ -207,7 +207,7 @@ describe('Teams integration actions', () => {
     }
   });
 
-  it('T031/T035/T223/T224: returns an EE-unavailable result before permissions or database access in CE mode', async () => {
+  it('T031/T035/T223/T224/T433: returns an EE-unavailable result before permissions or database access in CE mode', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'community';
 
     const result = await getTeamsIntegrationStatus();
@@ -220,7 +220,7 @@ describe('Teams integration actions', () => {
     expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 
-  it('T032/T037/T225/T226: returns a flag-disabled result before permissions or database access when the tenant flag is off', async () => {
+  it('T032/T037/T225/T226/T434: returns a flag-disabled result before permissions or database access when the tenant flag is off', async () => {
     isFeatureFlagEnabledMock.mockResolvedValue(false);
 
     const result = await saveTeamsIntegrationSettings({
@@ -453,7 +453,7 @@ describe('Teams integration actions', () => {
     });
   });
 
-  it('T088/T461/T462/T253/T254: only tenant admins can load or save Teams setup state', async () => {
+  it('T088/T461/T462/T253/T254/T383/T384: only tenant admins can load or save Teams setup state', async () => {
     hasPermissionMock.mockResolvedValue(false);
 
     await expect(getTeamsIntegrationStatus()).resolves.toEqual({

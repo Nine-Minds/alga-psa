@@ -2,6 +2,10 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex } from '@alga-psa/db';
 import { getMicrosoftProfileReadiness } from '@alga-psa/integrations/actions/integrations/providerReadiness';
 import {
+  TEAMS_ALLOWED_ACTIONS,
+  TEAMS_CAPABILITIES,
+  TEAMS_INSTALL_STATUSES,
+  TEAMS_NOTIFICATION_CATEGORIES,
   type TeamsAllowedAction,
   type TeamsCapability,
   type TeamsInstallStatus,
@@ -11,29 +15,7 @@ import type {
   TeamsIntegrationExecutionState,
   TeamsIntegrationSettingsInput,
   TeamsIntegrationStatusResponse,
-} from '@alga-psa/integrations/actions/integrations/teamsActions';
-
-const TEAMS_INSTALL_STATUSES = ['not_configured', 'install_pending', 'active', 'error'] as const;
-const TEAMS_CAPABILITIES = [
-  'personal_tab',
-  'personal_bot',
-  'message_extension',
-  'activity_notifications',
-] as const;
-const TEAMS_NOTIFICATION_CATEGORIES = [
-  'assignment',
-  'customer_reply',
-  'approval_request',
-  'escalation',
-  'sla_risk',
-] as const;
-const TEAMS_ALLOWED_ACTIONS = [
-  'assign_ticket',
-  'add_note',
-  'reply_to_contact',
-  'log_time',
-  'approval_response',
-] as const;
+} from '@alga-psa/integrations/actions/integrations/teamsContracts';
 
 interface TeamsIntegrationRow {
   tenant: string;

@@ -1073,7 +1073,7 @@
   {
     "id": "F120",
     "description": "Server actions: runtime constants and helpers needed by both UI and action code live outside `use server` files.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1082,7 +1082,7 @@
   {
     "id": "F121",
     "description": "Server actions: CE action wrappers do not pull enterprise-only modules into client bundles.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1091,7 +1091,7 @@
   {
     "id": "F122",
     "description": "Server actions: shared action indexes no longer make Teams look like a CE-managed provider integration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1100,7 +1100,7 @@
   {
     "id": "F123",
     "description": "Server actions: any shared consumer-binding helpers remain shared and are not moved into EE just because Teams uses them.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1154,7 +1154,7 @@
   {
     "id": "F129",
     "description": "Server actions: shared CE code no longer uses Teams action modules as a source of reusable runtime constants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1163,7 +1163,7 @@
   {
     "id": "F130",
     "description": "Server actions: the migration explicitly tests the `use server` export shape of migrated Teams action modules.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1370,7 +1370,7 @@
   {
     "id": "F153",
     "description": "Notification boundary: CE builds do not include Teams notification runtime by accident through shared notification imports.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"
@@ -1586,7 +1586,7 @@
   {
     "id": "F177",
     "description": "Cleanup: shared notifications runtime no longer imports concrete Teams delivery code.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1595,7 +1595,7 @@
   {
     "id": "F178",
     "description": "Cleanup: shared auth indexes no longer expose concrete Teams-only runtime modules when a wrapper would suffice.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1613,7 +1613,7 @@
   {
     "id": "F180",
     "description": "Cleanup: comments and file names are updated so Teams enterprise ownership is obvious to future maintainers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1622,7 +1622,7 @@
   {
     "id": "F181",
     "description": "Cleanup: no settings copy still tells admins to configure Teams from the Providers tab.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1631,7 +1631,7 @@
   {
     "id": "F182",
     "description": "Cleanup: no test names still describe Teams as a Providers-category integration unless they are historical references.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1640,7 +1640,7 @@
   {
     "id": "F183",
     "description": "Cleanup: no docs introduced by this migration claim that Teams is available in CE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1649,7 +1649,7 @@
   {
     "id": "F184",
     "description": "Cleanup: no shared package barrel accidentally re-exports enterprise Teams code.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1658,7 +1658,7 @@
   {
     "id": "F185",
     "description": "Cleanup: no EE module imports shared Teams code that is itself trying to import back into EE recursively.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1667,7 +1667,7 @@
   {
     "id": "F186",
     "description": "Cleanup: stale temporary wrappers created during migration are removed before the work is considered complete.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1676,7 +1676,7 @@
   {
     "id": "F187",
     "description": "Compatibility: shared Microsoft profile CRUD still works in CE after the Teams extraction.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1685,7 +1685,7 @@
   {
     "id": "F188",
     "description": "Compatibility: shared Microsoft profile CRUD still works in EE after the Teams extraction.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1694,7 +1694,7 @@
   {
     "id": "F189",
     "description": "Compatibility: shared default-profile compatibility behavior for email/calendar/MSP SSO remains intact after the Teams extraction.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1703,7 +1703,7 @@
   {
     "id": "F190",
     "description": "Compatibility: Teams remains able to bind to a selected Microsoft profile through the shared consumer-binding model after the extraction.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1712,7 +1712,7 @@
   {
     "id": "F191",
     "description": "Compatibility: the migration does not change tenant-admin permission requirements for managing Microsoft profiles.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1721,7 +1721,7 @@
   {
     "id": "F192",
     "description": "Compatibility: the migration does not change tenant-admin permission requirements for managing Teams setup; it only changes ownership and placement.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1730,7 +1730,7 @@
   {
     "id": "F193",
     "description": "Compatibility: CE tenants without Teams remain unaffected in behavior and schema after the extraction.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1739,7 +1739,7 @@
   {
     "id": "F194",
     "description": "Compatibility: EE tenants with the feature flag off remain unaffected in behavior while Teams code remains unavailable.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1748,7 +1748,7 @@
   {
     "id": "F195",
     "description": "Compatibility: EE tenants with the feature flag on can still use the same Teams v1 surface set after the extraction.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1757,7 +1757,7 @@
   {
     "id": "F196",
     "description": "Compatibility: the migration preserves the single-integration mental model for Teams across tab, bot, message extension, and notifications.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1766,7 +1766,7 @@
   {
     "id": "F197",
     "description": "Compatibility: the migration does not broaden Teams support to client users, channel-first workflows, or channel-targeted notifications.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1775,7 +1775,7 @@
   {
     "id": "F198",
     "description": "Test infrastructure: add or update fixture helpers that can simulate CE, EE flag-off, and EE flag-on states for Teams settings and routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1784,7 +1784,7 @@
   {
     "id": "F199",
     "description": "Test infrastructure: add or update fixture helpers that can simulate Teams availability checks without requiring live PostHog access.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1793,7 +1793,7 @@
   {
     "id": "F200",
     "description": "Test infrastructure: add or update fixture helpers that can simulate fresh CE versus fresh EE migration states.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1802,7 +1802,7 @@
   {
     "id": "F201",
     "description": "Test infrastructure: add or update fixture helpers that can simulate Teams-disabled wrapper results consistently across settings, actions, and routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1811,7 +1811,7 @@
   {
     "id": "F202",
     "description": "Test infrastructure: contract tests are added or updated for settings placement in Communication vs Providers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1820,7 +1820,7 @@
   {
     "id": "F203",
     "description": "Test infrastructure: contract tests are added or updated for route delegation into EE implementations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1829,7 +1829,7 @@
   {
     "id": "F204",
     "description": "Test infrastructure: contract tests are added or updated for CE unavailable responses.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1838,7 +1838,7 @@
   {
     "id": "F205",
     "description": "Test infrastructure: contract tests are added or updated for flag-disabled responses.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1847,7 +1847,7 @@
   {
     "id": "F206",
     "description": "Test infrastructure: contract tests are added or updated for shared Microsoft profile compatibility after extraction.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1856,7 +1856,7 @@
   {
     "id": "F207",
     "description": "Test infrastructure: contract tests are added or updated for schema ownership boundaries between shared and EE migrations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1865,7 +1865,7 @@
   {
     "id": "F208",
     "description": "Test infrastructure: scratchpad runbooks list the focused commands needed to validate settings, routes, actions, and migrations for this extraction.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"
@@ -1874,7 +1874,7 @@
   {
     "id": "F209",
     "description": "Acceptance: the migration is not complete until Teams is invisible in CE, visible only in EE Communication when flagged on, and database ownership clearly matches that split.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"

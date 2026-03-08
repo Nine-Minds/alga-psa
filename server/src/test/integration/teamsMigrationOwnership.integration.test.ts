@@ -69,7 +69,7 @@ describe('Teams migration ownership (integration)', () => {
     }
   });
 
-  it('T439: fresh CE schema keeps shared Microsoft profile tables but omits Teams tables and Teams migration history', async () => {
+  it('T399/T400/T413/T414/T417/T418/T439: fresh CE schema keeps shared Microsoft profile tables but omits Teams tables and Teams migration history', async () => {
     await expect(ceDb.schema.hasTable('microsoft_profiles')).resolves.toBe(true);
     await expect(ceDb.schema.hasTable('microsoft_profile_consumer_bindings')).resolves.toBe(true);
     await expect(ceDb.schema.hasTable('teams_integrations')).resolves.toBe(false);
@@ -81,7 +81,7 @@ describe('Teams migration ownership (integration)', () => {
     expect(appliedMigrations).toHaveLength(0);
   });
 
-  it('T440: fresh EE schema overlays the Teams migrations so Teams tables and package metadata columns exist alongside shared Microsoft tables', async () => {
+  it('T399/T400/T413/T414/T417/T418/T440: fresh EE schema overlays the Teams migrations so Teams tables and package metadata columns exist alongside shared Microsoft tables', async () => {
     await expect(eeDb.schema.hasTable('microsoft_profiles')).resolves.toBe(true);
     await expect(eeDb.schema.hasTable('microsoft_profile_consumer_bindings')).resolves.toBe(true);
     await expect(eeDb.schema.hasTable('teams_integrations')).resolves.toBe(true);

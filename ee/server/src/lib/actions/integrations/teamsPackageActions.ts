@@ -6,9 +6,8 @@ import {
   buildTeamsPersonalTabDeepLink,
   TEAMS_PERSONAL_TAB_ENTITY_ID,
 } from '../../teams/teamsDeepLinks';
-import type { TeamsAppPackageStatusResponse } from '@alga-psa/integrations/actions/integrations/teamsPackageActions';
-
-type TeamsInstallStatus = 'not_configured' | 'install_pending' | 'active' | 'error';
+import type { TeamsAppPackageStatusResponse } from '@alga-psa/integrations/actions/integrations/teamsContracts';
+import type { TeamsInstallStatus } from '@alga-psa/integrations/actions/integrations/teamsShared';
 
 interface TeamsIntegrationRow {
   tenant: string;

@@ -9,40 +9,11 @@ import type {
   TeamsInstallStatus,
   TeamsNotificationCategory,
 } from './teamsShared';
-
-export interface TeamsIntegrationStatusResponse {
-  success: boolean;
-  error?: string;
-  integration?: {
-    selectedProfileId: string | null;
-    installStatus: TeamsInstallStatus;
-    enabledCapabilities: TeamsCapability[];
-    notificationCategories: TeamsNotificationCategory[];
-    allowedActions: TeamsAllowedAction[];
-    appId: string | null;
-    botId: string | null;
-    packageMetadata: Record<string, unknown> | null;
-    lastError: string | null;
-  };
-}
-
-export interface TeamsIntegrationExecutionState {
-  selectedProfileId: string | null;
-  installStatus: TeamsInstallStatus;
-  enabledCapabilities: TeamsCapability[];
-  allowedActions: TeamsAllowedAction[];
-  appId: string | null;
-  packageMetadata: Record<string, unknown> | null;
-}
-
-export interface TeamsIntegrationSettingsInput {
-  selectedProfileId?: string | null;
-  installStatus?: TeamsInstallStatus;
-  enabledCapabilities?: TeamsCapability[];
-  notificationCategories?: TeamsNotificationCategory[];
-  allowedActions?: TeamsAllowedAction[];
-  lastError?: string | null;
-}
+import type {
+  TeamsIntegrationExecutionState,
+  TeamsIntegrationSettingsInput,
+  TeamsIntegrationStatusResponse,
+} from './teamsContracts';
 
 const DEFAULT_EXECUTION_STATE: TeamsIntegrationExecutionState = {
   selectedProfileId: null,

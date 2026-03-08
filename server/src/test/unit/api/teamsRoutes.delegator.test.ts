@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const EE_ONLY_ERROR = {
   success: false,
@@ -204,5 +206,36 @@ describe('CE Teams route delegators', () => {
     expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('[teams/package] Failed to load EE route:'));
     expect(response.status).toBe(501);
     await expect(response.json()).resolves.toEqual(EE_ONLY_ERROR);
+  });
+
+  it('T155/T156/T159/T160/T163/T164/T351/T352/T405/T406/T407/T408: keeps shared Teams routes as cached wrapper-only delegators without direct runtime logic', () => {
+    const repoRoot = path.resolve(__dirname, '../../../../..');
+    const eeDelegatorSource = fs.readFileSync(path.join(repoRoot, 'server/src/app/api/teams/_eeDelegator.ts'), 'utf8');
+    const sharedTabPageSource = fs.readFileSync(path.join(repoRoot, 'server/src/app/teams/tab/page.tsx'), 'utf8');
+    const sharedRouteSources = [
+      'server/src/app/api/teams/bot/messages/route.ts',
+      'server/src/app/api/teams/message-extension/query/route.ts',
+      'server/src/app/api/teams/quick-actions/route.ts',
+      'server/src/app/api/teams/auth/callback/tab/route.ts',
+      'server/src/app/api/teams/auth/callback/bot/route.ts',
+      'server/src/app/api/teams/auth/callback/message-extension/route.ts',
+      'server/src/app/api/teams/package/route.ts',
+    ].map((relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), 'utf8'));
+
+    expect(eeDelegatorSource).toContain('const eeRouteModulePromises = new Map<string, Promise<unknown | null>>();');
+    expect(eeDelegatorSource).toContain('if (!eeRouteModulePromises.has(routeKey))');
+
+    for (const source of sharedRouteSources) {
+      expect(source).toContain('loadTeamsEeRoute');
+      expect(source).toContain('eeUnavailable');
+      expect(source).not.toContain('teamsBotHandler');
+      expect(source).not.toContain('teamsMessageExtensionHandler');
+      expect(source).not.toContain('teamsQuickActionHandler');
+      expect(source).not.toContain('handleTeamsAuthCallback');
+    }
+
+    expect(sharedTabPageSource).toContain("import('@enterprise/app/teams/tab/page')");
+    expect(sharedTabPageSource).not.toContain('resolveTeamsTabAuthState');
+    expect(sharedTabPageSource).not.toContain('resolveTeamsTabAccessState');
   });
 });

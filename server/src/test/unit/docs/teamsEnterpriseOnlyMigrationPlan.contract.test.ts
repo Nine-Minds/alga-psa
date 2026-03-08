@@ -83,4 +83,22 @@ describe('Teams enterprise-only migration plan contract', () => {
     expect(scratchpad).toContain('/api/teams/package');
     expect(scratchpad).toContain('The personal tab UI at `/teams/tab` remains a hard-stop page when Teams is unavailable');
   });
+
+  it('T365/T366/T415/T416/T444: keeps the scratchpad and PRD aligned on CE invisibility plus the focused validation runbooks for settings, routes, actions, auth, notifications, and schema', () => {
+    expect(prd).toContain('Teams is invisible and unavailable in CE');
+    expect(prd).toContain('Teams admin setup appears only in `Settings -> Integrations -> Communication`');
+    expect(scratchpad).toContain('settings visibility tests for CE vs EE flag-off vs EE flag-on');
+    expect(scratchpad).toContain('Teams route wrapper tests for unavailable, disabled, and delegated cases');
+    expect(scratchpad).toContain('Teams action wrapper tests for unavailable, disabled, and delegated cases');
+    expect(scratchpad).toContain('migration tests for fresh CE vs fresh EE schema');
+    expect(scratchpad).toContain('Validate EE ownership/package boundaries with:');
+    expect(scratchpad).toContain('Validate auth and notification wrapper behavior with:');
+  });
+
+  it('T417/T418: keeps acceptance scoped to CE invisibility, EE Communication placement, and EE-owned schema boundaries', () => {
+    expect(prd).toContain('CE settings show no Teams integration surface.');
+    expect(prd).toContain('EE settings show Teams only in `Communication`, and only when `teams-integration-ui` is enabled.');
+    expect(prd).toContain('Fresh CE installs do not create Teams schema.');
+    expect(prd).toContain('Fresh EE installs do create Teams schema.');
+  });
 });

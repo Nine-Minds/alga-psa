@@ -75,7 +75,7 @@ describe('teamsNotificationDelivery shared wrapper', () => {
     });
   });
 
-  it('T283/T289/T291: delegates Teams notification delivery into the EE implementation after the shared availability check passes', async () => {
+  it('T283/T289/T291/T292/T293/T294: delegates Teams notification delivery into the EE implementation after the shared availability check passes', async () => {
     vi.doMock(EE_TEAMS_NOTIFICATION_MODULE, () => ({
       deliverTeamsNotificationImpl: hoisted.deliverTeamsNotificationImplMock,
     }));
@@ -97,7 +97,7 @@ describe('teamsNotificationDelivery shared wrapper', () => {
     expect(hoisted.deliverTeamsNotificationImplMock).toHaveBeenCalledWith(notification);
   });
 
-  it('T303/T304: returns a stable skipped result and bounded warning when the EE Teams delivery implementation cannot be loaded', async () => {
+  it('T303/T304/T305/T306/T353/T354: returns a stable skipped result and bounded warning when the EE Teams delivery implementation cannot be loaded', async () => {
     vi.doMock(EE_TEAMS_NOTIFICATION_MODULE, () => {
       throw new Error('EE notification delivery missing');
     });
@@ -116,5 +116,15 @@ describe('teamsNotificationDelivery shared wrapper', () => {
         error: expect.any(String),
       })
     );
+  });
+
+  it('T305/T306/T353/T354: keeps the shared notification wrapper free of direct EE runtime imports outside the lazy loader', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const source = fs.readFileSync(path.resolve(__dirname, '../../../../../packages/notifications/src/realtime/teamsNotificationDelivery.ts'), 'utf8');
+
+    expect(source).toContain('loadEeTeamsNotificationDelivery');
+    expect(source).toContain("import('../../../../ee/server/src/lib/notifications/teamsNotificationDelivery')");
+    expect(source).not.toMatch(/import .*ee\/server\/src\/lib\/notifications\/teamsNotificationDelivery/);
   });
 });

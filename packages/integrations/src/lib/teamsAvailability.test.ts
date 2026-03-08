@@ -8,7 +8,7 @@ import {
 } from './teamsAvailability';
 
 describe('teamsAvailability', () => {
-  it('T021/T023/T025/T039/T041/T049/T057: enables Teams only for EE tenants with the tenant flag enabled and forwards tenant/user context to flag evaluation', async () => {
+  it('T021/T023/T025/T027/T028/T039/T040/T041/T049/T051/T052/T053/T054/T057/T397/T398: enables Teams only for EE tenants with the tenant flag enabled and forwards tenant/user context to flag evaluation', async () => {
     const evaluateFlag = vi.fn(async () => true);
 
     const availability = await getTeamsAvailability({
@@ -29,7 +29,7 @@ describe('teamsAvailability', () => {
     });
   });
 
-  it('T035/T041/T049: resolves CE as unavailable without attempting feature-flag evaluation', async () => {
+  it('T035/T036/T041/T042/T049/T397/T398: resolves CE as unavailable without attempting feature-flag evaluation', async () => {
     const evaluateFlag = vi.fn(async () => true);
 
     const availability = await getTeamsAvailability({
@@ -47,7 +47,7 @@ describe('teamsAvailability', () => {
     expect(evaluateFlag).not.toHaveBeenCalled();
   });
 
-  it('T022/T041/T049: keeps tenant-not-configured distinct from flag-disabled results for server-side runtime checks', () => {
+  it('T022/T041/T042/T049/T397/T398: keeps tenant-not-configured distinct from flag-disabled results for server-side runtime checks', () => {
     expect(
       resolveTeamsAvailability({
         isEnterpriseEdition: true,
@@ -61,7 +61,7 @@ describe('teamsAvailability', () => {
     });
   });
 
-  it('T024/T049: requires tenant context before evaluating the Teams flag for server-side runtime checks', async () => {
+  it('T024/T049/T397/T398: requires tenant context before evaluating the Teams flag for server-side runtime checks', async () => {
     const evaluateFlag = vi.fn(async () => true);
 
     const availability = await getTeamsAvailability({
@@ -78,7 +78,7 @@ describe('teamsAvailability', () => {
     expect(evaluateFlag).not.toHaveBeenCalled();
   });
 
-  it('T026/T049: treats user context as optional and omits blank user IDs from tenant-scoped flag evaluation', async () => {
+  it('T026/T049/T397/T398: treats user context as optional and omits blank user IDs from tenant-scoped flag evaluation', async () => {
     const evaluateFlag = vi.fn(async () => true);
 
     const availability = await getTeamsAvailability({
@@ -99,7 +99,7 @@ describe('teamsAvailability', () => {
     });
   });
 
-  it('T037/T041/T043/T047/T049: resolves EE with the UI flag off as disabled and supports UI wrappers that do not require tenant context', () => {
+  it('T037/T038/T041/T043/T047/T049/T397/T398: resolves EE with the UI flag off as disabled and supports UI wrappers that do not require tenant context', () => {
     expect(
       resolveTeamsAvailability({
         isEnterpriseEdition: true,

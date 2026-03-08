@@ -113,7 +113,7 @@ describe('IntegrationsSettingsPage Teams placement', () => {
     vi.clearAllMocks();
   });
 
-  it('T419: omits Teams in CE communication settings while keeping Inbound Email visible', async () => {
+  it('T027/T028/T036/T042/T071/T072/T073/T074/T395/T396/T417/T418/T419: omits Teams in CE communication settings while keeping Inbound Email visible', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'community';
 
     const { default: IntegrationsSettingsPage } = await import(
@@ -127,7 +127,7 @@ describe('IntegrationsSettingsPage Teams placement', () => {
     expect(screen.queryByTestId('teams-integration-settings-shell')).not.toBeInTheDocument();
   });
 
-  it('T419: omits Teams from the Providers category while keeping Microsoft profiles visible in CE', async () => {
+  it('T062/T064/T068/T079/T080/T105/T106/T385/T386/T419: omits Teams from the Providers category while keeping Microsoft profiles visible in CE', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'community';
     useSearchParamsMock.mockReturnValue({
       get: (key: string) => (key === 'category' ? 'providers' : null),
@@ -146,7 +146,7 @@ describe('IntegrationsSettingsPage Teams placement', () => {
     expect(screen.queryByTestId('teams-integration-settings-shell')).not.toBeInTheDocument();
   });
 
-  it('T420: renders Teams only in Communication when EE mode and the tenant flag are enabled', async () => {
+  it('T040/T065/T066/T071/T072/T077/T078/T084/T097/T098/T389/T390/T391/T392/T395/T396/T403/T404/T417/T418/T420: renders Teams only in Communication when EE mode and the tenant flag are enabled', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
 
     const { default: IntegrationsSettingsPage } = await import(
@@ -164,7 +164,7 @@ describe('IntegrationsSettingsPage Teams placement', () => {
     expect(screen.queryByText('Microsoft Integration Settings')).not.toBeInTheDocument();
   });
 
-  it('T043/T075/T421: renders a disabled Teams shell instead of the active Teams settings UI when EE mode is on but the tenant flag is disabled', async () => {
+  it('T038/T043/T044/T075/T076/T387/T388/T401/T402/T409/T410/T421: renders a disabled Teams shell instead of the active Teams settings UI when EE mode is on but the tenant flag is disabled', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     useFeatureFlagMock.mockImplementation((flagKey: string) => ({
       enabled: false,
