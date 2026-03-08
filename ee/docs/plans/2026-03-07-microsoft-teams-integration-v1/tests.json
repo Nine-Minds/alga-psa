@@ -1106,7 +1106,7 @@
   {
     "id": "T139",
     "description": "Happy path: Teams app package: bot IDs, app IDs, and package metadata are stored with the Teams integration record as needed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F070"
     ]
@@ -1114,7 +1114,7 @@
   {
     "id": "T140",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: bot ids, app ids, and package metadata are stored with the teams integration record as needed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F070"
     ]
@@ -1138,7 +1138,7 @@
   {
     "id": "T143",
     "description": "Happy path: Teams app package: changing the selected Teams profile invalidates stale package/install readiness state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F072"
     ]
@@ -1146,7 +1146,7 @@
   {
     "id": "T144",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: changing the selected teams profile invalidates stale package/install readiness state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F072"
     ]

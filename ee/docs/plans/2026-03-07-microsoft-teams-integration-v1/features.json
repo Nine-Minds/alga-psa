@@ -623,7 +623,7 @@
   {
     "id": "F070",
     "description": "Teams app package: bot IDs, app IDs, and package metadata are stored with the Teams integration record as needed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -641,7 +641,7 @@
   {
     "id": "F072",
     "description": "Teams app package: changing the selected Teams profile invalidates stale package/install readiness state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"

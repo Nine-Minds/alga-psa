@@ -39,6 +39,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Existing event/workflow infrastructure is a better trigger source for Teams notifications than adding a Teams-specific event bus.
 - (2026-03-07) Existing extension iframe surfaces are useful precedent for embedded UI and auth forwarding, but they are not a native substitute for Teams bot/message-extension surfaces.
 - (2026-03-07) Existing Microsoft integration flows for email, calendar, and Entra already establish tenant-secret and Graph API patterns that Teams can reuse.
+- (2026-03-07) Teams package generation now persists `app_id`, `bot_id`, and a summarized `package_metadata` blob on `teams_integrations`, which keeps setup/status views tenant-local and avoids recomputing storage-less manifest state.
+- (2026-03-07) Rebinding Teams to a different Microsoft profile must clear persisted package metadata and reset non-`not_configured` install state back to `install_pending` so stale package/install assumptions do not survive profile swaps.
 - (2026-03-07) Existing Microsoft consumers still read the legacy tenant-secret keys directly. Introducing profiles without default-secret mirroring would break Outlook email, Outlook calendar, and MSP SSO compatibility.
 - (2026-03-07) `packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.tsx` already gives the right long-term home for Microsoft profile management: `Integrations -> Providers`, not a new top-level settings tab.
 - (2026-03-07) The backend compatibility guard is sufficient for `F015`/`T029-T030`: archiving the default profile is blocked until another profile is made default, which preserves the active compatibility binding.
@@ -91,6 +93,15 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `packages/notifications/src/actions/internal-notification-actions/internalNotificationActions.ts`
   - `server/src/lib/utils/notificationLinkResolver.ts`
   - `server/src/lib/eventBus`
+- (2026-03-07) Verified Teams package metadata persistence and invalidation with:
+  - `pnpm --dir packages/integrations typecheck`
+  - `cd server && npx vitest run --config vitest.config.ts ../packages/integrations/src/actions/integrations/teamsActions.test.ts ../packages/integrations/src/actions/integrations/teamsPackageActions.test.ts ../server/src/test/unit/migrations/teamsPackageMetadataMigration.test.ts`
+
+## Progress Log
+
+- (2026-03-07) Completed `F070` by adding a migration for `teams_integrations.app_id`, `bot_id`, and `package_metadata`, and by persisting generated Teams package metadata in `packages/integrations/src/actions/integrations/teamsPackageActions.ts`.
+- (2026-03-07) Completed `F072` by clearing stored Teams package metadata and resetting install readiness to `install_pending` when the selected Teams Microsoft profile changes in `packages/integrations/src/actions/integrations/teamsActions.ts`.
+- (2026-03-07) Completed `T139`, `T140`, `T143`, and `T144` with focused migration and action-layer tests covering package metadata storage and stale-profile invalidation behavior.
   - `server/migrations/20260307120000_create_microsoft_profiles.cjs`
   - `server/migrations/20260307143000_create_microsoft_profile_consumer_bindings.cjs`
   - `server/migrations/20260307153000_create_teams_integrations.cjs`

@@ -41,6 +41,9 @@ interface TeamsIntegrationRow {
   enabled_capabilities: unknown;
   notification_categories: unknown;
   allowed_actions: unknown;
+  app_id?: string | null;
+  bot_id?: string | null;
+  package_metadata?: unknown;
   last_error: string | null;
   created_by: string | null;
   updated_by: string | null;
@@ -66,6 +69,9 @@ export interface TeamsIntegrationStatusResponse {
     enabledCapabilities: TeamsCapability[];
     notificationCategories: TeamsNotificationCategory[];
     allowedActions: TeamsAllowedAction[];
+    appId: string | null;
+    botId: string | null;
+    packageMetadata: Record<string, unknown> | null;
     lastError: string | null;
   };
 }
@@ -98,6 +104,9 @@ function defaultTeamsIntegrationState() {
     enabledCapabilities: [...TEAMS_CAPABILITIES] as TeamsCapability[],
     notificationCategories: [...TEAMS_NOTIFICATION_CATEGORIES] as TeamsNotificationCategory[],
     allowedActions: [...TEAMS_ALLOWED_ACTIONS] as TeamsAllowedAction[],
+    appId: null as string | null,
+    botId: null as string | null,
+    packageMetadata: null as Record<string, unknown> | null,
     lastError: null as string | null,
   };
 }
@@ -113,6 +122,11 @@ function mapTeamsIntegrationRow(row?: TeamsIntegrationRow | null): NonNullable<T
     enabledCapabilities: normalizeEnumArray(row.enabled_capabilities, TEAMS_CAPABILITIES),
     notificationCategories: normalizeEnumArray(row.notification_categories, TEAMS_NOTIFICATION_CATEGORIES),
     allowedActions: normalizeEnumArray(row.allowed_actions, TEAMS_ALLOWED_ACTIONS),
+    appId: row.app_id || null,
+    botId: row.bot_id || null,
+    packageMetadata: row.package_metadata && typeof row.package_metadata === 'object'
+      ? row.package_metadata as Record<string, unknown>
+      : null,
     lastError: row.last_error || null,
   };
 }
@@ -205,9 +219,9 @@ export const saveTeamsIntegrationSettings = withAuth(async (
     };
 
     const selectedProfileId = input.selectedProfileId === undefined ? next.selectedProfileId : input.selectedProfileId;
-    const installStatus = input.installStatus ?? next.installStatus;
+    const requestedInstallStatus = input.installStatus ?? next.installStatus;
 
-    if (!isTeamsInstallStatus(installStatus)) {
+    if (!isTeamsInstallStatus(requestedInstallStatus)) {
       return { success: false, error: 'Unsupported Teams install status' };
     }
 
@@ -215,11 +229,16 @@ export const saveTeamsIntegrationSettings = withAuth(async (
       knex,
       tenant,
       selectedProfileId ?? null,
-      installStatus === 'active'
+      requestedInstallStatus === 'active'
     );
     if (profileValidation.error) {
       return { success: false, error: profileValidation.error };
     }
+
+    const selectedProfileChanged = Boolean(existing?.selected_profile_id) && existing?.selected_profile_id !== (selectedProfileId ?? null);
+    const installStatus = selectedProfileChanged && requestedInstallStatus !== 'not_configured'
+      ? 'install_pending'
+      : requestedInstallStatus;
 
     const enabledCapabilities = input.enabledCapabilities
       ? normalizeEnumArray(input.enabledCapabilities, TEAMS_CAPABILITIES)
@@ -230,7 +249,11 @@ export const saveTeamsIntegrationSettings = withAuth(async (
     const allowedActions = input.allowedActions
       ? normalizeEnumArray(input.allowedActions, TEAMS_ALLOWED_ACTIONS)
       : next.allowedActions;
-    const lastError = input.lastError === undefined ? next.lastError : input.lastError;
+    const lastError = selectedProfileChanged
+      ? null
+      : input.lastError === undefined
+        ? next.lastError
+        : input.lastError;
     const now = new Date();
 
     const row: TeamsIntegrationRow = {
@@ -240,6 +263,9 @@ export const saveTeamsIntegrationSettings = withAuth(async (
       enabled_capabilities: enabledCapabilities,
       notification_categories: notificationCategories,
       allowed_actions: allowedActions,
+      app_id: selectedProfileChanged ? null : next.appId,
+      bot_id: selectedProfileChanged ? null : next.botId,
+      package_metadata: selectedProfileChanged ? null : next.packageMetadata,
       last_error: lastError || null,
       created_by: existing?.created_by || (user as any)?.user_id || null,
       updated_by: (user as any)?.user_id || null,

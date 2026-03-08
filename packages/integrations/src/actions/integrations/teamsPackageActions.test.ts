@@ -15,6 +15,11 @@ const hoisted = vi.hoisted(() => {
     tenant: string;
     selected_profile_id: string | null;
     install_status: 'not_configured' | 'install_pending' | 'active' | 'error';
+    app_id?: string | null;
+    bot_id?: string | null;
+    package_metadata?: Record<string, unknown> | null;
+    updated_by?: string | null;
+    updated_at?: string | Date;
   };
 
   const state = {
@@ -53,6 +58,11 @@ const hoisted = vi.hoisted(() => {
       async first() {
         const row = filteredRows()[0];
         return row ? clone(row) : undefined;
+      },
+      async update(values: Record<string, unknown>) {
+        const rows = filteredRows();
+        rows.forEach((row) => Object.assign(row, values));
+        return rows.length;
       },
       async select(..._args: unknown[]) {
         return filteredRows().map((row) => clone(row));
@@ -205,6 +215,25 @@ describe('Teams app package actions', () => {
     expect(result.package?.manifest.composeExtensions[0]?.commands[1]?.contexts).toEqual(['message']);
     expect(result.package?.manifest.activities.activityTypes).toHaveLength(5);
     expect(JSON.stringify(result.package?.manifest)).not.toContain('channel-routing');
+    expect(teamsIntegrations[0]).toMatchObject({
+      tenant: 'tenant-1',
+      selected_profile_id: 'profile-1',
+      install_status: 'install_pending',
+      app_id: 'teams-client-id',
+      bot_id: 'teams-client-id',
+      package_metadata: {
+        manifestVersion: '1.24',
+        packageVersion: '1.0.0',
+        fileName: 'alga-psa-teams-tenant-1.zip',
+        baseUrl: 'https://tenant.example.com',
+        validDomains: ['tenant.example.com', 'token.botframework.com'],
+        webApplicationInfo: {
+          id: 'teams-client-id',
+          resource: 'api://tenant.example.com/teams/teams-client-id',
+        },
+      },
+      updated_by: 'user-1',
+    });
   });
 
   it('T118/T120/T122/T124/T126/T128/T130/T132/T134/T136/T138/T142: rejects missing or unready selected profiles before package generation', async () => {

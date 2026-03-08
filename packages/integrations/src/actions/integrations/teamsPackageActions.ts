@@ -12,6 +12,11 @@ interface TeamsIntegrationRow {
   tenant: string;
   selected_profile_id: string | null;
   install_status: TeamsInstallStatus;
+  app_id?: string | null;
+  bot_id?: string | null;
+  package_metadata?: unknown;
+  updated_by?: string | null;
+  updated_at?: string | Date;
 }
 
 interface MicrosoftProfileRow {
@@ -120,6 +125,18 @@ export interface TeamsAppPackageStatusResponse {
       resource: string;
     };
     manifest: TeamsAppManifest;
+  };
+}
+
+interface PersistedTeamsPackageMetadata {
+  manifestVersion: string;
+  packageVersion: string;
+  fileName: string;
+  baseUrl: string;
+  validDomains: string[];
+  webApplicationInfo: {
+    id: string;
+    resource: string;
   };
 }
 
@@ -327,6 +344,25 @@ export const getTeamsAppPackageStatus = withAuth(async (
 
     const baseUrl = await getDeploymentBaseUrl();
     const manifest = buildTeamsAppManifest(baseUrl, tenant, profile);
+    const fileName = `alga-psa-teams-${tenant}.zip`;
+    const packageMetadata: PersistedTeamsPackageMetadata = {
+      manifestVersion: TEAMS_MANIFEST_VERSION,
+      packageVersion: TEAMS_PACKAGE_VERSION,
+      fileName,
+      baseUrl,
+      validDomains: manifest.validDomains,
+      webApplicationInfo: manifest.webApplicationInfo,
+    };
+
+    await knex('teams_integrations')
+      .where({ tenant })
+      .update({
+        app_id: profile.client_id,
+        bot_id: profile.client_id,
+        package_metadata: packageMetadata,
+        updated_by: (user as any)?.user_id || null,
+        updated_at: new Date(),
+      });
 
     return {
       success: true,
@@ -337,7 +373,7 @@ export const getTeamsAppPackageStatus = withAuth(async (
         botId: profile.client_id,
         manifestVersion: TEAMS_MANIFEST_VERSION,
         packageVersion: TEAMS_PACKAGE_VERSION,
-        fileName: `alga-psa-teams-${tenant}.zip`,
+        fileName,
         baseUrl,
         validDomains: manifest.validDomains,
         webApplicationInfo: manifest.webApplicationInfo,

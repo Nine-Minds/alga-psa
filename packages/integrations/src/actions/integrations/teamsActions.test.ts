@@ -17,6 +17,9 @@ const hoisted = vi.hoisted(() => {
     enabled_capabilities: string[];
     notification_categories: string[];
     allowed_actions: string[];
+    app_id?: string | null;
+    bot_id?: string | null;
+    package_metadata?: Record<string, unknown> | null;
     last_error: string | null;
     created_by: string | null;
     updated_by: string | null;
@@ -188,6 +191,9 @@ describe('Teams integration actions', () => {
         enabledCapabilities: ['personal_tab', 'personal_bot', 'message_extension', 'activity_notifications'],
         notificationCategories: ['assignment', 'customer_reply', 'approval_request', 'escalation', 'sla_risk'],
         allowedActions: ['assign_ticket', 'add_note', 'reply_to_contact', 'log_time', 'approval_response'],
+        appId: null,
+        botId: null,
+        packageMetadata: null,
         lastError: null,
       },
     });
@@ -222,6 +228,9 @@ describe('Teams integration actions', () => {
         enabledCapabilities: ['personal_tab', 'message_extension'],
         notificationCategories: ['assignment', 'approval_request'],
         allowedActions: ['assign_ticket', 'log_time'],
+        appId: null,
+        botId: null,
+        packageMetadata: null,
         lastError: null,
       },
     });
@@ -281,6 +290,64 @@ describe('Teams integration actions', () => {
     expect(unsupportedStatus).toEqual({
       success: false,
       error: 'Unsupported Teams install status',
+    });
+  });
+
+  it('T143/T144: changing the selected Teams profile invalidates stale package metadata and resets active install state to install-pending', async () => {
+    addMicrosoftProfile({
+      tenant: 'tenant-1',
+      profileId: 'profile-1',
+      clientId: 'tenant-one-client',
+      tenantId: 'tenant-one-guid',
+      secretRef: 'tenant-one-secret-ref',
+    });
+    addMicrosoftProfile({
+      tenant: 'tenant-1',
+      profileId: 'profile-2',
+      clientId: 'tenant-two-client',
+      tenantId: 'tenant-two-guid',
+      secretRef: 'tenant-two-secret-ref',
+    });
+    tenantSecrets.set('tenant-1:tenant-one-secret-ref', 'tenant-one-secret');
+    tenantSecrets.set('tenant-1:tenant-two-secret-ref', 'tenant-two-secret');
+
+    teamsIntegrations.push({
+      tenant: 'tenant-1',
+      selected_profile_id: 'profile-1',
+      install_status: 'active',
+      enabled_capabilities: ['personal_tab'],
+      notification_categories: ['assignment'],
+      allowed_actions: ['assign_ticket'],
+      app_id: 'tenant-one-client',
+      bot_id: 'tenant-one-client',
+      package_metadata: {
+        fileName: 'alga-psa-teams-tenant-1.zip',
+      },
+      last_error: 'previous package error',
+      created_by: 'user-1',
+      updated_by: 'user-1',
+      created_at: new Date('2026-03-07T10:00:00.000Z'),
+      updated_at: new Date('2026-03-07T10:00:00.000Z'),
+    });
+
+    const saved = await saveTeamsIntegrationSettings({
+      selectedProfileId: 'profile-2',
+      installStatus: 'active',
+    });
+
+    expect(saved).toEqual({
+      success: true,
+      integration: {
+        selectedProfileId: 'profile-2',
+        installStatus: 'install_pending',
+        enabledCapabilities: ['personal_tab'],
+        notificationCategories: ['assignment'],
+        allowedActions: ['assign_ticket'],
+        appId: null,
+        botId: null,
+        packageMetadata: null,
+        lastError: null,
+      },
     });
   });
 });
