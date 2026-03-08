@@ -158,6 +158,26 @@ describe('Time Entries API E2E Tests', () => {
         expect(response.data.error.code).toBe('VALIDATION_ERROR');
       });
 
+      it('should reject creating a time entry without a service', async () => {
+        const ticket = await createTestTicket(env.db, env.tenant, {
+          client_id: env.clientId,
+          entered_by: env.userId,
+          assigned_to: env.userId
+        });
+
+        const response = await env.apiClient.post(API_BASE, {
+          work_item_id: ticket.ticket_id,
+          work_item_type: 'ticket',
+          start_time: new Date().toISOString(),
+          end_time: new Date(Date.now() + 60 * 60000).toISOString(),
+          notes: 'Missing service',
+          is_billable: true
+        });
+
+        assertError(response, 400);
+        expect(response.data.error.code).toBe('VALIDATION_ERROR');
+      });
+
       it('should validate time periods overlap', async () => {
         const ticket = await createTestTicket(env.db, env.tenant, {
           client_id: env.clientId,

@@ -173,6 +173,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     if (!isEditable) return;
   
     const entry = entries[index];
+    const shouldKeepDialogOpen = entries.length > 1;
     console.log('Entry to save:', entry);
 
     const isAdHoc = workItem.type === 'ad_hoc';
@@ -253,8 +254,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
         isNumber: typeof timeEntry.billable_duration === 'number'
       });
 
-      const savedEntry = await onSave(timeEntry);
-      console.log('Saved entry response:', savedEntry);
+      await onSave(timeEntry);
   
       // Fetch updated entries
       if (onTimeEntriesUpdate && timeSheetId) {
@@ -265,16 +265,30 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
           end_time: typeof entry.end_time === 'string' ? entry.end_time : formatISO(entry.end_time),
         }));
         await onTimeEntriesUpdate(updatedEntries);
+
+        if (shouldKeepDialogOpen) {
+          await initializeEntries({
+            existingEntries: updatedEntries,
+            workItem,
+            date,
+            defaultTaxRegion
+          });
+        }
       }
   
       toast.dismiss(loadingToast);
       toast.success('Time entry saved');
-      onClose();
+
+      if (shouldKeepDialogOpen) {
+        setEditingIndex(null);
+      } else {
+        onClose();
+      }
     } catch (error) {
       toast.dismiss(loadingToast);
       handleError(error, 'Failed to save time entry. Please try again.');
     }
-  }, [isEditable, timeSheetId, entries, services, workItem, onSave, onTimeEntriesUpdate, onClose]);
+  }, [isEditable, timeSheetId, entries, services, workItem, onSave, onTimeEntriesUpdate, onClose, initializeEntries, date, defaultTaxRegion, setEditingIndex]);
 
   const deleteTimeEntryAtIndex = async (index: number) => {
     try {

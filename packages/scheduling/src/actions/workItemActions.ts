@@ -41,6 +41,13 @@ interface SearchResult {
   total: number;
 }
 
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function sanitizeWorkItemIdsForUuidColumns(workItemIds?: string[]): string[] {
+  return (workItemIds ?? []).filter((workItemId) => UUID_PATTERN.test(workItemId));
+}
+
 // ==================================
 // Function for Technician Dispatch
 // ==================================
@@ -289,9 +296,10 @@ export const searchPickerWorkItems = withAuth(async (
     const pageSize = options.pageSize || 10;
     const offset = (page - 1) * pageSize;
     const isTimesheet = options.isTimesheet || false;
+    const availableWorkItemIds = sanitizeWorkItemIdsForUuidColumns(options.availableWorkItemIds);
 
     let ticketsQuery = db('tickets as t')
-      .whereNotIn('t.ticket_id', options.availableWorkItemIds || [])
+      .whereNotIn('t.ticket_id', availableWorkItemIds)
       .where('t.tenant', tenant)
       .innerJoin('clients as c', function() {
         this.on('t.client_id', '=', 'c.client_id')
@@ -386,7 +394,7 @@ export const searchPickerWorkItems = withAuth(async (
        );
 
       let projectTasksQuery = db('project_tasks as pt')
-      .whereNotIn('pt.task_id', options.availableWorkItemIds || [])
+      .whereNotIn('pt.task_id', availableWorkItemIds)
       .where('pt.tenant', tenant)
       .innerJoin('project_phases as pp', function() {
         this.on('pt.phase_id', '=', 'pp.phase_id')
@@ -520,7 +528,7 @@ export const searchPickerWorkItems = withAuth(async (
     let adHocQuery;
     if (!options.type || options.type === 'all' || options.type === 'ad_hoc') {
       adHocQuery = db('schedule_entries as se')
-        .whereNotIn('se.entry_id', options.availableWorkItemIds || [])
+        .whereNotIn('se.entry_id', availableWorkItemIds)
         .where('se.tenant', tenant)
         .where('work_item_type', 'ad_hoc')
         .whereILike('title', db.raw('?', [`%${searchTerm}%`]))
@@ -589,7 +597,7 @@ export const searchPickerWorkItems = withAuth(async (
     let interactionsQuery;
     if (!options.type || options.type === 'all' || options.type === 'interaction') {
       interactionsQuery = db('interactions as i')
-        .whereNotIn('i.interaction_id', options.availableWorkItemIds || [])
+        .whereNotIn('i.interaction_id', availableWorkItemIds)
         .where('i.tenant', tenant)
         .leftJoin('clients as c', function() {
           this.on('i.client_id', '=', 'c.client_id')
