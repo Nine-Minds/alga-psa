@@ -2466,7 +2466,7 @@
   {
     "id": "T309",
     "description": "Happy path: Message extension: a Teams message extension exists for PSA.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F155"
     ]
@@ -2474,7 +2474,7 @@
   {
     "id": "T310",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: a teams message extension exists for psa.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F155"
     ]
@@ -2482,7 +2482,7 @@
   {
     "id": "T311",
     "description": "Happy path: Message extension: search commands can look up PSA tickets.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F156"
     ]
@@ -2490,7 +2490,7 @@
   {
     "id": "T312",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search commands can look up psa tickets.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F156"
     ]
@@ -2498,7 +2498,7 @@
   {
     "id": "T313",
     "description": "Happy path: Message extension: search commands can look up PSA tasks.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F157"
     ]
@@ -2506,7 +2506,7 @@
   {
     "id": "T314",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search commands can look up psa tasks.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F157"
     ]
@@ -2514,7 +2514,7 @@
   {
     "id": "T315",
     "description": "Happy path: Message extension: search commands can look up PSA contacts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F158"
     ]
@@ -2522,7 +2522,7 @@
   {
     "id": "T316",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search commands can look up psa contacts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F158"
     ]
@@ -2530,7 +2530,7 @@
   {
     "id": "T317",
     "description": "Happy path: Message extension: search commands can look up approval-related work items needed for v1.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F159"
     ]
@@ -2538,7 +2538,7 @@
   {
     "id": "T318",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search commands can look up approval-related work items needed for v1.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F159"
     ]
@@ -2546,7 +2546,7 @@
   {
     "id": "T319",
     "description": "Happy path: Message extension: search commands work from compose and command-box contexts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F160"
     ]
@@ -2554,7 +2554,7 @@
   {
     "id": "T320",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search commands work from compose and command-box contexts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F160"
     ]

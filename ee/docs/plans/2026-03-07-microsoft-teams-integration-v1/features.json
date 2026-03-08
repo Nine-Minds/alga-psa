@@ -1468,7 +1468,7 @@
   {
     "id": "F155",
     "description": "Message extension: a Teams message extension exists for PSA.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1478,7 +1478,7 @@
   {
     "id": "F156",
     "description": "Message extension: search commands can look up PSA tickets.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1488,7 +1488,7 @@
   {
     "id": "F157",
     "description": "Message extension: search commands can look up PSA tasks.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1498,7 +1498,7 @@
   {
     "id": "F158",
     "description": "Message extension: search commands can look up PSA contacts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1508,7 +1508,7 @@
   {
     "id": "F159",
     "description": "Message extension: search commands can look up approval-related work items needed for v1.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1518,7 +1518,7 @@
   {
     "id": "F160",
     "description": "Message extension: search commands work from compose and command-box contexts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",

@@ -1,6 +1,5 @@
-import { createTenantKnex, runWithTenant, User, type ServiceContext } from '@alga-psa/db';
+import { runWithTenant, type ServiceContext } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { isFeatureFlagEnabled } from '@alga-psa/core';
 import {
   buildTeamsBotResultDeepLinkFromPsaUrl,
   buildTeamsMessageExtensionResultDeepLinkFromPsaUrl,
@@ -21,6 +20,7 @@ import { TimeEntryService } from 'server/src/lib/api/services/TimeEntryService';
 import { TimeSheetService } from 'server/src/lib/api/services/TimeSheetService';
 import { ForbiddenError, NotFoundError, ValidationError } from 'server/src/lib/api/middleware/apiMiddleware';
 import { buildTeamsFullPsaUrl } from '../buildTeamsFullPsaUrl';
+import { listPendingApprovalsForTeams, type TeamsPendingApprovalRecord } from '../approvals/queryPendingApprovalsForTeams';
 import type { TeamsTabDestination } from '../resolveTeamsTabDestination';
 import { describeTeamsTabDestination } from '../resolveTeamsTabDestination';
 
@@ -691,15 +691,6 @@ function describeTicketListSummary(ticket: Record<string, unknown>): string {
   return parts.join(' • ') || 'Ticket opened from Teams';
 }
 
-interface TeamsApprovalListItem {
-  id: string;
-  approval_status: string | null;
-  first_name: string | null;
-  last_name: string | null;
-  period_start_date: string | null;
-  period_end_date: string | null;
-}
-
 function formatApprovalPeriod(startDate: string | null, endDate: string | null): string {
   if (!startDate || !endDate) {
     return 'Period unavailable';
@@ -708,70 +699,10 @@ function formatApprovalPeriod(startDate: string | null, endDate: string | null):
   return `${startDate} to ${endDate}`;
 }
 
-function describeApprovalListSummary(approval: TeamsApprovalListItem): string {
+function describeApprovalListSummary(approval: TeamsPendingApprovalRecord): string {
   const employeeName = [approval.first_name, approval.last_name].filter(Boolean).join(' ').trim() || 'Unknown employee';
   const status = approval.approval_status?.trim() || 'SUBMITTED';
   return `${employeeName} • ${formatApprovalPeriod(approval.period_start_date, approval.period_end_date)} • ${status}`;
-}
-
-// Mirror the manager approval dashboard scope so Teams sees the same approval queue.
-async function listPendingApprovalsForTeams(
-  tenantId: string,
-  user: IUserWithRoles,
-  limit: number
-): Promise<TeamsApprovalListItem[]> {
-  const { knex } = await createTenantKnex(tenantId);
-  const canReadAll = await hasPermission(user, 'timesheet', 'read_all', knex);
-
-  let query = knex('time_sheets')
-    .join('users', function joinUsers() {
-      this.on('time_sheets.user_id', '=', 'users.user_id').andOn('time_sheets.tenant', '=', 'users.tenant');
-    })
-    .join('time_periods', function joinPeriods() {
-      this.on('time_sheets.period_id', '=', 'time_periods.period_id').andOn('time_sheets.tenant', '=', 'time_periods.tenant');
-    })
-    .where('time_sheets.tenant', tenantId)
-    .whereIn('time_sheets.approval_status', ['SUBMITTED', 'CHANGES_REQUESTED'])
-    .select(
-      'time_sheets.id',
-      'time_sheets.approval_status',
-      'users.first_name',
-      'users.last_name',
-      'time_periods.start_date as period_start_date',
-      'time_periods.end_date as period_end_date'
-    )
-    .orderBy('time_sheets.submitted_at', 'asc')
-    .limit(limit);
-
-  if (!canReadAll) {
-    const reportsToEnabled = await isFeatureFlagEnabled('teams-v2', {
-      userId: user.user_id,
-      tenantId,
-    });
-
-    const reportsToUserIds = reportsToEnabled ? await User.getReportsToSubordinateIds(knex, user.user_id) : [];
-
-    query = query
-      .where((builder) => {
-        builder.whereExists(function managerScope() {
-          this.select(1)
-            .from('team_members')
-            .join('teams', function joinTeams() {
-              this.on('team_members.team_id', '=', 'teams.team_id').andOn('team_members.tenant', '=', 'teams.tenant');
-            })
-            .where('team_members.user_id', knex.ref('users.user_id'))
-            .andWhere('teams.manager_id', user.user_id)
-            .andWhere('teams.tenant', tenantId);
-        });
-
-        if (reportsToEnabled && reportsToUserIds.length > 0) {
-          builder.orWhereIn('users.user_id', reportsToUserIds);
-        }
-      })
-      .distinct();
-  }
-
-  return (await query) as TeamsApprovalListItem[];
 }
 
 function describeResolvedTarget(target: TeamsResolvedTarget): { title: string; summary: string } {
@@ -918,11 +849,11 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
         'You do not have permission to view approvals from Teams.'
       ),
     execute: async (normalized, context) => {
-      const approvals = await listPendingApprovalsForTeams(
-        context.request.tenantId,
-        context.request.user,
-        normalized.limit as number
-      );
+      const approvals = await listPendingApprovalsForTeams({
+        tenantId: context.request.tenantId,
+        user: context.request.user,
+        limit: normalized.limit as number,
+      });
 
       const items = await Promise.all(
         approvals.map((approval) =>

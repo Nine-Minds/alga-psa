@@ -108,6 +108,7 @@ const _middleware = auth((request) => {
       '/api/email/oauth/',
       '/api/teams/auth/',
       '/api/teams/bot/',
+      '/api/teams/message-extension/',
       '/api/client-portal/domain-session',
       // Mobile auth endpoints use OTT/refresh tokens (no x-api-key)
       '/api/v1/mobile/auth/',

@@ -253,6 +253,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Resolving a non-self assignee from the bot should require `user:read` permission and only match active internal PSA users by exact user ID, email, username, or full name so Teams assignment stays tenant-scoped and predictable.
 - (2026-03-07) Pending-approval lookup needs to mirror the existing Manager Approval dashboard scope logic instead of `TimeSheetService.list(...)`, because the service layer does not currently apply manager / reports-to visibility for time-sheet approvals.
 - (2026-03-07) The current time-sheet approval model supports `approve` and `request_changes`, not a distinct reject mutation, so the Teams bot treats `reject approval ...` as a user-friendly alias for the shared `request_changes` action.
+- (2026-03-07) The first Teams message-extension slice can stay SDK-free like the bot transport: a Next.js invoke route can accept `composeExtension/query` payloads directly and reuse tenant/user resolution plus the shared Teams action layer for result cards.
+- (2026-03-07) Approval lookup needed a reusable helper outside the action registry so both bot approvals and message-extension search can share the same manager/reports-to visibility rules and optional query filtering.
+- (2026-03-07) The smallest safe v1 message-extension search surface is one `searchRecords` command for `compose` and `commandBox` contexts that aggregates tickets, tasks, contacts, and approvals into shared `open_record` hero cards.
 
 ## Progress Log
 
@@ -283,7 +286,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Verified Teams bot approval commands with:
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/actions/teamsActionRegistry.test.ts src/test/unit/lib/teams/bot/teamsBotHandler.test.ts`
   - `pnpm --dir server exec tsc -p tsconfig.json --noEmit --pretty false`
-- (2026-03-07) Next unchecked feature after this slice is `F153` (Personal bot command approvals: returns the technician's pending approvals).
+- (2026-03-07) Verified Teams message-extension search with:
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/actions/teamsActionRegistry.test.ts src/test/unit/lib/teams/messageExtension/teamsMessageExtensionHandler.test.ts src/app/api/teams/message-extension/query/route.test.ts`
+  - `pnpm --dir server exec tsc -p tsconfig.json --noEmit --pretty false`
 
 - (2026-03-07) Completed `F140`, `F141`, `F142`, and `F143` by teaching `server/src/lib/teams/bot/teamsBotHandler.ts` to parse `assign ticket` commands, default `assign ticket <ticket-id>` to self-assignment, resolve other assignees from active internal users with explicit `user:read` gating, and return the shared action result with an assignee-specific success summary plus Teams-tab/full-PSA links.
 - (2026-03-07) Completed `F144`, `F145`, and `F146` by teaching the same bot handler to parse `add note <ticket-id>: <note>`, preserve ticket context when the note body is missing, execute the shared `add_note` Teams action, and return the saved-note confirmation with follow-up deep links.
@@ -297,4 +302,6 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Completed `F154` by extending the bot parser/UX with `approve approval <id>` and `request changes` / `reject approval <id>: <comment>` commands that execute the shared `approval_response` action and return Teams-tab/full-PSA follow-up links.
 - (2026-03-07) Completed `T305` and `T306` with registry + bot coverage for pending-approval lookup, permission failures, approval summaries, and approval-result shortcut rendering.
 - (2026-03-07) Completed `T307` and `T308` with bot-handler coverage for approval approval/request-changes execution plus missing-reference and missing-comment remediation.
-- (2026-03-07) Next unchecked feature after this slice is `F155` (Message extension: a Teams message extension exists for PSA).
+- (2026-03-07) Completed `F155`, `F156`, `F157`, `F158`, `F159`, and `F160` by adding the SDK-free Teams message-extension route in `server/src/app/api/teams/message-extension/query/route.ts` plus `server/src/lib/teams/messageExtension/teamsMessageExtensionHandler.ts`, which resolves tenant and linked-user context, accepts `searchRecords` queries from compose/command-box contexts, and returns ticket/task/contact/approval hero-card results through the shared `open_record` Teams action mapping.
+- (2026-03-07) Completed `T309` through `T320` with `server/src/app/api/teams/message-extension/query/route.test.ts` and `server/src/test/unit/lib/teams/messageExtension/teamsMessageExtensionHandler.test.ts`, covering route delegation, invalid JSON handling, tenant/user-gated search aggregation, permission-based suppression, empty-state recovery, and compose/command-box context enforcement.
+- (2026-03-07) Next unchecked feature after this slice is `F161` (Message extension: action commands work from message context).
