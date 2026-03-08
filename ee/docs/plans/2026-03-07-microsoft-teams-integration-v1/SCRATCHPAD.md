@@ -243,6 +243,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) The existing Teams tab runtime already understood direct `context` and notification-style PSA URLs; bot and message-extension result handoff only needed explicit surface-specific link aliases plus stable deep-link builders, not a new tab route.
 - (2026-03-07) The personal tab shell is a good place to surface invoking-surface context (`bot`, `message_extension`, `notification`) because it confirms why the user landed on a record without changing destination authorization semantics.
 - (2026-03-07) The project-task Teams access check should stay local to Teams and use `ProjectService.getTasks(projectId, context)` for project/task consistency instead of widening the shared `IProjectTask` interface with a `project_id` field that ripples through unrelated project-editing call sites.
+- (2026-03-07) The smallest reusable Teams action-layer pattern in this repo is a typed registry plus normalized DTO/result unions in `server/src/lib/teams/actions`, not the heavier workflow runtime registry; that keeps bot, message-extension, and quick-action semantics aligned with the existing Teams auth/setup code.
+- (2026-03-07) Teams action results can derive Teams-tab links from existing PSA record URLs by flowing through `buildTeamsFullPsaUrl` first and only then calling the Teams package deep-link builders, which keeps the PSA route as the source of truth.
+- (2026-03-07) The first idempotency slice for Teams actions is process-local and keyed by `tenant + user + action + idempotencyKey`; that is enough to prevent duplicate mutation execution within the current app process while keeping the action layer free of new persistence until a later concurrency hardening pass is justified.
 
 ## Progress Log
 
@@ -252,3 +255,12 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Completed `T213`, `T214`, `T215`, and `T216` with destination-parser, page-shell, and deep-link-builder coverage for bot-result and message-extension-result tab handoff plus safe fallback behavior.
 - (2026-03-07) Completed `T217`, `T218`, `T219`, and `T220` with page-shell coverage for graceful cold-start setup messaging and explicit full-PSA escalation copy.
 - (2026-03-07) Fixed two pre-existing server TypeScript blockers encountered during verification by narrowing `normalizeTenantClaim` to accept `undefined` in `server/src/lib/teams/resolveTeamsTabAuthState.ts` and by keeping the project-task Teams access check local in `server/src/lib/teams/resolveTeamsTabAccessState.ts` instead of widening shared project-task interfaces.
+- (2026-03-07) Completed `F111` through `F126` by adding `server/src/lib/teams/actions/teamsActionRegistry.ts`, which centralizes Teams action definitions, input normalization, target resolution, permission/capability gating, result mapping, allowed-action metadata, and idempotent mutation replay for shared bot/message-extension/quick-action execution.
+- (2026-03-07) Completed `T221` through `T252` with `server/src/test/unit/lib/teams/actions/teamsActionRegistry.test.ts`, covering registry metadata, input normalization, ticket/task/contact/approval/time-entry resolution, permission guards, consistent validation errors, invoking-surface metadata, PSA-first deep-link generation, idempotent mutation replay, partial-failure remediation, capability gating, and service reuse for time entry and approval mutations.
+- (2026-03-07) Exported `getTeamsIntegrationExecutionState(tenant)` from `packages/integrations/src/actions/integrations/teamsActions.ts` so future Teams route handlers can read install status, enabled capabilities, allowed actions, app id, and package metadata without duplicating Teams integration row mapping.
+
+- (2026-03-07) Verified shared Teams action-layer execution with:
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/actions/teamsActionRegistry.test.ts`
+  - `pnpm --dir server exec tsc -p tsconfig.json --noEmit --pretty false`
+  - `pnpm --dir packages/integrations typecheck`
+- (2026-03-07) Next unchecked feature after this slice is `F127` (Personal bot: a Teams personal-scope bot exists for PSA).

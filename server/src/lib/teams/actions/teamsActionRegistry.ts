@@ -1,0 +1,1374 @@
+import { runWithTenant, type ServiceContext } from '@alga-psa/db';
+import type { IUserWithRoles } from '@alga-psa/types';
+import {
+  buildTeamsBotResultDeepLinkFromPsaUrl,
+  buildTeamsMessageExtensionResultDeepLinkFromPsaUrl,
+  buildTeamsPersonalTabDeepLinkFromPsaUrl,
+} from '@alga-psa/integrations/actions/integrations/teamsPackageActions';
+import {
+  getTeamsIntegrationExecutionState,
+  type TeamsAllowedAction,
+  type TeamsCapability,
+  type TeamsIntegrationExecutionState,
+} from '@alga-psa/integrations/actions/integrations/teamsActions';
+import { z, ZodError } from 'zod';
+import { hasPermission } from 'server/src/lib/auth/rbac';
+import { ContactService } from 'server/src/lib/api/services/ContactService';
+import { ProjectService } from 'server/src/lib/api/services/ProjectService';
+import { TicketService } from 'server/src/lib/api/services/TicketService';
+import { TimeEntryService } from 'server/src/lib/api/services/TimeEntryService';
+import { TimeSheetService } from 'server/src/lib/api/services/TimeSheetService';
+import { ForbiddenError, NotFoundError, ValidationError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { buildTeamsFullPsaUrl } from '../buildTeamsFullPsaUrl';
+import type { TeamsTabDestination } from '../resolveTeamsTabDestination';
+import { describeTeamsTabDestination } from '../resolveTeamsTabDestination';
+
+export const TEAMS_ACTION_SURFACES = ['bot', 'message_extension', 'quick_action'] as const;
+export type TeamsActionSurface = typeof TEAMS_ACTION_SURFACES[number];
+
+export const TEAMS_ACTION_OPERATIONS = ['lookup', 'mutation'] as const;
+export type TeamsActionOperation = typeof TEAMS_ACTION_OPERATIONS[number];
+
+export const TEAMS_ACTION_TARGET_TYPES = ['ticket', 'project_task', 'approval', 'time_entry', 'contact'] as const;
+export type TeamsActionTargetType = typeof TEAMS_ACTION_TARGET_TYPES[number];
+
+export const TEAMS_ACTION_IDS = [
+  'my_tickets',
+  'open_record',
+  'assign_ticket',
+  'add_note',
+  'reply_to_contact',
+  'log_time',
+  'approval_response',
+] as const;
+export type TeamsActionId = typeof TEAMS_ACTION_IDS[number];
+
+export type TeamsActionEntityReference =
+  | { entityType: 'ticket'; ticketId: string }
+  | { entityType: 'project_task'; taskId: string; projectId?: string }
+  | { entityType: 'approval'; approvalId: string }
+  | { entityType: 'time_entry'; entryId: string }
+  | { entityType: 'contact'; contactId: string; clientId?: string };
+
+export interface TeamsActionRequest<TInput extends Record<string, unknown> = Record<string, unknown>> {
+  actionId: TeamsActionId;
+  surface: TeamsActionSurface;
+  tenantId: string;
+  user: IUserWithRoles;
+  input?: TInput;
+  target?: TeamsActionEntityReference;
+  idempotencyKey?: string;
+}
+
+export interface TeamsActionFieldDefinition {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'datetime' | 'enum' | 'entity';
+  required: boolean;
+  description: string;
+}
+
+export interface TeamsActionLink {
+  type: 'teams_tab' | 'psa';
+  label: string;
+  url: string;
+}
+
+export interface TeamsActionWarning {
+  code: 'partial_failure';
+  message: string;
+  remediation: string;
+}
+
+export interface TeamsActionError {
+  code:
+    | 'validation_error'
+    | 'forbidden'
+    | 'not_found'
+    | 'not_configured'
+    | 'capability_disabled'
+    | 'unsupported_action'
+    | 'duplicate_submission'
+    | 'execution_failed';
+  message: string;
+  fieldErrors?: Record<string, string>;
+  remediation?: string;
+  retryable?: boolean;
+}
+
+export interface TeamsActionResultItem {
+  id: string;
+  title: string;
+  summary: string;
+  entityType: TeamsActionTargetType;
+  links: TeamsActionLink[];
+}
+
+export interface TeamsActionSuccessResult {
+  success: true;
+  actionId: TeamsActionId;
+  surface: TeamsActionSurface;
+  operation: TeamsActionOperation;
+  summary: {
+    title: string;
+    text: string;
+  };
+  links: TeamsActionLink[];
+  items: TeamsActionResultItem[];
+  warnings: TeamsActionWarning[];
+  target?: {
+    entityType: TeamsActionTargetType;
+    id: string;
+    destination: TeamsTabDestination;
+  };
+  metadata: {
+    surface: TeamsActionSurface;
+    idempotencyKey: string | null;
+    idempotentReplay: boolean;
+    invokingSurface: TeamsActionSurface;
+    businessOperations: string[];
+  };
+}
+
+export interface TeamsActionFailureResult {
+  success: false;
+  actionId: TeamsActionId;
+  surface: TeamsActionSurface;
+  operation: TeamsActionOperation;
+  error: TeamsActionError;
+  warnings: TeamsActionWarning[];
+  metadata: {
+    surface: TeamsActionSurface;
+    idempotencyKey: string | null;
+    idempotentReplay: boolean;
+    invokingSurface: TeamsActionSurface;
+    businessOperations: string[];
+  };
+}
+
+export type TeamsActionResult = TeamsActionSuccessResult | TeamsActionFailureResult;
+
+export interface TeamsActionAvailability {
+  actionId: TeamsActionId;
+  operation: TeamsActionOperation;
+  available: boolean;
+  targetEntityTypes: TeamsActionTargetType[];
+  requiredInputs: TeamsActionFieldDefinition[];
+  businessOperations: string[];
+  reason?: TeamsActionError['code'];
+  message?: string;
+}
+
+type TeamsResolvedTarget =
+  | {
+      entityType: 'ticket';
+      id: string;
+      entity: Awaited<ReturnType<TicketService['getById']>>;
+      destination: TeamsTabDestination;
+    }
+  | {
+      entityType: 'project_task';
+      id: string;
+      entity: Awaited<ReturnType<ProjectService['getTaskById']>>;
+      destination: TeamsTabDestination;
+    }
+  | {
+      entityType: 'approval';
+      id: string;
+      entity: Awaited<ReturnType<TimeSheetService['getById']>>;
+      destination: TeamsTabDestination;
+    }
+  | {
+      entityType: 'time_entry';
+      id: string;
+      entity: Awaited<ReturnType<TimeEntryService['getById']>>;
+      destination: TeamsTabDestination;
+    }
+  | {
+      entityType: 'contact';
+      id: string;
+      entity: Awaited<ReturnType<ContactService['getById']>>;
+      destination: TeamsTabDestination;
+    };
+
+type TeamsActionExecutionContext = {
+  integration: TeamsIntegrationExecutionState;
+  request: TeamsActionRequest;
+  serviceContext: ServiceContext;
+};
+
+type TeamsActionDefinition<TNormalized extends Record<string, unknown> = Record<string, unknown>> = {
+  id: TeamsActionId;
+  title: string;
+  description: string;
+  operation: TeamsActionOperation;
+  targetEntityTypes: TeamsActionTargetType[];
+  requiredInputs: TeamsActionFieldDefinition[];
+  businessOperations: string[];
+  allowedAction?: TeamsAllowedAction;
+  requiredCapabilities?: TeamsCapability[];
+  normalize: (request: TeamsActionRequest) => TNormalized;
+  authorize: (
+    normalized: TNormalized,
+    context: TeamsActionExecutionContext,
+    target: TeamsResolvedTarget | null
+  ) => Promise<TeamsActionError | null>;
+  execute: (
+    normalized: TNormalized,
+    context: TeamsActionExecutionContext,
+    target: TeamsResolvedTarget | null
+  ) => Promise<{
+    summary: {
+      title: string;
+      text: string;
+    };
+    destination?: TeamsTabDestination;
+    target?: TeamsResolvedTarget | null;
+    items?: TeamsActionResultItem[];
+  }>;
+};
+
+const ticketService = new TicketService();
+const projectService = new ProjectService();
+const contactService = new ContactService();
+const timeEntryService = new TimeEntryService();
+const timeSheetService = new TimeSheetService();
+
+const duplicateResults = new Map<string, TeamsActionResult>();
+const inFlightResults = new Map<string, Promise<TeamsActionResult>>();
+
+const nonEmptyString = z.string().trim().min(1);
+const boundedText = (label: string) =>
+  z.string().trim().min(1, `${label} is required`).max(4000, `${label} is too long`);
+const positiveInt = (label: string, max: number) =>
+  z.preprocess(
+    (value) => {
+      if (typeof value === 'number') return value;
+      if (typeof value === 'string' && value.trim().length > 0) return Number.parseInt(value, 10);
+      return value;
+    },
+    z.number().int().min(1, `${label} must be at least 1`).max(max, `${label} must be ${max} or less`)
+  );
+const booleanFromUnknown = z.preprocess((value) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+  }
+  return value;
+}, z.boolean());
+
+const myTicketsInputSchema = z.object({
+  limit: positiveInt('Limit', 25).optional().default(10),
+});
+
+const entityReferenceSchema = z.discriminatedUnion('entityType', [
+  z.object({ entityType: z.literal('ticket'), ticketId: nonEmptyString }),
+  z.object({ entityType: z.literal('project_task'), taskId: nonEmptyString, projectId: nonEmptyString.optional() }),
+  z.object({ entityType: z.literal('approval'), approvalId: nonEmptyString }),
+  z.object({ entityType: z.literal('time_entry'), entryId: nonEmptyString }),
+  z.object({ entityType: z.literal('contact'), contactId: nonEmptyString, clientId: nonEmptyString.optional() }),
+]);
+
+const assignTicketInputSchema = z.object({
+  ticketId: nonEmptyString,
+  assigneeId: nonEmptyString,
+  note: boundedText('Assignment note').optional(),
+});
+
+const addNoteInputSchema = z.object({
+  ticketId: nonEmptyString,
+  note: boundedText('Note'),
+});
+
+const replyToContactInputSchema = z.object({
+  ticketId: nonEmptyString,
+  reply: boundedText('Reply'),
+});
+
+const logTimeInputSchema = z.object({
+  entityType: z.enum(['ticket', 'project_task']),
+  workItemId: nonEmptyString,
+  startTime: z.string().datetime(),
+  durationMinutes: positiveInt('Duration', 1440),
+  note: z.string().trim().max(4000).optional().default(''),
+  isBillable: booleanFromUnknown.optional().default(true),
+});
+
+const approvalResponseInputSchema = z
+  .object({
+    approvalId: nonEmptyString,
+    outcome: z.enum(['approve', 'request_changes']),
+    comment: z.string().trim().max(4000).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.outcome === 'request_changes' && (!value.comment || value.comment.trim().length === 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['comment'],
+        message: 'Comment is required when requesting changes',
+      });
+    }
+  });
+
+function cloneResult<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function buildServiceContext(request: TeamsActionRequest): ServiceContext {
+  return {
+    tenant: request.tenantId,
+    userId: request.user.user_id,
+    user: request.user,
+  };
+}
+
+function buildResultMetadata(
+  request: TeamsActionRequest,
+  definition: TeamsActionDefinition,
+  idempotentReplay: boolean
+): TeamsActionSuccessResult['metadata'] {
+  return {
+    surface: request.surface,
+    idempotencyKey: request.idempotencyKey ?? null,
+    idempotentReplay,
+    invokingSurface: request.surface,
+    businessOperations: definition.businessOperations,
+  };
+}
+
+function parseActionInput<T extends Record<string, unknown>>(schema: z.ZodType<T>, payload: Record<string, unknown>): T {
+  return schema.parse(payload);
+}
+
+function buildPayloadFromRequest(
+  request: TeamsActionRequest,
+  defaults: Record<string, unknown> = {}
+): Record<string, unknown> {
+  return {
+    ...defaults,
+    ...(request.input ?? {}),
+  };
+}
+
+function requireTargetReference(request: TeamsActionRequest): TeamsActionEntityReference {
+  if (request.target) {
+    return request.target;
+  }
+
+  const payload = buildPayloadFromRequest(request);
+
+  if (typeof payload.entityType === 'string') {
+    return entityReferenceSchema.parse(payload);
+  }
+
+  if (typeof payload.ticketId === 'string') {
+    return entityReferenceSchema.parse({ entityType: 'ticket', ticketId: payload.ticketId });
+  }
+
+  if (typeof payload.taskId === 'string') {
+    return entityReferenceSchema.parse({
+      entityType: 'project_task',
+      taskId: payload.taskId,
+      projectId: payload.projectId,
+    });
+  }
+
+  if (typeof payload.approvalId === 'string') {
+    return entityReferenceSchema.parse({ entityType: 'approval', approvalId: payload.approvalId });
+  }
+
+  if (typeof payload.entryId === 'string') {
+    return entityReferenceSchema.parse({ entityType: 'time_entry', entryId: payload.entryId });
+  }
+
+  if (typeof payload.contactId === 'string') {
+    return entityReferenceSchema.parse({
+      entityType: 'contact',
+      contactId: payload.contactId,
+      clientId: payload.clientId,
+    });
+  }
+
+  throw new ValidationError('Validation failed', [
+    {
+      path: ['target'],
+      message: 'A supported Teams target is required',
+    },
+  ]);
+}
+
+async function resolveTargetInternal(
+  reference: TeamsActionEntityReference,
+  serviceContext: ServiceContext
+): Promise<TeamsResolvedTarget> {
+  switch (reference.entityType) {
+    case 'ticket': {
+      const entity = await ticketService.getById(reference.ticketId, serviceContext);
+      if (!entity) {
+        throw new NotFoundError('Ticket not found');
+      }
+
+      return {
+        entityType: 'ticket',
+        id: reference.ticketId,
+        entity,
+        destination: { type: 'ticket', ticketId: reference.ticketId },
+      };
+    }
+
+    case 'project_task': {
+      const entity = await projectService.getTaskById(reference.taskId, serviceContext);
+      if (!entity) {
+        throw new NotFoundError('Project task not found');
+      }
+
+      const projectId =
+        (reference.projectId && reference.projectId.trim()) ||
+        (typeof (entity as { project_id?: string }).project_id === 'string'
+          ? (entity as { project_id?: string }).project_id
+          : undefined);
+      if (!projectId) {
+        throw new ValidationError('Validation failed', [
+          {
+            path: ['projectId'],
+            message: 'Project task links require a projectId',
+          },
+        ]);
+      }
+
+      return {
+        entityType: 'project_task',
+        id: reference.taskId,
+        entity,
+        destination: { type: 'project_task', projectId, taskId: reference.taskId },
+      };
+    }
+
+    case 'approval': {
+      const entity = await timeSheetService.getById(reference.approvalId, serviceContext);
+      if (!entity) {
+        throw new NotFoundError('Approval item not found');
+      }
+
+      return {
+        entityType: 'approval',
+        id: reference.approvalId,
+        entity,
+        destination: { type: 'approval', approvalId: reference.approvalId },
+      };
+    }
+
+    case 'time_entry': {
+      const entity = await timeEntryService.getById(reference.entryId, serviceContext);
+      if (!entity) {
+        throw new NotFoundError('Time entry not found');
+      }
+
+      return {
+        entityType: 'time_entry',
+        id: reference.entryId,
+        entity,
+        destination: { type: 'time_entry', entryId: reference.entryId },
+      };
+    }
+
+    case 'contact': {
+      const entity = await contactService.getById(reference.contactId, serviceContext);
+      if (!entity) {
+        throw new NotFoundError('Contact not found');
+      }
+
+      return {
+        entityType: 'contact',
+        id: reference.contactId,
+        entity,
+        destination: {
+          type: 'contact',
+          contactId: reference.contactId,
+          clientId:
+            reference.clientId ||
+            (typeof (entity as { client_id?: string }).client_id === 'string'
+              ? (entity as { client_id?: string }).client_id
+              : undefined),
+        },
+      };
+    }
+  }
+}
+
+function getCapabilityForSurface(surface: TeamsActionSurface): TeamsCapability | null {
+  switch (surface) {
+    case 'bot':
+      return 'personal_bot';
+    case 'message_extension':
+      return 'message_extension';
+    case 'quick_action':
+      return null;
+  }
+}
+
+async function ensurePermission(
+  user: IUserWithRoles,
+  resource: string,
+  action: string,
+  message: string
+): Promise<TeamsActionError | null> {
+  const allowed = await hasPermission(user, resource, action);
+  if (allowed) {
+    return null;
+  }
+
+  return {
+    code: 'forbidden',
+    message,
+    remediation: 'Use the full PSA application if you need access to this operation.',
+  };
+}
+
+function mapErrorToActionError(error: unknown): TeamsActionError {
+  if (error instanceof ZodError) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of error.issues) {
+      const key = issue.path.map(String).join('.') || 'input';
+      if (!fieldErrors[key]) {
+        fieldErrors[key] = issue.message;
+      }
+    }
+
+    return {
+      code: 'validation_error',
+      message: 'The Teams action request is missing required or valid inputs.',
+      fieldErrors,
+      remediation: 'Update the missing fields and try again.',
+    };
+  }
+
+  if (error instanceof ValidationError) {
+    const fieldErrors: Record<string, string> = {};
+    const details = Array.isArray(error.details) ? error.details : [];
+    for (const issue of details) {
+      const path = Array.isArray(issue?.path) ? issue.path.map(String).join('.') : 'input';
+      const message = typeof issue?.message === 'string' ? issue.message : error.message;
+      if (!fieldErrors[path]) {
+        fieldErrors[path] = message;
+      }
+    }
+
+    return {
+      code: 'validation_error',
+      message: error.message || 'The Teams action request is invalid.',
+      fieldErrors: Object.keys(fieldErrors).length > 0 ? fieldErrors : undefined,
+      remediation: 'Correct the highlighted fields and submit the action again.',
+    };
+  }
+
+  if (error instanceof ForbiddenError) {
+    return {
+      code: 'forbidden',
+      message: error.message || 'You do not have permission to run this Teams action.',
+      remediation: 'Open the full PSA application if you need broader access.',
+    };
+  }
+
+  if (error instanceof NotFoundError) {
+    return {
+      code: 'not_found',
+      message: error.message || 'The requested record could not be found.',
+      remediation: 'Refresh the Teams result or open the full PSA application to verify the record still exists.',
+    };
+  }
+
+  const message = error instanceof Error ? error.message : 'Teams action execution failed';
+  if (/not found/i.test(message)) {
+    return {
+      code: 'not_found',
+      message,
+      remediation: 'Refresh the Teams result or open the full PSA application to verify the record still exists.',
+    };
+  }
+
+  if (/permission denied|forbidden/i.test(message)) {
+    return {
+      code: 'forbidden',
+      message,
+      remediation: 'Open the full PSA application if you need broader access.',
+    };
+  }
+
+  return {
+    code: 'execution_failed',
+    message,
+    remediation: 'Try the action again or continue in the full PSA application.',
+    retryable: true,
+  };
+}
+
+function buildActionLinks(
+  destination: TeamsTabDestination | undefined,
+  integration: TeamsIntegrationExecutionState,
+  surface: TeamsActionSurface
+): { links: TeamsActionLink[]; warnings: TeamsActionWarning[] } {
+  if (!destination) {
+    return { links: [], warnings: [] };
+  }
+
+  const psaUrl = buildTeamsFullPsaUrl(destination);
+  if (!psaUrl) {
+    return { links: [], warnings: [] };
+  }
+
+  const links: TeamsActionLink[] = [
+    {
+      type: 'psa',
+      label: 'Open in full PSA',
+      url: psaUrl,
+    },
+  ];
+  const warnings: TeamsActionWarning[] = [];
+
+  const baseUrl =
+    integration.packageMetadata && typeof integration.packageMetadata.baseUrl === 'string'
+      ? integration.packageMetadata.baseUrl
+      : null;
+
+  if (baseUrl && integration.appId) {
+    const absolutePsaUrl = psaUrl.startsWith('http') ? psaUrl : `${baseUrl}${psaUrl}`;
+    const teamsUrl =
+      surface === 'bot'
+        ? buildTeamsBotResultDeepLinkFromPsaUrl(baseUrl, integration.appId, absolutePsaUrl)
+        : surface === 'message_extension'
+          ? buildTeamsMessageExtensionResultDeepLinkFromPsaUrl(baseUrl, integration.appId, absolutePsaUrl)
+          : buildTeamsPersonalTabDeepLinkFromPsaUrl(baseUrl, integration.appId, absolutePsaUrl);
+
+    links.unshift({
+      type: 'teams_tab',
+      label: 'Open in Teams tab',
+      url: teamsUrl,
+    });
+  } else {
+    warnings.push({
+      code: 'partial_failure',
+      message: 'The tenant Teams package metadata is incomplete, so only the PSA fallback link is available.',
+      remediation: 'Regenerate the Teams package in settings to restore Teams-tab links for action results.',
+    });
+  }
+
+  return { links, warnings };
+}
+
+async function buildItemForDestination(
+  entityType: TeamsActionTargetType,
+  id: string,
+  title: string,
+  summary: string,
+  destination: TeamsTabDestination,
+  integration: TeamsIntegrationExecutionState,
+  surface: TeamsActionSurface
+): Promise<TeamsActionResultItem> {
+  const { links } = buildActionLinks(destination, integration, surface);
+  return {
+    id,
+    title,
+    summary,
+    entityType,
+    links,
+  };
+}
+
+const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
+  my_tickets: {
+    id: 'my_tickets',
+    title: 'My tickets',
+    description: 'List the signed-in technician’s assigned tickets.',
+    operation: 'lookup',
+    targetEntityTypes: [],
+    requiredInputs: [
+      {
+        name: 'limit',
+        type: 'number',
+        required: false,
+        description: 'Optional maximum number of tickets to return.',
+      },
+    ],
+    businessOperations: ['TicketService.list'],
+    requiredCapabilities: ['personal_bot'],
+    normalize: (request) => parseActionInput(myTicketsInputSchema, buildPayloadFromRequest(request)),
+    authorize: async (_normalized, context) =>
+      ensurePermission(
+        context.request.user,
+        'ticket',
+        'read',
+        'You do not have permission to view tickets from Teams.'
+      ),
+    execute: async (normalized, context) => {
+      const result = await ticketService.list(
+        {
+          page: 1,
+          limit: normalized.limit as number,
+          fields: ['mobile_list'],
+          filters: {
+            assigned_to: context.request.user.user_id,
+            is_closed: false,
+          },
+        },
+        context.serviceContext
+      );
+
+      const items = await Promise.all(
+        result.data.map((ticket) =>
+          buildItemForDestination(
+            'ticket',
+            String((ticket as { ticket_id?: string }).ticket_id ?? ''),
+            String((ticket as { ticket_number?: string }).ticket_number || (ticket as { ticket_id?: string }).ticket_id || 'Ticket'),
+            String((ticket as { title?: string }).title || 'Ticket opened from Teams'),
+            { type: 'ticket', ticketId: String((ticket as { ticket_id?: string }).ticket_id ?? '') },
+            context.integration,
+            context.request.surface
+          )
+        )
+      );
+
+      return {
+        summary: {
+          title: 'My tickets',
+          text:
+            items.length > 0
+              ? `Found ${items.length} assigned ticket${items.length === 1 ? '' : 's'} for the signed-in technician.`
+              : 'No assigned tickets matched this Teams request.',
+        },
+        items,
+      };
+    },
+  },
+  open_record: {
+    id: 'open_record',
+    title: 'Open record',
+    description: 'Resolve a supported PSA record into Teams-safe summary data and links.',
+    operation: 'lookup',
+    targetEntityTypes: [...TEAMS_ACTION_TARGET_TYPES],
+    requiredInputs: [
+      {
+        name: 'target',
+        type: 'entity',
+        required: true,
+        description: 'The ticket, task, approval, time entry, or contact to open.',
+      },
+    ],
+    businessOperations: [
+      'TicketService.getById',
+      'ProjectService.getTaskById',
+      'TimeSheetService.getById',
+      'TimeEntryService.getById',
+      'ContactService.getById',
+    ],
+    normalize: (request) => requireTargetReference(request),
+    authorize: async (_normalized, context, target) => {
+      if (!target) {
+        return {
+          code: 'validation_error',
+          message: 'A Teams record target is required.',
+        };
+      }
+
+      switch (target.entityType) {
+        case 'ticket':
+          return ensurePermission(context.request.user, 'ticket', 'read', 'You do not have permission to view tickets from Teams.');
+        case 'project_task':
+          return ensurePermission(context.request.user, 'project', 'read', 'You do not have permission to view project tasks from Teams.');
+        case 'approval':
+          return ensurePermission(context.request.user, 'timesheet', 'approve', 'You do not have permission to view approval work from Teams.');
+        case 'time_entry':
+          return ensurePermission(context.request.user, 'time_entry', 'read', 'You do not have permission to view time entries from Teams.');
+        case 'contact':
+          return ensurePermission(context.request.user, 'contact', 'read', 'You do not have permission to view contacts from Teams.');
+      }
+    },
+    execute: async (_normalized, context, target) => {
+      if (!target) {
+        throw new ValidationError('Validation failed', [{ path: ['target'], message: 'Target is required' }]);
+      }
+
+      const description = describeTeamsTabDestination(target.destination);
+      return {
+        summary: {
+          title: description.title,
+          text: description.summary,
+        },
+        destination: target.destination,
+        target,
+      };
+    },
+  },
+  assign_ticket: {
+    id: 'assign_ticket',
+    title: 'Assign ticket',
+    description: 'Assign a ticket to a technician using the shared Teams action layer.',
+    operation: 'mutation',
+    targetEntityTypes: ['ticket'],
+    requiredInputs: [
+      { name: 'ticketId', type: 'entity', required: true, description: 'Ticket to assign.' },
+      { name: 'assigneeId', type: 'string', required: true, description: 'User ID of the technician to assign.' },
+      { name: 'note', type: 'string', required: false, description: 'Optional internal note to attach after assignment.' },
+    ],
+    businessOperations: ['TicketService.update', 'TicketService.addComment'],
+    allowedAction: 'assign_ticket',
+    requiredCapabilities: ['personal_bot', 'message_extension'],
+    normalize: (request) =>
+      parseActionInput(
+        assignTicketInputSchema,
+        buildPayloadFromRequest(request, request.target?.entityType === 'ticket' ? { ticketId: request.target.ticketId } : {})
+      ),
+    authorize: async (_normalized, context) =>
+      ensurePermission(context.request.user, 'ticket', 'update', 'You do not have permission to assign tickets from Teams.'),
+    execute: async (normalized, context) => {
+      await ticketService.update(
+        String(normalized.ticketId),
+        { assigned_to: String(normalized.assigneeId) },
+        context.serviceContext
+      );
+      if (normalized.note) {
+        await ticketService.addComment(
+          String(normalized.ticketId),
+          {
+            comment_text: String(normalized.note),
+            is_internal: true,
+          },
+          context.serviceContext
+        );
+      }
+
+      const target = await resolveTargetInternal(
+        { entityType: 'ticket', ticketId: String(normalized.ticketId) },
+        context.serviceContext
+      );
+      return {
+        summary: {
+          title: 'Ticket assigned',
+          text: `Ticket ${normalized.ticketId} was reassigned successfully.`,
+        },
+        destination: target.destination,
+        target,
+      };
+    },
+  },
+  add_note: {
+    id: 'add_note',
+    title: 'Add note',
+    description: 'Append an internal ticket note from Teams.',
+    operation: 'mutation',
+    targetEntityTypes: ['ticket'],
+    requiredInputs: [
+      { name: 'ticketId', type: 'entity', required: true, description: 'Ticket receiving the internal note.' },
+      { name: 'note', type: 'string', required: true, description: 'Internal note body.' },
+    ],
+    businessOperations: ['TicketService.addComment'],
+    allowedAction: 'add_note',
+    requiredCapabilities: ['personal_bot', 'message_extension'],
+    normalize: (request) =>
+      parseActionInput(
+        addNoteInputSchema,
+        buildPayloadFromRequest(request, request.target?.entityType === 'ticket' ? { ticketId: request.target.ticketId } : {})
+      ),
+    authorize: async (_normalized, context) =>
+      ensurePermission(context.request.user, 'ticket', 'update', 'You do not have permission to add ticket notes from Teams.'),
+    execute: async (normalized, context) => {
+      await ticketService.addComment(
+        String(normalized.ticketId),
+        {
+          comment_text: String(normalized.note),
+          is_internal: true,
+        },
+        context.serviceContext
+      );
+
+      const target = await resolveTargetInternal(
+        { entityType: 'ticket', ticketId: String(normalized.ticketId) },
+        context.serviceContext
+      );
+      return {
+        summary: {
+          title: 'Internal note added',
+          text: `A new internal note was added to ticket ${normalized.ticketId}.`,
+        },
+        destination: target.destination,
+        target,
+      };
+    },
+  },
+  reply_to_contact: {
+    id: 'reply_to_contact',
+    title: 'Reply to contact',
+    description: 'Add a customer-visible ticket reply from Teams.',
+    operation: 'mutation',
+    targetEntityTypes: ['ticket'],
+    requiredInputs: [
+      { name: 'ticketId', type: 'entity', required: true, description: 'Ticket receiving the customer reply.' },
+      { name: 'reply', type: 'string', required: true, description: 'Customer-visible reply body.' },
+    ],
+    businessOperations: ['TicketService.addComment'],
+    allowedAction: 'reply_to_contact',
+    requiredCapabilities: ['personal_bot', 'message_extension'],
+    normalize: (request) =>
+      parseActionInput(
+        replyToContactInputSchema,
+        buildPayloadFromRequest(request, request.target?.entityType === 'ticket' ? { ticketId: request.target.ticketId } : {})
+      ),
+    authorize: async (_normalized, context) =>
+      ensurePermission(context.request.user, 'ticket', 'update', 'You do not have permission to send ticket replies from Teams.'),
+    execute: async (normalized, context) => {
+      await ticketService.addComment(
+        String(normalized.ticketId),
+        {
+          comment_text: String(normalized.reply),
+          is_internal: false,
+        },
+        context.serviceContext
+      );
+
+      const target = await resolveTargetInternal(
+        { entityType: 'ticket', ticketId: String(normalized.ticketId) },
+        context.serviceContext
+      );
+      return {
+        summary: {
+          title: 'Reply sent',
+          text: `A customer-visible reply was added to ticket ${normalized.ticketId}.`,
+        },
+        destination: target.destination,
+        target,
+      };
+    },
+  },
+  log_time: {
+    id: 'log_time',
+    title: 'Log time',
+    description: 'Create a time entry against a ticket or project task from Teams.',
+    operation: 'mutation',
+    targetEntityTypes: ['ticket', 'project_task'],
+    requiredInputs: [
+      { name: 'workItemId', type: 'entity', required: true, description: 'Ticket or project task receiving time.' },
+      { name: 'startTime', type: 'datetime', required: true, description: 'Start time for the time entry.' },
+      { name: 'durationMinutes', type: 'number', required: true, description: 'Duration in minutes.' },
+      { name: 'note', type: 'string', required: false, description: 'Optional time-entry note.' },
+      { name: 'isBillable', type: 'boolean', required: false, description: 'Whether the time entry is billable.' },
+    ],
+    businessOperations: ['TimeEntryService.create'],
+    allowedAction: 'log_time',
+    requiredCapabilities: ['personal_bot', 'message_extension'],
+    normalize: (request) => {
+      const defaults =
+        request.target?.entityType === 'ticket'
+          ? { entityType: 'ticket', workItemId: request.target.ticketId }
+          : request.target?.entityType === 'project_task'
+            ? { entityType: 'project_task', workItemId: request.target.taskId }
+            : {};
+      return parseActionInput(logTimeInputSchema, buildPayloadFromRequest(request, defaults));
+    },
+    authorize: async (normalized, context) => {
+      const timePermission = await ensurePermission(
+        context.request.user,
+        'timeentry',
+        'create',
+        'You do not have permission to create time entries from Teams.'
+      );
+      if (timePermission) {
+        return timePermission;
+      }
+
+      return normalized.entityType === 'ticket'
+        ? ensurePermission(context.request.user, 'ticket', 'read', 'You do not have permission to read tickets for Teams time entry logging.')
+        : ensurePermission(context.request.user, 'project', 'read', 'You do not have permission to read project tasks for Teams time entry logging.');
+    },
+    execute: async (normalized, context) => {
+      const startTime = new Date(String(normalized.startTime));
+      const endTime = new Date(startTime.getTime() + Number(normalized.durationMinutes) * 60_000);
+      const created = await timeEntryService.create(
+        {
+          work_item_type: String(normalized.entityType) as 'ticket' | 'project_task',
+          work_item_id: String(normalized.workItemId),
+          start_time: startTime.toISOString(),
+          end_time: endTime.toISOString(),
+          notes: String(normalized.note || ''),
+          is_billable: Boolean(normalized.isBillable),
+        },
+        context.serviceContext
+      );
+
+      const workItemType = String(normalized.entityType);
+      const destination =
+        workItemType === 'ticket'
+          ? ({ type: 'ticket', ticketId: String(normalized.workItemId) } as TeamsTabDestination)
+          : ({
+              type: 'project_task',
+              projectId: String((created as { project_id?: string }).project_id || ''),
+              taskId: String(normalized.workItemId),
+            } as TeamsTabDestination);
+
+      return {
+        summary: {
+          title: 'Time logged',
+          text: `Logged ${normalized.durationMinutes} minute${Number(normalized.durationMinutes) === 1 ? '' : 's'} from Teams.`,
+        },
+        destination,
+      };
+    },
+  },
+  approval_response: {
+    id: 'approval_response',
+    title: 'Approval response',
+    description: 'Approve a time-sheet approval item or request changes from Teams.',
+    operation: 'mutation',
+    targetEntityTypes: ['approval'],
+    requiredInputs: [
+      { name: 'approvalId', type: 'entity', required: true, description: 'Approval item to update.' },
+      { name: 'outcome', type: 'enum', required: true, description: 'Approval outcome to apply.' },
+      { name: 'comment', type: 'string', required: false, description: 'Optional approval note or required change request comment.' },
+    ],
+    businessOperations: ['TimeSheetService.approveTimeSheet', 'TimeSheetService.requestChanges'],
+    allowedAction: 'approval_response',
+    requiredCapabilities: ['personal_bot', 'message_extension'],
+    normalize: (request) =>
+      parseActionInput(
+        approvalResponseInputSchema,
+        buildPayloadFromRequest(
+          request,
+          request.target?.entityType === 'approval' ? { approvalId: request.target.approvalId } : {}
+        )
+      ),
+    authorize: async (_normalized, context) =>
+      ensurePermission(context.request.user, 'timesheet', 'approve', 'You do not have permission to respond to approvals from Teams.'),
+    execute: async (normalized, context) => {
+      const approvalId = String(normalized.approvalId);
+      if (normalized.outcome === 'approve') {
+        await timeSheetService.approveTimeSheet(
+          approvalId,
+          { approval_notes: normalized.comment ? String(normalized.comment) : undefined },
+          context.serviceContext
+        );
+      } else {
+        await timeSheetService.requestChanges(
+          approvalId,
+          {
+            change_reason: String(normalized.comment),
+            detailed_feedback: String(normalized.comment),
+          },
+          context.serviceContext
+        );
+      }
+
+      const target = await resolveTargetInternal(
+        { entityType: 'approval', approvalId },
+        context.serviceContext
+      );
+      return {
+        summary: {
+          title: normalized.outcome === 'approve' ? 'Approval completed' : 'Changes requested',
+          text:
+            normalized.outcome === 'approve'
+              ? `Approval ${approvalId} was approved successfully.`
+              : `Approval ${approvalId} was returned with requested changes.`,
+        },
+        destination: target.destination,
+        target,
+      };
+    },
+  },
+};
+
+function getDefinition(actionId: TeamsActionId): TeamsActionDefinition {
+  return actionDefinitions[actionId];
+}
+
+async function evaluateActionAvailability(
+  definition: TeamsActionDefinition,
+  request: Pick<TeamsActionRequest, 'surface' | 'tenantId' | 'user'>,
+  integration: TeamsIntegrationExecutionState,
+  targetReference?: TeamsActionEntityReference
+): Promise<TeamsActionAvailability> {
+  const surfaceCapability = getCapabilityForSurface(request.surface);
+  if (integration.installStatus !== 'active') {
+    return {
+      actionId: definition.id,
+      operation: definition.operation,
+      available: false,
+      targetEntityTypes: definition.targetEntityTypes,
+      requiredInputs: definition.requiredInputs,
+      businessOperations: definition.businessOperations,
+      reason: 'not_configured',
+      message: 'Teams is not active for this tenant.',
+    };
+  }
+
+  if (surfaceCapability && !integration.enabledCapabilities.includes(surfaceCapability)) {
+    return {
+      actionId: definition.id,
+      operation: definition.operation,
+      available: false,
+      targetEntityTypes: definition.targetEntityTypes,
+      requiredInputs: definition.requiredInputs,
+      businessOperations: definition.businessOperations,
+      reason: 'capability_disabled',
+      message: `The ${request.surface} surface is disabled for this tenant.`,
+    };
+  }
+
+  if (
+    definition.requiredCapabilities &&
+    definition.requiredCapabilities.length > 0 &&
+    !definition.requiredCapabilities.some((capability) => integration.enabledCapabilities.includes(capability))
+  ) {
+    return {
+      actionId: definition.id,
+      operation: definition.operation,
+      available: false,
+      targetEntityTypes: definition.targetEntityTypes,
+      requiredInputs: definition.requiredInputs,
+      businessOperations: definition.businessOperations,
+      reason: 'capability_disabled',
+      message: 'The Teams capabilities required for this action are disabled.',
+    };
+  }
+
+  if (definition.allowedAction && !integration.allowedActions.includes(definition.allowedAction)) {
+    return {
+      actionId: definition.id,
+      operation: definition.operation,
+      available: false,
+      targetEntityTypes: definition.targetEntityTypes,
+      requiredInputs: definition.requiredInputs,
+      businessOperations: definition.businessOperations,
+      reason: 'capability_disabled',
+      message: 'This Teams quick action is disabled for the tenant.',
+    };
+  }
+
+  if (targetReference && definition.targetEntityTypes.length > 0 && !definition.targetEntityTypes.includes(targetReference.entityType)) {
+    return {
+      actionId: definition.id,
+      operation: definition.operation,
+      available: false,
+      targetEntityTypes: definition.targetEntityTypes,
+      requiredInputs: definition.requiredInputs,
+      businessOperations: definition.businessOperations,
+      reason: 'unsupported_action',
+      message: `This Teams action does not support ${targetReference.entityType} targets.`,
+    };
+  }
+
+  const permissionRequirement =
+    definition.id === 'my_tickets' || definition.id === 'open_record'
+      ? definition.id === 'open_record' && targetReference?.entityType === 'project_task'
+        ? ['project', 'read']
+        : definition.id === 'open_record' && targetReference?.entityType === 'approval'
+          ? ['timesheet', 'approve']
+          : definition.id === 'open_record' && targetReference?.entityType === 'time_entry'
+            ? ['time_entry', 'read']
+            : definition.id === 'open_record' && targetReference?.entityType === 'contact'
+              ? ['contact', 'read']
+              : ['ticket', 'read']
+      : definition.id === 'log_time'
+        ? ['timeentry', 'create']
+        : definition.id === 'approval_response'
+          ? ['timesheet', 'approve']
+          : ['ticket', 'update'];
+
+  const allowed = await hasPermission(request.user, permissionRequirement[0], permissionRequirement[1]);
+
+  return {
+    actionId: definition.id,
+    operation: definition.operation,
+    available: allowed,
+    targetEntityTypes: definition.targetEntityTypes,
+    requiredInputs: definition.requiredInputs,
+    businessOperations: definition.businessOperations,
+    reason: allowed ? undefined : 'forbidden',
+    message: allowed ? undefined : 'The signed-in user does not have permission to run this Teams action.',
+  };
+}
+
+export function listTeamsActionDefinitions(): Array<{
+  id: TeamsActionId;
+  title: string;
+  description: string;
+  operation: TeamsActionOperation;
+  targetEntityTypes: TeamsActionTargetType[];
+  requiredInputs: TeamsActionFieldDefinition[];
+  businessOperations: string[];
+}> {
+  return Object.values(actionDefinitions).map((definition) => ({
+    id: definition.id,
+    title: definition.title,
+    description: definition.description,
+    operation: definition.operation,
+    targetEntityTypes: definition.targetEntityTypes,
+    requiredInputs: definition.requiredInputs,
+    businessOperations: definition.businessOperations,
+  }));
+}
+
+export async function resolveTeamsActionTarget(
+  tenantId: string,
+  user: IUserWithRoles,
+  reference: TeamsActionEntityReference
+): Promise<TeamsResolvedTarget> {
+  return runWithTenant(tenantId, async () => resolveTargetInternal(reference, { tenant: tenantId, userId: user.user_id, user }));
+}
+
+export async function listAvailableTeamsActions(params: {
+  surface: TeamsActionSurface;
+  tenantId: string;
+  user: IUserWithRoles;
+  target?: TeamsActionEntityReference;
+}): Promise<TeamsActionAvailability[]> {
+  return runWithTenant(params.tenantId, async () => {
+    const integration = await getTeamsIntegrationExecutionState(params.tenantId);
+    const definitions = Object.values(actionDefinitions);
+    return Promise.all(
+      definitions.map((definition) => evaluateActionAvailability(definition, params, integration, params.target))
+    );
+  });
+}
+
+export function normalizeTeamsActionRequest(
+  request: TeamsActionRequest
+): {
+  action: ReturnType<typeof listTeamsActionDefinitions>[number];
+  normalizedInput: Record<string, unknown>;
+  targetReference?: TeamsActionEntityReference;
+} {
+  const definition = getDefinition(request.actionId);
+  const normalizedInput = definition.normalize(request);
+  const targetReference =
+    definition.targetEntityTypes.length > 0 ? requireTargetReference({ ...request, input: normalizedInput }) : undefined;
+
+  return {
+    action: listTeamsActionDefinitions().find((item) => item.id === definition.id)!,
+    normalizedInput,
+    targetReference,
+  };
+}
+
+async function executeTeamsActionInternal(request: TeamsActionRequest): Promise<TeamsActionResult> {
+  const definition = getDefinition(request.actionId);
+  const integration = await getTeamsIntegrationExecutionState(request.tenantId);
+  const availability = await evaluateActionAvailability(definition, request, integration, request.target);
+
+  if (!availability.available) {
+    return {
+      success: false,
+      actionId: request.actionId,
+      surface: request.surface,
+      operation: definition.operation,
+      error: {
+        code: availability.reason || 'capability_disabled',
+        message: availability.message || 'Teams action is unavailable.',
+        remediation:
+          availability.reason === 'not_configured'
+            ? 'Finish Teams setup for this tenant and try again.'
+            : 'Review the tenant Teams settings or use the full PSA application instead.',
+      },
+      warnings: [],
+      metadata: buildResultMetadata(request, definition, false),
+    };
+  }
+
+  try {
+    if (!request.user?.user_id || request.user.tenant !== request.tenantId || request.user.user_type === 'client') {
+      throw new ForbiddenError('Teams actions are limited to authenticated MSP users in the current tenant.');
+    }
+
+    const serviceContext = buildServiceContext(request);
+    const normalized = definition.normalize(request);
+    const target =
+      definition.targetEntityTypes.length > 0
+        ? await resolveTargetInternal(requireTargetReference({ ...request, input: normalized }), serviceContext)
+        : null;
+
+    const authorizationFailure = await definition.authorize(normalized, { integration, request, serviceContext }, target);
+    if (authorizationFailure) {
+      return {
+        success: false,
+        actionId: request.actionId,
+        surface: request.surface,
+        operation: definition.operation,
+        error: authorizationFailure,
+        warnings: [],
+        metadata: buildResultMetadata(request, definition, false),
+      };
+    }
+
+    const executed = await definition.execute(normalized, { integration, request, serviceContext }, target);
+    const destination = executed.destination ?? target?.destination;
+    const targetSummary = executed.target ?? target;
+    const { links, warnings } = buildActionLinks(destination, integration, request.surface);
+
+    return {
+      success: true,
+      actionId: request.actionId,
+      surface: request.surface,
+      operation: definition.operation,
+      summary: executed.summary,
+      links,
+      items: executed.items ?? [],
+      warnings,
+      target: targetSummary
+        ? {
+            entityType: targetSummary.entityType,
+            id: targetSummary.id,
+            destination: targetSummary.destination,
+          }
+        : undefined,
+      metadata: buildResultMetadata(request, definition, false),
+    };
+  } catch (error) {
+    return {
+      success: false,
+      actionId: request.actionId,
+      surface: request.surface,
+      operation: definition.operation,
+      error: mapErrorToActionError(error),
+      warnings: [],
+      metadata: buildResultMetadata(request, definition, false),
+    };
+  }
+}
+
+export async function executeTeamsAction(request: TeamsActionRequest): Promise<TeamsActionResult> {
+  return runWithTenant(request.tenantId, async () => {
+    const definition = getDefinition(request.actionId);
+
+    if (definition.operation === 'mutation' && request.idempotencyKey) {
+      const cacheKey = `${request.tenantId}:${request.user.user_id}:${request.actionId}:${request.idempotencyKey}`;
+      const existing = duplicateResults.get(cacheKey);
+      if (existing) {
+        const cloned = cloneResult(existing);
+        cloned.metadata.idempotentReplay = true;
+        return cloned;
+      }
+
+      const inFlight = inFlightResults.get(cacheKey);
+      if (inFlight) {
+        const replayed = cloneResult(await inFlight);
+        replayed.metadata.idempotentReplay = true;
+        return replayed;
+      }
+
+      const promise = executeTeamsActionInternal(request);
+      inFlightResults.set(cacheKey, promise);
+      try {
+        const result = await promise;
+        duplicateResults.set(cacheKey, result);
+        return result;
+      } finally {
+        inFlightResults.delete(cacheKey);
+      }
+    }
+
+    return executeTeamsActionInternal(request);
+  });
+}
+
+export function resetTeamsActionIdempotencyCache(): void {
+  duplicateResults.clear();
+  inFlightResults.clear();
+}

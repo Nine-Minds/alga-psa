@@ -76,6 +76,15 @@ export interface TeamsIntegrationStatusResponse {
   };
 }
 
+export interface TeamsIntegrationExecutionState {
+  selectedProfileId: string | null;
+  installStatus: TeamsInstallStatus;
+  enabledCapabilities: TeamsCapability[];
+  allowedActions: TeamsAllowedAction[];
+  appId: string | null;
+  packageMetadata: Record<string, unknown> | null;
+}
+
 function isClientPortalUser(user: any): boolean {
   return user?.user_type === 'client';
 }
@@ -193,6 +202,23 @@ export const getTeamsIntegrationStatus = withAuth(async (
     return { success: false, error: err?.message || 'Failed to load Teams integration settings' };
   }
 });
+
+export async function getTeamsIntegrationExecutionState(
+  tenant: string
+): Promise<TeamsIntegrationExecutionState> {
+  const { knex } = await createTenantKnex();
+  const row = await getTeamsIntegrationRow(knex, tenant);
+  const integration = mapTeamsIntegrationRow(row);
+
+  return {
+    selectedProfileId: integration.selectedProfileId,
+    installStatus: integration.installStatus,
+    enabledCapabilities: integration.enabledCapabilities,
+    allowedActions: integration.allowedActions,
+    appId: integration.appId,
+    packageMetadata: integration.packageMetadata,
+  };
+}
 
 export const saveTeamsIntegrationSettings = withAuth(async (
   user,

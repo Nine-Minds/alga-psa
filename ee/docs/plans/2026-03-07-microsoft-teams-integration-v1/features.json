@@ -1028,7 +1028,7 @@
   {
     "id": "F111",
     "description": "Teams action layer: a shared Teams action registry exists for bot commands, message-extension actions, and card/dialog submits.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations",
@@ -1038,7 +1038,7 @@
   {
     "id": "F112",
     "description": "Teams action layer: each supported action declares its required inputs and target entity types.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations",
@@ -1048,7 +1048,7 @@
   {
     "id": "F113",
     "description": "Teams action layer: shared entity resolvers handle tickets, tasks, contacts, approvals, and time-entry targets.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations",
@@ -1058,7 +1058,7 @@
   {
     "id": "F114",
     "description": "Teams action layer: shared authorization checks wrap the underlying PSA services or server actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations",
@@ -1068,7 +1068,7 @@
   {
     "id": "F115",
     "description": "Teams action layer: shared result mappers return Teams-safe summaries, buttons, and deep links.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations",
@@ -1078,7 +1078,7 @@
   {
     "id": "F116",
     "description": "Teams action layer: validation errors use one consistent response shape across bot, message extension, and cards/dialogs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations",
@@ -1088,7 +1088,7 @@
   {
     "id": "F117",
     "description": "Teams action layer: action execution records the invoking surface so downstream PSA behavior can distinguish bot, message extension, and tab contexts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations",
@@ -1098,7 +1098,7 @@
   {
     "id": "F118",
     "description": "Teams action layer: deep-link generation reuses existing PSA deep-link helpers instead of building Teams-specific URL logic.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations",
@@ -1108,7 +1108,7 @@
   {
     "id": "F119",
     "description": "Teams action layer: actions can distinguish read-only lookups from mutating operations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations",
@@ -1118,7 +1118,7 @@
   {
     "id": "F120",
     "description": "Teams action layer: actions reuse existing PSA ticket, task, approval, contact, and time-entry business operations where possible.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations",
@@ -1128,7 +1128,7 @@
   {
     "id": "F121",
     "description": "Teams action layer: actions can expose allowed-action metadata for a user and entity.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations",
@@ -1138,7 +1138,7 @@
   {
     "id": "F122",
     "description": "Teams action layer: Teams input payloads are normalized into PSA-ready requests before execution.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations",
@@ -1148,7 +1148,7 @@
   {
     "id": "F123",
     "description": "Teams action layer: duplicate card/dialog submissions can be handled safely without creating duplicate mutations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations",
@@ -1158,7 +1158,7 @@
   {
     "id": "F124",
     "description": "Teams action layer: partial-failure results return user-readable remediation guidance.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations",
@@ -1168,7 +1168,7 @@
   {
     "id": "F125",
     "description": "Teams action layer: Teams capability gating can disable unsupported actions centrally.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations",
@@ -1178,7 +1178,7 @@
   {
     "id": "F126",
     "description": "Teams action layer: action definitions are reused instead of reimplementing each workflow per Teams surface.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations",

@@ -1762,7 +1762,7 @@
   {
     "id": "T221",
     "description": "Happy path: Teams action layer: a shared Teams action registry exists for bot commands, message-extension actions, and card/dialog submits.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F111"
     ]
@@ -1770,7 +1770,7 @@
   {
     "id": "T222",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: a shared teams action registry exists for bot commands, message-extension actions, and card/dialog submits.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F111"
     ]
@@ -1778,7 +1778,7 @@
   {
     "id": "T223",
     "description": "Happy path: Teams action layer: each supported action declares its required inputs and target entity types.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F112"
     ]
@@ -1786,7 +1786,7 @@
   {
     "id": "T224",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: each supported action declares its required inputs and target entity types.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F112"
     ]
@@ -1794,7 +1794,7 @@
   {
     "id": "T225",
     "description": "Happy path: Teams action layer: shared entity resolvers handle tickets, tasks, contacts, approvals, and time-entry targets.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F113"
     ]
@@ -1802,7 +1802,7 @@
   {
     "id": "T226",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: shared entity resolvers handle tickets, tasks, contacts, approvals, and time-entry targets.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F113"
     ]
@@ -1810,7 +1810,7 @@
   {
     "id": "T227",
     "description": "Happy path: Teams action layer: shared authorization checks wrap the underlying PSA services or server actions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F114"
     ]
@@ -1818,7 +1818,7 @@
   {
     "id": "T228",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: shared authorization checks wrap the underlying psa services or server actions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F114"
     ]
@@ -1826,7 +1826,7 @@
   {
     "id": "T229",
     "description": "Happy path: Teams action layer: shared result mappers return Teams-safe summaries, buttons, and deep links.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F115"
     ]
@@ -1834,7 +1834,7 @@
   {
     "id": "T230",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: shared result mappers return teams-safe summaries, buttons, and deep links.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F115"
     ]
@@ -1842,7 +1842,7 @@
   {
     "id": "T231",
     "description": "Happy path: Teams action layer: validation errors use one consistent response shape across bot, message extension, and cards/dialogs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F116"
     ]
@@ -1850,7 +1850,7 @@
   {
     "id": "T232",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: validation errors use one consistent response shape across bot, message extension, and cards/dialogs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F116"
     ]
@@ -1858,7 +1858,7 @@
   {
     "id": "T233",
     "description": "Happy path: Teams action layer: action execution records the invoking surface so downstream PSA behavior can distinguish bot, message extension, and tab contexts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F117"
     ]
@@ -1866,7 +1866,7 @@
   {
     "id": "T234",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: action execution records the invoking surface so downstream psa behavior can distinguish bot, message extension, and tab contexts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F117"
     ]
@@ -1874,7 +1874,7 @@
   {
     "id": "T235",
     "description": "Happy path: Teams action layer: deep-link generation reuses existing PSA deep-link helpers instead of building Teams-specific URL logic.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F118"
     ]
@@ -1882,7 +1882,7 @@
   {
     "id": "T236",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: deep-link generation reuses existing psa deep-link helpers instead of building teams-specific url logic.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F118"
     ]
@@ -1890,7 +1890,7 @@
   {
     "id": "T237",
     "description": "Happy path: Teams action layer: actions can distinguish read-only lookups from mutating operations.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F119"
     ]
@@ -1898,7 +1898,7 @@
   {
     "id": "T238",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: actions can distinguish read-only lookups from mutating operations.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F119"
     ]
@@ -1906,7 +1906,7 @@
   {
     "id": "T239",
     "description": "Happy path: Teams action layer: actions reuse existing PSA ticket, task, approval, contact, and time-entry business operations where possible.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F120"
     ]
@@ -1914,7 +1914,7 @@
   {
     "id": "T240",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: actions reuse existing psa ticket, task, approval, contact, and time-entry business operations where possible.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F120"
     ]
@@ -1922,7 +1922,7 @@
   {
     "id": "T241",
     "description": "Happy path: Teams action layer: actions can expose allowed-action metadata for a user and entity.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F121"
     ]
@@ -1930,7 +1930,7 @@
   {
     "id": "T242",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: actions can expose allowed-action metadata for a user and entity.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F121"
     ]
@@ -1938,7 +1938,7 @@
   {
     "id": "T243",
     "description": "Happy path: Teams action layer: Teams input payloads are normalized into PSA-ready requests before execution.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F122"
     ]
@@ -1946,7 +1946,7 @@
   {
     "id": "T244",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: teams input payloads are normalized into psa-ready requests before execution.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F122"
     ]
@@ -1954,7 +1954,7 @@
   {
     "id": "T245",
     "description": "Happy path: Teams action layer: duplicate card/dialog submissions can be handled safely without creating duplicate mutations.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F123"
     ]
@@ -1962,7 +1962,7 @@
   {
     "id": "T246",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: duplicate card/dialog submissions can be handled safely without creating duplicate mutations.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F123"
     ]
@@ -1970,7 +1970,7 @@
   {
     "id": "T247",
     "description": "Happy path: Teams action layer: partial-failure results return user-readable remediation guidance.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F124"
     ]
@@ -1978,7 +1978,7 @@
   {
     "id": "T248",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: partial-failure results return user-readable remediation guidance.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F124"
     ]
@@ -1986,7 +1986,7 @@
   {
     "id": "T249",
     "description": "Happy path: Teams action layer: Teams capability gating can disable unsupported actions centrally.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F125"
     ]
@@ -1994,7 +1994,7 @@
   {
     "id": "T250",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: teams capability gating can disable unsupported actions centrally.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F125"
     ]
@@ -2002,7 +2002,7 @@
   {
     "id": "T251",
     "description": "Happy path: Teams action layer: action definitions are reused instead of reimplementing each workflow per Teams surface.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F126"
     ]
@@ -2010,7 +2010,7 @@
   {
     "id": "T252",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for teams action layer: action definitions are reused instead of reimplementing each workflow per teams surface.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F126"
     ]
