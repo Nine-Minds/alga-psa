@@ -28,6 +28,8 @@
 ## Commands / Runbooks
 
 - Validate plan: `python scripts/validate_plan.py docs/plans/2026-03-08-page-titles`
+- Validate T019 build (EE): `NODE_OPTIONS='--max-old-space-size=8192' npm --prefix ee/server run build`
+- Validate T019 build (community): `NODE_OPTIONS='--max-old-space-size=8192' npm --prefix server run build`
 
 ## Links / References
 
@@ -48,6 +50,10 @@
 - (2026-03-08) Validation runbook: `npm --prefix server run test -- src/test/unit/app/pageTitles.metadata.test.ts` verifies title coverage from source.
 - (2026-03-08) Validation runbook: `NODE_OPTIONS='--max-old-space-size=8192' npm --prefix server run typecheck && NODE_OPTIONS='--max-old-space-size=8192' npm --prefix ee/server run typecheck` passes.
 - (2026-03-08) Build blocker: `npm run build` and `npm --prefix ee/server run build` fail on pre-existing missing-module issues in `@alga-psa/product-extension-actions`, `@alga-psa/storage/StorageService`, and `packages/workflows` exports.
+- (2026-03-08) EE build config bug: `ee/server/next.config.mjs` resolved monorepo package aliases from `../packages/*`, which pointed at a non-existent `ee/packages/*` tree instead of the repo-root `packages/*` directory.
+- (2026-03-08) EE build fix: add stable-specifier aliases for `@alga-psa/product-extension-actions`, `@alga-psa/product-extension-initialization`, `@alga-psa/product-auth-ee`, `@alga-psa/storage/StorageService`, and `@alga-psa/workflows/entry`.
+- (2026-03-08) EE build fix: add `ee/server/src/empty/workflows/entry.tsx` so the package-level workflow loader fallback resolves inside the EE app during production builds.
+- (2026-03-08) Build validation: both Next.js apps completed production builds with `NODE_OPTIONS='--max-old-space-size=8192'`; the default heap on this machine aborted before completion.
 - (2026-03-08) F001: Root layout: change generateMetadata() title from static string to template object with `template: '%s | Alga PSA'` and `default: 'Alga PSA'`
 - (2026-03-08) F002: MSP layout: add metadata export with `template: '%s | Alga PSA'` and `default: 'Dashboard | Alga PSA'`
 - (2026-03-08) F003: Client Portal layout: add metadata export with `template: '%s | Client Portal'` and `default: 'Dashboard | Client Portal'`
@@ -181,6 +187,7 @@
 - (2026-03-08) T016: Verify existing metadata compatibility: /client-portal/extensions/[id] re-exported metadata is compatible with Client Portal template
 - (2026-03-08) T017: Verify existing metadata compatibility: /surveys/respond/[token] generateMetadata() returns a string title (works with root template)
 - (2026-03-08) T018: TypeScript: no type errors introduced by metadata exports (run tsc --noEmit)
+- (2026-03-08) T019: Production build verification passed for `server` and `ee/server` after fixing EE alias wiring.
 - (2026-03-08) T020: Verify no page uses client-side document.title for setting titles
 - (2026-03-08) T021: Verify pages without explicit metadata fall back to their section layout default title
 - (2026-03-08) T022: Verify uncovered community routes /msp/documents and /test-routing export metadata titles
