@@ -530,7 +530,7 @@
   {
     "id": "F067",
     "description": "MSP page title: /msp/licenses/purchase/success — title: 'Purchase Success'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
