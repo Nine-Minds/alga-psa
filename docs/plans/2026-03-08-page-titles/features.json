@@ -370,7 +370,7 @@
   {
     "id": "F047",
     "description": "MSP page title: /msp/workflow-editor/new — title: 'New Workflow'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
