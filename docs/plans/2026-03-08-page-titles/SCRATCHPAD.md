@@ -90,3 +90,4 @@
 - (2026-03-08) F040: MSP page title: /msp/surveys — title: 'Surveys'
 - (2026-03-08) F041: MSP page title: /msp/surveys/dashboard — title: 'Survey Dashboard'
 - (2026-03-08) F042: MSP page title: /msp/surveys/analytics — title: 'Survey Analytics'
+- (2026-03-08) F043: MSP page title: /msp/surveys/responses — title: 'Survey Responses'
