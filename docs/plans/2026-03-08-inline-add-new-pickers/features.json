@@ -186,7 +186,7 @@
   {
     "id": "F024",
     "description": "QuickAddCategory accepts preselectedBoardId prop and hides board selector when provided",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5"
     ]

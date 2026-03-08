@@ -158,3 +158,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `npx tsc -p packages/assets/tsconfig.json --noEmit`
 - 2026-03-08 F023: Extracted the create-only category dialog into `packages/tickets/src/components/QuickAddCategory.tsx` and exported it from the tickets component surface, preserving the existing create-form structure (name, board/parent selection, footer actions) as reusable UI.
 - Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
+- 2026-03-08 F024: `QuickAddCategory` now accepts `preselectedBoardId`, seeds the create form with that board, and hides the board selector whenever the consumer already knows the board context.
+- Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
