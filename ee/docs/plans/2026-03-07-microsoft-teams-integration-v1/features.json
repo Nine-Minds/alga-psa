@@ -748,7 +748,7 @@
   {
     "id": "F083",
     "description": "Teams identity: user mapping can associate a Teams user identity to the correct PSA user within the tenant.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Security / Permissions",

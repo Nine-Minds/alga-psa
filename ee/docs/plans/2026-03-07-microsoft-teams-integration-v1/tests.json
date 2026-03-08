@@ -1314,7 +1314,7 @@
   {
     "id": "T165",
     "description": "Happy path: Teams identity: user mapping can associate a Teams user identity to the correct PSA user within the tenant.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F083"
     ]
@@ -1322,7 +1322,7 @@
   {
     "id": "T166",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: user mapping can associate a teams user identity to the correct psa user within the tenant.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F083"
     ]
