@@ -17,4 +17,12 @@ describe('tree select add-new contract', () => {
     expect(source).toContain('<Plus className="h-4 w-4" />');
     expect(source).toContain('<span>{addNewLabel}</span>');
   });
+
+  it('T039: TreeSelect guards the add-new UI behind the optional onAddNew prop', () => {
+    const source = read('./TreeSelect.tsx');
+
+    expect(source).toContain('onAddNew?: () => void;');
+    expect(source).toContain('{onAddNew && (');
+    expect(source).toContain("addNewLabel = '+ Add new'");
+  });
 });

@@ -307,7 +307,7 @@
   {
     "id": "T039",
     "description": "TreeSelect does NOT render '+ Add new' button when onAddNew is omitted",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
