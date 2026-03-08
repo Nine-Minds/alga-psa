@@ -874,7 +874,7 @@
   {
     "id": "F110",
     "description": "EE Client Portal layout: add metadata template `'%s | Client Portal'` and default `'Dashboard | Client Portal'`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria"
     ]
