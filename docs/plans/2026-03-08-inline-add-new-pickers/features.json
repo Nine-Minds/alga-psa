@@ -202,7 +202,7 @@
   {
     "id": "F026",
     "description": "QuickAddCategory uses createCategory action and calls onCategoryCreated callback on success",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5"
     ]

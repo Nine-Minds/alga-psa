@@ -162,3 +162,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
 - 2026-03-08 F025: `QuickAddCategory` renders the required category-name input, conditionally shows the board selector, and keeps the optional parent-category dropdown filtered to top-level categories with board-aware labels/inheritance.
 - Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
+- 2026-03-08 F026: `QuickAddCategory` now validates the create request, calls `createCategory` with board/parent inheritance, shows a success toast, and hands the created `ITicketCategory` back through `onCategoryCreated` so consumers can update local picker state.
+- Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
