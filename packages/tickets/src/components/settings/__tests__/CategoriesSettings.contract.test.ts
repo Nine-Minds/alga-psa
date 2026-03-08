@@ -16,4 +16,13 @@ describe('categories settings quick-add refactor contract', () => {
     expect(source).toContain('<QuickAddCategory');
     expect(source).toContain('isOpen={showAddEditDialog && !editingCategory}');
   });
+
+  it('T036: CategoriesSettings keeps the create-category flow wired through QuickAddCategory and refreshes data after create', () => {
+    const source = read('../CategoriesSettings.tsx');
+
+    expect(source).toContain('onCategoryCreated={async () => {');
+    expect(source).toContain('await fetchCategories();');
+    expect(source).toContain('categories={categories}');
+    expect(source).toContain('boards={boards}');
+  });
 });

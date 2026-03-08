@@ -242,3 +242,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddCategory.test.tsx -t T034`
 - 2026-03-08 T035: Added `packages/tickets/src/components/settings/__tests__/CategoriesSettings.contract.test.ts` to lock the refactor entry point: `CategoriesSettings` now imports and renders `QuickAddCategory` for the add dialog.
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/settings/__tests__/CategoriesSettings.contract.test.ts -t T035`
+- 2026-03-08 T036: Extended `CategoriesSettings.contract.test.ts` to preserve create-flow parity by asserting the extracted `QuickAddCategory` still receives boards/categories and triggers `fetchCategories()` after creation.
+- Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/settings/__tests__/CategoriesSettings.contract.test.ts -t T036`

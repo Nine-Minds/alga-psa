@@ -283,7 +283,7 @@
   {
     "id": "T036",
     "description": "CategoriesSettings create-category flow still works after refactor (name, board, parent, display_order)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
