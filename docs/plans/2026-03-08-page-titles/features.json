@@ -738,7 +738,7 @@
   {
     "id": "F093",
     "description": "Auth page title: /auth/verify-email — title: 'Verify Email'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3b"
     ]
