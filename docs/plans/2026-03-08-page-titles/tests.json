@@ -186,7 +186,7 @@
   {
     "id": "T013",
     "description": "Verify existing metadata compatibility: /auth/verify layout title 'Verify Email' is a plain string (works with template)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F092"
     ]
