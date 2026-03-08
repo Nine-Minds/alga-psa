@@ -112,3 +112,4 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - 2026-03-08 F001: Added optional `onAddNew` support to `packages/ui/src/components/ContactPicker.tsx` and rendered the bottom separator/button using the PRD styling pattern. Included the dropdown height estimate update so the portal positions correctly when the new action is present.
 - Validation: `cd packages/ui && npx vitest run --config vitest.config.ts src/components/ContactPicker.test.tsx`
 - 2026-03-08 F002/F003: The new `handleAddNew` path now closes the dropdown before invoking the consumer callback, and the add-new UI is fully gated behind the optional prop so existing picker rendering remains unchanged when omitted.
+- 2026-03-08 T001: Verified the add button and separator render when `onAddNew` is present.
