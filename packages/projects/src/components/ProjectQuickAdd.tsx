@@ -27,6 +27,7 @@ import type { PendingTag } from '@alga-psa/types';
 import { createTagsForEntity } from '@alga-psa/tags/actions';
 import ClientPortalConfigEditor from './ClientPortalConfigEditor';
 import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
+import { QuickAddContact } from '@alga-psa/clients/components';
 
 interface ProjectQuickAddProps {
   onClose: () => void;
@@ -40,6 +41,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const [users, setUsers] = useState<IUser[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
@@ -187,8 +189,9 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
       onClose={() => {
         setHasAttemptedSubmit(false);
         setValidationErrors([]);
-        onClose();
-      }}
+      onClose();
+      setIsQuickAddContactOpen(false);
+    }}
       title="Add New Project"
       className="max-w-[600px]"
       disableFocusTrap
@@ -260,8 +263,28 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                   clientId={selectedClientId || undefined}
                   placeholder="Select Contact"
                   buttonWidth="full"
+                  onAddNew={selectedClientId ? () => setIsQuickAddContactOpen(true) : undefined}
                 />
               </div>
+              <QuickAddContact
+                isOpen={isQuickAddContactOpen}
+                onClose={() => setIsQuickAddContactOpen(false)}
+                onContactAdded={(newContact) => {
+                  setContacts((prevContacts) => {
+                    const existingIndex = prevContacts.findIndex((contact) => contact.contact_name_id === newContact.contact_name_id);
+                    if (existingIndex >= 0) {
+                      const nextContacts = [...prevContacts];
+                      nextContacts[existingIndex] = newContact;
+                      return nextContacts;
+                    }
+                    return [...prevContacts, newContact];
+                  });
+                  setSelectedContactId(newContact.contact_name_id);
+                  setIsQuickAddContactOpen(false);
+                }}
+                clients={clients}
+                selectedClientId={selectedClientId || undefined}
+              />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Project Manager</label>
                 <UserPicker
