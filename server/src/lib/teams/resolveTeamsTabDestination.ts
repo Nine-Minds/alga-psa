@@ -4,7 +4,7 @@ export type TeamsTabDestination =
   | { type: 'project_task'; projectId: string; taskId: string }
   | { type: 'approval'; approvalId: string }
   | { type: 'time_entry'; entryId: string }
-  | { type: 'contact'; contactId: string };
+  | { type: 'contact'; contactId: string; clientId?: string };
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -61,7 +61,8 @@ export function resolveTeamsTabDestination(params?: SearchParams): TeamsTabDesti
     }
     case 'contact': {
       const contactId = getContextString(context, 'contactId') || getSingleSearchParam(params?.contactId);
-      return contactId ? { type: 'contact', contactId } : { type: 'my_work' };
+      const clientId = getContextString(context, 'clientId') || getSingleSearchParam(params?.clientId);
+      return contactId ? { type: 'contact', contactId, clientId } : { type: 'my_work' };
     }
     default:
       return { type: 'my_work' };
@@ -75,28 +76,30 @@ export function describeTeamsTabDestination(destination: TeamsTabDestination): {
   switch (destination.type) {
     case 'ticket':
       return {
-        title: 'Ticket',
-        summary: `Deep link bootstrap is ready for ticket ${destination.ticketId}.`,
+        title: `Ticket ${destination.ticketId}`,
+        summary: `You're opening ticket ${destination.ticketId} from Teams.`,
       };
     case 'project_task':
       return {
-        title: 'Project task',
-        summary: `Deep link bootstrap is ready for project ${destination.projectId} task ${destination.taskId}.`,
+        title: `Project task ${destination.taskId}`,
+        summary: `You're opening task ${destination.taskId} in project ${destination.projectId}.`,
       };
     case 'approval':
       return {
-        title: 'Approval',
-        summary: `Deep link bootstrap is ready for approval ${destination.approvalId}.`,
+        title: `Approval ${destination.approvalId}`,
+        summary: `You're opening approval ${destination.approvalId} from Teams.`,
       };
     case 'time_entry':
       return {
-        title: 'Time entry',
-        summary: `Deep link bootstrap is ready for time entry ${destination.entryId}.`,
+        title: `Time entry ${destination.entryId}`,
+        summary: `You're opening time entry ${destination.entryId} from Teams.`,
       };
     case 'contact':
       return {
-        title: 'Contact',
-        summary: `Deep link bootstrap is ready for contact ${destination.contactId}.`,
+        title: `Contact ${destination.contactId}`,
+        summary: destination.clientId
+          ? `You're opening contact ${destination.contactId} for client ${destination.clientId} from Teams.`
+          : `You're opening contact ${destination.contactId} from Teams.`,
       };
     case 'my_work':
     default:

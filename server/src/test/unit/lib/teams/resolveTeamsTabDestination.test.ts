@@ -5,7 +5,7 @@ import {
 } from 'server/src/lib/teams/resolveTeamsTabDestination';
 
 describe('resolveTeamsTabDestination', () => {
-  it('parses Teams deep-link context payloads into a destination model', () => {
+  it('T189/T191/T193/T195/T197/T199: parses ticket, project-task, approval, time-entry, and contact deep links and returns destination copy with enough entity context for the initial Teams tab load', () => {
     expect(
       resolveTeamsTabDestination({
         context: JSON.stringify({ page: 'ticket', ticketId: 'ticket-123' }),
@@ -14,9 +14,62 @@ describe('resolveTeamsTabDestination', () => {
       type: 'ticket',
       ticketId: 'ticket-123',
     });
+
+    expect(
+      resolveTeamsTabDestination({
+        context: JSON.stringify({ page: 'project_task', projectId: 'project-44', taskId: 'task-88' }),
+      })
+    ).toEqual({
+      type: 'project_task',
+      projectId: 'project-44',
+      taskId: 'task-88',
+    });
+
+    expect(
+      resolveTeamsTabDestination({
+        context: JSON.stringify({ page: 'approval', approvalId: 'approval-2' }),
+      })
+    ).toEqual({
+      type: 'approval',
+      approvalId: 'approval-2',
+    });
+
+    expect(
+      resolveTeamsTabDestination({
+        context: JSON.stringify({ page: 'time_entry', entryId: 'entry-9' }),
+      })
+    ).toEqual({
+      type: 'time_entry',
+      entryId: 'entry-9',
+    });
+
+    expect(
+      resolveTeamsTabDestination({
+        context: JSON.stringify({ page: 'contact', contactId: 'contact-5', clientId: 'client-9' }),
+      })
+    ).toEqual({
+      type: 'contact',
+      contactId: 'contact-5',
+      clientId: 'client-9',
+    });
+
+    expect(describeTeamsTabDestination({ type: 'ticket', ticketId: 'ticket-123' })).toEqual({
+      title: 'Ticket ticket-123',
+      summary: "You're opening ticket ticket-123 from Teams.",
+    });
+    expect(
+      describeTeamsTabDestination({
+        type: 'contact',
+        contactId: 'contact-5',
+        clientId: 'client-9',
+      })
+    ).toEqual({
+      title: 'Contact contact-5',
+      summary: "You're opening contact contact-5 for client client-9 from Teams.",
+    });
   });
 
-  it('T186/T188: falls back safely to my-work when Teams passes an unsupported page or invalid context payload', () => {
+  it('T186/T188/T190/T192/T194/T196/T198/T200: falls back safely to my-work when Teams passes an unsupported page, invalid context payload, or incomplete record identifiers', () => {
     expect(
       resolveTeamsTabDestination({
         context: JSON.stringify({ page: 'unsupported', ticketId: 'ticket-123' }),
@@ -32,12 +85,42 @@ describe('resolveTeamsTabDestination', () => {
     ).toEqual({
       type: 'my_work',
     });
-  });
 
-  it('falls back to my-work when the Teams context is missing or incomplete', () => {
     expect(
       resolveTeamsTabDestination({
         context: JSON.stringify({ page: 'ticket' }),
+      })
+    ).toEqual({
+      type: 'my_work',
+    });
+
+    expect(
+      resolveTeamsTabDestination({
+        context: JSON.stringify({ page: 'project_task', projectId: 'project-44' }),
+      })
+    ).toEqual({
+      type: 'my_work',
+    });
+
+    expect(
+      resolveTeamsTabDestination({
+        context: JSON.stringify({ page: 'approval' }),
+      })
+    ).toEqual({
+      type: 'my_work',
+    });
+
+    expect(
+      resolveTeamsTabDestination({
+        context: JSON.stringify({ page: 'time_entry' }),
+      })
+    ).toEqual({
+      type: 'my_work',
+    });
+
+    expect(
+      resolveTeamsTabDestination({
+        context: JSON.stringify({ page: 'contact' }),
       })
     ).toEqual({
       type: 'my_work',

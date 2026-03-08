@@ -177,6 +177,11 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Completed `T185` and `T187` with a Teams-tab page test asserting the default ready state renders the `my_work` destination for the personal-tab entry path.
 - (2026-03-07) Completed `F094` by verifying the default Teams tab destination model already resolves to `my_work`, which matches the intended PSA technician landing surface for the personal tab.
 - (2026-03-07) Completed `T186` and `T188` with destination-parser coverage asserting unsupported or malformed Teams context falls back safely to `my_work` instead of failing open.
+- (2026-03-07) Completed `F095`, `F096`, `F097`, `F098`, and `F099` by expanding the Teams tab destination model and page shell so ticket, project-task, approval, time-entry, and contact deep links all render explicit entity context, with contact links carrying optional client context from Teams message-driven entry points.
+- (2026-03-07) Completed `T189` through `T200` with parser and page coverage for valid ticket/project-task/approval/time-entry/contact deep links plus guard coverage for incomplete context payloads falling back safely to `my_work`.
+- (2026-03-07) Completed `F100` by changing destination copy from generic bootstrap text to entity-specific titles and summaries so the initial Teams tab load visibly confirms the intended PSA entity.
+- (2026-03-07) Completed `F101` by changing post-auth record-access failures from a dead-end error card into a safe `my_work` fallback shell with explanatory messaging about the unavailable requested destination.
+- (2026-03-07) Completed `T201` and `T202` with page tests asserting unavailable ticket/project-task/approval/time-entry/contact links land on the `my_work` fallback shell and preserve the requested-destination context in user-facing remediation copy.
   - `server/migrations/20260307120000_create_microsoft_profiles.cjs`
   - `server/migrations/20260307143000_create_microsoft_profile_consumer_bindings.cjs`
   - `server/migrations/20260307153000_create_teams_integrations.cjs`
@@ -184,7 +189,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `server/src/test/unit/migrations/teamsIntegrationsMigration.test.ts`
 - (2026-03-07) The focused vitest slice still emits pre-existing React `act(...)` warnings from `MicrosoftIntegrationSettings.contract.test.tsx`; the tests pass, but the harness remains noisy.
 - (2026-03-07) The Teams setup contract tests currently emit similar non-blocking React `act(...)` warnings while asserting async save flows; the tests pass, but the harness remains noisy.
-- (2026-03-07) Next unchecked feature after this slice is `F095` (Teams personal tab deep links can open a specific ticket view).
+- (2026-03-07) `npx vitest run --config vitest.config.ts src/test/unit/app/teams/tab/page.test.tsx src/test/unit/lib/teams/resolveTeamsTabDestination.test.ts`
+- (2026-03-07) Next unchecked feature after this slice is `F102` (Teams tab offers an “open in full PSA” path for richer context or unsupported functionality).
 
 ## Links / References
 

@@ -26,6 +26,40 @@ vi.mock('server/src/lib/teams/resolveTeamsTabAccessState', () => ({
 
 const { default: TeamsTabPage } = await import('server/src/app/teams/tab/page');
 
+function collectText(node: React.ReactNode): string {
+  if (node === null || node === undefined || typeof node === 'boolean') {
+    return '';
+  }
+
+  if (typeof node === 'string' || typeof node === 'number') {
+    return String(node);
+  }
+
+  if (Array.isArray(node)) {
+    return node.map((entry) => collectText(entry)).join(' ');
+  }
+
+  if (React.isValidElement(node)) {
+    return collectText(node.props.children);
+  }
+
+  return '';
+}
+
+function collectNormalizedText(node: React.ReactNode): string {
+  return collectText(node).replace(/\s+/g, ' ').trim();
+}
+
+const readyAuthState = {
+  status: 'ready' as const,
+  tenantId: 'tenant-1',
+  userId: 'user-1',
+  userName: 'Taylor Tech',
+  userEmail: 'taylor@example.com',
+  profileId: 'profile-1',
+  microsoftTenantId: 'entra-tenant-1',
+};
+
 describe('TeamsTabPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -56,15 +90,7 @@ describe('TeamsTabPage', () => {
   });
 
   it('T185/T187: renders the Teams personal tab entry point at the default my-work landing destination', async () => {
-    resolveTeamsTabAuthStateMock.mockResolvedValue({
-      status: 'ready',
-      tenantId: 'tenant-1',
-      userId: 'user-1',
-      userName: 'Taylor Tech',
-      userEmail: 'taylor@example.com',
-      profileId: 'profile-1',
-      microsoftTenantId: 'entra-tenant-1',
-    });
+    resolveTeamsTabAuthStateMock.mockResolvedValue(readyAuthState);
 
     const result = await TeamsTabPage({
       searchParams: Promise.resolve({}),
@@ -72,31 +98,15 @@ describe('TeamsTabPage', () => {
 
     expect(redirectMock).not.toHaveBeenCalled();
     expect(resolveTeamsTabAccessStateMock).toHaveBeenCalledWith(
-      {
-        status: 'ready',
-        tenantId: 'tenant-1',
-        userId: 'user-1',
-        userName: 'Taylor Tech',
-        userEmail: 'taylor@example.com',
-        profileId: 'profile-1',
-        microsoftTenantId: 'entra-tenant-1',
-      },
+      readyAuthState,
       { type: 'my_work' }
     );
     expect((result as any)?.props?.['data-teams-tab-state']).toBe('ready');
     expect((result as any)?.props?.['data-teams-tab-destination']).toBe('my_work');
   });
 
-  it('T169: bootstraps a deep-linked Teams tab destination without requiring a second PSA sign-in prompt inside Teams', async () => {
-    resolveTeamsTabAuthStateMock.mockResolvedValue({
-      status: 'ready',
-      tenantId: 'tenant-1',
-      userId: 'user-1',
-      userName: 'Taylor Tech',
-      userEmail: 'taylor@example.com',
-      profileId: 'profile-1',
-      microsoftTenantId: 'entra-tenant-1',
-    });
+  it('T169/T189/T199: bootstraps a ticket deep link without a second PSA sign-in prompt and renders enough record context to confirm the ticket destination', async () => {
+    resolveTeamsTabAuthStateMock.mockResolvedValue(readyAuthState);
 
     const result = await TeamsTabPage({
       searchParams: Promise.resolve({
@@ -111,20 +121,11 @@ describe('TeamsTabPage', () => {
       expectedTenantId: 'acme-helpdesk',
       expectedMicrosoftTenantId: 'entra-tenant-1',
     });
-    expect(resolveTeamsTabAccessStateMock).toHaveBeenCalledWith(
-      {
-        status: 'ready',
-        tenantId: 'tenant-1',
-        userId: 'user-1',
-        userName: 'Taylor Tech',
-        userEmail: 'taylor@example.com',
-        profileId: 'profile-1',
-        microsoftTenantId: 'entra-tenant-1',
-      },
-      { type: 'ticket', ticketId: '12345' }
-    );
+    expect(resolveTeamsTabAccessStateMock).toHaveBeenCalledWith(readyAuthState, { type: 'ticket', ticketId: '12345' });
     expect((result as any)?.props?.['data-teams-tab-state']).toBe('ready');
     expect((result as any)?.props?.['data-teams-tab-destination']).toBe('ticket');
+    expect(collectNormalizedText(result)).toContain('Ticket 12345');
+    expect(collectNormalizedText(result)).toContain("You're opening ticket 12345 from Teams.");
   });
 
   it('T170: returns Teams-safe remediation for rejected or unavailable deep-link entry points', async () => {
@@ -164,20 +165,12 @@ describe('TeamsTabPage', () => {
     expect((result as any)?.type).toBe(CardMock);
   });
 
-  it('T178: returns a Teams-safe fallback when destination authorization fails after Teams authentication succeeds', async () => {
-    resolveTeamsTabAuthStateMock.mockResolvedValue({
-      status: 'ready',
-      tenantId: 'tenant-1',
-      userId: 'user-1',
-      userName: 'Taylor Tech',
-      userEmail: 'taylor@example.com',
-      profileId: 'profile-1',
-      microsoftTenantId: 'entra-tenant-1',
-    });
+  it('T178/T190/T201: falls back to the my-work landing with explanatory messaging when a requested ticket is unavailable after Teams authentication succeeds', async () => {
+    resolveTeamsTabAuthStateMock.mockResolvedValue(readyAuthState);
     resolveTeamsTabAccessStateMock.mockResolvedValue({
       status: 'forbidden',
-      reason: 'missing_permission',
-      message: 'You do not have permission to open tickets from Teams.',
+      reason: 'not_found',
+      message: 'That ticket is unavailable or you no longer have access to it.',
     });
 
     const result = await TeamsTabPage({
@@ -187,6 +180,128 @@ describe('TeamsTabPage', () => {
     });
 
     expect(redirectMock).not.toHaveBeenCalled();
-    expect((result as any)?.type).toBe(CardMock);
+    expect((result as any)?.props?.['data-teams-tab-destination']).toBe('my_work');
+    expect((result as any)?.props?.['data-teams-tab-requested-destination']).toBe('ticket');
+    expect((result as any)?.props?.['data-teams-tab-fallback']).toBe('my_work');
+    expect(collectNormalizedText(result)).toContain('Requested Teams record unavailable');
+    expect(collectNormalizedText(result)).toContain('That ticket is unavailable or you no longer have access to it.');
+    expect(collectNormalizedText(result)).toContain('You landed on your Teams work list instead of ticket 12345');
+  });
+
+  it('T191/T193/T195/T197: renders project-task, approval, time-entry, and contact destinations from Teams deep-link context', async () => {
+    resolveTeamsTabAuthStateMock.mockResolvedValue(readyAuthState);
+
+    const projectTaskResult = await TeamsTabPage({
+      searchParams: Promise.resolve({
+        context: JSON.stringify({ page: 'project_task', projectId: 'project-44', taskId: 'task-88' }),
+      }),
+    });
+    expect(resolveTeamsTabAccessStateMock).toHaveBeenNthCalledWith(1, readyAuthState, {
+      type: 'project_task',
+      projectId: 'project-44',
+      taskId: 'task-88',
+    });
+    expect(collectNormalizedText(projectTaskResult)).toContain('Project task task-88');
+    expect(collectNormalizedText(projectTaskResult)).toContain("You're opening task task-88 in project project-44.");
+
+    const approvalResult = await TeamsTabPage({
+      searchParams: Promise.resolve({
+        context: JSON.stringify({ page: 'approval', approvalId: 'approval-2' }),
+      }),
+    });
+    expect(resolveTeamsTabAccessStateMock).toHaveBeenNthCalledWith(2, readyAuthState, {
+      type: 'approval',
+      approvalId: 'approval-2',
+    });
+    expect(collectNormalizedText(approvalResult)).toContain('Approval approval-2');
+
+    const timeEntryResult = await TeamsTabPage({
+      searchParams: Promise.resolve({
+        context: JSON.stringify({ page: 'time_entry', entryId: 'entry-9' }),
+      }),
+    });
+    expect(resolveTeamsTabAccessStateMock).toHaveBeenNthCalledWith(3, readyAuthState, {
+      type: 'time_entry',
+      entryId: 'entry-9',
+    });
+    expect(collectNormalizedText(timeEntryResult)).toContain('Time entry entry-9');
+
+    const contactResult = await TeamsTabPage({
+      searchParams: Promise.resolve({
+        context: JSON.stringify({ page: 'contact', contactId: 'contact-5', clientId: 'client-9' }),
+      }),
+    });
+    expect(resolveTeamsTabAccessStateMock).toHaveBeenNthCalledWith(4, readyAuthState, {
+      type: 'contact',
+      contactId: 'contact-5',
+      clientId: 'client-9',
+    });
+    expect(collectNormalizedText(contactResult)).toContain('Contact contact-5');
+    expect(collectNormalizedText(contactResult)).toContain("You're opening contact contact-5 for client client-9 from Teams.");
+  });
+
+  it('T192/T194/T196/T198/T202: falls back to my-work when project-task, approval, time-entry, or contact deep links resolve to unavailable records', async () => {
+    resolveTeamsTabAuthStateMock.mockResolvedValue(readyAuthState);
+    resolveTeamsTabAccessStateMock
+      .mockResolvedValueOnce({
+        status: 'forbidden',
+        reason: 'not_found',
+        message: 'That project task is unavailable or no longer matches this Teams link.',
+      })
+      .mockResolvedValueOnce({
+        status: 'forbidden',
+        reason: 'not_found',
+        message: 'That approval item is unavailable or you no longer have access to it.',
+      })
+      .mockResolvedValueOnce({
+        status: 'forbidden',
+        reason: 'not_found',
+        message: 'That time entry is unavailable or you no longer have access to it.',
+      })
+      .mockResolvedValueOnce({
+        status: 'forbidden',
+        reason: 'not_found',
+        message: 'That contact is unavailable or you no longer have access to it.',
+      });
+
+    const projectTaskResult = await TeamsTabPage({
+      searchParams: Promise.resolve({
+        context: JSON.stringify({ page: 'project_task', projectId: 'project-44', taskId: 'task-88' }),
+      }),
+    });
+    expect((projectTaskResult as any)?.props?.['data-teams-tab-destination']).toBe('my_work');
+    expect(collectNormalizedText(projectTaskResult)).toContain(
+      'That project task is unavailable or no longer matches this Teams link.'
+    );
+
+    const approvalResult = await TeamsTabPage({
+      searchParams: Promise.resolve({
+        context: JSON.stringify({ page: 'approval', approvalId: 'approval-2' }),
+      }),
+    });
+    expect((approvalResult as any)?.props?.['data-teams-tab-destination']).toBe('my_work');
+    expect(collectNormalizedText(approvalResult)).toContain(
+      'That approval item is unavailable or you no longer have access to it.'
+    );
+
+    const timeEntryResult = await TeamsTabPage({
+      searchParams: Promise.resolve({
+        context: JSON.stringify({ page: 'time_entry', entryId: 'entry-9' }),
+      }),
+    });
+    expect((timeEntryResult as any)?.props?.['data-teams-tab-destination']).toBe('my_work');
+    expect(collectNormalizedText(timeEntryResult)).toContain(
+      'That time entry is unavailable or you no longer have access to it.'
+    );
+
+    const contactResult = await TeamsTabPage({
+      searchParams: Promise.resolve({
+        context: JSON.stringify({ page: 'contact', contactId: 'contact-5', clientId: 'client-9' }),
+      }),
+    });
+    expect((contactResult as any)?.props?.['data-teams-tab-destination']).toBe('my_work');
+    expect(collectNormalizedText(contactResult)).toContain(
+      'That contact is unavailable or you no longer have access to it.'
+    );
   });
 });

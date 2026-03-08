@@ -5,6 +5,7 @@ import { resolveTeamsTabAccessState } from 'server/src/lib/teams/resolveTeamsTab
 import { resolveTeamsTabAuthState } from 'server/src/lib/teams/resolveTeamsTabAuthState';
 import {
   describeTeamsTabDestination,
+  type TeamsTabDestination,
   resolveTeamsTabDestination,
 } from 'server/src/lib/teams/resolveTeamsTabDestination';
 
@@ -42,10 +43,52 @@ function buildTeamsTabCallbackUrl(params?: Record<string, string | string[] | un
   return suffix ? `/teams/tab?${suffix}` : '/teams/tab';
 }
 
+function renderTeamsTabShell(options: {
+  state: Extract<Awaited<ReturnType<typeof resolveTeamsTabAuthState>>, { status: 'ready' }>;
+  destination: TeamsTabDestination;
+  requestedDestination?: TeamsTabDestination;
+  fallbackMessage?: string;
+}) {
+  const destinationCopy = describeTeamsTabDestination(options.destination);
+  const requestedDestination = options.requestedDestination || options.destination;
+  const requestedDestinationCopy = describeTeamsTabDestination(requestedDestination);
+  const isFallback = requestedDestination.type !== options.destination.type;
+
+  return (
+    <div
+      className="mx-auto max-w-3xl p-6"
+      data-teams-tab-state="ready"
+      data-teams-tab-destination={options.destination.type}
+      data-teams-tab-requested-destination={requestedDestination.type}
+      data-teams-tab-fallback={isFallback ? options.destination.type : undefined}
+    >
+      <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="space-y-1">
+          <p className="text-xs font-medium uppercase tracking-wide text-teal-700">Microsoft Teams</p>
+          <h1 className="text-2xl font-semibold text-gray-900">{destinationCopy.title}</h1>
+        </div>
+        {options.fallbackMessage ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p className="font-medium">Requested Teams record unavailable</p>
+            <p>{options.fallbackMessage}</p>
+            <p>You landed on your Teams work list instead of {requestedDestinationCopy.title.toLowerCase()}.</p>
+          </div>
+        ) : null}
+        <p className="text-sm text-gray-600">
+          Signed in as {options.state.userName || options.state.userEmail || options.state.userId} for tenant{' '}
+          {options.state.tenantId}.
+        </p>
+        <p className="text-sm text-gray-600">
+          Teams tab SSO is active with Microsoft profile {options.state.profileId}. {destinationCopy.summary}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default async function TeamsTabPage({ searchParams }: TeamsTabPageProps) {
   const params = searchParams ? await searchParams : undefined;
   const destination = resolveTeamsTabDestination(params);
-  const destinationCopy = describeTeamsTabDestination(destination);
   const state = await resolveTeamsTabAuthState({
     expectedTenantId:
       (typeof params?.tenantId === 'string' ? params.tenantId : undefined) ||
@@ -71,37 +114,15 @@ export default async function TeamsTabPage({ searchParams }: TeamsTabPageProps) 
 
   const accessState = await resolveTeamsTabAccessState(state, destination);
   if (accessState.status !== 'ready') {
-    return (
-      <Card className="m-6 p-6 text-sm text-gray-700">
-        <div className="space-y-2">
-          <h1 className="text-lg font-semibold text-gray-900">Requested Teams record unavailable</h1>
-          <p>{accessState.message}</p>
-          <p>Return to your Teams work list or open the full PSA app if you need a different record.</p>
-        </div>
-      </Card>
-    );
+    return renderTeamsTabShell({
+      state,
+      destination: { type: 'my_work' },
+      requestedDestination: destination,
+      fallbackMessage: accessState.message,
+    });
   }
 
-  return (
-    <div
-      className="mx-auto max-w-3xl p-6"
-      data-teams-tab-state="ready"
-      data-teams-tab-destination={destination.type}
-    >
-      <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="space-y-1">
-          <p className="text-xs font-medium uppercase tracking-wide text-teal-700">Microsoft Teams</p>
-          <h1 className="text-2xl font-semibold text-gray-900">{destinationCopy.title}</h1>
-        </div>
-        <p className="text-sm text-gray-600">
-          Signed in as {state.userName || state.userEmail || state.userId} for tenant {state.tenantId}.
-        </p>
-        <p className="text-sm text-gray-600">
-          Teams tab SSO is active with Microsoft profile {state.profileId}. {destinationCopy.summary}
-        </p>
-      </div>
-    </div>
-  );
+  return renderTeamsTabShell({ state, destination });
 }
 
 export const dynamic = 'force-dynamic';
