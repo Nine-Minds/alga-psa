@@ -226,7 +226,7 @@
   {
     "id": "F029",
     "description": "CategoriesSettings behavior unchanged after refactor (create and edit both work)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-6"
     ]

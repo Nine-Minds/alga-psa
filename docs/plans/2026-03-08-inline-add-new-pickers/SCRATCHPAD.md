@@ -168,3 +168,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
 - 2026-03-08 F028: Refactored `packages/tickets/src/components/settings/CategoriesSettings.tsx` so add-category now uses the extracted `QuickAddCategory` component, while the settings page still owns the edit-only dialog markup and refreshes category data after create.
 - Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
+- 2026-03-08 F029: Preserved CategoriesSettings behavior by keeping the existing edit-category path intact, leaving board-change warnings/display-order editing untouched, and refreshing category data after both create and update flows.
+- Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
