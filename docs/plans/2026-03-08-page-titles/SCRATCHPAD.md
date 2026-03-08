@@ -84,3 +84,4 @@
 - (2026-03-08) F034: MSP page title: /msp/time-sheet-approvals — title: 'Timesheet Approvals'
 - (2026-03-08) F035: MSP page title: /msp/chat — title: 'Chat'
 - (2026-03-08) F036: MSP page title: /msp/email-logs — title: 'Email Logs'
+- (2026-03-08) F037: MSP page title: /msp/schedule — title: 'Schedule'

@@ -290,7 +290,7 @@
   {
     "id": "F037",
     "description": "MSP page title: /msp/schedule — title: 'Schedule'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
