@@ -202,7 +202,7 @@
   {
     "id": "T015",
     "description": "Verify existing metadata compatibility: /msp/extensions/[id] re-exported metadata from @product/extensions/entry uses string title",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ]
