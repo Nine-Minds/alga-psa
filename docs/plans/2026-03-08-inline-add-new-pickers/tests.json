@@ -275,7 +275,7 @@
   {
     "id": "T035",
     "description": "CategoriesSettings uses QuickAddCategory component for the add dialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
