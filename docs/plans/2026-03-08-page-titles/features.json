@@ -266,7 +266,7 @@
   {
     "id": "F034",
     "description": "MSP page title: /msp/time-sheet-approvals — title: 'Timesheet Approvals'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
