@@ -251,6 +251,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Bot follow-up shortcuts should be filtered through `listAvailableTeamsActions(...)` so ticket result cards only advertise tenant-enabled actions and stay aligned with central Teams capability gating.
 - (2026-03-07) The smallest useful bot mutation syntax is `assign ticket <ticket-id> to <assignee>` with `to me` as the default fallback and `add note <ticket-id>: <note>` for note entry; both shapes keep parsing deterministic without introducing multi-step bot state.
 - (2026-03-07) Resolving a non-self assignee from the bot should require `user:read` permission and only match active internal PSA users by exact user ID, email, username, or full name so Teams assignment stays tenant-scoped and predictable.
+- (2026-03-07) Pending-approval lookup needs to mirror the existing Manager Approval dashboard scope logic instead of `TimeSheetService.list(...)`, because the service layer does not currently apply manager / reports-to visibility for time-sheet approvals.
+- (2026-03-07) The current time-sheet approval model supports `approve` and `request_changes`, not a distinct reject mutation, so the Teams bot treats `reject approval ...` as a user-friendly alias for the shared `request_changes` action.
 
 ## Progress Log
 
@@ -278,6 +280,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Verified Teams bot mutation commands with:
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/bot/teamsBotHandler.test.ts src/app/api/teams/bot/messages/route.test.ts src/test/unit/lib/teams/actions/teamsActionRegistry.test.ts`
   - `pnpm --dir server exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-07) Verified Teams bot approval commands with:
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/actions/teamsActionRegistry.test.ts src/test/unit/lib/teams/bot/teamsBotHandler.test.ts`
+  - `pnpm --dir server exec tsc -p tsconfig.json --noEmit --pretty false`
 - (2026-03-07) Next unchecked feature after this slice is `F153` (Personal bot command approvals: returns the technician's pending approvals).
 
 - (2026-03-07) Completed `F140`, `F141`, `F142`, and `F143` by teaching `server/src/lib/teams/bot/teamsBotHandler.ts` to parse `assign ticket` commands, default `assign ticket <ticket-id>` to self-assignment, resolve other assignees from active internal users with explicit `user:read` gating, and return the shared action result with an assignee-specific success summary plus Teams-tab/full-PSA links.
@@ -288,3 +293,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Completed `T287` through `T292` with bot-handler tests covering note-command parsing, missing-note remediation that preserves ticket context, shared `add_note` execution, and successful follow-up link rendering after note creation.
 - (2026-03-07) Completed `T293` through `T298` with bot-handler tests covering reply-command parsing, missing-reply remediation, shared `reply_to_contact` execution, and successful follow-up link rendering after a customer-visible reply is created.
 - (2026-03-07) Completed `T299` through `T304` with bot-handler tests covering missing work-item/duration remediation, shared ticket/task `log_time` execution, duration-and-note normalization, and follow-up link rendering after Teams time entry creation.
+- (2026-03-07) Completed `F153` by adding a shared `my_approvals` Teams action plus bot support for `my approvals`, reusing the Manager Approval dashboard scope rules so the bot lists only approval items the signed-in approver can review.
+- (2026-03-07) Completed `F154` by extending the bot parser/UX with `approve approval <id>` and `request changes` / `reject approval <id>: <comment>` commands that execute the shared `approval_response` action and return Teams-tab/full-PSA follow-up links.
+- (2026-03-07) Completed `T305` and `T306` with registry + bot coverage for pending-approval lookup, permission failures, approval summaries, and approval-result shortcut rendering.
+- (2026-03-07) Completed `T307` and `T308` with bot-handler coverage for approval approval/request-changes execution plus missing-reference and missing-comment remediation.
+- (2026-03-07) Next unchecked feature after this slice is `F155` (Message extension: a Teams message extension exists for PSA).

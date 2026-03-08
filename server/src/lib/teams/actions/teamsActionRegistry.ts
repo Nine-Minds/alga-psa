@@ -1,5 +1,6 @@
-import { runWithTenant, type ServiceContext } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, User, type ServiceContext } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { isFeatureFlagEnabled } from '@alga-psa/core';
 import {
   buildTeamsBotResultDeepLinkFromPsaUrl,
   buildTeamsMessageExtensionResultDeepLinkFromPsaUrl,
@@ -34,6 +35,7 @@ export type TeamsActionTargetType = typeof TEAMS_ACTION_TARGET_TYPES[number];
 
 export const TEAMS_ACTION_IDS = [
   'my_tickets',
+  'my_approvals',
   'open_record',
   'assign_ticket',
   'add_note',
@@ -258,6 +260,10 @@ const booleanFromUnknown = z.preprocess((value) => {
 }, z.boolean());
 
 const myTicketsInputSchema = z.object({
+  limit: positiveInt('Limit', 25).optional().default(10),
+});
+
+const myApprovalsInputSchema = z.object({
   limit: positiveInt('Limit', 25).optional().default(10),
 });
 
@@ -685,6 +691,89 @@ function describeTicketListSummary(ticket: Record<string, unknown>): string {
   return parts.join(' • ') || 'Ticket opened from Teams';
 }
 
+interface TeamsApprovalListItem {
+  id: string;
+  approval_status: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  period_start_date: string | null;
+  period_end_date: string | null;
+}
+
+function formatApprovalPeriod(startDate: string | null, endDate: string | null): string {
+  if (!startDate || !endDate) {
+    return 'Period unavailable';
+  }
+
+  return `${startDate} to ${endDate}`;
+}
+
+function describeApprovalListSummary(approval: TeamsApprovalListItem): string {
+  const employeeName = [approval.first_name, approval.last_name].filter(Boolean).join(' ').trim() || 'Unknown employee';
+  const status = approval.approval_status?.trim() || 'SUBMITTED';
+  return `${employeeName} • ${formatApprovalPeriod(approval.period_start_date, approval.period_end_date)} • ${status}`;
+}
+
+// Mirror the manager approval dashboard scope so Teams sees the same approval queue.
+async function listPendingApprovalsForTeams(
+  tenantId: string,
+  user: IUserWithRoles,
+  limit: number
+): Promise<TeamsApprovalListItem[]> {
+  const { knex } = await createTenantKnex(tenantId);
+  const canReadAll = await hasPermission(user, 'timesheet', 'read_all', knex);
+
+  let query = knex('time_sheets')
+    .join('users', function joinUsers() {
+      this.on('time_sheets.user_id', '=', 'users.user_id').andOn('time_sheets.tenant', '=', 'users.tenant');
+    })
+    .join('time_periods', function joinPeriods() {
+      this.on('time_sheets.period_id', '=', 'time_periods.period_id').andOn('time_sheets.tenant', '=', 'time_periods.tenant');
+    })
+    .where('time_sheets.tenant', tenantId)
+    .whereIn('time_sheets.approval_status', ['SUBMITTED', 'CHANGES_REQUESTED'])
+    .select(
+      'time_sheets.id',
+      'time_sheets.approval_status',
+      'users.first_name',
+      'users.last_name',
+      'time_periods.start_date as period_start_date',
+      'time_periods.end_date as period_end_date'
+    )
+    .orderBy('time_sheets.submitted_at', 'asc')
+    .limit(limit);
+
+  if (!canReadAll) {
+    const reportsToEnabled = await isFeatureFlagEnabled('teams-v2', {
+      userId: user.user_id,
+      tenantId,
+    });
+
+    const reportsToUserIds = reportsToEnabled ? await User.getReportsToSubordinateIds(knex, user.user_id) : [];
+
+    query = query
+      .where((builder) => {
+        builder.whereExists(function managerScope() {
+          this.select(1)
+            .from('team_members')
+            .join('teams', function joinTeams() {
+              this.on('team_members.team_id', '=', 'teams.team_id').andOn('team_members.tenant', '=', 'teams.tenant');
+            })
+            .where('team_members.user_id', knex.ref('users.user_id'))
+            .andWhere('teams.manager_id', user.user_id)
+            .andWhere('teams.tenant', tenantId);
+        });
+
+        if (reportsToEnabled && reportsToUserIds.length > 0) {
+          builder.orWhereIn('users.user_id', reportsToUserIds);
+        }
+      })
+      .distinct();
+  }
+
+  return (await query) as TeamsApprovalListItem[];
+}
+
 function describeResolvedTarget(target: TeamsResolvedTarget): { title: string; summary: string } {
   switch (target.entityType) {
     case 'ticket': {
@@ -799,6 +888,63 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
             items.length > 0
               ? `Found ${items.length} assigned ticket${items.length === 1 ? '' : 's'} for the signed-in technician.`
               : 'No assigned tickets matched this Teams request.',
+        },
+        items,
+      };
+    },
+  },
+  my_approvals: {
+    id: 'my_approvals',
+    title: 'My approvals',
+    description: 'List time-sheet approvals the signed-in approver can act on from Teams.',
+    operation: 'lookup',
+    targetEntityTypes: [],
+    requiredInputs: [
+      {
+        name: 'limit',
+        type: 'number',
+        required: false,
+        description: 'Optional maximum number of approval items to return.',
+      },
+    ],
+    businessOperations: ['TimeSheetApprovalQuery.listPendingApprovals'],
+    requiredCapabilities: ['personal_bot'],
+    normalize: (request) => parseActionInput(myApprovalsInputSchema, buildPayloadFromRequest(request)),
+    authorize: async (_normalized, context) =>
+      ensurePermission(
+        context.request.user,
+        'timesheet',
+        'approve',
+        'You do not have permission to view approvals from Teams.'
+      ),
+    execute: async (normalized, context) => {
+      const approvals = await listPendingApprovalsForTeams(
+        context.request.tenantId,
+        context.request.user,
+        normalized.limit as number
+      );
+
+      const items = await Promise.all(
+        approvals.map((approval) =>
+          buildItemForDestination(
+            'approval',
+            approval.id,
+            `Approval ${approval.id}`,
+            describeApprovalListSummary(approval),
+            { type: 'approval', approvalId: approval.id },
+            context.integration,
+            context.request.surface
+          )
+        )
+      );
+
+      return {
+        summary: {
+          title: 'My approvals',
+          text:
+            items.length > 0
+              ? `Found ${items.length} approval item${items.length === 1 ? '' : 's'} ready for review in Teams.`
+              : 'No pending approvals matched this Teams request.',
         },
         items,
       };
@@ -1230,7 +1376,7 @@ async function evaluateActionAvailability(
   }
 
   const permissionRequirement =
-    definition.id === 'my_tickets' || definition.id === 'open_record'
+    definition.id === 'my_tickets' || definition.id === 'my_approvals' || definition.id === 'open_record'
       ? definition.id === 'open_record' && targetReference?.entityType === 'project_task'
         ? ['project', 'read']
         : definition.id === 'open_record' && targetReference?.entityType === 'approval'
@@ -1239,7 +1385,9 @@ async function evaluateActionAvailability(
             ? ['time_entry', 'read']
             : definition.id === 'open_record' && targetReference?.entityType === 'contact'
               ? ['contact', 'read']
-              : ['ticket', 'read']
+              : definition.id === 'my_approvals'
+                ? ['timesheet', 'approve']
+                : ['ticket', 'read']
       : definition.id === 'log_time'
         ? ['timeentry', 'create']
         : definition.id === 'approval_response'

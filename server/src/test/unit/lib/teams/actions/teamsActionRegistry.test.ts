@@ -20,12 +20,33 @@ const {
   buildTeamsMessageExtensionResultDeepLinkFromPsaUrlMock,
   buildTeamsPersonalTabDeepLinkFromPsaUrlMock,
   hasPermissionMock,
+  createTenantKnexMock,
+  getReportsToSubordinateIdsMock,
+  isFeatureFlagEnabledMock,
 } = vi.hoisted(() => ({
   getTeamsIntegrationExecutionStateMock: vi.fn(),
   buildTeamsBotResultDeepLinkFromPsaUrlMock: vi.fn(),
   buildTeamsMessageExtensionResultDeepLinkFromPsaUrlMock: vi.fn(),
   buildTeamsPersonalTabDeepLinkFromPsaUrlMock: vi.fn(),
   hasPermissionMock: vi.fn(),
+  createTenantKnexMock: vi.fn(),
+  getReportsToSubordinateIdsMock: vi.fn(),
+  isFeatureFlagEnabledMock: vi.fn(),
+}));
+
+vi.mock('@alga-psa/db', async () => {
+  const actual = await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db');
+  return {
+    ...actual,
+    createTenantKnex: createTenantKnexMock,
+    User: {
+      getReportsToSubordinateIds: getReportsToSubordinateIdsMock,
+    },
+  };
+});
+
+vi.mock('@alga-psa/core', () => ({
+  isFeatureFlagEnabled: isFeatureFlagEnabledMock,
 }));
 
 vi.mock('@alga-psa/integrations/actions/integrations/teamsActions', () => ({
@@ -81,6 +102,31 @@ describe('teamsActionRegistry', () => {
     buildTeamsBotResultDeepLinkFromPsaUrlMock.mockReturnValue('https://teams.test/bot-link');
     buildTeamsMessageExtensionResultDeepLinkFromPsaUrlMock.mockReturnValue('https://teams.test/message-link');
     buildTeamsPersonalTabDeepLinkFromPsaUrlMock.mockReturnValue('https://teams.test/tab-link');
+    isFeatureFlagEnabledMock.mockResolvedValue(false);
+    getReportsToSubordinateIdsMock.mockResolvedValue([]);
+    createTenantKnexMock.mockResolvedValue({
+      knex: Object.assign(
+        vi.fn(() => {
+          const query = Promise.resolve([]) as any;
+          const builder = {
+            join: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            whereIn: vi.fn().mockReturnThis(),
+            select: vi.fn().mockReturnThis(),
+            orderBy: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockReturnThis(),
+            distinct: vi.fn().mockReturnThis(),
+            then: query.then.bind(query),
+            catch: query.catch.bind(query),
+            finally: query.finally.bind(query),
+          };
+          return builder;
+        }),
+        {
+          ref: vi.fn((value: string) => value),
+        }
+      ),
+    });
   });
 
   it('exposes reusable Teams action definitions with declared inputs, targets, operations, and business-operation metadata', () => {
@@ -88,6 +134,7 @@ describe('teamsActionRegistry', () => {
 
     expect(definitions.map((definition) => definition.id)).toEqual([
       'my_tickets',
+      'my_approvals',
       'open_record',
       'assign_ticket',
       'add_note',
@@ -276,6 +323,88 @@ describe('teamsActionRegistry', () => {
       'teams-app-1',
       'https://example.test/msp/tickets/ticket-1'
     );
+  });
+
+  it('lists pending approvals through the shared Teams action registry with approval links and summaries', async () => {
+    const approvalRows = [
+      {
+        id: 'approval-1',
+        approval_status: 'SUBMITTED',
+        first_name: 'Taylor',
+        last_name: 'Nguyen',
+        period_start_date: '2026-03-02',
+        period_end_date: '2026-03-08',
+      },
+      {
+        id: 'approval-2',
+        approval_status: 'CHANGES_REQUESTED',
+        first_name: 'Jamie',
+        last_name: 'Rivera',
+        period_start_date: '2026-02-24',
+        period_end_date: '2026-03-01',
+      },
+    ];
+
+    createTenantKnexMock.mockResolvedValue({
+      knex: Object.assign(
+        vi.fn(() => {
+          const query = Promise.resolve(approvalRows) as any;
+          const builder = {
+            join: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            whereIn: vi.fn().mockReturnThis(),
+            select: vi.fn().mockReturnThis(),
+            orderBy: vi.fn().mockReturnThis(),
+            limit: vi.fn().mockReturnThis(),
+            distinct: vi.fn().mockReturnThis(),
+            then: query.then.bind(query),
+            catch: query.catch.bind(query),
+            finally: query.finally.bind(query),
+          };
+          return builder;
+        }),
+        {
+          ref: vi.fn((value: string) => value),
+        }
+      ),
+    });
+
+    const result = await executeTeamsAction({
+      actionId: 'my_approvals',
+      surface: 'bot',
+      tenantId: 'tenant-1',
+      user: buildUser(),
+      input: {
+        limit: 5,
+      },
+    });
+
+    expect(result).toMatchObject({
+      success: true,
+      actionId: 'my_approvals',
+      summary: {
+        title: 'My approvals',
+        text: 'Found 2 approval items ready for review in Teams.',
+      },
+    });
+    if (result.success) {
+      expect(result.items).toEqual([
+        expect.objectContaining({
+          id: 'approval-1',
+          title: 'Approval approval-1',
+          summary: 'Taylor Nguyen • 2026-03-02 to 2026-03-08 • SUBMITTED',
+          entityType: 'approval',
+          links: [
+            { type: 'teams_tab', label: 'Open in Teams tab', url: 'https://teams.test/bot-link' },
+            { type: 'psa', label: 'Open in full PSA', url: '/msp/time-sheet-approvals?approvalId=approval-1' },
+          ],
+        }),
+        expect.objectContaining({
+          id: 'approval-2',
+          summary: 'Jamie Rivera • 2026-02-24 to 2026-03-01 • CHANGES_REQUESTED',
+        }),
+      ]);
+    }
   });
 
   it('returns a single validation-error shape when normalized inputs are missing or invalid', async () => {

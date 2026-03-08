@@ -2434,7 +2434,7 @@
   {
     "id": "T305",
     "description": "Happy path: Personal bot command approvals: returns the technician's pending approvals.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F153"
     ]
@@ -2442,7 +2442,7 @@
   {
     "id": "T306",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command approvals: returns the technician's pending approvals.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F153"
     ]
@@ -2450,7 +2450,7 @@
   {
     "id": "T307",
     "description": "Happy path: Personal bot command approvals: can execute approve/reject or request-change actions for supported approval items.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F154"
     ]
@@ -2458,7 +2458,7 @@
   {
     "id": "T308",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command approvals: can execute approve/reject or request-change actions for supported approval items.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F154"
     ]

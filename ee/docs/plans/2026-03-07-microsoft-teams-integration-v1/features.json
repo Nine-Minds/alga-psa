@@ -1448,7 +1448,7 @@
   {
     "id": "F153",
     "description": "Personal bot command approvals: returns the technician's pending approvals.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1458,7 +1458,7 @@
   {
     "id": "F154",
     "description": "Personal bot command approvals: can execute approve/reject or request-change actions for supported approval items.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",

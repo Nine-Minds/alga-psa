@@ -115,7 +115,7 @@ describe('teamsBotHandler', () => {
       selectedProfileId: 'profile-1',
       installStatus: 'active',
       enabledCapabilities: ['personal_bot', 'personal_tab', 'message_extension'],
-      allowedActions: ['assign_ticket', 'add_note', 'reply_to_contact', 'log_time'],
+      allowedActions: ['assign_ticket', 'add_note', 'reply_to_contact', 'log_time', 'approval_response'],
       appId: 'teams-app-1',
       packageMetadata: {
         baseUrl: 'https://example.test',
@@ -147,6 +147,7 @@ describe('teamsBotHandler', () => {
     expect(welcome.text).toContain('Alga PSA is ready');
     expect(welcome.attachments?.[0]?.content.title).toBe('Teams bot commands');
     expect(welcome.attachments?.[0]?.content.text).toContain('my tickets');
+    expect(welcome.attachments?.[0]?.content.text).toContain('my approvals');
     expect(welcome.attachments?.[0]?.content.text).toContain('ticket <id>');
     expect(welcome.attachments?.[0]?.content.text).toContain('assign ticket <ticket-id> to me');
     expect(welcome.suggestedActions?.actions.map((action) => action.value)).toContain('my tickets');
@@ -156,6 +157,7 @@ describe('teamsBotHandler', () => {
     expect(help.attachments?.[0]?.content.text).toContain('add note <ticket-id>: <note>');
     expect(help.attachments?.[0]?.content.text).toContain('reply to contact <ticket-id>: <reply>');
     expect(help.attachments?.[0]?.content.text).toContain('log time ticket <ticket-id> 30m: <note>');
+    expect(help.attachments?.[0]?.content.text).toContain('approve approval <approval-id>');
     expect(help.metadata?.commandId).toBe('help');
   });
 
@@ -741,6 +743,80 @@ describe('teamsBotHandler', () => {
     );
   });
 
+  it('T305: `my approvals` returns pending approval summaries with Teams links and approval command shortcuts', async () => {
+    executeTeamsActionMock.mockResolvedValue({
+      success: true,
+      actionId: 'my_approvals',
+      surface: 'bot',
+      operation: 'lookup',
+      summary: {
+        title: 'My approvals',
+        text: 'Found 2 approval items ready for review in Teams.',
+      },
+      links: [],
+      items: [
+        {
+          id: 'approval-1',
+          title: 'Approval approval-1',
+          summary: 'Taylor Nguyen • 2026-03-02 to 2026-03-08 • SUBMITTED',
+          entityType: 'approval',
+          links: [
+            { type: 'teams_tab', label: 'Open in Teams tab', url: 'https://teams.test/approval-1' },
+            { type: 'psa', label: 'Open in full PSA', url: '/msp/time-sheet-approvals?approvalId=approval-1' },
+          ],
+        },
+        {
+          id: 'approval-2',
+          title: 'Approval approval-2',
+          summary: 'Jamie Rivera • 2026-02-24 to 2026-03-01 • CHANGES_REQUESTED',
+          entityType: 'approval',
+          links: [
+            { type: 'teams_tab', label: 'Open in Teams tab', url: 'https://teams.test/approval-2' },
+            { type: 'psa', label: 'Open in full PSA', url: '/msp/time-sheet-approvals?approvalId=approval-2' },
+          ],
+        },
+      ],
+      warnings: [],
+      metadata: {
+        surface: 'bot',
+        idempotencyKey: null,
+        idempotentReplay: false,
+        invokingSurface: 'bot',
+        businessOperations: ['TimeSheetApprovalQuery.listPendingApprovals'],
+      },
+    });
+    listAvailableTeamsActionsMock.mockResolvedValue([
+      {
+        actionId: 'approval_response',
+        operation: 'mutation',
+        available: true,
+        targetEntityTypes: ['approval'],
+        requiredInputs: [],
+        businessOperations: ['TimeSheetService.approveTimeSheet', 'TimeSheetService.requestChanges'],
+      },
+    ]);
+
+    const response = await handleTeamsBotActivity(buildPersonalMessageActivity('my approvals'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(executeTeamsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: 'my_approvals',
+        input: {
+          limit: 5,
+        },
+      })
+    );
+    expect(response.text).toContain('Found 2 approval items');
+    expect(response.attachments?.[1]?.content.buttons).toContainEqual(
+      expect.objectContaining({ type: 'imBack', value: 'approve approval approval-1' })
+    );
+    expect(response.attachments?.[1]?.content.buttons).toContainEqual(
+      expect.objectContaining({ type: 'imBack', value: 'request changes approval approval-1: <comment>' })
+    );
+  });
+
   it('T270/T272/T274: recoverable permission failures from `my tickets` remain user-readable inside Teams', async () => {
     executeTeamsActionMock.mockResolvedValue({
       success: false,
@@ -768,6 +844,158 @@ describe('teamsBotHandler', () => {
 
     expect(response.text).toContain('You do not have permission');
     expect(response.attachments?.[0]?.content.text).toContain('Open the full PSA application');
+  });
+
+  it('T306: recoverable permission failures from `my approvals` remain user-readable inside Teams', async () => {
+    executeTeamsActionMock.mockResolvedValue({
+      success: false,
+      actionId: 'my_approvals',
+      surface: 'bot',
+      operation: 'lookup',
+      error: {
+        code: 'forbidden',
+        message: 'You do not have permission to view approvals from Teams.',
+        remediation: 'Open the full PSA application if you need broader access.',
+      },
+      warnings: [],
+      metadata: {
+        surface: 'bot',
+        idempotencyKey: null,
+        idempotentReplay: false,
+        invokingSurface: 'bot',
+        businessOperations: ['TimeSheetApprovalQuery.listPendingApprovals'],
+      },
+    });
+
+    const response = await handleTeamsBotActivity(buildPersonalMessageActivity('my approvals'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(response.text).toContain('view approvals');
+    expect(response.attachments?.[0]?.content.title).toBe('Teams bot request unavailable');
+  });
+
+  it('T307: approval commands execute approve and request-changes flows through the shared Teams action layer', async () => {
+    executeTeamsActionMock
+      .mockResolvedValueOnce({
+        success: true,
+        actionId: 'approval_response',
+        surface: 'bot',
+        operation: 'mutation',
+        summary: {
+          title: 'Approval completed',
+          text: 'Approval approval-1 was approved successfully.',
+        },
+        links: [
+          { type: 'teams_tab', label: 'Open in Teams tab', url: 'https://teams.test/approval-1' },
+          { type: 'psa', label: 'Open in full PSA', url: '/msp/time-sheet-approvals?approvalId=approval-1' },
+        ],
+        items: [],
+        target: {
+          entityType: 'approval',
+          id: 'approval-1',
+          destination: {
+            type: 'approval',
+            approvalId: 'approval-1',
+          },
+        },
+        warnings: [],
+        metadata: {
+          surface: 'bot',
+          idempotencyKey: null,
+          idempotentReplay: false,
+          invokingSurface: 'bot',
+          businessOperations: ['TimeSheetService.approveTimeSheet', 'TimeSheetService.requestChanges'],
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        actionId: 'approval_response',
+        surface: 'bot',
+        operation: 'mutation',
+        summary: {
+          title: 'Changes requested',
+          text: 'Approval approval-2 was returned with requested changes.',
+        },
+        links: [
+          { type: 'teams_tab', label: 'Open in Teams tab', url: 'https://teams.test/approval-2' },
+          { type: 'psa', label: 'Open in full PSA', url: '/msp/time-sheet-approvals?approvalId=approval-2' },
+        ],
+        items: [],
+        target: {
+          entityType: 'approval',
+          id: 'approval-2',
+          destination: {
+            type: 'approval',
+            approvalId: 'approval-2',
+          },
+        },
+        warnings: [],
+        metadata: {
+          surface: 'bot',
+          idempotencyKey: null,
+          idempotentReplay: false,
+          invokingSurface: 'bot',
+          businessOperations: ['TimeSheetService.approveTimeSheet', 'TimeSheetService.requestChanges'],
+        },
+      });
+
+    const approveResponse = await handleTeamsBotActivity(buildPersonalMessageActivity('approve approval approval-1'), {
+      tenantIdHint: 'tenant-1',
+    });
+    const requestChangesResponse = await handleTeamsBotActivity(
+      buildPersonalMessageActivity('reject approval approval-2: Please split Friday travel and labor.'),
+      {
+        tenantIdHint: 'tenant-1',
+      }
+    );
+
+    expect(executeTeamsActionMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        actionId: 'approval_response',
+        target: {
+          entityType: 'approval',
+          approvalId: 'approval-1',
+        },
+        input: {
+          approvalId: 'approval-1',
+          outcome: 'approve',
+        },
+      })
+    );
+    expect(executeTeamsActionMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        actionId: 'approval_response',
+        target: {
+          entityType: 'approval',
+          approvalId: 'approval-2',
+        },
+        input: {
+          approvalId: 'approval-2',
+          outcome: 'request_changes',
+          comment: 'Please split Friday travel and labor.',
+        },
+      })
+    );
+    expect(approveResponse.text).toContain('approved successfully');
+    expect(requestChangesResponse.text).toContain('requested changes');
+  });
+
+  it('T308: approval commands validate missing approval IDs and required change-request comments with recoverable guidance', async () => {
+    const missingTarget = await handleTeamsBotActivity(buildPersonalMessageActivity('approve approval'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(missingTarget.text).toContain('Specify an approval reference');
+
+    const missingComment = await handleTeamsBotActivity(buildPersonalMessageActivity('request changes approval approval-2'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(missingComment.text).toContain('Add a comment');
+    expect(executeTeamsActionMock).not.toHaveBeenCalled();
   });
 
   it('T275/T277/T276/T278: `ticket <id>` returns a ticket summary when allowed and a clear not-found response when the reference is invalid', async () => {

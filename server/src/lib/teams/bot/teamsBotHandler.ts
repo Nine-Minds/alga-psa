@@ -9,6 +9,7 @@ import {
   type TeamsActionEntityReference,
   type TeamsActionLink,
   type TeamsActionResult,
+  type TeamsActionResultItem,
   type TeamsActionSurface,
 } from 'server/src/lib/teams/actions/teamsActionRegistry';
 import { resolveTeamsLinkedUser } from 'server/src/lib/teams/resolveTeamsLinkedUser';
@@ -68,11 +69,18 @@ type ParsedCommand =
   | { kind: 'help' }
   | { kind: 'unsupported'; text: string }
   | { kind: 'my_tickets' }
+  | { kind: 'my_approvals' }
   | { kind: 'ticket'; ticketId: string }
   | { kind: 'assign_ticket'; ticketId?: string; assignee?: string }
   | { kind: 'add_note'; ticketId?: string; note?: string }
   | { kind: 'reply_to_contact'; ticketId?: string; reply?: string }
-  | { kind: 'log_time'; targetType?: 'ticket' | 'project_task'; targetId?: string; durationMinutes?: number; note?: string };
+  | { kind: 'log_time'; targetType?: 'ticket' | 'project_task'; targetId?: string; durationMinutes?: number; note?: string }
+  | {
+      kind: 'approval_response';
+      approvalId?: string;
+      outcome: 'approve' | 'request_changes';
+      comment?: string;
+    };
 
 interface HandleTeamsBotActivityOptions {
   tenantIdHint?: string | null;
@@ -174,6 +182,10 @@ function parseCommand(text: string): ParsedCommand {
     return { kind: 'my_tickets' };
   }
 
+  if (lower === 'my approvals') {
+    return { kind: 'my_approvals' };
+  }
+
   const ticketMatch = normalized.match(/^ticket\s+(.+)$/i);
   if (ticketMatch) {
     return { kind: 'ticket', ticketId: ticketMatch[1].trim() };
@@ -218,6 +230,26 @@ function parseCommand(text: string): ParsedCommand {
     };
   }
 
+  const approveApprovalMatch = normalized.match(/^approve approval(?:\s+(\S+))?(?:\s*:\s*(.+))?$/i);
+  if (approveApprovalMatch) {
+    return {
+      kind: 'approval_response',
+      approvalId: parseTicketCommandReference(approveApprovalMatch[1]),
+      outcome: 'approve',
+      comment: normalizeOptionalString(approveApprovalMatch[2]) || undefined,
+    };
+  }
+
+  const requestChangesMatch = normalized.match(/^(?:request changes|reject) approval(?:\s+(\S+))?(?:\s*:\s*(.+))?$/i);
+  if (requestChangesMatch) {
+    return {
+      kind: 'approval_response',
+      approvalId: parseTicketCommandReference(requestChangesMatch[1]),
+      outcome: 'request_changes',
+      comment: normalizeOptionalString(requestChangesMatch[2]) || undefined,
+    };
+  }
+
   return { kind: 'unsupported', text: normalized };
 }
 
@@ -237,6 +269,7 @@ async function buildSupportedCommandButtons(tenantId: string): Promise<TeamsBotB
   const integration = await getTeamsIntegrationExecutionState(tenantId);
   const buttons: TeamsBotButton[] = [
     buildImBackButton('My tickets', 'my tickets'),
+    buildImBackButton('My approvals', 'my approvals'),
     buildImBackButton('Ticket <id>', 'ticket <id>'),
   ];
 
@@ -251,6 +284,10 @@ async function buildSupportedCommandButtons(tenantId: string): Promise<TeamsBotB
   }
   if (integration.allowedActions.includes('log_time')) {
     buttons.push(buildImBackButton('Log time', 'log time ticket <ticket-id> 30m: <note>'));
+  }
+  if (integration.allowedActions.includes('approval_response')) {
+    buttons.push(buildImBackButton('Approve approval', 'approve approval <approval-id>'));
+    buttons.push(buildImBackButton('Request changes', 'request changes approval <approval-id>: <comment>'));
   }
 
   return buttons;
@@ -315,8 +352,32 @@ function mapActionAvailabilityToButtons(
         return [buildImBackButton('Log time', `log time task ${target.taskId} 30m: <note>`)];
       }
       return [];
+    case 'approval_response':
+      return target.entityType === 'approval'
+        ? [
+            buildImBackButton('Approve', `approve approval ${target.approvalId}`),
+            buildImBackButton('Request changes', `request changes approval ${target.approvalId}: <comment>`),
+          ]
+        : [];
     default:
       return [];
+  }
+}
+
+function buildTargetReferenceFromItem(item: TeamsActionResultItem): TeamsActionEntityReference | null {
+  switch (item.entityType) {
+    case 'ticket':
+      return { entityType: 'ticket', ticketId: item.id };
+    case 'project_task':
+      return { entityType: 'project_task', taskId: item.id };
+    case 'approval':
+      return { entityType: 'approval', approvalId: item.id };
+    case 'time_entry':
+      return { entityType: 'time_entry', entryId: item.id };
+    case 'contact':
+      return { entityType: 'contact', contactId: item.id };
+    default:
+      return null;
   }
 }
 
@@ -439,14 +500,10 @@ async function renderActionResult(
   ];
 
   for (const item of result.items) {
+    const targetReference = buildTargetReferenceFromItem(item);
     const buttons = [
       ...mapLinksToButtons(item.links),
-      ...(item.entityType === 'ticket'
-        ? await buildTargetedActionButtons(context.tenantId, context.user, {
-            entityType: 'ticket',
-            ticketId: item.id,
-          })
-        : []),
+      ...(targetReference ? await buildTargetedActionButtons(context.tenantId, context.user, targetReference) : []),
     ].slice(0, 5);
 
     attachments.push(buildCard(item.title, item.summary, buttons));
@@ -810,6 +867,72 @@ async function handleLogTimeCommand(params: {
   );
 }
 
+async function handleApprovalResponseCommand(params: {
+  tenantId: string;
+  user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>;
+  metadata: TeamsBotResponseActivity['metadata'];
+  approvalId?: string;
+  outcome: 'approve' | 'request_changes';
+  comment?: string;
+}): Promise<TeamsBotResponseActivity> {
+  if (!params.approvalId) {
+    const example =
+      params.outcome === 'approve'
+        ? 'approve approval <approval-id>'
+        : 'request changes approval <approval-id>: <comment>';
+    return buildMessageResponse(`Specify an approval reference, for example: ${example}.`, {
+      attachments: [
+        buildCard('Command needs an approval reference', `Specify an approval reference, for example: ${example}.`),
+      ],
+      metadata: {
+        ...params.metadata,
+        commandId: 'approval_response',
+      },
+    });
+  }
+
+  if (params.outcome === 'request_changes' && !normalizeOptionalString(params.comment)) {
+    return buildMessageResponse(
+      `Add a comment so the technician knows what to change, for example: request changes approval ${params.approvalId}: Please add more detail for Friday.`,
+      {
+        attachments: [
+          buildCard(
+            'Change request comment required',
+            `Approval ${params.approvalId} is ready. Add a comment so the technician knows what to change, for example: request changes approval ${params.approvalId}: Please add more detail for Friday.`
+          ),
+        ],
+        metadata: {
+          ...params.metadata,
+          commandId: 'approval_response',
+        },
+      }
+    );
+  }
+
+  return renderActionResult(
+    await executeTeamsAction({
+      actionId: 'approval_response',
+      surface: BOT_SURFACE,
+      tenantId: params.tenantId,
+      user: params.user,
+      target: {
+        entityType: 'approval',
+        approvalId: params.approvalId,
+      },
+      input: {
+        approvalId: params.approvalId,
+        outcome: params.outcome,
+        ...(normalizeOptionalString(params.comment) ? { comment: params.comment } : {}),
+      },
+    }),
+    {
+      tenantId: params.tenantId,
+      user: params.user,
+      metadata: params.metadata,
+    }
+  );
+}
+
 export async function handleTeamsBotActivity(
   activity: TeamsBotActivity,
   options: HandleTeamsBotActivityOptions = {}
@@ -908,6 +1031,23 @@ export async function handleTeamsBotActivity(
           metadata,
         }
       );
+    case 'my_approvals':
+      return renderActionResult(
+        await executeTeamsAction({
+          actionId: 'my_approvals',
+          surface: BOT_SURFACE,
+          tenantId: tenantContext.tenantId,
+          user,
+          input: {
+            limit: 5,
+          },
+        }),
+        {
+          tenantId: tenantContext.tenantId,
+          user,
+          metadata,
+        }
+      );
     case 'ticket':
       return renderActionResult(
         await executeTeamsAction({
@@ -949,6 +1089,15 @@ export async function handleTeamsBotActivity(
         metadata,
         ticketId: parsed.ticketId,
         reply: parsed.reply,
+      });
+    case 'approval_response':
+      return handleApprovalResponseCommand({
+        tenantId: tenantContext.tenantId,
+        user,
+        metadata,
+        approvalId: parsed.approvalId,
+        outcome: parsed.outcome,
+        comment: parsed.comment,
       });
     case 'log_time': {
       return handleLogTimeCommand({
