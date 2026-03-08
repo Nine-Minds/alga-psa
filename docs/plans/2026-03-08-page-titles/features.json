@@ -274,7 +274,7 @@
   {
     "id": "F035",
     "description": "MSP page title: /msp/chat — title: 'Chat'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
