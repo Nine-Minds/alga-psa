@@ -218,7 +218,7 @@
   {
     "id": "T017",
     "description": "Verify existing metadata compatibility: /surveys/respond/[token] generateMetadata() returns a string title (works with root template)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F105"
     ]
