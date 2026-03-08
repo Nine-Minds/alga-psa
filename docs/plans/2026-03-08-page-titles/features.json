@@ -26,7 +26,7 @@
   {
     "id": "F004",
     "description": "Auth layout: add metadata export with `template: '%s | Alga PSA'` and `default: 'Sign In | Alga PSA'`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 2"
     ]
