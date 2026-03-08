@@ -250,7 +250,7 @@
   {
     "id": "T020",
     "description": "Verify no page uses client-side document.title for setting titles",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001"
     ]
