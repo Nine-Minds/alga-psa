@@ -506,7 +506,7 @@
   {
     "id": "F064",
     "description": "MSP page title: /msp/extensions/[id] — verify existing re-exported metadata from @product/extensions/entry is compatible",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3c"
     ]
