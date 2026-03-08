@@ -146,7 +146,7 @@
   {
     "id": "F019",
     "description": "ProjectQuickAdd wires ClientPicker onAddNew to open QuickAddClient and auto-selects new client",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4"
     ]

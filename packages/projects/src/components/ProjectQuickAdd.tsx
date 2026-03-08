@@ -27,7 +27,7 @@ import type { PendingTag } from '@alga-psa/types';
 import { createTagsForEntity } from '@alga-psa/tags/actions';
 import ClientPortalConfigEditor from './ClientPortalConfigEditor';
 import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
-import { QuickAddContact } from '@alga-psa/clients/components';
+import { QuickAddClient, QuickAddContact } from '@alga-psa/clients/components';
 
 interface ProjectQuickAddProps {
   onClose: () => void;
@@ -38,9 +38,11 @@ interface ProjectQuickAddProps {
 const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdded, clients }) => {
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
+  const [clientOptions, setClientOptions] = useState<IClient[]>(clients);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const [users, setUsers] = useState<IUser[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -59,6 +61,10 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
   const [clientPortalConfig, setClientPortalConfig] = useState<IClientPortalConfig>(DEFAULT_CLIENT_PORTAL_CONFIG);
   const [showClientPortalConfig, setShowClientPortalConfig] = useState(false);
+
+  useEffect(() => {
+    setClientOptions(clients);
+  }, [clients]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -243,7 +249,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                 <label className="block text-sm font-medium text-gray-700 mb-1">Client *</label>
                 <ClientPicker
                   id='client-picker'
-                  clients={clients}
+                  clients={clientOptions}
                   onSelect={setSelectedClientId}
                   selectedClientId={selectedClientId}
                   filterState={filterState}
@@ -251,6 +257,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                   clientTypeFilter={clientTypeFilter}
                   onClientTypeFilterChange={setClientTypeFilter}
                   className={hasAttemptedSubmit && !selectedClientId ? 'ring-1 ring-red-500' : ''}
+                  onAddNew={() => setIsQuickAddClientOpen(true)}
                 />
               </div>
               <div>
@@ -282,8 +289,25 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                   setSelectedContactId(newContact.contact_name_id);
                   setIsQuickAddContactOpen(false);
                 }}
-                clients={clients}
+                clients={clientOptions}
                 selectedClientId={selectedClientId || undefined}
+              />
+              <QuickAddClient
+                open={isQuickAddClientOpen}
+                onOpenChange={setIsQuickAddClientOpen}
+                onClientAdded={(newClient) => {
+                  setClientOptions((prevClients) => {
+                    const existingIndex = prevClients.findIndex((client) => client.client_id === newClient.client_id);
+                    if (existingIndex >= 0) {
+                      const nextClients = [...prevClients];
+                      nextClients[existingIndex] = newClient;
+                      return nextClients;
+                    }
+                    return [...prevClients, newClient];
+                  });
+                  setSelectedClientId(newClient.client_id);
+                  setSelectedContactId(null);
+                }}
               />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Project Manager</label>

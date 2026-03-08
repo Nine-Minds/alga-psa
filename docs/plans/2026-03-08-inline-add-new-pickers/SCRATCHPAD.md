@@ -148,3 +148,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `npx tsc -p packages/ui/tsconfig.json --noEmit`
 - 2026-03-08 F018: Wired `packages/tickets/src/components/QuickAddTicket.tsx` to open `QuickAddClient` from `ClientPicker`, merge new clients into local state, auto-select the created client, and let the existing client-data effect refresh contacts/locations for the new selection.
 - Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
+- 2026-03-08 F019: Wired `packages/projects/src/components/ProjectQuickAdd.tsx` to maintain a local `clientOptions` list, open `QuickAddClient` from the client picker, merge newly created clients into that list, and auto-select the new client while clearing any stale contact selection.
+- Validation: `npx tsc -p packages/projects/tsconfig.json --noEmit`
