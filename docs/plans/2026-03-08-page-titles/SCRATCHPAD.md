@@ -120,3 +120,4 @@
 - (2026-03-08) F070: MSP page title: /msp/onboarding — title: 'Onboarding'
 - (2026-03-08) F071: MSP page title: /msp/share_document — title: 'Share Document'
 - (2026-03-08) F072: MSP page title: /msp/test — title: 'Test'
+- (2026-03-08) F073: MSP page title: /msp/test/ui-kit — title: 'UI Kit'

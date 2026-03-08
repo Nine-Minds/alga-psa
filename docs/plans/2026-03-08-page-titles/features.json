@@ -578,7 +578,7 @@
   {
     "id": "F073",
     "description": "MSP page title: /msp/test/ui-kit — title: 'UI Kit'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
