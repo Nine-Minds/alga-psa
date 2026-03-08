@@ -39,6 +39,12 @@ import WorkflowRunWaitModelV2 from '@shared/workflow/persistence/workflowRunWait
 import WorkflowActionInvocationModelV2 from '@shared/workflow/persistence/workflowActionInvocationModelV2';
 import WorkflowRuntimeEventModelV2 from '@shared/workflow/persistence/workflowRuntimeEventModelV2';
 import WorkflowRunLogModelV2 from '@shared/workflow/persistence/workflowRunLogModelV2';
+import {
+  buildDesiredWorkflowSchedule,
+  deleteWorkflowScheduleState,
+  syncWorkflowScheduleState
+} from 'server/src/lib/workflow-runtime-v2/workflowScheduleLifecycle';
+import { launchPublishedWorkflowRun } from 'server/src/lib/workflow-runtime-v2/workflowRunLauncher';
 import { auditLog } from '@alga-psa/db';
 import { analytics } from '@alga-psa/analytics';
 import { EventCatalogModel } from '../models/eventCatalog';
@@ -229,6 +235,14 @@ const collectTimeTriggerValidationErrors = (trigger: unknown): PublishError[] =>
   }
 
   return [];
+};
+
+const getLatestPublishedWorkflowVersion = async (
+  knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
+  workflowId: string
+): Promise<WorkflowDefinitionVersionRecord | null> => {
+  const versions = await WorkflowDefinitionVersionModelV2.listByWorkflow(knex, workflowId);
+  return versions[0] ?? null;
 };
 
 const normalizeTimeTriggerDraftContract = <T extends Record<string, unknown>>(params: {
@@ -1362,10 +1376,12 @@ export const updateWorkflowDefinitionMetadataAction = withAuth(async (user, { te
     await requireWorkflowPermission(user, 'admin', knex);
   }
 
+  const nextIsPaused = parsed.isPaused ?? current.is_paused ?? false;
+
   const updated = await WorkflowDefinitionModelV2.update(knex, parsed.workflowId, {
     ...(parsed.key ? { key: parsed.key.trim() } : {}),
     is_visible: parsed.isVisible ?? current.is_visible ?? true,
-    is_paused: parsed.isPaused ?? current.is_paused ?? false,
+    is_paused: nextIsPaused,
     concurrency_limit: parsed.concurrencyLimit ?? current.concurrency_limit ?? null,
     auto_pause_on_failure: parsed.autoPauseOnFailure ?? current.auto_pause_on_failure ?? false,
     failure_rate_threshold: parsed.failureRateThreshold ?? current.failure_rate_threshold ?? null,
@@ -1373,6 +1389,19 @@ export const updateWorkflowDefinitionMetadataAction = withAuth(async (user, { te
     retention_policy_override: parsed.retentionPolicyOverride ?? current.retention_policy_override ?? null,
     updated_by: user.user_id
   });
+
+  if (tenant && current.status === 'published') {
+    const latestVersion = await getLatestPublishedWorkflowVersion(knex, parsed.workflowId);
+    const publishedDefinition = latestVersion?.definition_json as WorkflowDefinitionVersionRecord['definition_json'] | undefined;
+    const desired = latestVersion && publishedDefinition
+      ? buildDesiredWorkflowSchedule(publishedDefinition as any, latestVersion.version, !nextIsPaused)
+      : null;
+    await syncWorkflowScheduleState(knex, {
+      tenantId: tenant,
+      workflowId: parsed.workflowId,
+      desired
+    });
+  }
 
   await auditWorkflowEvent(knex, user, {
     operation: 'workflow_definition_metadata_update',
@@ -1515,6 +1544,13 @@ export const deleteWorkflowDefinitionAction = withAuth(async (
     };
   }
 
+  if (tenant) {
+    await deleteWorkflowScheduleState(knex, {
+      tenantId: tenant,
+      workflowId: parsed.workflowId
+    });
+  }
+
   const result = await deleteEntityWithValidation('workflow', parsed.workflowId, knex, tenant, async (trx) => {
     const runIds = await trx('workflow_runs')
       .where({ workflow_id: parsed.workflowId })
@@ -1535,6 +1571,10 @@ export const deleteWorkflowDefinitionAction = withAuth(async (
       .del();
 
     await trx('workflow_definition_versions')
+      .where({ workflow_id: parsed.workflowId })
+      .del();
+
+    await trx('tenant_workflow_schedule')
       .where({ workflow_id: parsed.workflowId })
       .del();
 
@@ -1694,6 +1734,14 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
     validated_at: new Date().toISOString(),
     updated_by: user.user_id
   });
+
+  if (tenant) {
+    await syncWorkflowScheduleState(knex, {
+      tenantId: tenant,
+      workflowId: parsed.workflowId,
+      desired: buildDesiredWorkflowSchedule(definition as any, record.version, !(workflow.is_paused ?? false))
+    });
+  }
 
   await auditWorkflowEvent(knex, user, {
     operation: 'workflow_definition_publish',
@@ -2971,16 +3019,18 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
       }
     }
 
-    const newRunId = await runtime.startRun(knex, {
+    const launched = await launchPublishedWorkflowRun(knex, {
       workflowId: workflow.workflow_id,
-      version: latest.version,
+      workflowVersion: latest.version,
       payload: workflowPayload,
       tenantId: tenant,
       eventType: parsed.eventName,
       sourcePayloadSchemaRef: effectiveSourceSchemaRef,
-      triggerMappingApplied: mappingApplied
+      triggerMappingApplied: mappingApplied,
+      execute: true,
+      executionKey: `event-${Date.now()}`
     });
-    startedRuns.push(newRunId);
+    startedRuns.push(launched.runId);
 
     try {
       void analytics.capture('workflow.trigger.mapping_applied', {
@@ -2998,7 +3048,6 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
       // best-effort telemetry
     }
 
-    await runtime.executeRun(knex, newRunId, `event-${Date.now()}`);
   }
 
   return { status: runId ? 'resumed' : 'no_wait', runId, startedRuns, eventId: (eventRecord as any)?.event_id ?? null };

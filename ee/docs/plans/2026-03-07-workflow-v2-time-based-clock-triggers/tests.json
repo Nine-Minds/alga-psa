@@ -44,7 +44,7 @@
   {
     "id": "T008",
     "description": "Contract: time-trigger fire payload matches the registered synthetic schema",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F018", "F019"]
   },
   {
@@ -146,61 +146,61 @@
   {
     "id": "T025",
     "description": "Launcher: event-triggered workflow starts still flow through the shared launcher after refactor",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F017"]
   },
   {
     "id": "T026",
     "description": "Launcher: one-time schedule job handler starts a workflow run through the shared launcher",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F018"]
   },
   {
     "id": "T027",
     "description": "Launcher: recurring schedule job handler starts a workflow run through the shared launcher",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F019"]
   },
   {
     "id": "T028",
     "description": "Publish lifecycle: publishing a one-time scheduled workflow registers a one-time job via scheduleJobAt",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {
     "id": "T029",
     "description": "Publish lifecycle: publishing a recurring scheduled workflow registers a recurring job via scheduleRecurringJob",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {
     "id": "T030",
     "description": "Lifecycle: pausing a published time-triggered workflow cancels or disables its registered schedule",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
     "id": "T031",
     "description": "Lifecycle: deleting a published time-triggered workflow cancels its registered schedule",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
     "id": "T032",
     "description": "Lifecycle: changing a published workflow from time trigger to event trigger removes its registered schedule",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022", "F023"]
   },
   {
     "id": "T033",
     "description": "Reschedule: updating a published one-time trigger atomically cancels the old registration and stores the replacement registration",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   },
   {
     "id": "T034",
     "description": "Reschedule: updating a published recurring trigger atomically cancels the old registration and stores the replacement registration",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   },
   {

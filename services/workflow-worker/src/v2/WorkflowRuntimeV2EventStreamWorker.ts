@@ -1,9 +1,10 @@
 import logger from '@shared/core/logger.js';
 import { RedisStreamClient, WorkflowEventBaseSchema } from '@shared/workflow/streams/index.js';
-import { WorkflowRuntimeV2, getSchemaRegistry, initializeWorkflowRuntimeV2 } from '@shared/workflow/runtime';
+import { getSchemaRegistry, initializeWorkflowRuntimeV2 } from '@shared/workflow/runtime';
 import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
 import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
 import WorkflowRuntimeEventModelV2 from '@shared/workflow/persistence/workflowRuntimeEventModelV2';
+import { launchPublishedWorkflowRun } from 'server/src/lib/workflow-runtime-v2/workflowRunLauncher';
 import { getAdminConnection } from '@shared/db/admin.js';
 import type { Knex } from 'knex';
 
@@ -140,7 +141,6 @@ export class WorkflowRuntimeV2EventStreamWorker {
       processed_at: processedAt,
     });
 
-    const runtime = new WorkflowRuntimeV2();
     const schemaRegistry = getSchemaRegistry();
 
     const workflows = await WorkflowDefinitionModelV2.list(knex);
@@ -191,20 +191,21 @@ export class WorkflowRuntimeV2EventStreamWorker {
         continue;
       }
 
-      const runId = await runtime.startRun(knex, {
+      const launched = await launchPublishedWorkflowRun(knex, {
         workflowId: workflow.workflow_id,
-        version: latest.version,
+        workflowVersion: latest.version,
         payload,
         tenantId: event.tenant,
         eventType: event.event_type,
         sourcePayloadSchemaRef: payloadSchemaRef ?? workflowPayloadSchemaRef,
         triggerMappingApplied: false,
+        execute: false,
       });
-      startedRuns.push(runId);
+      startedRuns.push(launched.runId);
       if (this.verbose) {
         logger.info('[WorkflowRuntimeV2EventStreamWorker] Started run', {
           workerId: this.workerId,
-          runId,
+          runId: launched.runId,
           workflowId: workflow.workflow_id,
           version: latest.version,
           eventId: event.event_id,

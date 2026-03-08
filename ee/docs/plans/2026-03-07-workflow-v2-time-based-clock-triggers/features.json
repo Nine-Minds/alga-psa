@@ -80,61 +80,61 @@
   {
     "id": "F014",
     "description": "Add an EE workflow schedule state table for time-trigger registration and lifecycle tracking",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations", "Non-functional Requirements"]
   },
   {
     "id": "F015",
     "description": "Persist job-runner identifiers and schedule lifecycle state for registered workflow schedules",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations", "Observability"]
   },
   {
     "id": "F016",
     "description": "Extract a shared workflow launcher service that centralizes run-start behavior across trigger types",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements"]
   },
   {
     "id": "F017",
     "description": "Refactor the existing event-trigger ingress path to use the shared launcher service",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements"]
   },
   {
     "id": "F018",
     "description": "Add an EE job handler that starts one-time scheduled workflow runs through the shared launcher",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Data / API / Integrations"]
   },
   {
     "id": "F019",
     "description": "Add an EE job handler that starts recurring scheduled workflow runs through the shared launcher",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Data / API / Integrations"]
   },
   {
     "id": "F020",
     "description": "Register one-time scheduled jobs when a published workflow uses a one-time time trigger",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Rollout / Migration"]
   },
   {
     "id": "F021",
     "description": "Register recurring schedules when a published workflow uses a recurring time trigger",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Rollout / Migration"]
   },
   {
     "id": "F022",
     "description": "Cancel or disable registered time-trigger jobs when workflows are paused, deleted, or changed away from time triggers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Rollout / Migration"]
   },
   {
     "id": "F023",
     "description": "Atomically reschedule published time-trigger registrations when trigger configuration changes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Non-functional Requirements"]
   },
   {

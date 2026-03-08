@@ -62,6 +62,9 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
   - `pnpm exec eslint ee/server/src/components/workflow-designer/WorkflowDesigner.tsx ee/server/src/__tests__/page-objects/WorkflowDesignerPage.ts ee/server/src/__tests__/integration/workflow-designer-time-triggers.playwright.test.ts`
   - `cd ee/server && npm run typecheck`
   - `cd ee/server && npx playwright test -c playwright.config.ts src/__tests__/integration/workflow-designer-time-triggers.playwright.test.ts --headed`
+- (2026-03-07) Validate scheduling lifecycle and launcher wiring:
+  - `cd server && pnpm vitest run src/test/unit/workflowTimeTriggerSchedulingLifecycle.unit.test.ts src/test/unit/workflowScheduledRunHandlers.unit.test.ts src/test/unit/workflowEventLauncherRouting.unit.test.ts --config vitest.config.ts`
+  - `cd ee/server && npm run typecheck`
 
 ## Progress Log
 
@@ -90,6 +93,14 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
   - Added `ee/server/src/__tests__/integration/workflow-designer-time-triggers.playwright.test.ts` plus page-object helpers for the new controls.
   - `npm run typecheck` passed in `ee/server`.
   - The targeted Playwright run could not complete in this environment because the EE Playwright web-server bootstrap never brought `http://localhost:3300` up; the worker stalled before any browser steps ran.
+- (2026-03-07) Completed F014-F023 and T008/T025-T034.
+  - Added the EE migration `ee/server/migrations/20260307200000_create_workflow_schedule_tables.cjs` plus `shared/workflow/persistence/workflowScheduleStateModel.ts` for durable workflow schedule registration state.
+  - Added `server/src/lib/workflow-runtime-v2/workflowScheduleLifecycle.ts` to build desired schedule state, register one-time and recurring jobs through `IJobRunner`, compensate failed reschedules, and clean up registrations on pause/delete/trigger changes.
+  - Added `server/src/lib/workflow-runtime-v2/workflowRunLauncher.ts` as the shared published-workflow launcher, then routed both `submitWorkflowEventAction` and `WorkflowRuntimeV2EventStreamWorker` through it.
+  - Added `server/src/lib/jobs/handlers/workflowScheduledRunHandlers.ts` and registered EE-only one-time/recurring schedule handlers in `server/src/lib/jobs/registerAllHandlers.ts`.
+  - Publishing, pausing, deleting, and re-publishing time-triggered workflows now synchronize schedule registration state from `packages/workflows/src/actions/workflow-runtime-v2-actions.ts`.
+  - Added unit coverage in `server/src/test/unit/workflowTimeTriggerSchedulingLifecycle.unit.test.ts`, `server/src/test/unit/workflowScheduledRunHandlers.unit.test.ts`, and `server/src/test/unit/workflowEventLauncherRouting.unit.test.ts` for launcher wiring, fixed payload contract emission, schedule registration calls, pause/delete/change-away cleanup, and one-time/recurring reschedule replacement.
+  - Left T022-T024 false because this checkpoint still lacks DB-backed integration coverage that exercises real `tenant_workflow_schedule` rows against a migrated test database; current coverage is action/handler-focused unit coverage.
 
 ## Links / References
 
