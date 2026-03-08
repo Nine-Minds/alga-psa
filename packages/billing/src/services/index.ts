@@ -5,6 +5,7 @@
  */
 
 export { TaxService } from './taxService';
+export { ContractLineServiceConfigurationService } from './contractLineServiceConfigurationService';
 
 // Accounting export services
 export { AccountingExportService, type ExternalTaxImporter } from './accountingExportService';
