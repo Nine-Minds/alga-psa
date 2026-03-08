@@ -266,7 +266,7 @@
   {
     "id": "F034",
     "description": "TicketingDashboard wires CategoryPicker onAddNew to open QuickAddCategory",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-8"
     ]
