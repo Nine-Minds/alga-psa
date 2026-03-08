@@ -170,7 +170,7 @@
   {
     "id": "F022",
     "description": "MSP page title: /msp/assets — title: 'Assets'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
