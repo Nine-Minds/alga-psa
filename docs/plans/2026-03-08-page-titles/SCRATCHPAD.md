@@ -169,3 +169,4 @@
 - (2026-03-08) T004: Verify Auth layout exports metadata with template '%s | Alga PSA' and default 'Sign In | Alga PSA'
 - (2026-03-08) T005: Verify Static layout exports metadata with default 'Alga PSA'
 - (2026-03-08) T006: Batch verify: all static MSP pages (F006-F075) export 'export const metadata' with correct title strings
+- (2026-03-08) T007: Batch verify: all dynamic MSP pages (F011, F013, F015, F016, F018, F021, F023, F033, F044, F048, F051, F052, F057, F058, F065) export generateMetadata with correct title
