@@ -66,3 +66,4 @@
 - (2026-03-08) F016: MSP page title: /msp/contacts/[id]/activity — title: 'Contact Activity' (generateMetadata)
 - (2026-03-08) F017: MSP page title: /msp/projects — title: 'Projects'
 - (2026-03-08) F018: MSP page title: /msp/projects/[id] — title: 'Project Details' (generateMetadata)
+- (2026-03-08) F019: MSP page title: /msp/projects/templates — title: 'Project Templates'
