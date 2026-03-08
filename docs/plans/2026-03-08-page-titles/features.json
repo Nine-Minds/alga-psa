@@ -610,7 +610,7 @@
   {
     "id": "F077",
     "description": "Client Portal page title: /client-portal/account — title: 'Account'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3b"
     ]
