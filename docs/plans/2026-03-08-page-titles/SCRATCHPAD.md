@@ -156,3 +156,4 @@
 - (2026-03-08) F106: MSP page title: /msp/documents — title: 'Documents'
 - (2026-03-08) F107: Public page title: /test-routing — title: 'Test Routing'
 - (2026-03-08) F108: EE root layout: add metadata title template `'%s | Alga PSA'` and default `'Alga PSA'`
+- (2026-03-08) F109: EE MSP layout: add metadata template `'%s | Alga PSA'` and default `'Dashboard | Alga PSA'`
