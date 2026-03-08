@@ -802,7 +802,7 @@
   {
     "id": "F101",
     "description": "Auth page title: /auth/password-reset/confirmation — title: 'Password Reset'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3b"
     ]
