@@ -188,3 +188,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddTicketPrefill.test.tsx -t "T00[678]"`
 - 2026-03-08 T008: `QuickAddTicketPrefill.test.tsx` now verifies the full happy path: creating a contact through the mocked `QuickAddContact` appends it to local picker state and selects `contact-new` automatically.
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddTicketPrefill.test.tsx -t "T00[678]"`
+- 2026-03-08 T009: Added `packages/tickets/src/components/ticket/__tests__/TicketPropertiesQuickAddContact.test.tsx` to open the inline contact editor, trigger `+ Add new contact`, and assert the mocked `QuickAddContact` dialog opens with `ticket.client_id` taking precedence over the fallback client context.
+- Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/ticket/__tests__/TicketPropertiesQuickAddContact.test.tsx`
