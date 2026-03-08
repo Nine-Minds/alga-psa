@@ -32,13 +32,13 @@
   {
     "id": "T006",
     "description": "Guard: time-triggered workflow publish is rejected when EE-only scheduling support is unavailable",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
     "id": "T007",
     "description": "Contract: time-triggered workflow publish resolves the fixed synthetic payload schema ref",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {
@@ -50,43 +50,43 @@
   {
     "id": "T009",
     "description": "Validation: publish rejects inferred payload schema mode for one-time schedule triggers",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
     "id": "T010",
     "description": "Validation: publish rejects inferred payload schema mode for recurring schedule triggers",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
     "id": "T011",
     "description": "Validation: one-time schedule publish rejects missing runAt timestamp",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {
     "id": "T012",
     "description": "Validation: one-time schedule publish rejects invalid timestamp values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {
     "id": "T013",
     "description": "Validation: recurring schedule publish rejects cron expressions with six fields or seconds",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
     "id": "T014",
     "description": "Validation: recurring schedule publish rejects invalid timezone values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
     "id": "T015",
     "description": "Validation: recurring schedule publish accepts valid 5-field cron expressions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {

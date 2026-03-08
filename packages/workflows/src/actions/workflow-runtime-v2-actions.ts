@@ -16,13 +16,18 @@ import {
   getSchemaRegistry,
   initializeWorkflowRuntimeV2,
   applyRedactions,
+  WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF,
   isWorkflowEventTrigger,
+  isWorkflowOneTimeScheduleTrigger,
+  isWorkflowRecurringScheduleTrigger,
+  isWorkflowTimeTrigger,
   validateWorkflowDefinition,
   validateInputMapping,
   resolveInputMapping,
   createSecretResolverFromProvider,
   type PublishError
 } from '@shared/workflow/runtime';
+import { isEnterpriseEdition } from 'server/src/lib/features';
 import { verifySecretsExist } from '@shared/workflow/runtime/validation/publishValidation';
 import { createTenantSecretProvider } from '@alga-psa/shared/workflow/secrets';
 import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
@@ -76,6 +81,7 @@ const throwHttpError = (status: number, message: string, details?: unknown): nev
 const EXPORT_RUNS_LIMIT = 1000;
 const EXPORT_EVENTS_LIMIT = 1000;
 const EXPORT_AUDIT_LIMIT = 5000;
+const DEFAULT_TIME_TRIGGER_SCHEMA_MODE = 'pinned' as const;
 const EXPORT_LOGS_LIMIT = 5000;
 
 const csvEscape = (value: unknown) => {
@@ -114,6 +120,152 @@ const buildUnknownPayloadSchemaRefError = (schemaRef: string, suggestions: strin
     ? `Unknown payload schema ref "${schemaRef}". Did you mean: ${suggestions.join(', ')}?`
     : `Unknown payload schema ref "${schemaRef}".`
 });
+
+const buildTimeTriggerEnterpriseOnlyError = (): PublishError => ({
+  severity: 'error',
+  stepPath: 'root.trigger',
+  code: 'TIME_TRIGGER_ENTERPRISE_ONLY',
+  message: 'Time-triggered workflows are only available in Enterprise Edition.'
+});
+
+const buildTimeTriggerPinnedSchemaError = (): PublishError => ({
+  severity: 'error',
+  stepPath: 'root.payloadSchemaRef',
+  code: 'TIME_TRIGGER_REQUIRES_PINNED_SCHEMA',
+  message: 'Time-triggered workflows must use the fixed pinned clock payload schema.'
+});
+
+const buildTimeTriggerMissingRunAtError = (): PublishError => ({
+  severity: 'error',
+  stepPath: 'root.trigger.runAt',
+  code: 'TIME_TRIGGER_RUN_AT_REQUIRED',
+  message: 'One-time schedule triggers require a runAt timestamp.'
+});
+
+const buildTimeTriggerInvalidRunAtError = (message: string): PublishError => ({
+  severity: 'error',
+  stepPath: 'root.trigger.runAt',
+  code: 'TIME_TRIGGER_INVALID_RUN_AT',
+  message
+});
+
+const buildTimeTriggerInvalidCronError = (message: string): PublishError => ({
+  severity: 'error',
+  stepPath: 'root.trigger.cron',
+  code: 'TIME_TRIGGER_INVALID_CRON',
+  message
+});
+
+const buildTimeTriggerInvalidTimezoneError = (): PublishError => ({
+  severity: 'error',
+  stepPath: 'root.trigger.timezone',
+  code: 'TIME_TRIGGER_INVALID_TIMEZONE',
+  message: 'Recurring schedule triggers require a valid IANA timezone.'
+});
+
+const validateTimeTriggerTimezone = (timezone: string): boolean => {
+  try {
+    // eslint-disable-next-line no-new
+    new Intl.DateTimeFormat('en-US', { timeZone: timezone }).format(new Date());
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const validateFiveFieldCron = (cron: string): { ok: true; value: string } | { ok: false; message: string } => {
+  const value = String(cron || '').trim();
+  if (!value) {
+    return { ok: false, message: 'Recurring schedule triggers require a cron expression.' };
+  }
+  if (value.length > 128) {
+    return { ok: false, message: 'Cron expression too long.' };
+  }
+  const parts = value.split(/\s+/).filter(Boolean);
+  if (parts.length !== 5) {
+    return { ok: false, message: 'Recurring schedule triggers require a 5-field cron expression (minute hour day-of-month month day-of-week).' };
+  }
+  for (const part of parts) {
+    if (!/^[0-9*/,-]+$/.test(part)) {
+      return { ok: false, message: 'Cron expression contains unsupported characters.' };
+    }
+  }
+  const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
+  const domIsSet = dayOfMonth !== '*';
+  const dowIsSet = dayOfWeek !== '*';
+  if (domIsSet && dowIsSet) {
+    return { ok: false, message: 'Cron cannot set both day-of-month and day-of-week.' };
+  }
+  const allOtherStars = hour === '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*';
+  if (allOtherStars && (minute === '*' || minute === '*/1' || minute === '*/2' || minute === '*/3' || minute === '*/4')) {
+    return { ok: false, message: 'Cron too frequent (minimum interval is 5 minutes).' };
+  }
+  return { ok: true, value };
+};
+
+const collectTimeTriggerValidationErrors = (trigger: unknown): PublishError[] => {
+  if (isWorkflowOneTimeScheduleTrigger(trigger)) {
+    if (!trigger.runAt || !String(trigger.runAt).trim()) {
+      return [buildTimeTriggerMissingRunAtError()];
+    }
+    const runAtDate = new Date(trigger.runAt);
+    if (Number.isNaN(runAtDate.getTime())) {
+      return [buildTimeTriggerInvalidRunAtError('One-time schedule triggers require a valid ISO 8601 timestamp.')];
+    }
+    if (runAtDate.getTime() <= Date.now()) {
+      return [buildTimeTriggerInvalidRunAtError('One-time schedule triggers must be scheduled in the future.')];
+    }
+    return [];
+  }
+
+  if (isWorkflowRecurringScheduleTrigger(trigger)) {
+    const cronResult = validateFiveFieldCron(trigger.cron);
+    if (!cronResult.ok) {
+      return [buildTimeTriggerInvalidCronError(cronResult.message)];
+    }
+    if (!trigger.timezone || !validateTimeTriggerTimezone(trigger.timezone)) {
+      return [buildTimeTriggerInvalidTimezoneError()];
+    }
+  }
+
+  return [];
+};
+
+const normalizeTimeTriggerDraftContract = <T extends Record<string, unknown>>(params: {
+  definition: T;
+  payloadSchemaMode: 'inferred' | 'pinned';
+  pinnedPayloadSchemaRef: string | null;
+}): {
+  definition: T;
+  payloadSchemaMode: 'inferred' | 'pinned';
+  pinnedPayloadSchemaRef: string | null;
+  payloadSchemaProvenance: 'inferred' | 'pinned';
+} => {
+  const trigger = params.definition.trigger;
+  if (!isWorkflowTimeTrigger(trigger as any)) {
+    const payloadSchemaMode = params.payloadSchemaMode;
+    return {
+      definition: params.definition,
+      payloadSchemaMode,
+      pinnedPayloadSchemaRef: params.pinnedPayloadSchemaRef,
+      payloadSchemaProvenance: payloadSchemaMode === 'pinned' ? 'pinned' : 'inferred'
+    };
+  }
+
+  if (!isEnterpriseEdition()) {
+    throwHttpError(403, buildTimeTriggerEnterpriseOnlyError().message, { code: buildTimeTriggerEnterpriseOnlyError().code });
+  }
+
+  return {
+    definition: {
+      ...params.definition,
+      payloadSchemaRef: WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF
+    },
+    payloadSchemaMode: DEFAULT_TIME_TRIGGER_SCHEMA_MODE,
+    pinnedPayloadSchemaRef: WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF,
+    payloadSchemaProvenance: 'pinned'
+  };
+};
 
 const buildUnknownTriggerSourceSchemaRefError = (eventName: string): PublishError => ({
   severity: 'error',
@@ -280,6 +432,7 @@ const computeValidation = async (params: {
 
   const errors = [...validation.errors];
   const warnings = [...validation.warnings];
+  errors.push(...collectTimeTriggerValidationErrors((definition as any)?.trigger));
 
   if (!payloadSchemaRef || !String(payloadSchemaRef).trim()) {
     errors.push({
@@ -1044,10 +1197,15 @@ export const createWorkflowDefinitionAction = withAuth(async (user, { tenant }, 
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'manage', knex);
   const workflowId = uuidv4();
-  const definition = { ...parsed.definition, id: workflowId };
-  const payloadSchemaMode = parsed.payloadSchemaMode ?? 'pinned';
-  const pinnedPayloadSchemaRef = parsed.pinnedPayloadSchemaRef ?? null;
-  const payloadSchemaProvenance = payloadSchemaMode === 'pinned' ? 'pinned' : 'inferred';
+  const normalizedDraft = normalizeTimeTriggerDraftContract({
+    definition: { ...parsed.definition, id: workflowId },
+    payloadSchemaMode: parsed.payloadSchemaMode ?? 'pinned',
+    pinnedPayloadSchemaRef: parsed.pinnedPayloadSchemaRef ?? null
+  });
+  const definition = normalizedDraft.definition;
+  const payloadSchemaMode = normalizedDraft.payloadSchemaMode;
+  const pinnedPayloadSchemaRef = normalizedDraft.pinnedPayloadSchemaRef;
+  const payloadSchemaProvenance = normalizedDraft.payloadSchemaProvenance;
 
   const schemaRegistry = getSchemaRegistry();
   const payloadSchemaJson = definition.payloadSchemaRef && schemaRegistry.has(definition.payloadSchemaRef)
@@ -1129,10 +1287,15 @@ export const updateWorkflowDefinitionDraftAction = withAuth(async (user, { tenan
   if (current?.is_system) {
     await requireWorkflowPermission(user, 'admin', knex);
   }
-  const definition = { ...parsed.definition, id: parsed.workflowId };
-  const payloadSchemaMode = parsed.payloadSchemaMode ?? (typeof (current as any)?.payload_schema_mode === 'string' ? (current as any).payload_schema_mode : 'pinned');
-  const pinnedPayloadSchemaRef = parsed.pinnedPayloadSchemaRef ?? (typeof (current as any)?.pinned_payload_schema_ref === 'string' ? (current as any).pinned_payload_schema_ref : null);
-  const payloadSchemaProvenance = payloadSchemaMode === 'pinned' ? 'pinned' : 'inferred';
+  const normalizedDraft = normalizeTimeTriggerDraftContract({
+    definition: { ...parsed.definition, id: parsed.workflowId },
+    payloadSchemaMode: parsed.payloadSchemaMode ?? (typeof (current as any)?.payload_schema_mode === 'string' ? (current as any).payload_schema_mode : 'pinned'),
+    pinnedPayloadSchemaRef: parsed.pinnedPayloadSchemaRef ?? (typeof (current as any)?.pinned_payload_schema_ref === 'string' ? (current as any).pinned_payload_schema_ref : null)
+  });
+  const definition = normalizedDraft.definition;
+  const payloadSchemaMode = normalizedDraft.payloadSchemaMode;
+  const pinnedPayloadSchemaRef = normalizedDraft.pinnedPayloadSchemaRef;
+  const payloadSchemaProvenance = normalizedDraft.payloadSchemaProvenance;
 
   const schemaRegistry = getSchemaRegistry();
   const payloadSchemaJson = definition.payloadSchemaRef && schemaRegistry.has(definition.payloadSchemaRef)
@@ -1437,6 +1600,17 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
   const schemaRegistry = getSchemaRegistry();
   const payloadSchemaMode = typeof (workflow as any)?.payload_schema_mode === 'string' ? String((workflow as any).payload_schema_mode) : 'pinned';
   const payloadSchemaProvenance = payloadSchemaMode === 'pinned' ? 'pinned' : 'inferred';
+  if (isWorkflowTimeTrigger((definition as any)?.trigger)) {
+    if (!isEnterpriseEdition()) {
+      const error = buildTimeTriggerEnterpriseOnlyError();
+      return { ok: false, errors: [error], warnings: [] };
+    }
+    if (payloadSchemaMode !== 'pinned') {
+      const error = buildTimeTriggerPinnedSchemaError();
+      return { ok: false, errors: [error], warnings: [] };
+    }
+    (definition as any).payloadSchemaRef = WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF;
+  }
   if (payloadSchemaMode === 'inferred') {
     const trigger = (definition as any)?.trigger;
     if (!isWorkflowEventTrigger(trigger) || trigger.eventName.length === 0) {
@@ -1509,6 +1683,9 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
     description: definition.description ?? null,
     trigger: definition.trigger ?? null,
     payload_schema_ref: definition.payloadSchemaRef,
+    pinned_payload_schema_ref: isWorkflowTimeTrigger((definition as any)?.trigger)
+      ? WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF
+      : (workflow as any).pinned_payload_schema_ref,
     payload_schema_provenance: payloadSchemaProvenance,
     validation_status: validation.status,
     validation_errors: validation.errors,

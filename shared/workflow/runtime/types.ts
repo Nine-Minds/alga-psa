@@ -329,6 +329,7 @@ export type WorkflowEventTrigger = z.infer<typeof workflowEventTriggerSchema>;
 export type WorkflowOneTimeScheduleTrigger = z.infer<typeof workflowOneTimeScheduleTriggerSchema>;
 export type WorkflowRecurringScheduleTrigger = z.infer<typeof workflowRecurringScheduleTriggerSchema>;
 export type WorkflowTrigger = z.infer<typeof workflowTriggerSchema>;
+export type WorkflowTimeTrigger = WorkflowOneTimeScheduleTrigger | WorkflowRecurringScheduleTrigger;
 
 export function isWorkflowEventTrigger(trigger: WorkflowTrigger | null | undefined): trigger is WorkflowEventTrigger {
   return trigger?.type === 'event';
@@ -344,6 +345,10 @@ export function isWorkflowRecurringScheduleTrigger(
   trigger: WorkflowTrigger | null | undefined
 ): trigger is WorkflowRecurringScheduleTrigger {
   return trigger?.type === 'recurring';
+}
+
+export function isWorkflowTimeTrigger(trigger: WorkflowTrigger | null | undefined): trigger is WorkflowTimeTrigger {
+  return trigger?.type === 'schedule' || trigger?.type === 'recurring';
 }
 
 export type WorkflowRunStatus = 'RUNNING' | 'WAITING' | 'SUCCEEDED' | 'FAILED' | 'CANCELED';

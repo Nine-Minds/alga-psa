@@ -32,6 +32,8 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-07) The legacy `JobScheduler` is not a safe base for real cron semantics because it coarsens cron-ish input to a delayed interval path.
 - (2026-03-07) Current workflow list/filter code still contains trigger-type heuristics that infer “scheduled” from event-name strings. That should be removed once real trigger types exist.
 - (2026-03-07) Direct `trigger.eventName` and `trigger.sourcePayloadSchemaRef` access already exists in shared bundling, runtime actions, and run-studio UI; widening the trigger union requires explicit event-trigger narrowing at those call sites.
+- (2026-03-07) `payload_schema_mode` is persisted on the workflow definition record, not on publish input. That means publish must explicitly reject time-trigger definitions if an older draft is still marked `inferred`.
+- (2026-03-07) Local Workflow V2 integration tests in this worktree could not use the usual DB-backed harness because PostgreSQL was unavailable on `localhost:5438`; a mock-backed unit suite was a better fit for publish-path validation coverage.
 
 ## Commands / Runbooks
 
@@ -49,6 +51,9 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-07) Validate initial schema slice:
   - `cd server && pnpm vitest run src/test/unit/workflowTimeTriggerSchemas.unit.test.ts --config vitest.config.ts`
   - `pnpm exec eslint shared/workflow/runtime/types.ts shared/workflow/bundle/dependencySummaryV1.ts packages/workflows/src/actions/workflow-runtime-v2-actions.ts ee/server/src/components/workflow-run-studio/RunStudioShell.tsx server/src/test/unit/workflowTimeTriggerSchemas.unit.test.ts`
+- (2026-03-07) Validate time-trigger publish/contract slice:
+  - `cd server && pnpm vitest run src/test/unit/workflowTimeTriggerSchemas.unit.test.ts src/test/unit/workflowTimeTriggerPublishValidation.unit.test.ts --config vitest.config.ts`
+  - `pnpm exec eslint shared/workflow/runtime/types.ts shared/workflow/runtime/init.ts shared/workflow/runtime/index.ts shared/workflow/runtime/schemas/workflowClockTriggerSchema.ts server/src/lib/features.ts packages/workflows/src/actions/workflow-runtime-v2-actions.ts server/src/test/unit/workflowTimeTriggerPublishValidation.unit.test.ts`
 
 ## Progress Log
 
@@ -58,6 +63,12 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
   - Confirmed create/update action inputs accept time-trigger variants via the shared definition schema instead of separate action-only trigger parsing.
   - Added `server/src/test/unit/workflowTimeTriggerSchemas.unit.test.ts` covering shared schema acceptance, no-trigger preservation, and create/update input parsing.
   - Narrowed existing event-only call sites in dependency summary extraction, workflow runtime actions, and run-studio trigger display so the widened trigger union stays type-safe.
+- (2026-03-07) Completed F003-F007 and T006-T015.
+  - Added the fixed clock payload contract schema/registry entry at `payload.WorkflowClockTrigger.v1`.
+  - Time-trigger draft saves now normalize onto the fixed clock payload contract and reject CE create/update attempts at action time.
+  - Publish now rejects CE time-trigger workflows and rejects any time-trigger publish attempt that still uses inferred payload schema mode.
+  - Added publish-time validation for one-time schedules (`runAt` required, valid ISO timestamp, future-only) and recurring schedules (valid 5-field cron, valid IANA timezone).
+  - Added `server/src/test/unit/workflowTimeTriggerPublishValidation.unit.test.ts` to cover EE gating, fixed schema resolution, inferred-mode rejection, and one-time/recurring validation behavior without depending on a local PostgreSQL harness.
 
 ## Links / References
 

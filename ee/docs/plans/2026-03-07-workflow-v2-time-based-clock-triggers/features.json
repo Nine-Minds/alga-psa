@@ -14,31 +14,31 @@
   {
     "id": "F003",
     "description": "Enforce EE-only availability for time-triggered workflows in server-side create, update, and publish paths",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Security / Permissions"]
   },
   {
     "id": "F004",
     "description": "Register a fixed synthetic payload schema contract for time-triggered workflow runs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Data / API / Integrations"]
   },
   {
     "id": "F005",
     "description": "Require pinned payload schema mode for time-triggered workflows and block inferred mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements"]
   },
   {
     "id": "F006",
     "description": "Validate one-time schedule trigger definitions including required future timestamp semantics",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements"]
   },
   {
     "id": "F007",
     "description": "Validate recurring schedule trigger definitions including timezone and 5-field cron syntax with no seconds support",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Non-functional Requirements"]
   },
   {
