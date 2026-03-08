@@ -8,16 +8,35 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
 const getMicrosoftIntegrationStatusMock = vi.hoisted(() => vi.fn());
+const getTeamsIntegrationStatusMock = vi.hoisted(() => vi.fn());
+const saveTeamsIntegrationSettingsMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/integrations/actions', () => ({
   getMicrosoftIntegrationStatus: (...args: unknown[]) => getMicrosoftIntegrationStatusMock(...args),
+  getTeamsIntegrationStatus: (...args: unknown[]) => getTeamsIntegrationStatusMock(...args),
+  saveTeamsIntegrationSettings: (...args: unknown[]) => saveTeamsIntegrationSettingsMock(...args),
 }));
 
 import { TeamsIntegrationSettings } from './TeamsIntegrationSettings';
 
-function buildStatus(overrides: Record<string, unknown> = {}) {
+function buildMicrosoftStatus(overrides: Record<string, unknown> = {}) {
   return {
     success: true,
+    baseUrl: 'https://psa.example.com',
+    redirectUris: {
+      email: 'https://psa.example.com/api/auth/microsoft/callback',
+      calendar: 'https://psa.example.com/api/auth/microsoft/calendar/callback',
+      sso: 'https://psa.example.com/api/auth/callback/azure-ad',
+      teamsTab: 'https://psa.example.com/api/teams/auth/callback/tab',
+      teamsBot: 'https://psa.example.com/api/teams/auth/callback/bot',
+      teamsMessageExtension: 'https://psa.example.com/api/teams/auth/callback/message-extension',
+    },
+    scopes: {
+      email: ['Mail.Read', 'Mail.Send', 'offline_access'],
+      calendar: ['Calendars.ReadWrite', 'offline_access'],
+      sso: ['openid', 'profile', 'email'],
+      teams: ['openid', 'profile', 'email', 'offline_access'],
+    },
     profiles: [
       {
         profileId: 'profile-1',
@@ -42,26 +61,41 @@ function buildStatus(overrides: Record<string, unknown> = {}) {
       },
       {
         profileId: 'profile-2',
-        displayName: 'Archived Profile',
-        clientId: 'archived-client-id',
+        displayName: 'Secondary Profile',
+        clientId: 'secondary-client-id',
         tenantId: 'tenant-guid-2',
         clientSecretMasked: '••••4321',
         clientSecretConfigured: true,
         clientSecretRef: 'microsoft_profile_profile-2_client_secret',
         isDefault: false,
-        isArchived: true,
+        isArchived: false,
         readiness: {
-          ready: false,
+          ready: true,
           clientIdConfigured: true,
           clientSecretConfigured: true,
           tenantIdConfigured: true,
-          active: false,
+          active: true,
         },
-        status: 'archived',
-        archivedAt: '2026-03-07T12:00:00.000Z',
-        consumers: [],
+        status: 'ready',
+        archivedAt: null,
+        consumers: ['Teams'],
       },
     ],
+    ...overrides,
+  };
+}
+
+function buildTeamsStatus(overrides: Record<string, unknown> = {}) {
+  return {
+    success: true,
+    integration: {
+      selectedProfileId: 'profile-1',
+      installStatus: 'install_pending',
+      enabledCapabilities: ['personal_tab', 'message_extension'],
+      notificationCategories: ['assignment', 'approval_request'],
+      allowedActions: ['assign_ticket', 'log_time'],
+      lastError: null,
+    },
     ...overrides,
   };
 }
@@ -69,32 +103,196 @@ function buildStatus(overrides: Record<string, unknown> = {}) {
 describe('TeamsIntegrationSettings contracts', () => {
   beforeEach(() => {
     getMicrosoftIntegrationStatusMock.mockReset();
-    getMicrosoftIntegrationStatusMock.mockResolvedValue(buildStatus());
+    getTeamsIntegrationStatusMock.mockReset();
+    saveTeamsIntegrationSettingsMock.mockReset();
+    getMicrosoftIntegrationStatusMock.mockResolvedValue(buildMicrosoftStatus());
+    getTeamsIntegrationStatusMock.mockResolvedValue(buildTeamsStatus());
+    saveTeamsIntegrationSettingsMock.mockResolvedValue({
+      success: true,
+      integration: buildTeamsStatus().integration,
+    });
     window.location.hash = '';
   });
 
-  it('T095/T096: renders the tenant-admin Teams setup UI and refresh path', async () => {
+  it('T095/T096/T109/T110: renders the tenant-admin Teams setup UI, current selections, and refresh path', async () => {
     const user = userEvent.setup();
     render(<TeamsIntegrationSettings />);
 
     expect((await screen.findAllByText('Microsoft Teams')).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Guided tenant setup/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Primary Profile').length).toBeGreaterThan(0);
-    expect(screen.queryByText('Archived Profile')).not.toBeInTheDocument();
+    expect(screen.getByText('Current Teams setup')).toBeInTheDocument();
+    expect(screen.getByText('Selected profile:')).toBeInTheDocument();
+    expect(screen.getByLabelText('Microsoft profile')).toHaveValue('profile-1');
+    expect(screen.getByLabelText('Personal tab')).toBeChecked();
+    expect(screen.getByLabelText('Message extension')).toBeChecked();
+    expect(screen.getByLabelText('Personal bot')).not.toBeChecked();
+    expect(screen.getByLabelText('Assignment events')).toBeChecked();
+    expect(screen.getByLabelText('Approval requests')).toBeChecked();
+    expect(screen.getByLabelText('Customer replies')).not.toBeChecked();
 
-    const refreshButtons = screen.getAllByRole('button', { name: 'Refresh' });
-    expect(refreshButtons.length).toBeGreaterThan(0);
-    await user.click(refreshButtons[0]);
+    await user.click(screen.getByRole('button', { name: 'Refresh' }));
 
     await waitFor(() => {
       expect(getMicrosoftIntegrationStatusMock).toHaveBeenCalledTimes(2);
+      expect(getTeamsIntegrationStatusMock).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it('T097/T098/T099/T100/T101/T102: requires a selected profile before activation and shows registration guidance plus checklist state for the selected profile', async () => {
+    const user = userEvent.setup();
+    getTeamsIntegrationStatusMock.mockResolvedValueOnce(buildTeamsStatus({
+      integration: {
+        selectedProfileId: null,
+        installStatus: 'not_configured',
+        enabledCapabilities: ['personal_tab'],
+        notificationCategories: ['assignment'],
+        allowedActions: ['assign_ticket'],
+        lastError: null,
+      },
+    }));
+
+    render(<TeamsIntegrationSettings />);
+
+    expect(await screen.findByText('Install and readiness checklist')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Activate Teams' })).toBeDisabled();
+    expect(screen.getByText('Select a Microsoft profile to view the Teams app-registration values, redirect URIs, and scope guidance for this tenant.')).toBeInTheDocument();
+    expect(screen.getByText('Microsoft profile selected')).toBeInTheDocument();
+    expect(screen.getByText('Teams install state')).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText('Microsoft profile'), 'profile-1');
+
+    expect(screen.getByRole('button', { name: 'Activate Teams' })).toBeEnabled();
+    expect(screen.getAllByText('Primary Profile').length).toBeGreaterThan(0);
+    expect(screen.getByText('https://psa.example.com/api/teams/auth/callback/tab')).toBeInTheDocument();
+    expect(screen.getByText('https://psa.example.com/api/teams/auth/callback/bot')).toBeInTheDocument();
+    expect(screen.getByText('https://psa.example.com/api/teams/auth/callback/message-extension')).toBeInTheDocument();
+    expect(screen.getByText('openid, profile, email, offline_access')).toBeInTheDocument();
+    expect(screen.getByText('api://psa.example.com/teams/primary-client-id')).toBeInTheDocument();
+  });
+
+  it('T103/T104: saves draft Teams setup progress and shows recoverable save failures inline', async () => {
+    const user = userEvent.setup();
+    getTeamsIntegrationStatusMock.mockResolvedValueOnce(buildTeamsStatus({
+      integration: {
+        selectedProfileId: null,
+        installStatus: 'not_configured',
+        enabledCapabilities: ['personal_tab'],
+        notificationCategories: ['assignment'],
+        allowedActions: ['assign_ticket'],
+        lastError: null,
+      },
+    }));
+    saveTeamsIntegrationSettingsMock
+      .mockResolvedValueOnce({ success: false, error: 'Selected Microsoft profile is not ready for Teams setup' })
+      .mockResolvedValueOnce({
+        success: true,
+        integration: {
+          selectedProfileId: 'profile-1',
+          installStatus: 'install_pending',
+          enabledCapabilities: ['personal_tab', 'personal_bot'],
+          notificationCategories: ['assignment', 'customer_reply'],
+          allowedActions: ['assign_ticket', 'add_note'],
+          lastError: null,
+        },
+      });
+
+    render(<TeamsIntegrationSettings />);
+
+    await screen.findByText('Current Teams setup');
+    await user.selectOptions(screen.getByLabelText('Microsoft profile'), 'profile-1');
+    await user.click(screen.getByLabelText('Personal bot'));
+    await user.click(screen.getByLabelText('Customer replies'));
+    await user.click(screen.getByLabelText('Add note'));
+
+    await user.click(screen.getByRole('button', { name: 'Save Draft' }));
+    expect(await screen.findByText('Selected Microsoft profile is not ready for Teams setup')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Save Draft' }));
+
+    await waitFor(() => {
+      expect(saveTeamsIntegrationSettingsMock).toHaveBeenLastCalledWith({
+        selectedProfileId: 'profile-1',
+        installStatus: 'install_pending',
+        enabledCapabilities: ['personal_tab', 'personal_bot'],
+        notificationCategories: ['assignment', 'customer_reply'],
+        allowedActions: ['assign_ticket', 'add_note'],
+        lastError: null,
+      });
+    });
+  });
+
+  it('T105/T106: activates Teams once required setup is complete and surfaces activation failures safely', async () => {
+    const user = userEvent.setup();
+    saveTeamsIntegrationSettingsMock
+      .mockResolvedValueOnce({ success: false, error: 'A Microsoft profile must be selected before Teams can be activated' })
+      .mockResolvedValueOnce({
+        success: true,
+        integration: {
+          selectedProfileId: 'profile-1',
+          installStatus: 'active',
+          enabledCapabilities: ['personal_tab', 'message_extension'],
+          notificationCategories: ['assignment', 'approval_request'],
+          allowedActions: ['assign_ticket', 'log_time'],
+          lastError: null,
+        },
+      });
+
+    render(<TeamsIntegrationSettings />);
+
+    await screen.findByText('Current Teams setup');
+    await user.selectOptions(screen.getByLabelText('Microsoft profile'), 'profile-1');
+
+    await user.click(screen.getByRole('button', { name: 'Activate Teams' }));
+    expect(await screen.findByText('A Microsoft profile must be selected before Teams can be activated')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Activate Teams' }));
+
+    await waitFor(() => {
+      expect(saveTeamsIntegrationSettingsMock).toHaveBeenLastCalledWith({
+        selectedProfileId: 'profile-1',
+        installStatus: 'active',
+        enabledCapabilities: ['personal_tab', 'message_extension'],
+        notificationCategories: ['assignment', 'approval_request'],
+        allowedActions: ['assign_ticket', 'log_time'],
+        lastError: null,
+      });
+    });
+  });
+
+  it('T107/T108: deactivates Teams without deleting the selected Microsoft profile', async () => {
+    const user = userEvent.setup();
+    saveTeamsIntegrationSettingsMock.mockResolvedValueOnce({
+      success: true,
+      integration: {
+        selectedProfileId: 'profile-1',
+        installStatus: 'not_configured',
+        enabledCapabilities: ['personal_tab', 'message_extension'],
+        notificationCategories: ['assignment', 'approval_request'],
+        allowedActions: ['assign_ticket', 'log_time'],
+        lastError: null,
+      },
+    });
+
+    render(<TeamsIntegrationSettings />);
+
+    await screen.findByText('Current Teams setup');
+    await user.click(screen.getByRole('button', { name: 'Deactivate Teams' }));
+
+    await waitFor(() => {
+      expect(saveTeamsIntegrationSettingsMock).toHaveBeenCalledWith({
+        selectedProfileId: 'profile-1',
+        installStatus: 'not_configured',
+        enabledCapabilities: ['personal_tab', 'message_extension'],
+        notificationCategories: ['assignment', 'approval_request'],
+        allowedActions: ['assign_ticket', 'log_time'],
+        lastError: null,
+      });
     });
   });
 
   it('T111/T112/T115/T116: shows guided remediation and links back to Microsoft profile management when no eligible profile exists', async () => {
     const user = userEvent.setup();
     getMicrosoftIntegrationStatusMock.mockResolvedValueOnce(
-      buildStatus({
+      buildMicrosoftStatus({
         profiles: [
           {
             profileId: 'profile-2',
@@ -129,16 +327,5 @@ describe('TeamsIntegrationSettings contracts', () => {
     await user.click(screen.getByRole('button', { name: 'Open Microsoft Profiles' }));
 
     expect(window.location.hash).toBe('#microsoft-profile-manager');
-  });
-
-  it('shows load failures as actionable Teams setup errors', async () => {
-    getMicrosoftIntegrationStatusMock.mockResolvedValueOnce({
-      success: false,
-      error: 'Forbidden',
-    });
-
-    render(<TeamsIntegrationSettings />);
-
-    expect(await screen.findByText('Forbidden')).toBeInTheDocument();
   });
 });

@@ -770,7 +770,7 @@
   {
     "id": "T097",
     "description": "Happy path: Teams setup: the UI requires selecting one Microsoft profile before Teams can be activated.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F049"
     ]
@@ -778,7 +778,7 @@
   {
     "id": "T098",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the ui requires selecting one microsoft profile before teams can be activated.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F049"
     ]
@@ -786,7 +786,7 @@
   {
     "id": "T099",
     "description": "Happy path: Teams setup: the UI shows the selected profile's app-registration values, redirect URIs, and scope guidance.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ]
@@ -794,7 +794,7 @@
   {
     "id": "T100",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the ui shows the selected profile's app-registration values, redirect uris, and scope guidance.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ]
@@ -802,7 +802,7 @@
   {
     "id": "T101",
     "description": "Happy path: Teams setup: the UI shows install / consent / readiness checklist state for Teams.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ]
@@ -810,7 +810,7 @@
   {
     "id": "T102",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the ui shows install / consent / readiness checklist state for teams.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ]
@@ -818,7 +818,7 @@
   {
     "id": "T103",
     "description": "Happy path: Teams setup: the UI can save draft setup progress before Teams is fully activated.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052"
     ]
@@ -826,7 +826,7 @@
   {
     "id": "T104",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the ui can save draft setup progress before teams is fully activated.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052"
     ]
@@ -834,7 +834,7 @@
   {
     "id": "T105",
     "description": "Happy path: Teams setup: the UI can activate Teams once required setup is complete.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053"
     ]
@@ -842,7 +842,7 @@
   {
     "id": "T106",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the ui can activate teams once required setup is complete.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053"
     ]
@@ -850,7 +850,7 @@
   {
     "id": "T107",
     "description": "Happy path: Teams setup: the UI can deactivate Teams without deleting the underlying Microsoft profile.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054"
     ]
@@ -858,7 +858,7 @@
   {
     "id": "T108",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the ui can deactivate teams without deleting the underlying microsoft profile.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054"
     ]
@@ -866,7 +866,7 @@
   {
     "id": "T109",
     "description": "Happy path: Teams setup: the UI shows the currently selected profile, current capability toggles, and notification categories.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055"
     ]
@@ -874,7 +874,7 @@
   {
     "id": "T110",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the ui shows the currently selected profile, current capability toggles, and notification categories.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055"
     ]

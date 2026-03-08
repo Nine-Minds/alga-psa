@@ -434,7 +434,7 @@
   {
     "id": "F049",
     "description": "Teams setup: the UI requires selecting one Microsoft profile before Teams can be activated.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -443,7 +443,7 @@
   {
     "id": "F050",
     "description": "Teams setup: the UI shows the selected profile's app-registration values, redirect URIs, and scope guidance.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -452,7 +452,7 @@
   {
     "id": "F051",
     "description": "Teams setup: the UI shows install / consent / readiness checklist state for Teams.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -461,7 +461,7 @@
   {
     "id": "F052",
     "description": "Teams setup: the UI can save draft setup progress before Teams is fully activated.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -470,7 +470,7 @@
   {
     "id": "F053",
     "description": "Teams setup: the UI can activate Teams once required setup is complete.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -479,7 +479,7 @@
   {
     "id": "F054",
     "description": "Teams setup: the UI can deactivate Teams without deleting the underlying Microsoft profile.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -488,7 +488,7 @@
   {
     "id": "F055",
     "description": "Teams setup: the UI shows the currently selected profile, current capability toggles, and notification categories.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
