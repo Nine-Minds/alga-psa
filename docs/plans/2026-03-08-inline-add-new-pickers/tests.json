@@ -138,7 +138,7 @@
   {
     "id": "T018",
     "description": "ClientPicker renders '+ Add new client' button with separator when onAddNew prop is provided",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]

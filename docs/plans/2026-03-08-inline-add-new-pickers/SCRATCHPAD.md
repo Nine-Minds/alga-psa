@@ -206,3 +206,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd server && npx vitest run --config vitest.config.ts --coverage.enabled false src/components/settings/general/UserManagement.quick-add-contact.contract.test.ts`
 - 2026-03-08 T017: Added `server/src/components/settings/integrations/EntraReconciliationQueue.quick-add-contact.contract.test.ts` to preserve the EE reconciliation queue wiring that opens `QuickAddContact`, forwards the mapped client context, and assigns the created contact back to the queued item.
 - Validation: `cd server && npx vitest run --config vitest.config.ts --coverage.enabled false src/components/settings/integrations/EntraReconciliationQueue.quick-add-contact.contract.test.ts`
+- 2026-03-08 T018: Added `packages/ui/src/components/ClientPicker.test.tsx` and verified that `ClientPicker` renders the bottom separator plus `+ Add new client` action only when `onAddNew` is supplied.
+- Validation: `cd packages/ui && npx vitest run --config vitest.config.ts src/components/ClientPicker.test.tsx -t T018`
