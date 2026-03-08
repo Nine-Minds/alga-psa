@@ -682,7 +682,7 @@
   {
     "id": "F086",
     "description": "Client Portal page title: /client-portal/tickets/[ticketId] — title: 'Ticket Details' (generateMetadata)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3c"
     ]
