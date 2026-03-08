@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
+import Spinner from '@alga-psa/ui/components/Spinner';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -19,11 +20,16 @@ import {
   AlertCircle,
   Calendar,
   Tags,
+  Send,
+  CheckCircle,
+  Archive,
 } from 'lucide-react';
+import { CollaborativeEditor } from '../CollaborativeEditor';
 import { DocumentEditor } from '../DocumentEditor';
 import {
   getArticle,
   updateArticle,
+  publishArticle,
   IKBArticleWithDocument,
   IUpdateArticleInput,
   ArticleType,
@@ -72,6 +78,8 @@ const REVIEW_CYCLE_OPTIONS: SelectOption[] = [
 interface KBArticleEditorProps {
   articleId: string;
   userId: string;
+  userName?: string;
+  tenantId?: string;
   onBack?: () => void;
   onSave?: () => void;
   categories?: Array<{ id: string; name: string }>;
@@ -80,16 +88,35 @@ interface KBArticleEditorProps {
 export default function KBArticleEditor({
   articleId,
   userId,
+  userName,
+  tenantId,
   onBack,
   onSave,
   categories = [],
 }: KBArticleEditorProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation('features/documents');
+  const tRef = useRef(t);
+  tRef.current = t;
+
   const [article, setArticle] = useState<IKBArticleWithDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedMetadata, setHasUnsavedMetadata] = useState(false);
   const [articleTags, setArticleTags] = useState<ITag[]>([]);
+  const [isFallbackMode, setIsFallbackMode] = useState(!userName || !tenantId);
+
+  // Auto-fallback if CollaborativeEditor can't connect within 5 seconds
+  const collabConnectedRef = useRef(false);
+  useEffect(() => {
+    if (isFallbackMode) return;
+    const timer = setTimeout(() => {
+      if (!collabConnectedRef.current) {
+        console.warn('[KBArticleEditor] Collab connection timeout, switching to fallback editor');
+        setIsFallbackMode(true);
+      }
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [isFallbackMode]);
 
   // Form state for metadata
   const [title, setTitle] = useState('');
@@ -109,12 +136,12 @@ export default function KBArticleEditor({
     try {
       const result = await getArticle(articleId);
       if (result && typeof result === 'object' && 'code' in result) {
-        toast.error(t('kb.permissionDenied', 'Permission denied'));
+        toast.error(tRef.current('kb.permissionDenied', 'Permission denied'));
         return;
       }
       const articleData = result as IKBArticleWithDocument | null;
       if (!articleData) {
-        toast.error(t('kb.notFound', 'Article not found'));
+        toast.error(tRef.current('kb.notFound', 'Article not found'));
         return;
       }
       setArticle(articleData);
@@ -133,11 +160,11 @@ export default function KBArticleEditor({
         console.error('Failed to load article tags:', tagError);
       }
     } catch (error) {
-      handleError(error, t('kb.loadError', 'Failed to load article'));
+      handleError(error, tRef.current('kb.loadError', 'Failed to load article'));
     } finally {
       setIsLoading(false);
     }
-  }, [articleId, t]);
+  }, [articleId]);
 
   useEffect(() => {
     loadArticle();
@@ -196,12 +223,44 @@ export default function KBArticleEditor({
     setHasUnsavedMetadata(true);
   };
 
+  const handleStatusChange = async (newStatus: 'review' | 'published' | 'archived') => {
+    if (!article) return;
+
+    setIsSaving(true);
+    try {
+      if (newStatus === 'published') {
+        const result = await publishArticle(article.article_id);
+        if (typeof result === 'object' && 'code' in result) {
+          toast.error(t('kb.publishError', 'Failed to publish article'));
+          return;
+        }
+        toast.success(t('kb.publishSuccess', 'Article published'));
+      } else {
+        const result = await updateArticle(article.article_id, { status: newStatus });
+        if (typeof result === 'object' && 'code' in result) {
+          toast.error(t('kb.statusChangeError', 'Failed to change article status'));
+          return;
+        }
+        toast.success(
+          newStatus === 'review'
+            ? t('kb.submitForReviewSuccess', 'Article submitted for review')
+            : t('kb.archiveSuccess', 'Article archived')
+        );
+      }
+      await loadArticle();
+    } catch (error) {
+      handleError(error, t('kb.statusChangeError', 'Failed to change article status'));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const isStale = article?.next_review_due && new Date(article.next_review_due) < new Date();
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <Spinner size="sm" />
       </div>
     );
   }
@@ -247,15 +306,75 @@ export default function KBArticleEditor({
               </div>
             </div>
           </div>
+          {/* Status Actions */}
+          <div className="flex items-center gap-2">
+            {article.status === 'draft' && (
+              <>
+                <Button
+                  id="kb-editor-submit-review"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleStatusChange('review')}
+                  disabled={isSaving}
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  {t('kb.submitForReview', 'Submit for Review')}
+                </Button>
+                <Button
+                  id="kb-editor-publish"
+                  size="sm"
+                  onClick={() => handleStatusChange('published')}
+                  disabled={isSaving}
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  {t('kb.publish', 'Publish')}
+                </Button>
+              </>
+            )}
+            {article.status === 'review' && (
+              <Button
+                id="kb-editor-publish"
+                size="sm"
+                onClick={() => handleStatusChange('published')}
+                disabled={isSaving}
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                {t('kb.publish', 'Publish')}
+              </Button>
+            )}
+            {article.status === 'published' && (
+              <Button
+                id="kb-editor-archive"
+                variant="outline"
+                size="sm"
+                onClick={() => handleStatusChange('archived')}
+                disabled={isSaving}
+              >
+                <Archive className="w-4 h-4 mr-2" />
+                {t('kb.archive', 'Archive')}
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Document Editor */}
-        <Card className="min-h-[500px]">
+        {isFallbackMode ? (
           <DocumentEditor
             documentId={article.document_id}
             userId={userId}
           />
-        </Card>
+        ) : (
+          <CollaborativeEditor
+            documentId={article.document_id}
+            tenantId={tenantId || article.tenant || ''}
+            userId={userId}
+            userName={userName || userId}
+            onConnectionStatusChange={(status) => {
+              if (status === 'connected') collabConnectedRef.current = true;
+              if (status === 'disconnected') setIsFallbackMode(true);
+            }}
+          />
+        )}
       </div>
 
       {/* Metadata Sidebar */}

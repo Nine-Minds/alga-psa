@@ -19,7 +19,7 @@ export default function KBStalenessBadge({
   size = 'md',
   className = '',
 }: KBStalenessBadgeProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation('features/documents');
 
   if (!nextReviewDue) {
     return null;

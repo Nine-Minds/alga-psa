@@ -8,6 +8,11 @@ import Underline from '@tiptap/extension-underline';
 import { Emoticon } from '@alga-psa/ui/editor';
 import { marked } from 'marked';
 import { getBlockContent, updateBlockContent } from '../actions/documentBlockContentActions';
+import {
+  detectBlockContentFormat,
+  blockNoteJsonToProsemirrorJson,
+  parseBlockContent,
+} from '../lib/blockContentFormat';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
@@ -118,11 +123,15 @@ export function DocumentEditor({
         const content = await getBlockContent(documentId);
         if (content?.block_data) {
           try {
-            const parsedContent = typeof content.block_data === 'string'
-              ? JSON.parse(content.block_data)
-              : content.block_data;
+            const format = detectBlockContentFormat(content.block_data);
+            let parsedContent: unknown;
+            if (format === 'blocknote') {
+              parsedContent = blockNoteJsonToProsemirrorJson(content.block_data);
+            } else {
+              parsedContent = parseBlockContent(content.block_data);
+            }
             if (editor && !editor.isDestroyed) {
-              editor.commands.setContent(parsedContent);
+              editor.commands.setContent(parsedContent as Parameters<typeof editor.commands.setContent>[0]);
             }
           } catch (parseError) {
             console.error('Error parsing content:', parseError);

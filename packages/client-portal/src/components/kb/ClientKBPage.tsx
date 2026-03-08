@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import Spinner from '@alga-psa/ui/components/Spinner';
+import { TagFilter } from '@alga-psa/ui/components';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import {
@@ -22,11 +24,13 @@ import {
 import {
   getClientKBArticles,
   getClientKBCategories,
+  getClientKBTags,
   ClientKBFilters,
   PaginatedClientKBArticles,
   ClientKBCategory,
 } from '../../actions/client-portal-actions/client-kb';
 import type { IKBArticleWithDocument, ArticleType } from '@alga-psa/documents/actions';
+import type { ITag } from '@alga-psa/types';
 
 const TYPE_ICONS: Record<ArticleType, React.ReactNode> = {
   how_to: <BookOpen className="w-5 h-5 text-blue-500" />,
@@ -160,7 +164,7 @@ interface ClientKBPageProps {
 }
 
 export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
-  const { t } = useTranslation('client-portal');
+  const { t } = useTranslation('features/documents');
 
   const [articles, setArticles] = useState<IKBArticleWithDocument[]>([]);
   const [categories, setCategories] = useState<ClientKBCategory[]>([]);
@@ -172,6 +176,8 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
   const [total, setTotal] = useState(0);
   const [isCategorySidebarCollapsed, setIsCategorySidebarCollapsed] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [availableTags, setAvailableTags] = useState<ITag[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
   const pageSize = 20;
 
@@ -186,6 +192,9 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
       if (selectedCategory) {
         filters.categoryId = selectedCategory;
       }
+      if (selectedTags.length > 0) {
+        filters.tags = selectedTags;
+      }
 
       const result = await getClientKBArticles(page, pageSize, filters);
       setArticles(result.articles);
@@ -197,7 +206,7 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [page, pageSize, searchTerm, selectedCategory, t]);
+  }, [page, pageSize, searchTerm, selectedCategory, selectedTags, t]);
 
   const loadCategories = useCallback(async () => {
     try {
@@ -208,9 +217,19 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
     }
   }, []);
 
+  const loadTags = useCallback(async () => {
+    try {
+      const result = await getClientKBTags();
+      setAvailableTags(result as ITag[]);
+    } catch (error) {
+      console.error('Failed to load tags:', error);
+    }
+  }, []);
+
   useEffect(() => {
     void loadCategories();
-  }, [loadCategories]);
+    void loadTags();
+  }, [loadCategories, loadTags]);
 
   useEffect(() => {
     void loadArticles();
@@ -321,7 +340,7 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Search */}
+          {/* Search and Filters */}
           <div className="flex items-center gap-4 mb-4">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -332,6 +351,23 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
                 className="pl-9"
               />
             </div>
+            {availableTags.length > 0 && (
+              <TagFilter
+                tags={availableTags}
+                selectedTags={selectedTags}
+                onToggleTag={(tag: string) => {
+                  setSelectedTags((prev) =>
+                    prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+                  );
+                  setPage(1);
+                }}
+                onClearTags={() => {
+                  setSelectedTags([]);
+                  setPage(1);
+                }}
+                placeholder={t('kb.filterByTags', 'Filter by tags...')}
+              />
+            )}
             <span className="text-sm text-muted-foreground">
               {t('kb.articleCount', '{{count}} articles', { count: total })}
             </span>
@@ -348,7 +384,7 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
           <div className="flex-1 overflow-auto">
             {isLoading ? (
               <div className="flex items-center justify-center h-32">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <Spinner size="sm" />
               </div>
             ) : articles.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
@@ -378,10 +414,10 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
               >
-                {t('common.previous', 'Previous')}
+                {t('common:pagination.previous', 'Previous')}
               </Button>
               <span className="text-sm text-muted-foreground">
-                {t('common.pageOf', 'Page {{current}} of {{total}}', {
+                {t('common:pagination.pageOf', 'Page {{current}} of {{total}}', {
                   current: page,
                   total: totalPages,
                 })}
@@ -393,7 +429,7 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
               >
-                {t('common.next', 'Next')}
+                {t('common:pagination.next', 'Next')}
               </Button>
             </div>
           )}

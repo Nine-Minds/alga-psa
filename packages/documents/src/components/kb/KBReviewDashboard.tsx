@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
+import Spinner from '@alga-psa/ui/components/Spinner';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { toast } from 'react-hot-toast';
@@ -31,7 +32,10 @@ export default function KBReviewDashboard({
   onEditArticle,
   onReviewArticle,
 }: KBReviewDashboardProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation('features/documents');
+  const tRef = useRef(t);
+  tRef.current = t;
+
   const [articlesInReview, setArticlesInReview] = useState<IKBArticleWithDocument[]>([]);
   const [staleArticles, setStaleArticles] = useState<IKBArticleWithDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -51,11 +55,11 @@ export default function KBReviewDashboard({
         setStaleArticles(staleResult as IKBArticleWithDocument[]);
       }
     } catch (error) {
-      handleError(error, t('kb.loadError', 'Failed to load review data'));
+      handleError(error, tRef.current('kb.loadError', 'Failed to load review data'));
     } finally {
       setIsLoading(false);
     }
-  }, [t]);
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -64,7 +68,7 @@ export default function KBReviewDashboard({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-32">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <Spinner size="sm" />
       </div>
     );
   }

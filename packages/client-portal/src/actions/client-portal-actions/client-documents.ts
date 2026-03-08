@@ -110,8 +110,9 @@ export const getClientDocuments = withAuth(
         sourceClauses.push(`
           EXISTS (
             SELECT 1 FROM document_associations da
-            JOIN project_tasks pt ON pt.project_task_id = da.entity_id AND pt.tenant = da.tenant
-            JOIN projects p ON p.project_id = pt.project_id AND p.tenant = pt.tenant
+            JOIN project_tasks pt ON pt.task_id = da.entity_id AND pt.tenant = da.tenant
+            JOIN project_phases pp ON pp.phase_id = pt.phase_id AND pp.tenant = pt.tenant
+            JOIN projects p ON p.project_id = pp.project_id AND p.tenant = pp.tenant
             WHERE da.document_id = d.document_id
               AND da.tenant = d.tenant
               AND da.entity_type = 'project_task'
@@ -125,11 +126,12 @@ export const getClientDocuments = withAuth(
         sourceClauses.push(`
           EXISTS (
             SELECT 1 FROM document_associations da
-            JOIN billing_plans bp ON bp.plan_id = da.entity_id AND bp.tenant = da.tenant
+            JOIN contracts c ON c.contract_id = da.entity_id AND c.tenant = da.tenant
+            JOIN client_contracts cc ON cc.contract_id = c.contract_id AND cc.tenant = c.tenant
             WHERE da.document_id = d.document_id
               AND da.tenant = d.tenant
               AND da.entity_type = 'contract'
-              AND bp.company_id = ?
+              AND cc.client_id = ?
           )
         `);
         sourceParams.push(clientId);
@@ -180,7 +182,7 @@ export const getClientDocuments = withAuth(
       // Apply pagination
       const offset = (page - 1) * effectivePageSize;
       const documents = await query
-        .orderBy('created_at', 'desc')
+        .orderBy('entered_at', 'desc')
         .limit(effectivePageSize)
         .offset(offset);
 
@@ -253,8 +255,9 @@ export const getClientDocumentFolders = withAuth(
             )
             OR EXISTS (
               SELECT 1 FROM document_associations da
-              JOIN project_tasks pt ON pt.project_task_id = da.entity_id AND pt.tenant = da.tenant
-              JOIN projects p ON p.project_id = pt.project_id AND p.tenant = pt.tenant
+              JOIN project_tasks pt ON pt.task_id = da.entity_id AND pt.tenant = da.tenant
+              JOIN project_phases pp ON pp.phase_id = pt.phase_id AND pp.tenant = pt.tenant
+              JOIN projects p ON p.project_id = pp.project_id AND p.tenant = pp.tenant
               WHERE da.document_id = d.document_id
                 AND da.tenant = d.tenant
                 AND da.entity_type = 'project_task'
@@ -262,11 +265,12 @@ export const getClientDocumentFolders = withAuth(
             )
             OR EXISTS (
               SELECT 1 FROM document_associations da
-              JOIN billing_plans bp ON bp.plan_id = da.entity_id AND bp.tenant = da.tenant
+              JOIN contracts c ON c.contract_id = da.entity_id AND c.tenant = da.tenant
+              JOIN client_contracts cc ON cc.contract_id = c.contract_id AND cc.tenant = c.tenant
               WHERE da.document_id = d.document_id
                 AND da.tenant = d.tenant
                 AND da.entity_type = 'contract'
-                AND bp.company_id = ?
+                AND cc.client_id = ?
             )
           )
         ORDER BY folder_path
@@ -345,10 +349,13 @@ export const downloadClientDocument = withAuth(
             .orWhereExists(
               trx('document_associations as da')
                 .join('project_tasks as pt', function () {
-                  this.on('pt.project_task_id', '=', 'da.entity_id').andOn('pt.tenant', '=', 'da.tenant');
+                  this.on('pt.task_id', '=', 'da.entity_id').andOn('pt.tenant', '=', 'da.tenant');
+                })
+                .join('project_phases as pp', function () {
+                  this.on('pp.phase_id', '=', 'pt.phase_id').andOn('pp.tenant', '=', 'pt.tenant');
                 })
                 .join('projects as p', function () {
-                  this.on('p.project_id', '=', 'pt.project_id').andOn('p.tenant', '=', 'pt.tenant');
+                  this.on('p.project_id', '=', 'pp.project_id').andOn('p.tenant', '=', 'pp.tenant');
                 })
                 .whereRaw('da.document_id = d.document_id')
                 .andWhereRaw('da.tenant = d.tenant')
@@ -357,13 +364,16 @@ export const downloadClientDocument = withAuth(
             )
             .orWhereExists(
               trx('document_associations as da')
-                .join('billing_plans as bp', function () {
-                  this.on('bp.plan_id', '=', 'da.entity_id').andOn('bp.tenant', '=', 'da.tenant');
+                .join('contracts as c', function () {
+                  this.on('c.contract_id', '=', 'da.entity_id').andOn('c.tenant', '=', 'da.tenant');
+                })
+                .join('client_contracts as cc', function () {
+                  this.on('cc.contract_id', '=', 'c.contract_id').andOn('cc.tenant', '=', 'c.tenant');
                 })
                 .whereRaw('da.document_id = d.document_id')
                 .andWhereRaw('da.tenant = d.tenant')
                 .andWhere('da.entity_type', 'contract')
-                .andWhere('bp.company_id', clientId)
+                .andWhere('cc.client_id', clientId)
             );
         })
         .first();

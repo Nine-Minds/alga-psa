@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import Spinner from '@alga-psa/ui/components/Spinner';
 import { Search, ChevronRight, Download, FileText, Image, File, Video, ChevronDown, ChevronUp, FolderOpen } from 'lucide-react';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import type { IDocument, IFolderNode } from '@alga-psa/types';
@@ -155,7 +156,7 @@ function DocumentCard({ document, onDownload, isDownloading }: DocumentCardProps
 }
 
 export default function ClientDocumentsPage() {
-  const { t } = useTranslation('client-portal');
+  const { t } = useTranslation('features/documents');
 
   const [documents, setDocuments] = useState<IDocument[]>([]);
   const [folders, setFolders] = useState<IFolderNode[]>([]);
@@ -189,7 +190,7 @@ export default function ClientDocumentsPage() {
       setTotal(result.total);
     } catch (error) {
       console.error('Failed to load documents:', error);
-      setLoadError(t('documents.loadError', 'Failed to load documents. Please try again.'));
+      setLoadError(t('portal.loadError', 'Failed to load documents. Please try again.'));
     } finally {
       setIsLoading(false);
     }
@@ -241,9 +242,9 @@ export default function ClientDocumentsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold">{t('documents.title', 'Documents')}</h1>
+          <h1 className="text-2xl font-semibold">{t('title', 'Documents')}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {t('documents.subtitle', 'View and download your shared documents')}
+            {t('portal.subtitle', 'View and download your shared documents')}
           </p>
         </div>
       </div>
@@ -267,7 +268,7 @@ export default function ClientDocumentsPage() {
                 ) : (
                   <>
                     <div className="flex items-center justify-between px-2 py-1 mb-2">
-                      <span className="text-sm font-medium">{t('documents.folders', 'Folders')}</span>
+                      <span className="text-sm font-medium">{t('folders.title', 'Folders')}</span>
                       <Button
                         id="client-docs-collapse-sidebar"
                         variant="ghost"
@@ -286,7 +287,7 @@ export default function ClientDocumentsPage() {
                       }`}
                       onClick={() => handleFolderSelect(null)}
                     >
-                      <span className="text-sm">{t('documents.allDocuments', 'All Documents')}</span>
+                      <span className="text-sm">{t('folders.allDocuments', 'All Documents')}</span>
                     </div>
                     {folders.map((folder) => (
                       <FolderTreeNode
@@ -310,14 +311,14 @@ export default function ClientDocumentsPage() {
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder={t('documents.searchPlaceholder', 'Search documents...')}
+                placeholder={t('portal.searchPlaceholder', 'Search documents...')}
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
                 className="pl-9"
               />
             </div>
             <span className="text-sm text-muted-foreground">
-              {t('documents.showing', '{{count}} documents', { count: total })}
+              {t('portal.showing', '{{count}} documents', { count: total })}
             </span>
           </div>
 
@@ -332,12 +333,12 @@ export default function ClientDocumentsPage() {
           <div className="flex-1 overflow-auto">
             {isLoading ? (
               <div className="flex items-center justify-center h-32">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <Spinner size="sm" />
               </div>
             ) : documents.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
                 <FileText className="w-12 h-12 mb-2 opacity-50" />
-                <p>{t('documents.noDocuments', 'No documents found')}</p>
+                <p>{t('empty.default', 'No documents found')}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -363,10 +364,10 @@ export default function ClientDocumentsPage() {
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
               >
-                {t('common.previous', 'Previous')}
+                {t('common:pagination.previous', 'Previous')}
               </Button>
               <span className="text-sm text-muted-foreground">
-                {t('common.pageOf', 'Page {{current}} of {{total}}', { current: page, total: totalPages })}
+                {t('common:pagination.pageOf', 'Page {{current}} of {{total}}', { current: page, total: totalPages })}
               </span>
               <Button
                 id="client-docs-next-page"
@@ -375,7 +376,7 @@ export default function ClientDocumentsPage() {
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
               >
-                {t('common.next', 'Next')}
+                {t('common:pagination.next', 'Next')}
               </Button>
             </div>
           )}

@@ -100,7 +100,7 @@ export default function KBCategoryTree({
   showAllOption = true,
   className = '',
 }: KBCategoryTreeProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation('features/documents');
 
   // Build tree structure from flat list
   const buildTree = (items: Category[]): Category[] => {

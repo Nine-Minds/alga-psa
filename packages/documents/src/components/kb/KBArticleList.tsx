@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
+import Spinner from '@alga-psa/ui/components/Spinner';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -13,6 +14,7 @@ import {
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import Pagination from '@alga-psa/ui/components/Pagination';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -89,14 +91,17 @@ export default function KBArticleList({
   onSubmitForReview,
   onPublish,
 }: KBArticleListProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation('features/documents');
+  const tRef = useRef(t);
+  tRef.current = t;
+
   const [articles, setArticles] = useState<IKBArticleWithDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedArticles, setSelectedArticles] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState(10);
 
   // Archive confirmation dialog state
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
@@ -108,7 +113,7 @@ export default function KBArticleList({
     try {
       const result = await getArticles(currentPage, pageSize, filters);
       if ('code' in result && result.code === 'PERMISSION_DENIED') {
-        toast.error(t('kb.permissionDenied', 'Permission denied'));
+        toast.error(tRef.current('kb.permissionDenied', 'Permission denied'));
         setArticles([]);
         return;
       }
@@ -117,16 +122,21 @@ export default function KBArticleList({
       setTotal(data.total);
       setTotalPages(data.totalPages);
     } catch (error) {
-      handleError(error, t('kb.loadError', 'Failed to load articles'));
+      handleError(error, tRef.current('kb.loadError', 'Failed to load articles'));
       setArticles([]);
     } finally {
       setIsLoading(false);
     }
-  }, [currentPage, filters, t]);
+  }, [currentPage, pageSize, filters]);
 
   useEffect(() => {
     loadArticles();
   }, [loadArticles]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
 
   const handleArchive = async () => {
     if (!articleToArchive) return;
@@ -180,7 +190,7 @@ export default function KBArticleList({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-32">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <Spinner size="sm" />
       </div>
     );
   }
@@ -343,34 +353,24 @@ export default function KBArticleList({
       )}
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            {t('kb.showing', 'Showing')} {(currentPage - 1) * pageSize + 1}-
-            {Math.min(currentPage * pageSize, total)} {t('kb.of', 'of')} {total}
-          </p>
-          <div className="flex gap-2">
-            <Button
-              id="kb-list-previous-page"
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-            >
-              {t('kb.previous', 'Previous')}
-            </Button>
-            <Button
-              id="kb-list-next-page"
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-            >
-              {t('kb.next', 'Next')}
-            </Button>
-          </div>
-        </div>
-      )}
+      <Pagination
+        id="kb-article-list-pagination"
+        currentPage={currentPage}
+        totalItems={total}
+        itemsPerPage={pageSize}
+        onPageChange={setCurrentPage}
+        onItemsPerPageChange={(size) => {
+          setPageSize(size);
+          setCurrentPage(1);
+        }}
+        itemsPerPageOptions={[
+          { value: '10', label: '10 items/page' },
+          { value: '20', label: '20 items/page' },
+          { value: '50', label: '50 items/page' },
+        ]}
+        variant="clients"
+        itemLabel={t('kb.articleCount', 'articles')}
+      />
 
       {/* Archive Confirmation Dialog */}
       <ConfirmationDialog

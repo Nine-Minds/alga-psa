@@ -1,19 +1,22 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
+import { Tabs, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import {
   BookOpen,
   Clock,
   Plus,
+  Download,
 } from 'lucide-react';
 import KBArticleList from './KBArticleList';
 import KBArticleFilters from './KBArticleFilters';
 import KBArticleEditor from './KBArticleEditor';
 import KBReviewDashboard from './KBReviewDashboard';
+import KBImportDialog from './KBImportDialog';
 import {
   IKBArticleWithDocument,
   IArticleFilters,
@@ -22,25 +25,53 @@ import {
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
-type ViewMode = 'list' | 'editor' | 'review';
+type TabValue = 'articles' | 'review';
 
-export default function KnowledgeBasePage() {
-  const { t } = useTranslation('common');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [activeTab, setActiveTab] = useState<string>('articles');
-  const [editingArticleId, setEditingArticleId] = useState<string | null>(null);
+const KB_BASE_PATH = '/msp/knowledge-base';
+
+interface KnowledgeBasePageProps {
+  activeTab?: TabValue;
+}
+
+export default function KnowledgeBasePage({ activeTab = 'articles' }: KnowledgeBasePageProps) {
+  const { t } = useTranslation('features/documents');
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const editingArticleId = searchParams?.get('article') ?? null;
+
   const [filters, setFilters] = useState<IArticleFilters>({});
   const [listKey, setListKey] = useState(0);
   const [userId, setUserId] = useState<string>('');
+  const [userName, setUserName] = useState<string>('');
+  const [tenantId, setTenantId] = useState<string>('');
   const [userLoadError, setUserLoadError] = useState<string | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
-  // Load user ID on mount
+  const updateUrl = useCallback((params: Record<string, string | null>) => {
+    const newParams = new URLSearchParams(searchParams?.toString() ?? '');
+    for (const [key, value] of Object.entries(params)) {
+      if (value === null) {
+        newParams.delete(key);
+      } else {
+        newParams.set(key, value);
+      }
+    }
+    const qs = newParams.toString();
+    router.push(`${pathname}${qs ? `?${qs}` : ''}`, { scroll: false });
+  }, [router, pathname, searchParams]);
+
+  // Load user on mount
   React.useEffect(() => {
     const loadUser = async () => {
       try {
         const user = await getCurrentUser();
         if (user?.user_id) {
           setUserId(user.user_id);
+          const nameParts = [user.first_name, user.last_name].filter(Boolean);
+          setUserName(nameParts.join(' ').trim() || user.email || 'User');
+          setTenantId(user.tenant ?? '');
         } else {
           setUserLoadError(t('kb.userLoadError', 'Failed to load user. Article editing is unavailable.'));
         }
@@ -52,9 +83,16 @@ export default function KnowledgeBasePage() {
     loadUser();
   }, [t]);
 
+  const handleTabChange = useCallback((tab: string) => {
+    if (tab === 'review') {
+      router.push(`${KB_BASE_PATH}/review`);
+    } else {
+      router.push(KB_BASE_PATH);
+    }
+  }, [router]);
+
   const handleCreateNew = useCallback(async () => {
     try {
-      // Create a new article and open editor
       const result = await createArticle({
         title: t('kb.newArticleTitle', 'New Article'),
         articleType: 'how_to',
@@ -67,36 +105,34 @@ export default function KnowledgeBasePage() {
       }
 
       const article = result as IKBArticleWithDocument;
-      setEditingArticleId(article.article_id);
-      setViewMode('editor');
+      updateUrl({ article: article.article_id });
     } catch (error) {
       handleError(error, t('kb.createError', 'Failed to create article'));
     }
-  }, [t]);
+  }, [t, updateUrl]);
 
   const handleEdit = useCallback((article: IKBArticleWithDocument) => {
-    setEditingArticleId(article.article_id);
-    setViewMode('editor');
-  }, []);
+    router.push(`${KB_BASE_PATH}?article=${article.article_id}`);
+  }, [router]);
 
   const handleBack = useCallback(() => {
-    setViewMode('list');
-    setEditingArticleId(null);
-    // Refresh the list
+    router.push(KB_BASE_PATH);
     setListKey((k) => k + 1);
-  }, []);
+  }, [router]);
 
   const handleClearFilters = useCallback(() => {
     setFilters({});
   }, []);
 
-  // Render based on view mode
-  if (viewMode === 'editor' && editingArticleId && userId) {
+  // Render editor if article is selected
+  if (editingArticleId && userId) {
     return (
-      <div className="p-6 bg-gray-50 dark:bg-[rgb(var(--color-border-50))] min-h-screen">
+      <div className="p-6">
         <KBArticleEditor
           articleId={editingArticleId}
           userId={userId}
+          userName={userName}
+          tenantId={tenantId}
           onBack={handleBack}
           onSave={handleBack}
         />
@@ -105,7 +141,7 @@ export default function KnowledgeBasePage() {
   }
 
   return (
-    <div className="p-6 bg-gray-50 dark:bg-[rgb(var(--color-border-50))] min-h-screen">
+    <div className="p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
@@ -119,10 +155,23 @@ export default function KnowledgeBasePage() {
             </p>
           </div>
         </div>
-        <Button id="kb-new-article" onClick={handleCreateNew} disabled={!userId}>
-          <Plus className="w-4 h-4 mr-2" />
-          {t('kb.newArticle', 'New Article')}
-        </Button>
+        {activeTab === 'articles' && (
+          <div className="flex items-center gap-2">
+            <Button
+              id="kb-import-articles"
+              variant="outline"
+              onClick={() => setImportDialogOpen(true)}
+              disabled={!userId}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              {t('kb.importArticles', 'Import')}
+            </Button>
+            <Button id="kb-new-article" onClick={handleCreateNew} disabled={!userId}>
+              <Plus className="w-4 h-4 mr-2" />
+              {t('kb.newArticle', 'New Article')}
+            </Button>
+          </div>
+        )}
       </div>
 
       {userLoadError && (
@@ -132,7 +181,7 @@ export default function KnowledgeBasePage() {
       )}
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="mb-4">
           <TabsTrigger value="articles">
             <BookOpen className="w-4 h-4 mr-2" />
@@ -143,37 +192,43 @@ export default function KnowledgeBasePage() {
             {t('kb.tabReview', 'Review Dashboard')}
           </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="articles" className="m-0">
-          <div className="flex gap-6">
-            {/* Filters Sidebar */}
-            <div className="w-64 flex-shrink-0">
-              <KBArticleFilters
-                filters={filters}
-                onFiltersChange={setFilters}
-                onClearFilters={handleClearFilters}
-              />
-            </div>
-
-            {/* Article List */}
-            <div className="flex-1 min-w-0">
-              <KBArticleList
-                key={listKey}
-                filters={filters}
-                onEdit={handleEdit}
-                onCreateNew={handleCreateNew}
-              />
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="review" className="m-0">
-          <KBReviewDashboard
-            onEditArticle={handleEdit}
-            onReviewArticle={handleEdit}
-          />
-        </TabsContent>
       </Tabs>
+
+      {activeTab === 'articles' && (
+        <div className="flex gap-6">
+          {/* Filters Sidebar */}
+          <div className="w-64 flex-shrink-0">
+            <KBArticleFilters
+              filters={filters}
+              onFiltersChange={setFilters}
+              onClearFilters={handleClearFilters}
+            />
+          </div>
+
+          {/* Article List */}
+          <div className="flex-1 min-w-0">
+            <KBArticleList
+              key={listKey}
+              filters={filters}
+              onEdit={handleEdit}
+              onCreateNew={handleCreateNew}
+            />
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'review' && (
+        <KBReviewDashboard
+          onEditArticle={handleEdit}
+          onReviewArticle={handleEdit}
+        />
+      )}
+
+      <KBImportDialog
+        isOpen={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        onImportComplete={() => setListKey((k) => k + 1)}
+      />
     </div>
   );
 }

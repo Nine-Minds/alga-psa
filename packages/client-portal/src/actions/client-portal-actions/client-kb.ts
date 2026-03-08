@@ -14,6 +14,7 @@ export interface ClientKBFilters {
   search?: string;
   articleType?: ArticleType;
   categoryId?: string;
+  tags?: string[];
 }
 
 export interface PaginatedClientKBArticles {
@@ -110,6 +111,19 @@ export const getClientKBArticles = withAuth(
         query = query.andWhere('ka.category_id', filters.categoryId);
       }
 
+      if (filters.tags && filters.tags.length > 0) {
+        query = query.whereIn('ka.article_id', function () {
+          this.select('tm.tagged_id')
+            .from('tag_mappings as tm')
+            .join('tag_definitions as td', function () {
+              this.on('tm.tenant', '=', 'td.tenant').andOn('tm.tag_id', '=', 'td.tag_id');
+            })
+            .where('tm.tagged_type', 'knowledge_base_article')
+            .andWhere('tm.tenant', tenant)
+            .whereIn('td.tag_text', filters.tags);
+        });
+      }
+
       // Get total count
       const countResult = await query.clone().clearSelect().count('* as count').first();
       const total = parseInt((countResult as any)?.count || '0', 10);
@@ -186,10 +200,13 @@ export const getClientKBArticle = withAuth(
           'ka.created_at',
           'ka.updated_at',
           'd.document_name',
-          'd.block_content',
+          'dbc.block_data',
         ])
         .leftJoin('documents as d', function () {
           this.on('d.document_id', '=', 'ka.document_id').andOn('d.tenant', '=', 'ka.tenant');
+        })
+        .leftJoin('document_block_content as dbc', function () {
+          this.on('dbc.document_id', '=', 'ka.document_id').andOn('dbc.tenant', '=', 'ka.tenant');
         })
         .where('ka.tenant', tenant)
         .andWhere('ka.status', 'published')
@@ -286,13 +303,56 @@ export const getClientKBCategories = withAuth(
           this.select('*')
             .from('kb_articles as ka')
             .where('ka.tenant', tenant)
-            .whereRaw('ka.category_id = sc.id::text')
+            .whereRaw('ka.category_id::text = sc.id::text')
             .andWhere('ka.status', 'published')
             .whereIn('ka.audience', ['client', 'public']);
         })
         .orderBy('sc.display_order', 'asc');
 
       return categoriesWithArticles as ClientKBCategory[];
+    });
+  }
+);
+
+/**
+ * Gets unique tags used on published client/public KB articles.
+ */
+export const getClientKBTags = withAuth(
+  async (
+    user,
+    { tenant }
+  ): Promise<Array<{ tag_id: string; tag_text: string; tagged_id: string; tagged_type: string; background_color: string | null; text_color: string | null }>> => {
+    if (user.user_type !== 'client') {
+      throw new Error('Access denied: Client portal actions are restricted to client users');
+    }
+
+    const db = await getConnection(tenant);
+
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      const result = await trx.raw(`
+        SELECT DISTINCT ON (td.tag_text) td.tag_id, td.tag_text, td.background_color, td.text_color
+        FROM tag_definitions td
+        WHERE td.tenant = ?
+          AND td.tagged_type = 'knowledge_base_article'
+          AND EXISTS (
+            SELECT 1 FROM tag_mappings tm
+            JOIN kb_articles ka ON ka.article_id = tm.tagged_id AND ka.tenant = tm.tenant
+            WHERE tm.tenant = td.tenant
+              AND tm.tag_id = td.tag_id
+              AND ka.status = 'published'
+              AND ka.audience IN ('client', 'public')
+          )
+        ORDER BY td.tag_text ASC, td.created_at ASC
+      `, [tenant]);
+
+      return (result?.rows || []).map((tag: any) => ({
+        tag_id: tag.tag_id,
+        tag_text: tag.tag_text,
+        tagged_id: '',
+        tagged_type: 'knowledge_base_article' as const,
+        background_color: tag.background_color,
+        text_color: tag.text_color,
+      }));
     });
   }
 );

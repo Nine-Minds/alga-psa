@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
+import Spinner from '@alga-psa/ui/components/Spinner';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { toast } from 'react-hot-toast';
@@ -48,7 +49,7 @@ export default function ClientKBArticleView({
   articleIdOrSlug,
   onBack,
 }: ClientKBArticleViewProps) {
-  const { t } = useTranslation('client-portal');
+  const { t } = useTranslation('features/documents');
   const [article, setArticle] = useState<IKBArticleWithDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState<'helpful' | 'not_helpful' | null>(
@@ -134,18 +135,21 @@ export default function ClientKBArticleView({
           return React.createElement(tag, { key, className: headingClasses[level] || headingClasses[2] }, children);
         }
         case 'bulletList':
+        case 'bullet_list':
           return (
             <ul key={key} className="list-disc list-inside mb-4 space-y-1">
               {node.content?.map((child: any, i: number) => renderNode(child, i)) || null}
             </ul>
           );
         case 'orderedList':
+        case 'ordered_list':
           return (
             <ol key={key} className="list-decimal list-inside mb-4 space-y-1">
               {node.content?.map((child: any, i: number) => renderNode(child, i)) || null}
             </ol>
           );
         case 'listItem':
+        case 'list_item':
           return (
             <li key={key}>
               {node.content?.map((child: any, i: number) => {
@@ -154,6 +158,18 @@ export default function ClientKBArticleView({
                 }
                 return renderNode(child, i);
               }) || null}
+            </li>
+          );
+        case 'bulletListItem':
+          return (
+            <li key={key} className="list-disc list-inside mb-1">
+              {node.content?.map((child: any, i: number) => renderText(child, i)) || null}
+            </li>
+          );
+        case 'numberedListItem':
+          return (
+            <li key={key} className="list-decimal list-inside mb-1">
+              {node.content?.map((child: any, i: number) => renderText(child, i)) || null}
             </li>
           );
         case 'blockquote':
@@ -166,6 +182,7 @@ export default function ClientKBArticleView({
             </blockquote>
           );
         case 'codeBlock':
+        case 'code_block':
           return (
             <pre
               key={key}
@@ -259,7 +276,7 @@ export default function ClientKBArticleView({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <Spinner size="sm" />
       </div>
     );
   }
@@ -325,7 +342,7 @@ export default function ClientKBArticleView({
       {/* Article Content */}
       <Card className="mb-6">
         <CardContent className="p-6">
-          {renderBlockContent((article as any).block_content)}
+          {renderBlockContent((article as any).block_data)}
         </CardContent>
       </Card>
 

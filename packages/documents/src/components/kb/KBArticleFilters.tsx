@@ -5,8 +5,9 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { TagFilter } from '@alga-psa/ui/components';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { X, Search, Tags } from 'lucide-react';
+import { X, Search } from 'lucide-react';
 import { IArticleFilters, ArticleStatus, ArticleAudience, ArticleType } from '../../actions/kbArticleActions';
 import { findAllTagsByType } from '@alga-psa/tags';
 import type { ITag } from '@alga-psa/types';
@@ -47,7 +48,7 @@ export default function KBArticleFilters({
   onClearFilters,
   categories = [],
 }: KBArticleFiltersProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation('features/documents');
   const [availableTags, setAvailableTags] = useState<ITag[]>([]);
 
   // Load available tags for knowledge_base_article
@@ -75,18 +76,13 @@ export default function KBArticleFilters({
     ...categories.map((cat) => ({ value: cat.id, label: cat.name })),
   ];
 
-  const tagOptions: SelectOption[] = [
-    { value: '', label: t('kb.allTags', 'All Tags') },
-    ...availableTags.map((tag) => ({ value: tag.tag_id, label: tag.tag_text })),
-  ];
-
   const hasFilters =
     filters.search ||
     filters.status ||
     filters.audience ||
     filters.articleType ||
     filters.categoryId ||
-    (filters.tagIds && filters.tagIds.length > 0);
+    (filters.tags && filters.tags.length > 0);
 
   return (
     <Card className="sticky top-6">
@@ -192,17 +188,21 @@ export default function KBArticleFilters({
         {/* Tags */}
         {availableTags.length > 0 && (
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block flex items-center gap-1.5">
-              <Tags className="w-3 h-3" />
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
               {t('kb.tags', 'Tags')}
             </label>
-            <CustomSelect
-              options={tagOptions}
-              value={filters.tagIds?.[0] || ''}
-              onValueChange={(value) =>
-                onFiltersChange({ ...filters, tagIds: value ? [value] : undefined })
-              }
-              placeholder={t('kb.selectTag', 'Select tag...')}
+            <TagFilter
+              tags={availableTags}
+              selectedTags={filters.tags || []}
+              onToggleTag={(tag: string) => {
+                const current = filters.tags || [];
+                const updated = current.includes(tag)
+                  ? current.filter((t) => t !== tag)
+                  : [...current, tag];
+                onFiltersChange({ ...filters, tags: updated.length > 0 ? updated : undefined });
+              }}
+              onClearTags={() => onFiltersChange({ ...filters, tags: undefined })}
+              placeholder={t('kb.filterByTags', 'Filter by tags...')}
             />
           </div>
         )}

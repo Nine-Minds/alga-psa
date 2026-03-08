@@ -83,6 +83,7 @@ export interface IUpdateArticleInput {
   audience?: ArticleAudience;
   categoryId?: string | null;
   reviewCycleDays?: number | null;
+  status?: ArticleStatus;
 }
 
 export interface IArticleFilters {
@@ -92,6 +93,7 @@ export interface IArticleFilters {
   categoryId?: string;
   search?: string;
   tagIds?: string[];
+  tags?: string[];
 }
 
 const KB_ARTICLE_SELECT_COLUMNS = [
@@ -141,16 +143,30 @@ async function _createArticleInternal(
     throw new Error('Title is required');
   }
 
-  const slug = input.slug?.trim() || generateSlug(input.title);
+  let slug = input.slug?.trim() || generateSlug(input.title);
   const articleType = input.articleType || 'how_to';
   const audience = input.audience || 'internal';
 
-  // Check slug uniqueness
+  // Ensure slug uniqueness — append a numeric suffix if needed
   const existingSlug = await knex('kb_articles')
     .where({ tenant, slug })
     .first();
   if (existingSlug) {
-    throw new Error('An article with this slug already exists');
+    // If the caller provided an explicit slug, treat collision as an error
+    if (input.slug?.trim()) {
+      throw new Error('An article with this slug already exists');
+    }
+    // Otherwise auto-deduplicate
+    let suffix = 2;
+    while (true) {
+      const candidate = `${slug}-${suffix}`;
+      const collision = await knex('kb_articles').where({ tenant, slug: candidate }).first();
+      if (!collision) {
+        slug = candidate;
+        break;
+      }
+      suffix++;
+    }
   }
 
   // Create the underlying document directly via knex
@@ -171,9 +187,14 @@ async function _createArticleInternal(
 
   // Store block content if provided
   if (input.content && Array.isArray(input.content) && input.content.length > 0) {
-    await knex('documents')
-      .where({ tenant, document_id: documentId })
-      .update({ block_content: JSON.stringify(input.content) });
+    await knex('document_block_content').insert({
+      content_id: randomUUID(),
+      document_id: documentId,
+      tenant,
+      block_data: JSON.stringify(input.content),
+      created_at: now,
+      updated_at: now,
+    });
   }
 
   const document = await knex('documents')
@@ -318,6 +339,10 @@ export const updateArticle = withAuth(
             Date.now() + input.reviewCycleDays * 24 * 60 * 60 * 1000
           );
         }
+      }
+
+      if (input.status !== undefined) {
+        updates.status = input.status;
       }
 
       await trx('kb_articles')
@@ -630,7 +655,7 @@ export const getArticles = withAuth(
       });
     }
 
-    // Filter by tags (articles that have ANY of the specified tags)
+    // Filter by tag IDs (legacy)
     if (filters.tagIds && filters.tagIds.length > 0) {
       query = query.whereExists(function () {
         this.select(knex.raw('1'))
@@ -639,6 +664,20 @@ export const getArticles = withAuth(
           .whereRaw('tm.tenant = ka.tenant')
           .where('tm.tagged_type', 'knowledge_base_article')
           .whereIn('tm.tag_id', filters.tagIds as string[]);
+      });
+    }
+
+    // Filter by tag text (used by TagFilter component)
+    if (filters.tags && filters.tags.length > 0) {
+      query = query.whereIn('ka.article_id', function () {
+        this.select('tm.tagged_id')
+          .from('tag_mappings as tm')
+          .join('tag_definitions as td', function () {
+            this.on('tm.tenant', '=', 'td.tenant').andOn('tm.tag_id', '=', 'td.tag_id');
+          })
+          .where('tm.tagged_type', 'knowledge_base_article')
+          .whereRaw('tm.tenant = ka.tenant')
+          .whereIn('td.tag_text', filters.tags as string[]);
       });
     }
 
@@ -685,13 +724,16 @@ export const getArticle = withAuth(
       .select([
         ...KB_ARTICLE_SELECT_COLUMNS.map((col) => `ka.${col}`),
         'd.document_name',
-        'd.block_content',
         'd.content',
         'd.file_id',
         'd.mime_type',
+        'dbc.block_data',
       ])
       .leftJoin('documents as d', function () {
         this.on('d.document_id', '=', 'ka.document_id').andOn('d.tenant', '=', 'ka.tenant');
+      })
+      .leftJoin('document_block_content as dbc', function () {
+        this.on('dbc.document_id', '=', 'ka.document_id').andOn('dbc.tenant', '=', 'ka.tenant');
       })
       .where('ka.tenant', tenant)
       .andWhere('ka.article_id', articleId)
@@ -820,6 +862,258 @@ export const getArticleTemplates = withAuth(
     const templates = await query.orderBy('name', 'asc');
 
     return templates as IKBArticleTemplate[];
+  }
+);
+
+// ---------------------------------------------------------------------------
+// Markdown / HTML → BlockNote conversion helpers
+// ---------------------------------------------------------------------------
+
+interface BlockNoteBlock {
+  type: string;
+  props?: Record<string, any>;
+  content?: Array<{ type: string; text: string; styles?: Record<string, boolean> }>;
+  children?: BlockNoteBlock[];
+}
+
+function markdownToBlocks(markdown: string): BlockNoteBlock[] {
+  const lines = markdown.split('\n');
+  const blocks: BlockNoteBlock[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Fenced code block
+    if (line.startsWith('```')) {
+      const lang = line.slice(3).trim();
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].startsWith('```')) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      i++; // skip closing ```
+      blocks.push({
+        type: 'codeBlock',
+        props: { language: lang || 'plain' },
+        content: [{ type: 'text', text: codeLines.join('\n') }],
+      });
+      continue;
+    }
+
+    // Headings
+    const headingMatch = line.match(/^(#{1,6})\s+(.*)/);
+    if (headingMatch) {
+      blocks.push({
+        type: 'heading',
+        props: { level: headingMatch[1].length },
+        content: parseInlineMarkdown(headingMatch[2]),
+      });
+      i++;
+      continue;
+    }
+
+    // Unordered list items
+    if (/^\s*[-*+]\s+/.test(line)) {
+      const items: BlockNoteBlock[] = [];
+      while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i])) {
+        const text = lines[i].replace(/^\s*[-*+]\s+/, '');
+        items.push({
+          type: 'bulletListItem',
+          content: parseInlineMarkdown(text),
+        });
+        i++;
+      }
+      blocks.push(...items);
+      continue;
+    }
+
+    // Ordered list items
+    if (/^\s*\d+[.)]\s+/.test(line)) {
+      const items: BlockNoteBlock[] = [];
+      while (i < lines.length && /^\s*\d+[.)]\s+/.test(lines[i])) {
+        const text = lines[i].replace(/^\s*\d+[.)]\s+/, '');
+        items.push({
+          type: 'numberedListItem',
+          content: parseInlineMarkdown(text),
+        });
+        i++;
+      }
+      blocks.push(...items);
+      continue;
+    }
+
+    // Blank line → skip
+    if (!line.trim()) {
+      i++;
+      continue;
+    }
+
+    // Regular paragraph — collect consecutive non-blank, non-special lines
+    const paraLines: string[] = [];
+    while (
+      i < lines.length &&
+      lines[i].trim() &&
+      !lines[i].startsWith('#') &&
+      !lines[i].startsWith('```') &&
+      !/^\s*[-*+]\s+/.test(lines[i]) &&
+      !/^\s*\d+[.)]\s+/.test(lines[i])
+    ) {
+      paraLines.push(lines[i]);
+      i++;
+    }
+    blocks.push({
+      type: 'paragraph',
+      content: parseInlineMarkdown(paraLines.join(' ')),
+    });
+  }
+
+  return blocks;
+}
+
+function parseInlineMarkdown(
+  text: string
+): Array<{ type: string; text: string; styles?: Record<string, boolean> }> {
+  const segments: Array<{ type: string; text: string; styles?: Record<string, boolean> }> = [];
+  // Very simple: handle **bold**, *italic*, `code`
+  const regex = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({ type: 'text', text: text.slice(lastIndex, match.index) });
+    }
+    if (match[2]) {
+      segments.push({ type: 'text', text: match[2], styles: { bold: true } });
+    } else if (match[3]) {
+      segments.push({ type: 'text', text: match[3], styles: { italic: true } });
+    } else if (match[4]) {
+      segments.push({ type: 'text', text: match[4], styles: { code: true } });
+    }
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    segments.push({ type: 'text', text: text.slice(lastIndex) });
+  }
+
+  return segments.length > 0 ? segments : [{ type: 'text', text }];
+}
+
+function htmlToBlocks(html: string): BlockNoteBlock[] {
+  // Simple HTML → text conversion, then parse as markdown
+  const text = html
+    // Convert common block elements to newlines
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<h([1-6])[^>]*>(.*?)<\/h\1>/gi, (_, level, content) => {
+      return '#'.repeat(parseInt(level)) + ' ' + stripTags(content) + '\n\n';
+    })
+    .replace(/<li[^>]*>/gi, '- ')
+    .replace(/<pre[^>]*><code[^>]*>(.*?)<\/code><\/pre>/gis, (_, content) => {
+      return '```\n' + stripTags(content) + '\n```\n\n';
+    })
+    .replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`')
+    .replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**')
+    .replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**')
+    .replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*')
+    .replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*');
+
+  return markdownToBlocks(stripTags(text));
+}
+
+function stripTags(html: string): string {
+  return html.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ');
+}
+
+function titleFromFilename(filename: string): string {
+  return filename
+    .replace(/\.(md|markdown|html|htm)$/i, '')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim();
+}
+
+// ---------------------------------------------------------------------------
+// Import articles from file contents
+// ---------------------------------------------------------------------------
+
+export interface IImportFileInput {
+  filename: string;
+  content: string;
+}
+
+export interface IImportArticlesInput {
+  files: IImportFileInput[];
+  audience?: ArticleAudience;
+  articleType?: ArticleType;
+  categoryId?: string;
+}
+
+export interface IImportResult {
+  total: number;
+  imported: number;
+  failed: Array<{ filename: string; error: string }>;
+}
+
+/**
+ * Imports KB articles from markdown/HTML file contents.
+ * Each file becomes one article. Filename → title, content → BlockNote blocks.
+ */
+export const importArticles = withAuth(
+  async (
+    user,
+    { tenant },
+    input: IImportArticlesInput
+  ): Promise<IImportResult | ActionPermissionError> => {
+    const { knex } = await createTenantKnex();
+
+    if (!(await hasPermission(user, 'document', 'create'))) {
+      return permissionError('Permission denied');
+    }
+
+    if (!input.files?.length) {
+      throw new Error('No files provided');
+    }
+
+    const result: IImportResult = { total: input.files.length, imported: 0, failed: [] };
+
+    for (const file of input.files) {
+      try {
+        const title = titleFromFilename(file.filename);
+        const isHtml = /\.(html|htm)$/i.test(file.filename);
+        const blocks = isHtml ? htmlToBlocks(file.content) : markdownToBlocks(file.content);
+
+        // Deduplicate slug: append a suffix if needed
+        let slug = generateSlug(title);
+        const existingSlug = await knex('kb_articles').where({ tenant, slug }).first();
+        if (existingSlug) {
+          slug = `${slug}-${Date.now()}`;
+        }
+
+        await _createArticleInternal(knex, user, tenant, {
+          title,
+          slug,
+          content: blocks,
+          articleType: input.articleType || 'reference',
+          audience: input.audience || 'internal',
+          categoryId: input.categoryId,
+        });
+
+        result.imported++;
+      } catch (err) {
+        result.failed.push({
+          filename: file.filename,
+          error: err instanceof Error ? err.message : 'Unknown error',
+        });
+      }
+    }
+
+    return result;
   }
 );
 

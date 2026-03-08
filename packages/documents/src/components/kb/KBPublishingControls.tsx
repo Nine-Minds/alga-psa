@@ -47,7 +47,7 @@ export default function KBPublishingControls({
   onStatusChange,
   onSubmitForReview,
 }: KBPublishingControlsProps) {
-  const { t } = useTranslation('common');
+  const { t } = useTranslation('features/documents');
   const [isPublishing, setIsPublishing] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
