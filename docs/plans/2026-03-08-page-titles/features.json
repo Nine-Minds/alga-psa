@@ -242,7 +242,7 @@
   {
     "id": "F031",
     "description": "MSP page title: /msp/billing/credits — title: 'Credits'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
