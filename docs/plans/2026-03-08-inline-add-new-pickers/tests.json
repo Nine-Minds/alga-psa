@@ -259,7 +259,7 @@
   {
     "id": "T033",
     "description": "QuickAddCategory shows validation error when board is required but not selected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]

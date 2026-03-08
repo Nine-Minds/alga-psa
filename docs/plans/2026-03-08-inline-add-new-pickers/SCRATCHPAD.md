@@ -236,3 +236,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddCategory.test.tsx -t T031`
 - 2026-03-08 T032: Extended `QuickAddCategory.test.tsx` to verify the dialog blocks submission and surfaces `Category name is required` when the name field is left blank.
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddCategory.test.tsx -t T032`
+- 2026-03-08 T033: Extended `QuickAddCategory.test.tsx` to verify top-level category creation is blocked with `Board is required for top-level categories` when no board is selected.
+- Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddCategory.test.tsx -t T033`

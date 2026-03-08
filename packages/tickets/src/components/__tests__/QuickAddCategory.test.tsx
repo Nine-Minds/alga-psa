@@ -161,4 +161,14 @@ describe('QuickAddCategory', () => {
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Category name is required'));
     expect(createCategoryMock).not.toHaveBeenCalled();
   });
+
+  it('T033: shows validation error when board is required but not selected', async () => {
+    renderDialog();
+
+    fireEvent.change(screen.getByLabelText(/category name/i), { target: { value: 'Networking' } });
+    fireEvent.click(screen.getByRole('button', { name: /^create$/i }));
+
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Board is required for top-level categories'));
+    expect(createCategoryMock).not.toHaveBeenCalled();
+  });
 });
