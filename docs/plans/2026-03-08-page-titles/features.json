@@ -722,7 +722,7 @@
   {
     "id": "F091",
     "description": "Auth page title: /auth/register — title: 'Register'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3b"
     ]
