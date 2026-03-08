@@ -250,7 +250,7 @@
   {
     "id": "F032",
     "description": "MSP page title: /msp/time-entry — title: 'Time Entry'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]

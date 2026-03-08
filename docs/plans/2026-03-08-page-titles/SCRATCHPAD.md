@@ -79,3 +79,4 @@
 - (2026-03-08) F029: MSP page title: /msp/assets/policies — title: 'Asset Policies'
 - (2026-03-08) F030: MSP page title: /msp/billing — title: 'Billing'
 - (2026-03-08) F031: MSP page title: /msp/billing/credits — title: 'Credits'
+- (2026-03-08) F032: MSP page title: /msp/time-entry — title: 'Time Entry'
