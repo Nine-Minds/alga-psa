@@ -347,7 +347,7 @@
   {
     "id": "T044",
     "description": "TicketingDashboard: clicking '+ Add new category' opens QuickAddCategory",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
