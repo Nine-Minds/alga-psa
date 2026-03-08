@@ -74,7 +74,7 @@
   {
     "id": "T010",
     "description": "QuickAddInteraction: clicking '+ Add new contact' opens QuickAddContact with selectedClientId",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ]

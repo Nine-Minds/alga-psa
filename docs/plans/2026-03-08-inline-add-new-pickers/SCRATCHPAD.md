@@ -190,3 +190,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddTicketPrefill.test.tsx -t "T00[678]"`
 - 2026-03-08 T009: Added `packages/tickets/src/components/ticket/__tests__/TicketPropertiesQuickAddContact.test.tsx` to open the inline contact editor, trigger `+ Add new contact`, and assert the mocked `QuickAddContact` dialog opens with `ticket.client_id` taking precedence over the fallback client context.
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/ticket/__tests__/TicketPropertiesQuickAddContact.test.tsx`
+- 2026-03-08 T010: Added `packages/clients/src/components/interactions/QuickAddInteraction.quick-add-contact.contract.test.ts` to lock the add-new contact wiring in `QuickAddInteraction`, including the guarded `onAddNew` callback and the forwarded `selectedClientId` into `QuickAddContact`.
+- Validation: `cd packages/clients && npx vitest run --config vitest.config.ts src/components/interactions/QuickAddInteraction.quick-add-contact.contract.test.ts`
