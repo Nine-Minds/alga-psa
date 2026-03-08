@@ -546,7 +546,7 @@
   {
     "id": "F069",
     "description": "MSP page title: /msp/user-activities — title: 'User Activities'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
