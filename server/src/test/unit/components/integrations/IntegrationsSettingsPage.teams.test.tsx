@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 const useSearchParamsMock = vi.hoisted(() => vi.fn());
@@ -104,6 +104,7 @@ describe('IntegrationsSettingsPage Teams placement', () => {
   });
 
   afterEach(() => {
+    cleanup();
     if (originalEdition === undefined) {
       delete process.env.NEXT_PUBLIC_EDITION;
     } else {

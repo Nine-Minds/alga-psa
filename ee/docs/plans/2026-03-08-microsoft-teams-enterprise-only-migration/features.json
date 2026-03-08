@@ -380,7 +380,7 @@
   {
     "id": "F043",
     "description": "Settings IA: the Teams settings UI continues to reference shared Microsoft profiles instead of duplicating Microsoft credential entry.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -389,7 +389,7 @@
   {
     "id": "F044",
     "description": "Settings IA: Teams profile-selection UX remains tenant-admin-only.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -407,7 +407,7 @@
   {
     "id": "F046",
     "description": "Settings IA: the Teams settings entry preserves the existing Teams setup concepts such as profile selection, capability status, and package/install state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -443,7 +443,7 @@
   {
     "id": "F050",
     "description": "Settings IA: any Teams-related settings copy that says “Providers” is updated to say “Communication”.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -461,7 +461,7 @@
   {
     "id": "F052",
     "description": "Settings IA: Teams-specific settings help text remains scoped to MSP users and does not broaden product scope during the migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -848,7 +848,7 @@
   {
     "id": "F095",
     "description": "EE ownership: concrete Teams settings UI lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"

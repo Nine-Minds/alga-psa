@@ -2,8 +2,10 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import fs from 'node:fs';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
@@ -19,7 +21,20 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   saveTeamsIntegrationSettings: (...args: unknown[]) => saveTeamsIntegrationSettingsMock(...args),
 }));
 
-import { TeamsIntegrationSettings } from './TeamsIntegrationSettings';
+import { TeamsIntegrationSettings } from '../../../../../../ee/server/src/components/settings/integrations/TeamsIntegrationSettings';
+
+const sharedTeamsSettingsPath = path.resolve(
+  __dirname,
+  '../../../../../../packages/integrations/src/components/settings/integrations/TeamsIntegrationSettings.tsx'
+);
+const ceStubTeamsSettingsPath = path.resolve(
+  __dirname,
+  '../../../../../../packages/ee/src/components/settings/integrations/TeamsIntegrationSettings.tsx'
+);
+const eeTeamsSettingsPath = path.resolve(
+  __dirname,
+  '../../../../../../ee/server/src/components/settings/integrations/TeamsIntegrationSettings.tsx'
+);
 
 function buildMicrosoftStatus(overrides: Record<string, unknown> = {}) {
   return {
@@ -153,7 +168,19 @@ describe('TeamsIntegrationSettings contracts', () => {
     });
   });
 
-  it('T095/T096/T109/T110: renders the tenant-admin Teams setup UI, current selections, and refresh path', async () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('T189/T190: keeps the concrete Teams settings UI in ee/server while the CE stub stays inert', () => {
+    const ceStubSource = fs.readFileSync(ceStubTeamsSettingsPath, 'utf8');
+
+    expect(fs.existsSync(eeTeamsSettingsPath)).toBe(true);
+    expect(fs.existsSync(sharedTeamsSettingsPath)).toBe(false);
+    expect(ceStubSource).toContain('return null');
+  });
+
+  it('T087/T091/T092: preserves the tenant-admin Teams setup concepts, current selections, and refresh path', async () => {
     const user = userEvent.setup();
     render(<TeamsIntegrationSettings />);
 
@@ -176,7 +203,7 @@ describe('TeamsIntegrationSettings contracts', () => {
     });
   });
 
-  it('T097/T098/T099/T100/T101/T102: requires a selected profile before activation and shows registration guidance plus checklist state for the selected profile', async () => {
+  it('T085/T086: reuses the shared Microsoft profile selector and guidance instead of duplicating credential entry', async () => {
     const user = userEvent.setup();
     getTeamsIntegrationStatusMock.mockResolvedValueOnce(buildTeamsStatus({
       integration: {
@@ -196,6 +223,9 @@ describe('TeamsIntegrationSettings contracts', () => {
     expect(screen.getByText('Select a Microsoft profile to view the Teams app-registration values, redirect URIs, and scope guidance for this tenant.')).toBeInTheDocument();
     expect(screen.getByText('Microsoft profile selected')).toBeInTheDocument();
     expect(screen.getByText('Teams install state')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Client ID')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Client secret')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Tenant ID')).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText('Microsoft profile'), 'profile-1');
 
@@ -208,7 +238,15 @@ describe('TeamsIntegrationSettings contracts', () => {
     expect(screen.getByText('api://psa.example.com/teams/primary-client-id')).toBeInTheDocument();
   });
 
-  it('T103/T104: saves draft Teams setup progress and shows recoverable save failures inline', async () => {
+  it('T099/T100/T103/T104: keeps Teams settings copy aligned with Communication placement and MSP-technician scope', () => {
+    const eeSource = fs.readFileSync(eeTeamsSettingsPath, 'utf8');
+
+    expect(eeSource).not.toContain('Providers');
+    expect(eeSource).toContain('technicians');
+    expect(eeSource).not.toContain('client users');
+  });
+
+  it('saves draft Teams setup progress and shows recoverable save failures inline', async () => {
     const user = userEvent.setup();
     getTeamsIntegrationStatusMock.mockResolvedValueOnce(buildTeamsStatus({
       integration: {

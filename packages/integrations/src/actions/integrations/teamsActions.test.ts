@@ -424,7 +424,7 @@ describe('Teams integration actions', () => {
     });
   });
 
-  it('T461/T462: only tenant admins can load or save Teams setup state', async () => {
+  it('T088/T461/T462: only tenant admins can load or save Teams setup state', async () => {
     hasPermissionMock.mockResolvedValue(false);
 
     await expect(getTeamsIntegrationStatus()).resolves.toEqual({
