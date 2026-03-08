@@ -158,3 +158,4 @@
 - (2026-03-08) F108: EE root layout: add metadata title template `'%s | Alga PSA'` and default `'Alga PSA'`
 - (2026-03-08) F109: EE MSP layout: add metadata template `'%s | Alga PSA'` and default `'Dashboard | Alga PSA'`
 - (2026-03-08) F110: EE Client Portal layout: add metadata template `'%s | Client Portal'` and default `'Dashboard | Client Portal'`
+- (2026-03-08) F111: EE MSP page title: /msp/chat — title: 'Chat'

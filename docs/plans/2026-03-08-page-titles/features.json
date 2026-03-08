@@ -882,7 +882,7 @@
   {
     "id": "F111",
     "description": "EE MSP page title: /msp/chat — title: 'Chat'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria"
     ]
