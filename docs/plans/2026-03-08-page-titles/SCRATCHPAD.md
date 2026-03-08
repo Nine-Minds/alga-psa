@@ -155,3 +155,4 @@
 - (2026-03-08) F105: Public page title: /surveys/respond/[token] — verify existing generateMetadata() is compatible with root template
 - (2026-03-08) F106: MSP page title: /msp/documents — title: 'Documents'
 - (2026-03-08) F107: Public page title: /test-routing — title: 'Test Routing'
+- (2026-03-08) F108: EE root layout: add metadata title template `'%s | Alga PSA'` and default `'Alga PSA'`

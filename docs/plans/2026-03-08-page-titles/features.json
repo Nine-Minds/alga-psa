@@ -858,7 +858,7 @@
   {
     "id": "F108",
     "description": "EE root layout: add metadata title template `'%s | Alga PSA'` and default `'Alga PSA'`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria"
     ]
