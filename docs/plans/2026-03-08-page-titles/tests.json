@@ -306,7 +306,7 @@
   {
     "id": "T026",
     "description": "Audit every page route under server/src/app and ee/server/src/app for metadata coverage via page export or route layout",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002",
