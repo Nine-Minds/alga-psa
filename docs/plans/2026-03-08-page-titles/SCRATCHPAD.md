@@ -180,3 +180,4 @@
 - (2026-03-08) T015: Verify existing metadata compatibility: /msp/extensions/[id] re-exported metadata from @product/extensions/entry uses string title
 - (2026-03-08) T016: Verify existing metadata compatibility: /client-portal/extensions/[id] re-exported metadata is compatible with Client Portal template
 - (2026-03-08) T017: Verify existing metadata compatibility: /surveys/respond/[token] generateMetadata() returns a string title (works with root template)
+- (2026-03-08) T018: TypeScript: no type errors introduced by metadata exports (run tsc --noEmit)

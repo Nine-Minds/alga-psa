@@ -226,7 +226,7 @@
   {
     "id": "T018",
     "description": "TypeScript: no type errors introduced by metadata exports (run tsc --noEmit)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002",
