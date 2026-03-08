@@ -3970,7 +3970,7 @@
   {
     "id": "T497",
     "description": "Tenant migration creates a default Microsoft profile, preserves existing Microsoft credentials, and leaves legacy email/calendar/MSP SSO consumers working.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F006",
@@ -3985,7 +3985,7 @@
   {
     "id": "T498",
     "description": "Tenant admin can create multiple named Microsoft profiles, mark one default, and bind a different selected profile specifically to Teams.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F003",
@@ -4003,7 +4003,7 @@
   {
     "id": "T499",
     "description": "Tenant admin sees Teams setup blocked with clear remediation when no eligible Microsoft profile exists.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039",
       "F040"
@@ -4012,7 +4012,7 @@
   {
     "id": "T500",
     "description": "Tenant-specific Teams package metadata uses the selected Microsoft profile identity and correct environment URLs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041",
       "F046",
@@ -4022,7 +4022,7 @@
   {
     "id": "T501",
     "description": "MSP technician can open the Teams personal tab via SSO without a second PSA sign-in prompt and land on the my-work view.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057",
       "F060",
@@ -4032,7 +4032,7 @@
   {
     "id": "T502",
     "description": "Activity-feed deep link opens the intended ticket inside the Teams tab for an authorized MSP user.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071",
       "F074",
@@ -4045,7 +4045,7 @@
   {
     "id": "T503",
     "description": "Bot command `my tickets` returns authorized ticket results with action links for the signed-in MSP technician.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F097",
       "F098",
@@ -4055,7 +4055,7 @@
   {
     "id": "T504",
     "description": "Bot command `ticket <id>` returns a summary for an authorized ticket and a not-found response for an invalid ID.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F100",
       "F101"
@@ -4064,7 +4064,7 @@
   {
     "id": "T505",
     "description": "Bot command `assign ticket` updates the assignee through the shared Teams action layer and confirms the result.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F081",
       "F090",
@@ -4077,7 +4077,7 @@
   {
     "id": "T506",
     "description": "Bot command `add note` appends an internal note to the target ticket and returns a follow-up deep link.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F106",
       "F107",
@@ -4087,7 +4087,7 @@
   {
     "id": "T507",
     "description": "Bot command `reply to contact` creates a customer-facing reply when permitted and blocks the action when not permitted.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F109",
       "F110",
@@ -4098,7 +4098,7 @@
   {
     "id": "T508",
     "description": "Bot command `log time` creates a time entry against a ticket or task using the quick-action form flow.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F112",
       "F113",
@@ -4110,7 +4110,7 @@
   {
     "id": "T509",
     "description": "Bot approvals command lists pending approvals and completes approve/reject actions through the shared action layer.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F115",
       "F116",
@@ -4120,7 +4120,7 @@
   {
     "id": "T510",
     "description": "Message extension search returns tenant-scoped ticket, task, contact, and approval matches only when the invoking user has permission.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F118",
       "F119",
@@ -4133,7 +4133,7 @@
   {
     "id": "T511",
     "description": "Message action `create ticket from message` creates a ticket with Teams source metadata and returns a deep link.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F140",
       "F141",
@@ -4146,7 +4146,7 @@
   {
     "id": "T512",
     "description": "Message action `update from message` appends an internal note to an existing ticket with Teams source metadata and returns a deep link.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F146",
       "F148",
@@ -4157,7 +4157,7 @@
   {
     "id": "T513",
     "description": "Shared quick-action dialogs validate required fields, submit through the shared action layer, and show success/failure responses in Teams.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F157",
       "F164",
@@ -4168,7 +4168,7 @@
   {
     "id": "T514",
     "description": "Assignment, customer-reply, approval-request, escalation, and SLA-risk events each produce personal Teams notifications when enabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F190",
       "F191",
@@ -4185,7 +4185,7 @@
   {
     "id": "T515",
     "description": "Teams personal notifications are suppressed safely when the tenant category is disabled or the user lacks Teams linkage.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F200",
       "F201",
@@ -4195,7 +4195,7 @@
   {
     "id": "T516",
     "description": "Unauthorized, wrong-tenant, or client-portal users are rejected across tab, bot, and message extension entry points.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F059",
       "F060",
