@@ -47,7 +47,7 @@ function normalizeOptionalString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
-function normalizeTenantClaim(value: string | null): string | null {
+function normalizeTenantClaim(value: string | null | undefined): string | null {
   const normalized = normalizeOptionalString(value);
   return normalized ? normalized.toLowerCase() : null;
 }

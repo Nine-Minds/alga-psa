@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hasPermissionMock = vi.fn();
 const ticketGetByIdMock = vi.fn();
-const projectTaskGetByIdMock = vi.fn();
+const projectTasksGetMock = vi.fn();
 const contactGetByIdMock = vi.fn();
 const timeEntryGetByIdMock = vi.fn();
 const timeSheetGetByIdMock = vi.fn();
@@ -21,8 +21,8 @@ vi.mock('server/src/lib/api/services/TicketService', () => ({
 
 vi.mock('server/src/lib/api/services/ProjectService', () => ({
   ProjectService: class {
-    getTaskById(...args: unknown[]) {
-      return projectTaskGetByIdMock(...args);
+    getTasks(...args: unknown[]) {
+      return projectTasksGetMock(...args);
     }
   },
 }));
@@ -68,7 +68,7 @@ describe('resolveTeamsTabAccessState', () => {
     vi.clearAllMocks();
     hasPermissionMock.mockReset();
     ticketGetByIdMock.mockReset();
-    projectTaskGetByIdMock.mockReset();
+    projectTasksGetMock.mockReset();
     contactGetByIdMock.mockReset();
     timeEntryGetByIdMock.mockReset();
     timeSheetGetByIdMock.mockReset();
@@ -77,7 +77,7 @@ describe('resolveTeamsTabAccessState', () => {
   it('T177: runs existing permission checks and tenant-scoped entity lookups before granting Teams tab access to ticket, project-task, contact, time-entry, and approval destinations', async () => {
     hasPermissionMock.mockResolvedValue(true);
     ticketGetByIdMock.mockResolvedValue({ ticket_id: 'ticket-1' });
-    projectTaskGetByIdMock.mockResolvedValue({ task_id: 'task-1', project_id: 'project-1' });
+    projectTasksGetMock.mockResolvedValue([{ task_id: 'task-1' }]);
     contactGetByIdMock.mockResolvedValue({ contact_name_id: 'contact-1' });
     timeEntryGetByIdMock.mockResolvedValue({ entry_id: 'entry-1' });
     timeSheetGetByIdMock.mockResolvedValue({ id: 'approval-1' });
@@ -137,7 +137,7 @@ describe('resolveTeamsTabAccessState', () => {
     );
 
     expect(ticketGetByIdMock).toHaveBeenCalledWith('ticket-1', { tenant: 'tenant-1', userId: 'user-1' });
-    expect(projectTaskGetByIdMock).toHaveBeenCalledWith('task-1', { tenant: 'tenant-1', userId: 'user-1' });
+    expect(projectTasksGetMock).toHaveBeenCalledWith('project-1', { tenant: 'tenant-1', userId: 'user-1' });
     expect(contactGetByIdMock).toHaveBeenCalledWith('contact-1', { tenant: 'tenant-1', userId: 'user-1' });
     expect(timeEntryGetByIdMock).toHaveBeenCalledWith('entry-1', { tenant: 'tenant-1', userId: 'user-1' });
     expect(timeSheetGetByIdMock).toHaveBeenCalledWith('approval-1', { tenant: 'tenant-1', userId: 'user-1' });
@@ -156,7 +156,7 @@ describe('resolveTeamsTabAccessState', () => {
     expect(ticketGetByIdMock).not.toHaveBeenCalled();
 
     hasPermissionMock.mockResolvedValueOnce(true);
-    projectTaskGetByIdMock.mockResolvedValueOnce({ task_id: 'task-1', project_id: 'project-2' });
+    projectTasksGetMock.mockResolvedValueOnce([{ task_id: 'task-2' }]);
 
     await expect(
       resolveTeamsTabAccessState(readyState, {

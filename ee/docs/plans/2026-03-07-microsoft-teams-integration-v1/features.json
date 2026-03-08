@@ -988,7 +988,7 @@
   {
     "id": "F107",
     "description": "Personal tab: bot action results can open the correct tab destination.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -998,7 +998,7 @@
   {
     "id": "F108",
     "description": "Personal tab: message extension results can open the correct tab destination.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1008,7 +1008,7 @@
   {
     "id": "F109",
     "description": "Personal tab: the landing experience handles cold-start setup or not-configured tenants gracefully.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1018,7 +1018,7 @@
   {
     "id": "F110",
     "description": "Personal tab: the tab remains the escalation path for workflows that are too complex for cards or dialogs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",

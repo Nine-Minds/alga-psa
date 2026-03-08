@@ -200,6 +200,10 @@ describe('TeamsTabPage', () => {
     expect(redirectMock).not.toHaveBeenCalled();
     expect(resolveTeamsTabAccessStateMock).not.toHaveBeenCalled();
     expect((result as any)?.type).toBe(CardMock);
+    expect(collectNormalizedText(result)).toContain('Teams setup not finished');
+    expect(collectNormalizedText(result)).toContain(
+      'Ask a PSA administrator to finish Teams setup and then reopen the personal tab.'
+    );
   });
 
   it('T178/T190/T201: falls back to the my-work landing with explanatory messaging when a requested ticket is unavailable after Teams authentication succeeds', async () => {
@@ -366,5 +370,97 @@ describe('TeamsTabPage', () => {
     expect((result as any)?.props?.['data-teams-tab-requested-destination']).toBe('ticket');
     expect(collectNormalizedText(result)).toContain('Requested Teams record unavailable');
     expect(collectNormalizedText(result)).toContain('You landed on your Teams work list instead of ticket ticket-123');
+  });
+
+  it('T213/T215/T219: opens bot-result and message-extension-result links on the correct tab destination and keeps the full-PSA escalation path visible', async () => {
+    resolveTeamsTabAuthStateMock.mockResolvedValue(readyAuthState);
+
+    const botResult = await TeamsTabPage({
+      searchParams: Promise.resolve({
+        botResultLink: '/msp/tickets/ticket-123',
+      }),
+    });
+
+    expect(resolveTeamsTabAccessStateMock).toHaveBeenNthCalledWith(1, readyAuthState, {
+      type: 'ticket',
+      ticketId: 'ticket-123',
+    });
+    expect((botResult as any)?.props?.['data-teams-tab-destination']).toBe('ticket');
+    expect((botResult as any)?.props?.['data-teams-tab-entry-source']).toBe('bot');
+    expect(collectNormalizedText(botResult)).toContain('This record was opened from a Teams bot result.');
+    expect(collectNormalizedText(botResult)).toContain(
+      'Use the full PSA view when this workflow needs more context than a Teams card or quick action can provide.'
+    );
+    expect(collectHrefs(botResult)).toContain('/msp/tickets/ticket-123');
+
+    const messageExtensionResult = await TeamsTabPage({
+      searchParams: Promise.resolve({
+        messageExtensionResultLink: '/msp/contacts/contact-5?clientId=client-9',
+      }),
+    });
+
+    expect(resolveTeamsTabAccessStateMock).toHaveBeenNthCalledWith(2, readyAuthState, {
+      type: 'contact',
+      contactId: 'contact-5',
+      clientId: 'client-9',
+    });
+    expect((messageExtensionResult as any)?.props?.['data-teams-tab-destination']).toBe('contact');
+    expect((messageExtensionResult as any)?.props?.['data-teams-tab-entry-source']).toBe('message_extension');
+    expect(collectNormalizedText(messageExtensionResult)).toContain(
+      'This record was opened from a Teams message extension result.'
+    );
+    expect(collectHrefs(messageExtensionResult)).toContain('/msp/contacts/contact-5');
+  });
+
+  it('T214/T216/T218/T220: keeps bot-result, message-extension-result, and cold-start setup failures on safe Teams surfaces', async () => {
+    resolveTeamsTabAuthStateMock.mockResolvedValueOnce(readyAuthState);
+    resolveTeamsTabAccessStateMock.mockResolvedValueOnce({
+      status: 'forbidden',
+      reason: 'not_found',
+      message: 'That ticket is unavailable or you no longer have access to it.',
+    });
+
+    const botFallback = await TeamsTabPage({
+      searchParams: Promise.resolve({
+        botResultLink: '/msp/tickets/ticket-123',
+      }),
+    });
+
+    expect((botFallback as any)?.props?.['data-teams-tab-destination']).toBe('my_work');
+    expect((botFallback as any)?.props?.['data-teams-tab-entry-source']).toBe('bot');
+    expect(collectNormalizedText(botFallback)).toContain('Requested Teams record unavailable');
+
+    resolveTeamsTabAuthStateMock.mockResolvedValueOnce(readyAuthState);
+    resolveTeamsTabAccessStateMock.mockResolvedValueOnce({
+      status: 'forbidden',
+      reason: 'not_found',
+      message: 'That contact is unavailable or you no longer have access to it.',
+    });
+
+    const messageExtensionFallback = await TeamsTabPage({
+      searchParams: Promise.resolve({
+        messageExtensionResultLink: '/msp/contacts/contact-5?clientId=client-9',
+      }),
+    });
+
+    expect((messageExtensionFallback as any)?.props?.['data-teams-tab-destination']).toBe('my_work');
+    expect((messageExtensionFallback as any)?.props?.['data-teams-tab-entry-source']).toBe('message_extension');
+    expect(collectNormalizedText(messageExtensionFallback)).toContain(
+      'That contact is unavailable or you no longer have access to it.'
+    );
+
+    resolveTeamsTabAuthStateMock.mockResolvedValueOnce({
+      status: 'not_configured',
+      tenantId: 'tenant-1',
+      message: 'Teams is not configured for this tenant',
+    });
+
+    const coldStart = await TeamsTabPage({
+      searchParams: Promise.resolve({}),
+    });
+
+    expect((coldStart as any)?.type).toBe(CardMock);
+    expect(collectNormalizedText(coldStart)).toContain('Teams setup not finished');
+    expect(collectNormalizedText(coldStart)).toContain('Teams is not configured for this tenant');
   });
 });

@@ -17,6 +17,8 @@ export type TeamsDeepLinkDestination =
   | { type: 'time_entry'; entryId: string }
   | { type: 'contact'; contactId: string };
 
+export type TeamsDeepLinkSurface = 'tab' | 'notification' | 'bot' | 'message_extension';
+
 interface TeamsIntegrationRow {
   tenant: string;
   selected_profile_id: string | null;
@@ -219,20 +221,33 @@ function buildTeamsTabWebUrl(baseUrl: string, destination: TeamsDeepLinkDestinat
   }
 }
 
-function buildTeamsTabContext(destination: TeamsDeepLinkDestination): Record<string, string> {
+function buildTeamsTabContext(
+  destination: TeamsDeepLinkDestination,
+  surface: TeamsDeepLinkSurface = 'tab'
+): Record<string, string> {
   switch (destination.type) {
     case 'my_work':
-      return { page: 'my_work' };
+      return surface === 'tab' ? { page: 'my_work' } : { page: 'my_work', source: surface };
     case 'ticket':
-      return { page: 'ticket', ticketId: destination.ticketId };
+      return surface === 'tab'
+        ? { page: 'ticket', ticketId: destination.ticketId }
+        : { page: 'ticket', ticketId: destination.ticketId, source: surface };
     case 'project_task':
-      return { page: 'project_task', projectId: destination.projectId, taskId: destination.taskId };
+      return surface === 'tab'
+        ? { page: 'project_task', projectId: destination.projectId, taskId: destination.taskId }
+        : { page: 'project_task', projectId: destination.projectId, taskId: destination.taskId, source: surface };
     case 'approval':
-      return { page: 'approval', approvalId: destination.approvalId };
+      return surface === 'tab'
+        ? { page: 'approval', approvalId: destination.approvalId }
+        : { page: 'approval', approvalId: destination.approvalId, source: surface };
     case 'time_entry':
-      return { page: 'time_entry', entryId: destination.entryId };
+      return surface === 'tab'
+        ? { page: 'time_entry', entryId: destination.entryId }
+        : { page: 'time_entry', entryId: destination.entryId, source: surface };
     case 'contact':
-      return { page: 'contact', contactId: destination.contactId };
+      return surface === 'tab'
+        ? { page: 'contact', contactId: destination.contactId }
+        : { page: 'contact', contactId: destination.contactId, source: surface };
     default: {
       const exhaustive: never = destination;
       throw new Error(`Unsupported Teams deep-link destination: ${(exhaustive as any).type}`);
@@ -281,16 +296,42 @@ function resolveTeamsDeepLinkDestinationFromPsaUrl(psaUrl: string): TeamsDeepLin
   return { type: 'my_work' };
 }
 
-export function buildTeamsPersonalTabDeepLink(baseUrl: string, appId: string, destination: TeamsDeepLinkDestination): string {
+function buildTeamsPersonalTabDeepLinkForSurface(
+  baseUrl: string,
+  appId: string,
+  destination: TeamsDeepLinkDestination,
+  surface: TeamsDeepLinkSurface
+): string {
   const params = new URLSearchParams({
     webUrl: buildTeamsTabWebUrl(baseUrl, destination),
-    context: JSON.stringify(buildTeamsTabContext(destination)),
+    context: JSON.stringify(buildTeamsTabContext(destination, surface)),
   });
   return `https://teams.microsoft.com/l/entity/${encodeURIComponent(appId)}/${encodeURIComponent(TEAMS_PERSONAL_TAB_ENTITY_ID)}?${params.toString()}`;
 }
 
+export function buildTeamsPersonalTabDeepLink(baseUrl: string, appId: string, destination: TeamsDeepLinkDestination): string {
+  return buildTeamsPersonalTabDeepLinkForSurface(baseUrl, appId, destination, 'tab');
+}
+
 export function buildTeamsPersonalTabDeepLinkFromPsaUrl(baseUrl: string, appId: string, psaUrl: string): string {
   return buildTeamsPersonalTabDeepLink(baseUrl, appId, resolveTeamsDeepLinkDestinationFromPsaUrl(psaUrl));
+}
+
+export function buildTeamsBotResultDeepLinkFromPsaUrl(baseUrl: string, appId: string, psaUrl: string): string {
+  return buildTeamsPersonalTabDeepLinkForSurface(baseUrl, appId, resolveTeamsDeepLinkDestinationFromPsaUrl(psaUrl), 'bot');
+}
+
+export function buildTeamsMessageExtensionResultDeepLinkFromPsaUrl(
+  baseUrl: string,
+  appId: string,
+  psaUrl: string
+): string {
+  return buildTeamsPersonalTabDeepLinkForSurface(
+    baseUrl,
+    appId,
+    resolveTeamsDeepLinkDestinationFromPsaUrl(psaUrl),
+    'message_extension'
+  );
 }
 
 function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: MicrosoftProfileRow): TeamsAppManifest {

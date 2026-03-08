@@ -6,6 +6,8 @@ export type TeamsTabDestination =
   | { type: 'time_entry'; entryId: string }
   | { type: 'contact'; contactId: string; clientId?: string };
 
+export type TeamsTabEntrySource = 'tab' | 'notification' | 'bot' | 'message_extension';
+
 type SearchParams = Record<string, string | string[] | undefined>;
 
 function getSingleSearchParam(value: string | string[] | undefined): string | undefined {
@@ -35,6 +37,47 @@ function getContextString(context: Record<string, unknown> | null, key: string):
 
   const value = context[key];
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function resolveDestinationLink(params?: SearchParams): string | undefined {
+  return (
+    getSingleSearchParam(params?.botResultLink) ||
+    getSingleSearchParam(params?.messageExtensionResultLink) ||
+    getSingleSearchParam(params?.notificationLink) ||
+    getSingleSearchParam(params?.link) ||
+    getSingleSearchParam(params?.webUrl)
+  );
+}
+
+export function resolveTeamsTabEntrySource(params?: SearchParams): TeamsTabEntrySource {
+  const context = parseTeamsContext(getSingleSearchParam(params?.context));
+  const explicitSource =
+    getContextString(context, 'source') ||
+    getSingleSearchParam(params?.source) ||
+    getSingleSearchParam(params?.surface);
+
+  switch (explicitSource) {
+    case 'notification':
+      return 'notification';
+    case 'bot':
+      return 'bot';
+    case 'message_extension':
+      return 'message_extension';
+  }
+
+  if (getSingleSearchParam(params?.botResultLink)) {
+    return 'bot';
+  }
+
+  if (getSingleSearchParam(params?.messageExtensionResultLink)) {
+    return 'message_extension';
+  }
+
+  if (getSingleSearchParam(params?.notificationLink)) {
+    return 'notification';
+  }
+
+  return 'tab';
 }
 
 export function resolveTeamsTabDestinationFromPsaUrl(psaUrl: string | undefined): TeamsTabDestination {
@@ -112,13 +155,10 @@ export function resolveTeamsTabDestination(params?: SearchParams): TeamsTabDesti
     }
   }
 
-  const notificationLink =
-    getSingleSearchParam(params?.notificationLink) ||
-    getSingleSearchParam(params?.link) ||
-    getSingleSearchParam(params?.webUrl);
+  const destinationLink = resolveDestinationLink(params);
 
-  if (notificationLink) {
-    return resolveTeamsTabDestinationFromPsaUrl(notificationLink);
+  if (destinationLink) {
+    return resolveTeamsTabDestinationFromPsaUrl(destinationLink);
   }
 
   return { type: 'my_work' };

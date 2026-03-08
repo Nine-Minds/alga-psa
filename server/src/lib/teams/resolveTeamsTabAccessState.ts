@@ -99,14 +99,22 @@ export async function resolveTeamsTabAccessState(
         return permissionFailure;
       }
 
-      const task = await projectService.getTaskById(destination.taskId, context);
-      return task && task.project_id === destination.projectId
-        ? { status: 'ready' }
-        : {
-            status: 'forbidden',
-            reason: 'not_found',
-            message: 'That project task is unavailable or no longer matches this Teams link.',
-          };
+      try {
+        const tasks = await projectService.getTasks(destination.projectId, context);
+        return tasks.some((task) => task.task_id === destination.taskId)
+          ? { status: 'ready' }
+          : {
+              status: 'forbidden',
+              reason: 'not_found',
+              message: 'That project task is unavailable or no longer matches this Teams link.',
+            };
+      } catch {
+        return {
+          status: 'forbidden',
+          reason: 'not_found',
+          message: 'That project task is unavailable or no longer matches this Teams link.',
+        };
+      }
     }
 
     case 'approval': {

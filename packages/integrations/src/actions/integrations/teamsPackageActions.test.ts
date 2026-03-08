@@ -121,6 +121,8 @@ vi.mock('./providerReadiness', () => ({
 }));
 
 import {
+  buildTeamsBotResultDeepLinkFromPsaUrl,
+  buildTeamsMessageExtensionResultDeepLinkFromPsaUrl,
   buildTeamsPersonalTabDeepLinkFromPsaUrl,
   getTeamsAppPackageStatus,
 } from './teamsPackageActions';
@@ -344,5 +346,41 @@ describe('Teams app package actions', () => {
 
     expect(unsupported).toContain(encodeURIComponent('{"page":"my_work"}'));
     expect(malformed).toContain(encodeURIComponent('{"page":"my_work"}'));
+  });
+
+  it('T213/T215: emits bot-result and message-extension-result deep links that preserve the same destination context while tagging the invoking Teams surface', () => {
+    const botTicket = buildTeamsBotResultDeepLinkFromPsaUrl(
+      'https://tenant.example.com',
+      'teams-client-id',
+      '/msp/tickets/ticket-123'
+    );
+    const messageExtensionContact = buildTeamsMessageExtensionResultDeepLinkFromPsaUrl(
+      'https://tenant.example.com',
+      'teams-client-id',
+      '/msp/contacts/contact-5'
+    );
+
+    expect(botTicket).toContain(encodeURIComponent('{"page":"ticket","ticketId":"ticket-123","source":"bot"}'));
+    expect(messageExtensionContact).toContain(
+      encodeURIComponent('{"page":"contact","contactId":"contact-5","source":"message_extension"}')
+    );
+  });
+
+  it('T214/T216: falls back bot-result and message-extension-result deep links to my-work when the supplied PSA URL is malformed or unsupported', () => {
+    const unsupportedBot = buildTeamsBotResultDeepLinkFromPsaUrl(
+      'https://tenant.example.com',
+      'teams-client-id',
+      '/msp/projects/project-44'
+    );
+    const malformedMessageExtension = buildTeamsMessageExtensionResultDeepLinkFromPsaUrl(
+      'https://tenant.example.com',
+      'teams-client-id',
+      'not a url'
+    );
+
+    expect(unsupportedBot).toContain(encodeURIComponent('{"page":"my_work","source":"bot"}'));
+    expect(malformedMessageExtension).toContain(
+      encodeURIComponent('{"page":"my_work","source":"message_extension"}')
+    );
   });
 });

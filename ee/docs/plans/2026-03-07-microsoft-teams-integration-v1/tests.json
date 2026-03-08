@@ -1698,7 +1698,7 @@
   {
     "id": "T213",
     "description": "Happy path: Personal tab: bot action results can open the correct tab destination.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F107"
     ]
@@ -1706,7 +1706,7 @@
   {
     "id": "T214",
     "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: bot action results can open the correct tab destination.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F107"
     ]
@@ -1714,7 +1714,7 @@
   {
     "id": "T215",
     "description": "Happy path: Personal tab: message extension results can open the correct tab destination.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F108"
     ]
@@ -1722,7 +1722,7 @@
   {
     "id": "T216",
     "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: message extension results can open the correct tab destination.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F108"
     ]
@@ -1730,7 +1730,7 @@
   {
     "id": "T217",
     "description": "Happy path: Personal tab: the landing experience handles cold-start setup or not-configured tenants gracefully.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F109"
     ]
@@ -1738,7 +1738,7 @@
   {
     "id": "T218",
     "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: the landing experience handles cold-start setup or not-configured tenants gracefully.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F109"
     ]
@@ -1746,7 +1746,7 @@
   {
     "id": "T219",
     "description": "Happy path: Personal tab: the tab remains the escalation path for workflows that are too complex for cards or dialogs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F110"
     ]
@@ -1754,7 +1754,7 @@
   {
     "id": "T220",
     "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: the tab remains the escalation path for workflows that are too complex for cards or dialogs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F110"
     ]

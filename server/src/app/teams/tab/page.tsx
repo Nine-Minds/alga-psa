@@ -6,6 +6,8 @@ import { resolveTeamsTabAccessState } from 'server/src/lib/teams/resolveTeamsTab
 import { resolveTeamsTabAuthState } from 'server/src/lib/teams/resolveTeamsTabAuthState';
 import {
   describeTeamsTabDestination,
+  resolveTeamsTabEntrySource,
+  type TeamsTabEntrySource,
   type TeamsTabDestination,
   resolveTeamsTabDestination,
 } from 'server/src/lib/teams/resolveTeamsTabDestination';
@@ -47,6 +49,7 @@ function buildTeamsTabCallbackUrl(params?: Record<string, string | string[] | un
 function renderTeamsTabShell(options: {
   state: Extract<Awaited<ReturnType<typeof resolveTeamsTabAuthState>>, { status: 'ready' }>;
   destination: TeamsTabDestination;
+  entrySource: TeamsTabEntrySource;
   requestedDestination?: TeamsTabDestination;
   fallbackMessage?: string;
 }) {
@@ -62,6 +65,7 @@ function renderTeamsTabShell(options: {
       className="mx-auto max-w-3xl p-6"
       data-teams-tab-state="ready"
       data-teams-tab-destination={options.destination.type}
+      data-teams-tab-entry-source={options.entrySource}
       data-teams-tab-requested-destination={requestedDestination.type}
       data-teams-tab-fallback={isFallback ? options.destination.type : undefined}
     >
@@ -81,11 +85,20 @@ function renderTeamsTabShell(options: {
           Signed in as {options.state.userName || options.state.userEmail || options.state.userId} for tenant{' '}
           {options.state.tenantId}.
         </p>
+        {options.entrySource === 'bot' ? (
+          <p className="text-sm text-gray-600">This record was opened from a Teams bot result.</p>
+        ) : null}
+        {options.entrySource === 'message_extension' ? (
+          <p className="text-sm text-gray-600">This record was opened from a Teams message extension result.</p>
+        ) : null}
+        {options.entrySource === 'notification' ? (
+          <p className="text-sm text-gray-600">This record was opened from a Teams activity notification.</p>
+        ) : null}
         <p className="text-sm text-gray-600">
           Teams tab SSO is active with Microsoft profile {options.state.profileId}. {destinationCopy.summary}
         </p>
         {fullPsaUrl ? (
-          <div>
+          <div className="space-y-2">
             <a
               className="inline-flex items-center rounded-md border border-teal-200 px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50"
               data-teams-open-full-psa={fullPsaUrl}
@@ -93,6 +106,9 @@ function renderTeamsTabShell(options: {
             >
               Open in full PSA
             </a>
+            <p className="text-sm text-gray-600">
+              Use the full PSA view when this workflow needs more context than a Teams card or quick action can provide.
+            </p>
           </div>
         ) : null}
         {embeddedPsaUrl ? (
@@ -111,6 +127,7 @@ function renderTeamsTabShell(options: {
 export default async function TeamsTabPage({ searchParams }: TeamsTabPageProps) {
   const params = searchParams ? await searchParams : undefined;
   const destination = resolveTeamsTabDestination(params);
+  const entrySource = resolveTeamsTabEntrySource(params);
   const state = await resolveTeamsTabAuthState({
     expectedTenantId:
       (typeof params?.tenantId === 'string' ? params.tenantId : undefined) ||
@@ -126,9 +143,15 @@ export default async function TeamsTabPage({ searchParams }: TeamsTabPageProps) 
     return (
       <Card className="m-6 p-6 text-sm text-gray-700">
         <div className="space-y-2">
-          <h1 className="text-lg font-semibold text-gray-900">Teams tab unavailable</h1>
+          <h1 className="text-lg font-semibold text-gray-900">
+            {state.status === 'not_configured' ? 'Teams setup not finished' : 'Teams tab unavailable'}
+          </h1>
           <p>{state.message}</p>
-          <p>Ask a PSA administrator to finish Teams setup, then reopen the tab.</p>
+          <p>
+            {state.status === 'not_configured'
+              ? 'Ask a PSA administrator to finish Teams setup and then reopen the personal tab.'
+              : 'Ask a PSA administrator to finish Teams setup, then reopen the tab.'}
+          </p>
         </div>
       </Card>
     );
@@ -139,12 +162,13 @@ export default async function TeamsTabPage({ searchParams }: TeamsTabPageProps) 
     return renderTeamsTabShell({
       state,
       destination: { type: 'my_work' },
+      entrySource,
       requestedDestination: destination,
       fallbackMessage: accessState.message,
     });
   }
 
-  return renderTeamsTabShell({ state, destination });
+  return renderTeamsTabShell({ state, destination, entrySource });
 }
 
 export const dynamic = 'force-dynamic';

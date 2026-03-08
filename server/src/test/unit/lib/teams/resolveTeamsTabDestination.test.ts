@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   describeTeamsTabDestination,
+  resolveTeamsTabEntrySource,
   resolveTeamsTabDestination,
   resolveTeamsTabDestinationFromPsaUrl,
 } from 'server/src/lib/teams/resolveTeamsTabDestination';
@@ -183,5 +184,62 @@ describe('resolveTeamsTabDestination', () => {
     ).toEqual({
       type: 'my_work',
     });
+  });
+
+  it('T213/T215: resolves bot-result and message-extension-result PSA links into the same personal-tab destinations used by direct Teams deep links', () => {
+    expect(
+      resolveTeamsTabDestination({
+        botResultLink: '/msp/tickets/ticket-123',
+      })
+    ).toEqual({
+      type: 'ticket',
+      ticketId: 'ticket-123',
+    });
+    expect(
+      resolveTeamsTabDestination({
+        messageExtensionResultLink: '/msp/contacts/contact-5?clientId=client-9',
+      })
+    ).toEqual({
+      type: 'contact',
+      contactId: 'contact-5',
+      clientId: 'client-9',
+    });
+    expect(
+      resolveTeamsTabEntrySource({
+        botResultLink: '/msp/tickets/ticket-123',
+      })
+    ).toBe('bot');
+    expect(
+      resolveTeamsTabEntrySource({
+        messageExtensionResultLink: '/msp/contacts/contact-5?clientId=client-9',
+      })
+    ).toBe('message_extension');
+  });
+
+  it('T214/T216: falls back bot-result and message-extension-result entries safely to my-work when the upstream PSA link is malformed or unsupported', () => {
+    expect(
+      resolveTeamsTabDestination({
+        botResultLink: '/msp/projects/project-44',
+      })
+    ).toEqual({
+      type: 'my_work',
+    });
+    expect(
+      resolveTeamsTabDestination({
+        messageExtensionResultLink: 'not a url',
+      })
+    ).toEqual({
+      type: 'my_work',
+    });
+    expect(
+      resolveTeamsTabEntrySource({
+        context: JSON.stringify({ page: 'ticket', ticketId: 'ticket-123', source: 'bot' }),
+      })
+    ).toBe('bot');
+    expect(
+      resolveTeamsTabEntrySource({
+        context: JSON.stringify({ page: 'contact', contactId: 'contact-5', source: 'message_extension' }),
+      })
+    ).toBe('message_extension');
   });
 });

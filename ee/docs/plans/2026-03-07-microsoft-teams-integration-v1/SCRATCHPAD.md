@@ -208,7 +208,12 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) `npx vitest run --config vitest.config.ts src/test/unit/app/teams/tab/page.test.tsx src/test/unit/lib/teams/resolveTeamsTabDestination.test.ts src/test/unit/lib/teams/buildTeamsFullPsaUrl.test.ts`
 - (2026-03-07) `npx vitest run --config vitest.config.ts src/test/unit/app/teams/tab/page.test.tsx`
 - (2026-03-07) `npx vitest run --config vitest.config.ts src/test/unit/app/teams/tab/page.test.tsx src/test/unit/lib/teams/buildTeamsFullPsaUrl.test.ts`
-- (2026-03-07) Next unchecked feature after this slice is `F107` (Bot action results can open the correct tab destination).
+- (2026-03-07) Verified bot-result, message-extension-result, cold-start tab, and escalation-path behavior with:
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/resolveTeamsTabAccessState.test.ts src/test/unit/lib/teams/resolveTeamsTabDestination.test.ts src/test/unit/app/teams/tab/page.test.tsx ../packages/integrations/src/actions/integrations/teamsPackageActions.test.ts`
+  - `pnpm --dir packages/integrations typecheck`
+  - `pnpm --dir server exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-07) Running multiple coverage-enabled Vitest commands in parallel can race on `server/coverage/.tmp`; rerun sequentially for a clean green verification slice.
+- (2026-03-07) Next unchecked feature after this slice is `F111` (Shared Teams action registry exists for bot commands, message-extension actions, and card/dialog submits).
 
 ## Links / References
 
@@ -232,3 +237,18 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Do existing Microsoft consumers beyond Teams need explicit per-consumer profile selection UX in v1, or is a default-binding compatibility path sufficient initially?
 - How much approval behavior belongs in Teams quick actions versus deep-linking into the tab?
 - What exact tenant-by-tenant Teams app packaging and distribution flow should be used across local/dev/staging/prod?
+
+## Additional Discoveries / Constraints
+
+- (2026-03-07) The existing Teams tab runtime already understood direct `context` and notification-style PSA URLs; bot and message-extension result handoff only needed explicit surface-specific link aliases plus stable deep-link builders, not a new tab route.
+- (2026-03-07) The personal tab shell is a good place to surface invoking-surface context (`bot`, `message_extension`, `notification`) because it confirms why the user landed on a record without changing destination authorization semantics.
+- (2026-03-07) The project-task Teams access check should stay local to Teams and use `ProjectService.getTasks(projectId, context)` for project/task consistency instead of widening the shared `IProjectTask` interface with a `project_id` field that ripples through unrelated project-editing call sites.
+
+## Progress Log
+
+- (2026-03-07) Completed `F107` and `F108` by teaching `server/src/lib/teams/resolveTeamsTabDestination.ts` to resolve `botResultLink` and `messageExtensionResultLink` entries, adding explicit entry-source handling in `server/src/app/teams/tab/page.tsx`, and exposing surface-specific Teams deep-link helpers in `packages/integrations/src/actions/integrations/teamsPackageActions.ts`.
+- (2026-03-07) Completed `F109` by refining the not-configured Teams tab copy so cold-start tenants get a setup-specific heading and remediation message instead of a generic unavailable state.
+- (2026-03-07) Completed `F110` by making the tab shell explicitly describe the `Open in full PSA` handoff as the escalation path when a workflow needs more context than Teams cards or quick actions provide.
+- (2026-03-07) Completed `T213`, `T214`, `T215`, and `T216` with destination-parser, page-shell, and deep-link-builder coverage for bot-result and message-extension-result tab handoff plus safe fallback behavior.
+- (2026-03-07) Completed `T217`, `T218`, `T219`, and `T220` with page-shell coverage for graceful cold-start setup messaging and explicit full-PSA escalation copy.
+- (2026-03-07) Fixed two pre-existing server TypeScript blockers encountered during verification by narrowing `normalizeTenantClaim` to accept `undefined` in `server/src/lib/teams/resolveTeamsTabAuthState.ts` and by keeping the project-task Teams access check local in `server/src/lib/teams/resolveTeamsTabAccessState.ts` instead of widening shared project-task interfaces.
