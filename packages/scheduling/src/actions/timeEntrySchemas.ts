@@ -8,7 +8,15 @@ export const fetchTimeEntriesParamsSchema = z.object({
 
 export type FetchTimeEntriesParams = z.infer<typeof fetchTimeEntriesParamsSchema>;
 
-export const saveTimeEntryParamsSchema = timeEntrySchema;
+export const saveTimeEntryParamsSchema = timeEntrySchema.superRefine((data, ctx) => {
+  if (!data.service_id?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['service_id'],
+      message: 'service_id is required for time entries',
+    });
+  }
+});
 
 export type SaveTimeEntryParams = z.infer<typeof saveTimeEntryParamsSchema>;
 

@@ -252,6 +252,10 @@ export const saveTimeEntry = withAuth(async (
   // Validate input
   const validatedTimeEntry = validateData<SaveTimeEntryParams>(saveTimeEntryParamsSchema, timeEntry);
 
+  if (!validatedTimeEntry.service_id?.trim()) {
+    throw new Error('Service is required for time entries');
+  }
+
   const actorUserId = user.user_id;
   let timeEntryUserId = validatedTimeEntry.user_id || actorUserId;
 
@@ -300,7 +304,7 @@ export const saveTimeEntry = withAuth(async (
       tax_region,
       contract_line_id,
       tax_rate_id, // Extract tax_rate_id from input
-    } = timeEntry;
+    } = validatedTimeEntry;
 
     const subjectTimeZone = await resolveUserTimeZone(db, tenant, timeEntryUserId);
     const { work_date, work_timezone } = computeWorkDateFields(start_time, subjectTimeZone);
