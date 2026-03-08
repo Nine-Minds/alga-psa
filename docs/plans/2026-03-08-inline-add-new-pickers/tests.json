@@ -122,7 +122,7 @@
   {
     "id": "T016",
     "description": "UserManagement: clicking '+ Add new contact' opens QuickAddContact",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]

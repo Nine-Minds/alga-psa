@@ -202,3 +202,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd packages/clients && npx vitest run --config vitest.config.ts src/components/clients/ClientDetails.quick-add-contact.contract.test.ts`
 - 2026-03-08 T015: Added `packages/clients/src/components/clients/BillingConfigForm.quick-add-contact.contract.test.ts` to preserve the billing-contact picker wiring that opens `QuickAddContact`, passes the current `clientId`, and clears fallback billing email when a new contact is created.
 - Validation: `cd packages/clients && npx vitest run --config vitest.config.ts src/components/clients/BillingConfigForm.quick-add-contact.contract.test.ts`
+- 2026-03-08 T016: Added `server/src/components/settings/general/UserManagement.quick-add-contact.contract.test.ts` to preserve the invite-contact wiring that opens `QuickAddContact`, forwards `newUser.clientId`, and hydrates the new-user form from the created contact.
+- Validation: `cd server && npx vitest run --config vitest.config.ts --coverage.enabled false src/components/settings/general/UserManagement.quick-add-contact.contract.test.ts`
