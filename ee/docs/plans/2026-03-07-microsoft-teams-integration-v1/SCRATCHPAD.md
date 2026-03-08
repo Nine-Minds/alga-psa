@@ -54,6 +54,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) The fifth slice is complete: `F042`, `F043`, `F044`, `F045`, `F046`, `F047` and `T083`, `T084`, `T085`, `T086`, `T087`, `T088`, `T089`, `T090`, `T091`, `T092`, `T093`, `T094` pass with a real Teams integration record plus guarded admin save/load actions.
 - (2026-03-07) `packages/integrations/src/components/settings/integrations/TeamsIntegrationSettings.tsx` now renders a real Teams setup form with explicit profile selection, readiness checklisting, selected-profile app-registration guidance, capability toggles, notification preferences, and activate/deactivate actions.
 - (2026-03-07) The sixth slice is complete: `F049`, `F050`, `F051`, `F052`, `F053`, `F054`, `F055` and `T097`, `T098`, `T099`, `T100`, `T101`, `T102`, `T103`, `T104`, `T105`, `T106`, `T107`, `T108`, `T109`, `T110` pass with a saveable Teams setup workflow in the settings UI.
+- (2026-03-07) `packages/integrations/src/actions/integrations/teamsPackageActions.ts` now builds tenant-specific Teams app package metadata from the selected Teams profile, including manifest structure, personal tab/bot declarations, compose-extension commands, activity-feed activity types, webApplicationInfo, valid domains, and environment-aware base URLs.
+- (2026-03-07) The seventh slice is complete: `F059`, `F060`, `F061`, `F062`, `F063`, `F064`, `F065`, `F066`, `F067`, `F068`, `F069`, `F071` and `T117`, `T118`, `T119`, `T120`, `T121`, `T122`, `T123`, `T124`, `T125`, `T126`, `T127`, `T128`, `T129`, `T130`, `T131`, `T132`, `T133`, `T134`, `T135`, `T136`, `T137`, `T138`, `T141`, `T142` pass with a generated Teams manifest/package model and guarded package-status retrieval.
 
 ## Commands / Runbooks
 
@@ -69,6 +71,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run --config vitest.config.ts ../packages/integrations/src/actions/integrations/microsoftActions.test.ts ../packages/integrations/src/actions/integrations/microsoftConsumerBindings.test.ts ../server/src/test/unit/migrations/microsoftConsumerBindingsMigration.test.ts`
   - `cd server && npx vitest run --config vitest.config.ts ../packages/integrations/src/actions/integrations/teamsActions.test.ts ../server/src/test/unit/migrations/teamsIntegrationsMigration.test.ts`
   - `cd server && npx vitest run --config vitest.config.ts ../packages/integrations/src/components/settings/integrations/TeamsIntegrationSettings.contract.test.tsx ../packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.providers.test.ts`
+  - `cd server && npx vitest run --config vitest.config.ts ../packages/integrations/src/actions/integrations/teamsPackageActions.test.ts`
 - (2026-03-07) Relevant local references:
   - `packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.tsx`
   - `packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.contract.test.tsx`
@@ -81,6 +84,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `packages/integrations/src/actions/integrations/providerReadiness.ts`
   - `packages/integrations/src/actions/integrations/teamsActions.ts`
   - `packages/integrations/src/actions/integrations/teamsActions.test.ts`
+  - `packages/integrations/src/actions/integrations/teamsPackageActions.ts`
+  - `packages/integrations/src/actions/integrations/teamsPackageActions.test.ts`
   - `packages/auth/src/lib/nextAuthOptions.ts`
   - `packages/auth/src/lib/sso/mspSsoResolution.ts`
   - `packages/notifications/src/actions/internal-notification-actions/internalNotificationActions.ts`
@@ -93,7 +98,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `server/src/test/unit/migrations/teamsIntegrationsMigration.test.ts`
 - (2026-03-07) The focused vitest slice still emits pre-existing React `act(...)` warnings from `MicrosoftIntegrationSettings.contract.test.tsx`; the tests pass, but the harness remains noisy.
 - (2026-03-07) The Teams setup contract tests currently emit similar non-blocking React `act(...)` warnings while asserting async save flows; the tests pass, but the harness remains noisy.
-- (2026-03-07) Next unchecked feature after this slice is `F059` (Teams app manifest/package model).
+- (2026-03-07) Next unchecked feature after this slice is `F070` (store Teams bot/app/package metadata with the integration record).
 
 ## Links / References
 

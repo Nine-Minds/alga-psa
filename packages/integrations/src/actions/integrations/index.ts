@@ -21,6 +21,9 @@ export {
   getTeamsIntegrationStatus,
   saveTeamsIntegrationSettings,
 } from './teamsActions';
+export {
+  getTeamsAppPackageStatus,
+} from './teamsPackageActions';
 export { getXeroConnectionStatus, getXeroIntegrationStatus, disconnectXero } from './xeroActions';
 export { getXeroCsvSettings, saveXeroCsvSettings } from './xeroCsvActions';
 export {

@@ -930,7 +930,7 @@
   {
     "id": "T117",
     "description": "Happy path: Teams app package: a Teams app manifest/package model exists for PSA.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F059"
     ]
@@ -938,7 +938,7 @@
   {
     "id": "T118",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: a teams app manifest/package model exists for psa.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F059"
     ]
@@ -946,7 +946,7 @@
   {
     "id": "T119",
     "description": "Happy path: Teams app package: the manifest declares a personal tab.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060"
     ]
@@ -954,7 +954,7 @@
   {
     "id": "T120",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: the manifest declares a personal tab.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060"
     ]
@@ -962,7 +962,7 @@
   {
     "id": "T121",
     "description": "Happy path: Teams app package: the manifest declares a personal-scope bot.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061"
     ]
@@ -970,7 +970,7 @@
   {
     "id": "T122",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: the manifest declares a personal-scope bot.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061"
     ]
@@ -978,7 +978,7 @@
   {
     "id": "T123",
     "description": "Happy path: Teams app package: the manifest declares a message extension.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F062"
     ]
@@ -986,7 +986,7 @@
   {
     "id": "T124",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: the manifest declares a message extension.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F062"
     ]
@@ -994,7 +994,7 @@
   {
     "id": "T125",
     "description": "Happy path: Teams app package: the manifest declares activity-feed notification capability.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063"
     ]
@@ -1002,7 +1002,7 @@
   {
     "id": "T126",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: the manifest declares activity-feed notification capability.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063"
     ]
@@ -1010,7 +1010,7 @@
   {
     "id": "T127",
     "description": "Happy path: Teams app package: the manifest uses the selected Microsoft profile's application identity and `webApplicationInfo` metadata.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ]
@@ -1018,7 +1018,7 @@
   {
     "id": "T128",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: the manifest uses the selected microsoft profile's application identity and `webapplicationinfo` metadata.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ]
@@ -1026,7 +1026,7 @@
   {
     "id": "T129",
     "description": "Happy path: Teams app package: the manifest supports personal scope for the tab and bot.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F065"
     ]
@@ -1034,7 +1034,7 @@
   {
     "id": "T130",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: the manifest supports personal scope for the tab and bot.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F065"
     ]
@@ -1042,7 +1042,7 @@
   {
     "id": "T131",
     "description": "Happy path: Teams app package: the manifest supports message and compose contexts needed for message-extension flows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066"
     ]
@@ -1050,7 +1050,7 @@
   {
     "id": "T132",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: the manifest supports message and compose contexts needed for message-extension flows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066"
     ]
@@ -1058,7 +1058,7 @@
   {
     "id": "T133",
     "description": "Happy path: Teams app package: the manifest omits channel-routing-specific notification requirements in v1.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F067"
     ]
@@ -1066,7 +1066,7 @@
   {
     "id": "T134",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: the manifest omits channel-routing-specific notification requirements in v1.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F067"
     ]
@@ -1074,7 +1074,7 @@
   {
     "id": "T135",
     "description": "Happy path: Teams app package: tenant install state supports at least not-configured, install-pending, active, and error states.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F068"
     ]
@@ -1082,7 +1082,7 @@
   {
     "id": "T136",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: tenant install state supports at least not-configured, install-pending, active, and error states.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F068"
     ]
@@ -1090,7 +1090,7 @@
   {
     "id": "T137",
     "description": "Happy path: Teams app package: setup surfaces can retrieve the tenant's current package/install metadata.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F069"
     ]
@@ -1098,7 +1098,7 @@
   {
     "id": "T138",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: setup surfaces can retrieve the tenant's current package/install metadata.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F069"
     ]
@@ -1122,7 +1122,7 @@
   {
     "id": "T141",
     "description": "Happy path: Teams app package: environment-specific base URLs are generated correctly for local, staging, and production packaging flows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071"
     ]
@@ -1130,7 +1130,7 @@
   {
     "id": "T142",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: environment-specific base urls are generated correctly for local, staging, and production packaging flows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071"
     ]

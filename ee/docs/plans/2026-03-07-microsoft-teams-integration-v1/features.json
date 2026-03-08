@@ -524,7 +524,7 @@
   {
     "id": "F059",
     "description": "Teams app package: a Teams app manifest/package model exists for PSA.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -533,7 +533,7 @@
   {
     "id": "F060",
     "description": "Teams app package: the manifest declares a personal tab.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -542,7 +542,7 @@
   {
     "id": "F061",
     "description": "Teams app package: the manifest declares a personal-scope bot.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -551,7 +551,7 @@
   {
     "id": "F062",
     "description": "Teams app package: the manifest declares a message extension.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -560,7 +560,7 @@
   {
     "id": "F063",
     "description": "Teams app package: the manifest declares activity-feed notification capability.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -569,7 +569,7 @@
   {
     "id": "F064",
     "description": "Teams app package: the manifest uses the selected Microsoft profile's application identity and `webApplicationInfo` metadata.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -578,7 +578,7 @@
   {
     "id": "F065",
     "description": "Teams app package: the manifest supports personal scope for the tab and bot.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -587,7 +587,7 @@
   {
     "id": "F066",
     "description": "Teams app package: the manifest supports message and compose contexts needed for message-extension flows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -596,7 +596,7 @@
   {
     "id": "F067",
     "description": "Teams app package: the manifest omits channel-routing-specific notification requirements in v1.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -605,7 +605,7 @@
   {
     "id": "F068",
     "description": "Teams app package: tenant install state supports at least not-configured, install-pending, active, and error states.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -614,7 +614,7 @@
   {
     "id": "F069",
     "description": "Teams app package: setup surfaces can retrieve the tenant's current package/install metadata.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -632,7 +632,7 @@
   {
     "id": "F071",
     "description": "Teams app package: environment-specific base URLs are generated correctly for local, staging, and production packaging flows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"

@@ -126,6 +126,9 @@ export {
   saveTeamsIntegrationSettings,
 } from './integrations/teamsActions';
 export {
+  getTeamsAppPackageStatus,
+} from './integrations/teamsPackageActions';
+export {
   initiateEntraDirectOAuth,
   connectEntraCipp,
   getEntraIntegrationStatus,
