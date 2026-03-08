@@ -826,7 +826,7 @@
   {
     "id": "F104",
     "description": "Static page title: /static/privacy_policy — title: 'Privacy Policy'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3b"
     ]

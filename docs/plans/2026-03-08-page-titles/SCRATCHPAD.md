@@ -151,3 +151,4 @@
 - (2026-03-08) F101: Auth page title: /auth/password-reset/confirmation — title: 'Password Reset'
 - (2026-03-08) F102: Auth page title: /auth/password-reset/set-new-password — title: 'Set New Password'
 - (2026-03-08) F103: Static page title: /static/master_terms — title: 'Master Terms'
+- (2026-03-08) F104: Static page title: /static/privacy_policy — title: 'Privacy Policy'
