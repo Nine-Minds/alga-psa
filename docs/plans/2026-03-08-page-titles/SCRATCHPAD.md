@@ -117,3 +117,4 @@
 - (2026-03-08) F067: MSP page title: /msp/licenses/purchase/success — title: 'Purchase Success'
 - (2026-03-08) F068: MSP page title: /msp/reports — title: 'Reports'
 - (2026-03-08) F069: MSP page title: /msp/user-activities — title: 'User Activities'
+- (2026-03-08) F070: MSP page title: /msp/onboarding — title: 'Onboarding'

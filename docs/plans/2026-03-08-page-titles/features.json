@@ -554,7 +554,7 @@
   {
     "id": "F070",
     "description": "MSP page title: /msp/onboarding — title: 'Onboarding'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
