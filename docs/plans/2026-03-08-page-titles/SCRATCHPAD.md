@@ -185,3 +185,4 @@
 - (2026-03-08) T021: Verify pages without explicit metadata fall back to their section layout default title
 - (2026-03-08) T022: Verify uncovered community routes /msp/documents and /test-routing export metadata titles
 - (2026-03-08) T023: Verify EE root, MSP, and Client Portal layouts export the expected metadata templates/defaults
+- (2026-03-08) T024: Verify EE MSP routes /msp/chat, /msp/licenses/purchase, /msp/licenses/purchase/success, and /msp/settings export or inherit metadata titles
