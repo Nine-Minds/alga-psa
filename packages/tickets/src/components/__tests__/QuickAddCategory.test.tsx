@@ -105,4 +105,10 @@ describe('QuickAddCategory', () => {
 
     expect(screen.getByRole('combobox', { name: /select a board/i })).toBeInTheDocument();
   });
+
+  it('T029: hides board selector when preselectedBoardId is provided', () => {
+    renderDialog({ preselectedBoardId: 'board-1' });
+
+    expect(screen.queryByRole('combobox', { name: /select a board/i })).toBeNull();
+  });
 });

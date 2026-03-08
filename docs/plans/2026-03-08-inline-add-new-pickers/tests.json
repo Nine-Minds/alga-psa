@@ -227,7 +227,7 @@
   {
     "id": "T029",
     "description": "QuickAddCategory hides board selector when preselectedBoardId IS provided",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]

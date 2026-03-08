@@ -228,3 +228,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddCategory.test.tsx -t T027`
 - 2026-03-08 T028: Extended `QuickAddCategory.test.tsx` to verify the board selector is visible in create mode when no `preselectedBoardId` is supplied.
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddCategory.test.tsx -t T028`
+- 2026-03-08 T029: Extended `QuickAddCategory.test.tsx` to verify `preselectedBoardId` hides the board selector so inline callers can skip redundant board selection.
+- Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddCategory.test.tsx -t T029`
