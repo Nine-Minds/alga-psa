@@ -1,5 +1,8 @@
-import { runWithTenant, type ServiceContext } from '@alga-psa/db';
+import { createTenantKnex, runWithTenant, type ServiceContext } from '@alga-psa/db';
+import { ServerAnalyticsTracker } from '@alga-psa/analytics';
+import { ServerEventPublisher } from '@alga-psa/event-bus';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { TicketModel } from '@shared/models/ticketModel';
 import {
   buildTeamsBotResultDeepLinkFromPsaUrl,
   buildTeamsMessageExtensionResultDeepLinkFromPsaUrl,
@@ -37,6 +40,8 @@ export const TEAMS_ACTION_IDS = [
   'my_tickets',
   'my_approvals',
   'open_record',
+  'create_ticket_from_message',
+  'update_from_message',
   'assign_ticket',
   'add_note',
   'reply_to_contact',
@@ -318,6 +323,39 @@ const approvalResponseInputSchema = z
     }
   });
 
+const createTicketFromMessageInputSchema = z.object({
+  title: boundedText('Title'),
+  description: boundedText('Description'),
+  boardId: nonEmptyString,
+  statusId: nonEmptyString,
+  clientId: nonEmptyString,
+  contactId: nonEmptyString.optional(),
+  metadata: z.record(z.unknown()).optional(),
+});
+
+const updateFromMessageInputSchema = z
+  .object({
+    targetEntityType: z.enum(['ticket', 'project_task']),
+    targetId: nonEmptyString,
+    projectId: nonEmptyString.optional(),
+    updateType: z.enum(['internal_note', 'customer_reply', 'continue_in_tab']),
+    content: z.string().trim().max(4000).optional().default(''),
+    metadata: z.record(z.unknown()).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.updateType !== 'continue_in_tab' && value.content.trim().length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['content'],
+        message: 'Content is required for Teams message updates',
+      });
+    }
+  });
+
+function normalizeOptionalString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
 function cloneResult<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
@@ -349,7 +387,7 @@ function parseActionInput<T extends Record<string, unknown>>(schema: z.ZodType<T
 }
 
 function buildPayloadFromRequest(
-  request: TeamsActionRequest,
+  request: Pick<TeamsActionRequest, 'input'>,
   defaults: Record<string, unknown> = {}
 ): Record<string, unknown> {
   return {
@@ -371,6 +409,19 @@ function requireTargetReference(request: TeamsActionRequest): TeamsActionEntityR
 
   if (typeof payload.ticketId === 'string') {
     return entityReferenceSchema.parse({ entityType: 'ticket', ticketId: payload.ticketId });
+  }
+
+  if (typeof payload.targetEntityType === 'string' && typeof payload.targetId === 'string') {
+    return payload.targetEntityType === 'project_task'
+      ? entityReferenceSchema.parse({
+          entityType: 'project_task',
+          taskId: payload.targetId,
+          projectId: payload.projectId,
+        })
+      : entityReferenceSchema.parse({
+          entityType: 'ticket',
+          ticketId: payload.targetId,
+        });
   }
 
   if (typeof payload.taskId === 'string') {
@@ -500,6 +551,156 @@ async function resolveTargetInternal(
               : undefined),
         },
       };
+    }
+  }
+}
+
+async function resolveDefaultPriorityIdForBoard(tenantId: string, boardId: string): Promise<string | null> {
+  const { knex } = await createTenantKnex(tenantId);
+  const board = (await knex('boards')
+    .where({ tenant: tenantId, board_id: boardId, is_inactive: false })
+    .select('default_priority_id', 'priority_type')
+    .first()) as { default_priority_id?: string | null; priority_type?: string | null } | null;
+
+  const boardDefaultPriorityId = normalizeOptionalString(board?.default_priority_id);
+  if (boardDefaultPriorityId) {
+    return boardDefaultPriorityId;
+  }
+
+  const desiredPriorityType = normalizeOptionalString(board?.priority_type) || 'custom';
+  const primaryPriority = (await knex('priorities')
+    .select('priority_id')
+    .where({ tenant: tenantId, item_type: 'ticket' })
+    .where(function filterPriorityType() {
+      if (desiredPriorityType === 'itil') {
+        this.where('is_from_itil_standard', true);
+      } else {
+        this.where(function filterCustomPriorities() {
+          this.whereNull('is_from_itil_standard').orWhere('is_from_itil_standard', false);
+        });
+      }
+    })
+    .orderByRaw(
+      desiredPriorityType === 'itil'
+        ? "CASE WHEN itil_priority_level = 3 THEN 0 ELSE 1 END, order_number ASC, priority_name ASC"
+        : 'order_number ASC, priority_name ASC'
+    )
+    .first()) as { priority_id?: string | null } | null;
+
+  if (normalizeOptionalString(primaryPriority?.priority_id)) {
+    return normalizeOptionalString(primaryPriority?.priority_id);
+  }
+
+  const fallbackPriority = (await knex('priorities')
+    .select('priority_id')
+    .where({ tenant: tenantId, item_type: 'ticket' })
+    .orderBy('order_number', 'asc')
+    .orderBy('priority_name', 'asc')
+    .first()) as { priority_id?: string | null } | null;
+
+  return normalizeOptionalString(fallbackPriority?.priority_id);
+}
+
+async function findTicketByMessageActionIdempotencyKey(
+  tenantId: string,
+  idempotencyKey: string
+): Promise<{ ticketId: string; ticketNumber: string | null; title: string | null } | null> {
+  const { knex } = await createTenantKnex(tenantId);
+  const row = (await knex('tickets')
+    .where({ tenant: tenantId })
+    .whereRaw("(attributes::jsonb ->> 'idempotency_key') = ?", [idempotencyKey])
+    .select('ticket_id', 'ticket_number', 'title')
+    .first()) as { ticket_id?: string | null; ticket_number?: string | null; title?: string | null } | null;
+
+  const ticketId = normalizeOptionalString(row?.ticket_id);
+  if (!ticketId) {
+    return null;
+  }
+
+  return {
+    ticketId,
+    ticketNumber: normalizeOptionalString(row?.ticket_number),
+    title: normalizeOptionalString(row?.title),
+  };
+}
+
+async function validateCreateTicketMessageSelection(params: {
+  tenantId: string;
+  boardId: string;
+  statusId: string;
+  clientId: string;
+  contactId?: string;
+}): Promise<void> {
+  const { knex } = await createTenantKnex(params.tenantId);
+
+  const [board, status, client, contact] = await Promise.all([
+    knex('boards')
+      .where({ tenant: params.tenantId, board_id: params.boardId, is_inactive: false })
+      .select('board_id')
+      .first(),
+    knex('statuses')
+      .where({ tenant: params.tenantId, status_id: params.statusId, status_type: 'ticket', is_closed: false })
+      .select('status_id')
+      .first(),
+    knex('clients')
+      .where({ tenant: params.tenantId, client_id: params.clientId, is_inactive: false })
+      .select('client_id')
+      .first(),
+    params.contactId
+      ? knex('contacts')
+          .where({ tenant: params.tenantId, contact_name_id: params.contactId, is_inactive: false })
+          .select('contact_name_id', 'client_id')
+          .first()
+      : Promise.resolve(null),
+  ]);
+
+  if (!board) {
+    throw new ValidationError('Validation failed', [
+      {
+        path: ['boardId'],
+        message: 'Select an active PSA board before creating a ticket from this Teams message.',
+      },
+    ]);
+  }
+
+  if (!status) {
+    throw new ValidationError('Validation failed', [
+      {
+        path: ['statusId'],
+        message: 'Select an open PSA status before creating a ticket from this Teams message.',
+      },
+    ]);
+  }
+
+  if (!client) {
+    throw new ValidationError('Validation failed', [
+      {
+        path: ['clientId'],
+        message: 'Select an active PSA client before creating a ticket from this Teams message.',
+      },
+    ]);
+  }
+
+  if (params.contactId) {
+    const resolvedContactId = normalizeOptionalString((contact as { contact_name_id?: string | null } | null)?.contact_name_id);
+    const resolvedContactClientId = normalizeOptionalString((contact as { client_id?: string | null } | null)?.client_id);
+
+    if (!resolvedContactId) {
+      throw new ValidationError('Validation failed', [
+        {
+          path: ['contactId'],
+          message: 'Select a valid PSA contact or clear the contact field before creating a ticket from this Teams message.',
+        },
+      ]);
+    }
+
+    if (resolvedContactClientId && resolvedContactClientId !== params.clientId) {
+      throw new ValidationError('Validation failed', [
+        {
+          path: ['contactId'],
+          message: 'The selected PSA contact does not belong to the selected client.',
+        },
+      ]);
     }
   }
 }
@@ -952,6 +1153,221 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
       };
     },
   },
+  create_ticket_from_message: {
+    id: 'create_ticket_from_message',
+    title: 'Create ticket from message',
+    description: 'Create a PSA ticket from Teams message content using the shared Teams action layer.',
+    operation: 'mutation',
+    targetEntityTypes: [],
+    requiredInputs: [
+      { name: 'title', type: 'string', required: true, description: 'Ticket title derived from the Teams message.' },
+      { name: 'description', type: 'string', required: true, description: 'Ticket description derived from the Teams message.' },
+      { name: 'boardId', type: 'string', required: true, description: 'Target PSA board.' },
+      { name: 'statusId', type: 'string', required: true, description: 'Open PSA status for the new ticket.' },
+      { name: 'clientId', type: 'string', required: true, description: 'Target PSA client.' },
+      { name: 'contactId', type: 'string', required: false, description: 'Optional PSA contact for the new ticket.' },
+    ],
+    businessOperations: ['TicketModel.createTicketWithRetry'],
+    requiredCapabilities: ['message_extension'],
+    normalize: (request) => parseActionInput(createTicketFromMessageInputSchema, buildPayloadFromRequest(request)),
+    authorize: async (_normalized, context) =>
+      ensurePermission(context.request.user, 'ticket', 'create', 'You do not have permission to create PSA tickets from Teams messages.'),
+    execute: async (normalized, context) => {
+      if (!context.request.idempotencyKey) {
+        throw new ValidationError('Validation failed', [
+          {
+            path: ['idempotencyKey'],
+            message: 'Reopen the Teams message action before creating a ticket so the submission can be applied safely once.',
+          },
+        ]);
+      }
+
+      const existingTicket = await findTicketByMessageActionIdempotencyKey(context.request.tenantId, context.request.idempotencyKey);
+      if (existingTicket) {
+        return {
+          summary: {
+            title: existingTicket.ticketNumber ? `Created ticket ${existingTicket.ticketNumber}` : 'Ticket created',
+            text: existingTicket.title || `Ticket ${existingTicket.ticketId} is ready to open from Teams.`,
+          },
+          destination: {
+            type: 'ticket',
+            ticketId: existingTicket.ticketId,
+          },
+        };
+      }
+
+      await validateCreateTicketMessageSelection({
+        tenantId: context.request.tenantId,
+        boardId: String(normalized.boardId),
+        statusId: String(normalized.statusId),
+        clientId: String(normalized.clientId),
+        ...(normalizeOptionalString(normalized.contactId) ? { contactId: normalizeOptionalString(normalized.contactId)! } : {}),
+      });
+
+      const priorityId = await resolveDefaultPriorityIdForBoard(context.request.tenantId, String(normalized.boardId));
+      if (!priorityId) {
+        throw new ValidationError('Validation failed', [
+          {
+            path: ['boardId'],
+            message:
+              'The selected PSA board does not have a usable default priority. Update board priority defaults before creating a ticket from Teams.',
+          },
+        ]);
+      }
+
+      const { knex } = await createTenantKnex(context.request.tenantId);
+      const createdTicket = await knex.transaction((trx: any) =>
+        TicketModel.createTicketWithRetry(
+          {
+            title: String(normalized.title),
+            description: String(normalized.description),
+            client_id: String(normalized.clientId),
+            contact_id: normalizeOptionalString(normalized.contactId) || undefined,
+            board_id: String(normalized.boardId),
+            status_id: String(normalized.statusId),
+            priority_id: priorityId,
+            entered_by: context.request.user.user_id,
+            source: 'teams_message_extension',
+            ticket_origin: 'internal',
+            attributes: {
+              idempotency_key: context.request.idempotencyKey,
+              teams_message_source: normalized.metadata || {},
+            },
+          },
+          context.request.tenantId,
+          trx,
+          {},
+          new ServerEventPublisher(),
+          new ServerAnalyticsTracker(),
+          context.request.user.user_id,
+          3
+        )
+      );
+
+      const ticketNumber = normalizeOptionalString((createdTicket as { ticket_number?: string | null }).ticket_number);
+      return {
+        summary: {
+          title: ticketNumber ? `Created ticket ${ticketNumber}` : 'Ticket created',
+          text: ticketNumber
+            ? `Created ticket ${ticketNumber} from the selected Teams message.`
+            : `Created ticket ${String((createdTicket as { ticket_id?: string | null }).ticket_id || normalized.title)} from the selected Teams message.`,
+        },
+        destination: {
+          type: 'ticket',
+          ticketId: String((createdTicket as { ticket_id?: string | null }).ticket_id),
+        },
+      };
+    },
+  },
+  update_from_message: {
+    id: 'update_from_message',
+    title: 'Update from message',
+    description: 'Apply a Teams message as a PSA ticket update or safe Teams-tab handoff.',
+    operation: 'mutation',
+    targetEntityTypes: ['ticket', 'project_task'],
+    requiredInputs: [
+      { name: 'targetEntityType', type: 'enum', required: true, description: 'Whether the Teams message targets a ticket or project task.' },
+      { name: 'targetId', type: 'entity', required: true, description: 'Ticket or task ID to update.' },
+      { name: 'projectId', type: 'string', required: false, description: 'Optional parent project ID for project-task targets.' },
+      { name: 'updateType', type: 'enum', required: true, description: 'Whether to add an internal note, send a customer reply, or continue in the Teams tab.' },
+      { name: 'content', type: 'string', required: false, description: 'Note or reply body derived from the Teams message.' },
+    ],
+    businessOperations: ['TicketService.addComment', 'TicketService.getById', 'ProjectService.getTaskById'],
+    requiredCapabilities: ['message_extension'],
+    normalize: (request) => parseActionInput(updateFromMessageInputSchema, buildPayloadFromRequest(request)),
+    authorize: async (normalized, context, target) => {
+      if (!target) {
+        return {
+          code: 'validation_error',
+          message: 'A supported PSA record target is required.',
+        };
+      }
+
+      if (target.entityType === 'project_task') {
+        return ensurePermission(
+          context.request.user,
+          'project',
+          'read',
+          'You do not have permission to open project tasks from Teams.'
+        );
+      }
+
+      if (normalized.updateType === 'continue_in_tab') {
+        return ensurePermission(
+          context.request.user,
+          'ticket',
+          'read',
+          'You do not have permission to open tickets from Teams.'
+        );
+      }
+
+      return ensurePermission(
+        context.request.user,
+        'ticket',
+        'update',
+        normalized.updateType === 'customer_reply'
+          ? 'You do not have permission to send ticket replies from Teams.'
+          : 'You do not have permission to add ticket notes from Teams.'
+      );
+    },
+    execute: async (normalized, context, target) => {
+      if (!target) {
+        throw new ValidationError('Validation failed', [
+          {
+            path: ['targetId'],
+            message: 'A supported PSA record target is required.',
+          },
+        ]);
+      }
+
+      if (target.entityType === 'project_task') {
+        return {
+          summary: {
+            title: 'Continue in Teams tab',
+            text:
+              normalized.updateType === 'customer_reply'
+                ? 'Customer-visible replies are only supported for tickets from Teams. Open the project task in Teams or full PSA to continue.'
+                : 'Project task updates from Teams open in the Teams tab so you can add the full task context safely.',
+          },
+          destination: target.destination,
+          target,
+        };
+      }
+
+      if (normalized.updateType === 'continue_in_tab') {
+        return {
+          summary: {
+            title: 'Continue in Teams tab',
+            text: 'Open the ticket in Teams or full PSA to continue this workflow.',
+          },
+          destination: target.destination,
+          target,
+        };
+      }
+
+      await ticketService.addComment(
+        target.id,
+        {
+          comment_text: String(normalized.content),
+          is_internal: normalized.updateType !== 'customer_reply',
+          metadata: normalized.metadata as Record<string, unknown> | undefined,
+        },
+        context.serviceContext
+      );
+
+      return {
+        summary: {
+          title: normalized.updateType === 'customer_reply' ? 'Reply sent' : 'Internal note added',
+          text:
+            normalized.updateType === 'customer_reply'
+              ? `A customer-visible reply was added to ticket ${target.id}.`
+              : `An internal note was added to ticket ${target.id}.`,
+        },
+        destination: target.destination,
+        target,
+      };
+    },
+  },
   assign_ticket: {
     id: 'assign_ticket',
     title: 'Assign ticket',
@@ -1236,7 +1652,7 @@ function getDefinition(actionId: TeamsActionId): TeamsActionDefinition {
 
 async function evaluateActionAvailability(
   definition: TeamsActionDefinition,
-  request: Pick<TeamsActionRequest, 'surface' | 'tenantId' | 'user'>,
+  request: Pick<TeamsActionRequest, 'surface' | 'tenantId' | 'user' | 'input'>,
   integration: TeamsIntegrationExecutionState,
   targetReference?: TeamsActionEntityReference
 ): Promise<TeamsActionAvailability> {
@@ -1311,7 +1727,15 @@ async function evaluateActionAvailability(
   }
 
   const permissionRequirement =
-    definition.id === 'my_tickets' || definition.id === 'my_approvals' || definition.id === 'open_record'
+    definition.id === 'create_ticket_from_message'
+      ? ['ticket', 'create']
+      : definition.id === 'update_from_message'
+        ? targetReference?.entityType === 'project_task'
+          ? ['project', 'read']
+          : buildPayloadFromRequest(request).updateType === 'continue_in_tab'
+            ? ['ticket', 'read']
+            : ['ticket', 'update']
+      : definition.id === 'my_tickets' || definition.id === 'my_approvals' || definition.id === 'open_record'
       ? definition.id === 'open_record' && targetReference?.entityType === 'project_task'
         ? ['project', 'read']
         : definition.id === 'open_record' && targetReference?.entityType === 'approval'

@@ -265,6 +265,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) The first message-to-update slice can stay in `server/src/lib/teams/messageExtension/teamsMessageExtensionHandler.ts` as long as ticket mutations still flow through the shared Teams action registry and project-task updates fail safely into a Teams-tab handoff instead of inventing a second task-specific mutation path.
 - (2026-03-07) Ticket message-to-update provenance is simplest when stored on the created `comments.metadata` payload, so the shared `TicketService.addComment(...)` contract now needs to accept optional metadata for both internal notes and customer-visible replies.
 - (2026-03-07) A generic `Continue in Teams tab` action can be attached to message-action task modules whenever `teams_integrations` already has `appId` plus `packageMetadata.baseUrl`; if those install artifacts are missing, the task flow should remain functional without the handoff button.
+- (2026-03-07) `createTicketFromMessage` and `updateFromMessage` task-module UIs can stay in `teamsMessageExtensionHandler.ts`, but their submit paths should route through dedicated registry actions (`create_ticket_from_message`, `update_from_message`) so message-driven workflows share the same idempotency, permission, and result-link plumbing as the rest of Teams.
 
 ## Progress Log
 
@@ -347,5 +348,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Verified Teams message-to-update task-card rendering, shared ticket mutations, provenance metadata flow, and Teams-tab handoff behavior with:
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/messageExtension/teamsMessageExtensionHandler.test.ts`
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/actions/teamsActionRegistry.test.ts`
+  - `pnpm --dir server exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-07) Completed `F196` by moving both message-driven submit paths onto dedicated shared registry actions in `server/src/lib/teams/actions/teamsActionRegistry.ts`, leaving the message-extension handler responsible only for task-module UI, field prefilling, and final task-response rendering.
+- (2026-03-07) Completed `T391` and `T392` with handler coverage proving `createTicketFromMessage` and `updateFromMessage` submits delegate to the shared action layer and still surface recoverable Teams-safe failures when the shared action rejects the request.
+- (2026-03-07) Verified shared message-driven action delegation with:
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/messageExtension/teamsMessageExtensionHandler.test.ts src/test/unit/lib/teams/actions/teamsActionRegistry.test.ts`
   - `pnpm --dir server exec tsc -p tsconfig.json --noEmit --pretty false`
 - (2026-03-07) Next unchecked feature after this slice is `F197` (Quick actions: a shared adaptive-card/dialog submission path exists for Teams quick actions).

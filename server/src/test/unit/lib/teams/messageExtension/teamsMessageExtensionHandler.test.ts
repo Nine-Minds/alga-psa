@@ -238,13 +238,6 @@ describe('teamsMessageExtensionHandler', () => {
     });
     hasPermissionMock.mockResolvedValue(true);
     listAvailableTeamsActionsMock.mockResolvedValue([]);
-    createTicketWithRetryMock.mockResolvedValue({
-      ticket_id: 'ticket-created-1',
-      ticket_number: 'T-4001',
-      title: 'VPN outage from Teams',
-      tenant: 'tenant-1',
-      entered_at: '2026-03-07T12:00:00.000Z',
-    });
     listPendingApprovalsForTeamsMock.mockResolvedValue([
       {
         id: 'approval-1',
@@ -256,68 +249,161 @@ describe('teamsMessageExtensionHandler', () => {
       },
     ]);
     createTenantKnexMock.mockResolvedValue(createTenantKnexFixture());
-    executeTeamsActionMock.mockImplementation(async ({ target }: { target: { entityType: string; ticketId?: string; taskId?: string; contactId?: string; approvalId?: string } }) => ({
-      success: true,
-      actionId: 'open_record',
-      surface: 'message_extension',
-      operation: 'lookup',
-      summary: {
-        title:
-          target.entityType === 'ticket'
-            ? 'Ticket T-1001'
-            : target.entityType === 'project_task'
-              ? 'Project task VPN cleanup'
-              : target.entityType === 'contact'
-                ? 'Contact Taylor Nguyen'
-                : 'Approval approval-1',
-        text:
-          target.entityType === 'ticket'
-            ? 'VPN outage • In progress'
-            : target.entityType === 'project_task'
-              ? 'VPN cleanup for onboarding'
-              : target.entityType === 'contact'
-                ? 'Taylor Nguyen • Contoso'
-                : 'Jamie Rivera • 2026-03-02 to 2026-03-08 • SUBMITTED',
-      },
-      links: [
-        { type: 'teams_tab', label: 'Open in Teams tab', url: `https://teams.test/${target.entityType}` },
-        { type: 'psa', label: 'Open in full PSA', url: `/msp/${target.entityType}` },
-      ],
-      items: [
-        {
-          id: target.ticketId || target.taskId || target.contactId || target.approvalId || 'record-1',
-          title:
-            target.entityType === 'ticket'
-              ? 'Ticket T-1001'
-              : target.entityType === 'project_task'
-                ? 'Project task VPN cleanup'
-                : target.entityType === 'contact'
-                  ? 'Contact Taylor Nguyen'
-                  : 'Approval approval-1',
-          summary:
-            target.entityType === 'ticket'
-              ? 'VPN outage • In progress'
-              : target.entityType === 'project_task'
-                ? 'VPN cleanup for onboarding'
-                : target.entityType === 'contact'
-                  ? 'Taylor Nguyen • Contoso'
-                  : 'Jamie Rivera • 2026-03-02 to 2026-03-08 • SUBMITTED',
-          entityType: target.entityType,
+    executeTeamsActionMock.mockImplementation(
+      async ({
+        actionId,
+        target,
+        input,
+      }: {
+        actionId: string;
+        target?: { entityType: string; ticketId?: string; taskId?: string; contactId?: string; approvalId?: string };
+        input?: Record<string, unknown>;
+      }) => {
+        if (actionId === 'create_ticket_from_message') {
+          return {
+            success: true,
+            actionId,
+            surface: 'message_extension',
+            operation: 'mutation',
+            summary: {
+              title: 'Created ticket T-4001',
+              text: 'Created ticket T-4001 from the selected Teams message.',
+            },
+            links: [
+              { type: 'teams_tab', label: 'Open in Teams tab', url: 'https://teams.test/ticket' },
+              { type: 'psa', label: 'Open in full PSA', url: '/msp/ticket' },
+            ],
+            items: [],
+            warnings: [],
+            target: {
+              entityType: 'ticket',
+              id: 'ticket-created-1',
+              destination: {
+                type: 'ticket',
+                ticketId: 'ticket-created-1',
+              },
+            },
+            metadata: {
+              surface: 'message_extension',
+              idempotencyKey: null,
+              idempotentReplay: false,
+              invokingSurface: 'message_extension',
+              businessOperations: ['TicketModel.createTicketWithRetry'],
+            },
+          };
+        }
+
+        if (actionId === 'update_from_message') {
+          const entityType = input?.targetEntityType === 'project_task' ? 'project_task' : 'ticket';
+          return {
+            success: true,
+            actionId,
+            surface: 'message_extension',
+            operation: 'mutation',
+            summary: {
+              title:
+                entityType === 'project_task' || input?.updateType === 'continue_in_tab'
+                  ? 'Continue in Teams tab'
+                  : input?.updateType === 'customer_reply'
+                    ? 'Reply sent'
+                    : 'Internal note added',
+              text:
+                entityType === 'project_task'
+                  ? 'Project task updates from Teams open in the Teams tab so you can add the full task context safely.'
+                  : input?.updateType === 'continue_in_tab'
+                    ? 'Open the ticket in Teams or full PSA to continue this workflow.'
+                    : input?.updateType === 'customer_reply'
+                      ? `A customer-visible reply was added to ticket ${input?.targetId}.`
+                      : `An internal note was added to ticket ${input?.targetId}.`,
+            },
+            links: [
+              { type: 'teams_tab', label: 'Open in Teams tab', url: `https://teams.test/${entityType}` },
+              { type: 'psa', label: 'Open in full PSA', url: `/msp/${entityType}` },
+            ],
+            items: [],
+            warnings: [],
+            target: {
+              entityType,
+              id: String(input?.targetId || 'record-1'),
+              destination:
+                entityType === 'project_task'
+                  ? { type: 'project_task', projectId: String(input?.projectId || 'project-1'), taskId: String(input?.targetId || 'task-1') }
+                  : { type: 'ticket', ticketId: String(input?.targetId || 'ticket-1') },
+            },
+            metadata: {
+              surface: 'message_extension',
+              idempotencyKey: null,
+              idempotentReplay: false,
+              invokingSurface: 'message_extension',
+              businessOperations: ['TicketService.addComment'],
+            },
+          };
+        }
+
+        return {
+          success: true,
+          actionId: 'open_record',
+          surface: 'message_extension',
+          operation: 'lookup',
+          summary: {
+            title:
+              target?.entityType === 'ticket'
+                ? 'Ticket T-1001'
+                : target?.entityType === 'project_task'
+                  ? 'Project task VPN cleanup'
+                  : target?.entityType === 'contact'
+                    ? 'Contact Taylor Nguyen'
+                    : 'Approval approval-1',
+            text:
+              target?.entityType === 'ticket'
+                ? 'VPN outage • In progress'
+                : target?.entityType === 'project_task'
+                  ? 'VPN cleanup for onboarding'
+                  : target?.entityType === 'contact'
+                    ? 'Taylor Nguyen • Contoso'
+                    : 'Jamie Rivera • 2026-03-02 to 2026-03-08 • SUBMITTED',
+          },
           links: [
-            { type: 'teams_tab', label: 'Open in Teams tab', url: `https://teams.test/${target.entityType}` },
-            { type: 'psa', label: 'Open in full PSA', url: `/msp/${target.entityType}` },
+            { type: 'teams_tab', label: 'Open in Teams tab', url: `https://teams.test/${target?.entityType}` },
+            { type: 'psa', label: 'Open in full PSA', url: `/msp/${target?.entityType}` },
           ],
-        },
-      ],
-      warnings: [],
-      metadata: {
-        surface: 'message_extension',
-        idempotencyKey: null,
-        idempotentReplay: false,
-        invokingSurface: 'message_extension',
-        businessOperations: ['TicketService.getById'],
-      },
-    }));
+          items: [
+            {
+              id: target?.ticketId || target?.taskId || target?.contactId || target?.approvalId || 'record-1',
+              title:
+                target?.entityType === 'ticket'
+                  ? 'Ticket T-1001'
+                  : target?.entityType === 'project_task'
+                    ? 'Project task VPN cleanup'
+                    : target?.entityType === 'contact'
+                      ? 'Contact Taylor Nguyen'
+                      : 'Approval approval-1',
+              summary:
+                target?.entityType === 'ticket'
+                  ? 'VPN outage • In progress'
+                  : target?.entityType === 'project_task'
+                    ? 'VPN cleanup for onboarding'
+                    : target?.entityType === 'contact'
+                      ? 'Taylor Nguyen • Contoso'
+                      : 'Jamie Rivera • 2026-03-02 to 2026-03-08 • SUBMITTED',
+              entityType: target?.entityType || 'ticket',
+              links: [
+                { type: 'teams_tab', label: 'Open in Teams tab', url: `https://teams.test/${target?.entityType}` },
+                { type: 'psa', label: 'Open in full PSA', url: `/msp/${target?.entityType}` },
+              ],
+            },
+          ],
+          warnings: [],
+          metadata: {
+            surface: 'message_extension',
+            idempotencyKey: null,
+            idempotentReplay: false,
+            invokingSurface: 'message_extension',
+            businessOperations: ['TicketService.getById'],
+          },
+        };
+      }
+    );
 
     vi.spyOn(TicketService.prototype, 'search').mockResolvedValue([
       { ticket_id: 'ticket-1' } as any,
@@ -624,44 +710,28 @@ describe('teamsMessageExtensionHandler', () => {
       { tenantIdHint: 'tenant-1' }
     );
 
-    expect(createTicketWithRetryMock).toHaveBeenCalledWith(
+    expect(executeTeamsActionMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: 'VPN outage from Teams',
-        description: 'The VPN has been down since 9 AM.',
-        board_id: 'board-1',
-        status_id: 'status-1',
-        client_id: 'client-1',
-        contact_id: 'contact-1',
-        priority_id: 'priority-1',
-        source: 'teams_message_extension',
-        attributes: expect.objectContaining({
-          idempotency_key: 'teams-message-1',
-          teams_message_source: expect.objectContaining({
+        actionId: 'create_ticket_from_message',
+        surface: 'message_extension',
+        idempotencyKey: 'teams-message-1',
+        input: {
+          title: 'VPN outage from Teams',
+          description: 'The VPN has been down since 9 AM.',
+          boardId: 'board-1',
+          statusId: 'status-1',
+          clientId: 'client-1',
+          contactId: 'contact-1',
+          metadata: expect.objectContaining({
             message_id: 'message-1',
             subject: 'VPN outage from Teams',
             author: 'Morgan Message',
             link_to_message: 'https://teams.example.test/messages/1',
           }),
-        }),
-      }),
-      'tenant-1',
-      expect.any(Function),
-      {},
-      expect.any(Object),
-      expect.any(Object),
-      'user-1',
-      3
-    );
-    expect(executeTeamsActionMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        actionId: 'open_record',
-        surface: 'message_extension',
-        target: {
-          entityType: 'ticket',
-          ticketId: 'ticket-created-1',
         },
       })
     );
+    expect(createTicketWithRetryMock).not.toHaveBeenCalled();
     expect(response).toMatchObject({
       task: {
         type: 'continue',
@@ -702,16 +772,24 @@ describe('teamsMessageExtensionHandler', () => {
       { tenantIdHint: 'tenant-1' }
     );
 
-    const mismatchedContactKnex = createTenantKnexFixture({
-      contacts: [
-        {
-          contact_name_id: 'contact-1',
-          client_id: 'client-2',
-        },
-      ],
+    executeTeamsActionMock.mockResolvedValueOnce({
+      success: false,
+      actionId: 'create_ticket_from_message',
+      surface: 'message_extension',
+      operation: 'mutation',
+      error: {
+        code: 'validation_error',
+        message: 'The selected PSA contact does not belong to the selected client.',
+      },
+      warnings: [],
+      metadata: {
+        surface: 'message_extension',
+        idempotencyKey: 'teams-message-3',
+        idempotentReplay: false,
+        invokingSurface: 'message_extension',
+        businessOperations: ['TicketModel.createTicketWithRetry'],
+      },
     });
-    createTenantKnexMock.mockResolvedValueOnce(mismatchedContactKnex);
-    createTenantKnexMock.mockResolvedValueOnce(mismatchedContactKnex);
     const mismatchedContactResponse = await handleTeamsMessageExtensionActivity(
       buildActivity({
         name: 'composeExtension/submitAction',
@@ -755,17 +833,6 @@ describe('teamsMessageExtensionHandler', () => {
   });
 
   it('T367/T368: submitAction replays duplicate create-ticket submissions safely and rejects missing idempotency state', async () => {
-    createTenantKnexMock.mockResolvedValueOnce(
-      createTenantKnexFixture({
-        tickets: [
-          {
-            ticket_id: 'ticket-created-1',
-            ticket_number: 'T-4001',
-            title: 'VPN outage from Teams',
-          },
-        ],
-      })
-    );
     const duplicateResponse = await handleTeamsMessageExtensionActivity(
       buildActivity({
         name: 'composeExtension/submitAction',
@@ -819,6 +886,12 @@ describe('teamsMessageExtensionHandler', () => {
       { tenantIdHint: 'tenant-1' }
     );
 
+    expect(executeTeamsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: 'create_ticket_from_message',
+        idempotencyKey: 'teams-message-4',
+      })
+    );
     expect(createTicketWithRetryMock).not.toHaveBeenCalled();
     expect(duplicateResponse).toMatchObject({
       task: {
@@ -1023,16 +1096,14 @@ describe('teamsMessageExtensionHandler', () => {
 
     expect(executeTeamsActionMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        actionId: 'add_note',
+        actionId: 'update_from_message',
         surface: 'message_extension',
         idempotencyKey: 'update-message-3',
-        target: {
-          entityType: 'ticket',
-          ticketId: 'ticket-1',
-        },
         input: {
-          ticketId: 'ticket-1',
-          note: 'Please capture this update on the ticket.',
+          targetEntityType: 'ticket',
+          targetId: 'ticket-1',
+          updateType: 'internal_note',
+          content: 'Please capture this update on the ticket.',
           metadata: expect.objectContaining({
             message_id: 'message-3',
             subject: 'Follow-up from Teams',
@@ -1088,14 +1159,12 @@ describe('teamsMessageExtensionHandler', () => {
 
     expect(executeTeamsActionMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        actionId: 'reply_to_contact',
-        target: {
-          entityType: 'ticket',
-          ticketId: 'ticket-2',
-        },
+        actionId: 'update_from_message',
         input: expect.objectContaining({
-          ticketId: 'ticket-2',
-          reply: 'We deployed the fix and the user can retry now.',
+          targetEntityType: 'ticket',
+          targetId: 'ticket-2',
+          updateType: 'customer_reply',
+          content: 'We deployed the fix and the user can retry now.',
         }),
       })
     );
@@ -1132,12 +1201,13 @@ describe('teamsMessageExtensionHandler', () => {
 
     expect(executeTeamsActionMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        actionId: 'open_record',
-        target: {
-          entityType: 'project_task',
-          taskId: 'task-1',
+        actionId: 'update_from_message',
+        input: expect.objectContaining({
+          targetEntityType: 'project_task',
+          targetId: 'task-1',
           projectId: 'project-1',
-        },
+          updateType: 'internal_note',
+        }),
       })
     );
     expect(response).toMatchObject({
@@ -1220,6 +1290,132 @@ describe('teamsMessageExtensionHandler', () => {
         value: {
           title: 'Continue in Teams tab',
         },
+      },
+    });
+  });
+
+  it('T391: create/update submit flows delegate to the shared Teams action layer instead of bespoke handler mutations', async () => {
+    await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        name: 'composeExtension/submitAction',
+        value: {
+          commandId: 'createTicketFromMessage',
+          commandContext: 'message',
+          messagePayload: {
+            id: 'message-6',
+            subject: 'Create through shared action',
+            body: {
+              content: '<div>Create this from Teams.</div>',
+            },
+          },
+          data: {
+            commandId: 'createTicketFromMessage',
+            commandContext: 'message',
+            idempotencyKey: 'teams-message-6',
+            title: 'Create through shared action',
+            description: 'Create this from Teams.',
+            boardId: 'board-1',
+            statusId: 'status-1',
+            clientId: 'client-1',
+          },
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        name: 'composeExtension/submitAction',
+        value: {
+          commandId: 'updateFromMessage',
+          commandContext: 'message',
+          messagePayload: {
+            id: 'message-7',
+            subject: 'Update through shared action',
+            body: {
+              content: '<div>Update this from Teams.</div>',
+            },
+          },
+          data: {
+            commandId: 'updateFromMessage',
+            commandContext: 'message',
+            idempotencyKey: 'update-message-7',
+            targetEntityType: 'ticket',
+            targetId: 'ticket-7',
+            updateType: 'internal_note',
+            content: 'Update this from Teams.',
+          },
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    expect(executeTeamsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: 'create_ticket_from_message',
+      })
+    );
+    expect(executeTeamsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: 'update_from_message',
+      })
+    );
+    expect(createTicketWithRetryMock).not.toHaveBeenCalled();
+  });
+
+  it('T392: shared message-driven action failures stay recoverable at the Teams handler boundary', async () => {
+    executeTeamsActionMock.mockResolvedValueOnce({
+      success: false,
+      actionId: 'update_from_message',
+      surface: 'message_extension',
+      operation: 'mutation',
+      error: {
+        code: 'forbidden',
+        message: 'You do not have permission to update this PSA record from Teams.',
+        remediation: 'Open the full PSA application if you need broader access.',
+      },
+      warnings: [],
+      metadata: {
+        surface: 'message_extension',
+        idempotencyKey: 'update-message-8',
+        idempotentReplay: false,
+        invokingSurface: 'message_extension',
+        businessOperations: ['TicketService.addComment'],
+      },
+    });
+
+    const response = await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        name: 'composeExtension/submitAction',
+        value: {
+          commandId: 'updateFromMessage',
+          commandContext: 'message',
+          messagePayload: {
+            id: 'message-8',
+            subject: 'Guard shared action failure',
+            body: {
+              content: '<div>This should fail safely.</div>',
+            },
+          },
+          data: {
+            commandId: 'updateFromMessage',
+            commandContext: 'message',
+            idempotencyKey: 'update-message-8',
+            targetEntityType: 'ticket',
+            targetId: 'ticket-8',
+            updateType: 'internal_note',
+            content: 'This should fail safely.',
+          },
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    expect(response).toEqual({
+      task: {
+        type: 'message',
+        value:
+          'You do not have permission to update this PSA record from Teams. Open the full PSA application if you need broader access.',
       },
     });
   });

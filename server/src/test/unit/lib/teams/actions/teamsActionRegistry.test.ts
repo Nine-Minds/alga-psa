@@ -136,6 +136,8 @@ describe('teamsActionRegistry', () => {
       'my_tickets',
       'my_approvals',
       'open_record',
+      'create_ticket_from_message',
+      'update_from_message',
       'assign_ticket',
       'add_note',
       'reply_to_contact',

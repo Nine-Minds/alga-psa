@@ -3122,7 +3122,7 @@
   {
     "id": "T391",
     "description": "Happy path: Message-driven actions: both create and update flows reuse the shared Teams action layer instead of bespoke handlers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F196"
     ]
@@ -3130,7 +3130,7 @@
   {
     "id": "T392",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message-driven actions: both create and update flows reuse the shared teams action layer instead of bespoke handlers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F196"
     ]
