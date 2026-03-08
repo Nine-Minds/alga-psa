@@ -202,7 +202,7 @@
   {
     "id": "F026",
     "description": "MSP page title: /msp/assets/imports — title: 'Asset Imports'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
