@@ -111,4 +111,14 @@ describe('QuickAddCategory', () => {
 
     expect(screen.queryByRole('combobox', { name: /select a board/i })).toBeNull();
   });
+
+  it('T030: shows optional parent category dropdown filtered to the selected board', () => {
+    renderDialog({ preselectedBoardId: 'board-1' });
+
+    const parentSelect = screen.getByRole('combobox', { name: /select parent category/i });
+    expect(parentSelect).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Hardware' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Software' })).toBeNull();
+    expect(screen.queryByRole('option', { name: 'Laptop' })).toBeNull();
+  });
 });

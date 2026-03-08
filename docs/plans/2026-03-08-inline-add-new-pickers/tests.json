@@ -235,7 +235,7 @@
   {
     "id": "T030",
     "description": "QuickAddCategory shows optional parent category dropdown filtered to selected board's categories",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
