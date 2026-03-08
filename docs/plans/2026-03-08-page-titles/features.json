@@ -74,7 +74,7 @@
   {
     "id": "F010",
     "description": "MSP page title: /msp/tickets — title: 'Tickets'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
