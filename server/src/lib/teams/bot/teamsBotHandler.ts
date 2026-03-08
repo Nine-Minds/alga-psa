@@ -72,7 +72,7 @@ type ParsedCommand =
   | { kind: 'assign_ticket'; ticketId?: string; assignee?: string }
   | { kind: 'add_note'; ticketId?: string; note?: string }
   | { kind: 'reply_to_contact'; ticketId?: string; reply?: string }
-  | { kind: 'log_time'; targetType?: 'ticket' | 'project_task'; targetId?: string };
+  | { kind: 'log_time'; targetType?: 'ticket' | 'project_task'; targetId?: string; durationMinutes?: number; note?: string };
 
 interface HandleTeamsBotActivityOptions {
   tenantIdHint?: string | null;
@@ -145,6 +145,23 @@ function parseTicketCommandReference(value: string | null | undefined): string |
   return normalized || undefined;
 }
 
+function parseDurationMinutes(value: string | null | undefined): number | undefined {
+  const normalized = normalizeOptionalString(value);
+  if (!normalized) {
+    return undefined;
+  }
+
+  const match = normalized.match(/^(?:(\d+)\s*h)?\s*(?:(\d+)\s*m)?$/i);
+  if (!match) {
+    return undefined;
+  }
+
+  const hours = match[1] ? Number.parseInt(match[1], 10) : 0;
+  const minutes = match[2] ? Number.parseInt(match[2], 10) : 0;
+  const total = hours * 60 + minutes;
+  return total > 0 ? total : undefined;
+}
+
 function parseCommand(text: string): ParsedCommand {
   const normalized = normalizeActivityText(text);
   const lower = normalized.toLowerCase();
@@ -189,13 +206,15 @@ function parseCommand(text: string): ParsedCommand {
     };
   }
 
-  const logTimeMatch = normalized.match(/^log time(?:\s+(ticket|task)\s+(.+))?$/i);
+  const logTimeMatch = normalized.match(/^log time(?:\s+(ticket|task)\s+(\S+))?(?:\s+([^:]+?))?(?:\s*:\s*(.+))?$/i);
   if (logTimeMatch) {
     const targetType = logTimeMatch[1]?.toLowerCase() === 'task' ? 'project_task' : logTimeMatch[1] ? 'ticket' : undefined;
     return {
       kind: 'log_time',
       targetType,
       targetId: parseTicketCommandReference(logTimeMatch[2]),
+      durationMinutes: parseDurationMinutes(logTimeMatch[3]),
+      note: normalizeOptionalString(logTimeMatch[4]) || undefined,
     };
   }
 
@@ -231,7 +250,7 @@ async function buildSupportedCommandButtons(tenantId: string): Promise<TeamsBotB
     buttons.push(buildImBackButton('Reply to contact', 'reply to contact <ticket-id>: <reply>'));
   }
   if (integration.allowedActions.includes('log_time')) {
-    buttons.push(buildImBackButton('Log time', 'log time ticket <ticket-id>'));
+    buttons.push(buildImBackButton('Log time', 'log time ticket <ticket-id> 30m: <note>'));
   }
 
   return buttons;
@@ -290,10 +309,10 @@ function mapActionAvailabilityToButtons(
       return target.entityType === 'ticket' ? [buildImBackButton('Reply to contact', `reply to contact ${target.ticketId}`)] : [];
     case 'log_time':
       if (target.entityType === 'ticket') {
-        return [buildImBackButton('Log time', `log time ticket ${target.ticketId}`)];
+        return [buildImBackButton('Log time', `log time ticket ${target.ticketId} 30m: <note>`)];
       }
       if (target.entityType === 'project_task') {
-        return [buildImBackButton('Log time', `log time task ${target.taskId}`)];
+        return [buildImBackButton('Log time', `log time task ${target.taskId} 30m: <note>`)];
       }
       return [];
     default:
@@ -718,6 +737,79 @@ async function handleReplyToContactCommand(params: {
   );
 }
 
+async function handleLogTimeCommand(params: {
+  tenantId: string;
+  user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>;
+  metadata: TeamsBotResponseActivity['metadata'];
+  targetType?: 'ticket' | 'project_task';
+  targetId?: string;
+  durationMinutes?: number;
+  note?: string;
+}): Promise<TeamsBotResponseActivity> {
+  if (!params.targetId || !params.targetType) {
+    return buildMessageResponse(
+      'Specify a work item, for example: log time ticket <ticket-id> 30m: Investigated the issue.',
+      {
+        attachments: [
+          buildCard(
+            'Command needs a work item',
+            'Specify a work item, for example: log time ticket <ticket-id> 30m: Investigated the issue.'
+          ),
+        ],
+        metadata: {
+          ...params.metadata,
+          commandId: 'log_time',
+        },
+      }
+    );
+  }
+
+  if (!params.durationMinutes) {
+    return buildMessageResponse(
+      `Add a duration after the work item, for example: log time ${params.targetType === 'project_task' ? 'task' : 'ticket'} ${params.targetId} 30m: Investigated the issue.`,
+      {
+        attachments: [
+          buildCard(
+            'Duration required',
+            `Include a duration such as 15m, 30m, 1h, or 1h 30m. Example: log time ${params.targetType === 'project_task' ? 'task' : 'ticket'} ${params.targetId} 30m: Investigated the issue.`
+          ),
+        ],
+        metadata: {
+          ...params.metadata,
+          commandId: 'log_time',
+        },
+      }
+    );
+  }
+
+  const startTime = new Date(Date.now() - params.durationMinutes * 60_000).toISOString();
+  return renderActionResult(
+    await executeTeamsAction({
+      actionId: 'log_time',
+      surface: BOT_SURFACE,
+      tenantId: params.tenantId,
+      user: params.user,
+      target:
+        params.targetType === 'project_task'
+          ? { entityType: 'project_task', taskId: params.targetId }
+          : { entityType: 'ticket', ticketId: params.targetId },
+      input: {
+        entityType: params.targetType,
+        workItemId: params.targetId,
+        startTime,
+        durationMinutes: params.durationMinutes,
+        note: params.note || '',
+        isBillable: true,
+      },
+    }),
+    {
+      tenantId: params.tenantId,
+      user: params.user,
+      metadata: params.metadata,
+    }
+  );
+}
+
 export async function handleTeamsBotActivity(
   activity: TeamsBotActivity,
   options: HandleTeamsBotActivityOptions = {}
@@ -859,19 +951,14 @@ export async function handleTeamsBotActivity(
         reply: parsed.reply,
       });
     case 'log_time': {
-      const target =
-        parsed.targetId && parsed.targetType === 'project_task'
-          ? ({ entityType: 'project_task', taskId: parsed.targetId } satisfies TeamsActionEntityReference)
-          : parsed.targetId
-            ? ({ entityType: 'ticket', ticketId: parsed.targetId } satisfies TeamsActionEntityReference)
-            : undefined;
-      return buildGuidedHandoffResponse({
-        actionId: 'log_time',
+      return handleLogTimeCommand({
         tenantId: tenantContext.tenantId,
         user,
         metadata,
-        target,
-        missingTargetMessage: 'Specify a work item, for example: log time ticket <ticket-id>.',
+        targetType: parsed.targetType,
+        targetId: parsed.targetId,
+        durationMinutes: parsed.durationMinutes,
+        note: parsed.note,
       });
     }
   }

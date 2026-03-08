@@ -2386,7 +2386,7 @@
   {
     "id": "T299",
     "description": "Happy path: Personal bot command `log time`: supports creating a time entry against a ticket.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F150"
     ]
@@ -2394,7 +2394,7 @@
   {
     "id": "T300",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `log time`: supports creating a time entry against a ticket.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F150"
     ]
@@ -2402,7 +2402,7 @@
   {
     "id": "T301",
     "description": "Happy path: Personal bot command `log time`: supports creating a time entry against a project task.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F151"
     ]
@@ -2410,7 +2410,7 @@
   {
     "id": "T302",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `log time`: supports creating a time entry against a project task.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F151"
     ]
@@ -2418,7 +2418,7 @@
   {
     "id": "T303",
     "description": "Happy path: Personal bot command `log time`: collects minimal duration, note, and work-context data.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F152"
     ]
@@ -2426,7 +2426,7 @@
   {
     "id": "T304",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `log time`: collects minimal duration, note, and work-context data.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F152"
     ]

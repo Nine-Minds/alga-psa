@@ -115,7 +115,7 @@ describe('teamsBotHandler', () => {
       selectedProfileId: 'profile-1',
       installStatus: 'active',
       enabledCapabilities: ['personal_bot', 'personal_tab', 'message_extension'],
-      allowedActions: ['assign_ticket', 'add_note', 'reply_to_contact'],
+      allowedActions: ['assign_ticket', 'add_note', 'reply_to_contact', 'log_time'],
       appId: 'teams-app-1',
       packageMetadata: {
         baseUrl: 'https://example.test',
@@ -155,6 +155,7 @@ describe('teamsBotHandler', () => {
 
     expect(help.attachments?.[0]?.content.text).toContain('add note <ticket-id>: <note>');
     expect(help.attachments?.[0]?.content.text).toContain('reply to contact <ticket-id>: <reply>');
+    expect(help.attachments?.[0]?.content.text).toContain('log time ticket <ticket-id> 30m: <note>');
     expect(help.metadata?.commandId).toBe('help');
   });
 
@@ -555,6 +556,121 @@ describe('teamsBotHandler', () => {
     expect(response.text).toContain('customer-visible reply');
     expect(response.attachments?.[0]?.content.buttons).toContainEqual(
       expect.objectContaining({ type: 'openUrl', value: 'https://teams.test/ticket-2002' })
+    );
+  });
+
+  it('T300/T302/T304: `log time` validates missing work items and missing durations with recoverable guidance', async () => {
+    const missingTarget = await handleTeamsBotActivity(buildPersonalMessageActivity('log time'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(missingTarget.text).toContain('Specify a work item');
+
+    const missingDuration = await handleTeamsBotActivity(buildPersonalMessageActivity('log time ticket ticket-2002'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(missingDuration.text).toContain('log time ticket ticket-2002 30m');
+    expect(executeTeamsActionMock).not.toHaveBeenCalled();
+  });
+
+  it('T299/T303: `log time` logs time against a ticket with duration, note, and Teams follow-up links', async () => {
+    executeTeamsActionMock.mockResolvedValue({
+      success: true,
+      actionId: 'log_time',
+      surface: 'bot',
+      operation: 'mutation',
+      summary: {
+        title: 'Time logged',
+        text: 'Logged 30 minutes from Teams.',
+      },
+      links: [
+        { type: 'teams_tab', label: 'Open in Teams tab', url: 'https://teams.test/ticket-2002' },
+        { type: 'psa', label: 'Open in full PSA', url: '/msp/tickets/ticket-2002' },
+      ],
+      items: [],
+      warnings: [],
+      metadata: {
+        surface: 'bot',
+        idempotencyKey: null,
+        idempotentReplay: false,
+        invokingSurface: 'bot',
+        businessOperations: ['TimeEntryService.create'],
+      },
+    });
+
+    const response = await handleTeamsBotActivity(
+      buildPersonalMessageActivity('log time ticket ticket-2002 30m: Investigated the issue'),
+      {
+        tenantIdHint: 'tenant-1',
+      }
+    );
+
+    expect(executeTeamsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: 'log_time',
+        input: expect.objectContaining({
+          entityType: 'ticket',
+          workItemId: 'ticket-2002',
+          durationMinutes: 30,
+          note: 'Investigated the issue',
+          isBillable: true,
+          startTime: expect.any(String),
+        }),
+      })
+    );
+    expect(response.text).toContain('Logged 30 minutes');
+    expect(response.attachments?.[0]?.content.buttons).toContainEqual(
+      expect.objectContaining({ type: 'openUrl', value: 'https://teams.test/ticket-2002' })
+    );
+  });
+
+  it('T301: `log time` can target a project task with the same shared mutation path', async () => {
+    executeTeamsActionMock.mockResolvedValue({
+      success: true,
+      actionId: 'log_time',
+      surface: 'bot',
+      operation: 'mutation',
+      summary: {
+        title: 'Time logged',
+        text: 'Logged 60 minutes from Teams.',
+      },
+      links: [
+        { type: 'teams_tab', label: 'Open in Teams tab', url: 'https://teams.test/task-2002' },
+        { type: 'psa', label: 'Open in full PSA', url: '/msp/projects/proj-1/tasks/task-2002' },
+      ],
+      items: [],
+      warnings: [],
+      metadata: {
+        surface: 'bot',
+        idempotencyKey: null,
+        idempotentReplay: false,
+        invokingSurface: 'bot',
+        businessOperations: ['TimeEntryService.create'],
+      },
+    });
+
+    await handleTeamsBotActivity(
+      buildPersonalMessageActivity('log time task task-2002 1h: Worked the task'),
+      {
+        tenantIdHint: 'tenant-1',
+      }
+    );
+
+    expect(executeTeamsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: 'log_time',
+        target: {
+          entityType: 'project_task',
+          taskId: 'task-2002',
+        },
+        input: expect.objectContaining({
+          entityType: 'project_task',
+          workItemId: 'task-2002',
+          durationMinutes: 60,
+          note: 'Worked the task',
+        }),
+      })
     );
   });
 

@@ -1418,7 +1418,7 @@
   {
     "id": "F150",
     "description": "Personal bot command `log time`: supports creating a time entry against a ticket.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1428,7 +1428,7 @@
   {
     "id": "F151",
     "description": "Personal bot command `log time`: supports creating a time entry against a project task.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1438,7 +1438,7 @@
   {
     "id": "F152",
     "description": "Personal bot command `log time`: collects minimal duration, note, and work-context data.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
