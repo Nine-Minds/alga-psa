@@ -634,7 +634,7 @@
   {
     "id": "F080",
     "description": "Client Portal page title: /client-portal/appointments/[appointmentRequestId] — title: 'Appointment Details' (generateMetadata)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3c"
     ]
