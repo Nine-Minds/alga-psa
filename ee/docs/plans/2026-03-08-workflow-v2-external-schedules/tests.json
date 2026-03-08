@@ -400,7 +400,7 @@
   {
     "id": "T047",
     "description": "Workflow editor: trigger selector only shows No trigger and Event",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
@@ -408,7 +408,7 @@
   {
     "id": "T048",
     "description": "Workflow editor: one-time and recurring inline trigger panels are removed",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
@@ -416,7 +416,7 @@
   {
     "id": "T049",
     "description": "Workflow editor: no-trigger workflow still allows manual run using the existing run dialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
@@ -424,7 +424,7 @@
   {
     "id": "T050",
     "description": "Workflow editor: event-trigger workflow still shows event catalog and mapping controls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
@@ -432,7 +432,7 @@
   {
     "id": "T051",
     "description": "Workflow editor: workflow-context link opens the schedules screen filtered to the current workflow",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
@@ -440,7 +440,7 @@
   {
     "id": "T052",
     "description": "Permissions: users without workflow manage permission cannot create schedules",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
@@ -448,7 +448,7 @@
   {
     "id": "T053",
     "description": "Permissions: users without workflow manage permission cannot edit, pause, resume, or delete schedules",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
@@ -465,7 +465,7 @@
   {
     "id": "T055",
     "description": "DB integration: happy path creates a recurring schedule row with payload_json and runner identifiers in a migrated test database",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F004",
@@ -476,7 +476,7 @@
   {
     "id": "T056",
     "description": "DB integration: failure path rejects invalid payload_json against the real migrated schedule schema and leaves no row behind",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014",
       "F015"

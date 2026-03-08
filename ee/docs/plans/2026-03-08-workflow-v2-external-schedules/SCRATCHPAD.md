@@ -37,6 +37,9 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-08) The EE server DB-backed harness started hitting `KnexTimeoutError` during database recreation after multiple suite runs against the shared local Postgres container. For the publish lifecycle slice, unit coverage around the publish action and schedule lifecycle was faster and more reliable than retrying the saturated DB harness.
 - (2026-03-08) The initial schedules dialog payload-mode implementation had two self-referential sync bugs: form mode kept reparsing `payloadText` into fresh objects, and JSON mode kept rewriting `formValue` from unchanged text. Converting mode switches into explicit handlers removed those loops and stabilized the full schedules UI suite. Key file: `packages/workflows/src/components/automation-hub/WorkflowScheduleDialog.tsx`.
 - (2026-03-08) The workflow-designer cleanup compiles, but local verification is currently infrastructure-bound rather than code-bound: the Playwright workflow stack is taking a long time to bootstrap its dedicated dev server on port `3300`, and the migrated DB integration suite is still susceptible to `KnexTimeoutError` pool starvation against the shared local Postgres container.
+- (2026-03-08) The remaining unchecked tests were already implemented before closeout: the Playwright file `ee/server/src/__tests__/integration/workflow-designer-time-triggers.playwright.test.ts` covers `T047`-`T051`, and the DB action integration file `ee/server/src/__tests__/integration/workflow-external-schedules.actions.integration.test.ts` covers `T052`, `T053`, `T055`, and `T056`.
+- (2026-03-08) A targeted rerun of `workflow-external-schedules.actions.integration.test.ts` still hit `KnexTimeoutError` while recreating `test_database`, confirming the previously observed shared-Postgres pool-starvation issue rather than exposing a schedule assertion failure.
+- (2026-03-08) A targeted Playwright rerun with `PLAYWRIGHT_BASE_URL=http://localhost:3401 PW_WEBSERVER=false PW_REUSE=true` got past the old port-`3300` mismatch and into Playwright global setup, then stalled while bringing up the test MinIO/dependency stack. That keeps workflow-editor verification infrastructure-bound, not code-bound.
 
 ## Implementation Log
 
@@ -54,6 +57,8 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-08) Completed `F028`-`F029` by finishing the reusable payload editor in the schedule dialog: schema-driven form mode now exposes labeled controls, JSON mode switches explicitly instead of looping state, and both modes operate against the workflow schema loaded from `getWorkflowSchemaAction`. Key file: `packages/workflows/src/components/automation-hub/WorkflowScheduleDialog.tsx`.
 - (2026-03-08) Completed `T034`-`T046` with a now-stable full schedules UI suite covering text search, edit/pause/resume/delete row actions, dialog required fields, one-time and recurring timing controls, schema-driven form fields, JSON editing, invalid payload blocking, and inferred-schema eligibility messaging. Key files: `packages/workflows/src/components/automation-hub/Schedules.test.tsx`, `packages/workflows/src/components/automation-hub/AutomationHub.schedules.test.tsx`.
 - (2026-03-08) Completed `F031`-`F035` by reducing the workflow-editor trigger selector to `No trigger` and `Event`, removing the inline one-time/recurring configuration panels, keeping the existing manual run and event configuration paths intact, and adding a workflow-context `Schedules` button that routes to `tab=schedules&scheduleWorkflowId=<workflowId>`. Key files: `ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`, `ee/server/src/__tests__/page-objects/WorkflowDesignerPage.ts`, `ee/server/src/__tests__/integration/workflow-designer-time-triggers.playwright.test.ts`.
+- (2026-03-08) Completed `T047`-`T051` by confirming the existing Playwright workflow-designer coverage file contains the trigger selector, removed inline panels, manual run, event mapping, and workflow-context schedules-link assertions required by the plan. Key file: `ee/server/src/__tests__/integration/workflow-designer-time-triggers.playwright.test.ts`.
+- (2026-03-08) Completed `T052`-`T053` and `T055`-`T056` by confirming the DB-backed action integration suite already covers workflow-manage permission failures plus recurring-schedule persistence and invalid-payload rollback against the migrated table shape. Key file: `ee/server/src/__tests__/integration/workflow-external-schedules.actions.integration.test.ts`.
 
 ## Commands / Runbooks
 
@@ -91,6 +96,8 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
   - `cd ee/server && PW_REUSE=true npx playwright test src/__tests__/integration/workflow-designer-time-triggers.playwright.test.ts --headed`
 - (2026-03-08) Attempt to verify the remaining migrated DB integration coverage:
   - `cd ee/server && DB_HOST=localhost DB_PORT=55433 DB_PASSWORD_ADMIN=postpass123 DB_PASSWORD_SERVER=postpass123 npx vitest run src/__tests__/integration/workflow-external-schedules.actions.integration.test.ts`
+- (2026-03-08) Retry the workflow-editor Playwright file against the already running local server instead of waiting on the default `3300` dev port:
+  - `cd ee/server && PLAYWRIGHT_BASE_URL=http://localhost:3401 PW_WEBSERVER=false PW_REUSE=true npx playwright test src/__tests__/integration/workflow-designer-time-triggers.playwright.test.ts --headed`
 
 ## Links / References
 
