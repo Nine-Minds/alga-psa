@@ -169,7 +169,7 @@
   {
     "id": "T011",
     "description": "Batch verify: static/public pages (F103, F104) export metadata with correct titles",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F103",
       "F104"

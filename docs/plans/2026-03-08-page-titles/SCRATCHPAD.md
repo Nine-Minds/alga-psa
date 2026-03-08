@@ -173,3 +173,4 @@
 - (2026-03-08) T008: Batch verify: all static Client Portal pages (F076-F079, F081, F085, F087) export 'export const metadata' with correct title strings
 - (2026-03-08) T009: Batch verify: all dynamic Client Portal pages (F080, F082, F083, F086, F088) export generateMetadata with correct title
 - (2026-03-08) T010: Batch verify: all Auth pages (F090-F102) export 'export const metadata' with correct title strings
+- (2026-03-08) T011: Batch verify: static/public pages (F103, F104) export metadata with correct titles
