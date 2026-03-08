@@ -22,6 +22,7 @@ interface CategoryPickerProps {
   allowEmpty?: boolean;
   disabled?: boolean;
   modal?: boolean;
+  onAddNew?: () => void;
 }
 
 type CategoryType = 'parent' | 'child';
@@ -40,6 +41,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
   allowEmpty = false,
   disabled = false,
   modal = true,
+  onAddNew,
   "data-automation-type": dataAutomationType = 'custom',
 }) => {
   // Register components with UI reflection system
@@ -261,6 +263,8 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
           allowEmpty={allowEmpty}
           disabled={disabled}
           modal={modal}
+          onAddNew={onAddNew}
+          addNewLabel="+ Add new category"
         />
       </div>
     </ReflectionContainer>

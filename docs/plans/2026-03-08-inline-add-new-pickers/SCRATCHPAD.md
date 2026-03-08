@@ -172,3 +172,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
 - 2026-03-08 F030: Added generic `onAddNew`/`addNewLabel` support to `packages/ui/src/components/TreeSelect.tsx`, rendering the separator/button inside the Radix portal content and explicitly closing the dropdown before invoking the consumer callback.
 - Validation: `npx tsc -p packages/ui/tsconfig.json --noEmit && npx tsc -p packages/tickets/tsconfig.json --noEmit`
+- 2026-03-08 F031: `packages/tickets/src/components/CategoryPicker.tsx` now accepts `onAddNew` and passes it into `TreeSelect` with a category-specific `+ Add new category` label.
+- Validation: `npx tsc -p packages/ui/tsconfig.json --noEmit && npx tsc -p packages/tickets/tsconfig.json --noEmit`

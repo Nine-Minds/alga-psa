@@ -242,7 +242,7 @@
   {
     "id": "F031",
     "description": "CategoryPicker accepts optional onAddNew prop and passes it through to TreeSelect",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-7"
     ]
