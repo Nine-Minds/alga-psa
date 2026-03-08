@@ -2,10 +2,13 @@ export { getGoogleIntegrationStatus, saveGoogleIntegrationSettings, resetGoogleP
 export {
   getMicrosoftIntegrationStatus,
   listMicrosoftProfiles,
+  listMicrosoftConsumerBindings,
   createMicrosoftProfile,
+  setMicrosoftConsumerBinding,
   updateMicrosoftProfile,
   archiveMicrosoftProfile,
   setDefaultMicrosoftProfile,
+  resolveMicrosoftProfileForConsumer,
   resolveMicrosoftProfileForCompatibility,
   saveMicrosoftIntegrationSettings,
   resetMicrosoftProvidersToDisconnected

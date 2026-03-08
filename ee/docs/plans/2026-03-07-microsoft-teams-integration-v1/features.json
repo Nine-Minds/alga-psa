@@ -326,7 +326,7 @@
   {
     "id": "F037",
     "description": "Consumer bindings: a tenant-scoped consumer binding model exists for Microsoft-profile consumers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -335,7 +335,7 @@
   {
     "id": "F038",
     "description": "Consumer bindings: the model supports at least MSP SSO, email, calendar, and Teams as consumer types.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -344,7 +344,7 @@
   {
     "id": "F039",
     "description": "Consumer bindings: each consumer can reference exactly one selected Microsoft profile per tenant.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -353,7 +353,7 @@
   {
     "id": "F040",
     "description": "Consumer bindings: migration creates compatibility bindings so existing Microsoft consumers continue to work after profile introduction.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -362,7 +362,7 @@
   {
     "id": "F041",
     "description": "Consumer bindings: Teams requires an explicit selected profile instead of silently falling back to unrelated global Microsoft credentials.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
