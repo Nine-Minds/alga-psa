@@ -142,3 +142,4 @@
 - (2026-03-08) F092: Auth page title: /auth/verify — verify existing 'Verify Email' metadata in layout.tsx is compatible
 - (2026-03-08) F093: Auth page title: /auth/verify-email — title: 'Verify Email'
 - (2026-03-08) F094: Auth page title: /auth/check-email — title: 'Check Email'
+- (2026-03-08) F095: Auth page title: /auth/portal/setup — title: 'Portal Setup'

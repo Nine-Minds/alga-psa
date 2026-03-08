@@ -754,7 +754,7 @@
   {
     "id": "F095",
     "description": "Auth page title: /auth/portal/setup — title: 'Portal Setup'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3b"
     ]
