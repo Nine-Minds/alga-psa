@@ -498,7 +498,7 @@
   {
     "id": "F063",
     "description": "MSP page title: /msp/extensions — title: 'Extensions'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]

@@ -110,3 +110,4 @@
 - (2026-03-08) F060: MSP page title: /msp/settings/notifications — title: 'Notification Settings'
 - (2026-03-08) F061: MSP page title: /msp/settings/sla — title: 'SLA Settings'
 - (2026-03-08) F062: MSP page title: /msp/security-settings — title: 'Security Settings'
+- (2026-03-08) F063: MSP page title: /msp/extensions — title: 'Extensions'
