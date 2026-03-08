@@ -133,3 +133,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `npx tsc -p packages/projects/tsconfig.json --noEmit`
 - 2026-03-08 F011: Wired `packages/clients/src/components/clients/ClientDetails.tsx` default-contact picker to open `QuickAddContact` for the current client, merge the created contact into the local default-contact options, and immediately apply it as the default contact selection.
 - Validation: `npx tsc -p packages/clients/tsconfig.json --noEmit`
+- 2026-03-08 F012: Wired `packages/clients/src/components/clients/BillingConfigForm.tsx` billing-contact picker to open `QuickAddContact` with the current client preselected, merge the new contact into local picker state, and apply it as the billing contact while clearing the fallback billing email.
+- Validation: `npx tsc -p packages/clients/tsconfig.json --noEmit`
