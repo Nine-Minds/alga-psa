@@ -58,3 +58,4 @@
 - (2026-03-08) F008: MSP page title: /msp/account-manager — title: 'Account Manager'
 - (2026-03-08) F009: MSP page title: /msp/profile — title: 'Profile'
 - (2026-03-08) F010: MSP page title: /msp/tickets — title: 'Tickets'
+- (2026-03-08) F011: MSP page title: /msp/tickets/[id] — title: 'Ticket Details' (generateMetadata)

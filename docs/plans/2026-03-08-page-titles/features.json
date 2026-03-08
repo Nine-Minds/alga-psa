@@ -82,7 +82,7 @@
   {
     "id": "F011",
     "description": "MSP page title: /msp/tickets/[id] — title: 'Ticket Details' (generateMetadata)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3c"
     ]
