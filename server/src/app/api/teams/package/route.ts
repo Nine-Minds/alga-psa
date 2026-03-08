@@ -4,14 +4,24 @@ import { loadTeamsEeRoute, teamsOptionsResponse } from '../_eeDelegator';
 export { dynamic, runtime };
 
 type EeRouteModule = {
+  GET?: (req: Request) => Promise<Response>;
   POST?: (req: Request) => Promise<Response>;
 };
 
 async function loadEeRoute(): Promise<EeRouteModule | null> {
   return loadTeamsEeRoute(
-    'teams/quick-actions',
-    async () => import('@enterprise/app/api/teams/quick-actions/route') as Promise<EeRouteModule>
+    'teams/package',
+    async () => import('@enterprise/app/api/teams/package/route') as Promise<EeRouteModule>
   );
+}
+
+export async function GET(request: Request): Promise<Response> {
+  const eeRoute = await loadEeRoute();
+  if (!eeRoute?.GET) {
+    return eeUnavailable();
+  }
+
+  return eeRoute.GET(request);
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -24,5 +34,5 @@ export async function POST(request: Request): Promise<Response> {
 }
 
 export async function OPTIONS(): Promise<Response> {
-  return teamsOptionsResponse('POST, OPTIONS');
+  return teamsOptionsResponse('GET, POST, OPTIONS');
 }

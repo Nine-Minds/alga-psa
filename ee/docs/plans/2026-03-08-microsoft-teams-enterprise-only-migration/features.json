@@ -650,7 +650,7 @@
   {
     "id": "F073",
     "description": "Route boundary: Teams package generation and install-status routes are converted from shared active implementations into EE-owned implementations or EE delegators.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -659,7 +659,7 @@
   {
     "id": "F074",
     "description": "Route boundary: Teams package/install routes return EE-unavailable responses in CE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -668,7 +668,7 @@
   {
     "id": "F075",
     "description": "Route boundary: Teams package/install routes return disabled responses in EE with the tenant flag off.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -677,7 +677,7 @@
   {
     "id": "F076",
     "description": "Route boundary: Teams package/install routes delegate into EE implementations when Teams is enabled.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -686,7 +686,7 @@
   {
     "id": "F077",
     "description": "Route boundary: OPTIONS handling for any CE stubbed Teams API routes remains valid even when the EE implementation is unavailable.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -704,7 +704,7 @@
   {
     "id": "F079",
     "description": "Route boundary: shared route wrappers log EE import failures in a bounded way without exposing stack traces to users.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -722,7 +722,7 @@
   {
     "id": "F081",
     "description": "Route boundary: the migration documents which Teams routes remain addressable as CE stubs and which become hard 404s.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"

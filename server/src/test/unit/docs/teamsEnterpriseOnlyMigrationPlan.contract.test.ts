@@ -75,4 +75,12 @@ describe('Teams enterprise-only migration plan contract', () => {
       'Canonical disabled copy for EE flag-off wrappers: `Microsoft Teams integration is disabled for this tenant.`'
     );
   });
+
+  it('T161/T162: documents which Teams public routes remain addressable as CE stubs and which hard-stop when unavailable', () => {
+    expect(scratchpad).toContain('/api/teams/bot/messages');
+    expect(scratchpad).toContain('/api/teams/message-extension/query');
+    expect(scratchpad).toContain('/api/teams/quick-actions');
+    expect(scratchpad).toContain('/api/teams/package');
+    expect(scratchpad).toContain('The personal tab UI at `/teams/tab` remains a hard-stop page when Teams is unavailable');
+  });
 });

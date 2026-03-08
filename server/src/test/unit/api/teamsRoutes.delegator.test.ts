@@ -38,6 +38,7 @@ describe('CE Teams route delegators', () => {
     const messageExtensionRoute = await import('@/app/api/teams/message-extension/query/route');
     const quickActionsRoute = await import('@/app/api/teams/quick-actions/route');
     const authTabRoute = await import('@/app/api/teams/auth/callback/tab/route');
+    const packageRoute = await import('@/app/api/teams/package/route');
 
     const botResponse = await botRoute.POST(new Request('http://localhost/api/teams/bot/messages', { method: 'POST' }));
     const messageExtensionResponse = await messageExtensionRoute.POST(
@@ -49,6 +50,7 @@ describe('CE Teams route delegators', () => {
     const authTabResponse = await authTabRoute.GET(
       new Request('http://localhost/api/teams/auth/callback/tab?tenantId=tenant-1', { method: 'GET' })
     );
+    const packageResponse = await packageRoute.GET(new Request('http://localhost/api/teams/package', { method: 'GET' }));
 
     expect(botResponse.status).toBe(501);
     await expect(botResponse.json()).resolves.toEqual(EE_ONLY_ERROR);
@@ -61,6 +63,9 @@ describe('CE Teams route delegators', () => {
 
     expect(authTabResponse.status).toBe(501);
     await expect(authTabResponse.json()).resolves.toEqual(EE_ONLY_ERROR);
+
+    expect(packageResponse.status).toBe(501);
+    await expect(packageResponse.json()).resolves.toEqual(EE_ONLY_ERROR);
   });
 
   it('T117/T125/T135/T143/T203/T405: forwards Teams requests to EE handlers when enterprise edition is enabled', async () => {
@@ -71,6 +76,8 @@ describe('CE Teams route delegators', () => {
     const eeMessageExtensionPost = vi.fn(async () => new Response(JSON.stringify({ ok: 'message-extension' }), { status: 200 }));
     const eeQuickActionsPost = vi.fn(async () => new Response(JSON.stringify({ ok: 'quick-actions' }), { status: 200 }));
     const eeAuthTabGet = vi.fn(async () => new Response('auth ok', { status: 200 }));
+    const eePackageGet = vi.fn(async () => new Response(JSON.stringify({ ok: 'package-get' }), { status: 200 }));
+    const eePackagePost = vi.fn(async () => new Response(JSON.stringify({ ok: 'package-post' }), { status: 200 }));
 
     vi.doMock('@enterprise/app/api/teams/bot/messages/route', () => ({
       POST: eeBotPost,
@@ -84,21 +91,30 @@ describe('CE Teams route delegators', () => {
     vi.doMock('@enterprise/app/api/teams/auth/callback/tab/route', () => ({
       GET: eeAuthTabGet,
     }));
+    vi.doMock('@enterprise/app/api/teams/package/route', () => ({
+      GET: eePackageGet,
+      POST: eePackagePost,
+    }));
 
     const botRequest = new Request('http://localhost/api/teams/bot/messages', { method: 'POST' });
     const messageExtensionRequest = new Request('http://localhost/api/teams/message-extension/query', { method: 'POST' });
     const quickActionsRequest = new Request('http://localhost/api/teams/quick-actions', { method: 'POST' });
     const authTabRequest = new Request('http://localhost/api/teams/auth/callback/tab?tenantId=tenant-1', { method: 'GET' });
+    const packageGetRequest = new Request('http://localhost/api/teams/package', { method: 'GET' });
+    const packagePostRequest = new Request('http://localhost/api/teams/package', { method: 'POST' });
 
     const botRoute = await import('@/app/api/teams/bot/messages/route');
     const messageExtensionRoute = await import('@/app/api/teams/message-extension/query/route');
     const quickActionsRoute = await import('@/app/api/teams/quick-actions/route');
     const authTabRoute = await import('@/app/api/teams/auth/callback/tab/route');
+    const packageRoute = await import('@/app/api/teams/package/route');
 
     const botResponse = await botRoute.POST(botRequest);
     const messageExtensionResponse = await messageExtensionRoute.POST(messageExtensionRequest);
     const quickActionsResponse = await quickActionsRoute.POST(quickActionsRequest);
     const authTabResponse = await authTabRoute.GET(authTabRequest);
+    const packageGetResponse = await packageRoute.GET(packageGetRequest);
+    const packagePostResponse = await packageRoute.POST(packagePostRequest);
 
     expect(eeBotPost).toHaveBeenCalledWith(botRequest);
     expect(botResponse.status).toBe(200);
@@ -111,5 +127,45 @@ describe('CE Teams route delegators', () => {
 
     expect(eeAuthTabGet).toHaveBeenCalledWith(authTabRequest);
     expect(authTabResponse.status).toBe(200);
+
+    expect(eePackageGet).toHaveBeenCalledWith(packageGetRequest);
+    expect(packageGetResponse.status).toBe(200);
+
+    expect(eePackagePost).toHaveBeenCalledWith(packagePostRequest);
+    expect(packagePostResponse.status).toBe(200);
+  });
+
+  it('T153/T154: keeps OPTIONS responses valid for CE Teams API stubs without loading EE handlers', async () => {
+    process.env.EDITION = 'ce';
+
+    const botRoute = await import('@/app/api/teams/bot/messages/route');
+    const packageRoute = await import('@/app/api/teams/package/route');
+
+    const botOptions = await botRoute.OPTIONS();
+    const packageOptions = await packageRoute.OPTIONS();
+
+    expect(botOptions.status).toBe(204);
+    expect(botOptions.headers.get('Allow')).toBe('POST, OPTIONS');
+
+    expect(packageOptions.status).toBe(204);
+    expect(packageOptions.headers.get('Allow')).toBe('GET, POST, OPTIONS');
+  });
+
+  it('T157/T158: logs bounded EE import failures and falls back to the stable enterprise-only response', async () => {
+    process.env.EDITION = 'ee';
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    vi.doMock('@enterprise/app/api/teams/package/route', () => {
+      throw new Error('module exploded');
+    });
+
+    const packageRoute = await import('@/app/api/teams/package/route');
+    const response = await packageRoute.GET(new Request('http://localhost/api/teams/package', { method: 'GET' }));
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('[teams/package] Failed to load EE route:'));
+    expect(response.status).toBe(501);
+    await expect(response.json()).resolves.toEqual(EE_ONLY_ERROR);
   });
 });

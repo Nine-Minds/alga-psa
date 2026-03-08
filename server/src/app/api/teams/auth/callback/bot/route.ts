@@ -1,28 +1,17 @@
-import { dynamic, runtime, eeUnavailable, isEnterpriseEdition } from '../../../_ceStub';
+import { dynamic, runtime, eeUnavailable } from '../../../_ceStub';
+import { loadTeamsEeRoute, teamsOptionsResponse } from '../../../_eeDelegator';
 
 export { dynamic, runtime };
 
 type EeRouteModule = {
-  GET: (req: Request) => Promise<Response>;
+  GET?: (req: Request) => Promise<Response>;
 };
 
-let eeRouteModulePromise: Promise<EeRouteModule | null> | null = null;
-
 async function loadEeRoute(): Promise<EeRouteModule | null> {
-  if (!isEnterpriseEdition) {
-    return null;
-  }
-
-  if (!eeRouteModulePromise) {
-    eeRouteModulePromise = import('@enterprise/app/api/teams/auth/callback/bot/route')
-      .then((module) => module as unknown as EeRouteModule)
-      .catch((error) => {
-        console.error('[teams/auth/callback/bot] Failed to load EE route', error);
-        return null;
-      });
-  }
-
-  return eeRouteModulePromise;
+  return loadTeamsEeRoute(
+    'teams/auth/callback/bot',
+    async () => import('@enterprise/app/api/teams/auth/callback/bot/route') as Promise<EeRouteModule>
+  );
 }
 
 export async function GET(request: Request): Promise<Response> {
@@ -32,4 +21,8 @@ export async function GET(request: Request): Promise<Response> {
   }
 
   return eeRoute.GET(request);
+}
+
+export async function OPTIONS(): Promise<Response> {
+  return teamsOptionsResponse('GET, OPTIONS');
 }

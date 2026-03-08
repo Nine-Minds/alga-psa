@@ -1,28 +1,17 @@
-import { dynamic, runtime, eeUnavailable, isEnterpriseEdition } from '../../_ceStub';
+import { dynamic, runtime, eeUnavailable } from '../../_ceStub';
+import { loadTeamsEeRoute, teamsOptionsResponse } from '../../_eeDelegator';
 
 export { dynamic, runtime };
 
 type EeRouteModule = {
-  POST: (req: Request) => Promise<Response>;
+  POST?: (req: Request) => Promise<Response>;
 };
 
-let eeRouteModulePromise: Promise<EeRouteModule | null> | null = null;
-
 async function loadEeRoute(): Promise<EeRouteModule | null> {
-  if (!isEnterpriseEdition) {
-    return null;
-  }
-
-  if (!eeRouteModulePromise) {
-    eeRouteModulePromise = import('@enterprise/app/api/teams/message-extension/query/route')
-      .then((module) => module as unknown as EeRouteModule)
-      .catch((error) => {
-        console.error('[teams/message-extension/query] Failed to load EE route', error);
-        return null;
-      });
-  }
-
-  return eeRouteModulePromise;
+  return loadTeamsEeRoute(
+    'teams/message-extension/query',
+    async () => import('@enterprise/app/api/teams/message-extension/query/route') as Promise<EeRouteModule>
+  );
 }
 
 export async function POST(request: Request): Promise<Response> {
@@ -32,4 +21,8 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   return eeRoute.POST(request);
+}
+
+export async function OPTIONS(): Promise<Response> {
+  return teamsOptionsResponse('POST, OPTIONS');
 }
