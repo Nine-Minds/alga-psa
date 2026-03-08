@@ -206,6 +206,14 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
     setIsOpen(false);
   };
 
+  const handleAddNew = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSearchTerm('');
+    setIsOpen(false);
+    onAddNew?.();
+  };
+
   const opts = useMemo(
     () => [
       { value: 'active', label: 'Active Clients' },
@@ -347,7 +355,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
           <button
             type="button"
             className="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-gray-100 cursor-pointer"
-            onClick={() => onAddNew()}
+            onClick={handleAddNew}
           >
             <Plus className="h-4 w-4" />
             <span>+ Add new client</span>

@@ -122,7 +122,7 @@
   {
     "id": "F016",
     "description": "ClientPicker button calls onAddNew() and closes the dropdown",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3"
     ]

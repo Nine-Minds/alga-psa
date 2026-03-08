@@ -142,3 +142,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `npx tsc -p ee/server/tsconfig.json --noEmit`
 - 2026-03-08 F015: Added optional `onAddNew` support to `packages/ui/src/components/ClientPicker.tsx` and rendered the bottom separator/button using the same utility-class pattern as `ContactPicker`/`EditableServiceTypeSelect`.
 - Validation: `npx tsc -p packages/ui/tsconfig.json --noEmit`
+- 2026-03-08 F016: `ClientPicker` now resets the search term, closes the dropdown, and only then invokes the consumer's `onAddNew` callback so the QuickAdd dialog can take focus immediately.
+- Validation: `npx tsc -p packages/ui/tsconfig.json --noEmit`
