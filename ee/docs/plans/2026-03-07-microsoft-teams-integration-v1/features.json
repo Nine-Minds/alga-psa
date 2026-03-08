@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Microsoft profiles: tenant-owned named Microsoft profiles exist as the shared credential model for Teams.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -164,7 +164,7 @@
   {
     "id": "F019",
     "description": "Microsoft settings UI: the existing singleton Microsoft settings screen becomes a profile manager.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -173,7 +173,7 @@
   {
     "id": "F020",
     "description": "Microsoft settings UI: the profile manager lists all profiles with display name, tenant ID, default state, and readiness state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -182,7 +182,7 @@
   {
     "id": "F021",
     "description": "Microsoft settings UI: admins can create a new named Microsoft profile from the settings screen.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -191,7 +191,7 @@
   {
     "id": "F022",
     "description": "Microsoft settings UI: admins can edit an existing named Microsoft profile from the settings screen.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -200,7 +200,7 @@
   {
     "id": "F023",
     "description": "Microsoft settings UI: admins can archive an existing named Microsoft profile from the settings screen.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -209,7 +209,7 @@
   {
     "id": "F024",
     "description": "Microsoft settings UI: admins can mark a named Microsoft profile as the default profile.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -218,7 +218,7 @@
   {
     "id": "F025",
     "description": "Microsoft settings UI: the form captures display name, client ID, client secret, and tenant ID.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -227,7 +227,7 @@
   {
     "id": "F026",
     "description": "Microsoft settings UI: the form preserves the existing client secret when the admin edits metadata without rotating the secret.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -236,7 +236,7 @@
   {
     "id": "F027",
     "description": "Microsoft settings UI: the screen continues to show the Microsoft Entra outbound link.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -245,7 +245,7 @@
   {
     "id": "F028",
     "description": "Microsoft settings UI: the screen shows Teams-required redirect URIs for each profile.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -254,7 +254,7 @@
   {
     "id": "F029",
     "description": "Microsoft settings UI: the screen shows existing email, calendar, and MSP SSO redirect URIs for each profile.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -263,7 +263,7 @@
   {
     "id": "F030",
     "description": "Microsoft settings UI: the screen shows Teams-required scope guidance for each profile.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -272,7 +272,7 @@
   {
     "id": "F031",
     "description": "Microsoft settings UI: the screen shows which consumers are currently bound to each profile.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -281,7 +281,7 @@
   {
     "id": "F032",
     "description": "Microsoft settings UI: the screen surfaces readiness or validation errors inline per profile.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -290,7 +290,7 @@
   {
     "id": "F033",
     "description": "Microsoft settings UI: the screen has an explicit empty state when no Microsoft profiles exist.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -299,7 +299,7 @@
   {
     "id": "F034",
     "description": "Microsoft settings UI: the screen retains a refresh path for reloading readiness and masked secret state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -308,7 +308,7 @@
   {
     "id": "F035",
     "description": "Microsoft settings UI: destructive archive or delete actions require confirmation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"

@@ -22,6 +22,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Microsoft profile migration will be lazy and app-driven instead of a secret-provider-aware SQL migration: the first profile-aware read/write backfills a default profile from legacy tenant secrets and leaves legacy keys in place for compatibility.
 - (2026-03-07) Default-profile compatibility will be maintained by mirroring the selected default profile back to legacy tenant secrets (`microsoft_client_id`, `microsoft_client_secret`, `microsoft_tenant_id`) until consumer-binding work lands.
 - (2026-03-07) Profile secrets stay out of SQL. The database stores profile metadata plus a deterministic tenant secret reference (`microsoft_profile_<profile_id>_client_secret`).
+- (2026-03-07) The Microsoft settings screen should become a profile manager in `Integrations -> Providers`, with one card per profile and shared app-registration guidance rendered inline instead of a separate Teams-only credential editor.
+- (2026-03-07) Until explicit consumer-binding records ship, the UI will surface compatibility bindings by treating the active default profile as the current source for Email, Calendar, and MSP SSO.
+- (2026-03-07) Teams registration guidance will be generated from deployment base URL plus profile client ID, including tab/bot/message-extension callback URLs and a derived Teams application ID URI (`api://<host>/teams/<clientId>`).
 
 ## Discoveries / Constraints
 
@@ -35,7 +38,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Existing Microsoft integration flows for email, calendar, and Entra already establish tenant-secret and Graph API patterns that Teams can reuse.
 - (2026-03-07) Existing Microsoft consumers still read the legacy tenant-secret keys directly. Introducing profiles without default-secret mirroring would break Outlook email, Outlook calendar, and MSP SSO compatibility.
 - (2026-03-07) `packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.tsx` already gives the right long-term home for Microsoft profile management: `Integrations -> Providers`, not a new top-level settings tab.
-- (2026-03-07) The first backend slice is complete: `F001-F014`, `F016-F018`, and `T001-T028`, `T031-T036` now pass against the new profile-aware action layer. `F015`/`T029-T030` remain open until consumer bindings exist beyond the default-compatibility path.
+- (2026-03-07) The backend compatibility guard is sufficient for `F015`/`T029-T030`: archiving the default profile is blocked until another profile is made default, which preserves the active compatibility binding.
+- (2026-03-07) The second slice is complete: `F019-F035` and `T037-T070` pass with the profile manager UI, per-profile readiness/rendering, inline registration guidance, refresh, default switching, and archive confirmation.
 
 ## Commands / Runbooks
 
@@ -43,8 +47,12 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Backend verification commands:
   - `cd server && npx vitest run --config vitest.config.ts ../packages/integrations/src/actions/integrations/microsoftActions.test.ts ../packages/integrations/src/actions/integrations/providerReadiness.test.ts`
   - `pnpm --dir packages/integrations typecheck`
+- (2026-03-07) UI verification commands:
+  - `cd server && npx vitest run --config vitest.config.ts ../packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.contract.test.tsx`
+  - `cd server && npx vitest run --config vitest.config.ts ../packages/integrations/src/actions/integrations/microsoftActions.test.ts ../packages/integrations/src/actions/integrations/providerReadiness.test.ts ../packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.contract.test.tsx`
 - (2026-03-07) Relevant local references:
   - `packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.tsx`
+  - `packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.contract.test.tsx`
   - `packages/integrations/src/actions/integrations/microsoftActions.ts`
   - `packages/integrations/src/actions/integrations/providerReadiness.ts`
   - `packages/auth/src/lib/nextAuthOptions.ts`

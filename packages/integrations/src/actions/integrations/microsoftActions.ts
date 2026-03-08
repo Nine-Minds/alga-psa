@@ -45,14 +45,22 @@ export interface MicrosoftProfileSummary {
   readiness: ProviderReadinessResult;
   status: 'ready' | 'incomplete' | 'archived';
   archivedAt?: string | null;
+  consumers: string[];
 }
 
 export interface MicrosoftProfileStatusResponse {
   success: boolean;
   error?: string;
   baseUrl?: string;
-  redirectUris?: { email: string; calendar: string; sso: string };
-  scopes?: { email: string[]; calendar: string[]; sso: string[] };
+  redirectUris?: {
+    email: string;
+    calendar: string;
+    sso: string;
+    teamsTab: string;
+    teamsBot: string;
+    teamsMessageExtension: string;
+  };
+  scopes?: { email: string[]; calendar: string[]; sso: string[]; teams: string[] };
   config?: {
     clientId?: string;
     clientSecretMasked?: string;
@@ -114,6 +122,14 @@ function normalizeDisplayName(value: string): string {
 
 function normalizeDisplayNameKey(value: string): string {
   return normalizeDisplayName(value).toLocaleLowerCase();
+}
+
+function getMicrosoftCompatibilityConsumers(row: MicrosoftProfileRow): string[] {
+  if (row.is_archived || !row.is_default) {
+    return [];
+  }
+
+  return ['Email', 'Calendar', 'MSP SSO'];
 }
 
 function getMicrosoftProfileSecretRef(profileId: string): string {
@@ -236,6 +252,39 @@ function getDuplicateProfileName(
   );
 }
 
+function getMicrosoftIntegrationMetadata(baseUrl: string): NonNullable<
+  Pick<MicrosoftProfileStatusResponse, 'redirectUris' | 'scopes'>
+> {
+  return {
+    redirectUris: {
+      email: `${baseUrl}/api/auth/microsoft/callback`,
+      calendar: `${baseUrl}/api/auth/microsoft/calendar/callback`,
+      sso: `${baseUrl}/api/auth/callback/azure-ad`,
+      teamsTab: `${baseUrl}/api/teams/auth/callback/tab`,
+      teamsBot: `${baseUrl}/api/teams/auth/callback/bot`,
+      teamsMessageExtension: `${baseUrl}/api/teams/auth/callback/message-extension`,
+    },
+    scopes: {
+      email: [
+        'https://graph.microsoft.com/Mail.Read',
+        'https://graph.microsoft.com/Mail.ReadWrite',
+        'https://graph.microsoft.com/Mail.Send',
+        'offline_access',
+        'openid',
+        'profile',
+        'email',
+      ],
+      calendar: [
+        'https://graph.microsoft.com/Calendars.ReadWrite',
+        'https://graph.microsoft.com/Mail.Read',
+        'offline_access',
+      ],
+      sso: ['openid', 'profile', 'email'],
+      teams: ['openid', 'profile', 'email', 'offline_access'],
+    },
+  };
+}
+
 async function buildMicrosoftProfileSummary(
   tenant: string,
   row: MicrosoftProfileRow,
@@ -264,6 +313,7 @@ async function buildMicrosoftProfileSummary(
     readiness,
     status: row.is_archived ? 'archived' : readiness.ready ? 'ready' : 'incomplete',
     archivedAt: row.archived_at ? String(row.archived_at) : null,
+    consumers: getMicrosoftCompatibilityConsumers(row),
   };
 }
 
@@ -600,32 +650,13 @@ export const getMicrosoftIntegrationStatus = withAuth(async (
     const profiles = await listMicrosoftProfilesForTenant(tenant, (user as any)?.user_id);
     const compatibilityProfile = profiles.find((profile) => profile.isDefault && !profile.isArchived) || profiles.find((profile) => !profile.isArchived);
     const baseUrl = await getDeploymentBaseUrl();
+    const metadata = getMicrosoftIntegrationMetadata(baseUrl);
 
     return {
       success: true,
       baseUrl,
-      redirectUris: {
-        email: `${baseUrl}/api/auth/microsoft/callback`,
-        calendar: `${baseUrl}/api/auth/microsoft/calendar/callback`,
-        sso: `${baseUrl}/api/auth/callback/azure-ad`,
-      },
-      scopes: {
-        email: [
-          'https://graph.microsoft.com/Mail.Read',
-          'https://graph.microsoft.com/Mail.ReadWrite',
-          'https://graph.microsoft.com/Mail.Send',
-          'offline_access',
-          'openid',
-          'profile',
-          'email',
-        ],
-        calendar: [
-          'https://graph.microsoft.com/Calendars.ReadWrite',
-          'https://graph.microsoft.com/Mail.Read',
-          'offline_access',
-        ],
-        sso: ['openid', 'profile', 'email'],
-      },
+      redirectUris: metadata.redirectUris,
+      scopes: metadata.scopes,
       config: {
         clientId: compatibilityProfile?.clientId,
         clientSecretMasked: compatibilityProfile?.clientSecretMasked,

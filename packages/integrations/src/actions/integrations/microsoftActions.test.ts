@@ -243,6 +243,7 @@ describe('Microsoft integration actions', () => {
       tenantId: 'ops-tenant-guid',
       clientSecretConfigured: true,
       status: 'ready',
+      consumers: ['Email', 'Calendar', 'MSP SSO'],
     });
     expect(status.profiles?.[0]?.clientSecretMasked).not.toContain('ops-secret-value');
     expect(status.profiles?.[0]?.readiness).toMatchObject({
@@ -455,10 +456,15 @@ describe('Microsoft integration actions', () => {
     expect(result.redirectUris?.email).toBe('https://example.com/api/auth/microsoft/callback');
     expect(result.redirectUris?.calendar).toBe('https://example.com/api/auth/microsoft/calendar/callback');
     expect(result.redirectUris?.sso).toBe('https://example.com/api/auth/callback/azure-ad');
+    expect(result.redirectUris?.teamsTab).toBe('https://example.com/api/teams/auth/callback/tab');
+    expect(result.redirectUris?.teamsBot).toBe('https://example.com/api/teams/auth/callback/bot');
+    expect(result.redirectUris?.teamsMessageExtension).toBe('https://example.com/api/teams/auth/callback/message-extension');
     expect(result.scopes?.email?.length).toBeGreaterThan(0);
     expect(result.scopes?.calendar?.length).toBeGreaterThan(0);
     expect(result.scopes?.sso).toContain('openid');
+    expect(result.scopes?.teams).toEqual(['openid', 'profile', 'email', 'offline_access']);
     expect(result.profiles?.[0]?.displayName).toBe('Default Microsoft Profile');
+    expect(result.profiles?.[0]?.consumers).toEqual(['Email', 'Calendar', 'MSP SSO']);
   });
 
   it('T011/T012: reset action disconnects Microsoft email and calendar providers', async () => {

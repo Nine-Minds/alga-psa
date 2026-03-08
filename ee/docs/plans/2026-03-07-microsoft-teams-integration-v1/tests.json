@@ -226,7 +226,7 @@
   {
     "id": "T029",
     "description": "Happy path: Microsoft profiles: deleting or archiving a profile that is still actively bound to a consumer is blocked until the binding is changed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
@@ -234,7 +234,7 @@
   {
     "id": "T030",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft profiles: deleting or archiving a profile that is still actively bound to a consumer is blocked until the binding is changed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
@@ -290,7 +290,7 @@
   {
     "id": "T037",
     "description": "Happy path: Microsoft settings UI: the existing singleton Microsoft settings screen becomes a profile manager.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
@@ -298,7 +298,7 @@
   {
     "id": "T038",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the existing singleton microsoft settings screen becomes a profile manager.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
@@ -306,7 +306,7 @@
   {
     "id": "T039",
     "description": "Happy path: Microsoft settings UI: the profile manager lists all profiles with display name, tenant ID, default state, and readiness state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
@@ -314,7 +314,7 @@
   {
     "id": "T040",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the profile manager lists all profiles with display name, tenant id, default state, and readiness state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
@@ -322,7 +322,7 @@
   {
     "id": "T041",
     "description": "Happy path: Microsoft settings UI: admins can create a new named Microsoft profile from the settings screen.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
@@ -330,7 +330,7 @@
   {
     "id": "T042",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: admins can create a new named microsoft profile from the settings screen.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
@@ -338,7 +338,7 @@
   {
     "id": "T043",
     "description": "Happy path: Microsoft settings UI: admins can edit an existing named Microsoft profile from the settings screen.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
@@ -346,7 +346,7 @@
   {
     "id": "T044",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: admins can edit an existing named microsoft profile from the settings screen.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
@@ -354,7 +354,7 @@
   {
     "id": "T045",
     "description": "Happy path: Microsoft settings UI: admins can archive an existing named Microsoft profile from the settings screen.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
@@ -362,7 +362,7 @@
   {
     "id": "T046",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: admins can archive an existing named microsoft profile from the settings screen.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
@@ -370,7 +370,7 @@
   {
     "id": "T047",
     "description": "Happy path: Microsoft settings UI: admins can mark a named Microsoft profile as the default profile.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
@@ -378,7 +378,7 @@
   {
     "id": "T048",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: admins can mark a named microsoft profile as the default profile.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
@@ -386,7 +386,7 @@
   {
     "id": "T049",
     "description": "Happy path: Microsoft settings UI: the form captures display name, client ID, client secret, and tenant ID.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
@@ -394,7 +394,7 @@
   {
     "id": "T050",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the form captures display name, client id, client secret, and tenant id.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
@@ -402,7 +402,7 @@
   {
     "id": "T051",
     "description": "Happy path: Microsoft settings UI: the form preserves the existing client secret when the admin edits metadata without rotating the secret.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
@@ -410,7 +410,7 @@
   {
     "id": "T052",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the form preserves the existing client secret when the admin edits metadata without rotating the secret.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
@@ -418,7 +418,7 @@
   {
     "id": "T053",
     "description": "Happy path: Microsoft settings UI: the screen continues to show the Microsoft Entra outbound link.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]
@@ -426,7 +426,7 @@
   {
     "id": "T054",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the screen continues to show the microsoft entra outbound link.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]
@@ -434,7 +434,7 @@
   {
     "id": "T055",
     "description": "Happy path: Microsoft settings UI: the screen shows Teams-required redirect URIs for each profile.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
@@ -442,7 +442,7 @@
   {
     "id": "T056",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the screen shows teams-required redirect uris for each profile.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
@@ -450,7 +450,7 @@
   {
     "id": "T057",
     "description": "Happy path: Microsoft settings UI: the screen shows existing email, calendar, and MSP SSO redirect URIs for each profile.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
@@ -458,7 +458,7 @@
   {
     "id": "T058",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the screen shows existing email, calendar, and msp sso redirect uris for each profile.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
@@ -466,7 +466,7 @@
   {
     "id": "T059",
     "description": "Happy path: Microsoft settings UI: the screen shows Teams-required scope guidance for each profile.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
@@ -474,7 +474,7 @@
   {
     "id": "T060",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the screen shows teams-required scope guidance for each profile.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
@@ -482,7 +482,7 @@
   {
     "id": "T061",
     "description": "Happy path: Microsoft settings UI: the screen shows which consumers are currently bound to each profile.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
@@ -490,7 +490,7 @@
   {
     "id": "T062",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the screen shows which consumers are currently bound to each profile.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
@@ -498,7 +498,7 @@
   {
     "id": "T063",
     "description": "Happy path: Microsoft settings UI: the screen surfaces readiness or validation errors inline per profile.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
@@ -506,7 +506,7 @@
   {
     "id": "T064",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the screen surfaces readiness or validation errors inline per profile.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
@@ -514,7 +514,7 @@
   {
     "id": "T065",
     "description": "Happy path: Microsoft settings UI: the screen has an explicit empty state when no Microsoft profiles exist.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
@@ -522,7 +522,7 @@
   {
     "id": "T066",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the screen has an explicit empty state when no microsoft profiles exist.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
@@ -530,7 +530,7 @@
   {
     "id": "T067",
     "description": "Happy path: Microsoft settings UI: the screen retains a refresh path for reloading readiness and masked secret state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
@@ -538,7 +538,7 @@
   {
     "id": "T068",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: the screen retains a refresh path for reloading readiness and masked secret state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
@@ -546,7 +546,7 @@
   {
     "id": "T069",
     "description": "Happy path: Microsoft settings UI: destructive archive or delete actions require confirmation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
@@ -554,7 +554,7 @@
   {
     "id": "T070",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for microsoft settings ui: destructive archive or delete actions require confirmation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
