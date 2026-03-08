@@ -5,7 +5,7 @@ import { getMicrosoftProfileReadiness } from '@alga-psa/integrations/actions/int
 import {
   buildTeamsPersonalTabDeepLink,
   TEAMS_PERSONAL_TAB_ENTITY_ID,
-} from '@alga-psa/integrations/actions/integrations/teamsPackageShared';
+} from '../../teams/teamsDeepLinks';
 import type { TeamsAppPackageStatusResponse } from '@alga-psa/integrations/actions/integrations/teamsPackageActions';
 
 type TeamsInstallStatus = 'not_configured' | 'install_pending' | 'active' | 'error';

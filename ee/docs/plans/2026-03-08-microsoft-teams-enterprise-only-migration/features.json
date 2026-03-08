@@ -821,7 +821,7 @@
   {
     "id": "F092",
     "description": "EE ownership: concrete Teams deep-link composition used only by Teams runtime surfaces lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1325,7 +1325,7 @@
   {
     "id": "F148",
     "description": "Notification boundary: Teams deep-link builders used only for Teams feed delivery are EE-owned or wrapped safely.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"

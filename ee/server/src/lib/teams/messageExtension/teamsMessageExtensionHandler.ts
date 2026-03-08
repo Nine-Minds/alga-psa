@@ -1,12 +1,10 @@
 import { createTenantKnex, getUserWithRoles } from '@alga-psa/db';
-import {
-  buildTeamsMessageExtensionResultDeepLinkFromPsaUrl,
-} from '@alga-psa/integrations/actions/integrations/teamsPackageShared';
 import { getTeamsIntegrationExecutionState } from '@alga-psa/integrations/actions/integrations/teamsActions';
 import { NextResponse } from 'next/server';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { ContactService } from 'server/src/lib/api/services/ContactService';
 import { TicketService } from 'server/src/lib/api/services/TicketService';
+import { buildTeamsMessageExtensionResultDeepLinkFromPsaUrl } from '../teamsDeepLinks';
 import { getTeamsRuntimeAvailability } from '../getTeamsRuntimeAvailability';
 import {
   executeTeamsAction,

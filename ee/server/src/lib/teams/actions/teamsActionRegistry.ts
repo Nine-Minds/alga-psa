@@ -7,7 +7,7 @@ import {
   buildTeamsBotResultDeepLinkFromPsaUrl,
   buildTeamsMessageExtensionResultDeepLinkFromPsaUrl,
   buildTeamsPersonalTabDeepLinkFromPsaUrl,
-} from '@alga-psa/integrations/actions/integrations/teamsPackageShared';
+} from '../teamsDeepLinks';
 import {
   getTeamsIntegrationExecutionState,
   type TeamsAllowedAction,

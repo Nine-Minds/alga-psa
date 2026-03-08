@@ -3,13 +3,13 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex } from '@alga-psa/db';
 import { getSSORegistry } from '@alga-psa/auth';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { buildTeamsPersonalTabDeepLinkFromPsaUrl } from '@alga-psa/integrations/actions/integrations/teamsPackageShared';
 import type { InternalNotification } from '@alga-psa/notifications';
 import {
   buildNotificationDeliveredPayload,
   buildNotificationFailedPayload,
   buildNotificationSentPayload,
 } from '@shared/workflow/streams/domainEventBuilders/notificationEventBuilders';
+import { buildTeamsPersonalTabDeepLinkFromPsaUrl } from '../teams/teamsDeepLinks';
 
 type TeamsNotificationCategory =
   | 'assignment'

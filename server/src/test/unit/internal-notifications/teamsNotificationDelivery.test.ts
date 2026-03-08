@@ -113,7 +113,7 @@ vi.mock('@alga-psa/integrations/lib/teamsAvailability', () => ({
   getTeamsAvailability: hoisted.getTeamsAvailabilityMock,
 }));
 
-vi.mock('@alga-psa/integrations/actions/integrations/teamsPackageShared', () => ({
+vi.mock('../../../../../ee/server/src/lib/teams/teamsDeepLinks', () => ({
   buildTeamsPersonalTabDeepLinkFromPsaUrl: hoisted.buildTeamsPersonalTabDeepLinkFromPsaUrlMock,
 }));
 

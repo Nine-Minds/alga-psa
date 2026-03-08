@@ -134,7 +134,7 @@ import {
   buildTeamsBotResultDeepLinkFromPsaUrl,
   buildTeamsMessageExtensionResultDeepLinkFromPsaUrl,
   buildTeamsPersonalTabDeepLinkFromPsaUrl,
-} from './teamsPackageShared';
+} from '../../../../../ee/server/src/lib/teams/teamsDeepLinks';
 
 function addMicrosoftProfile({
   tenant,

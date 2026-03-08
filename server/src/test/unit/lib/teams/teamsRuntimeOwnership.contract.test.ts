@@ -53,4 +53,9 @@ describe('teams runtime EE ownership', () => {
     expect(sharedTeamsNotificationSource).toContain('deliverTeamsNotificationImpl');
     expect(sharedTeamsNotificationSource).not.toContain('teamwork/sendActivityNotification');
   });
+
+  it('T183/T295: keeps Teams deep-link composition under ee/server ownership', () => {
+    expect(fs.existsSync(repoPath('packages/integrations/src/actions/integrations/teamsPackageShared.ts'))).toBe(false);
+    expect(fs.existsSync(repoPath('ee/server/src/lib/teams/teamsDeepLinks.ts'))).toBe(true);
+  });
 });

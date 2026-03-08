@@ -1458,7 +1458,7 @@
   {
     "id": "T183",
     "description": "Happy path: EE ownership: concrete Teams deep-link composition used only by Teams runtime surfaces lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F092"
     ]
@@ -2354,7 +2354,7 @@
   {
     "id": "T295",
     "description": "Happy path: Notification boundary: Teams deep-link builders used only for Teams feed delivery are EE-owned or wrapped safely.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F148"
     ]
@@ -2362,7 +2362,7 @@
   {
     "id": "T296",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for notification boundary: Teams deep-link builders used only for Teams feed delivery are EE-owned or wrapped safely.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F148"
     ]
