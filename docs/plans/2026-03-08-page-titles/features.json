@@ -410,7 +410,7 @@
   {
     "id": "F052",
     "description": "MSP page title: /msp/workflows/runs/[runId] — title: 'Workflow Run' (generateMetadata)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3c"
     ]
