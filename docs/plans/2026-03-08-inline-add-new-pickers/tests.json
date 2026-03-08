@@ -106,7 +106,7 @@
   {
     "id": "T014",
     "description": "ClientDetails: clicking '+ Add new contact' opens QuickAddContact with clientId pre-filled",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
