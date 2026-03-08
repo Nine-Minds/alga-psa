@@ -57,6 +57,12 @@ const hoisted = vi.hoisted(() => {
   };
 });
 
+vi.mock('@alga-psa/core/logger', () => ({
+  default: {
+    warn: vi.fn(),
+  },
+}));
+
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: async () => ({
     getTenantSecret: hoisted.getTenantSecretMock,

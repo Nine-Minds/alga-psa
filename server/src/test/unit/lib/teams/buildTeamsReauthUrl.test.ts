@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTeamsReauthPath, buildTeamsReauthUrl } from 'server/src/lib/teams/buildTeamsReauthUrl';
+import { buildTeamsReauthPath, buildTeamsReauthUrl } from '../../../../../../ee/server/src/lib/teams/buildTeamsReauthUrl';
 
 describe('buildTeamsReauthUrl', () => {
   it('builds a Teams-safe reauthentication redirect that preserves the callback destination', () => {

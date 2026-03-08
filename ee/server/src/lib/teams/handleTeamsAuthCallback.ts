@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTeamsAvailability } from '@alga-psa/integrations/lib/teamsAvailability';
 import { resolveTeamsTabAuthState, type TeamsTabAuthState } from './resolveTeamsTabAuthState';
-import { buildTeamsReauthUrl } from 'server/src/lib/teams/buildTeamsReauthUrl';
+import { buildTeamsReauthUrl } from './buildTeamsReauthUrl';
 
 type TeamsAuthCallbackSurface = 'tab' | 'bot' | 'message_extension';
 

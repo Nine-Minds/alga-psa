@@ -425,7 +425,7 @@ describe('Teams integration actions', () => {
     });
   });
 
-  it('T191/T227: delegates execution-state reads into the EE implementation while preserving the existing shared result shape', async () => {
+  it('T191/T192/T255/T256: delegates execution-state reads into the EE implementation while preserving the existing shared result shape', async () => {
     teamsIntegrations.push({
       tenant: 'tenant-1',
       selected_profile_id: 'profile-1',

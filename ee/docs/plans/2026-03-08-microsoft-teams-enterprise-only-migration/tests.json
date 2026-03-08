@@ -1530,7 +1530,7 @@
   {
     "id": "T192",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for eE ownership: concrete Teams setup state persistence helpers live under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F096"
     ]
@@ -2034,7 +2034,7 @@
   {
     "id": "T255",
     "description": "Happy path: Server actions: teams action wrappers remain safe to import from settings pages, notification code, and server components without edition leakage.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F128"
     ]
@@ -2042,7 +2042,7 @@
   {
     "id": "T256",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for server actions: teams action wrappers remain safe to import from settings pages, notification code, and server components without edition leakage.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F128"
     ]
@@ -2090,7 +2090,7 @@
   {
     "id": "T262",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for server actions: no remaining shared server-action module owns Teams business logic after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F131"
     ]
@@ -2098,7 +2098,7 @@
   {
     "id": "T263",
     "description": "Happy path: Auth boundary: Teams-specific Microsoft provider resolution used by Teams runtime entrypoints is moved behind EE ownership or EE-safe wrappers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F132"
     ]
@@ -2106,7 +2106,7 @@
   {
     "id": "T264",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for auth boundary: Teams-specific Microsoft provider resolution used by Teams runtime entrypoints is moved behind EE ownership or EE-safe wrappers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F132"
     ]
@@ -2178,7 +2178,7 @@
   {
     "id": "T273",
     "description": "Happy path: Auth boundary: shared auth indexes no longer expose Teams-specific helpers as if they are CE-owned runtime features.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F137"
     ]
@@ -2186,7 +2186,7 @@
   {
     "id": "T274",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for auth boundary: shared auth indexes no longer expose Teams-specific helpers as if they are CE-owned runtime features.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F137"
     ]
@@ -2194,7 +2194,7 @@
   {
     "id": "T275",
     "description": "Happy path: Auth boundary: Teams reauth URL helpers used only for Teams surfaces are moved behind EE ownership or EE-safe wrappers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F138"
     ]
@@ -2202,7 +2202,7 @@
   {
     "id": "T276",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for auth boundary: Teams reauth URL helpers used only for Teams surfaces are moved behind EE ownership or EE-safe wrappers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F138"
     ]

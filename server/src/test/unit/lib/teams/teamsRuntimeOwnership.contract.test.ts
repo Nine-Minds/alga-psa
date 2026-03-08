@@ -72,6 +72,19 @@ describe('teams runtime EE ownership', () => {
     expect(fs.existsSync(repoPath('ee/server/src/lib/teams/teamsDeepLinks.ts'))).toBe(true);
   });
 
+  it('T263/T273/T275: keeps Teams-specific auth helpers under EE while shared auth exports only fail-closed wrappers', () => {
+    const sharedTeamsMicrosoftProviderResolutionPath = repoPath('packages/auth/src/lib/sso/teamsMicrosoftProviderResolution.ts');
+    const sharedTeamsMicrosoftProviderResolutionSource = fs.readFileSync(sharedTeamsMicrosoftProviderResolutionPath, 'utf8');
+
+    expect(fs.existsSync(sharedTeamsMicrosoftProviderResolutionPath)).toBe(true);
+    expect(fs.existsSync(repoPath('ee/server/src/lib/auth/teamsMicrosoftProviderResolution.ts'))).toBe(true);
+    expect(fs.existsSync(repoPath('server/src/lib/teams/buildTeamsReauthUrl.ts'))).toBe(false);
+    expect(fs.existsSync(repoPath('ee/server/src/lib/teams/buildTeamsReauthUrl.ts'))).toBe(true);
+    expect(sharedTeamsMicrosoftProviderResolutionSource).toContain('loadEeTeamsMicrosoftProviderResolution');
+    expect(sharedTeamsMicrosoftProviderResolutionSource).toContain('resolveTeamsMicrosoftProviderConfigImpl');
+    expect(sharedTeamsMicrosoftProviderResolutionSource).not.toContain('getAdminConnection');
+  });
+
   it('T253/T254/T255/T256/T261/T262: keeps the shared Teams settings actions availability-gated while the concrete persistence logic stays in EE', () => {
     const sharedTeamsActionsPath = repoPath('packages/integrations/src/actions/integrations/teamsActions.ts');
     const sharedTeamsActionsSource = fs.readFileSync(sharedTeamsActionsPath, 'utf8');

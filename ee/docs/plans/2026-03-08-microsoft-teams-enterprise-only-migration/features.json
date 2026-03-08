@@ -866,7 +866,7 @@
   {
     "id": "F097",
     "description": "EE ownership: EE Teams components continue to consume shared Microsoft profile services through stable shared interfaces.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1109,7 +1109,7 @@
   {
     "id": "F124",
     "description": "Server actions: Teams-specific provider-resolution helpers used only for Teams runtime behavior are moved out of shared auth action surfaces.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1145,7 +1145,7 @@
   {
     "id": "F128",
     "description": "Server actions: teams action wrappers remain safe to import from settings pages, notification code, and server components without edition leakage.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1181,7 +1181,7 @@
   {
     "id": "F132",
     "description": "Auth boundary: Teams-specific Microsoft provider resolution used by Teams runtime entrypoints is moved behind EE ownership or EE-safe wrappers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"
@@ -1226,7 +1226,7 @@
   {
     "id": "F137",
     "description": "Auth boundary: shared auth indexes no longer expose Teams-specific helpers as if they are CE-owned runtime features.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"
@@ -1235,7 +1235,7 @@
   {
     "id": "F138",
     "description": "Auth boundary: Teams reauth URL helpers used only for Teams surfaces are moved behind EE ownership or EE-safe wrappers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"
