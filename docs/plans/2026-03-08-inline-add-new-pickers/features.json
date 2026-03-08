@@ -10,7 +10,7 @@
   {
     "id": "F002",
     "description": "ContactPicker button calls onAddNew() and closes the dropdown (setIsOpen(false))",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1"
     ]
@@ -18,7 +18,7 @@
   {
     "id": "F003",
     "description": "ContactPicker renders identically to current when onAddNew is not provided (backward compatible)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-1"
     ]
