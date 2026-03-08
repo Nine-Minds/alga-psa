@@ -58,7 +58,7 @@
   {
     "id": "F008",
     "description": "OverallInteractionsFeed wires ContactPicker onAddNew to open QuickAddContact",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2"
     ]

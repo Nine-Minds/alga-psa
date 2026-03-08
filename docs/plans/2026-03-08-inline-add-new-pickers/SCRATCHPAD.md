@@ -125,3 +125,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
 - 2026-03-08 F007: Wired `packages/clients/src/components/interactions/QuickAddInteraction.tsx` to offer inline contact creation when a client is selected, reuse `QuickAddContact`, append the new contact into local state, and auto-select it for the in-progress interaction.
 - Validation: `npx tsc -p packages/clients/tsconfig.json --noEmit`
+- 2026-03-08 F008: Wired `packages/clients/src/components/interactions/OverallInteractionsFeed.tsx` to offer `QuickAddContact` from the filter dialog, remove the empty-list disable state so add-new stays reachable, merge created contacts into `allContacts`, and auto-select the new contact in the active filter.
+- Validation: `npx tsc -p packages/clients/tsconfig.json --noEmit`
