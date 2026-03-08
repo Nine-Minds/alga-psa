@@ -14,7 +14,7 @@ export default async function WorkflowControlPage({ searchParams }: WorkflowCont
   const resolvedSearchParams = (await searchParams) ?? {};
   const section = getSingleQueryValue(resolvedSearchParams.section);
 
-  if ((section ?? '').trim().toLowerCase() === 'workflows') {
+  if (['workflows', 'template-library', 'template_library', 'templates'].includes((section ?? '').trim().toLowerCase())) {
     const params = new URLSearchParams();
     for (const [key, rawValue] of Object.entries(resolvedSearchParams)) {
       if (key === 'section') continue;

@@ -16,7 +16,6 @@ import {
   getSchemaRegistry,
   initializeWorkflowRuntimeV2,
   applyRedactions,
-  WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF,
   isWorkflowEventTrigger,
   isWorkflowOneTimeScheduleTrigger,
   isWorkflowRecurringScheduleTrigger,
@@ -25,6 +24,7 @@ import {
   validateInputMapping,
   resolveInputMapping,
   createSecretResolverFromProvider,
+  type WorkflowTrigger,
   type PublishError
 } from '@shared/workflow/runtime';
 import { isEnterpriseEdition } from 'server/src/lib/features';
@@ -92,7 +92,6 @@ const throwHttpError = (status: number, message: string, details?: unknown): nev
 const EXPORT_RUNS_LIMIT = 1000;
 const EXPORT_EVENTS_LIMIT = 1000;
 const EXPORT_AUDIT_LIMIT = 5000;
-const DEFAULT_TIME_TRIGGER_SCHEMA_MODE = 'pinned' as const;
 const EXPORT_LOGS_LIMIT = 5000;
 
 const csvEscape = (value: unknown) => {
@@ -147,20 +146,6 @@ const buildUnknownPayloadSchemaRefError = (schemaRef: string, suggestions: strin
   message: suggestions.length
     ? `Unknown payload schema ref "${schemaRef}". Did you mean: ${suggestions.join(', ')}?`
     : `Unknown payload schema ref "${schemaRef}".`
-});
-
-const buildTimeTriggerEnterpriseOnlyError = (): PublishError => ({
-  severity: 'error',
-  stepPath: 'root.trigger',
-  code: 'TIME_TRIGGER_ENTERPRISE_ONLY',
-  message: 'Time-triggered workflows are only available in Enterprise Edition.'
-});
-
-const buildTimeTriggerPinnedSchemaError = (): PublishError => ({
-  severity: 'error',
-  stepPath: 'root.payloadSchemaRef',
-  code: 'TIME_TRIGGER_REQUIRES_PINNED_SCHEMA',
-  message: 'Time-triggered workflows must use the fixed pinned clock payload schema.'
 });
 
 const buildTimeTriggerMissingRunAtError = (): PublishError => ({
@@ -231,7 +216,7 @@ const validateFiveFieldCron = (cron: string): { ok: true; value: string } | { ok
   return { ok: true, value };
 };
 
-const collectTimeTriggerValidationErrors = (trigger: unknown): PublishError[] => {
+const collectTimeTriggerValidationErrors = (trigger: WorkflowTrigger | null | undefined): PublishError[] => {
   if (isWorkflowOneTimeScheduleTrigger(trigger)) {
     if (!trigger.runAt || !String(trigger.runAt).trim()) {
       return [buildTimeTriggerMissingRunAtError()];
@@ -288,18 +273,14 @@ const normalizeTimeTriggerDraftContract = <T extends Record<string, unknown>>(pa
     };
   }
 
-  if (!isEnterpriseEdition()) {
-    throwHttpError(403, buildTimeTriggerEnterpriseOnlyError().message, { code: buildTimeTriggerEnterpriseOnlyError().code });
-  }
-
   return {
     definition: {
       ...params.definition,
-      payloadSchemaRef: WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF
+      trigger: undefined
     },
-    payloadSchemaMode: DEFAULT_TIME_TRIGGER_SCHEMA_MODE,
-    pinnedPayloadSchemaRef: WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF,
-    payloadSchemaProvenance: 'pinned'
+    payloadSchemaMode: params.payloadSchemaMode,
+    pinnedPayloadSchemaRef: params.pinnedPayloadSchemaRef,
+    payloadSchemaProvenance: params.payloadSchemaMode === 'pinned' ? 'pinned' : 'inferred'
   };
 };
 
@@ -1614,11 +1595,6 @@ export const deleteWorkflowDefinitionAction = withAuth(async (
       await trx('workflow_runs').whereIn('run_id', runIds).del();
     }
 
-    // Clean up child records owned by the workflow
-    await trx('workflow_registration_versions')
-      .where({ registration_id: parsed.workflowId })
-      .del();
-
     await trx('workflow_definition_versions')
       .where({ workflow_id: parsed.workflowId })
       .del();
@@ -1689,15 +1665,7 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
   const payloadSchemaMode = typeof (workflow as any)?.payload_schema_mode === 'string' ? String((workflow as any).payload_schema_mode) : 'pinned';
   const payloadSchemaProvenance = payloadSchemaMode === 'pinned' ? 'pinned' : 'inferred';
   if (isWorkflowTimeTrigger((definition as any)?.trigger)) {
-    if (!isEnterpriseEdition()) {
-      const error = buildTimeTriggerEnterpriseOnlyError();
-      return { ok: false, errors: [error], warnings: [] };
-    }
-    if (payloadSchemaMode !== 'pinned') {
-      const error = buildTimeTriggerPinnedSchemaError();
-      return { ok: false, errors: [error], warnings: [] };
-    }
-    (definition as any).payloadSchemaRef = WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF;
+    delete (definition as any).trigger;
   }
   if (payloadSchemaMode === 'inferred') {
     const trigger = (definition as any)?.trigger;
@@ -1771,9 +1739,7 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
     description: definition.description ?? null,
     trigger: definition.trigger ?? null,
     payload_schema_ref: definition.payloadSchemaRef,
-    pinned_payload_schema_ref: isWorkflowTimeTrigger((definition as any)?.trigger)
-      ? WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF
-      : (workflow as any).pinned_payload_schema_ref,
+    pinned_payload_schema_ref: (workflow as any).pinned_payload_schema_ref,
     payload_schema_provenance: payloadSchemaProvenance,
     validation_status: validation.status,
     validation_errors: validation.errors,
@@ -3055,9 +3021,10 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
   }
 
   const triggered = await WorkflowDefinitionModelV2.list(knex);
-  const matching = triggered.filter(
-    (workflow) => isWorkflowEventTrigger(workflow.trigger as any) && workflow.trigger.eventName === parsed.eventName && workflow.status === 'published'
-  );
+  const matching = triggered.filter((workflow) => {
+    const trigger = workflow.trigger as WorkflowTrigger | null | undefined;
+    return isWorkflowEventTrigger(trigger) && trigger.eventName === parsed.eventName && workflow.status === 'published';
+  });
 
   const schemaRegistry = getSchemaRegistry();
   const startedRuns: string[] = [];
@@ -3071,7 +3038,7 @@ export const submitWorkflowEventAction = withAuth(async (user, { tenant }, input
       (typeof latestDefinition?.payloadSchemaRef === 'string' ? latestDefinition.payloadSchemaRef : null)
       ?? (typeof workflow.payload_schema_ref === 'string' ? workflow.payload_schema_ref : null);
 
-    const trigger = latestDefinition?.trigger ?? workflow.trigger ?? null;
+    const trigger = (latestDefinition?.trigger ?? workflow.trigger ?? null) as WorkflowTrigger | null;
     const eventTrigger = isWorkflowEventTrigger(trigger) ? trigger : null;
     const overrideSourceSchemaRef = typeof eventTrigger?.sourcePayloadSchemaRef === 'string' ? eventTrigger.sourcePayloadSchemaRef : null;
     const effectiveSourceSchemaRef = overrideSourceSchemaRef ?? sourcePayloadSchemaRef;

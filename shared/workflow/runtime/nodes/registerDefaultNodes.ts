@@ -7,7 +7,7 @@ import { applyAssignments } from '../utils/assignmentUtils';
 import type { Envelope, InputMapping } from '../types';
 import { safeSerialize } from '../utils/redactionUtils';
 import { parseEmailBodyWithFallback, renderCommentBlocksWithFallback } from './utils/emailNodes';
-import { getFormValidationService } from '../../core/formValidationService';
+import { getFormValidationService } from '@shared/task-inbox';
 
 function normalizeAssignmentPath(path: string): string {
   const trimmed = path.trim();

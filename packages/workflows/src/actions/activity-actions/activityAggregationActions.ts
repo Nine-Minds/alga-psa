@@ -8,6 +8,7 @@ import {
   ActivityResponse,
   ActivityType,
   ActivityPriority,
+  IWorkflowExecution,
   NotificationActivity,
   scheduleEntryToActivity,
   projectTaskToActivity,
@@ -17,7 +18,6 @@ import {
 import ScheduleEntry from '@alga-psa/scheduling/models/scheduleEntry';
 import { withAuth } from '@alga-psa/auth';
 import { ISO8601String } from '@alga-psa/types';
-import { IWorkflowExecution } from '@alga-psa/shared/workflow/persistence/workflowInterfaces';
 import { IProjectTask } from '@alga-psa/types';
 
 // Enhanced in-memory cache implementation with different TTLs and invalidation
@@ -750,17 +750,8 @@ export async function fetchWorkflowTaskActivities(
       // Go back to using the knex query builder instead of raw SQL to avoid binding issues
       const workflowTasksQuery = trx("workflow_tasks as wt")
       .select(
-        "wt.*",
-        "we.workflow_name",
-        "we.context_data",
-        "we.workflow_version",
-        "we.current_state",
-        "we.status as execution_status"
+        "wt.*"
       )
-      .leftJoin("workflow_executions as we", function() {
-        this.on(db.raw("wt.execution_id::uuid = we.execution_id"))
-            .andOn(db.raw("wt.tenant = we.tenant"));
-      })
       .where("wt.tenant", tenant)
       .modify(function(queryBuilder) {
         // Filter for tasks assigned to the user or their roles
@@ -844,8 +835,6 @@ export async function fetchWorkflowTaskActivities(
         }
       });
       
-      console.log('Executing workflow task query:', workflowTasksQuery.toString());
-      
       // Execute the query
       const workflowTasks = await workflowTasksQuery;
       
@@ -853,22 +842,7 @@ export async function fetchWorkflowTaskActivities(
     });
 
     // Convert to activities
-    const activities = workflowTasks.map((task: WorkflowTaskData) => {
-      const execution: IWorkflowExecution = {
-        execution_id: task.execution_id,
-        tenant: task.tenant,
-        workflow_name: task.workflow_name || '',
-        workflow_version: task.workflow_version || '',
-        current_state: task.current_state || '',
-        status: task.execution_status || '',
-        context_data: task.context_data,
-        created_at: task.created_at,
-        updated_at: task.updated_at,
-        workflow_type: 'tenant'
-      };
-      
-      return workflowTaskToActivity(task, execution);
-    });
+    const activities = workflowTasks.map((task: WorkflowTaskData) => workflowTaskToActivity(task));
     
     // Cache individual activity type results
     if (workflowTasks.length > 0) {

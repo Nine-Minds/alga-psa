@@ -2,8 +2,6 @@ import { isEnterprise } from './features';
 import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
 import { initializeScheduledJobs } from './jobs/initializeScheduledJobs';
 import { logger, registerFeatureFlagChecker } from '@alga-psa/core';
-import { initializeServerWorkflows } from '@alga-psa/shared/workflow/init/serverInit';
-import { registerAccountingExportWorkflowActions } from './workflow/registerAccountingExportActions';
 import { validateEnv } from 'server/src/config/envConfig';
 import { validateRequiredConfiguration, validateDatabaseConnectivity, validateSecretUniqueness } from 'server/src/config/criticalEnvValidation';
 import { config } from 'dotenv';
@@ -214,22 +212,6 @@ export async function initializeApp() {
     } catch (error) {
       logger.error('Failed to initialize scheduled jobs:', error);
       // Continue startup - scheduled jobs are not critical for basic functionality
-    }
-
-    // Initialize workflow system
-    try {
-      await initializeServerWorkflows();
-      // Register accounting export workflow actions
-      await registerAccountingExportWorkflowActions();
-
-      // Register invoice-specific workflow actions
-      const { registerInvoiceActions } = await import('@alga-psa/billing/actions/invoiceWorkflowRegistration');
-      registerInvoiceActions();
-
-      logger.info('Workflow system initialized');
-    } catch (error) {
-      logger.error('Failed to initialize workflow system:', error);
-      // Continue startup - workflow system is not critical for basic functionality
     }
 
     // Standard invoice templates are shipped as data (AST) and do not require compilation/sync at startup.

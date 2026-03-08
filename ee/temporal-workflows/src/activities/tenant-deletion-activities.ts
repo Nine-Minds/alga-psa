@@ -36,9 +36,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'sessions',
 
   // === LEVEL 1: Leaf tables with no dependencies ===
-  // Workflow details (legacy)
-  'workflow_action_results', 'workflow_event_attachments', 'workflow_snapshots',
-  'workflow_action_dependencies', 'workflow_sync_points', 'workflow_timers',
+  // Workflow task details
   'workflow_task_history', 'workflow_form_schemas',
 
   // Workflow runtime V2 (child tables first, then parent)
@@ -183,9 +181,8 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Project/task entities
   'project_tasks', 'project_phases', 'project_status_mappings',
 
-  // Workflow entities
-  'workflow_tasks', 'workflow_executions', 'workflow_events', 'workflow_event_processing',
-  'workflow_registration_versions', 'workflow_triggers', 'workflow_form_definitions',
+  // Workflow task entities
+  'workflow_tasks', 'workflow_form_definitions',
   'workflow_task_definitions',
 
   // === LEVEL 3: Mid-level entities ===
@@ -225,9 +222,6 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // External files and documents
   'external_files', 'documents', 'document_types',
-
-  // Workflow templates
-  'workflow_registrations', 'workflow_templates', 'workflow_template_categories',
 
   // === LEVEL 5: Tickets and related ===
   // Ticket bundle settings and entity links must be deleted BEFORE tickets

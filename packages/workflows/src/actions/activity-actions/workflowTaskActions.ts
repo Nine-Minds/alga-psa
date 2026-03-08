@@ -10,6 +10,7 @@ import { revalidatePath } from "next/cache";
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { fetchWorkflowTaskActivities } from "./activityAggregationActions";
+import { getFormRegistry } from '@shared/task-inbox';
 
 /**
  * Server action to fetch a workflow task by ID
@@ -62,22 +63,14 @@ export const fetchTaskFormSchema = withAuth(async (
 ): Promise<TaskFormSchema> => {
   try {
     const { knex: db } = await createTenantKnex();
-
-    // Fetch the form schema from the database
-    const form = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx("workflow_forms")
-        .where("form_id", formId)
-        .where("tenant", tenant)
-        .first();
-    });
+    const formRegistry = getFormRegistry();
+    const form = await withTransaction(db, async (trx: Knex.Transaction) =>
+      formRegistry.getForm(trx, tenant, formId)
+    );
 
     if (!form) {
       throw new Error(`Form not found: ${formId}`);
     }
-
-    // Parse the JSON schema and UI schema
-    const jsonSchema = form.json_schema ? JSON.parse(form.json_schema) : {};
-    const uiSchema = form.ui_schema ? JSON.parse(form.ui_schema) : {};
 
     // Generate actions based on the form configuration
     const actions = [
@@ -86,8 +79,8 @@ export const fetchTaskFormSchema = withAuth(async (
     ];
 
     return {
-      jsonSchema,
-      uiSchema,
+      jsonSchema: form.schema.json_schema || {},
+      uiSchema: form.schema.ui_schema || {},
       actions
     };
   } catch (error) {
@@ -110,8 +103,7 @@ export const fetchTaskFormData = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
 
-    // Fetch the task and execution data
-    const { task, execution } = await withTransaction(db, async (trx: Knex.Transaction) => {
+    const task = await withTransaction(db, async (trx: Knex.Transaction) => {
       const task = await trx("workflow_tasks")
         .where("task_id", taskId)
         .where("tenant", tenant)
@@ -120,22 +112,10 @@ export const fetchTaskFormData = withAuth(async (
       if (!task) {
         throw new Error(`Task not found: ${taskId}`);
       }
-
-      // Fetch the execution to get the context data
-      const execution = await trx("workflow_executions")
-        .where("execution_id", task.execution_id)
-        .where("tenant", tenant)
-        .first();
-
-      return { task, execution };
+      return task;
     });
 
-    if (!execution) {
-      throw new Error(`Execution not found: ${task.execution_id}`);
-    }
-
-    // Return the context data as the form data
-    return execution.context_data || null;
+    return task.context_data || null;
   } catch (error) {
     console.error(`Error fetching task form data (${taskId}):`, error);
     throw new Error("Failed to fetch task form data. Please try again later.");
@@ -158,9 +138,8 @@ export const submitTaskForm = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
 
-    // Update task and execution in a transaction
+    // Update task completion details in a transaction
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Fetch the task to get the execution ID
       const task = await trx("workflow_tasks")
         .where("task_id", taskId)
         .where("tenant", tenant)
@@ -176,15 +155,7 @@ export const submitTaskForm = withAuth(async (
         .where("tenant", tenant)
         .update({
           status: "completed",
-          updated_at: new Date()
-        });
-
-      // Update the execution context data with the form data
-      await trx("workflow_executions")
-        .where("execution_id", task.execution_id)
-        .where("tenant", tenant)
-        .update({
-          context_data: formData,
+          response_data: formData,
           updated_at: new Date()
         });
     });

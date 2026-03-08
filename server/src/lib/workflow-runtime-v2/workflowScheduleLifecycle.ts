@@ -343,10 +343,12 @@ export async function updateExternalWorkflowScheduleState(
     return persistScheduleUpdate(knex, {
       existing,
       record: params.record,
-      scheduled: {
-        jobId: existing.job_id ?? undefined,
-        externalId: existing.runner_schedule_id ?? undefined
-      }
+      scheduled: existing.job_id
+        ? {
+            jobId: existing.job_id,
+            externalId: existing.runner_schedule_id ?? null
+          }
+        : null
     });
   }
 

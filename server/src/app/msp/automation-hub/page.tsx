@@ -24,7 +24,10 @@ export default async function AutomationHubPage({ searchParams }: AutomationHubP
   }
 
   if (executionId && (tab === 'logs' || tab === 'logs-history')) {
-    redirect(`/msp/workflows/${encodeURIComponent(executionId)}`);
+    const destination = params.toString()
+      ? `/msp/workflow-control?section=runs&${params.toString()}`
+      : '/msp/workflow-control?section=runs';
+    redirect(destination);
   }
 
   if (tab === 'workflows') {
@@ -35,11 +38,17 @@ export default async function AutomationHubPage({ searchParams }: AutomationHubP
   }
 
   const section =
-    tab === 'template-library' ? 'template-library'
-        : tab === 'schedules' ? 'schedules'
+    tab === 'schedules' ? 'schedules'
           : tab === 'events-catalog' ? 'event-catalog'
             : tab === 'logs' || tab === 'logs-history' ? 'runs'
               : null;
+
+  if (tab === 'template-library' || tab === 'templates') {
+    const destination = params.toString()
+      ? `/msp/workflow-editor?${params.toString()}`
+      : '/msp/workflow-editor';
+    redirect(destination);
+  }
 
   if (section) {
     params.set('section', section);

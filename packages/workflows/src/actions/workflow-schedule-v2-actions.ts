@@ -268,7 +268,7 @@ const validateSchedulableWorkflow = async (
   ensureWorkflowPayloadSchemasRegistered();
   const workflow = await WorkflowDefinitionModelV2.getById(knex, workflowId);
   if (!workflow) {
-    throwHttpError(404, 'Workflow not found');
+    return throwHttpError(404, 'Workflow not found');
   }
 
   const latestVersion = await getLatestPublishedWorkflowVersion(knex, workflowId);
@@ -414,6 +414,9 @@ export const createWorkflowScheduleAction = withAuth(async (user, _ctx, input: u
   const parsed = CreateWorkflowScheduleInput.parse(input);
   const { knex, tenant } = await createTenantKnex();
   await requireWorkflowPermission(user, 'manage', knex);
+  if (!tenant) {
+    return throwHttpError(400, 'Tenant not found');
+  }
   return mutateWorkflowSchedule(knex, tenant, parsed);
 });
 
@@ -421,6 +424,9 @@ export const updateWorkflowScheduleAction = withAuth(async (user, _ctx, input: u
   const parsed = UpdateWorkflowScheduleInput.parse(input);
   const { knex, tenant } = await createTenantKnex();
   await requireWorkflowPermission(user, 'manage', knex);
+  if (!tenant) {
+    return throwHttpError(400, 'Tenant not found');
+  }
   return mutateWorkflowSchedule(knex, tenant, parsed, parsed.scheduleId);
 });
 

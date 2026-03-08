@@ -4,8 +4,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
-import { getFormRegistry } from '@shared/workflow/core/formRegistry';
-import { getFormValidationService } from '@shared/workflow/core/formValidationService';
+import { getFormRegistry, getFormValidationService } from '@shared/task-inbox';
 import {
   FormRegistrationParams,
   FormUpdateParams,

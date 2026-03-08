@@ -34,9 +34,6 @@ import { NumberingService } from '../../services/numberingService';
 import { PDFGenerationService, createPDFGenerationService } from '../../../services/pdf-generation.service';
 import { StorageService } from '../../storage/StorageService';
 
-// Import workflow actions
-import { approveInvoice, rejectInvoice, processInvoiceEvent } from '@alga-psa/workflows/actions/invoiceWorkflowActions';
-
 // Import schemas and interfaces
 import {
   CreateInvoice,

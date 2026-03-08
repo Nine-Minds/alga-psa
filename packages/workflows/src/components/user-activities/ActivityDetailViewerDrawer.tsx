@@ -338,8 +338,6 @@ export function ActivityDetailViewerDrawer({
               throw new Error('Time entry not found');
             }
             
-            console.log('Time entry data:', timeEntryData);
-            
             // Get the current time period for the time entry
             const now = new Date();
             // Create a time period object with all required properties
@@ -374,9 +372,6 @@ export function ActivityDetailViewerDrawer({
               type: timeEntryData.work_item_type,
               is_billable: Boolean(timeEntryData.workItem?.is_billable)
             };
-            
-            console.log('Formatted time entry:', formattedTimeEntry);
-            console.log('Work item:', workItem);
             
             setContent(
               <div className="h-full">
@@ -430,26 +425,18 @@ export function ActivityDetailViewerDrawer({
         
         case ActivityType.WORKFLOW_TASK: {
           const taskDetails = await getTaskDetails(activityId);
-          
-          console.log('[ActivityDetailViewerDrawer] Raw Task details for WORKFLOW_TASK:', JSON.stringify(taskDetails, null, 2));
-          
+
           if (taskDetails.formId && taskDetails.formSchema && taskDetails.formSchema.jsonSchema) {
             let initialDataForForm = taskDetails.responseData || {};
             if (!taskDetails.responseData || Object.keys(taskDetails.responseData).length === 0) {
               if (taskDetails.formSchema.defaultValues) {
-                console.log('[ActivityDetailViewerDrawer] Processing defaultValues for initialFormData. Raw defaultValues:', JSON.stringify(taskDetails.formSchema.defaultValues, null, 2));
-                console.log('[ActivityDetailViewerDrawer] ContextData for defaultValues processing:', JSON.stringify(taskDetails.contextData, null, 2));
                 initialDataForForm = processTemplateVariables(
                   taskDetails.formSchema.defaultValues,
                   taskDetails.contextData
                 );
-                console.log('[ActivityDetailViewerDrawer] Processed defaultValues for initialFormData:', JSON.stringify(initialDataForForm, null, 2));
               }
             }
 
-            console.log('[ActivityDetailViewerDrawer] Passing to TaskForm - JSONSchema:', JSON.stringify(taskDetails.formSchema.jsonSchema, null, 2));
-            console.log('[ActivityDetailViewerDrawer] Passing to TaskForm - UISchema:', JSON.stringify(taskDetails.formSchema.uiSchema, null, 2));
-            console.log('[ActivityDetailViewerDrawer] Task contextData:', taskDetails.contextData);
             setContent(
               <div className="h-full p-6">
                 <h2 className="text-xl font-semibold mb-4">Workflow Task</h2>

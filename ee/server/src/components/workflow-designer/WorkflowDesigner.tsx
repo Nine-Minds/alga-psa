@@ -48,7 +48,6 @@ import WorkflowRunDialog from './WorkflowRunDialog';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
 import WorkflowListV2 from '@alga-psa/workflows/components/automation-hub/WorkflowList';
 import EventsCatalogV2 from '@alga-psa/workflows/components/automation-hub/EventsCatalogV2';
-import TemplateLibrary from '@alga-psa/workflows/components/automation-hub/TemplateLibrary';
 import Schedules from '@alga-psa/workflows/components/automation-hub/Schedules';
 import { MappingPanel, type ActionInputField } from './mapping';
 import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema as ExprJsonSchema } from './expression-editor';
@@ -289,6 +288,11 @@ const DEFAULT_PAYLOAD_SCHEMA = 'payload.EmailWorkflowPayload.v1';
 const isTimeTrigger = (trigger?: WorkflowTrigger | null): boolean =>
   trigger?.type === 'schedule' || trigger?.type === 'recurring';
 
+const normalizeDesignerDefinition = (definition: WorkflowDefinition): WorkflowDefinition =>
+  isTimeTrigger(definition.trigger)
+    ? { ...definition, trigger: undefined }
+    : definition;
+
 type WorkflowDesignerMode = 'control-panel' | 'editor-list' | 'editor-designer';
 
 type WorkflowDesignerProps = {
@@ -297,11 +301,10 @@ type WorkflowDesignerProps = {
   isNew?: boolean;
 };
 
-type ControlPanelTab = 'Template Library' | 'Schedules' | 'Runs' | 'Events' | 'Event Catalog' | 'Dead Letter';
+type ControlPanelTab = 'Schedules' | 'Runs' | 'Events' | 'Event Catalog' | 'Dead Letter';
 
 const mapSectionToControlPanelTab = (section: string | null, canAdmin: boolean): ControlPanelTab => {
   const raw = (section ?? '').trim().toLowerCase();
-  if (raw === 'template-library' || raw === 'template_library' || raw === 'templates') return 'Template Library';
   if (raw === 'schedules') return 'Schedules';
   if (raw === 'events') return 'Events';
   if (raw === 'event-catalog' || raw === 'events-catalog' || raw === 'event_catalog') return 'Event Catalog';
@@ -310,7 +313,6 @@ const mapSectionToControlPanelTab = (section: string | null, canAdmin: boolean):
 };
 
 const mapControlPanelTabToSection = (tab: string): string => {
-  if (tab === 'Template Library') return 'template-library';
   if (tab === 'Schedules') return 'schedules';
   if (tab === 'Events') return 'events';
   if (tab === 'Event Catalog') return 'event-catalog';
@@ -1752,9 +1754,10 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     if (activeWorkflowId && activeWorkflowRecord) {
       const savedMode = (activeWorkflowRecord.payload_schema_mode === 'inferred' ? 'inferred' : 'pinned') as 'inferred' | 'pinned';
       const savedPinnedRef = activeWorkflowRecord.pinned_payload_schema_ref ?? activeWorkflowRecord.payload_schema_ref ?? '';
+      const savedDraftDefinition = normalizeDesignerDefinition(activeWorkflowRecord.draft_definition);
 
       return (
-        !areStructurallyEqual(activeDefinition, activeWorkflowRecord.draft_definition) ||
+        !areStructurallyEqual(activeDefinition, savedDraftDefinition) ||
         payloadSchemaModeDraft !== savedMode ||
         pinnedPayloadSchemaRefDraft !== savedPinnedRef
       );
@@ -2519,9 +2522,10 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     
     // Set new workflow - React will batch updates, but clearing first ensures
     // we don't show stale data if there's any delay
-    setActiveDefinition(record.draft_definition);
+    const normalizedDefinition = normalizeDesignerDefinition(record.draft_definition);
+    setActiveDefinition(normalizedDefinition);
     setActiveWorkflowId(record.workflow_id);
-    setTriggerTypeSelection(record.draft_definition.trigger?.type === 'event' ? 'event' : 'manual');
+    setTriggerTypeSelection(normalizedDefinition.trigger?.type === 'event' ? 'event' : 'manual');
     
     // Always reset these when selecting a workflow
     setPublishErrors([]);
@@ -2631,6 +2635,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
   const handleSaveDefinition = async () => {
     if (!activeDefinition) return;
+    const normalizedDefinition = normalizeDesignerDefinition(activeDefinition);
     setIsSaving(true);
     try {
       const overrides = getWorkflowPlaywrightOverrides();
@@ -2640,12 +2645,12 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       }
       if (!activeWorkflowId) {
         const data = await createWorkflowDefinitionAction({
-          definition: activeDefinition,
+          definition: normalizedDefinition,
           payloadSchemaMode: payloadSchemaModeDraft,
           pinnedPayloadSchemaRef: pinnedPayloadSchemaRefDraft ? pinnedPayloadSchemaRefDraft : undefined
         });
         setActiveWorkflowId(data.workflowId);
-        setActiveDefinition({ ...activeDefinition, id: data.workflowId });
+        setActiveDefinition({ ...normalizedDefinition, id: data.workflowId });
 
         router.replace(`/msp/workflow-editor/${encodeURIComponent(data.workflowId)}`, { scroll: false });
         toast.success('Workflow created');
@@ -2653,7 +2658,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         await persistMetadataDraft(activeWorkflowId);
         await updateWorkflowDefinitionDraftAction({
           workflowId: activeWorkflowId,
-          definition: activeDefinition,
+          definition: normalizedDefinition,
           payloadSchemaMode: payloadSchemaModeDraft,
           pinnedPayloadSchemaRef: pinnedPayloadSchemaRefDraft ? pinnedPayloadSchemaRefDraft : undefined
         });
@@ -2687,6 +2692,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       toast.error('Save the workflow before publishing');
       return;
     }
+    const normalizedDefinition = normalizeDesignerDefinition(activeDefinition);
     setIsPublishing(true);
     try {
       const overrides = getWorkflowPlaywrightOverrides();
@@ -2697,8 +2703,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       await persistMetadataDraft(activeWorkflowId);
       const data = await publishWorkflowDefinitionAction({
         workflowId: activeWorkflowId,
-        version: activeDefinition.version,
-        definition: activeDefinition
+        version: normalizedDefinition.version,
+        definition: normalizedDefinition
       });
       setPublishErrors(Array.isArray((data as any)?.errors) ? ((data as any).errors as PublishError[]) : []);
       setPublishWarnings(Array.isArray((data as any)?.warnings) ? ((data as any).warnings as PublishError[]) : []);
@@ -2709,7 +2715,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             workflowId: activeWorkflowId,
             payloadSchemaMode: payloadSchemaModeDraft,
             effectivePayloadSchemaRef,
-            triggerEvent: activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger.eventName : null,
+            triggerEvent: normalizedDefinition.trigger?.type === 'event' ? normalizedDefinition.trigger.eventName : null,
             errorCodes: codes
           });
         } catch {}
@@ -2721,8 +2727,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           workflowId: activeWorkflowId,
           payloadSchemaMode: payloadSchemaModeDraft,
           effectivePayloadSchemaRef,
-          triggerEvent: activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger.eventName : null,
-          publishedVersion: (data as any)?.publishedVersion ?? activeDefinition.version
+          triggerEvent: normalizedDefinition.trigger?.type === 'event' ? normalizedDefinition.trigger.eventName : null,
+          publishedVersion: (data as any)?.publishedVersion ?? normalizedDefinition.version
         });
       } catch {}
       toast.success('Workflow published');
@@ -4617,11 +4623,6 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       <EventsCatalogV2 />
     </div>
   );
-  const templateLibraryContent = (
-    <div className="h-full min-h-0 overflow-y-auto px-6 py-4">
-      <TemplateLibrary />
-    </div>
-  );
   const schedulesContent = (
     <div className="h-full min-h-0 overflow-y-auto px-6 py-4">
       <Schedules />
@@ -4631,7 +4632,6 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const isEditorDesignerMode = mode === 'editor-designer';
 
   const controlPanelTabs = [
-    { label: 'Template Library', content: templateLibraryContent },
     { label: 'Schedules', content: schedulesContent },
     { label: 'Runs', content: runListContent },
     { label: 'Events', content: eventListContent },
@@ -4648,7 +4648,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
   const pageDescription =
     isControlPanelMode
-      ? 'Manage templates, schedules, runs, events, and the event catalog.'
+      ? 'Manage schedules, runs, events, and the event catalog.'
       : isEditorDesignerMode
         ? 'Build and maintain workflow automations.'
         : 'Choose a workflow to edit or create a new workflow.';

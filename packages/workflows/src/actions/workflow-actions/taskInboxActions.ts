@@ -3,21 +3,17 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { v4 as uuidv4 } from 'uuid';
-import { getFormRegistry } from '@shared/workflow/core/formRegistry';
-import { getActionRegistry } from '@shared/workflow/core/actionRegistry';
+import { getFormRegistry } from '@shared/task-inbox';
 import WorkflowTaskModel, { WorkflowTaskStatus } from '@shared/workflow/persistence/workflowTaskModel';
-import WorkflowEventModel from '@shared/workflow/persistence/workflowEventModel';
-import { TaskSubmissionParams, TaskDetails, TaskQueryParams, TaskQueryResult, TaskEventNames } from '@shared/workflow/persistence/taskInboxInterfaces';
+import { TaskSubmissionParams, TaskDetails, TaskQueryParams, TaskQueryResult } from '@shared/workflow/persistence/taskInboxInterfaces';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
 import { revalidatePath } from "next/cache";
 
 //TODO: we need to fix withTransaction to work with passed knex instances
 
 /**
  * Submit a task form
- * This function handles the conversion of form submissions to workflow events
  */
 export const submitTaskForm = withAuth(async (user, { tenant }, params: TaskSubmissionParams): Promise<{ success: boolean }> => {
   const { taskId, formData, comments } = params;
@@ -116,43 +112,8 @@ export const submitTaskForm = withAuth(async (user, { tenant }, params: TaskSubm
         }
       );
       
-      // 3. Generate a clean eventId for this task completion.
-      // This eventId will be used as the idempotency_key for enqueueEvent,
-      // making enqueueEvent the sole persister of this event.
       const taskCompletionEventId = uuidv4();
-      
-      // The direct insert into workflow_events is removed from here.
-      // WorkflowRuntime.enqueueEvent will handle the event persistence.
-
-      // 4. Publish event to workflow engine
-      // Get action registry and workflow runtime
-      const actionRegistry = getActionRegistry();
-      const workflowRuntime = getWorkflowRuntime(actionRegistry);
-      
-      try {
-        // First, try to load the execution state to ensure it's in memory
-        // Note: Depending on implementation, loadExecutionState might not be strictly necessary
-        // before enqueueEvent if enqueueEvent can robustly handle non-cached states.
-        // However, it's often good practice to ensure the state is loaded or can be loaded.
-        await workflowRuntime.loadExecutionState(trx, task.execution_id, tenant);
-        
-        // Then enqueue event for asynchronous processing, passing the generated
-        // eventId as the idempotency_key.
-        await workflowRuntime.enqueueEvent(trx, {
-          execution_id: task.execution_id,
-          event_name: TaskEventNames.taskCompleted(taskId),
-          payload: finalFormData,
-          user_id: userId,
-          tenant,
-          idempotency_key: taskCompletionEventId // Pass the generated clean UUID
-        });
-      } catch (error) {
-        console.error('Error enqueueing workflow event:', error);
-        
-        // If we can't enqueue the event, we'll still mark the task as completed
-        // but log the error for debugging
-        console.log('Task marked as completed but workflow event not enqueued');
-      }
+      void taskCompletionEventId;
       
       return { success: true };
     });
@@ -320,8 +281,6 @@ export const getTaskDetails = withAuth(async (_user, { tenant }, taskId: string)
     // and formRegistry.getForm can resolve this.
     const form = await formRegistry.getForm(knex, tenant, taskDefinition.form_id);
     
-    console.log('[taskInboxAction] Form:', form);
-
     // Return task details
     return {
       taskId: task.task_id,
@@ -549,30 +508,8 @@ export const dismissTask = withAuth(async (user, { tenant }, taskId: string): Pr
         }
       );
       
-      // Generate event ID for task completion
       const taskCompletionEventId = uuidv4();
-      
-      // Publish task completion event to workflow engine
-      const actionRegistry = getActionRegistry();
-      const workflowRuntime = getWorkflowRuntime(actionRegistry);
-      
-      try {
-        // Load execution state
-        await workflowRuntime.loadExecutionState(trx, task.execution_id, tenant);
-        
-        // Enqueue task completed event with dismiss resolution data
-        await workflowRuntime.enqueueEvent(trx, {
-          execution_id: task.execution_id,
-          event_name: TaskEventNames.taskCompleted(taskId),
-          payload: dismissResolutionData,
-          user_id: userId,
-          tenant,
-          idempotency_key: taskCompletionEventId
-        });
-      } catch (error: any) {
-        console.error('Error enqueueing workflow completion event:', error);
-        console.log('Task marked as completed but workflow event not enqueued');
-      }
+      void taskCompletionEventId;
       
       return { success: true };
     });
