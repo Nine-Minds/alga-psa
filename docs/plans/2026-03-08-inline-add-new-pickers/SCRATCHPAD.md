@@ -254,3 +254,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/CategoryPicker.contract.test.ts -t T040`
 - 2026-03-08 T041: Extended `QuickAddTicketPrefill.test.tsx` with `CategoryPicker`/`QuickAddCategory` mocks so the ticket form now verifies `+ Add new category` opens the category quick-add dialog with `board-1` preselected.
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddTicketPrefill.test.tsx -t T041`
+- 2026-03-08 T042: Added `packages/tickets/src/components/QuickAddTicket.category.contract.test.ts` to lock the post-create category wiring in `QuickAddTicket`: created categories merge into local state, become the selected category, clear submission errors, and close the inline dialog.
+- Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/QuickAddTicket.category.contract.test.ts -t T042`

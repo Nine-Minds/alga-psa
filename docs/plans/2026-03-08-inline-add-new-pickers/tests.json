@@ -331,7 +331,7 @@
   {
     "id": "T042",
     "description": "QuickAddTicket: after creating category via QuickAddCategory, new category is added to list and auto-selected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
