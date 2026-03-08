@@ -1188,7 +1188,7 @@
   {
     "id": "F127",
     "description": "Personal bot: a Teams personal-scope bot exists for PSA.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1198,7 +1198,7 @@
   {
     "id": "F128",
     "description": "Personal bot: a command router parses supported bot commands.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1208,7 +1208,7 @@
   {
     "id": "F129",
     "description": "Personal bot: unsupported commands return a help-oriented response instead of silently failing.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1218,7 +1218,7 @@
   {
     "id": "F130",
     "description": "Personal bot: a welcome/help response lists the supported v1 commands.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1228,7 +1228,7 @@
   {
     "id": "F131",
     "description": "Personal bot: bot responses can render buttons or cards that open the tab or quick actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1238,7 +1238,7 @@
   {
     "id": "F132",
     "description": "Personal bot: the bot respects tenant-level allowed-action configuration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1248,7 +1248,7 @@
   {
     "id": "F133",
     "description": "Personal bot: explicit entity references in commands are resolved consistently.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1258,7 +1258,7 @@
   {
     "id": "F134",
     "description": "Personal bot: unsupported non-personal contexts return a clear \u201cpersonal scope only\u201d response for v1.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1268,7 +1268,7 @@
   {
     "id": "F135",
     "description": "Personal bot command `my tickets`: returns the technician's relevant tickets.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1278,7 +1278,7 @@
   {
     "id": "F136",
     "description": "Personal bot command `my tickets`: response items include enough summary data to act or click through.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1288,7 +1288,7 @@
   {
     "id": "F137",
     "description": "Personal bot command `my tickets`: response items include deep links into the Teams tab or PSA web app.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1298,7 +1298,7 @@
   {
     "id": "F138",
     "description": "Personal bot command `ticket <id>`: returns a ticket summary for a valid ticket reference.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1308,7 +1308,7 @@
   {
     "id": "F139",
     "description": "Personal bot command `ticket <id>`: returns a clear not-found or not-authorized response for invalid references.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",

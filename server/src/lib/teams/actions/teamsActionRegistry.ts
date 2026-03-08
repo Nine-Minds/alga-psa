@@ -675,6 +675,70 @@ async function buildItemForDestination(
   };
 }
 
+function describeTicketListSummary(ticket: Record<string, unknown>): string {
+  const parts = [
+    typeof ticket.title === 'string' ? ticket.title.trim() : '',
+    typeof ticket.status_name === 'string' ? ticket.status_name.trim() : '',
+    typeof ticket.priority_name === 'string' ? ticket.priority_name.trim() : '',
+  ].filter(Boolean);
+
+  return parts.join(' • ') || 'Ticket opened from Teams';
+}
+
+function describeResolvedTarget(target: TeamsResolvedTarget): { title: string; summary: string } {
+  switch (target.entityType) {
+    case 'ticket': {
+      const entity = (target.entity || {}) as unknown as Record<string, unknown>;
+      const ticketNumber =
+        typeof entity.ticket_number === 'string' && entity.ticket_number.trim().length > 0
+          ? entity.ticket_number.trim()
+          : target.id;
+      return {
+        title: `Ticket ${ticketNumber}`,
+        summary: describeTicketListSummary(entity),
+      };
+    }
+    case 'project_task': {
+      const entity = (target.entity || {}) as unknown as Record<string, unknown>;
+      const taskName =
+        typeof entity.task_name === 'string' && entity.task_name.trim().length > 0
+          ? entity.task_name.trim()
+          : target.id;
+      return {
+        title: `Project task ${taskName}`,
+        summary: typeof entity.description === 'string' && entity.description.trim().length > 0
+          ? entity.description.trim()
+          : `Project task ${target.id} is ready to open from Teams.`,
+      };
+    }
+    case 'approval':
+      return {
+        title: `Approval ${target.id}`,
+        summary: `Approval ${target.id} is ready to open from Teams.`,
+      };
+    case 'time_entry':
+      return {
+        title: `Time entry ${target.id}`,
+        summary: `Time entry ${target.id} is ready to open from Teams.`,
+      };
+    case 'contact': {
+      const entity = (target.entity || {}) as unknown as Record<string, unknown>;
+      const contactName =
+        typeof entity.full_name === 'string' && entity.full_name.trim().length > 0
+          ? entity.full_name.trim()
+          : target.id;
+      const clientName =
+        typeof entity.client_name === 'string' && entity.client_name.trim().length > 0
+          ? entity.client_name.trim()
+          : '';
+      return {
+        title: `Contact ${contactName}`,
+        summary: clientName ? `${contactName} • ${clientName}` : `Contact ${contactName} is ready to open from Teams.`,
+      };
+    }
+  }
+}
+
 const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
   my_tickets: {
     id: 'my_tickets',
@@ -720,7 +784,7 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
             'ticket',
             String((ticket as { ticket_id?: string }).ticket_id ?? ''),
             String((ticket as { ticket_number?: string }).ticket_number || (ticket as { ticket_id?: string }).ticket_id || 'Ticket'),
-            String((ticket as { title?: string }).title || 'Ticket opened from Teams'),
+            describeTicketListSummary(ticket as unknown as Record<string, unknown>),
             { type: 'ticket', ticketId: String((ticket as { ticket_id?: string }).ticket_id ?? '') },
             context.integration,
             context.request.surface
@@ -788,7 +852,16 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
         throw new ValidationError('Validation failed', [{ path: ['target'], message: 'Target is required' }]);
       }
 
-      const description = describeTeamsTabDestination(target.destination);
+      const description = describeResolvedTarget(target);
+      const item = await buildItemForDestination(
+        target.entityType,
+        target.id,
+        description.title,
+        description.summary,
+        target.destination,
+        context.integration,
+        context.request.surface
+      );
       return {
         summary: {
           title: description.title,
@@ -796,6 +869,7 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
         },
         destination: target.destination,
         target,
+        items: [item],
       };
     },
   },

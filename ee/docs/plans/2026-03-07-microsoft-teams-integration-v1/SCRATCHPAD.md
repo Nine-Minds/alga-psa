@@ -246,6 +246,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) The smallest reusable Teams action-layer pattern in this repo is a typed registry plus normalized DTO/result unions in `server/src/lib/teams/actions`, not the heavier workflow runtime registry; that keeps bot, message-extension, and quick-action semantics aligned with the existing Teams auth/setup code.
 - (2026-03-07) Teams action results can derive Teams-tab links from existing PSA record URLs by flowing through `buildTeamsFullPsaUrl` first and only then calling the Teams package deep-link builders, which keeps the PSA route as the source of truth.
 - (2026-03-07) The first idempotency slice for Teams actions is process-local and keyed by `tenant + user + action + idempotencyKey`; that is enough to prevent duplicate mutation execution within the current app process while keeping the action layer free of new persistence until a later concurrency hardening pass is justified.
+- (2026-03-07) The first Teams bot transport can stay SDK-free: a Next.js route can accept Bot Framework-style activity JSON, resolve tenant/user context locally, and map shared Teams action results into simple hero-card responses without introducing `botbuilder`.
+- (2026-03-07) Bot requests need a tenant-resolution helper separate from browser SSO because webhook activities arrive without a PSA session; the tenant can be resolved from an explicit query hint first and then from the selected Teams profile's Microsoft tenant ID.
+- (2026-03-07) Bot follow-up shortcuts should be filtered through `listAvailableTeamsActions(...)` so ticket result cards only advertise tenant-enabled actions and stay aligned with central Teams capability gating.
 
 ## Progress Log
 
@@ -258,9 +261,16 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Completed `F111` through `F126` by adding `server/src/lib/teams/actions/teamsActionRegistry.ts`, which centralizes Teams action definitions, input normalization, target resolution, permission/capability gating, result mapping, allowed-action metadata, and idempotent mutation replay for shared bot/message-extension/quick-action execution.
 - (2026-03-07) Completed `T221` through `T252` with `server/src/test/unit/lib/teams/actions/teamsActionRegistry.test.ts`, covering registry metadata, input normalization, ticket/task/contact/approval/time-entry resolution, permission guards, consistent validation errors, invoking-surface metadata, PSA-first deep-link generation, idempotent mutation replay, partial-failure remediation, capability gating, and service reuse for time entry and approval mutations.
 - (2026-03-07) Exported `getTeamsIntegrationExecutionState(tenant)` from `packages/integrations/src/actions/integrations/teamsActions.ts` so future Teams route handlers can read install status, enabled capabilities, allowed actions, app id, and package metadata without duplicating Teams integration row mapping.
+- (2026-03-07) Completed `F127` through `F134` by adding an SDK-free Teams bot transport in `server/src/app/api/teams/bot/messages/route.ts` and `server/src/lib/teams/bot/teamsBotHandler.ts`, plus `server/src/lib/teams/resolveTeamsTenantContext.ts` for tenant selection from Teams webhook context. The handler enforces personal-scope-only behavior, resolves linked MSP users, renders help/unsupported guidance, parses supported bot commands, and filters follow-up shortcuts through tenant allowed-action state.
+- (2026-03-07) Completed `F135`, `F136`, and `F137` by wiring the bot `my tickets` command through the shared Teams action layer and rendering summary cards with ticket number/title/status-style summaries plus Teams-tab and full-PSA links.
+- (2026-03-07) Completed `F138` and `F139` by wiring `ticket <id>` through the shared Teams action layer, enriching open-record summaries with entity-specific detail, and returning clear recoverable not-found/permission failures inside bot-safe cards.
+- (2026-03-07) Completed `T253` through `T278` with `server/src/test/unit/lib/teams/bot/teamsBotHandler.test.ts` and `server/src/app/api/teams/bot/messages/route.test.ts`, covering route presence, invalid JSON handling, welcome/help responses, unsupported-command recovery, personal-scope-only enforcement, allowed-action filtering, shared entity-reference parsing, `my tickets` cards/deep links, and `ticket <id>` success/error behavior.
 
 - (2026-03-07) Verified shared Teams action-layer execution with:
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/actions/teamsActionRegistry.test.ts`
   - `pnpm --dir server exec tsc -p tsconfig.json --noEmit --pretty false`
   - `pnpm --dir packages/integrations typecheck`
-- (2026-03-07) Next unchecked feature after this slice is `F127` (Personal bot: a Teams personal-scope bot exists for PSA).
+- (2026-03-07) Verified Teams bot foundation and lookup commands with:
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/bot/teamsBotHandler.test.ts src/app/api/teams/bot/messages/route.test.ts src/test/unit/lib/teams/actions/teamsActionRegistry.test.ts`
+  - `pnpm --dir server exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-07) Next unchecked feature after this slice is `F140` (Personal bot command `assign ticket`: supports assigning a ticket to a technician).

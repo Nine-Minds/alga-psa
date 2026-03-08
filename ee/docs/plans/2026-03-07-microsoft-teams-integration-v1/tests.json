@@ -2018,7 +2018,7 @@
   {
     "id": "T253",
     "description": "Happy path: Personal bot: a Teams personal-scope bot exists for PSA.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F127"
     ]
@@ -2026,7 +2026,7 @@
   {
     "id": "T254",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot: a teams personal-scope bot exists for psa.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F127"
     ]
@@ -2034,7 +2034,7 @@
   {
     "id": "T255",
     "description": "Happy path: Personal bot: a command router parses supported bot commands.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F128"
     ]
@@ -2042,7 +2042,7 @@
   {
     "id": "T256",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot: a command router parses supported bot commands.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F128"
     ]
@@ -2050,7 +2050,7 @@
   {
     "id": "T257",
     "description": "Happy path: Personal bot: unsupported commands return a help-oriented response instead of silently failing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F129"
     ]
@@ -2058,7 +2058,7 @@
   {
     "id": "T258",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot: unsupported commands return a help-oriented response instead of silently failing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F129"
     ]
@@ -2066,7 +2066,7 @@
   {
     "id": "T259",
     "description": "Happy path: Personal bot: a welcome/help response lists the supported v1 commands.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F130"
     ]
@@ -2074,7 +2074,7 @@
   {
     "id": "T260",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot: a welcome/help response lists the supported v1 commands.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F130"
     ]
@@ -2082,7 +2082,7 @@
   {
     "id": "T261",
     "description": "Happy path: Personal bot: bot responses can render buttons or cards that open the tab or quick actions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F131"
     ]
@@ -2090,7 +2090,7 @@
   {
     "id": "T262",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot: bot responses can render buttons or cards that open the tab or quick actions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F131"
     ]
@@ -2098,7 +2098,7 @@
   {
     "id": "T263",
     "description": "Happy path: Personal bot: the bot respects tenant-level allowed-action configuration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F132"
     ]
@@ -2106,7 +2106,7 @@
   {
     "id": "T264",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot: the bot respects tenant-level allowed-action configuration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F132"
     ]
@@ -2114,7 +2114,7 @@
   {
     "id": "T265",
     "description": "Happy path: Personal bot: explicit entity references in commands are resolved consistently.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F133"
     ]
@@ -2122,7 +2122,7 @@
   {
     "id": "T266",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot: explicit entity references in commands are resolved consistently.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F133"
     ]
@@ -2130,7 +2130,7 @@
   {
     "id": "T267",
     "description": "Happy path: Personal bot: unsupported non-personal contexts return a clear \u201cpersonal scope only\u201d response for v1.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F134"
     ]
@@ -2138,7 +2138,7 @@
   {
     "id": "T268",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot: unsupported non-personal contexts return a clear \u201cpersonal scope only\u201d response for v1.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F134"
     ]
@@ -2146,7 +2146,7 @@
   {
     "id": "T269",
     "description": "Happy path: Personal bot command `my tickets`: returns the technician's relevant tickets.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F135"
     ]
@@ -2154,7 +2154,7 @@
   {
     "id": "T270",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `my tickets`: returns the technician's relevant tickets.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F135"
     ]
@@ -2162,7 +2162,7 @@
   {
     "id": "T271",
     "description": "Happy path: Personal bot command `my tickets`: response items include enough summary data to act or click through.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F136"
     ]
@@ -2170,7 +2170,7 @@
   {
     "id": "T272",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `my tickets`: response items include enough summary data to act or click through.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F136"
     ]
@@ -2178,7 +2178,7 @@
   {
     "id": "T273",
     "description": "Happy path: Personal bot command `my tickets`: response items include deep links into the Teams tab or PSA web app.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F137"
     ]
@@ -2186,7 +2186,7 @@
   {
     "id": "T274",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `my tickets`: response items include deep links into the teams tab or psa web app.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F137"
     ]
@@ -2194,7 +2194,7 @@
   {
     "id": "T275",
     "description": "Happy path: Personal bot command `ticket <id>`: returns a ticket summary for a valid ticket reference.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F138"
     ]
@@ -2202,7 +2202,7 @@
   {
     "id": "T276",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `ticket <id>`: returns a ticket summary for a valid ticket reference.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F138"
     ]
@@ -2210,7 +2210,7 @@
   {
     "id": "T277",
     "description": "Happy path: Personal bot command `ticket <id>`: returns a clear not-found or not-authorized response for invalid references.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F139"
     ]
@@ -2218,7 +2218,7 @@
   {
     "id": "T278",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `ticket <id>`: returns a clear not-found or not-authorized response for invalid references.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F139"
     ]
