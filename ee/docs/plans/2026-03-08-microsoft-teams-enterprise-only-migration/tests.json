@@ -170,7 +170,7 @@
   {
     "id": "T022",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for availability model: define a single Teams availability helper that combines enterprise edition checks with the tenant-level `teams-integration-ui` flag.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
@@ -226,7 +226,7 @@
   {
     "id": "T029",
     "description": "Happy path: Availability model: Teams runtime route access is driven by the shared availability helper rather than ad hoc local checks.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
@@ -234,7 +234,7 @@
   {
     "id": "T030",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for availability model: Teams runtime route access is driven by the shared availability helper rather than ad hoc local checks.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
@@ -354,7 +354,7 @@
   {
     "id": "T045",
     "description": "Happy path: Availability model: Teams runtime wrappers can return a stable EE-unavailable response when running in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
@@ -362,7 +362,7 @@
   {
     "id": "T046",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for availability model: Teams runtime wrappers can return a stable EE-unavailable response when running in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
@@ -370,7 +370,7 @@
   {
     "id": "T047",
     "description": "Happy path: Availability model: Teams runtime wrappers can return a stable disabled response when running in EE with the tenant flag off.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
@@ -378,7 +378,7 @@
   {
     "id": "T048",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for availability model: Teams runtime wrappers can return a stable disabled response when running in EE with the tenant flag off.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
@@ -466,7 +466,7 @@
   {
     "id": "T059",
     "description": "Happy path: Availability model: all new EE Teams entrypoints are required to call the shared availability helper before touching tenant Teams state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
@@ -474,7 +474,7 @@
   {
     "id": "T060",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for availability model: all new EE Teams entrypoints are required to call the shared availability helper before touching tenant Teams state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
@@ -866,7 +866,7 @@
   {
     "id": "T109",
     "description": "Happy path: Route boundary: the Teams personal-tab page is converted from a shared active implementation into an EE-owned implementation or EE delegator.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055"
     ]
@@ -874,7 +874,7 @@
   {
     "id": "T110",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for route boundary: the Teams personal-tab page is converted from a shared active implementation into an EE-owned implementation or EE delegator.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055"
     ]
@@ -882,7 +882,7 @@
   {
     "id": "T111",
     "description": "Happy path: Route boundary: the Teams tab page exports only wrapper code in shared CE paths when a public route boundary must remain present.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056"
     ]
@@ -890,7 +890,7 @@
   {
     "id": "T112",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for route boundary: the Teams tab page exports only wrapper code in shared CE paths when a public route boundary must remain present.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056"
     ]
@@ -898,7 +898,7 @@
   {
     "id": "T113",
     "description": "Happy path: Route boundary: the Teams tab page returns an EE-unavailable result or `notFound` style response in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057"
     ]
@@ -906,7 +906,7 @@
   {
     "id": "T114",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for route boundary: the Teams tab page returns an EE-unavailable result or `notFound` style response in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057"
     ]
@@ -914,7 +914,7 @@
   {
     "id": "T115",
     "description": "Happy path: Route boundary: the Teams tab page returns a disabled-state response when running in EE with the tenant flag off.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ]
@@ -922,7 +922,7 @@
   {
     "id": "T116",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for route boundary: the Teams tab page returns a disabled-state response when running in EE with the tenant flag off.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ]
@@ -930,7 +930,7 @@
   {
     "id": "T117",
     "description": "Happy path: Route boundary: the Teams tab page delegates into EE code when running in EE with the tenant flag enabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F059"
     ]
@@ -938,7 +938,7 @@
   {
     "id": "T118",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for route boundary: the Teams tab page delegates into EE code when running in EE with the tenant flag enabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F059"
     ]
@@ -946,7 +946,7 @@
   {
     "id": "T119",
     "description": "Happy path: Route boundary: Teams bot message routes are converted from shared active implementations into EE-owned implementations or EE delegators.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060"
     ]
@@ -954,7 +954,7 @@
   {
     "id": "T120",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for route boundary: Teams bot message routes are converted from shared active implementations into EE-owned implementations or EE delegators.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060"
     ]
@@ -962,7 +962,7 @@
   {
     "id": "T121",
     "description": "Happy path: Route boundary: Teams bot routes return an EE-unavailable response in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061"
     ]
@@ -970,7 +970,7 @@
   {
     "id": "T122",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for route boundary: Teams bot routes return an EE-unavailable response in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061"
     ]
@@ -978,7 +978,7 @@
   {
     "id": "T123",
     "description": "Happy path: Route boundary: Teams bot routes return a disabled response in EE when the tenant flag is off.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F062"
     ]
@@ -986,7 +986,7 @@
   {
     "id": "T124",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for route boundary: Teams bot routes return a disabled response in EE when the tenant flag is off.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F062"
     ]
@@ -994,7 +994,7 @@
   {
     "id": "T125",
     "description": "Happy path: Route boundary: Teams bot routes delegate into EE implementations when Teams is enabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063"
     ]
@@ -1002,7 +1002,7 @@
   {
     "id": "T126",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for route boundary: Teams bot routes delegate into EE implementations when Teams is enabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063"
     ]
@@ -1010,7 +1010,7 @@
   {
     "id": "T127",
     "description": "Happy path: Route boundary: Teams message-extension query routes are converted from shared active implementations into EE-owned implementations or EE delegators.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ]
@@ -1018,7 +1018,7 @@
   {
     "id": "T128",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for route boundary: Teams message-extension query routes are converted from shared active implementations into EE-owned implementations or EE delegators.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ]
@@ -1026,7 +1026,7 @@
   {
     "id": "T129",
     "description": "Happy path: Route boundary: Teams message-extension action routes are converted from shared active implementations into EE-owned implementations or EE delegators.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F065"
     ]
@@ -1034,7 +1034,7 @@
   {
     "id": "T130",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for route boundary: Teams message-extension action routes are converted from shared active implementations into EE-owned implementations or EE delegators.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F065"
     ]
@@ -1042,7 +1042,7 @@
   {
     "id": "T131",
     "description": "Happy path: Route boundary: Teams message-extension routes return CE-unavailable responses when invoked from CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066"
     ]
@@ -1050,7 +1050,7 @@
   {
     "id": "T132",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for route boundary: Teams message-extension routes return CE-unavailable responses when invoked from CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066"
     ]
@@ -1058,7 +1058,7 @@
   {
     "id": "T133",
     "description": "Happy path: Route boundary: Teams message-extension routes return disabled responses when invoked from EE with the tenant flag off.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F067"
     ]
@@ -1066,7 +1066,7 @@
   {
     "id": "T134",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for route boundary: Teams message-extension routes return disabled responses when invoked from EE with the tenant flag off.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F067"
     ]
@@ -1074,7 +1074,7 @@
   {
     "id": "T135",
     "description": "Happy path: Route boundary: Teams message-extension routes delegate into EE implementations when Teams is enabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F068"
     ]
@@ -1082,7 +1082,7 @@
   {
     "id": "T136",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for route boundary: Teams message-extension routes delegate into EE implementations when Teams is enabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F068"
     ]
@@ -1090,7 +1090,7 @@
   {
     "id": "T137",
     "description": "Happy path: Route boundary: Teams auth callback routes for tab, bot, and message extension are converted from shared active implementations into EE-owned implementations or EE delegators.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F069"
     ]
@@ -1098,7 +1098,7 @@
   {
     "id": "T138",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for route boundary: Teams auth callback routes for tab, bot, and message extension are converted from shared active implementations into EE-owned implementations or EE delegators.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F069"
     ]
@@ -1106,7 +1106,7 @@
   {
     "id": "T139",
     "description": "Happy path: Route boundary: Teams auth callback routes return EE-unavailable responses in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F070"
     ]
@@ -1114,7 +1114,7 @@
   {
     "id": "T140",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for route boundary: Teams auth callback routes return EE-unavailable responses in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F070"
     ]
@@ -1122,7 +1122,7 @@
   {
     "id": "T141",
     "description": "Happy path: Route boundary: Teams auth callback routes return disabled responses in EE with the tenant flag off.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071"
     ]
@@ -1130,7 +1130,7 @@
   {
     "id": "T142",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for route boundary: Teams auth callback routes return disabled responses in EE with the tenant flag off.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071"
     ]
@@ -1138,7 +1138,7 @@
   {
     "id": "T143",
     "description": "Happy path: Route boundary: Teams auth callback routes delegate into EE implementations when Teams is enabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F072"
     ]
@@ -1146,7 +1146,7 @@
   {
     "id": "T144",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for route boundary: Teams auth callback routes delegate into EE implementations when Teams is enabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F072"
     ]
@@ -3234,7 +3234,7 @@
   {
     "id": "T405",
     "description": "Happy path: Test infrastructure: contract tests are added or updated for route delegation into EE implementations.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F203"
     ]
@@ -3242,7 +3242,7 @@
   {
     "id": "T406",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for test infrastructure: contract tests are added or updated for route delegation into EE implementations.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F203"
     ]
@@ -3258,7 +3258,7 @@
   {
     "id": "T408",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for test infrastructure: contract tests are added or updated for CE unavailable responses.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F204"
     ]
@@ -3274,7 +3274,7 @@
   {
     "id": "T410",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for test infrastructure: contract tests are added or updated for flag-disabled responses.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F205"
     ]
@@ -3378,7 +3378,7 @@
   {
     "id": "T422",
     "description": "CE Teams tab route returns the documented unavailable behavior without executing Teams business logic.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055",
       "F057",
@@ -3388,7 +3388,7 @@
   {
     "id": "T423",
     "description": "EE Teams tab route with flag off returns the documented disabled behavior without executing Teams business logic.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056",
       "F058",
@@ -3398,7 +3398,7 @@
   {
     "id": "T424",
     "description": "EE Teams tab route with flag on delegates into the EE implementation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F059",
       "F083"
@@ -3407,7 +3407,7 @@
   {
     "id": "T425",
     "description": "CE Teams bot route returns the documented unavailable behavior without executing Teams business logic.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060",
       "F061",
@@ -3417,7 +3417,7 @@
   {
     "id": "T426",
     "description": "EE Teams bot route with flag on delegates into the EE implementation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063",
       "F084"
@@ -3426,7 +3426,7 @@
   {
     "id": "T427",
     "description": "CE Teams message-extension routes return unavailable responses without executing Teams business logic.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064",
       "F066",
@@ -3437,7 +3437,7 @@
   {
     "id": "T428",
     "description": "EE Teams message-extension routes with flag on delegate into the EE implementation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F068",
       "F070",
@@ -3448,7 +3448,7 @@
   {
     "id": "T429",
     "description": "CE Teams auth callback routes return unavailable responses without starting Teams auth completion.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071",
       "F072",
@@ -3459,7 +3459,7 @@
   {
     "id": "T430",
     "description": "EE Teams auth callback routes with flag on delegate into the EE implementation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F074",
       "F110"

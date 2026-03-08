@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const resolveTeamsTabAuthStateMock = vi.fn();
+const getTeamsAvailabilityMock = vi.fn();
 
 class MockNextResponse {
   status: number;
@@ -36,12 +37,22 @@ vi.mock('server/src/lib/teams/resolveTeamsTabAuthState', () => ({
   resolveTeamsTabAuthState: (...args: unknown[]) => resolveTeamsTabAuthStateMock(...args),
 }));
 
-const { GET } = await import('./route');
+vi.mock('@alga-psa/integrations/lib/teamsAvailability', () => ({
+  getTeamsAvailability: (...args: unknown[]) => getTeamsAvailabilityMock(...args),
+}));
+
+const { GET } = await import('../../../../../../../../ee/server/src/app/api/teams/auth/callback/bot/route');
 
 describe('GET /api/teams/auth/callback/bot', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resolveTeamsTabAuthStateMock.mockReset();
+    getTeamsAvailabilityMock.mockReset();
+    getTeamsAvailabilityMock.mockResolvedValue({
+      enabled: true,
+      reason: 'enabled',
+      flagKey: 'teams-integration-ui',
+    });
   });
 
   it('T153/T173: returns a Teams bot auth callback payload with resolved tenant and MSP user context for slug-based or vanity-host entry points', async () => {
@@ -119,5 +130,23 @@ describe('GET /api/teams/auth/callback/bot', () => {
     await expect(response.text()).resolves.toContain('"surface":"bot"');
     await expect(response.text()).resolves.toContain('"status":"not_configured"');
     await expect(response.text()).resolves.toContain('Teams is not configured for this tenant');
+  });
+
+  it('T071/T123: returns a disabled payload when the Teams flag is off for the tenant', async () => {
+    getTeamsAvailabilityMock.mockResolvedValue({
+      enabled: false,
+      reason: 'flag_disabled',
+      flagKey: 'teams-integration-ui',
+      message: 'Microsoft Teams integration is disabled for this tenant.',
+    });
+
+    const response = await GET(
+      new Request('https://example.com/api/teams/auth/callback/bot?tenantId=tenant-1') as any
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.text()).resolves.toContain('"status":"disabled"');
+    await expect(response.text()).resolves.toContain('Microsoft Teams integration is disabled for this tenant.');
+    expect(resolveTeamsTabAuthStateMock).not.toHaveBeenCalled();
   });
 });

@@ -128,7 +128,7 @@
   {
     "id": "F015",
     "description": "Availability model: Teams runtime route access is driven by the shared availability helper rather than ad hoc local checks.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Rollout / Migration"
@@ -200,7 +200,7 @@
   {
     "id": "F023",
     "description": "Availability model: Teams runtime wrappers can return a stable EE-unavailable response when running in CE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Rollout / Migration"
@@ -209,7 +209,7 @@
   {
     "id": "F024",
     "description": "Availability model: Teams runtime wrappers can return a stable disabled response when running in EE with the tenant flag off.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Rollout / Migration"
@@ -263,7 +263,7 @@
   {
     "id": "F030",
     "description": "Availability model: all new EE Teams entrypoints are required to call the shared availability helper before touching tenant Teams state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Rollout / Migration"
@@ -488,7 +488,7 @@
   {
     "id": "F055",
     "description": "Route boundary: the Teams personal-tab page is converted from a shared active implementation into an EE-owned implementation or EE delegator.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -497,7 +497,7 @@
   {
     "id": "F056",
     "description": "Route boundary: the Teams tab page exports only wrapper code in shared CE paths when a public route boundary must remain present.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -506,7 +506,7 @@
   {
     "id": "F057",
     "description": "Route boundary: the Teams tab page returns an EE-unavailable result or `notFound` style response in CE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -515,7 +515,7 @@
   {
     "id": "F058",
     "description": "Route boundary: the Teams tab page returns a disabled-state response when running in EE with the tenant flag off.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -524,7 +524,7 @@
   {
     "id": "F059",
     "description": "Route boundary: the Teams tab page delegates into EE code when running in EE with the tenant flag enabled.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -533,7 +533,7 @@
   {
     "id": "F060",
     "description": "Route boundary: Teams bot message routes are converted from shared active implementations into EE-owned implementations or EE delegators.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -542,7 +542,7 @@
   {
     "id": "F061",
     "description": "Route boundary: Teams bot routes return an EE-unavailable response in CE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -551,7 +551,7 @@
   {
     "id": "F062",
     "description": "Route boundary: Teams bot routes return a disabled response in EE when the tenant flag is off.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -560,7 +560,7 @@
   {
     "id": "F063",
     "description": "Route boundary: Teams bot routes delegate into EE implementations when Teams is enabled.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -569,7 +569,7 @@
   {
     "id": "F064",
     "description": "Route boundary: Teams message-extension query routes are converted from shared active implementations into EE-owned implementations or EE delegators.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -578,7 +578,7 @@
   {
     "id": "F065",
     "description": "Route boundary: Teams message-extension action routes are converted from shared active implementations into EE-owned implementations or EE delegators.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -587,7 +587,7 @@
   {
     "id": "F066",
     "description": "Route boundary: Teams message-extension routes return CE-unavailable responses when invoked from CE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -596,7 +596,7 @@
   {
     "id": "F067",
     "description": "Route boundary: Teams message-extension routes return disabled responses when invoked from EE with the tenant flag off.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -605,7 +605,7 @@
   {
     "id": "F068",
     "description": "Route boundary: Teams message-extension routes delegate into EE implementations when Teams is enabled.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -614,7 +614,7 @@
   {
     "id": "F069",
     "description": "Route boundary: Teams auth callback routes for tab, bot, and message extension are converted from shared active implementations into EE-owned implementations or EE delegators.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -623,7 +623,7 @@
   {
     "id": "F070",
     "description": "Route boundary: Teams auth callback routes return EE-unavailable responses in CE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -632,7 +632,7 @@
   {
     "id": "F071",
     "description": "Route boundary: Teams auth callback routes return disabled responses in EE with the tenant flag off.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -641,7 +641,7 @@
   {
     "id": "F072",
     "description": "Route boundary: Teams auth callback routes delegate into EE implementations when Teams is enabled.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -695,7 +695,7 @@
   {
     "id": "F078",
     "description": "Route boundary: shared route wrappers cache EE dynamic imports safely so repeated requests do not reload modules unnecessarily.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -713,7 +713,7 @@
   {
     "id": "F080",
     "description": "Route boundary: shared route wrappers do not import EE modules eagerly in CE builds.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -731,7 +731,7 @@
   {
     "id": "F082",
     "description": "Route boundary: no remaining shared route directly executes Teams business logic after the migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -740,7 +740,7 @@
   {
     "id": "F083",
     "description": "EE ownership: concrete Teams tab rendering logic lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1577,7 +1577,7 @@
   {
     "id": "F176",
     "description": "Cleanup: shared route trees no longer contain active Teams business logic in page or API handlers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"

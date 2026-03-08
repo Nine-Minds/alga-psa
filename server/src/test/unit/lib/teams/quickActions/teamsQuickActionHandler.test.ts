@@ -13,6 +13,7 @@ const {
   executeTeamsActionMock,
   createTenantKnexMock,
   hasPermissionMock,
+  getTeamsRuntimeAvailabilityMock,
 } = vi.hoisted(() => ({
   resolveTeamsTenantContextMock: vi.fn(),
   resolveTeamsLinkedUserMock: vi.fn(),
@@ -21,6 +22,7 @@ const {
   executeTeamsActionMock: vi.fn(),
   createTenantKnexMock: vi.fn(),
   hasPermissionMock: vi.fn(),
+  getTeamsRuntimeAvailabilityMock: vi.fn(),
 }));
 
 vi.mock('@alga-psa/db', async (importOriginal) => {
@@ -47,6 +49,10 @@ vi.mock('server/src/lib/teams/resolveTeamsLinkedUser', () => ({
 vi.mock('server/src/lib/teams/actions/teamsActionRegistry', () => ({
   executeTeamsAction: executeTeamsActionMock,
   listAvailableTeamsActions: listAvailableTeamsActionsMock,
+}));
+
+vi.mock('server/src/lib/teams/getTeamsRuntimeAvailability', () => ({
+  getTeamsRuntimeAvailability: (...args: unknown[]) => getTeamsRuntimeAvailabilityMock(...args),
 }));
 
 function buildUser(overrides: Record<string, unknown> = {}) {
@@ -119,6 +125,7 @@ describe('teamsQuickActionHandler', () => {
     });
     getUserWithRolesMock.mockResolvedValue(buildUser());
     hasPermissionMock.mockResolvedValue(true);
+    getTeamsRuntimeAvailabilityMock.mockResolvedValue(null);
     listAvailableTeamsActionsMock.mockResolvedValue([
       {
         actionId: 'assign_ticket',
@@ -520,6 +527,30 @@ describe('teamsQuickActionHandler', () => {
     expect(payload).toEqual({
       error: 'invalid_json',
       message: 'The Teams quick-action request body must be valid JSON.',
+    });
+  });
+
+  it('T231/T232: request handling returns a stable disabled response when Teams quick actions are gated off', async () => {
+    getTeamsRuntimeAvailabilityMock.mockResolvedValue({
+      enabled: false,
+      reason: 'flag_disabled',
+      flagKey: 'teams-integration-ui',
+      message: 'Microsoft Teams integration is disabled for this tenant.',
+    });
+
+    const response = await handleTeamsQuickActionRequest(
+      new Request('https://example.test/api/teams/quick-actions?tenantId=tenant-1', {
+        method: 'POST',
+        body: JSON.stringify(buildActivity()),
+      })
+    );
+    const payload = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(payload).toEqual({
+      success: false,
+      error: 'Microsoft Teams integration is disabled for this tenant.',
+      reason: 'flag_disabled',
     });
   });
 });

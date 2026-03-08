@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { POST } from 'server/src/app/api/teams/message-extension/query/route';
+import { POST } from '../../../../../../../ee/server/src/app/api/teams/message-extension/query/route';
 
 const { handleTeamsMessageExtensionRequestMock } = vi.hoisted(() => ({
   handleTeamsMessageExtensionRequestMock: vi.fn(),
@@ -33,6 +33,38 @@ describe('POST /api/teams/message-extension/query', () => {
       body: JSON.stringify({
         type: 'invoke',
         name: 'composeExtension/query',
+      }),
+    }) as any;
+
+    const response = await POST(request);
+
+    expect(handleTeamsMessageExtensionRequestMock).toHaveBeenCalledWith(request);
+    expect(response.status).toBe(200);
+  });
+
+  it('T129/T130: routes message-action submissions through the same EE-owned message-extension handler boundary', async () => {
+    handleTeamsMessageExtensionRequestMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          task: {
+            type: 'message',
+            value: 'handled',
+          },
+        }),
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      )
+    );
+
+    const request = new Request('https://example.test/api/teams/message-extension/query', {
+      method: 'POST',
+      body: JSON.stringify({
+        type: 'invoke',
+        name: 'composeExtension/submitAction',
       }),
     }) as any;
 

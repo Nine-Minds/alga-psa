@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { ContactService } from 'server/src/lib/api/services/ContactService';
 import { TicketService } from 'server/src/lib/api/services/TicketService';
+import { getTeamsRuntimeAvailability } from 'server/src/lib/teams/getTeamsRuntimeAvailability';
 import {
   executeTeamsAction,
   listAvailableTeamsActions,
@@ -19,6 +20,7 @@ import {
 import { listPendingApprovalsForTeams } from 'server/src/lib/teams/approvals/queryPendingApprovalsForTeams';
 import { resolveTeamsLinkedUser } from 'server/src/lib/teams/resolveTeamsLinkedUser';
 import { resolveTeamsTenantContext } from 'server/src/lib/teams/resolveTeamsTenantContext';
+import { buildTeamsAvailabilityJsonResponse } from 'server/src/lib/teams/teamsAvailabilityResponses';
 
 const MESSAGE_EXTENSION_SURFACE: TeamsActionSurface = 'message_extension';
 const ticketService = new TicketService();
@@ -1386,6 +1388,15 @@ export async function handleTeamsMessageExtensionRequest(request: Request): Prom
 
   const url = new URL(request.url);
   const tenantIdHint = url.searchParams.get('tenantId') || url.searchParams.get('tenant');
+  const availability = await getTeamsRuntimeAvailability({
+    explicitTenantId: tenantIdHint,
+    microsoftTenantId: getTeamsTenantId(activity),
+    requiredCapability: 'message_extension',
+  });
+  if (availability && !availability.enabled) {
+    return buildTeamsAvailabilityJsonResponse(availability);
+  }
+
   const response = await handleTeamsMessageExtensionActivity(activity, { tenantIdHint });
 
   return NextResponse.json(response, {

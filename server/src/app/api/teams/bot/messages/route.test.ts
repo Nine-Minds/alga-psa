@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { POST } from 'server/src/app/api/teams/bot/messages/route';
+import { POST } from '../../../../../../../ee/server/src/app/api/teams/bot/messages/route';
 
 const { handleTeamsBotActivityRequestMock } = vi.hoisted(() => ({
   handleTeamsBotActivityRequestMock: vi.fn(),

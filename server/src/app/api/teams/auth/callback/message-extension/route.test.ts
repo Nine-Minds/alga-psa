@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const resolveTeamsTabAuthStateMock = vi.fn();
+const getTeamsAvailabilityMock = vi.fn();
 
 class MockNextResponse {
   status: number;
@@ -36,12 +37,22 @@ vi.mock('server/src/lib/teams/resolveTeamsTabAuthState', () => ({
   resolveTeamsTabAuthState: (...args: unknown[]) => resolveTeamsTabAuthStateMock(...args),
 }));
 
-const { GET } = await import('./route');
+vi.mock('@alga-psa/integrations/lib/teamsAvailability', () => ({
+  getTeamsAvailability: (...args: unknown[]) => getTeamsAvailabilityMock(...args),
+}));
+
+const { GET } = await import('../../../../../../../../ee/server/src/app/api/teams/auth/callback/message-extension/route');
 
 describe('GET /api/teams/auth/callback/message-extension', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     resolveTeamsTabAuthStateMock.mockReset();
+    getTeamsAvailabilityMock.mockReset();
+    getTeamsAvailabilityMock.mockResolvedValue({
+      enabled: true,
+      reason: 'enabled',
+      flagKey: 'teams-integration-ui',
+    });
   });
 
   it('T155: returns a Teams message-extension auth callback payload with resolved tenant and MSP user context', async () => {
@@ -102,5 +113,23 @@ describe('GET /api/teams/auth/callback/message-extension', () => {
     await expect(forbiddenResponse.text()).resolves.toContain('"surface":"message_extension"');
     await expect(forbiddenResponse.text()).resolves.toContain('"status":"forbidden"');
     await expect(forbiddenResponse.text()).resolves.toContain('This Teams tab request does not match your PSA tenant.');
+  });
+
+  it('T133: returns a disabled payload when the tenant flag is off before resolving Teams auth state', async () => {
+    getTeamsAvailabilityMock.mockResolvedValue({
+      enabled: false,
+      reason: 'flag_disabled',
+      flagKey: 'teams-integration-ui',
+      message: 'Microsoft Teams integration is disabled for this tenant.',
+    });
+
+    const response = await GET(
+      new Request('https://example.com/api/teams/auth/callback/message-extension?tenantId=tenant-1') as any
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.text()).resolves.toContain('"status":"disabled"');
+    await expect(response.text()).resolves.toContain('Microsoft Teams integration is disabled for this tenant.');
+    expect(resolveTeamsTabAuthStateMock).not.toHaveBeenCalled();
   });
 });

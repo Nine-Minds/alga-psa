@@ -1,6 +1,8 @@
 import { createTenantKnex, getUserWithRoles } from '@alga-psa/db';
 import { NextResponse } from 'next/server';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+import { getTeamsRuntimeAvailability } from 'server/src/lib/teams/getTeamsRuntimeAvailability';
+import { buildTeamsAvailabilityJsonResponse } from 'server/src/lib/teams/teamsAvailabilityResponses';
 import {
   executeTeamsAction,
   listAvailableTeamsActions,
@@ -803,6 +805,15 @@ export async function handleTeamsQuickActionRequest(request: Request): Promise<N
 
   const url = new URL(request.url);
   const tenantIdHint = url.searchParams.get('tenantId') || url.searchParams.get('tenant');
+  const availability = await getTeamsRuntimeAvailability({
+    explicitTenantId: tenantIdHint,
+    microsoftTenantId: getTeamsTenantId(activity),
+    requiredCapability: 'message_extension',
+  });
+  if (availability && !availability.enabled) {
+    return buildTeamsAvailabilityJsonResponse(availability);
+  }
+
   const response = await handleTeamsQuickActionActivity(activity, { tenantIdHint });
 
   return NextResponse.json(response, {

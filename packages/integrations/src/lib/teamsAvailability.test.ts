@@ -45,7 +45,7 @@ describe('teamsAvailability', () => {
     expect(evaluateFlag).not.toHaveBeenCalled();
   });
 
-  it('T041/T049: keeps tenant-not-configured distinct from flag-disabled results', () => {
+  it('T022/T041/T049: keeps tenant-not-configured distinct from flag-disabled results for server-side runtime checks', () => {
     expect(
       resolveTeamsAvailability({
         isEnterpriseEdition: true,

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getTeamsAvailability } from '@alga-psa/integrations/lib/teamsAvailability';
 import { resolveTeamsTabAuthState, type TeamsTabAuthState } from 'server/src/lib/teams/resolveTeamsTabAuthState';
 import { buildTeamsReauthUrl } from 'server/src/lib/teams/buildTeamsReauthUrl';
 
@@ -8,7 +9,7 @@ interface TeamsAuthCallbackPayload {
   type: 'teams-auth-callback';
   surface: TeamsAuthCallbackSurface;
   success: boolean;
-  status: TeamsTabAuthState['status'];
+  status: TeamsTabAuthState['status'] | 'disabled' | 'unavailable';
   tenantId: string | null;
   userId?: string | null;
   userName?: string | null;
@@ -135,18 +136,82 @@ function getExpectedMicrosoftTenantId(request: NextRequest | Request): string | 
   );
 }
 
+function buildAvailabilityPayload(
+  surface: TeamsAuthCallbackSurface,
+  params: {
+    tenantId: string | null;
+    status: 'disabled' | 'unavailable';
+    message: string;
+  }
+): TeamsAuthCallbackPayload {
+  return {
+    type: 'teams-auth-callback',
+    surface,
+    success: false,
+    status: params.status,
+    tenantId: params.tenantId,
+    message: params.message,
+  };
+}
+
 export async function handleTeamsAuthCallback(
   request: NextRequest | Request,
   surface: TeamsAuthCallbackSurface
 ): Promise<NextResponse> {
+  const expectedTenantId = getExpectedTenantId(request);
+  if (expectedTenantId) {
+    const availability = await getTeamsAvailability({ tenantId: expectedTenantId });
+    if (!availability.enabled) {
+      return new NextResponse(
+        renderCallbackHtml(
+          buildAvailabilityPayload(surface, {
+            tenantId: expectedTenantId,
+            status: availability.reason === 'ce_unavailable' ? 'unavailable' : 'disabled',
+            message: availability.message,
+          })
+        ),
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'no-store',
+          },
+        }
+      );
+    }
+  }
+
   const state = await resolveTeamsTabAuthState({
-    expectedTenantId: getExpectedTenantId(request),
+    expectedTenantId,
     expectedMicrosoftTenantId: getExpectedMicrosoftTenantId(request),
   });
 
   if (state.status === 'unauthenticated') {
     const requestUrl = getRequestUrl(request);
     return NextResponse.redirect(buildTeamsReauthUrl(requestUrl.origin, buildCallbackUrl(request)));
+  }
+
+  const availability = await getTeamsAvailability({
+    tenantId: state.tenantId || expectedTenantId || undefined,
+    userId: state.status === 'ready' ? state.userId : undefined,
+  });
+  if (!availability.enabled) {
+    return new NextResponse(
+      renderCallbackHtml(
+        buildAvailabilityPayload(surface, {
+          tenantId: state.tenantId || expectedTenantId || null,
+          status: availability.reason === 'ce_unavailable' ? 'unavailable' : 'disabled',
+          message: availability.message,
+        })
+      ),
+      {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'no-store',
+        },
+      }
+    );
   }
 
   const payload = buildCallbackPayload(surface, state);

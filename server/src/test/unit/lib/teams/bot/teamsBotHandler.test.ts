@@ -15,6 +15,7 @@ const {
   getTeamsIntegrationExecutionStateMock,
   executeTeamsActionMock,
   listAvailableTeamsActionsMock,
+  getTeamsRuntimeAvailabilityMock,
 } = vi.hoisted(() => ({
   resolveTeamsTenantContextMock: vi.fn(),
   resolveTeamsLinkedUserMock: vi.fn(),
@@ -24,6 +25,7 @@ const {
   getTeamsIntegrationExecutionStateMock: vi.fn(),
   executeTeamsActionMock: vi.fn(),
   listAvailableTeamsActionsMock: vi.fn(),
+  getTeamsRuntimeAvailabilityMock: vi.fn(),
 }));
 
 vi.mock('server/src/lib/teams/resolveTeamsTenantContext', () => ({
@@ -50,6 +52,10 @@ vi.mock('@alga-psa/integrations/actions/integrations/teamsActions', () => ({
 vi.mock('server/src/lib/teams/actions/teamsActionRegistry', () => ({
   executeTeamsAction: executeTeamsActionMock,
   listAvailableTeamsActions: listAvailableTeamsActionsMock,
+}));
+
+vi.mock('server/src/lib/teams/getTeamsRuntimeAvailability', () => ({
+  getTeamsRuntimeAvailability: (...args: unknown[]) => getTeamsRuntimeAvailabilityMock(...args),
 }));
 
 function buildUser(overrides: Partial<IUserWithRoles> = {}): IUserWithRoles {
@@ -122,6 +128,7 @@ describe('teamsBotHandler', () => {
       },
     });
     listAvailableTeamsActionsMock.mockResolvedValue([]);
+    getTeamsRuntimeAvailabilityMock.mockResolvedValue(null);
     createTenantKnexMock.mockResolvedValue({
       knex: Object.assign(
         vi.fn(() => ({
@@ -1106,6 +1113,32 @@ describe('teamsBotHandler', () => {
     expect(badResponse.status).toBe(400);
     await expect(badResponse.json()).resolves.toMatchObject({
       error: 'invalid_json',
+    });
+  });
+
+  it('T123/T124: request handling returns a stable disabled response when Teams runtime availability is off', async () => {
+    getTeamsRuntimeAvailabilityMock.mockResolvedValue({
+      enabled: false,
+      reason: 'flag_disabled',
+      flagKey: 'teams-integration-ui',
+      message: 'Microsoft Teams integration is disabled for this tenant.',
+    });
+
+    const response = await handleTeamsBotActivityRequest(
+      new Request('https://example.test/api/teams/bot/messages?tenantId=tenant-1', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(buildPersonalMessageActivity('help')),
+      })
+    );
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({
+      success: false,
+      error: 'Microsoft Teams integration is disabled for this tenant.',
+      reason: 'flag_disabled',
     });
   });
 });

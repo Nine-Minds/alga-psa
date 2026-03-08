@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { POST } from 'server/src/app/api/teams/quick-actions/route';
+import { POST } from '../../../../../../ee/server/src/app/api/teams/quick-actions/route';
 
 const { handleTeamsQuickActionRequestMock } = vi.hoisted(() => ({
   handleTeamsQuickActionRequestMock: vi.fn(),

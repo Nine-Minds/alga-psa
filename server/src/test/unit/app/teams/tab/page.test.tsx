@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const redirectMock = vi.fn();
 const resolveTeamsTabAuthStateMock = vi.fn();
 const resolveTeamsTabAccessStateMock = vi.fn();
+const getTeamsAvailabilityMock = vi.fn();
 const CardMock = vi.fn((props: { children?: React.ReactNode }) => null);
 
 vi.mock('next/navigation', () => ({
@@ -24,7 +25,11 @@ vi.mock('server/src/lib/teams/resolveTeamsTabAccessState', () => ({
   resolveTeamsTabAccessState: (...args: unknown[]) => resolveTeamsTabAccessStateMock(...args),
 }));
 
-const { default: TeamsTabPage } = await import('server/src/app/teams/tab/page');
+vi.mock('@alga-psa/integrations/lib/teamsAvailability', () => ({
+  getTeamsAvailability: (...args: unknown[]) => getTeamsAvailabilityMock(...args),
+}));
+
+const { default: TeamsTabPage } = await import('../../../../../../../ee/server/src/app/teams/tab/page');
 
 function collectText(node: React.ReactNode): string {
   if (node === null || node === undefined || typeof node === 'boolean') {
@@ -99,7 +104,13 @@ describe('TeamsTabPage', () => {
     vi.clearAllMocks();
     resolveTeamsTabAuthStateMock.mockReset();
     resolveTeamsTabAccessStateMock.mockReset();
+    getTeamsAvailabilityMock.mockReset();
     resolveTeamsTabAccessStateMock.mockResolvedValue({ status: 'ready' });
+    getTeamsAvailabilityMock.mockResolvedValue({
+      enabled: true,
+      reason: 'enabled',
+      flagKey: 'teams-integration-ui',
+    });
   });
 
   it('T171: redirects expired or invalid Teams tab sessions into a Teams-safe MSP reauthentication path', async () => {
@@ -121,6 +132,27 @@ describe('TeamsTabPage', () => {
     expect(redirectMock).toHaveBeenCalledWith(
       '/auth/msp/signin?callbackUrl=%2Fteams%2Ftab%3Fcontext%3D%257B%2522page%2522%253A%2522ticket%2522%252C%2522ticketId%2522%253A%252212345%2522%257D&teamsReauth=1'
     );
+  });
+
+  it('T115/T423: renders a disabled Teams shell when the tenant flag is off', async () => {
+    getTeamsAvailabilityMock.mockResolvedValue({
+      enabled: false,
+      reason: 'flag_disabled',
+      flagKey: 'teams-integration-ui',
+      message: 'Microsoft Teams integration is disabled for this tenant.',
+    });
+
+    const result = await TeamsTabPage({
+      searchParams: Promise.resolve({
+        tenantId: 'tenant-1',
+      }),
+    });
+
+    expect(redirectMock).not.toHaveBeenCalled();
+    expect(resolveTeamsTabAuthStateMock).not.toHaveBeenCalled();
+    expect((result as any)?.type).toBe(CardMock);
+    expect(collectNormalizedText(result)).toContain('Teams integration disabled');
+    expect(collectNormalizedText(result)).toContain('Microsoft Teams integration is disabled for this tenant.');
   });
 
   it('T185/T187: renders the Teams personal tab entry point at the default my-work landing destination', async () => {
