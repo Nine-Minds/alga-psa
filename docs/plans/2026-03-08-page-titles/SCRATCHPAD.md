@@ -176,3 +176,4 @@
 - (2026-03-08) T011: Batch verify: static/public pages (F103, F104) export metadata with correct titles
 - (2026-03-08) T012: Verify existing metadata compatibility: /msp/assets/[asset_id]/edit title 'Edit Asset' is a plain string (works with template)
 - (2026-03-08) T013: Verify existing metadata compatibility: /auth/verify layout title 'Verify Email' is a plain string (works with template)
+- (2026-03-08) T014: Verify existing metadata compatibility: /client-portal/client-settings layout title 'Company Settings' is a plain string (works with template)

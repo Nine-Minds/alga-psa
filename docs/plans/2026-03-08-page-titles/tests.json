@@ -194,7 +194,7 @@
   {
     "id": "T014",
     "description": "Verify existing metadata compatibility: /client-portal/client-settings layout title 'Company Settings' is a plain string (works with template)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084"
     ]
