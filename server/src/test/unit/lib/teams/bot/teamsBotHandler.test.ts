@@ -10,6 +10,8 @@ const {
   resolveTeamsTenantContextMock,
   resolveTeamsLinkedUserMock,
   getUserWithRolesMock,
+  createTenantKnexMock,
+  hasPermissionMock,
   getTeamsIntegrationExecutionStateMock,
   executeTeamsActionMock,
   listAvailableTeamsActionsMock,
@@ -17,6 +19,8 @@ const {
   resolveTeamsTenantContextMock: vi.fn(),
   resolveTeamsLinkedUserMock: vi.fn(),
   getUserWithRolesMock: vi.fn(),
+  createTenantKnexMock: vi.fn(),
+  hasPermissionMock: vi.fn(),
   getTeamsIntegrationExecutionStateMock: vi.fn(),
   executeTeamsActionMock: vi.fn(),
   listAvailableTeamsActionsMock: vi.fn(),
@@ -31,7 +35,12 @@ vi.mock('server/src/lib/teams/resolveTeamsLinkedUser', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: createTenantKnexMock,
   getUserWithRoles: getUserWithRolesMock,
+}));
+
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: hasPermissionMock,
 }));
 
 vi.mock('@alga-psa/integrations/actions/integrations/teamsActions', () => ({
@@ -51,6 +60,7 @@ function buildUser(overrides: Partial<IUserWithRoles> = {}): IUserWithRoles {
     first_name: 'Alex',
     last_name: 'Tech',
     email: 'alex@example.test',
+    username: 'alex@example.test',
     roles: [],
     permissions: [],
     ...overrides,
@@ -100,17 +110,29 @@ describe('teamsBotHandler', () => {
       matchedBy: 'provider_account_id',
     });
     getUserWithRolesMock.mockResolvedValue(buildUser());
+    hasPermissionMock.mockResolvedValue(true);
     getTeamsIntegrationExecutionStateMock.mockResolvedValue({
       selectedProfileId: 'profile-1',
       installStatus: 'active',
       enabledCapabilities: ['personal_bot', 'personal_tab', 'message_extension'],
-      allowedActions: ['assign_ticket', 'add_note'],
+      allowedActions: ['assign_ticket', 'add_note', 'reply_to_contact'],
       appId: 'teams-app-1',
       packageMetadata: {
         baseUrl: 'https://example.test',
       },
     });
     listAvailableTeamsActionsMock.mockResolvedValue([]);
+    createTenantKnexMock.mockResolvedValue({
+      knex: Object.assign(
+        vi.fn(() => ({
+          where: vi.fn().mockReturnThis(),
+          select: vi.fn().mockResolvedValue([]),
+        })),
+        {
+          from: vi.fn(),
+        }
+      ),
+    });
   });
 
   it('T255/T259: returns welcome and help responses that list the currently supported bot commands for the tenant', async () => {
@@ -126,12 +148,13 @@ describe('teamsBotHandler', () => {
     expect(welcome.attachments?.[0]?.content.title).toBe('Teams bot commands');
     expect(welcome.attachments?.[0]?.content.text).toContain('my tickets');
     expect(welcome.attachments?.[0]?.content.text).toContain('ticket <id>');
-    expect(welcome.attachments?.[0]?.content.text).toContain('assign ticket <ticket-id>');
+    expect(welcome.attachments?.[0]?.content.text).toContain('assign ticket <ticket-id> to me');
     expect(welcome.suggestedActions?.actions.map((action) => action.value)).toContain('my tickets');
 
     const help = await handleTeamsBotActivity(buildPersonalMessageActivity('help'), { tenantIdHint: 'tenant-1' });
 
-    expect(help.attachments?.[0]?.content.text).toContain('add note <ticket-id>');
+    expect(help.attachments?.[0]?.content.text).toContain('add note <ticket-id>: <note>');
+    expect(help.attachments?.[0]?.content.text).toContain('reply to contact <ticket-id>: <reply>');
     expect(help.metadata?.commandId).toBe('help');
   });
 
@@ -261,25 +284,164 @@ describe('teamsBotHandler', () => {
     );
   });
 
-  it('T264/T266: command shortcuts that need an explicit ticket reference fail safely and reuse the same entity target resolution', async () => {
-    listAvailableTeamsActionsMock.mockResolvedValue([
+  it('T280/T282/T284/T286: `assign ticket` validates missing targets and assignee lookup failures with recoverable bot responses', async () => {
+    hasPermissionMock.mockResolvedValue(false);
+
+    const missingTarget = await handleTeamsBotActivity(buildPersonalMessageActivity('assign ticket'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(missingTarget.text).toContain('Specify a ticket reference');
+
+    const lookupForbidden = await handleTeamsBotActivity(
+      buildPersonalMessageActivity('assign ticket ticket-2002 to Casey Chen'),
       {
-        actionId: 'add_note',
-        operation: 'mutation',
-        available: true,
-        targetEntityTypes: ['ticket'],
-        requiredInputs: [],
-        businessOperations: ['TicketService.addComment'],
-      },
-    ]);
+        tenantIdHint: 'tenant-1',
+      }
+    );
+
+    expect(hasPermissionMock).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1' }), 'user', 'read', expect.anything());
+    expect(lookupForbidden.text).toContain('requires PSA permission to read users');
+    expect(executeTeamsActionMock).not.toHaveBeenCalled();
+  });
+
+  it('T279/T281/T283/T285/T213: `assign ticket` resolves the ticket, resolves the assignee, executes the shared mutation, and returns Teams tab links in the result', async () => {
+    createTenantKnexMock.mockResolvedValue({
+      knex: vi.fn(() => ({
+        where: vi.fn().mockReturnThis(),
+        select: vi.fn().mockResolvedValue([
+          {
+            user_id: 'user-2',
+            username: 'casey@example.test',
+            email: 'casey@example.test',
+            first_name: 'Casey',
+            last_name: 'Chen',
+          },
+        ]),
+      })),
+    });
     executeTeamsActionMock.mockResolvedValue({
       success: true,
-      actionId: 'open_record',
+      actionId: 'assign_ticket',
       surface: 'bot',
-      operation: 'lookup',
+      operation: 'mutation',
       summary: {
-        title: 'Ticket T-2002',
-        text: 'Printer jam • Waiting on client',
+        title: 'Ticket assigned',
+        text: 'Ticket ticket-2002 was reassigned successfully.',
+      },
+      links: [
+        { type: 'teams_tab', label: 'Open in Teams tab', url: 'https://teams.test/ticket-2002' },
+        { type: 'psa', label: 'Open in full PSA', url: '/msp/tickets/ticket-2002' },
+      ],
+      items: [
+        {
+          id: 'ticket-2002',
+          title: 'Ticket T-2002',
+          summary: 'Printer jam • Waiting on client',
+          entityType: 'ticket',
+          links: [
+            { type: 'teams_tab', label: 'Open in Teams tab', url: 'https://teams.test/ticket-2002' },
+            { type: 'psa', label: 'Open in full PSA', url: '/msp/tickets/ticket-2002' },
+          ],
+        },
+      ],
+      target: {
+        entityType: 'ticket',
+        id: 'ticket-2002',
+        destination: {
+          type: 'ticket',
+          ticketId: 'ticket-2002',
+        },
+      },
+      warnings: [],
+      metadata: {
+        surface: 'bot',
+        idempotencyKey: null,
+        idempotentReplay: false,
+        invokingSurface: 'bot',
+        businessOperations: ['TicketService.getById'],
+      },
+    });
+
+    const response = await handleTeamsBotActivity(buildPersonalMessageActivity('assign ticket ticket-2002 to Casey Chen'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(executeTeamsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: 'assign_ticket',
+        input: {
+          ticketId: 'ticket-2002',
+          assigneeId: 'user-2',
+        },
+        target: {
+          entityType: 'ticket',
+          ticketId: 'ticket-2002',
+        },
+      })
+    );
+    expect(response.text).toContain('assigned to Casey Chen');
+    expect(response.attachments?.[0]?.content.buttons).toContainEqual(
+      expect.objectContaining({ type: 'openUrl', value: 'https://teams.test/ticket-2002' })
+    );
+    expect(response.attachments?.[1]?.content.buttons).toContainEqual(
+      expect.objectContaining({ type: 'openUrl', value: 'https://teams.test/ticket-2002' })
+    );
+  });
+
+  it('T214: failed bot action results fall back safely instead of returning an unusable tab handoff', async () => {
+    executeTeamsActionMock.mockResolvedValue({
+      success: false,
+      actionId: 'assign_ticket',
+      surface: 'bot',
+      operation: 'mutation',
+      error: {
+        code: 'not_found',
+        message: 'Ticket ticket-missing was not found.',
+        remediation: 'Refresh the Teams result or open the full PSA application to verify the record still exists.',
+      },
+      warnings: [],
+      metadata: {
+        surface: 'bot',
+        idempotencyKey: null,
+        idempotentReplay: false,
+        invokingSurface: 'bot',
+        businessOperations: ['TicketService.update'],
+      },
+    });
+
+    const response = await handleTeamsBotActivity(buildPersonalMessageActivity('assign ticket ticket-missing'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(response.text).toContain('not found');
+    expect(response.attachments?.[0]?.content.title).toBe('Teams bot request unavailable');
+  });
+
+  it('T288/T290: `add note` validates missing targets and missing note content with recoverable guidance', async () => {
+    const missingTarget = await handleTeamsBotActivity(buildPersonalMessageActivity('add note'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(missingTarget.text).toContain('Specify a ticket reference');
+
+    const missingNote = await handleTeamsBotActivity(buildPersonalMessageActivity('add note ticket-2002'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(missingNote.text).toContain('add note ticket-2002:');
+    expect(executeTeamsActionMock).not.toHaveBeenCalled();
+  });
+
+  it('T287/T289/T291/T292: `add note` resolves the ticket, executes the shared mutation, and returns follow-up links after success', async () => {
+    executeTeamsActionMock.mockResolvedValue({
+      success: true,
+      actionId: 'add_note',
+      surface: 'bot',
+      operation: 'mutation',
+      summary: {
+        title: 'Internal note added',
+        text: 'A new internal note was added to ticket ticket-2002.',
       },
       links: [
         { type: 'teams_tab', label: 'Open in Teams tab', url: 'https://teams.test/ticket-2002' },
@@ -300,38 +462,100 @@ describe('teamsBotHandler', () => {
         idempotencyKey: null,
         idempotentReplay: false,
         invokingSurface: 'bot',
-        businessOperations: ['TicketService.getById'],
+        businessOperations: ['TicketService.addComment'],
       },
     });
 
-    const handoff = await handleTeamsBotActivity(buildPersonalMessageActivity('add note ticket-2002'), {
-      tenantIdHint: 'tenant-1',
-    });
-
-    expect(listAvailableTeamsActionsMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        target: {
-          entityType: 'ticket',
-          ticketId: 'ticket-2002',
-        },
-      })
+    const response = await handleTeamsBotActivity(
+      buildPersonalMessageActivity('add note ticket-2002: Waiting on the vendor'),
+      {
+        tenantIdHint: 'tenant-1',
+      }
     );
+
     expect(executeTeamsActionMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        actionId: 'open_record',
-        target: {
-          entityType: 'ticket',
+        actionId: 'add_note',
+        input: {
           ticketId: 'ticket-2002',
+          note: 'Waiting on the vendor',
         },
       })
     );
-    expect(handoff.text).toContain('Open the record in Teams');
+    expect(response.text).toContain('internal note was added');
+    expect(response.attachments?.[0]?.content.buttons).toContainEqual(
+      expect.objectContaining({ type: 'openUrl', value: 'https://teams.test/ticket-2002' })
+    );
+  });
 
-    const missingTarget = await handleTeamsBotActivity(buildPersonalMessageActivity('add note'), {
+  it('T294/T296: `reply to contact` validates missing targets and missing reply content with recoverable guidance', async () => {
+    const missingTarget = await handleTeamsBotActivity(buildPersonalMessageActivity('reply to contact'), {
       tenantIdHint: 'tenant-1',
     });
 
     expect(missingTarget.text).toContain('Specify a ticket reference');
+
+    const missingReply = await handleTeamsBotActivity(buildPersonalMessageActivity('reply to contact ticket-2002'), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(missingReply.text).toContain('reply to contact ticket-2002:');
+    expect(executeTeamsActionMock).not.toHaveBeenCalled();
+  });
+
+  it('T293/T295/T297/T298: `reply to contact` resolves the ticket, executes the shared mutation, and returns follow-up links after success', async () => {
+    executeTeamsActionMock.mockResolvedValue({
+      success: true,
+      actionId: 'reply_to_contact',
+      surface: 'bot',
+      operation: 'mutation',
+      summary: {
+        title: 'Reply sent',
+        text: 'A customer-visible reply was added to ticket ticket-2002.',
+      },
+      links: [
+        { type: 'teams_tab', label: 'Open in Teams tab', url: 'https://teams.test/ticket-2002' },
+        { type: 'psa', label: 'Open in full PSA', url: '/msp/tickets/ticket-2002' },
+      ],
+      items: [],
+      target: {
+        entityType: 'ticket',
+        id: 'ticket-2002',
+        destination: {
+          type: 'ticket',
+          ticketId: 'ticket-2002',
+        },
+      },
+      warnings: [],
+      metadata: {
+        surface: 'bot',
+        idempotencyKey: null,
+        idempotentReplay: false,
+        invokingSurface: 'bot',
+        businessOperations: ['TicketService.addComment'],
+      },
+    });
+
+    const response = await handleTeamsBotActivity(
+      buildPersonalMessageActivity('reply to contact ticket-2002: I have an update for you.'),
+      {
+        tenantIdHint: 'tenant-1',
+      }
+    );
+
+    expect(executeTeamsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: 'reply_to_contact',
+        input: {
+          ticketId: 'ticket-2002',
+          reply: 'I have an update for you.',
+        },
+      })
+    );
+    expect(response.text).toContain('customer-visible reply');
+    expect(response.attachments?.[0]?.content.buttons).toContainEqual(
+      expect.objectContaining({ type: 'openUrl', value: 'https://teams.test/ticket-2002' })
+    );
   });
 
   it('T269/T271/T273: `my tickets` returns ticket summaries with action links for the signed-in technician', async () => {

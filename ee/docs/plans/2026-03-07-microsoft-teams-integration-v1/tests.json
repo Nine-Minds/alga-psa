@@ -2226,7 +2226,7 @@
   {
     "id": "T279",
     "description": "Happy path: Personal bot command `assign ticket`: supports assigning a ticket to a technician.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F140"
     ]
@@ -2234,7 +2234,7 @@
   {
     "id": "T280",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `assign ticket`: supports assigning a ticket to a technician.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F140"
     ]
@@ -2242,7 +2242,7 @@
   {
     "id": "T281",
     "description": "Happy path: Personal bot command `assign ticket`: can resolve the target ticket from command input or current bot workflow context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F141"
     ]
@@ -2250,7 +2250,7 @@
   {
     "id": "T282",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `assign ticket`: can resolve the target ticket from command input or current bot workflow context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F141"
     ]
@@ -2258,7 +2258,7 @@
   {
     "id": "T283",
     "description": "Happy path: Personal bot command `assign ticket`: can resolve the target assignee from available PSA users.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F142"
     ]
@@ -2266,7 +2266,7 @@
   {
     "id": "T284",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `assign ticket`: can resolve the target assignee from available psa users.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F142"
     ]
@@ -2274,7 +2274,7 @@
   {
     "id": "T285",
     "description": "Happy path: Personal bot command `assign ticket`: returns the updated assignment summary after success.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F143"
     ]
@@ -2282,7 +2282,7 @@
   {
     "id": "T286",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `assign ticket`: returns the updated assignment summary after success.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F143"
     ]
@@ -2290,7 +2290,7 @@
   {
     "id": "T287",
     "description": "Happy path: Personal bot command `add note`: supports appending an internal note to a target ticket.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F144"
     ]
@@ -2298,7 +2298,7 @@
   {
     "id": "T288",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `add note`: supports appending an internal note to a target ticket.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F144"
     ]
@@ -2306,7 +2306,7 @@
   {
     "id": "T289",
     "description": "Happy path: Personal bot command `add note`: can resolve the target ticket from explicit input or current workflow context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F145"
     ]
@@ -2314,7 +2314,7 @@
   {
     "id": "T290",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `add note`: can resolve the target ticket from explicit input or current workflow context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F145"
     ]
@@ -2322,7 +2322,7 @@
   {
     "id": "T291",
     "description": "Happy path: Personal bot command `add note`: returns the saved note result and deep link after success.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F146"
     ]
@@ -2330,7 +2330,7 @@
   {
     "id": "T292",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `add note`: returns the saved note result and deep link after success.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F146"
     ]
@@ -2338,7 +2338,7 @@
   {
     "id": "T293",
     "description": "Happy path: Personal bot command `reply to contact`: supports adding a customer-facing reply for a target ticket/contact context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F147"
     ]
@@ -2346,7 +2346,7 @@
   {
     "id": "T294",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `reply to contact`: supports adding a customer-facing reply for a target ticket/contact context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F147"
     ]
@@ -2354,7 +2354,7 @@
   {
     "id": "T295",
     "description": "Happy path: Personal bot command `reply to contact`: can prefill or resolve the ticket/contact context before submit.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F148"
     ]
@@ -2362,7 +2362,7 @@
   {
     "id": "T296",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `reply to contact`: can prefill or resolve the ticket/contact context before submit.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F148"
     ]
@@ -2370,7 +2370,7 @@
   {
     "id": "T297",
     "description": "Happy path: Personal bot command `reply to contact`: returns the reply result and follow-up deep link after success.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F149"
     ]
@@ -2378,7 +2378,7 @@
   {
     "id": "T298",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for personal bot command `reply to contact`: returns the reply result and follow-up deep link after success.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F149"
     ]

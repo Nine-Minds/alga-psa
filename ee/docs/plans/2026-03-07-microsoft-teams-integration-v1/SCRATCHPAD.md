@@ -249,6 +249,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) The first Teams bot transport can stay SDK-free: a Next.js route can accept Bot Framework-style activity JSON, resolve tenant/user context locally, and map shared Teams action results into simple hero-card responses without introducing `botbuilder`.
 - (2026-03-07) Bot requests need a tenant-resolution helper separate from browser SSO because webhook activities arrive without a PSA session; the tenant can be resolved from an explicit query hint first and then from the selected Teams profile's Microsoft tenant ID.
 - (2026-03-07) Bot follow-up shortcuts should be filtered through `listAvailableTeamsActions(...)` so ticket result cards only advertise tenant-enabled actions and stay aligned with central Teams capability gating.
+- (2026-03-07) The smallest useful bot mutation syntax is `assign ticket <ticket-id> to <assignee>` with `to me` as the default fallback and `add note <ticket-id>: <note>` for note entry; both shapes keep parsing deterministic without introducing multi-step bot state.
+- (2026-03-07) Resolving a non-self assignee from the bot should require `user:read` permission and only match active internal PSA users by exact user ID, email, username, or full name so Teams assignment stays tenant-scoped and predictable.
 
 ## Progress Log
 
@@ -273,4 +275,14 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Verified Teams bot foundation and lookup commands with:
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/bot/teamsBotHandler.test.ts src/app/api/teams/bot/messages/route.test.ts src/test/unit/lib/teams/actions/teamsActionRegistry.test.ts`
   - `pnpm --dir server exec tsc -p tsconfig.json --noEmit --pretty false`
-- (2026-03-07) Next unchecked feature after this slice is `F140` (Personal bot command `assign ticket`: supports assigning a ticket to a technician).
+- (2026-03-07) Verified Teams bot mutation commands with:
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/bot/teamsBotHandler.test.ts src/app/api/teams/bot/messages/route.test.ts src/test/unit/lib/teams/actions/teamsActionRegistry.test.ts`
+  - `pnpm --dir server exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-07) Next unchecked feature after this slice is `F150` (Personal bot command `log time`: supports creating a time entry against a ticket).
+
+- (2026-03-07) Completed `F140`, `F141`, `F142`, and `F143` by teaching `server/src/lib/teams/bot/teamsBotHandler.ts` to parse `assign ticket` commands, default `assign ticket <ticket-id>` to self-assignment, resolve other assignees from active internal users with explicit `user:read` gating, and return the shared action result with an assignee-specific success summary plus Teams-tab/full-PSA links.
+- (2026-03-07) Completed `F144`, `F145`, and `F146` by teaching the same bot handler to parse `add note <ticket-id>: <note>`, preserve ticket context when the note body is missing, execute the shared `add_note` Teams action, and return the saved-note confirmation with follow-up deep links.
+- (2026-03-07) Completed `F147`, `F148`, and `F149` by extending the bot handler with `reply to contact <ticket-id>: <reply>`, preserving ticket context when only the ticket reference is present, executing the shared `reply_to_contact` action, and returning the customer-reply confirmation with Teams-tab/full-PSA links.
+- (2026-03-07) Completed `T279` through `T286` with focused bot-handler tests covering assignment success, assignee lookup, missing-ticket validation, user-read permission failures during assignee resolution, and safe not-found mutation results for bot action handoff.
+- (2026-03-07) Completed `T287` through `T292` with bot-handler tests covering note-command parsing, missing-note remediation that preserves ticket context, shared `add_note` execution, and successful follow-up link rendering after note creation.
+- (2026-03-07) Completed `T293` through `T298` with bot-handler tests covering reply-command parsing, missing-reply remediation, shared `reply_to_contact` execution, and successful follow-up link rendering after a customer-visible reply is created.

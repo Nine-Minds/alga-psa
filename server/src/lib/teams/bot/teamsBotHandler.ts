@@ -1,6 +1,7 @@
-import { getUserWithRoles } from '@alga-psa/db';
+import { createTenantKnex, getUserWithRoles } from '@alga-psa/db';
 import { getTeamsIntegrationExecutionState } from '@alga-psa/integrations/actions/integrations/teamsActions';
 import { NextResponse } from 'next/server';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 import {
   executeTeamsAction,
   listAvailableTeamsActions,
@@ -68,9 +69,9 @@ type ParsedCommand =
   | { kind: 'unsupported'; text: string }
   | { kind: 'my_tickets' }
   | { kind: 'ticket'; ticketId: string }
-  | { kind: 'assign_ticket'; ticketId?: string }
-  | { kind: 'add_note'; ticketId?: string }
-  | { kind: 'reply_to_contact'; ticketId?: string }
+  | { kind: 'assign_ticket'; ticketId?: string; assignee?: string }
+  | { kind: 'add_note'; ticketId?: string; note?: string }
+  | { kind: 'reply_to_contact'; ticketId?: string; reply?: string }
   | { kind: 'log_time'; targetType?: 'ticket' | 'project_task'; targetId?: string };
 
 interface HandleTeamsBotActivityOptions {
@@ -161,19 +162,31 @@ function parseCommand(text: string): ParsedCommand {
     return { kind: 'ticket', ticketId: ticketMatch[1].trim() };
   }
 
-  const assignTicketMatch = normalized.match(/^assign ticket(?:\s+(.+))?$/i);
+  const assignTicketMatch = normalized.match(/^assign ticket(?:\s+(\S+))?(?:\s+to\s+(.+))?$/i);
   if (assignTicketMatch) {
-    return { kind: 'assign_ticket', ticketId: parseTicketCommandReference(assignTicketMatch[1]) };
+    return {
+      kind: 'assign_ticket',
+      ticketId: parseTicketCommandReference(assignTicketMatch[1]),
+      assignee: parseTicketCommandReference(assignTicketMatch[2]),
+    };
   }
 
-  const addNoteMatch = normalized.match(/^add note(?:\s+(.+))?$/i);
+  const addNoteMatch = normalized.match(/^add note(?:\s+(\S+))?(?:\s*:\s*(.+))?$/i);
   if (addNoteMatch) {
-    return { kind: 'add_note', ticketId: parseTicketCommandReference(addNoteMatch[1]) };
+    return {
+      kind: 'add_note',
+      ticketId: parseTicketCommandReference(addNoteMatch[1]),
+      note: normalizeOptionalString(addNoteMatch[2]) || undefined,
+    };
   }
 
-  const replyMatch = normalized.match(/^reply to contact(?:\s+(.+))?$/i);
+  const replyMatch = normalized.match(/^reply to contact(?:\s+(\S+))?(?:\s*:\s*(.+))?$/i);
   if (replyMatch) {
-    return { kind: 'reply_to_contact', ticketId: parseTicketCommandReference(replyMatch[1]) };
+    return {
+      kind: 'reply_to_contact',
+      ticketId: parseTicketCommandReference(replyMatch[1]),
+      reply: normalizeOptionalString(replyMatch[2]) || undefined,
+    };
   }
 
   const logTimeMatch = normalized.match(/^log time(?:\s+(ticket|task)\s+(.+))?$/i);
@@ -209,13 +222,13 @@ async function buildSupportedCommandButtons(tenantId: string): Promise<TeamsBotB
   ];
 
   if (integration.allowedActions.includes('assign_ticket')) {
-    buttons.push(buildImBackButton('Assign ticket', 'assign ticket <ticket-id>'));
+    buttons.push(buildImBackButton('Assign ticket', 'assign ticket <ticket-id> to me'));
   }
   if (integration.allowedActions.includes('add_note')) {
-    buttons.push(buildImBackButton('Add note', 'add note <ticket-id>'));
+    buttons.push(buildImBackButton('Add note', 'add note <ticket-id>: <note>'));
   }
   if (integration.allowedActions.includes('reply_to_contact')) {
-    buttons.push(buildImBackButton('Reply to contact', 'reply to contact <ticket-id>'));
+    buttons.push(buildImBackButton('Reply to contact', 'reply to contact <ticket-id>: <reply>'));
   }
   if (integration.allowedActions.includes('log_time')) {
     buttons.push(buildImBackButton('Log time', 'log time ticket <ticket-id>'));
@@ -290,6 +303,96 @@ function mapActionAvailabilityToButtons(
 
 function mapLinksToButtons(links: TeamsActionLink[]): TeamsBotButton[] {
   return links.map((link) => buildOpenUrlButton(link.label, link.url));
+}
+
+interface TeamsAssignableUserSummary {
+  user_id: string;
+  username: string | null;
+  email: string | null;
+  first_name: string | null;
+  last_name: string | null;
+}
+
+function normalizeLookupToken(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function describeAssignableUser(user: TeamsAssignableUserSummary): string {
+  const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
+  return fullName || user.email || user.username || user.user_id;
+}
+
+async function resolveTicketAssignee(params: {
+  tenantId: string;
+  user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>;
+  assigneeReference?: string;
+}): Promise<
+  | { status: 'resolved'; assigneeId: string; assigneeLabel: string }
+  | { status: 'error'; title: string; message: string }
+> {
+  const reference = normalizeOptionalString(params.assigneeReference);
+  if (!reference || ['me', 'myself', 'self'].includes(normalizeLookupToken(reference))) {
+    const fullName = [params.user.first_name, params.user.last_name].filter(Boolean).join(' ').trim();
+    return {
+      status: 'resolved',
+      assigneeId: params.user.user_id,
+      assigneeLabel: fullName || params.user.email || params.user.username || 'you',
+    };
+  }
+
+  const { knex } = await createTenantKnex(params.tenantId);
+  const canReadUsers = await hasPermission(params.user, 'user', 'read', knex);
+  if (!canReadUsers) {
+    return {
+      status: 'error',
+      title: 'Technician lookup unavailable',
+      message:
+        'Looking up another technician from Teams requires PSA permission to read users. Use “assign ticket <ticket-id> to me” or open the full PSA application.',
+    };
+  }
+
+  const rows = (await knex('users')
+    .where({
+      tenant: params.tenantId,
+      user_type: 'internal',
+      is_inactive: false,
+    })
+    .select('user_id', 'username', 'email', 'first_name', 'last_name')) as TeamsAssignableUserSummary[];
+
+  const normalizedReference = normalizeLookupToken(reference);
+  const matches = rows.filter((candidate) => {
+    const fullName = [candidate.first_name, candidate.last_name].filter(Boolean).join(' ').trim();
+    return [
+      candidate.user_id,
+      candidate.username,
+      candidate.email,
+      fullName,
+    ]
+      .filter((value): value is string => Boolean(value && value.trim()))
+      .some((value) => normalizeLookupToken(value) === normalizedReference);
+  });
+
+  if (matches.length === 0) {
+    return {
+      status: 'error',
+      title: 'Technician not found',
+      message: `No active technician matched “${reference}”. Use “me”, an email address, a user ID, or the technician’s full name.`,
+    };
+  }
+
+  if (matches.length > 1) {
+    return {
+      status: 'error',
+      title: 'Technician lookup is ambiguous',
+      message: `More than one technician matched “${reference}”. Use a user ID or email address instead.`,
+    };
+  }
+
+  return {
+    status: 'resolved',
+    assigneeId: matches[0].user_id,
+    assigneeLabel: describeAssignableUser(matches[0]),
+  };
 }
 
 async function renderActionResult(
@@ -410,6 +513,211 @@ async function buildGuidedHandoffResponse(params: {
   });
 }
 
+async function handleAssignTicketCommand(params: {
+  tenantId: string;
+  user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>;
+  metadata: TeamsBotResponseActivity['metadata'];
+  ticketId?: string;
+  assigneeReference?: string;
+}): Promise<TeamsBotResponseActivity> {
+  if (!params.ticketId) {
+    return buildMessageResponse('Specify a ticket reference, for example: assign ticket <ticket-id> to me.', {
+      attachments: [
+        buildCard('Command needs a ticket reference', 'Specify a ticket reference, for example: assign ticket <ticket-id> to me.'),
+      ],
+      metadata: {
+        ...params.metadata,
+        commandId: 'assign_ticket',
+      },
+    });
+  }
+
+  const assignee = await resolveTicketAssignee({
+    tenantId: params.tenantId,
+    user: params.user,
+    assigneeReference: params.assigneeReference,
+  });
+
+  if (assignee.status === 'error') {
+    return buildMessageResponse(assignee.message, {
+      attachments: [
+        buildCard(assignee.title, assignee.message),
+      ],
+      metadata: {
+        ...params.metadata,
+        commandId: 'assign_ticket',
+      },
+    });
+  }
+
+  const result = await executeTeamsAction({
+    actionId: 'assign_ticket',
+    surface: BOT_SURFACE,
+    tenantId: params.tenantId,
+    user: params.user,
+    target: {
+      entityType: 'ticket',
+      ticketId: params.ticketId,
+    },
+    input: {
+      ticketId: params.ticketId,
+      assigneeId: assignee.assigneeId,
+    },
+  });
+
+  if (!result.success) {
+    return renderActionResult(result, {
+      tenantId: params.tenantId,
+      user: params.user,
+      metadata: params.metadata,
+    });
+  }
+
+  return renderActionResult(
+    {
+      ...result,
+      summary: {
+        title: 'Ticket assigned',
+        text: `Ticket ${params.ticketId} was assigned to ${assignee.assigneeLabel}.`,
+      },
+    },
+    {
+      tenantId: params.tenantId,
+      user: params.user,
+      metadata: params.metadata,
+    }
+  );
+}
+
+async function handleAddNoteCommand(params: {
+  tenantId: string;
+  user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>;
+  metadata: TeamsBotResponseActivity['metadata'];
+  ticketId?: string;
+  note?: string;
+}): Promise<TeamsBotResponseActivity> {
+  if (!params.ticketId) {
+    return buildMessageResponse('Specify a ticket reference, for example: add note <ticket-id>: Waiting on the vendor.', {
+      attachments: [
+        buildCard(
+          'Command needs a ticket reference',
+          'Specify a ticket reference, for example: add note <ticket-id>: Waiting on the vendor.'
+        ),
+      ],
+      metadata: {
+        ...params.metadata,
+        commandId: 'add_note',
+      },
+    });
+  }
+
+  if (!normalizeOptionalString(params.note)) {
+    return buildMessageResponse(
+      `Add note content after the ticket reference, for example: add note ${params.ticketId}: Waiting on the vendor.`,
+      {
+        attachments: [
+          buildCard(
+            'Note content required',
+            `Ticket ${params.ticketId} is ready. Add note content after the ticket reference, for example: add note ${params.ticketId}: Waiting on the vendor.`
+          ),
+        ],
+        metadata: {
+          ...params.metadata,
+          commandId: 'add_note',
+        },
+      }
+    );
+  }
+
+  return renderActionResult(
+    await executeTeamsAction({
+      actionId: 'add_note',
+      surface: BOT_SURFACE,
+      tenantId: params.tenantId,
+      user: params.user,
+      target: {
+        entityType: 'ticket',
+        ticketId: params.ticketId,
+      },
+      input: {
+        ticketId: params.ticketId,
+        note: params.note,
+      },
+    }),
+    {
+      tenantId: params.tenantId,
+      user: params.user,
+      metadata: params.metadata,
+    }
+  );
+}
+
+async function handleReplyToContactCommand(params: {
+  tenantId: string;
+  user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>;
+  metadata: TeamsBotResponseActivity['metadata'];
+  ticketId?: string;
+  reply?: string;
+}): Promise<TeamsBotResponseActivity> {
+  if (!params.ticketId) {
+    return buildMessageResponse(
+      'Specify a ticket reference, for example: reply to contact <ticket-id>: I have an update for you.',
+      {
+        attachments: [
+          buildCard(
+            'Command needs a ticket reference',
+            'Specify a ticket reference, for example: reply to contact <ticket-id>: I have an update for you.'
+          ),
+        ],
+        metadata: {
+          ...params.metadata,
+          commandId: 'reply_to_contact',
+        },
+      }
+    );
+  }
+
+  if (!normalizeOptionalString(params.reply)) {
+    return buildMessageResponse(
+      `Add reply content after the ticket reference, for example: reply to contact ${params.ticketId}: I have an update for you.`,
+      {
+        attachments: [
+          buildCard(
+            'Reply content required',
+            `Ticket ${params.ticketId} is ready. Add reply content after the ticket reference, for example: reply to contact ${params.ticketId}: I have an update for you.`
+          ),
+        ],
+        metadata: {
+          ...params.metadata,
+          commandId: 'reply_to_contact',
+        },
+      }
+    );
+  }
+
+  return renderActionResult(
+    await executeTeamsAction({
+      actionId: 'reply_to_contact',
+      surface: BOT_SURFACE,
+      tenantId: params.tenantId,
+      user: params.user,
+      target: {
+        entityType: 'ticket',
+        ticketId: params.ticketId,
+      },
+      input: {
+        ticketId: params.ticketId,
+        reply: params.reply,
+      },
+    }),
+    {
+      tenantId: params.tenantId,
+      user: params.user,
+      metadata: params.metadata,
+    }
+  );
+}
+
 export async function handleTeamsBotActivity(
   activity: TeamsBotActivity,
   options: HandleTeamsBotActivityOptions = {}
@@ -527,31 +835,28 @@ export async function handleTeamsBotActivity(
         }
       );
     case 'assign_ticket':
-      return buildGuidedHandoffResponse({
-        actionId: 'assign_ticket',
+      return handleAssignTicketCommand({
         tenantId: tenantContext.tenantId,
         user,
         metadata,
-        target: parsed.ticketId ? { entityType: 'ticket', ticketId: parsed.ticketId } : undefined,
-        missingTargetMessage: 'Specify a ticket reference, for example: assign ticket <ticket-id>.',
+        ticketId: parsed.ticketId,
+        assigneeReference: parsed.assignee,
       });
     case 'add_note':
-      return buildGuidedHandoffResponse({
-        actionId: 'add_note',
+      return handleAddNoteCommand({
         tenantId: tenantContext.tenantId,
         user,
         metadata,
-        target: parsed.ticketId ? { entityType: 'ticket', ticketId: parsed.ticketId } : undefined,
-        missingTargetMessage: 'Specify a ticket reference, for example: add note <ticket-id>.',
+        ticketId: parsed.ticketId,
+        note: parsed.note,
       });
     case 'reply_to_contact':
-      return buildGuidedHandoffResponse({
-        actionId: 'reply_to_contact',
+      return handleReplyToContactCommand({
         tenantId: tenantContext.tenantId,
         user,
         metadata,
-        target: parsed.ticketId ? { entityType: 'ticket', ticketId: parsed.ticketId } : undefined,
-        missingTargetMessage: 'Specify a ticket reference, for example: reply to contact <ticket-id>.',
+        ticketId: parsed.ticketId,
+        reply: parsed.reply,
       });
     case 'log_time': {
       const target =

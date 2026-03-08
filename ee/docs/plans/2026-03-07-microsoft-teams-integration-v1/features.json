@@ -1318,7 +1318,7 @@
   {
     "id": "F140",
     "description": "Personal bot command `assign ticket`: supports assigning a ticket to a technician.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1328,7 +1328,7 @@
   {
     "id": "F141",
     "description": "Personal bot command `assign ticket`: can resolve the target ticket from command input or current bot workflow context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1338,7 +1338,7 @@
   {
     "id": "F142",
     "description": "Personal bot command `assign ticket`: can resolve the target assignee from available PSA users.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1348,7 +1348,7 @@
   {
     "id": "F143",
     "description": "Personal bot command `assign ticket`: returns the updated assignment summary after success.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1358,7 +1358,7 @@
   {
     "id": "F144",
     "description": "Personal bot command `add note`: supports appending an internal note to a target ticket.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1368,7 +1368,7 @@
   {
     "id": "F145",
     "description": "Personal bot command `add note`: can resolve the target ticket from explicit input or current workflow context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1378,7 +1378,7 @@
   {
     "id": "F146",
     "description": "Personal bot command `add note`: returns the saved note result and deep link after success.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1388,7 +1388,7 @@
   {
     "id": "F147",
     "description": "Personal bot command `reply to contact`: supports adding a customer-facing reply for a target ticket/contact context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1398,7 +1398,7 @@
   {
     "id": "F148",
     "description": "Personal bot command `reply to contact`: can prefill or resolve the ticket/contact context before submit.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1408,7 +1408,7 @@
   {
     "id": "F149",
     "description": "Personal bot command `reply to contact`: returns the reply result and follow-up deep link after success.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
