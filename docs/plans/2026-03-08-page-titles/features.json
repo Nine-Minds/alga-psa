@@ -698,7 +698,7 @@
   {
     "id": "F088",
     "description": "Client Portal page title: /client-portal/projects/[projectId] — title: 'Project Details' (generateMetadata)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3c"
     ]

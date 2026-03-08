@@ -135,3 +135,4 @@
 - (2026-03-08) F085: Client Portal page title: /client-portal/tickets — title: 'Tickets'
 - (2026-03-08) F086: Client Portal page title: /client-portal/tickets/[ticketId] — title: 'Ticket Details' (generateMetadata)
 - (2026-03-08) F087: Client Portal page title: /client-portal/projects — title: 'Projects'
+- (2026-03-08) F088: Client Portal page title: /client-portal/projects/[projectId] — title: 'Project Details' (generateMetadata)
