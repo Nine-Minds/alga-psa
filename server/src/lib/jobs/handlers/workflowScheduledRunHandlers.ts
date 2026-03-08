@@ -68,10 +68,23 @@ async function runScheduledWorkflow(
       executionKey: `${expectedTriggerType}-${schedule.id}-${Date.now()}`
     });
 
+    const successState = schedule.trigger_type === 'schedule'
+      ? {
+          enabled: false,
+          status: 'completed' as const,
+          job_id: null,
+          runner_schedule_id: null,
+          next_fire_at: null
+        }
+      : {
+          status: schedule.status
+        };
+
     await WorkflowScheduleStateModel.update(knex, schedule.id, {
       last_fire_at: payload.firedAt,
       last_run_status: 'success',
-      last_error: null
+      last_error: null,
+      ...successState
     });
   } catch (error) {
     await WorkflowScheduleStateModel.update(knex, schedule.id, {

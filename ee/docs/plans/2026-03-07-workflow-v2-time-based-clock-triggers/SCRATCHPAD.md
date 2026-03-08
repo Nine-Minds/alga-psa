@@ -31,6 +31,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-07) `IJobRunner` supports both one-time scheduled execution and recurring scheduled execution. This is the correct reuse seam for workflow time triggers.
 - (2026-03-07) The legacy `JobScheduler` is not a safe base for real cron semantics because it coarsens cron-ish input to a delayed interval path.
 - (2026-03-07) Current workflow list/filter code still contains trigger-type heuristics that infer “scheduled” from event-name strings. That should be removed once real trigger types exist.
+- (2026-03-07) Importing the broad `server/src/lib/jobs` barrel from workflow runtime code drags in unrelated handlers; for scheduling lifecycle code, the safer seam is `server/src/lib/jobs/JobRunnerFactory` so action/import paths do not depend on optional job-handler modules.
 - (2026-03-07) Direct `trigger.eventName` and `trigger.sourcePayloadSchemaRef` access already exists in shared bundling, runtime actions, and run-studio UI; widening the trigger union requires explicit event-trigger narrowing at those call sites.
 - (2026-03-07) `payload_schema_mode` is persisted on the workflow definition record, not on publish input. That means publish must explicitly reject time-trigger definitions if an older draft is still marked `inferred`.
 - (2026-03-07) Local Workflow V2 integration tests in this worktree could not use the usual DB-backed harness because PostgreSQL was unavailable on `localhost:5438`; a mock-backed unit suite was a better fit for publish-path validation coverage.
@@ -65,6 +66,8 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-07) Validate scheduling lifecycle and launcher wiring:
   - `cd server && pnpm vitest run src/test/unit/workflowTimeTriggerSchedulingLifecycle.unit.test.ts src/test/unit/workflowScheduledRunHandlers.unit.test.ts src/test/unit/workflowEventLauncherRouting.unit.test.ts --config vitest.config.ts`
   - `cd ee/server && npm run typecheck`
+- (2026-03-07) Attempt event-trigger regression validation after launcher extraction:
+  - `cd server && pnpm vitest run src/test/integration/workflowRuntimeV2.eventTrigger.integration.test.ts --coverage.enabled=false --config vitest.config.ts`
 
 ## Progress Log
 
@@ -99,8 +102,14 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
   - Added `server/src/lib/workflow-runtime-v2/workflowRunLauncher.ts` as the shared published-workflow launcher, then routed both `submitWorkflowEventAction` and `WorkflowRuntimeV2EventStreamWorker` through it.
   - Added `server/src/lib/jobs/handlers/workflowScheduledRunHandlers.ts` and registered EE-only one-time/recurring schedule handlers in `server/src/lib/jobs/registerAllHandlers.ts`.
   - Publishing, pausing, deleting, and re-publishing time-triggered workflows now synchronize schedule registration state from `packages/workflows/src/actions/workflow-runtime-v2-actions.ts`.
+  - Narrowed workflow schedule lifecycle imports to `server/src/lib/jobs/JobRunnerFactory` so the new scheduler path does not pull the entire jobs barrel during action imports.
   - Added unit coverage in `server/src/test/unit/workflowTimeTriggerSchedulingLifecycle.unit.test.ts`, `server/src/test/unit/workflowScheduledRunHandlers.unit.test.ts`, and `server/src/test/unit/workflowEventLauncherRouting.unit.test.ts` for launcher wiring, fixed payload contract emission, schedule registration calls, pause/delete/change-away cleanup, and one-time/recurring reschedule replacement.
   - Left T022-T024 false because this checkpoint still lacks DB-backed integration coverage that exercises real `tenant_workflow_schedule` rows against a migrated test database; current coverage is action/handler-focused unit coverage.
+  - Left T046 false because the targeted event-trigger integration suite could not run in this local environment: PostgreSQL was unavailable on `127.0.0.1:5438`/`::1:5438`, so the suite skipped its tests during setup and failed before exercising the regression path.
+- (2026-03-07) Completed F024 and T035/T037/T038.
+  - One-time schedule handler success now marks `tenant_workflow_schedule` rows `completed`, clears runner handles, disables the schedule, and nulls `next_fire_at`.
+  - Re-delivery after a successful one-time fire now short-circuits on the existing `enabled/status` guard, so later ticks do not launch another run.
+  - Re-ran `cd server && pnpm vitest run src/test/unit/workflowScheduledRunHandlers.unit.test.ts src/test/unit/workflowEventLauncherRouting.unit.test.ts src/test/unit/workflowTimeTriggerSchedulingLifecycle.unit.test.ts --coverage.enabled=false --config vitest.config.ts`.
 
 ## Links / References
 

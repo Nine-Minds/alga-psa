@@ -55,7 +55,7 @@ describe('Workflow scheduled run handlers', () => {
     updateScheduleState.mockReset();
   });
 
-  it('T008/T026: one-time handler launches through the shared launcher with the fixed clock payload contract', async () => {
+  it('T008/T026/T035/T037/T038: one-time handler launches once, emits the fixed clock payload contract, and marks the schedule completed', async () => {
     scheduleRecord = {
       id: 'schedule-1',
       tenant_id: 'tenant-1',
@@ -70,6 +70,12 @@ describe('Workflow scheduled run handlers', () => {
     };
 
     await workflowOneTimeScheduledRunHandler('job-1', {
+      tenantId: 'tenant-1',
+      workflowId: 'workflow-1',
+      scheduleId: 'schedule-1'
+    });
+
+    await workflowOneTimeScheduledRunHandler('job-1-retry', {
       tenantId: 'tenant-1',
       workflowId: 'workflow-1',
       scheduleId: 'schedule-1'
@@ -98,10 +104,21 @@ describe('Workflow scheduled run handlers', () => {
     expect(updateScheduleState).toHaveBeenCalledWith(
       'schedule-1',
       expect.objectContaining({
+        enabled: false,
+        status: 'completed',
+        job_id: null,
+        runner_schedule_id: null,
+        next_fire_at: null,
         last_run_status: 'success',
         last_error: null
       })
     );
+    expect(scheduleRecord).toMatchObject({
+      enabled: false,
+      status: 'completed',
+      job_id: null,
+      runner_schedule_id: null
+    });
   });
 
   it('T027: recurring handler launches through the shared launcher with recurring clock metadata', async () => {

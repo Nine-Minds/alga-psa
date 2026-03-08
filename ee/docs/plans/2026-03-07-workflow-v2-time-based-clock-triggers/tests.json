@@ -206,7 +206,7 @@
   {
     "id": "T035",
     "description": "Fire semantics: one-time schedule fire starts exactly one workflow run",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018", "F024"]
   },
   {
@@ -218,13 +218,13 @@
   {
     "id": "T037",
     "description": "State: one-time workflow schedule is marked completed after a successful fire",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {
     "id": "T038",
     "description": "State: completed one-time schedule does not refire on later worker ticks",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {

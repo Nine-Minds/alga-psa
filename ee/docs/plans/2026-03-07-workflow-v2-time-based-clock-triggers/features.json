@@ -140,7 +140,7 @@
   {
     "id": "F024",
     "description": "Ensure one-time schedules fire at most once and transition to a completed state after firing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
