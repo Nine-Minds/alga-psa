@@ -115,3 +115,4 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - 2026-03-08 T001: Verified the add button and separator render when `onAddNew` is present.
 - 2026-03-08 T002: Verified the add button stays hidden when `onAddNew` is omitted.
 - 2026-03-08 T003: Verified the add button keeps the requested utility classes and renders a `Plus` icon.
+- 2026-03-08 T004: Verified clicking the add button calls the consumer callback exactly once.
