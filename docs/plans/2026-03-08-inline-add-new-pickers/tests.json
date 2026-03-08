@@ -186,7 +186,7 @@
   {
     "id": "T024",
     "description": "ContractBasicsStep: clicking '+ Add new client' opens QuickAddClient and auto-selects new client",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
