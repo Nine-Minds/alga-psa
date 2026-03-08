@@ -330,7 +330,7 @@
   {
     "id": "F042",
     "description": "MSP page title: /msp/surveys/analytics — title: 'Survey Analytics'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
