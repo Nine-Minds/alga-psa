@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -34,14 +34,14 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import {
-  getArticles,
   archiveArticle,
   IKBArticleWithDocument,
-  IArticleFilters,
   ArticleStatus,
   ArticleAudience,
   ArticleType,
 } from '../../actions/kbArticleActions';
+import { TagManager } from '@alga-psa/tags/components';
+import type { ITag } from '@alga-psa/types';
 
 const STATUS_COLORS: Record<ArticleStatus, string> = {
   draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
@@ -77,7 +77,16 @@ const TYPE_LABELS: Record<ArticleType, string> = {
 };
 
 interface KBArticleListProps {
-  filters?: IArticleFilters;
+  articles: IKBArticleWithDocument[];
+  total: number;
+  totalPages: number;
+  articleTags: Record<string, ITag[]>;
+  currentPage: number;
+  pageSize: number;
+  isLoading: boolean;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
+  onRefresh: () => void;
   onEdit?: (article: IKBArticleWithDocument) => void;
   onCreateNew?: () => void;
   onSubmitForReview?: (article: IKBArticleWithDocument) => void;
@@ -85,58 +94,44 @@ interface KBArticleListProps {
 }
 
 export default function KBArticleList({
-  filters = {},
+  articles,
+  total,
+  totalPages,
+  articleTags: initialArticleTags,
+  currentPage,
+  pageSize,
+  isLoading,
+  onPageChange,
+  onPageSizeChange,
+  onRefresh,
   onEdit,
   onCreateNew,
   onSubmitForReview,
   onPublish,
 }: KBArticleListProps) {
   const { t } = useTranslation('features/documents');
-  const tRef = useRef(t);
-  tRef.current = t;
 
-  const [articles, setArticles] = useState<IKBArticleWithDocument[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedArticles, setSelectedArticles] = useState<Set<string>>(new Set());
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+
+  // Local tags ref for optimistic updates from TagManager
+  const articleTagsRef = useRef<Record<string, ITag[]>>(initialArticleTags);
+  const [tagsVersion, setTagsVersion] = useState(0);
+
+  // Sync ref when parent data changes
+  React.useEffect(() => {
+    articleTagsRef.current = initialArticleTags;
+    setTagsVersion((v) => v + 1);
+  }, [initialArticleTags]);
 
   // Archive confirmation dialog state
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [articleToArchive, setArticleToArchive] = useState<IKBArticleWithDocument | null>(null);
   const [isArchiving, setIsArchiving] = useState(false);
 
-  const loadArticles = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const result = await getArticles(currentPage, pageSize, filters);
-      if ('code' in result && result.code === 'PERMISSION_DENIED') {
-        toast.error(tRef.current('kb.permissionDenied', 'Permission denied'));
-        setArticles([]);
-        return;
-      }
-      const data = result as { articles: IKBArticleWithDocument[]; total: number; totalPages: number };
-      setArticles(data.articles);
-      setTotal(data.total);
-      setTotalPages(data.totalPages);
-    } catch (error) {
-      handleError(error, tRef.current('kb.loadError', 'Failed to load articles'));
-      setArticles([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentPage, pageSize, filters]);
-
-  useEffect(() => {
-    loadArticles();
-  }, [loadArticles]);
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filters]);
+  const handleTagsChange = useCallback((articleId: string, tags: ITag[]) => {
+    articleTagsRef.current[articleId] = tags;
+    setTagsVersion((v) => v + 1);
+  }, []);
 
   const handleArchive = async () => {
     if (!articleToArchive) return;
@@ -149,7 +144,7 @@ export default function KBArticleList({
         return;
       }
       toast.success(t('kb.archiveSuccess', 'Article archived'));
-      await loadArticles();
+      onRefresh();
     } catch (error) {
       handleError(error, t('kb.archiveError', 'Failed to archive article'));
     } finally {
@@ -243,6 +238,7 @@ export default function KBArticleList({
                 <TableHead>{t('kb.type', 'Type')}</TableHead>
                 <TableHead>{t('kb.audience', 'Audience')}</TableHead>
                 <TableHead>{t('kb.status', 'Status')}</TableHead>
+                <TableHead>{t('kb.tags', 'Tags')}</TableHead>
                 <TableHead>{t('kb.stats', 'Stats')}</TableHead>
                 <TableHead>{t('kb.updated', 'Updated')}</TableHead>
                 <TableHead className="w-16">{t('kb.actions', 'Actions')}</TableHead>
@@ -287,6 +283,14 @@ export default function KBArticleList({
                     <Badge className={STATUS_COLORS[article.status]}>
                       {STATUS_LABELS[article.status]}
                     </Badge>
+                  </TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
+                    <TagManager
+                      entityId={article.article_id}
+                      entityType="knowledge_base_article"
+                      initialTags={articleTagsRef.current[article.article_id] || []}
+                      onTagsChange={(tags) => handleTagsChange(article.article_id, tags)}
+                    />
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3 text-sm text-muted-foreground">
@@ -358,10 +362,9 @@ export default function KBArticleList({
         currentPage={currentPage}
         totalItems={total}
         itemsPerPage={pageSize}
-        onPageChange={setCurrentPage}
+        onPageChange={onPageChange}
         onItemsPerPageChange={(size) => {
-          setPageSize(size);
-          setCurrentPage(1);
+          onPageSizeChange(size);
         }}
         itemsPerPageOptions={[
           { value: '10', label: '10 items/page' },

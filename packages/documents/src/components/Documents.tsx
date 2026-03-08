@@ -19,6 +19,7 @@ import { CollaborativeEditor } from './CollaborativeEditor';
 import FolderTreeView from './FolderTreeView';
 import FolderManager from './FolderManager';
 import DocumentListView from './DocumentListView';
+import ShareLinkDialog from './ShareLinkDialog';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import FolderSelectorModal from './FolderSelectorModal';
 import { Plus, Link, FileText, Edit3, Download, Grid, List as ListIcon, FolderPlus, ChevronRight, X, FolderInput, Trash2 } from 'lucide-react';
@@ -152,6 +153,7 @@ const Documents = ({
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
   const [visibilityUpdatingIds, setVisibilityUpdatingIds] = useState<Set<string>>(new Set());
   const [isClientUserContext, setIsClientUserContext] = useState(false);
+  const [shareDialogDocument, setShareDialogDocument] = useState<IDocument | null>(null);
 
   // Determine if we're in folder mode (no entity specified) early
   // This affects whether we need user preferences
@@ -275,11 +277,16 @@ const Documents = ({
     };
   }, []);
 
-  // Sync currentFolder with URL changes (for breadcrumb navigation)
+  // Sync currentFolder with URL changes (for breadcrumb/back-forward navigation)
+  const prevSearchParamsRef = useRef(searchParams?.get('folder') ?? null);
   useEffect(() => {
     if (!entityId && !entityType) {
-      const folderParam = searchParams?.get('folder') ?? null;
-      setCurrentFolder(folderParam || null);
+      const folderParam = searchParams?.get('folder') || null;
+      // Only sync when the URL actually changed (avoids loop with handleFolderSelect)
+      if (folderParam !== prevSearchParamsRef.current) {
+        prevSearchParamsRef.current = folderParam;
+        setCurrentFolder(folderParam);
+      }
     }
   }, [searchParams, entityId, entityType]);
 
@@ -475,6 +482,7 @@ const Documents = ({
 
     // Update URL to persist folder selection
     if (inFolderMode) {
+      prevSearchParamsRef.current = folderPath;
       const params = new URLSearchParams(searchParams?.toString() ?? '');
       if (folderPath) {
         params.set('folder', folderPath);
@@ -1133,6 +1141,10 @@ const Documents = ({
     }
   };
 
+  const handleShareDocument = useCallback((doc: IDocument) => {
+    setShareDialogDocument(doc);
+  }, []);
+
   // Render document cards - let React handle the re-renders with memo
   const renderDocumentCards = () => {
     return documentsToDisplay.map((document) => {
@@ -1151,6 +1163,7 @@ const Documents = ({
             showVisibilityControls={showVisibilityControls}
             onToggleVisibility={handleToggleDocumentVisibility}
             isVisibilityUpdating={visibilityUpdatingIds.has(document.document_id)}
+            onShare={handleShareDocument}
             forceRefresh={editedDocumentId === document.document_id ? refreshTimestamp : undefined}
             onClick={getOrCreateClickHandler(document)}
             isContentDocument={!document.file_id}
@@ -1548,6 +1561,8 @@ const Documents = ({
                       showVisibilityControls={showVisibilityControls}
                       onToggleVisibility={handleToggleDocumentVisibility}
                       visibilityUpdatingIds={visibilityUpdatingIds}
+                      showShareControls
+                      onShare={handleShareDocument}
                     />
                   ) : (
                     documentsToDisplay.length > 0 ? (
@@ -1697,6 +1712,15 @@ const Documents = ({
           confirmLabel="Discard changes"
           cancelLabel="Continue editing"
         />
+
+        {shareDialogDocument && (
+          <ShareLinkDialog
+            isOpen={true}
+            onClose={() => setShareDialogDocument(null)}
+            documentId={shareDialogDocument.document_id}
+            documentName={shareDialogDocument.document_name}
+          />
+        )}
         </div>
       </ReflectionContainer>
     );
@@ -1935,6 +1959,15 @@ const Documents = ({
           cancelLabel="Continue editing"
         />
       </div>
+
+      {shareDialogDocument && (
+        <ShareLinkDialog
+          isOpen={true}
+          onClose={() => setShareDialogDocument(null)}
+          documentId={shareDialogDocument.document_id}
+          documentName={shareDialogDocument.document_name}
+        />
+      )}
     </ReflectionContainer>
   );
 };

@@ -25,7 +25,8 @@ import {
     Eye,
     X,
     Play,
-    FolderInput
+    FolderInput,
+    Share2
 } from 'lucide-react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
@@ -237,6 +238,7 @@ export interface DocumentStorageCardProps {
     showVisibilityControls?: boolean;
     onToggleVisibility?: (document: IDocument, nextValue: boolean) => void | Promise<void>;
     isVisibilityUpdating?: boolean;
+    onShare?: (document: IDocument) => void;
     onClick?: () => void;
     isContentDocument?: boolean;
     forceRefresh?: number; // Timestamp to trigger preview refresh
@@ -294,6 +296,7 @@ function DocumentStorageCardComponent({
     showVisibilityControls = false,
     onToggleVisibility,
     isVisibilityUpdating = false,
+    onShare,
     onClick,
     isContentDocument = false,
     forceRefresh
@@ -758,6 +761,22 @@ function DocumentStorageCardComponent({
                             <Download className="w-4 h-4 mr-2" />
                             {t('documents.download', 'Download')}
                         </Button>
+                        {onShare && (
+                            <Button
+                                id={`share-document-${document.document_id}-button`}
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onShare(document);
+                                }}
+                                disabled={isLoading}
+                                className="text-[rgb(var(--color-text-600))] hover:text-blue-600 hover:bg-blue-500/10 inline-flex items-center"
+                            >
+                                <Share2 className="w-4 h-4 mr-2" />
+                                {t('documents.share', 'Share')}
+                            </Button>
+                        )}
                         {showDisassociate && onDisassociate && (
                             <Button
                                 id={`disassociate-document-${document.document_id}-button`}
@@ -926,6 +945,7 @@ const DocumentStorageCard = memo(DocumentStorageCardComponent, (prevProps, nextP
         prevProps.showDisassociate === nextProps.showDisassociate &&
         prevProps.showMove === nextProps.showMove &&
         prevProps.isContentDocument === nextProps.isContentDocument &&
+        prevProps.onShare === nextProps.onShare &&
         prevProps.showVisibilityControls === nextProps.showVisibilityControls &&
         prevProps.onToggleVisibility === nextProps.onToggleVisibility &&
         prevProps.isVisibilityUpdating === nextProps.isVisibilityUpdating &&

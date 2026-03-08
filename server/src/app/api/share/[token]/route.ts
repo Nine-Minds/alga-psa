@@ -6,7 +6,7 @@ import {
   verifySharePassword,
   logShareAccess,
   incrementDownloadCount,
-} from '@alga-psa/documents/actions';
+} from '@alga-psa/documents/lib/shareLinkPublic';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 
 /**

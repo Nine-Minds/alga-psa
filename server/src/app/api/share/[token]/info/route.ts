@@ -3,7 +3,7 @@ import { getConnection } from '@/lib/db/db';
 import {
   validateShareToken,
   logShareAccess,
-} from '@alga-psa/documents/actions';
+} from '@alga-psa/documents/lib/shareLinkPublic';
 
 /**
  * GET /api/share/[token]/info
@@ -33,6 +33,7 @@ export async function GET(
     const validation = await validateShareToken(token);
 
     if (!validation.valid || !validation.share) {
+      console.error(`[share/info] Token validation failed: ${validation.error}`);
       await logShareAccess(
         'unknown',
         'unknown',
@@ -53,14 +54,24 @@ export async function GET(
 
     const share = validation.share;
 
-    // Get additional file info
+    // Get additional file info (if document has a file)
     const knex = await getConnection();
-    const fileRecord = await knex('external_files')
-      .where({ file_id: share.file_id, tenant: share.tenant, is_deleted: false })
-      .first();
+    let mimeType = 'application/octet-stream';
+    let fileSize = 0;
 
-    if (!fileRecord) {
-      return NextResponse.json({ error: 'File not found' }, { status: 404 });
+    if (share.file_id) {
+      const fileRecord = await knex('external_files')
+        .where({ file_id: share.file_id, tenant: share.tenant, is_deleted: false })
+        .first();
+
+      if (!fileRecord) {
+        return NextResponse.json({ error: 'File not found' }, { status: 404 });
+      }
+      mimeType = fileRecord.mime_type || mimeType;
+      fileSize = fileRecord.file_size || 0;
+    } else {
+      // Content-only document (BlockNote editor)
+      mimeType = 'text/html';
     }
 
     // Log the info access
@@ -78,15 +89,14 @@ export async function GET(
     // Return metadata (without sensitive fields)
     return NextResponse.json({
       documentName: share.document_name,
-      mimeType: fileRecord.mime_type,
-      fileSize: fileRecord.file_size,
+      mimeType,
+      fileSize,
       shareType: share.share_type,
       requiresPassword: share.share_type === 'password',
       requiresAuth: share.share_type === 'portal_authenticated',
       expiresAt: share.expires_at,
       maxDownloads: share.max_downloads,
       downloadCount: share.download_count,
-      // Don't expose: token, password_hash, internal IDs
     });
   } catch (error) {
     console.error(`Error getting share info for ${token}:`, error);

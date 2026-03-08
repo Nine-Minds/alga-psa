@@ -5,12 +5,11 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
 } from '@alga-psa/ui/components/Dialog';
@@ -67,7 +66,7 @@ export default function ShareLinkDialog({
   const [shareType, setShareType] = useState<ShareType>('public');
   const [password, setPassword] = useState('');
   const [hasExpiry, setHasExpiry] = useState(false);
-  const [expiryDate, setExpiryDate] = useState('');
+  const [expiryDate, setExpiryDate] = useState<Date | undefined>(undefined);
   const [hasMaxDownloads, setHasMaxDownloads] = useState(false);
   const [maxDownloads, setMaxDownloads] = useState('10');
 
@@ -95,7 +94,7 @@ export default function ShareLinkDialog({
     setShareType('public');
     setPassword('');
     setHasExpiry(false);
-    setExpiryDate('');
+    setExpiryDate(undefined);
     setHasMaxDownloads(false);
     setMaxDownloads('10');
     setShowCreateForm(false);
@@ -113,7 +112,7 @@ export default function ShareLinkDialog({
         documentId,
         shareType,
         password: shareType === 'password' ? password : undefined,
-        expiresAt: hasExpiry && expiryDate ? new Date(expiryDate) : undefined,
+        expiresAt: hasExpiry && expiryDate ? expiryDate : undefined,
         maxDownloads: hasMaxDownloads ? parseInt(maxDownloads, 10) : undefined,
       };
 
@@ -186,19 +185,11 @@ export default function ShareLinkDialog({
   };
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose}>
+    <Dialog isOpen={isOpen} onClose={onClose} title="Share Link">
       <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            <div className="flex items-center gap-2">
-              <Link2 className="w-5 h-5" />
-              Share Link
-            </div>
-          </DialogTitle>
-          <DialogDescription>
-            Create and manage share links for "{documentName}"
-          </DialogDescription>
-        </DialogHeader>
+        <DialogDescription>
+          Create and manage share links for &ldquo;{documentName}&rdquo;
+        </DialogDescription>
 
         <div className="space-y-4 py-4">
           {/* Existing Links */}
@@ -308,10 +299,13 @@ export default function ShareLinkDialog({
                   </div>
 
                   {hasExpiry && (
-                    <Input
-                      type="datetime-local"
+                    <DateTimePicker
+                      id="share-link-expiry"
                       value={expiryDate}
-                      onChange={(e) => setExpiryDate(e.target.value)}
+                      onChange={setExpiryDate}
+                      clearable
+                      minDate={new Date()}
+                      placeholder="Select expiration date"
                     />
                   )}
 

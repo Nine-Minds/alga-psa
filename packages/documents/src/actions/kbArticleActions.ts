@@ -6,7 +6,7 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { IDocument } from '@alga-psa/types';
+import type { IDocument, ITag } from '@alga-psa/types';
 
 export type ArticleType = 'how_to' | 'faq' | 'troubleshooting' | 'reference';
 export type ArticleAudience = 'internal' | 'client' | 'public';
@@ -696,6 +696,211 @@ export const getArticles = withAuth(
       articles: articles as IKBArticleWithDocument[],
       total,
       totalPages: Math.ceil(total / effectivePageSize),
+    };
+  }
+);
+
+/**
+ * Finds documents in /Knowledge Base that have no corresponding kb_articles
+ * record and creates one for each, so they appear in the KB article list.
+ */
+async function reconcileOrphanedKBDocuments(
+  knex: Knex,
+  tenant: string,
+  userId: string
+): Promise<void> {
+  const orphaned = await knex('documents as d')
+    .leftJoin('kb_articles as ka', function () {
+      this.on('ka.document_id', '=', 'd.document_id').andOn('ka.tenant', '=', 'd.tenant');
+    })
+    .where('d.tenant', tenant)
+    .where('d.folder_path', '/Knowledge Base')
+    .whereNull('ka.article_id')
+    .select('d.document_id', 'd.document_name');
+
+  if (orphaned.length === 0) return;
+
+  // Collect existing slugs to avoid collisions
+  const existingSlugs = await knex('kb_articles')
+    .where('tenant', tenant)
+    .select('slug');
+  const slugSet = new Set(existingSlugs.map((r: { slug: string }) => r.slug));
+
+  const records = orphaned.map((doc: { document_id: string; document_name: string }) => {
+    let slug = generateSlug(doc.document_name || 'untitled');
+    while (slugSet.has(slug)) {
+      slug = `${slug}-${randomUUID().slice(0, 8)}`;
+    }
+    slugSet.add(slug);
+
+    return {
+      tenant,
+      article_id: randomUUID(),
+      document_id: doc.document_id,
+      slug,
+      article_type: 'how_to' as ArticleType,
+      audience: 'internal' as ArticleAudience,
+      status: 'draft' as ArticleStatus,
+      created_by: userId,
+      updated_by: userId,
+    };
+  });
+
+  await knex('kb_articles').insert(records);
+}
+
+/**
+ * Consolidated action: returns paginated articles, their tags, and available
+ * filter tags in a single server round-trip. Also reconciles any documents
+ * in /Knowledge Base that are missing a kb_articles record.
+ */
+export const getArticlesWithTags = withAuth(
+  async (
+    user,
+    { tenant },
+    page: number = 1,
+    pageSize: number = 20,
+    filters: IArticleFilters = {}
+  ): Promise<{
+    articles: IKBArticleWithDocument[];
+    total: number;
+    totalPages: number;
+    articleTags: Record<string, ITag[]>;
+    availableTags: ITag[];
+  } | ActionPermissionError> => {
+    const effectivePageSize = Math.min(Math.max(pageSize, 1), 100);
+    const { knex } = await createTenantKnex();
+
+    if (!(await hasPermission(user, 'document', 'read'))) {
+      return permissionError('Permission denied');
+    }
+
+    // Auto-create kb_articles for orphaned /Knowledge Base documents
+    await reconcileOrphanedKBDocuments(knex, tenant, user.user_id);
+
+    // --- articles query (same logic as getArticles) ---
+    let query = knex('kb_articles as ka')
+      .select([
+        ...KB_ARTICLE_SELECT_COLUMNS.map((col) => `ka.${col}`),
+        'd.document_name',
+      ])
+      .leftJoin('documents as d', function () {
+        this.on('d.document_id', '=', 'ka.document_id').andOn('d.tenant', '=', 'ka.tenant');
+      })
+      .where('ka.tenant', tenant);
+
+    if (filters.status) {
+      query = query.andWhere('ka.status', filters.status);
+    }
+    if (filters.audience) {
+      query = query.andWhere('ka.audience', filters.audience);
+    }
+    if (filters.articleType) {
+      query = query.andWhere('ka.article_type', filters.articleType);
+    }
+    if (filters.categoryId) {
+      query = query.andWhere('ka.category_id', filters.categoryId);
+    }
+    if (filters.search) {
+      query = query.andWhere(function () {
+        this.whereILike('d.document_name', `%${filters.search}%`)
+          .orWhereILike('ka.slug', `%${filters.search}%`);
+      });
+    }
+    if (filters.tagIds && filters.tagIds.length > 0) {
+      query = query.whereExists(function () {
+        this.select(knex.raw('1'))
+          .from('tag_mappings as tm')
+          .whereRaw('tm.tagged_id = ka.article_id')
+          .whereRaw('tm.tenant = ka.tenant')
+          .where('tm.tagged_type', 'knowledge_base_article')
+          .whereIn('tm.tag_id', filters.tagIds as string[]);
+      });
+    }
+    if (filters.tags && filters.tags.length > 0) {
+      query = query.whereIn('ka.article_id', function () {
+        this.select('tm.tagged_id')
+          .from('tag_mappings as tm')
+          .join('tag_definitions as td', function () {
+            this.on('tm.tenant', '=', 'td.tenant').andOn('tm.tag_id', '=', 'td.tag_id');
+          })
+          .where('tm.tagged_type', 'knowledge_base_article')
+          .whereRaw('tm.tenant = ka.tenant')
+          .whereIn('td.tag_text', filters.tags as string[]);
+      });
+    }
+
+    const countResult = await query.clone().clearSelect().count('* as count').first();
+    const total = parseInt((countResult as any)?.count || '0', 10);
+
+    const offset = (page - 1) * effectivePageSize;
+    const articles = (await query
+      .orderBy('ka.updated_at', 'desc')
+      .limit(effectivePageSize)
+      .offset(offset)) as IKBArticleWithDocument[];
+
+    // --- tags for the current page of articles ---
+    const articleIds = articles.map((a) => a.article_id);
+    const articleTags: Record<string, ITag[]> = {};
+
+    if (articleIds.length > 0) {
+      const tagRows = await knex('tag_mappings as tm')
+        .join('tag_definitions as td', function () {
+          this.on('tm.tenant', '=', 'td.tenant').andOn('tm.tag_id', '=', 'td.tag_id');
+        })
+        .where('tm.tenant', tenant)
+        .where('tm.tagged_type', 'knowledge_base_article')
+        .whereIn('tm.tagged_id', articleIds)
+        .select(
+          'tm.mapping_id as tag_id',
+          'td.board_id',
+          'td.tag_text',
+          'tm.tagged_id',
+          'tm.tagged_type',
+          'td.background_color',
+          'td.text_color',
+          'tm.tenant'
+        );
+
+      for (const tag of tagRows) {
+        if (!articleTags[tag.tagged_id]) {
+          articleTags[tag.tagged_id] = [];
+        }
+        articleTags[tag.tagged_id].push(tag as unknown as ITag);
+      }
+    }
+
+    // --- available tags for filter sidebar ---
+    const availableTagsResult = await knex.raw(
+      `SELECT DISTINCT ON (td.tag_text) td.*
+       FROM tag_definitions td
+       WHERE td.tenant = ?
+         AND td.tagged_type = 'knowledge_base_article'
+         AND EXISTS (
+           SELECT 1 FROM tag_mappings tm
+           WHERE tm.tenant = td.tenant AND tm.tag_id = td.tag_id
+         )
+       ORDER BY td.tag_text ASC, td.created_at ASC`,
+      [tenant]
+    );
+
+    const availableTags: ITag[] = (availableTagsResult.rows || []).map((def: any) => ({
+      tag_id: def.tag_id,
+      tenant,
+      board_id: def.board_id || undefined,
+      tag_text: def.tag_text,
+      tagged_id: '',
+      tagged_type: def.tagged_type,
+      background_color: def.background_color,
+      text_color: def.text_color,
+    }));
+
+    return {
+      articles,
+      total,
+      totalPages: Math.ceil(total / effectivePageSize),
+      articleTags,
+      availableTags,
     };
   }
 );

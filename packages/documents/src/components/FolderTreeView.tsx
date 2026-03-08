@@ -44,11 +44,11 @@ export default function FolderTreeView({
       }
       setFolderTree(tree);
     } catch (error) {
-      handleError(error, t('documents.folders.loadFailed', 'Failed to load folder tree'));
+      handleError(error, 'Failed to load folder tree');
     } finally {
       setLoading(false);
     }
-  }, [entityId, entityType, t]);
+  }, [entityId, entityType]);
 
   useEffect(() => {
     loadFolderTree();
