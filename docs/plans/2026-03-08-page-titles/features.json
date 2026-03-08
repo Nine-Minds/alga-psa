@@ -18,7 +18,7 @@
   {
     "id": "F003",
     "description": "Client Portal layout: add metadata export with `template: '%s | Client Portal'` and `default: 'Dashboard | Client Portal'`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 2"
     ]
