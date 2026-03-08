@@ -1,0 +1,84 @@
+{
+  "name": "Alga PSA - Create then Update Assignment",
+  "nodes": [
+    {
+      "parameters": {
+        "resource": "ticket",
+        "ticketOperation": "create",
+        "title": "Example Ticket from n8n",
+        "client_id": {
+          "mode": "id",
+          "value": "00000000-0000-0000-0000-000000000001"
+        },
+        "board_id": {
+          "mode": "id",
+          "value": "00000000-0000-0000-0000-000000000002"
+        },
+        "status_id": {
+          "mode": "id",
+          "value": "00000000-0000-0000-0000-000000000003"
+        },
+        "priority_id": {
+          "mode": "id",
+          "value": "00000000-0000-0000-0000-000000000004"
+        },
+        "createAdditionalFields": {
+          "tags": "n8n,automation"
+        }
+      },
+      "id": "6f84fce8-9ab5-4a68-a2f4-cf7bb84222d1",
+      "name": "Create Ticket",
+      "type": "n8n-nodes-alga-psa.algaPsa",
+      "typeVersion": 1,
+      "position": [
+        320,
+        300
+      ],
+      "credentials": {
+        "algaPsaApi": {
+          "id": "1",
+          "name": "Alga PSA API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "ticket",
+        "ticketOperation": "updateAssignment",
+        "ticketId": "={{$json.ticket_id}}",
+        "assignmentAction": "assign",
+        "assigned_to": "00000000-0000-0000-0000-000000000010"
+      },
+      "id": "d8af09dd-9cb3-4103-a6ea-bf734a0e9f4a",
+      "name": "Update Assignment",
+      "type": "n8n-nodes-alga-psa.algaPsa",
+      "typeVersion": 1,
+      "position": [
+        620,
+        300
+      ],
+      "credentials": {
+        "algaPsaApi": {
+          "id": "1",
+          "name": "Alga PSA API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Create Ticket": {
+      "main": [
+        [
+          {
+            "node": "Update Assignment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "d2dc8358-e404-4410-a1f4-6ca65223b2dc"
+}
