@@ -115,3 +115,4 @@
 - (2026-03-08) F065: MSP page title: /msp/extensions/[id]/debug — title: 'Extension Debug' (generateMetadata)
 - (2026-03-08) F066: MSP page title: /msp/licenses/purchase — title: 'Purchase Licenses'
 - (2026-03-08) F067: MSP page title: /msp/licenses/purchase/success — title: 'Purchase Success'
+- (2026-03-08) F068: MSP page title: /msp/reports — title: 'Reports'

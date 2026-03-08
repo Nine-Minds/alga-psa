@@ -538,7 +538,7 @@
   {
     "id": "F068",
     "description": "MSP page title: /msp/reports — title: 'Reports'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
