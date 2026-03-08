@@ -162,7 +162,7 @@
   {
     "id": "F021",
     "description": "MSP page title: /msp/projects/templates/[templateId] — title: 'Template Details' (generateMetadata)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3c"
     ]
