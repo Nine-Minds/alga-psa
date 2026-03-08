@@ -29,6 +29,7 @@ import {
     getMspSsoSigningSecret,
     parseAndVerifyMspSsoResolutionCookie,
 } from "./sso/mspSsoResolution";
+import { resolveTeamsMicrosoftProviderConfig } from "./sso/teamsMicrosoftProviderResolution";
 import {
     buildClearedPendingRememberContextCookie,
     buildClearedRememberedEmailCookie,
@@ -885,7 +886,12 @@ async function ensureOAuthAccountLink(
 }
 
 // Helper function to get OAuth secrets from secret provider with env fallback
-async function getOAuthSecrets() {
+interface BuildAuthOptionsContext {
+    teamsTenantId?: string;
+    teamsMicrosoftOnly?: boolean;
+}
+
+async function getOAuthSecrets(context?: BuildAuthOptionsContext) {
     const { getSecretProviderInstance } = await import('@alga-psa/core/secrets');
     const secretProvider = await getSecretProviderInstance();
 
@@ -925,6 +931,26 @@ async function getOAuthSecrets() {
         microsoftTenantId: microsoftTenantId || process.env.MICROSOFT_OAUTH_TENANT_ID || '',
         microsoftAuthority: microsoftAuthority || process.env.MICROSOFT_OAUTH_AUTHORITY || '',
     };
+
+    if (context?.teamsMicrosoftOnly) {
+        resolved.googleClientId = '';
+        resolved.googleClientSecret = '';
+    }
+
+    if (context?.teamsTenantId) {
+        const teamsMicrosoft = await resolveTeamsMicrosoftProviderConfig(context.teamsTenantId);
+        if (teamsMicrosoft.status === 'ready') {
+            resolved.microsoftClientId = teamsMicrosoft.clientId || '';
+            resolved.microsoftClientSecret = teamsMicrosoft.clientSecret || '';
+            resolved.microsoftTenantId = teamsMicrosoft.microsoftTenantId || 'common';
+        } else {
+            resolved.microsoftClientId = '';
+            resolved.microsoftClientSecret = '';
+            resolved.microsoftTenantId = '';
+        }
+
+        return resolved;
+    }
 
     try {
         const signingSecret = await getMspSsoSigningSecret();
@@ -976,9 +1002,9 @@ async function getOAuthSecrets() {
 }
 
 // Build NextAuth options dynamically with secrets
-export async function buildAuthOptions(): Promise<NextAuthConfig> {
+export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promise<NextAuthConfig> {
     await ensureEnterpriseSsoRegistryInitialized();
-    const secrets = await getOAuthSecrets();
+    const secrets = await getOAuthSecrets(context);
     const nextAuthSecret = await getNextAuthSecret();
 
     return {
@@ -1710,6 +1736,13 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
 // For backward compatibility, create a cached instance
 export async function getAuthOptions(): Promise<NextAuthConfig> {
     return buildAuthOptions();
+}
+
+export async function buildTeamsAuthOptions(tenantId: string): Promise<NextAuthConfig> {
+    return buildAuthOptions({
+        teamsTenantId: tenantId,
+        teamsMicrosoftOnly: true,
+    });
 }
 
 // Synchronous fallback that uses environment variables

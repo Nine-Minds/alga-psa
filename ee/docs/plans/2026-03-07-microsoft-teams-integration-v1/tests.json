@@ -1186,7 +1186,7 @@
   {
     "id": "T149",
     "description": "Happy path: Teams identity: Teams authentication uses the tenant-selected Microsoft profile instead of an unrelated global Microsoft credential path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F075"
     ]
@@ -1194,7 +1194,7 @@
   {
     "id": "T150",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: teams authentication uses the tenant-selected microsoft profile instead of an unrelated global microsoft credential path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F075"
     ]

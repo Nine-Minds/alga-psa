@@ -43,6 +43,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Rebinding Teams to a different Microsoft profile must clear persisted package metadata and reset non-`not_configured` install state back to `install_pending` so stale package/install assumptions do not survive profile swaps.
 - (2026-03-07) The Teams setup UI now has a package handoff card that only enables generation for saved/non-`not_configured` setups, which avoids generating install artifacts from unsaved or invalid profile selections.
 - (2026-03-07) Teams manifest generation and future action/notification deep links now share the same `TEAMS_PERSONAL_TAB_ENTITY_ID` and Teams tab deep-link builder, which reduces drift between package declarations and runtime navigation targets.
+- (2026-03-07) `packages/auth/src/lib/nextAuthOptions.ts` now exposes a Teams-specific `buildTeamsAuthOptions(tenantId)` entry point that resolves Microsoft credentials from the tenant-selected Teams profile and intentionally bypasses generic app/global Microsoft fallback for that surface.
 - (2026-03-07) Existing Microsoft consumers still read the legacy tenant-secret keys directly. Introducing profiles without default-secret mirroring would break Outlook email, Outlook calendar, and MSP SSO compatibility.
 - (2026-03-07) `packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.tsx` already gives the right long-term home for Microsoft profile management: `Integrations -> Providers`, not a new top-level settings tab.
 - (2026-03-07) The backend compatibility guard is sufficient for `F015`/`T029-T030`: archiving the default profile is blocked until another profile is made default, which preserves the active compatibility binding.
@@ -108,6 +109,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Completed `T145` and `T146` with UI contract coverage for successful package handoff generation/download and recoverable package-generation failures.
 - (2026-03-07) Completed `F074` by adding shared Teams personal-tab deep-link builders and template targets in `packages/integrations/src/actions/integrations/teamsPackageActions.ts`, keeping package declarations aligned with future notification/action destinations.
 - (2026-03-07) Completed `T147` and `T148` with package-action tests covering deep-link template generation and prerequisite guard behavior.
+- (2026-03-07) Completed `F075` by adding `packages/auth/src/lib/sso/teamsMicrosoftProviderResolution.ts` and wiring `buildTeamsAuthOptions(tenantId)` in `packages/auth/src/lib/nextAuthOptions.ts` so Teams-specific auth can use the selected Teams Microsoft profile instead of broad fallback credentials.
+- (2026-03-07) Completed `T149` and `T150` with focused resolver tests plus a NextAuth contract test covering the Teams-specific auth-options entry point.
   - `server/migrations/20260307120000_create_microsoft_profiles.cjs`
   - `server/migrations/20260307143000_create_microsoft_profile_consumer_bindings.cjs`
   - `server/migrations/20260307153000_create_teams_integrations.cjs`

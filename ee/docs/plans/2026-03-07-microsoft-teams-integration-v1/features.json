@@ -668,7 +668,7 @@
   {
     "id": "F075",
     "description": "Teams identity: Teams authentication uses the tenant-selected Microsoft profile instead of an unrelated global Microsoft credential path.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Security / Permissions",

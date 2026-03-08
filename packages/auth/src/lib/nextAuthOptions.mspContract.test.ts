@@ -51,4 +51,13 @@ describe('NextAuth MSP SSO contract', () => {
     expect(source).toContain("issuer: `https://login.microsoftonline.com/${secrets.microsoftTenantId || 'common'}/v2.0`");
     expect(source).toContain("issuer: `https://login.microsoftonline.com/${process.env.MICROSOFT_OAUTH_TENANT_ID || 'common'}/v2.0`");
   });
+
+  it('T149/T150: Teams auth can build request-scoped Microsoft-only auth options from the tenant-selected Teams profile', () => {
+    expect(source).toContain('import { resolveTeamsMicrosoftProviderConfig } from "./sso/teamsMicrosoftProviderResolution";');
+    expect(source).toContain('if (context?.teamsTenantId) {');
+    expect(source).toContain('const teamsMicrosoft = await resolveTeamsMicrosoftProviderConfig(context.teamsTenantId);');
+    expect(source).toContain('export async function buildTeamsAuthOptions(tenantId: string): Promise<NextAuthConfig> {');
+    expect(source).toContain('teamsTenantId: tenantId');
+    expect(source).toContain('teamsMicrosoftOnly: true');
+  });
 });
