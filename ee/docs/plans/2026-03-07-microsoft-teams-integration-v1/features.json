@@ -1870,7 +1870,7 @@
   {
     "id": "F197",
     "description": "Quick actions: a shared adaptive-card/dialog submission path exists for Teams quick actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1880,7 +1880,7 @@
   {
     "id": "F198",
     "description": "Quick actions: assign-ticket cards/dialogs collect the minimum required assignee and note inputs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1890,7 +1890,7 @@
   {
     "id": "F199",
     "description": "Quick actions: add-note cards/dialogs collect the minimum required note inputs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1900,7 +1900,7 @@
   {
     "id": "F200",
     "description": "Quick actions: reply-to-contact cards/dialogs collect the minimum required reply inputs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1910,7 +1910,7 @@
   {
     "id": "F201",
     "description": "Quick actions: log-time cards/dialogs collect the minimum required time-entry inputs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1920,7 +1920,7 @@
   {
     "id": "F202",
     "description": "Quick actions: approval cards/dialogs collect approval outcome and optional comment inputs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1930,7 +1930,7 @@
   {
     "id": "F203",
     "description": "Quick actions: forms can prefill fields from the invoking entity or Teams message context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1940,7 +1940,7 @@
   {
     "id": "F204",
     "description": "Quick actions: forms validate required fields before submission.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1950,7 +1950,7 @@
   {
     "id": "F205",
     "description": "Quick actions: forms submit through the shared Teams action layer.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1960,7 +1960,7 @@
   {
     "id": "F206",
     "description": "Quick actions: forms return success confirmations in Teams after submit.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1970,7 +1970,7 @@
   {
     "id": "F207",
     "description": "Quick actions: forms return recoverable validation or state errors in Teams after submit.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1980,7 +1980,7 @@
   {
     "id": "F208",
     "description": "Quick actions: forms support cancel/dismiss without side effects.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1990,7 +1990,7 @@
   {
     "id": "F209",
     "description": "Quick actions: users only see quick actions they are allowed to perform.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -2000,7 +2000,7 @@
   {
     "id": "F210",
     "description": "Quick actions: the UI can redirect the user into the tab when the action exceeds quick-action complexity limits.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",

@@ -3138,7 +3138,7 @@
   {
     "id": "T393",
     "description": "Happy path: Quick actions: a shared adaptive-card/dialog submission path exists for Teams quick actions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F197"
     ]
@@ -3146,7 +3146,7 @@
   {
     "id": "T394",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: a shared adaptive-card/dialog submission path exists for teams quick actions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F197"
     ]
@@ -3154,7 +3154,7 @@
   {
     "id": "T395",
     "description": "Happy path: Quick actions: assign-ticket cards/dialogs collect the minimum required assignee and note inputs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F198"
     ]
@@ -3162,7 +3162,7 @@
   {
     "id": "T396",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: assign-ticket cards/dialogs collect the minimum required assignee and note inputs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F198"
     ]
@@ -3170,7 +3170,7 @@
   {
     "id": "T397",
     "description": "Happy path: Quick actions: add-note cards/dialogs collect the minimum required note inputs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F199"
     ]
@@ -3178,7 +3178,7 @@
   {
     "id": "T398",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: add-note cards/dialogs collect the minimum required note inputs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F199"
     ]
@@ -3186,7 +3186,7 @@
   {
     "id": "T399",
     "description": "Happy path: Quick actions: reply-to-contact cards/dialogs collect the minimum required reply inputs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F200"
     ]
@@ -3194,7 +3194,7 @@
   {
     "id": "T400",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: reply-to-contact cards/dialogs collect the minimum required reply inputs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F200"
     ]
@@ -3202,7 +3202,7 @@
   {
     "id": "T401",
     "description": "Happy path: Quick actions: log-time cards/dialogs collect the minimum required time-entry inputs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F201"
     ]
@@ -3210,7 +3210,7 @@
   {
     "id": "T402",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: log-time cards/dialogs collect the minimum required time-entry inputs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F201"
     ]
@@ -3218,7 +3218,7 @@
   {
     "id": "T403",
     "description": "Happy path: Quick actions: approval cards/dialogs collect approval outcome and optional comment inputs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F202"
     ]
@@ -3226,7 +3226,7 @@
   {
     "id": "T404",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: approval cards/dialogs collect approval outcome and optional comment inputs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F202"
     ]
@@ -3234,7 +3234,7 @@
   {
     "id": "T405",
     "description": "Happy path: Quick actions: forms can prefill fields from the invoking entity or Teams message context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F203"
     ]
@@ -3242,7 +3242,7 @@
   {
     "id": "T406",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: forms can prefill fields from the invoking entity or teams message context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F203"
     ]
@@ -3250,7 +3250,7 @@
   {
     "id": "T407",
     "description": "Happy path: Quick actions: forms validate required fields before submission.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F204"
     ]
@@ -3258,7 +3258,7 @@
   {
     "id": "T408",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: forms validate required fields before submission.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F204"
     ]
@@ -3266,7 +3266,7 @@
   {
     "id": "T409",
     "description": "Happy path: Quick actions: forms submit through the shared Teams action layer.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F205"
     ]
@@ -3274,7 +3274,7 @@
   {
     "id": "T410",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: forms submit through the shared teams action layer.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F205"
     ]
@@ -3282,7 +3282,7 @@
   {
     "id": "T411",
     "description": "Happy path: Quick actions: forms return success confirmations in Teams after submit.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F206"
     ]
@@ -3290,7 +3290,7 @@
   {
     "id": "T412",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: forms return success confirmations in teams after submit.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F206"
     ]
@@ -3298,7 +3298,7 @@
   {
     "id": "T413",
     "description": "Happy path: Quick actions: forms return recoverable validation or state errors in Teams after submit.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F207"
     ]
@@ -3306,7 +3306,7 @@
   {
     "id": "T414",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: forms return recoverable validation or state errors in teams after submit.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F207"
     ]
@@ -3314,7 +3314,7 @@
   {
     "id": "T415",
     "description": "Happy path: Quick actions: forms support cancel/dismiss without side effects.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F208"
     ]
@@ -3322,7 +3322,7 @@
   {
     "id": "T416",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: forms support cancel/dismiss without side effects.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F208"
     ]
@@ -3330,7 +3330,7 @@
   {
     "id": "T417",
     "description": "Happy path: Quick actions: users only see quick actions they are allowed to perform.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F209"
     ]
@@ -3338,7 +3338,7 @@
   {
     "id": "T418",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: users only see quick actions they are allowed to perform.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F209"
     ]
@@ -3346,7 +3346,7 @@
   {
     "id": "T419",
     "description": "Happy path: Quick actions: the UI can redirect the user into the tab when the action exceeds quick-action complexity limits.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F210"
     ]
@@ -3354,7 +3354,7 @@
   {
     "id": "T420",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for quick actions: the ui can redirect the user into the tab when the action exceeds quick-action complexity limits.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F210"
     ]
