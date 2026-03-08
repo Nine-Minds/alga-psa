@@ -106,7 +106,7 @@
   {
     "id": "F014",
     "description": "MSP page title: /msp/contacts — title: 'Contacts'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
