@@ -204,3 +204,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd packages/clients && npx vitest run --config vitest.config.ts src/components/clients/BillingConfigForm.quick-add-contact.contract.test.ts`
 - 2026-03-08 T016: Added `server/src/components/settings/general/UserManagement.quick-add-contact.contract.test.ts` to preserve the invite-contact wiring that opens `QuickAddContact`, forwards `newUser.clientId`, and hydrates the new-user form from the created contact.
 - Validation: `cd server && npx vitest run --config vitest.config.ts --coverage.enabled false src/components/settings/general/UserManagement.quick-add-contact.contract.test.ts`
+- 2026-03-08 T017: Added `server/src/components/settings/integrations/EntraReconciliationQueue.quick-add-contact.contract.test.ts` to preserve the EE reconciliation queue wiring that opens `QuickAddContact`, forwards the mapped client context, and assigns the created contact back to the queued item.
+- Validation: `cd server && npx vitest run --config vitest.config.ts --coverage.enabled false src/components/settings/integrations/EntraReconciliationQueue.quick-add-contact.contract.test.ts`
