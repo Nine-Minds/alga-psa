@@ -250,3 +250,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd packages/ui && npx vitest run --config vitest.config.ts src/components/TreeSelect.contract.test.ts -t T038`
 - 2026-03-08 T039: Extended `TreeSelect.contract.test.ts` to assert the add-new UI stays fully gated behind the optional `onAddNew` prop and its default `addNewLabel`.
 - Validation: `cd packages/ui && npx vitest run --config vitest.config.ts src/components/TreeSelect.contract.test.ts -t T039`
+- 2026-03-08 T040: Added `packages/tickets/src/components/CategoryPicker.contract.test.ts` to lock the `CategoryPicker` passthrough wiring into `TreeSelect`, including the category-specific add-new label.
+- Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/CategoryPicker.contract.test.ts -t T040`

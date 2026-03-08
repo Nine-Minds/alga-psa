@@ -315,7 +315,7 @@
   {
     "id": "T040",
     "description": "CategoryPicker passes onAddNew prop through to TreeSelect",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
