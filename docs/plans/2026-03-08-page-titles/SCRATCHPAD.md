@@ -93,3 +93,4 @@
 - (2026-03-08) F043: MSP page title: /msp/surveys/responses — title: 'Survey Responses'
 - (2026-03-08) F044: MSP page title: /msp/surveys/responses/[id] — title: 'Response Details' (generateMetadata)
 - (2026-03-08) F045: MSP page title: /msp/surveys/settings — title: 'Survey Settings'
+- (2026-03-08) F046: MSP page title: /msp/workflow-editor — title: 'Workflow Editor'
