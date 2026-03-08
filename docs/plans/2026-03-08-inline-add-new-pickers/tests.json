@@ -299,7 +299,7 @@
   {
     "id": "T038",
     "description": "TreeSelect renders '+ Add new' button with separator when onAddNew prop is provided",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]

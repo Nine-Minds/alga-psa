@@ -246,3 +246,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/settings/__tests__/CategoriesSettings.contract.test.ts -t T036`
 - 2026-03-08 T037: Extended `CategoriesSettings.contract.test.ts` to preserve edit-flow parity, asserting the inline edit dialog remains, `updateCategory` is still called for edits, and categories refresh after update.
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/settings/__tests__/CategoriesSettings.contract.test.ts -t T037`
+- 2026-03-08 T038: Added `packages/ui/src/components/TreeSelect.contract.test.ts` to lock the new add-new UI block in `TreeSelect`, including the separator, `Plus` icon, and configurable label.
+- Validation: `cd packages/ui && npx vitest run --config vitest.config.ts src/components/TreeSelect.contract.test.ts -t T038`
