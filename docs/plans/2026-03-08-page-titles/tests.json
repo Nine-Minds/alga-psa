@@ -138,7 +138,7 @@
   {
     "id": "T009",
     "description": "Batch verify: all dynamic Client Portal pages (F080, F082, F083, F086, F088) export generateMetadata with correct title",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080",
       "F082",
