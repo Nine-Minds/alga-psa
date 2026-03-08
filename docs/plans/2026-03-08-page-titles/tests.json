@@ -178,7 +178,7 @@
   {
     "id": "T012",
     "description": "Verify existing metadata compatibility: /msp/assets/[asset_id]/edit title 'Edit Asset' is a plain string (works with template)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
