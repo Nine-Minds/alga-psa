@@ -620,4 +620,79 @@ describe('TransformsWorkspace', () => {
     const ast = exportWorkspaceToInvoiceTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
     expect(ast.transforms?.outputBindingId).toBe('lineItems.sorted');
   });
+
+  it('keeps the output binding input focused while typing before blur commits to store', async () => {
+    act(() => {
+      useInvoiceDesignerStore.getState().setTransforms({
+        sourceBindingId: 'lineItems',
+        outputBindingId: 'lineItems.grouped',
+        operations: [
+          {
+            id: 'aggregate-total',
+            type: 'aggregate',
+            aggregations: [{ id: 'sumTotal', op: 'sum', path: 'total' }],
+          },
+        ],
+      });
+    });
+
+    renderTransformsWorkspace();
+
+    const outputInput =
+      screen
+        .getAllByPlaceholderText('items.transformed')
+        .find((element) => element.tagName === 'INPUT') as HTMLInputElement | undefined;
+    expect(outputInput).toBeTruthy();
+    if (!outputInput) {
+      return;
+    }
+
+    outputInput.focus();
+    expect(document.activeElement).toBe(outputInput);
+
+    fireEvent.change(outputInput, { target: { value: 'lineItems.grouped.v2' } });
+    expect(document.activeElement).toBe(outputInput);
+    expect(useInvoiceDesignerStore.getState().transforms.outputBindingId).toBe('lineItems.grouped');
+
+    fireEvent.change(outputInput, { target: { value: 'lineItems.grouped.v3' } });
+    expect(document.activeElement).toBe(outputInput);
+
+    fireEvent.blur(outputInput);
+
+    await waitFor(() =>
+      expect(useInvoiceDesignerStore.getState().transforms.outputBindingId).toBe('lineItems.grouped.v3')
+    );
+  });
+
+  it('keeps aggregate output ID focused while typing', async () => {
+    act(() => {
+      useInvoiceDesignerStore.getState().setTransforms({
+        sourceBindingId: 'lineItems',
+        outputBindingId: 'lineItems.grouped',
+        operations: [
+          {
+            id: 'aggregate-focus',
+            type: 'aggregate',
+            aggregations: [{ id: 'sumTotal', op: 'sum', path: 'total' }],
+          },
+        ],
+      });
+    });
+
+    renderTransformsWorkspace();
+
+    const aggregateIdInput = (await screen.findByDisplayValue('sumTotal')) as HTMLInputElement | null;
+    expect(aggregateIdInput).toBeTruthy();
+    if (!aggregateIdInput) return;
+
+    aggregateIdInput.focus();
+    expect(document.activeElement).toBe(aggregateIdInput);
+
+    fireEvent.change(aggregateIdInput, { target: { value: 'sumTotalNext' } });
+
+    const currentInput = screen.getByDisplayValue('sumTotalNext') as HTMLInputElement | null;
+    expect(currentInput).toBeTruthy();
+    expect(currentInput?.value).toBe('sumTotalNext');
+    expect(document.activeElement).toBe(currentInput);
+  });
 });

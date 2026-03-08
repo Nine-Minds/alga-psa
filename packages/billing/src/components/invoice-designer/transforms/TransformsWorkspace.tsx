@@ -267,6 +267,7 @@ const TransformsWorkspace: React.FC<Props> = ({
   const transforms = useInvoiceDesignerStore((state) => state.transforms);
   const setTransforms = useInvoiceDesignerStore((state) => state.setTransforms);
   const [selectedOperationId, setSelectedOperationId] = useState<string | null>(null);
+  const [outputBindingDraft, setOutputBindingDraft] = useState('');
 
   const workspaceSnapshot = useMemo(
     () => ({
@@ -368,6 +369,10 @@ const TransformsWorkspace: React.FC<Props> = ({
     () => transforms.operations.find((operation) => operation.id === selectedOperationId) ?? null,
     [selectedOperationId, transforms.operations]
   );
+
+  useEffect(() => {
+    setOutputBindingDraft(transforms.outputBindingId);
+  }, [transforms.outputBindingId]);
 
   useEffect(() => {
     if (transforms.operations.length === 0) {
@@ -841,7 +846,7 @@ const TransformsWorkspace: React.FC<Props> = ({
       return (
         <div className="space-y-3">
           {aggregations.map((aggregation, index) => (
-            <div key={`${selectedOperation.id}-${aggregation.id}-${index}`} className="rounded-md border border-slate-200 bg-slate-50 p-3 space-y-2">
+            <div key={`${selectedOperation.id}-${index}`} className="rounded-md border border-slate-200 bg-slate-50 p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold text-slate-600">Aggregation {index + 1}</p>
                 <Button
@@ -1065,20 +1070,12 @@ const TransformsWorkspace: React.FC<Props> = ({
             </label>
             <Input
               id="invoice-designer-transforms-output-binding"
-              value={transforms.outputBindingId}
-              onChange={(event) =>
-                updateTransforms(
-                  (current) => ({
-                    ...current,
-                    outputBindingId: event.target.value,
-                  }),
-                  false
-                )
-              }
-              onBlur={(event) =>
+              value={outputBindingDraft}
+              onChange={(event) => setOutputBindingDraft(event.target.value)}
+              onBlur={() =>
                 updateTransforms((current) => ({
                   ...current,
-                  outputBindingId: event.target.value.trim(),
+                  outputBindingId: outputBindingDraft.trim(),
                 }))
               }
               placeholder="items.transformed"
