@@ -58,7 +58,7 @@
   {
     "id": "T008",
     "description": "QuickAddTicket: after creating contact via QuickAddContact, new contact is added to contacts list and auto-selected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]

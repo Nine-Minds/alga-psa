@@ -186,3 +186,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddTicketPrefill.test.tsx -t "T00[678]"`
 - 2026-03-08 T007: The same focused `QuickAddTicketPrefill` coverage now asserts that `QuickAddContact` receives `client-1` as `selectedClientId` when the add-new contact dialog opens.
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddTicketPrefill.test.tsx -t "T00[678]"`
+- 2026-03-08 T008: `QuickAddTicketPrefill.test.tsx` now verifies the full happy path: creating a contact through the mocked `QuickAddContact` appends it to local picker state and selects `contact-new` automatically.
+- Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddTicketPrefill.test.tsx -t "T00[678]"`
