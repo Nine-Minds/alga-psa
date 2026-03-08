@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { InternalNotification } from '@alga-psa/notifications';
 
 const EE_TEAMS_NOTIFICATION_MODULE =
-  '../../../../../ee/server/src/lib/notifications/teamsNotificationDelivery';
+  '@enterprise/lib/notifications/teamsNotificationDelivery';
 const SHARED_TEAMS_NOTIFICATION_MODULE =
   '../../../../../packages/notifications/src/realtime/teamsNotificationDelivery';
 
@@ -124,7 +124,7 @@ describe('teamsNotificationDelivery shared wrapper', () => {
     const source = fs.readFileSync(path.resolve(__dirname, '../../../../../packages/notifications/src/realtime/teamsNotificationDelivery.ts'), 'utf8');
 
     expect(source).toContain('loadEeTeamsNotificationDelivery');
-    expect(source).toContain("import('../../../../ee/server/src/lib/notifications/teamsNotificationDelivery')");
-    expect(source).not.toMatch(/import .*ee\/server\/src\/lib\/notifications\/teamsNotificationDelivery/);
+    expect(source).toContain("import('@enterprise/lib/notifications/teamsNotificationDelivery')");
+    expect(source).not.toContain('ee/server/src/lib/notifications/teamsNotificationDelivery');
   });
 });

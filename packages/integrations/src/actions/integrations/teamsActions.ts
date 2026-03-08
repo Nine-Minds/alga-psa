@@ -43,7 +43,7 @@ let eeTeamsActionsPromise:
 
 async function loadEeTeamsActions() {
   if (!eeTeamsActionsPromise) {
-    eeTeamsActionsPromise = import('../../../../../ee/server/src/lib/actions/integrations/teamsActions').catch((error) => {
+    eeTeamsActionsPromise = import('@enterprise/lib/actions/integrations/teamsActions').catch((error) => {
       logger.warn('[TeamsActions] Failed to load EE Teams settings action implementation', {
         error: error instanceof Error ? error.message : String(error),
       });

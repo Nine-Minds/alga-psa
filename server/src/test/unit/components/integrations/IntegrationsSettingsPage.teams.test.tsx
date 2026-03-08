@@ -164,7 +164,7 @@ describe('IntegrationsSettingsPage Teams placement', () => {
     expect(screen.queryByText('Microsoft Integration Settings')).not.toBeInTheDocument();
   });
 
-  it('T038/T043/T044/T075/T076/T387/T388/T401/T402/T409/T410/T421: renders a disabled Teams shell instead of the active Teams settings UI when EE mode is on but the tenant flag is disabled', async () => {
+  it('T038/T043/T044/T075/T076/T387/T388/T401/T402/T409/T410/T421: hides Teams entirely when EE mode is on but the tenant flag is disabled', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     useFeatureFlagMock.mockImplementation((flagKey: string) => ({
       enabled: false,
@@ -182,8 +182,8 @@ describe('IntegrationsSettingsPage Teams placement', () => {
     expect(screen.getByText('Communication Integrations')).toBeInTheDocument();
     expect(screen.getByText('Inbound Email Integration')).toBeInTheDocument();
     expect(screen.queryByTestId('teams-integration-settings-shell')).not.toBeInTheDocument();
-    expect(screen.getByTestId('teams-integration-disabled-shell')).toBeInTheDocument();
-    expect(screen.getByText('Microsoft Teams integration disabled')).toBeInTheDocument();
-    expect(screen.getByText('Microsoft Teams integration is disabled for this tenant.')).toBeInTheDocument();
+    expect(screen.queryByTestId('teams-integration-disabled-shell')).not.toBeInTheDocument();
+    expect(screen.queryByText('Microsoft Teams integration disabled')).not.toBeInTheDocument();
+    expect(screen.queryByText('Microsoft Teams integration is disabled for this tenant.')).not.toBeInTheDocument();
   });
 });

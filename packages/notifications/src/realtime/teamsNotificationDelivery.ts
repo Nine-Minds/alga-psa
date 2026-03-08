@@ -17,7 +17,7 @@ let eeTeamsNotificationDeliveryPromise:
 
 async function loadEeTeamsNotificationDelivery() {
   if (!eeTeamsNotificationDeliveryPromise) {
-    eeTeamsNotificationDeliveryPromise = import('../../../../ee/server/src/lib/notifications/teamsNotificationDelivery').catch((error) => {
+    eeTeamsNotificationDeliveryPromise = import('@enterprise/lib/notifications/teamsNotificationDelivery').catch((error) => {
       logger.warn('[TeamsNotificationDelivery] Failed to load EE notification delivery implementation', {
         error: error instanceof Error ? error.message : String(error),
       });

@@ -15,7 +15,7 @@ let eeTeamsPackageActionsPromise:
 
 async function loadEeTeamsPackageActions() {
   if (!eeTeamsPackageActionsPromise) {
-    eeTeamsPackageActionsPromise = import('../../../../../ee/server/src/lib/actions/integrations/teamsPackageActions');
+    eeTeamsPackageActionsPromise = import('@enterprise/lib/actions/integrations/teamsPackageActions');
   }
 
   return eeTeamsPackageActionsPromise;

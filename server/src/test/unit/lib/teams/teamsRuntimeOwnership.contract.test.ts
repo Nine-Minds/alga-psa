@@ -134,10 +134,10 @@ describe('teams runtime EE ownership', () => {
     expect(sharedTeamsActionsSource).toContain("from './teamsContracts'");
     expect(sharedTeamsActionsSource).toContain("from './teamsShared'");
     expect(sharedPackageActionsSource).toContain("from './teamsContracts'");
-    expect(sharedTeamsActionsSource).toContain("import('../../../../../ee/server/src/lib/actions/integrations/teamsActions')");
-    expect(sharedPackageActionsSource).toContain("import('../../../../../ee/server/src/lib/actions/integrations/teamsPackageActions')");
-    expect(sharedTeamsActionsSource).not.toMatch(/import .*ee\/server\/src\/lib\/actions\/integrations\/teamsActions/);
-    expect(sharedPackageActionsSource).not.toMatch(/import .*ee\/server\/src\/lib\/actions\/integrations\/teamsPackageActions/);
+    expect(sharedTeamsActionsSource).toContain("import('@enterprise/lib/actions/integrations/teamsActions')");
+    expect(sharedPackageActionsSource).toContain("import('@enterprise/lib/actions/integrations/teamsPackageActions')");
+    expect(sharedTeamsActionsSource).not.toContain('ee/server/src/lib/actions/integrations/teamsActions');
+    expect(sharedPackageActionsSource).not.toContain('ee/server/src/lib/actions/integrations/teamsPackageActions');
 
     expect(eeTeamsActionsSource).toContain("@alga-psa/integrations/actions/integrations/teamsContracts");
     expect(eeTeamsActionsSource).toContain("@alga-psa/integrations/actions/integrations/teamsShared");
@@ -189,6 +189,7 @@ describe('teams runtime EE ownership', () => {
     expect(sharedTeamsNotificationSource).toContain('loadEeTeamsNotificationDelivery');
     expect(sharedTeamsNotificationSource).toContain('getTeamsAvailability');
     expect(sharedTeamsNotificationSource).toContain('deliverTeamsNotificationImpl');
+    expect(sharedTeamsNotificationSource).toContain("import('@enterprise/lib/notifications/teamsNotificationDelivery')");
     expect(sharedTeamsNotificationSource).not.toContain('teamwork/sendActivityNotification');
     expect(sharedNotificationBroadcasterSource).toContain("import { deliverTeamsNotification } from './teamsNotificationDelivery';");
     expect(sharedNotificationBroadcasterSource).not.toContain('ee/server/src/lib/notifications/teamsNotificationDelivery');
@@ -210,6 +211,7 @@ describe('teams runtime EE ownership', () => {
     expect(fs.existsSync(repoPath('ee/server/src/lib/teams/buildTeamsReauthUrl.ts'))).toBe(true);
     expect(sharedTeamsMicrosoftProviderResolutionSource).toContain('loadEeTeamsMicrosoftProviderResolution');
     expect(sharedTeamsMicrosoftProviderResolutionSource).toContain('resolveTeamsMicrosoftProviderConfigImpl');
+    expect(sharedTeamsMicrosoftProviderResolutionSource).toContain("import('@enterprise/lib/auth/teamsMicrosoftProviderResolution')");
     expect(sharedTeamsMicrosoftProviderResolutionSource).not.toContain('getAdminConnection');
     expect(sharedAuthIndexSource).toContain("export * from './teamsMicrosoftProviderResolution';");
     expect(sharedAuthIndexSource).not.toContain('ee/server/src/lib/auth/teamsMicrosoftProviderResolution');

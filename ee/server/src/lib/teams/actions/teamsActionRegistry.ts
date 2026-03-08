@@ -11,8 +11,8 @@ import {
 import {
   type TeamsAllowedAction,
   type TeamsCapability,
-  type TeamsIntegrationExecutionState,
-} from '@alga-psa/integrations/actions/integrations/teamsActions';
+} from '@alga-psa/integrations/actions/integrations/teamsShared';
+import type { TeamsIntegrationExecutionState } from '@alga-psa/integrations/actions/integrations/teamsContracts';
 import { getTeamsIntegrationExecutionStateImpl as getTeamsIntegrationExecutionState } from '../../actions/integrations/teamsActions';
 import { z, ZodError } from 'zod';
 import { hasPermission } from 'server/src/lib/auth/rbac';
