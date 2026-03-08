@@ -210,7 +210,7 @@
   {
     "id": "T016",
     "description": "Verify existing metadata compatibility: /client-portal/extensions/[id] re-exported metadata is compatible with Client Portal template",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F089"
     ]
