@@ -371,7 +371,7 @@
   {
     "id": "F042",
     "description": "Teams setup: a tenant-scoped Teams integration record exists.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -380,7 +380,7 @@
   {
     "id": "F043",
     "description": "Teams setup: the Teams integration record stores the selected Microsoft profile ID.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -389,7 +389,7 @@
   {
     "id": "F044",
     "description": "Teams setup: the Teams integration record stores install/configuration status for the tenant.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -398,7 +398,7 @@
   {
     "id": "F045",
     "description": "Teams setup: the Teams integration record stores enabled Teams capabilities for the tenant.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -407,7 +407,7 @@
   {
     "id": "F046",
     "description": "Teams setup: the Teams integration record stores personal-notification category preferences for the tenant.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -416,7 +416,7 @@
   {
     "id": "F047",
     "description": "Teams setup: the Teams integration record stores allowed action configuration for Teams quick actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"

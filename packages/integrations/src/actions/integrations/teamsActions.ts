@@ -1,0 +1,263 @@
+'use server';
+
+import { withAuth } from '@alga-psa/auth/withAuth';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { createTenantKnex } from '@alga-psa/db';
+import { getMicrosoftProfileReadiness } from './providerReadiness';
+
+export const TEAMS_INSTALL_STATUSES = ['not_configured', 'install_pending', 'active', 'error'] as const;
+export type TeamsInstallStatus = typeof TEAMS_INSTALL_STATUSES[number];
+
+export const TEAMS_CAPABILITIES = [
+  'personal_tab',
+  'personal_bot',
+  'message_extension',
+  'activity_notifications',
+] as const;
+export type TeamsCapability = typeof TEAMS_CAPABILITIES[number];
+
+export const TEAMS_NOTIFICATION_CATEGORIES = [
+  'assignment',
+  'customer_reply',
+  'approval_request',
+  'escalation',
+  'sla_risk',
+] as const;
+export type TeamsNotificationCategory = typeof TEAMS_NOTIFICATION_CATEGORIES[number];
+
+export const TEAMS_ALLOWED_ACTIONS = [
+  'assign_ticket',
+  'add_note',
+  'reply_to_contact',
+  'log_time',
+  'approval_response',
+] as const;
+export type TeamsAllowedAction = typeof TEAMS_ALLOWED_ACTIONS[number];
+
+interface TeamsIntegrationRow {
+  tenant: string;
+  selected_profile_id: string | null;
+  install_status: TeamsInstallStatus;
+  enabled_capabilities: unknown;
+  notification_categories: unknown;
+  allowed_actions: unknown;
+  last_error: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string | Date;
+  updated_at: string | Date;
+}
+
+interface MicrosoftProfileRow {
+  tenant: string;
+  profile_id: string;
+  client_id: string;
+  tenant_id: string;
+  client_secret_ref: string;
+  is_archived: boolean;
+}
+
+export interface TeamsIntegrationStatusResponse {
+  success: boolean;
+  error?: string;
+  integration?: {
+    selectedProfileId: string | null;
+    installStatus: TeamsInstallStatus;
+    enabledCapabilities: TeamsCapability[];
+    notificationCategories: TeamsNotificationCategory[];
+    allowedActions: TeamsAllowedAction[];
+    lastError: string | null;
+  };
+}
+
+function isClientPortalUser(user: any): boolean {
+  return user?.user_type === 'client';
+}
+
+async function canManageTeamsSettings(user: any): Promise<boolean> {
+  return hasPermission(user as any, 'system_settings', 'update');
+}
+
+function isTeamsInstallStatus(value: string): value is TeamsInstallStatus {
+  return (TEAMS_INSTALL_STATUSES as readonly string[]).includes(value);
+}
+
+function normalizeEnumArray<T extends string>(values: unknown, supported: readonly T[]): T[] {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+
+  const requested = new Set(values.filter((value): value is T => typeof value === 'string' && supported.includes(value as T)));
+  return supported.filter((value) => requested.has(value));
+}
+
+function defaultTeamsIntegrationState() {
+  return {
+    selectedProfileId: null,
+    installStatus: 'not_configured' as TeamsInstallStatus,
+    enabledCapabilities: [...TEAMS_CAPABILITIES] as TeamsCapability[],
+    notificationCategories: [...TEAMS_NOTIFICATION_CATEGORIES] as TeamsNotificationCategory[],
+    allowedActions: [...TEAMS_ALLOWED_ACTIONS] as TeamsAllowedAction[],
+    lastError: null as string | null,
+  };
+}
+
+function mapTeamsIntegrationRow(row?: TeamsIntegrationRow | null): NonNullable<TeamsIntegrationStatusResponse['integration']> {
+  if (!row) {
+    return defaultTeamsIntegrationState();
+  }
+
+  return {
+    selectedProfileId: row.selected_profile_id || null,
+    installStatus: isTeamsInstallStatus(row.install_status) ? row.install_status : 'not_configured',
+    enabledCapabilities: normalizeEnumArray(row.enabled_capabilities, TEAMS_CAPABILITIES),
+    notificationCategories: normalizeEnumArray(row.notification_categories, TEAMS_NOTIFICATION_CATEGORIES),
+    allowedActions: normalizeEnumArray(row.allowed_actions, TEAMS_ALLOWED_ACTIONS),
+    lastError: row.last_error || null,
+  };
+}
+
+async function getTeamsIntegrationRow(knex: any, tenant: string): Promise<TeamsIntegrationRow | undefined> {
+  const row = await knex('teams_integrations').where({ tenant }).first();
+  return row || undefined;
+}
+
+async function getMicrosoftProfileRow(knex: any, tenant: string, profileId: string): Promise<MicrosoftProfileRow | undefined> {
+  const row = await knex('microsoft_profiles').where({ tenant, profile_id: profileId }).first();
+  return row || undefined;
+}
+
+async function validateSelectedProfile(
+  knex: any,
+  tenant: string,
+  profileId: string | null,
+  requireReady: boolean
+): Promise<{ profile?: MicrosoftProfileRow; error?: string }> {
+  if (!profileId) {
+    return requireReady ? { error: 'A Microsoft profile must be selected before Teams can be activated' } : {};
+  }
+
+  const profile = await getMicrosoftProfileRow(knex, tenant, profileId);
+  if (!profile) {
+    return { error: 'Selected Microsoft profile was not found' };
+  }
+  if (profile.is_archived) {
+    return { error: 'Archived Microsoft profiles cannot be selected for Teams' };
+  }
+
+  if (requireReady) {
+    const readiness = await getMicrosoftProfileReadiness(tenant, {
+      clientId: profile.client_id,
+      tenantId: profile.tenant_id,
+      clientSecretRef: profile.client_secret_ref,
+      isArchived: profile.is_archived,
+    });
+
+    if (!readiness.ready) {
+      return { error: 'Selected Microsoft profile is not ready for Teams setup' };
+    }
+  }
+
+  return { profile };
+}
+
+export const getTeamsIntegrationStatus = withAuth(async (
+  user,
+  { tenant }
+): Promise<TeamsIntegrationStatusResponse> => {
+  try {
+    if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
+    if (!(await canManageTeamsSettings(user))) return { success: false, error: 'Forbidden' };
+
+    const { knex } = await createTenantKnex();
+    const row = await getTeamsIntegrationRow(knex, tenant);
+    return {
+      success: true,
+      integration: mapTeamsIntegrationRow(row),
+    };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to load Teams integration settings' };
+  }
+});
+
+export const saveTeamsIntegrationSettings = withAuth(async (
+  user,
+  { tenant },
+  input: {
+    selectedProfileId?: string | null;
+    installStatus?: TeamsInstallStatus;
+    enabledCapabilities?: TeamsCapability[];
+    notificationCategories?: TeamsNotificationCategory[];
+    allowedActions?: TeamsAllowedAction[];
+    lastError?: string | null;
+  }
+): Promise<TeamsIntegrationStatusResponse> => {
+  try {
+    if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
+    if (!(await canManageTeamsSettings(user))) return { success: false, error: 'Forbidden' };
+
+    const { knex } = await createTenantKnex();
+
+    const existing = await getTeamsIntegrationRow(knex, tenant);
+    const next = {
+      ...defaultTeamsIntegrationState(),
+      ...mapTeamsIntegrationRow(existing),
+    };
+
+    const selectedProfileId = input.selectedProfileId === undefined ? next.selectedProfileId : input.selectedProfileId;
+    const installStatus = input.installStatus ?? next.installStatus;
+
+    if (!isTeamsInstallStatus(installStatus)) {
+      return { success: false, error: 'Unsupported Teams install status' };
+    }
+
+    const profileValidation = await validateSelectedProfile(
+      knex,
+      tenant,
+      selectedProfileId ?? null,
+      installStatus === 'active'
+    );
+    if (profileValidation.error) {
+      return { success: false, error: profileValidation.error };
+    }
+
+    const enabledCapabilities = input.enabledCapabilities
+      ? normalizeEnumArray(input.enabledCapabilities, TEAMS_CAPABILITIES)
+      : next.enabledCapabilities;
+    const notificationCategories = input.notificationCategories
+      ? normalizeEnumArray(input.notificationCategories, TEAMS_NOTIFICATION_CATEGORIES)
+      : next.notificationCategories;
+    const allowedActions = input.allowedActions
+      ? normalizeEnumArray(input.allowedActions, TEAMS_ALLOWED_ACTIONS)
+      : next.allowedActions;
+    const lastError = input.lastError === undefined ? next.lastError : input.lastError;
+    const now = new Date();
+
+    const row: TeamsIntegrationRow = {
+      tenant,
+      selected_profile_id: selectedProfileId ?? null,
+      install_status: installStatus,
+      enabled_capabilities: enabledCapabilities,
+      notification_categories: notificationCategories,
+      allowed_actions: allowedActions,
+      last_error: lastError || null,
+      created_by: existing?.created_by || (user as any)?.user_id || null,
+      updated_by: (user as any)?.user_id || null,
+      created_at: existing?.created_at || now,
+      updated_at: now,
+    };
+
+    if (existing) {
+      await knex('teams_integrations').where({ tenant }).update(row);
+    } else {
+      await knex('teams_integrations').insert(row);
+    }
+
+    return {
+      success: true,
+      integration: mapTeamsIntegrationRow(row),
+    };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to save Teams integration settings' };
+  }
+});

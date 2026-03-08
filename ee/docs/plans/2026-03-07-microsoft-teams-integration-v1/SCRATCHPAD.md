@@ -49,6 +49,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) `server/migrations/20260307143000_create_microsoft_profile_consumer_bindings.cjs` adds a tenant-scoped one-row-per-consumer binding table keyed by `(tenant, consumer_type)` with composite FK back to `microsoft_profiles`.
 - (2026-03-07) `packages/integrations/src/actions/integrations/microsoftActions.ts` now exposes binding-aware helpers/actions: `listMicrosoftConsumerBindings`, `setMicrosoftConsumerBinding`, and `resolveMicrosoftProfileForConsumer`.
 - (2026-03-07) The fourth slice is complete: `F037`, `F038`, `F039`, `F040`, `F041` and `T073`, `T074`, `T075`, `T076`, `T077`, `T078`, `T079`, `T080`, `T081`, `T082` pass with a real Microsoft consumer-binding model, lazy compatibility binding backfill for legacy Microsoft consumers, and Teams explicit-binding resolution.
+- (2026-03-07) `server/migrations/20260307153000_create_teams_integrations.cjs` adds the tenant-scoped Teams integration table keyed by `tenant`, linked to a selected Microsoft profile, and storing install status, enabled capabilities, notification categories, and allowed quick actions.
+- (2026-03-07) `packages/integrations/src/actions/integrations/teamsActions.ts` now exposes `getTeamsIntegrationStatus` and `saveTeamsIntegrationSettings` with tenant-admin gating, client-user rejection, explicit selected-profile validation, and readiness checks before activation.
+- (2026-03-07) The fifth slice is complete: `F042`, `F043`, `F044`, `F045`, `F046`, `F047` and `T083`, `T084`, `T085`, `T086`, `T087`, `T088`, `T089`, `T090`, `T091`, `T092`, `T093`, `T094` pass with a real Teams integration record plus guarded admin save/load actions.
 
 ## Commands / Runbooks
 
@@ -62,6 +65,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run --config vitest.config.ts ../packages/integrations/src/components/settings/integrations/TeamsIntegrationSettings.contract.test.tsx ../packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.providers.test.ts`
   - `cd server && npx vitest run --config vitest.config.ts ../packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.contract.test.tsx ../packages/integrations/src/components/settings/integrations/TeamsIntegrationSettings.contract.test.tsx ../packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.providers.test.ts`
   - `cd server && npx vitest run --config vitest.config.ts ../packages/integrations/src/actions/integrations/microsoftActions.test.ts ../packages/integrations/src/actions/integrations/microsoftConsumerBindings.test.ts ../server/src/test/unit/migrations/microsoftConsumerBindingsMigration.test.ts`
+  - `cd server && npx vitest run --config vitest.config.ts ../packages/integrations/src/actions/integrations/teamsActions.test.ts ../server/src/test/unit/migrations/teamsIntegrationsMigration.test.ts`
 - (2026-03-07) Relevant local references:
   - `packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.tsx`
   - `packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.contract.test.tsx`
@@ -72,6 +76,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `packages/integrations/src/actions/integrations/microsoftActions.ts`
   - `packages/integrations/src/actions/integrations/microsoftConsumerBindings.test.ts`
   - `packages/integrations/src/actions/integrations/providerReadiness.ts`
+  - `packages/integrations/src/actions/integrations/teamsActions.ts`
+  - `packages/integrations/src/actions/integrations/teamsActions.test.ts`
   - `packages/auth/src/lib/nextAuthOptions.ts`
   - `packages/auth/src/lib/sso/mspSsoResolution.ts`
   - `packages/notifications/src/actions/internal-notification-actions/internalNotificationActions.ts`
@@ -79,9 +85,11 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `server/src/lib/eventBus`
   - `server/migrations/20260307120000_create_microsoft_profiles.cjs`
   - `server/migrations/20260307143000_create_microsoft_profile_consumer_bindings.cjs`
+  - `server/migrations/20260307153000_create_teams_integrations.cjs`
   - `server/src/test/unit/migrations/microsoftConsumerBindingsMigration.test.ts`
+  - `server/src/test/unit/migrations/teamsIntegrationsMigration.test.ts`
 - (2026-03-07) The focused vitest slice still emits pre-existing React `act(...)` warnings from `MicrosoftIntegrationSettings.contract.test.tsx`; the tests pass, but the harness remains noisy.
-- (2026-03-07) Next unchecked feature after this slice is `F042` (tenant-scoped Teams integration record).
+- (2026-03-07) Next unchecked feature after this slice is `F048` (tenant-admin Teams setup UI).
 
 ## Links / References
 

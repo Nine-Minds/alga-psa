@@ -122,6 +122,10 @@ export {
   revokeMspSsoDomainClaim,
 } from './integrations/mspSsoDomainActions';
 export {
+  getTeamsIntegrationStatus,
+  saveTeamsIntegrationSettings,
+} from './integrations/teamsActions';
+export {
   initiateEntraDirectOAuth,
   connectEntraCipp,
   getEntraIntegrationStatus,

@@ -658,7 +658,7 @@
   {
     "id": "T083",
     "description": "Happy path: Teams setup: a tenant-scoped Teams integration record exists.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042"
     ]
@@ -666,7 +666,7 @@
   {
     "id": "T084",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: a tenant-scoped teams integration record exists.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042"
     ]
@@ -674,7 +674,7 @@
   {
     "id": "T085",
     "description": "Happy path: Teams setup: the Teams integration record stores the selected Microsoft profile ID.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043"
     ]
@@ -682,7 +682,7 @@
   {
     "id": "T086",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the teams integration record stores the selected microsoft profile id.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043"
     ]
@@ -690,7 +690,7 @@
   {
     "id": "T087",
     "description": "Happy path: Teams setup: the Teams integration record stores install/configuration status for the tenant.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ]
@@ -698,7 +698,7 @@
   {
     "id": "T088",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the teams integration record stores install/configuration status for the tenant.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ]
@@ -706,7 +706,7 @@
   {
     "id": "T089",
     "description": "Happy path: Teams setup: the Teams integration record stores enabled Teams capabilities for the tenant.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045"
     ]
@@ -714,7 +714,7 @@
   {
     "id": "T090",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the teams integration record stores enabled teams capabilities for the tenant.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045"
     ]
@@ -722,7 +722,7 @@
   {
     "id": "T091",
     "description": "Happy path: Teams setup: the Teams integration record stores personal-notification category preferences for the tenant.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046"
     ]
@@ -730,7 +730,7 @@
   {
     "id": "T092",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the teams integration record stores personal-notification category preferences for the tenant.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046"
     ]
@@ -738,7 +738,7 @@
   {
     "id": "T093",
     "description": "Happy path: Teams setup: the Teams integration record stores allowed action configuration for Teams quick actions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047"
     ]
@@ -746,7 +746,7 @@
   {
     "id": "T094",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams setup: the teams integration record stores allowed action configuration for teams quick actions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047"
     ]

@@ -17,6 +17,10 @@ export {
   listMspSsoLoginDomains,
   saveMspSsoLoginDomains,
 } from './mspSsoDomainActions';
+export {
+  getTeamsIntegrationStatus,
+  saveTeamsIntegrationSettings,
+} from './teamsActions';
 export { getXeroConnectionStatus, getXeroIntegrationStatus, disconnectXero } from './xeroActions';
 export { getXeroCsvSettings, saveXeroCsvSettings } from './xeroCsvActions';
 export {
