@@ -834,7 +834,7 @@
   {
     "id": "F105",
     "description": "Public page title: /surveys/respond/[token] — verify existing generateMetadata() is compatible with root template",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3c"
     ]
