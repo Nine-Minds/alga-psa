@@ -282,7 +282,7 @@
   {
     "id": "F036",
     "description": "MSP page title: /msp/email-logs — title: 'Email Logs'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
