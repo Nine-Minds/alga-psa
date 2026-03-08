@@ -67,6 +67,23 @@ function collectHrefs(node: React.ReactNode): string[] {
   return [];
 }
 
+function collectDataProp(node: React.ReactNode, key: string): string[] {
+  if (node === null || node === undefined || typeof node === 'boolean') {
+    return [];
+  }
+
+  if (Array.isArray(node)) {
+    return node.flatMap((entry) => collectDataProp(entry, key));
+  }
+
+  if (React.isValidElement(node)) {
+    const value = typeof node.props[key] === 'string' ? [node.props[key]] : [];
+    return [...value, ...collectDataProp(node.props.children, key)];
+  }
+
+  return [];
+}
+
 const readyAuthState = {
   status: 'ready' as const,
   tenantId: 'tenant-1',
@@ -143,6 +160,7 @@ describe('TeamsTabPage', () => {
     expect((result as any)?.props?.['data-teams-tab-destination']).toBe('ticket');
     expect(collectNormalizedText(result)).toContain('Open in full PSA');
     expect(collectHrefs(result)).toContain('/msp/tickets/12345');
+    expect(collectDataProp(result, 'data-teams-embedded-psa')).toContain('/msp/tickets/12345');
     expect(collectNormalizedText(result)).toContain('Ticket 12345');
     expect(collectNormalizedText(result)).toContain("You're opening ticket 12345 from Teams.");
   });
@@ -203,6 +221,7 @@ describe('TeamsTabPage', () => {
     expect((result as any)?.props?.['data-teams-tab-requested-destination']).toBe('ticket');
     expect((result as any)?.props?.['data-teams-tab-fallback']).toBe('my_work');
     expect(collectHrefs(result)).toContain('/msp/tickets/12345');
+    expect(collectDataProp(result, 'data-teams-embedded-psa')).toEqual([]);
     expect(collectNormalizedText(result)).toContain('Requested Teams record unavailable');
     expect(collectNormalizedText(result)).toContain('That ticket is unavailable or you no longer have access to it.');
     expect(collectNormalizedText(result)).toContain('You landed on your Teams work list instead of ticket 12345');

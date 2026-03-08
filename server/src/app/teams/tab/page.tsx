@@ -55,6 +55,7 @@ function renderTeamsTabShell(options: {
   const requestedDestinationCopy = describeTeamsTabDestination(requestedDestination);
   const isFallback = requestedDestination.type !== options.destination.type;
   const fullPsaUrl = buildTeamsFullPsaUrl(requestedDestination);
+  const embeddedPsaUrl = !isFallback ? fullPsaUrl : null;
 
   return (
     <div
@@ -93,6 +94,14 @@ function renderTeamsTabShell(options: {
               Open in full PSA
             </a>
           </div>
+        ) : null}
+        {embeddedPsaUrl ? (
+          <iframe
+            className="min-h-[720px] w-full rounded-lg border border-gray-200 bg-white"
+            data-teams-embedded-psa={embeddedPsaUrl}
+            src={embeddedPsaUrl}
+            title={`${requestedDestinationCopy.title} in Alga PSA`}
+          />
         ) : null}
       </div>
     </div>

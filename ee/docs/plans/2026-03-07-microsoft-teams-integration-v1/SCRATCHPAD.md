@@ -186,6 +186,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Completed `T203` and `T204` with a focused URL-builder test plus page assertions covering visible full-PSA handoff links for entity destinations and omission of that link for the default `my_work` landing.
 - (2026-03-07) Completed `F103` by reconciling the plan with the existing access-state gate: the Teams tab only renders a destination after PSA permission checks and tenant-scoped entity resolution succeed, and otherwise falls back safely instead of rendering unauthorized content.
 - (2026-03-07) Completed `T205` and `T206` against the existing `resolveTeamsTabAccessState` happy/guard coverage and the tab-page fallback tests that already exercise authorization-preserving behavior for ready versus unavailable destinations.
+- (2026-03-07) Completed `F104` by replacing the ready-state Teams record shell with a same-origin iframe of the existing PSA record route when an authorized entity destination is available, so the tab now reuses PSA screens/components instead of keeping a parallel Teams-only detail view.
+- (2026-03-07) Completed `T207` and `T208` with page assertions proving authorized entity destinations render an embedded PSA route while fallback states intentionally suppress that embed and stay on the safe Teams shell.
+- (2026-03-07) Completed `F105` by keeping the embedded PSA composition on same-origin internal MSP routes that inherit the authenticated MSP session and tenant-scoped host context, avoiding any second auth callback or token-bearing bootstrap channel inside the iframe URL.
+- (2026-03-07) Completed `T209` and `T210` with URL-builder tests asserting embedded PSA routes remain relative `/msp/...` paths without callback/token parameters plus fallback-shell tests that suppress the embed when the requested destination is unavailable.
   - `server/migrations/20260307120000_create_microsoft_profiles.cjs`
   - `server/migrations/20260307143000_create_microsoft_profile_consumer_bindings.cjs`
   - `server/migrations/20260307153000_create_teams_integrations.cjs`
@@ -195,7 +199,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) The Teams setup contract tests currently emit similar non-blocking React `act(...)` warnings while asserting async save flows; the tests pass, but the harness remains noisy.
 - (2026-03-07) `npx vitest run --config vitest.config.ts src/test/unit/app/teams/tab/page.test.tsx src/test/unit/lib/teams/resolveTeamsTabDestination.test.ts`
 - (2026-03-07) `npx vitest run --config vitest.config.ts src/test/unit/app/teams/tab/page.test.tsx src/test/unit/lib/teams/resolveTeamsTabDestination.test.ts src/test/unit/lib/teams/buildTeamsFullPsaUrl.test.ts`
-- (2026-03-07) Next unchecked feature after this slice is `F104` (Teams tab prefers reusing existing PSA screens/components instead of building parallel Teams-only record UIs).
+- (2026-03-07) `npx vitest run --config vitest.config.ts src/test/unit/app/teams/tab/page.test.tsx`
+- (2026-03-07) `npx vitest run --config vitest.config.ts src/test/unit/app/teams/tab/page.test.tsx src/test/unit/lib/teams/buildTeamsFullPsaUrl.test.ts`
+- (2026-03-07) Next unchecked feature after this slice is `F106` (Activity-feed notification deep links open the correct tab destination).
 
 ## Links / References
 

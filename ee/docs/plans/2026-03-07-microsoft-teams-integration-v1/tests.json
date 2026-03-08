@@ -1650,7 +1650,7 @@
   {
     "id": "T207",
     "description": "Happy path: Personal tab: the tab prefers reusing existing PSA screens/components instead of building parallel Teams-only record UIs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F104"
     ]
@@ -1658,7 +1658,7 @@
   {
     "id": "T208",
     "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: the tab prefers reusing existing psa screens/components instead of building parallel teams-only record uis.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F104"
     ]
@@ -1666,7 +1666,7 @@
   {
     "id": "T209",
     "description": "Happy path: Personal tab: Teams bootstrap passes user and tenant context into existing PSA UI composition safely.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F105"
     ]
@@ -1674,7 +1674,7 @@
   {
     "id": "T210",
     "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: teams bootstrap passes user and tenant context into existing psa ui composition safely.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F105"
     ]
