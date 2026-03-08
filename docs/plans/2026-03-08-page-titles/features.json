@@ -522,7 +522,7 @@
   {
     "id": "F066",
     "description": "MSP page title: /msp/licenses/purchase — title: 'Purchase Licenses'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
