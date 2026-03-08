@@ -84,7 +84,7 @@ describe('GET /api/teams/auth/callback/message-extension', () => {
 
     expect(redirectResponse.status).toBe(307);
     expect(redirectResponse.headers.get('location')).toBe(
-      'https://example.com/auth/msp/signin?callbackUrl=%2Fapi%2Fteams%2Fauth%2Fcallback%2Fmessage-extension%3FtenantId%3Dtenant-1'
+      'https://example.com/auth/msp/signin?callbackUrl=%2Fapi%2Fteams%2Fauth%2Fcallback%2Fmessage-extension%3FtenantId%3Dtenant-1&teamsReauth=1'
     );
 
     resolveTeamsTabAuthStateMock.mockResolvedValueOnce({

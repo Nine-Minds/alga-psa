@@ -768,7 +768,7 @@
   {
     "id": "F085",
     "description": "Teams identity: deep-link entry points can bootstrap the destination without a separate PSA sign-in prompt inside Teams.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Security / Permissions",
@@ -778,7 +778,7 @@
   {
     "id": "F086",
     "description": "Teams identity: expired or invalid sessions return a Teams-safe reauthentication path instead of raw OAuth errors.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Security / Permissions",

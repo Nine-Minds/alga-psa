@@ -72,7 +72,7 @@ describe('GET /api/teams/auth/callback/bot', () => {
     await expect(response.text()).resolves.toContain('"userId":"user-1"');
   });
 
-  it('T154: redirects unauthenticated bot auth requests and returns Teams-safe failure payloads for rejected access', async () => {
+  it('T154/T172: redirects unauthenticated bot auth requests into the Teams-safe reauthentication path and returns safe failure payloads for rejected access', async () => {
     resolveTeamsTabAuthStateMock.mockResolvedValueOnce({
       status: 'unauthenticated',
       message: 'Sign in with your MSP account to open Alga PSA in Teams.',
@@ -84,7 +84,7 @@ describe('GET /api/teams/auth/callback/bot', () => {
 
     expect(redirectResponse.status).toBe(307);
     expect(redirectResponse.headers.get('location')).toBe(
-      'https://example.com/auth/msp/signin?callbackUrl=%2Fapi%2Fteams%2Fauth%2Fcallback%2Fbot%3FtenantId%3Dtenant-1'
+      'https://example.com/auth/msp/signin?callbackUrl=%2Fapi%2Fteams%2Fauth%2Fcallback%2Fbot%3FtenantId%3Dtenant-1&teamsReauth=1'
     );
 
     resolveTeamsTabAuthStateMock.mockResolvedValueOnce({

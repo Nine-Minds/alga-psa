@@ -1346,7 +1346,7 @@
   {
     "id": "T169",
     "description": "Happy path: Teams identity: deep-link entry points can bootstrap the destination without a separate PSA sign-in prompt inside Teams.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F085"
     ]
@@ -1354,7 +1354,7 @@
   {
     "id": "T170",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: deep-link entry points can bootstrap the destination without a separate psa sign-in prompt inside teams.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F085"
     ]
@@ -1362,7 +1362,7 @@
   {
     "id": "T171",
     "description": "Happy path: Teams identity: expired or invalid sessions return a Teams-safe reauthentication path instead of raw OAuth errors.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F086"
     ]
@@ -1370,7 +1370,7 @@
   {
     "id": "T172",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: expired or invalid sessions return a teams-safe reauthentication path instead of raw oauth errors.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F086"
     ]

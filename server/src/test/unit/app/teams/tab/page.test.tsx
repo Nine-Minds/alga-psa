@@ -27,14 +27,16 @@ describe('TeamsTabPage', () => {
     resolveTeamsTabAuthStateMock.mockReset();
   });
 
-  it('redirects unauthenticated users into the MSP sign-in flow with a Teams tab callback', async () => {
+  it('T171: redirects expired or invalid Teams tab sessions into a Teams-safe MSP reauthentication path', async () => {
     resolveTeamsTabAuthStateMock.mockResolvedValue({
       status: 'unauthenticated',
       message: 'Sign in with your MSP account to open Alga PSA in Teams.',
     });
 
     await TeamsTabPage({
-      searchParams: Promise.resolve({ page: 'ticket', ticketId: '12345' }),
+      searchParams: Promise.resolve({
+        context: JSON.stringify({ page: 'ticket', ticketId: '12345' }),
+      }),
     });
 
     expect(resolveTeamsTabAuthStateMock).toHaveBeenCalledWith({
@@ -42,11 +44,11 @@ describe('TeamsTabPage', () => {
       expectedMicrosoftTenantId: undefined,
     });
     expect(redirectMock).toHaveBeenCalledWith(
-      '/auth/msp/signin?callbackUrl=%2Fteams%2Ftab%3Fpage%3Dticket%26ticketId%3D12345'
+      '/auth/msp/signin?callbackUrl=%2Fteams%2Ftab%3Fcontext%3D%257B%2522page%2522%253A%2522ticket%2522%252C%2522ticketId%2522%253A%252212345%2522%257D&teamsReauth=1'
     );
   });
 
-  it('renders the Teams landing view when the tab auth state is ready', async () => {
+  it('T169: bootstraps a deep-linked Teams tab destination without requiring a second PSA sign-in prompt inside Teams', async () => {
     resolveTeamsTabAuthStateMock.mockResolvedValue({
       status: 'ready',
       tenantId: 'tenant-1',
@@ -58,7 +60,11 @@ describe('TeamsTabPage', () => {
     });
 
     const result = await TeamsTabPage({
-      searchParams: Promise.resolve({ tenantId: 'tenant-1', tid: 'entra-tenant-1' }),
+      searchParams: Promise.resolve({
+        tenantId: 'tenant-1',
+        tid: 'entra-tenant-1',
+        context: JSON.stringify({ page: 'ticket', ticketId: '12345' }),
+      }),
     });
 
     expect(redirectMock).not.toHaveBeenCalled();
@@ -67,17 +73,22 @@ describe('TeamsTabPage', () => {
       expectedMicrosoftTenantId: 'entra-tenant-1',
     });
     expect((result as any)?.props?.['data-teams-tab-state']).toBe('ready');
+    expect((result as any)?.props?.['data-teams-tab-destination']).toBe('ticket');
   });
 
-  it('renders a Teams-safe remediation card when the tenant is not ready', async () => {
+  it('T170: returns Teams-safe remediation for rejected or unavailable deep-link entry points', async () => {
     resolveTeamsTabAuthStateMock.mockResolvedValue({
-      status: 'not_configured',
+      status: 'forbidden',
+      reason: 'wrong_tenant',
       tenantId: 'tenant-1',
-      message: 'Teams is not configured for this tenant',
+      message: 'This Teams tab request does not match your PSA tenant.',
     });
 
     const result = await TeamsTabPage({
-      searchParams: Promise.resolve({ tenantId: 'tenant-1' }),
+      searchParams: Promise.resolve({
+        tenantId: 'tenant-1',
+        context: JSON.stringify({ page: 'ticket', ticketId: '12345' }),
+      }),
     });
 
     expect(redirectMock).not.toHaveBeenCalled();

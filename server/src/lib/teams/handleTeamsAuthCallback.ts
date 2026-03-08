@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveTeamsTabAuthState, type TeamsTabAuthState } from 'server/src/lib/teams/resolveTeamsTabAuthState';
+import { buildTeamsReauthUrl } from 'server/src/lib/teams/buildTeamsReauthUrl';
 
 type TeamsAuthCallbackSurface = 'tab' | 'bot' | 'message_extension';
 
@@ -145,9 +146,7 @@ export async function handleTeamsAuthCallback(
 
   if (state.status === 'unauthenticated') {
     const requestUrl = getRequestUrl(request);
-    const loginUrl = new URL('/auth/msp/signin', requestUrl.origin);
-    loginUrl.searchParams.set('callbackUrl', buildCallbackUrl(request));
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(buildTeamsReauthUrl(requestUrl.origin, buildCallbackUrl(request)));
   }
 
   const payload = buildCallbackPayload(surface, state);
