@@ -706,7 +706,7 @@
   {
     "id": "F089",
     "description": "Client Portal page title: /client-portal/extensions/[id] — verify existing re-exported metadata is compatible",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3c"
     ]

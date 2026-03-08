@@ -136,3 +136,4 @@
 - (2026-03-08) F086: Client Portal page title: /client-portal/tickets/[ticketId] — title: 'Ticket Details' (generateMetadata)
 - (2026-03-08) F087: Client Portal page title: /client-portal/projects — title: 'Projects'
 - (2026-03-08) F088: Client Portal page title: /client-portal/projects/[projectId] — title: 'Project Details' (generateMetadata)
+- (2026-03-08) F089: Client Portal page title: /client-portal/extensions/[id] — verify existing re-exported metadata is compatible
