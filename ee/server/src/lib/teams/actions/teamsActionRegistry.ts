@@ -9,11 +9,11 @@ import {
   buildTeamsPersonalTabDeepLinkFromPsaUrl,
 } from '../teamsDeepLinks';
 import {
-  getTeamsIntegrationExecutionState,
   type TeamsAllowedAction,
   type TeamsCapability,
   type TeamsIntegrationExecutionState,
 } from '@alga-psa/integrations/actions/integrations/teamsActions';
+import { getTeamsIntegrationExecutionStateImpl as getTeamsIntegrationExecutionState } from '../../actions/integrations/teamsActions';
 import { z, ZodError } from 'zod';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { ContactService } from 'server/src/lib/api/services/ContactService';

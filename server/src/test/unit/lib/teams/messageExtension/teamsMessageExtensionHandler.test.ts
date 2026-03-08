@@ -51,8 +51,8 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
   };
 });
 
-vi.mock('@alga-psa/integrations/actions/integrations/teamsActions', () => ({
-  getTeamsIntegrationExecutionState: getTeamsIntegrationExecutionStateMock,
+vi.mock('../../../../../../../ee/server/src/lib/actions/integrations/teamsActions', () => ({
+  getTeamsIntegrationExecutionStateImpl: getTeamsIntegrationExecutionStateMock,
 }));
 
 vi.mock('../../../../../../../ee/server/src/lib/teams/teamsDeepLinks', () => ({

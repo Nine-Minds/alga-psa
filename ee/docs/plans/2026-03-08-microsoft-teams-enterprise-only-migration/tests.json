@@ -1522,7 +1522,7 @@
   {
     "id": "T191",
     "description": "Happy path: EE ownership: concrete Teams setup state persistence helpers live under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F096"
     ]
@@ -1778,7 +1778,7 @@
   {
     "id": "T223",
     "description": "Happy path: Server actions: Teams settings actions return EE-unavailable results in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F112"
     ]
@@ -1786,7 +1786,7 @@
   {
     "id": "T224",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for server actions: Teams settings actions return EE-unavailable results in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F112"
     ]
@@ -1794,7 +1794,7 @@
   {
     "id": "T225",
     "description": "Happy path: Server actions: Teams settings actions return disabled results in EE when the tenant flag is off.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F113"
     ]
@@ -1802,7 +1802,7 @@
   {
     "id": "T226",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for server actions: Teams settings actions return disabled results in EE when the tenant flag is off.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F113"
     ]
@@ -1810,7 +1810,7 @@
   {
     "id": "T227",
     "description": "Happy path: Server actions: Teams settings actions delegate into EE implementations when Teams is enabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F114"
     ]
@@ -1818,7 +1818,7 @@
   {
     "id": "T228",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for server actions: Teams settings actions delegate into EE implementations when Teams is enabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F114"
     ]
@@ -2018,7 +2018,7 @@
   {
     "id": "T253",
     "description": "Happy path: Server actions: teams settings persistence still enforces tenant-admin permissions after moving to EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F127"
     ]
@@ -2026,7 +2026,7 @@
   {
     "id": "T254",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for server actions: teams settings persistence still enforces tenant-admin permissions after moving to EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F127"
     ]
@@ -2082,7 +2082,7 @@
   {
     "id": "T261",
     "description": "Happy path: Server actions: no remaining shared server-action module owns Teams business logic after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F131"
     ]

@@ -857,7 +857,7 @@
   {
     "id": "F096",
     "description": "EE ownership: concrete Teams setup state persistence helpers live under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1001,7 +1001,7 @@
   {
     "id": "F112",
     "description": "Server actions: Teams settings actions return EE-unavailable results in CE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1010,7 +1010,7 @@
   {
     "id": "F113",
     "description": "Server actions: Teams settings actions return disabled results in EE when the tenant flag is off.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1019,7 +1019,7 @@
   {
     "id": "F114",
     "description": "Server actions: Teams settings actions delegate into EE implementations when Teams is enabled.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1136,7 +1136,7 @@
   {
     "id": "F127",
     "description": "Server actions: teams settings persistence still enforces tenant-admin permissions after moving to EE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1172,7 +1172,7 @@
   {
     "id": "F131",
     "description": "Server actions: no remaining shared server-action module owns Teams business logic after the migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"

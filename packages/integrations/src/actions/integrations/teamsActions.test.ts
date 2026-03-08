@@ -152,6 +152,7 @@ vi.mock('./providerReadiness', () => ({
 }));
 
 import {
+  getTeamsIntegrationExecutionState,
   getTeamsIntegrationStatus,
   saveTeamsIntegrationSettings,
 } from './teamsActions';
@@ -206,7 +207,7 @@ describe('Teams integration actions', () => {
     }
   });
 
-  it('T031/T035: returns an EE-unavailable result before permissions or database access in CE mode', async () => {
+  it('T031/T035/T223/T224: returns an EE-unavailable result before permissions or database access in CE mode', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'community';
 
     const result = await getTeamsIntegrationStatus();
@@ -219,7 +220,7 @@ describe('Teams integration actions', () => {
     expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 
-  it('T032/T037: returns a flag-disabled result before permissions or database access when the tenant flag is off', async () => {
+  it('T032/T037/T225/T226: returns a flag-disabled result before permissions or database access when the tenant flag is off', async () => {
     isFeatureFlagEnabledMock.mockResolvedValue(false);
 
     const result = await saveTeamsIntegrationSettings({
@@ -275,7 +276,7 @@ describe('Teams integration actions', () => {
     expect(teamsIntegrations.filter((row) => row.tenant === 'tenant-2')).toHaveLength(1);
   });
 
-  it('T085/T087/T089/T091/T093: stores selected profile, install status, capabilities, notification categories, and allowed actions', async () => {
+  it('T085/T087/T089/T091/T093/T227/T228/T253/T255: stores selected profile, install status, capabilities, notification categories, and allowed actions', async () => {
     addMicrosoftProfile({
       tenant: 'tenant-1',
       profileId: 'profile-1',
@@ -312,7 +313,7 @@ describe('Teams integration actions', () => {
     expect(reloaded).toEqual(saved);
   });
 
-  it('T086/T088/T090/T092/T094: rejects missing, archived, or unready profiles and unsupported install states', async () => {
+  it('T086/T088/T090/T092/T094/T228/T254/T256: rejects missing, archived, or unready profiles and unsupported install states', async () => {
     const missingProfile = await saveTeamsIntegrationSettings({
       selectedProfileId: 'missing-profile',
       installStatus: 'install_pending',
@@ -424,7 +425,35 @@ describe('Teams integration actions', () => {
     });
   });
 
-  it('T088/T461/T462: only tenant admins can load or save Teams setup state', async () => {
+  it('T191/T227: delegates execution-state reads into the EE implementation while preserving the existing shared result shape', async () => {
+    teamsIntegrations.push({
+      tenant: 'tenant-1',
+      selected_profile_id: 'profile-1',
+      install_status: 'active',
+      enabled_capabilities: ['personal_tab', 'message_extension'],
+      notification_categories: ['assignment'],
+      allowed_actions: ['assign_ticket', 'log_time'],
+      app_id: 'teams-app-1',
+      bot_id: 'teams-bot-1',
+      package_metadata: { baseUrl: 'https://tenant.example.com' },
+      last_error: null,
+      created_by: 'user-1',
+      updated_by: 'user-1',
+      created_at: '2026-03-08T00:00:00.000Z',
+      updated_at: '2026-03-08T00:00:00.000Z',
+    });
+
+    await expect(getTeamsIntegrationExecutionState('tenant-1')).resolves.toEqual({
+      selectedProfileId: 'profile-1',
+      installStatus: 'active',
+      enabledCapabilities: ['personal_tab', 'message_extension'],
+      allowedActions: ['assign_ticket', 'log_time'],
+      appId: 'teams-app-1',
+      packageMetadata: { baseUrl: 'https://tenant.example.com' },
+    });
+  });
+
+  it('T088/T461/T462/T253/T254: only tenant admins can load or save Teams setup state', async () => {
     hasPermissionMock.mockResolvedValue(false);
 
     await expect(getTeamsIntegrationStatus()).resolves.toEqual({

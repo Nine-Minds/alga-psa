@@ -1,5 +1,5 @@
 import { createTenantKnex, getUserWithRoles } from '@alga-psa/db';
-import { getTeamsIntegrationExecutionState } from '@alga-psa/integrations/actions/integrations/teamsActions';
+import { getTeamsIntegrationExecutionStateImpl as getTeamsIntegrationExecutionState } from '../../actions/integrations/teamsActions';
 import { NextResponse } from 'next/server';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { ContactService } from 'server/src/lib/api/services/ContactService';

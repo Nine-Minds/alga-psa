@@ -42,6 +42,19 @@ describe('teams runtime EE ownership', () => {
     expect(sharedPackageActionsSource).not.toContain('function buildTeamsAppManifest');
   });
 
+  it('T191/T192/T223/T227/T239/T261: keeps Teams settings persistence under EE while leaving shared action wrappers in place', () => {
+    const sharedTeamsActionsPath = repoPath('packages/integrations/src/actions/integrations/teamsActions.ts');
+    const sharedTeamsActionsSource = fs.readFileSync(sharedTeamsActionsPath, 'utf8');
+
+    expect(fs.existsSync(sharedTeamsActionsPath)).toBe(true);
+    expect(fs.existsSync(repoPath('ee/server/src/lib/actions/integrations/teamsActions.ts'))).toBe(true);
+    expect(sharedTeamsActionsSource).toContain('loadEeTeamsActions');
+    expect(sharedTeamsActionsSource).toContain('getTeamsIntegrationStatusImpl');
+    expect(sharedTeamsActionsSource).toContain('getTeamsIntegrationExecutionStateImpl');
+    expect(sharedTeamsActionsSource).toContain('saveTeamsIntegrationSettingsImpl');
+    expect(sharedTeamsActionsSource).not.toContain('function mapTeamsIntegrationRow');
+  });
+
   it('T181/T283: keeps Teams notification delivery implementation under EE while leaving the shared broadcaster wrapper in place', () => {
     const sharedTeamsNotificationPath = repoPath('packages/notifications/src/realtime/teamsNotificationDelivery.ts');
     const sharedTeamsNotificationSource = fs.readFileSync(sharedTeamsNotificationPath, 'utf8');
@@ -57,5 +70,18 @@ describe('teams runtime EE ownership', () => {
   it('T183/T295: keeps Teams deep-link composition under ee/server ownership', () => {
     expect(fs.existsSync(repoPath('packages/integrations/src/actions/integrations/teamsPackageShared.ts'))).toBe(false);
     expect(fs.existsSync(repoPath('ee/server/src/lib/teams/teamsDeepLinks.ts'))).toBe(true);
+  });
+
+  it('T253/T254/T255/T256/T261/T262: keeps the shared Teams settings actions availability-gated while the concrete persistence logic stays in EE', () => {
+    const sharedTeamsActionsPath = repoPath('packages/integrations/src/actions/integrations/teamsActions.ts');
+    const sharedTeamsActionsSource = fs.readFileSync(sharedTeamsActionsPath, 'utf8');
+
+    expect(fs.existsSync(sharedTeamsActionsPath)).toBe(true);
+    expect(fs.existsSync(repoPath('ee/server/src/lib/actions/integrations/teamsActions.ts'))).toBe(true);
+    expect(sharedTeamsActionsSource).toContain('getTeamsAvailability');
+    expect(sharedTeamsActionsSource).toContain('loadEeTeamsActions');
+    expect(sharedTeamsActionsSource).toContain('getTeamsIntegrationStatusImpl');
+    expect(sharedTeamsActionsSource).toContain('saveTeamsIntegrationSettingsImpl');
+    expect(sharedTeamsActionsSource).not.toContain('function validateSelectedProfile');
   });
 });
