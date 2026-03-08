@@ -170,3 +170,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
 - 2026-03-08 F029: Preserved CategoriesSettings behavior by keeping the existing edit-category path intact, leaving board-change warnings/display-order editing untouched, and refreshing category data after both create and update flows.
 - Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
+- 2026-03-08 F030: Added generic `onAddNew`/`addNewLabel` support to `packages/ui/src/components/TreeSelect.tsx`, rendering the separator/button inside the Radix portal content and explicitly closing the dropdown before invoking the consumer callback.
+- Validation: `npx tsc -p packages/ui/tsconfig.json --noEmit && npx tsc -p packages/tickets/tsconfig.json --noEmit`

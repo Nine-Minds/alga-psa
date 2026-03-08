@@ -234,7 +234,7 @@
   {
     "id": "F030",
     "description": "TreeSelect accepts optional onAddNew prop and renders separator + button at bottom of options list",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-7"
     ]
