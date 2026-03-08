@@ -42,7 +42,7 @@
   {
     "id": "T006",
     "description": "Batch verify: all static MSP pages (F006-F075) export 'export const metadata' with correct title strings",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F007",
