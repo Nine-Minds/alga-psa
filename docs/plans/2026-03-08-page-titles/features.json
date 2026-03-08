@@ -34,7 +34,7 @@
   {
     "id": "F005",
     "description": "Static layout: add metadata export with `default: 'Alga PSA'`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 2"
     ]

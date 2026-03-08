@@ -52,3 +52,4 @@
 - (2026-03-08) F002: MSP layout: add metadata export with `template: '%s | Alga PSA'` and `default: 'Dashboard | Alga PSA'`
 - (2026-03-08) F003: Client Portal layout: add metadata export with `template: '%s | Client Portal'` and `default: 'Dashboard | Client Portal'`
 - (2026-03-08) F004: Auth layout: add metadata export with `template: '%s | Alga PSA'` and `default: 'Sign In | Alga PSA'`
+- (2026-03-08) F005: Static layout: add metadata export with `default: 'Alga PSA'`
