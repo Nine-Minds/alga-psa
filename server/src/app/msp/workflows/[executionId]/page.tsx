@@ -10,16 +10,23 @@ import WorkflowActionsList from '@alga-psa/workflows/components/WorkflowActionsL
 import WorkflowControls from '@alga-psa/workflows/components/WorkflowControls';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'Workflow Execution',
-};
-
 export const dynamic = 'force-dynamic';
 
 interface WorkflowDetailPageProps {
   params: Promise<{
     executionId: string;
   }>;
+}
+
+export async function generateMetadata({ params }: WorkflowDetailPageProps): Promise<Metadata> {
+  try {
+    const { executionId } = await params;
+    const details = await getWorkflowExecutionDetails(executionId);
+    if (details?.execution?.workflow_name) {
+      return { title: details.execution.workflow_name };
+    }
+  } catch {}
+  return { title: 'Workflow Execution' };
 }
 export default async function WorkflowDetailPage({ params }: WorkflowDetailPageProps) {
   const resolvedParams = await params;

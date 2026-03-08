@@ -7,9 +7,16 @@ import { ClientDetails } from '@alga-psa/clients';
 import { getSurveyClientSummary } from '@alga-psa/surveys/actions/survey-actions/surveyDashboardActions';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'Client Details',
-};
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  try {
+    const { id } = await params;
+    const client = await getClientById(id);
+    if (client && 'client_name' in client) {
+      return { title: client.client_name };
+    }
+  } catch {}
+  return { title: 'Client Details' };
+}
 
 const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;

@@ -6,14 +6,21 @@ import logger from '@alga-psa/core/logger';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'Ticket Details',
-};
-
 interface TicketPageProps {
   params: Promise<{
     ticketId: string;
   }>;
+}
+
+export async function generateMetadata({ params }: TicketPageProps): Promise<Metadata> {
+  try {
+    const { ticketId } = await params;
+    const ticket = await getClientTicketDetails(ticketId);
+    if (ticket) {
+      return { title: `Ticket #${ticket.ticket_number} - ${ticket.title}` };
+    }
+  } catch {}
+  return { title: 'Ticket Details' };
 }
 
 export default async function TicketPage({ params }: TicketPageProps) {

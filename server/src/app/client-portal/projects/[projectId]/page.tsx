@@ -5,14 +5,21 @@ import logger from '@alga-psa/core/logger';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'Project Details',
-};
-
 interface ProjectPageProps {
   params: Promise<{
     projectId: string;
   }>;
+}
+
+export async function generateMetadata({ params }: ProjectPageProps): Promise<Metadata> {
+  try {
+    const { projectId } = await params;
+    const project = await getClientProjectDetails(projectId);
+    if (project) {
+      return { title: project.project_name };
+    }
+  } catch {}
+  return { title: 'Project Details' };
 }
 
 export default async function ProjectPage({ params }: ProjectPageProps) {

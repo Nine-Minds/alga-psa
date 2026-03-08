@@ -6,11 +6,19 @@ import { TicketDetailsSkeleton } from '@alga-psa/tickets/components/ticket/Ticke
 import { getSurveyTicketSummary } from '@alga-psa/surveys/actions/survey-actions/surveyDashboardActions';
 import AssociatedAssets from '@alga-psa/assets/components/AssociatedAssets';
 import { MspTicketDetailsContainerClient } from '@alga-psa/msp-composition/tickets';
+import { getTicketById } from '@alga-psa/tickets/actions/ticketActions';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'Ticket Details',
-};
+export async function generateMetadata({ params }: TicketDetailsPageProps): Promise<Metadata> {
+  try {
+    const { id } = await params;
+    const ticket = await getTicketById(id);
+    if (ticket && 'ticket_number' in ticket) {
+      return { title: `Ticket #${ticket.ticket_number} - ${ticket.title}` };
+    }
+  } catch {}
+  return { title: 'Ticket Details' };
+}
 
 interface TicketDetailsPageProps {
   params: Promise<{

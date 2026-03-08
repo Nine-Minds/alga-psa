@@ -5,14 +5,21 @@ import { AssetDetailView } from '@alga-psa/assets/components/AssetDetailView';
 import { getSession } from '@alga-psa/auth';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'Asset Details',
-};
-
 interface Props {
   params: Promise<{
     asset_id: string;
   }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  try {
+    const { asset_id } = await params;
+    const bundle = await getAssetDetailBundle(asset_id);
+    if (bundle.asset?.name) {
+      return { title: bundle.asset.name };
+    }
+  } catch {}
+  return { title: 'Asset Details' };
 }
 
 export default async function AssetPage({ params }: Props) {

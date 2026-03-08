@@ -10,9 +10,16 @@ import { getContactPortalPermissions } from '@alga-psa/auth/actions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
-  title: 'Contact Details',
-};
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  try {
+    const { id } = await params;
+    const contact = await getContactByContactNameId(id);
+    if (contact) {
+      return { title: contact.full_name };
+    }
+  } catch {}
+  return { title: 'Contact Details' };
+}
 
 interface ContactDetailPageProps {
   params: Promise<{ id: string }>;

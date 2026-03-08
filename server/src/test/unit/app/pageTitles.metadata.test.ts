@@ -150,27 +150,36 @@ describe('route title metadata coverage', () => {
     }
   });
 
-  it('T007: dynamic MSP routes export the expected metadata functions', () => {
+  it('T007: dynamic MSP routes with static fallback titles use generateMetadata', () => {
     const dynamicMspRoutes = [
       ['server/src/app/msp/tickets/[id]/page.tsx', 'Ticket Details'],
       ['server/src/app/msp/clients/[id]/page.tsx', 'Client Details'],
       ['server/src/app/msp/contacts/[id]/page.tsx', 'Contact Details'],
       ['server/src/app/msp/contacts/[id]/activity/page.tsx', 'Contact Activity'],
       ['server/src/app/msp/projects/[id]/page.tsx', 'Project Details'],
-      ['server/src/app/msp/projects/templates/[templateId]/layout.tsx', 'Template Details'],
       ['server/src/app/msp/assets/[asset_id]/page.tsx', 'Asset Details'],
+      ['server/src/app/msp/workflows/[executionId]/page.tsx', 'Workflow Execution'],
+    ] as const;
+
+    for (const [relativePath, title] of dynamicMspRoutes) {
+      expectDynamicTitle(relativePath, title);
+    }
+  });
+
+  it('T007b: dynamic MSP routes with static-only titles use export const metadata', () => {
+    const staticDynamicRoutes = [
+      ['server/src/app/msp/projects/templates/[templateId]/layout.tsx', 'Template Details'],
       ['server/src/app/msp/time-entry/timesheet/[id]/page.tsx', 'Timesheet'],
       ['server/src/app/msp/surveys/responses/[id]/page.tsx', 'Response Details'],
       ['server/src/app/msp/workflow-editor/[workflowId]/page.tsx', 'Edit Workflow'],
-      ['server/src/app/msp/workflows/[executionId]/page.tsx', 'Workflow Execution'],
       ['server/src/app/msp/workflows/runs/[runId]/layout.tsx', 'Workflow Run'],
       ['server/src/app/msp/settings/extensions/[id]/layout.tsx', 'Extension Settings'],
       ['server/src/app/msp/settings/extensions/[id]/settings/layout.tsx', 'Extension Configuration'],
       ['server/src/app/msp/extensions/[id]/debug/layout.tsx', 'Extension Debug'],
     ] as const;
 
-    for (const [relativePath, title] of dynamicMspRoutes) {
-      expectDynamicTitle(relativePath, title);
+    for (const [relativePath, title] of staticDynamicRoutes) {
+      expectStaticTitle(relativePath, title);
     }
   });
 
@@ -190,17 +199,26 @@ describe('route title metadata coverage', () => {
     }
   });
 
-  it('T009: dynamic Client Portal routes export the expected metadata functions', () => {
+  it('T009: dynamic Client Portal routes with data-driven titles use generateMetadata', () => {
     const dynamicClientPortalRoutes = [
-      ['server/src/app/client-portal/appointments/[appointmentRequestId]/layout.tsx', 'Appointment Details'],
-      ['server/src/app/client-portal/billing/invoices/[invoiceId]/pay/page.tsx', 'Pay Invoice'],
-      ['server/src/app/client-portal/billing/invoices/[invoiceId]/payment-success/page.tsx', 'Payment Success'],
       ['server/src/app/client-portal/tickets/[ticketId]/page.tsx', 'Ticket Details'],
       ['server/src/app/client-portal/projects/[projectId]/page.tsx', 'Project Details'],
     ] as const;
 
     for (const [relativePath, title] of dynamicClientPortalRoutes) {
       expectDynamicTitle(relativePath, title);
+    }
+  });
+
+  it('T009b: dynamic Client Portal routes with static-only titles use export const metadata', () => {
+    const staticDynamicRoutes = [
+      ['server/src/app/client-portal/appointments/[appointmentRequestId]/layout.tsx', 'Appointment Details'],
+      ['server/src/app/client-portal/billing/invoices/[invoiceId]/pay/page.tsx', 'Pay Invoice'],
+      ['server/src/app/client-portal/billing/invoices/[invoiceId]/payment-success/page.tsx', 'Payment Success'],
+    ] as const;
+
+    for (const [relativePath, title] of staticDynamicRoutes) {
+      expectStaticTitle(relativePath, title);
     }
   });
 
@@ -238,8 +256,8 @@ describe('route title metadata coverage', () => {
     expectStaticTitle('server/src/app/auth/verify/layout.tsx', 'Verify Email');
   });
 
-  it('T014: client settings layout metadata stays template-compatible', () => {
-    expectStaticTitle('server/src/app/client-portal/client-settings/layout.tsx', 'Company Settings');
+  it('T014: client settings page metadata stays template-compatible', () => {
+    expectStaticTitle('server/src/app/client-portal/client-settings/page.tsx', 'Company Settings');
   });
 
   it('T015: MSP extension re-export remains metadata-compatible', () => {
@@ -274,11 +292,9 @@ describe('route title metadata coverage', () => {
     expect(read('server/src/app/auth/layout.tsx')).toContain("default: 'Sign In | Alga PSA'");
 
     expect(read('server/src/app/auth/verify/page.tsx')).not.toMatch(/export const metadata|generateMetadata/);
-    expect(read('server/src/app/client-portal/client-settings/page.tsx')).not.toMatch(/export const metadata|generateMetadata/);
     expect(read('server/src/app/msp/account/page.tsx')).not.toMatch(/export const metadata|generateMetadata/);
 
     expect(read('server/src/app/auth/verify/layout.tsx')).toContain("title: 'Verify Email'");
-    expect(read('server/src/app/client-portal/client-settings/layout.tsx')).toContain("title: 'Company Settings'");
     expect(read('server/src/app/msp/account/layout.tsx')).toContain("title: 'Account'");
   });
 
@@ -308,8 +324,8 @@ describe('route title metadata coverage', () => {
     expectStaticTitle('ee/server/src/app/msp/settings/page.tsx', 'Settings');
   });
 
-  it('T025: EE Client Portal extension route exports a dynamic title', () => {
-    expectDynamicTitle('ee/server/src/app/client-portal/extensions/[id]/page.tsx', 'Extension');
+  it('T025: EE Client Portal extension route exports a static title', () => {
+    expectStaticTitle('ee/server/src/app/client-portal/extensions/[id]/page.tsx', 'Extension');
   });
 
   it('T026: every CE and EE page route has metadata coverage', () => {
