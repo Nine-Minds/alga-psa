@@ -244,3 +244,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/settings/__tests__/CategoriesSettings.contract.test.ts -t T035`
 - 2026-03-08 T036: Extended `CategoriesSettings.contract.test.ts` to preserve create-flow parity by asserting the extracted `QuickAddCategory` still receives boards/categories and triggers `fetchCategories()` after creation.
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/settings/__tests__/CategoriesSettings.contract.test.ts -t T036`
+- 2026-03-08 T037: Extended `CategoriesSettings.contract.test.ts` to preserve edit-flow parity, asserting the inline edit dialog remains, `updateCategory` is still called for edits, and categories refresh after update.
+- Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/settings/__tests__/CategoriesSettings.contract.test.ts -t T037`

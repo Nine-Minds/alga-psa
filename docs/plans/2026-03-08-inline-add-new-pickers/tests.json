@@ -291,7 +291,7 @@
   {
     "id": "T037",
     "description": "CategoriesSettings edit-category flow still works after refactor",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]

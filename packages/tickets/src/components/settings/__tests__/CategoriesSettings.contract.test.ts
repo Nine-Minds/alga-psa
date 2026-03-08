@@ -25,4 +25,14 @@ describe('categories settings quick-add refactor contract', () => {
     expect(source).toContain('categories={categories}');
     expect(source).toContain('boards={boards}');
   });
+
+  it('T037: CategoriesSettings keeps the edit-category flow inline and refreshes after update', () => {
+    const source = read('../CategoriesSettings.tsx');
+
+    expect(source).toContain('{editingCategory && (');
+    expect(source).toContain('title="Edit Category"');
+    expect(source).toContain('await updateCategory(editingCategory.category_id, updateData);');
+    expect(source).toContain("toast.success('Category updated successfully');");
+    expect(source).toContain('await fetchCategories();');
+  });
 });
