@@ -1554,7 +1554,7 @@
   {
     "id": "T195",
     "description": "Happy path: EE ownership: EE Teams components continue to consume shared PSA notification/link infrastructure through stable shared interfaces.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F098"
     ]
@@ -1562,7 +1562,7 @@
   {
     "id": "T196",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for eE ownership: EE Teams components continue to consume shared PSA notification/link infrastructure through stable shared interfaces.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F098"
     ]
@@ -1570,7 +1570,7 @@
   {
     "id": "T197",
     "description": "Happy path: EE ownership: EE Teams components continue to consume shared auth/session primitives through stable shared interfaces.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F099"
     ]
@@ -1578,7 +1578,7 @@
   {
     "id": "T198",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for eE ownership: EE Teams components continue to consume shared auth/session primitives through stable shared interfaces.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F099"
     ]
@@ -2130,7 +2130,7 @@
   {
     "id": "T267",
     "description": "Happy path: Auth boundary: Teams runtime auth checks still enforce MSP-user-only semantics after moving to EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F134"
     ]
@@ -2138,7 +2138,7 @@
   {
     "id": "T268",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for auth boundary: Teams runtime auth checks still enforce MSP-user-only semantics after moving to EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F134"
     ]
@@ -2146,7 +2146,7 @@
   {
     "id": "T269",
     "description": "Happy path: Auth boundary: Teams runtime auth checks still enforce tenant matching after moving to EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F135"
     ]
@@ -2154,7 +2154,7 @@
   {
     "id": "T270",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for auth boundary: Teams runtime auth checks still enforce tenant matching after moving to EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F135"
     ]
@@ -2162,7 +2162,7 @@
   {
     "id": "T271",
     "description": "Happy path: Auth boundary: Teams runtime auth checks still enforce selected Teams Microsoft profile semantics after moving to EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F136"
     ]
@@ -2170,7 +2170,7 @@
   {
     "id": "T272",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for auth boundary: Teams runtime auth checks still enforce selected Teams Microsoft profile semantics after moving to EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F136"
     ]
@@ -2850,7 +2850,7 @@
   {
     "id": "T357",
     "description": "Happy path: Cleanup: Teams-specific helpers that are only meaningful for Teams runtime are moved out of generic shared utility files where appropriate.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F179"
     ]
@@ -2858,7 +2858,7 @@
   {
     "id": "T358",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for cleanup: Teams-specific helpers that are only meaningful for Teams runtime are moved out of generic shared utility files where appropriate.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F179"
     ]

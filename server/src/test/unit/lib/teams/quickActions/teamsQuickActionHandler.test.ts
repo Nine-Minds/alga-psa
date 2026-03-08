@@ -42,7 +42,7 @@ vi.mock('../../../../../../../ee/server/src/lib/teams/resolveTeamsTenantContext'
   resolveTeamsTenantContext: resolveTeamsTenantContextMock,
 }));
 
-vi.mock('server/src/lib/teams/resolveTeamsLinkedUser', () => ({
+vi.mock('../../../../../../../ee/server/src/lib/teams/resolveTeamsLinkedUser', () => ({
   resolveTeamsLinkedUser: resolveTeamsLinkedUserMock,
 }));
 

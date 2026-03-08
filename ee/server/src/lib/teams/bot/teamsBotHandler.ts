@@ -14,7 +14,7 @@ import {
   type TeamsActionResultItem,
   type TeamsActionSurface,
 } from '../actions/teamsActionRegistry';
-import { resolveTeamsLinkedUser } from 'server/src/lib/teams/resolveTeamsLinkedUser';
+import { resolveTeamsLinkedUser } from '../resolveTeamsLinkedUser';
 import { resolveTeamsTenantContext } from '../resolveTeamsTenantContext';
 
 export interface TeamsBotActivity {

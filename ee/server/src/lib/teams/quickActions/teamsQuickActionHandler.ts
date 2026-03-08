@@ -11,7 +11,7 @@ import {
   type TeamsActionLink,
   type TeamsActionResult,
 } from '../actions/teamsActionRegistry';
-import { resolveTeamsLinkedUser } from 'server/src/lib/teams/resolveTeamsLinkedUser';
+import { resolveTeamsLinkedUser } from '../resolveTeamsLinkedUser';
 import { resolveTeamsTenantContext } from '../resolveTeamsTenantContext';
 
 const QUICK_ACTION_IDS = ['assign_ticket', 'add_note', 'reply_to_contact', 'log_time', 'approval_response'] as const;

@@ -875,7 +875,7 @@
   {
     "id": "F098",
     "description": "EE ownership: EE Teams components continue to consume shared PSA notification/link infrastructure through stable shared interfaces.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -884,7 +884,7 @@
   {
     "id": "F099",
     "description": "EE ownership: EE Teams components continue to consume shared auth/session primitives through stable shared interfaces.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1199,7 +1199,7 @@
   {
     "id": "F134",
     "description": "Auth boundary: Teams runtime auth checks still enforce MSP-user-only semantics after moving to EE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"
@@ -1208,7 +1208,7 @@
   {
     "id": "F135",
     "description": "Auth boundary: Teams runtime auth checks still enforce tenant matching after moving to EE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"
@@ -1217,7 +1217,7 @@
   {
     "id": "F136",
     "description": "Auth boundary: Teams runtime auth checks still enforce selected Teams Microsoft profile semantics after moving to EE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"
@@ -1604,7 +1604,7 @@
   {
     "id": "F179",
     "description": "Cleanup: Teams-specific helpers that are only meaningful for Teams runtime are moved out of generic shared utility files where appropriate.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Acceptance Criteria (Definition of Done)"

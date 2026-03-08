@@ -21,7 +21,7 @@ vi.mock('../../../../../../../ee/server/src/lib/teams/resolveTeamsTabAuthState',
   resolveTeamsTabAuthState: (...args: unknown[]) => resolveTeamsTabAuthStateMock(...args),
 }));
 
-vi.mock('server/src/lib/teams/resolveTeamsTabAccessState', () => ({
+vi.mock('../../../../../../../ee/server/src/lib/teams/resolveTeamsTabAccessState', () => ({
   resolveTeamsTabAccessState: (...args: unknown[]) => resolveTeamsTabAccessStateMock(...args),
 }));
 

@@ -137,7 +137,7 @@ describe('resolveTeamsTabAuthState', () => {
     });
   });
 
-  it('T163/T164: blocks Teams auth when the selected Microsoft profile is missing or not ready and returns admin-readable remediation state', async () => {
+  it('T163/T164/T272: blocks Teams auth when the selected Microsoft profile is missing or not ready and returns admin-readable remediation state', async () => {
     getSessionWithRevocationCheckMock.mockResolvedValue({
       user: {
         id: 'user-3',
@@ -171,7 +171,7 @@ describe('resolveTeamsTabAuthState', () => {
     });
   });
 
-  it('T175/T176: re-reads the currently selected Teams Microsoft profile on each request so rebinding invalidates stale tenant assumptions', async () => {
+  it('T175/T176/T271: re-reads the currently selected Teams Microsoft profile on each request so rebinding invalidates stale tenant assumptions', async () => {
     getSessionWithRevocationCheckMock.mockResolvedValue({
       user: {
         id: 'user-4',

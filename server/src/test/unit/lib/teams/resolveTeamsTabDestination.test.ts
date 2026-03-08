@@ -4,7 +4,7 @@ import {
   resolveTeamsTabEntrySource,
   resolveTeamsTabDestination,
   resolveTeamsTabDestinationFromPsaUrl,
-} from 'server/src/lib/teams/resolveTeamsTabDestination';
+} from '../../../../../../ee/server/src/lib/teams/resolveTeamsTabDestination';
 
 describe('resolveTeamsTabDestination', () => {
   it('T189/T191/T193/T195/T197/T199: parses ticket, project-task, approval, time-entry, and contact deep links and returns destination copy with enough entity context for the initial Teams tab load', () => {

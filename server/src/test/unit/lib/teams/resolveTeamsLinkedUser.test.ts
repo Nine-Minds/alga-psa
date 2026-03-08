@@ -39,7 +39,7 @@ vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: (...args: unknown[]) => getAdminConnectionMock(...args),
 }));
 
-const { resolveTeamsLinkedUser } = await import('server/src/lib/teams/resolveTeamsLinkedUser');
+const { resolveTeamsLinkedUser } = await import('../../../../../../ee/server/src/lib/teams/resolveTeamsLinkedUser');
 
 describe('resolveTeamsLinkedUser', () => {
   beforeEach(() => {
@@ -48,7 +48,7 @@ describe('resolveTeamsLinkedUser', () => {
     getAdminConnectionMock.mockResolvedValue(createAdminDb());
   });
 
-  it('T165: maps a linked Microsoft Teams identity to the correct internal PSA user within the tenant', async () => {
+  it('T197/T267/T269/T357: keeps Teams linked-user resolution under EE while preserving shared auth-backed MSP and tenant matching semantics', async () => {
     findOAuthAccountLinkMock.mockResolvedValue({
       tenant: 'tenant-1',
       user_id: 'user-1',
@@ -80,7 +80,7 @@ describe('resolveTeamsLinkedUser', () => {
     });
   });
 
-  it('T166: rejects missing, cross-tenant, and client-user Teams identity mappings', async () => {
+  it('T198/T268/T270/T358: rejects missing, cross-tenant, and client-user Teams identity mappings after the EE move', async () => {
     await expect(
       resolveTeamsLinkedUser({
         tenantId: 'tenant-1',

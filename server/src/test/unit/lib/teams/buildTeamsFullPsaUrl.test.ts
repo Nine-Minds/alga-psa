@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTeamsFullPsaUrl } from 'server/src/lib/teams/buildTeamsFullPsaUrl';
+import { buildTeamsFullPsaUrl } from '../../../../../../ee/server/src/lib/teams/buildTeamsFullPsaUrl';
 
 describe('buildTeamsFullPsaUrl', () => {
   it('T203/T209: returns relative internal MSP paths for deep-linked destinations so Teams can reuse existing PSA UI composition without leaking an external origin or auth token', () => {

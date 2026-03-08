@@ -103,7 +103,7 @@ describe('internalNotificationBroadcaster', () => {
     );
   });
 
-  it('T303/T304: keeps the Redis in-app broadcast path working when Teams EE delivery is unavailable', async () => {
+  it('T196/T303/T304: keeps the Redis in-app broadcast path working when Teams EE delivery is unavailable', async () => {
     hoisted.deliverTeamsNotificationMock.mockResolvedValue({
       status: 'skipped',
       reason: 'delivery_unavailable',

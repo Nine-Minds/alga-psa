@@ -51,7 +51,7 @@ vi.mock('server/src/lib/api/services/TimeSheetService', () => ({
   },
 }));
 
-const { resolveTeamsTabAccessState } = await import('server/src/lib/teams/resolveTeamsTabAccessState');
+const { resolveTeamsTabAccessState } = await import('../../../../../../ee/server/src/lib/teams/resolveTeamsTabAccessState');
 
 const readyState = {
   status: 'ready' as const,

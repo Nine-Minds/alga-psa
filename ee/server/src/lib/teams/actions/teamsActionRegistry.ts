@@ -22,10 +22,10 @@ import { TicketService } from 'server/src/lib/api/services/TicketService';
 import { TimeEntryService } from 'server/src/lib/api/services/TimeEntryService';
 import { TimeSheetService } from 'server/src/lib/api/services/TimeSheetService';
 import { ForbiddenError, NotFoundError, ValidationError } from 'server/src/lib/api/middleware/apiMiddleware';
-import { buildTeamsFullPsaUrl } from 'server/src/lib/teams/buildTeamsFullPsaUrl';
+import { buildTeamsFullPsaUrl } from '../buildTeamsFullPsaUrl';
 import { listPendingApprovalsForTeams, type TeamsPendingApprovalRecord } from 'server/src/lib/teams/approvals/queryPendingApprovalsForTeams';
-import type { TeamsTabDestination } from 'server/src/lib/teams/resolveTeamsTabDestination';
-import { describeTeamsTabDestination } from 'server/src/lib/teams/resolveTeamsTabDestination';
+import type { TeamsTabDestination } from '../resolveTeamsTabDestination';
+import { describeTeamsTabDestination } from '../resolveTeamsTabDestination';
 
 export const TEAMS_ACTION_SURFACES = ['bot', 'message_extension', 'quick_action'] as const;
 export type TeamsActionSurface = typeof TEAMS_ACTION_SURFACES[number];

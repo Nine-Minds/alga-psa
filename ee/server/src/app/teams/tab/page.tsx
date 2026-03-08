@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation';
 import { Card } from '@alga-psa/ui/components/Card';
 import { getTeamsAvailability, type TeamsAvailability } from '@alga-psa/integrations/lib/teamsAvailability';
-import { buildTeamsReauthPath } from 'server/src/lib/teams/buildTeamsReauthUrl';
-import { buildTeamsFullPsaUrl } from 'server/src/lib/teams/buildTeamsFullPsaUrl';
-import { resolveTeamsTabAccessState } from 'server/src/lib/teams/resolveTeamsTabAccessState';
+import { buildTeamsReauthPath } from '../../../lib/teams/buildTeamsReauthUrl';
+import { buildTeamsFullPsaUrl } from '../../../lib/teams/buildTeamsFullPsaUrl';
+import { resolveTeamsTabAccessState } from '../../../lib/teams/resolveTeamsTabAccessState';
 import { resolveTeamsTabAuthState } from '../../../lib/teams/resolveTeamsTabAuthState';
 import {
   describeTeamsTabDestination,
@@ -11,7 +11,7 @@ import {
   type TeamsTabEntrySource,
   type TeamsTabDestination,
   resolveTeamsTabDestination,
-} from 'server/src/lib/teams/resolveTeamsTabDestination';
+} from '../../../lib/teams/resolveTeamsTabDestination';
 
 interface TeamsTabPageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
