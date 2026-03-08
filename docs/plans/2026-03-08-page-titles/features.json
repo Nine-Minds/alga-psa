@@ -482,7 +482,7 @@
   {
     "id": "F061",
     "description": "MSP page title: /msp/settings/sla — title: 'SLA Settings'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
