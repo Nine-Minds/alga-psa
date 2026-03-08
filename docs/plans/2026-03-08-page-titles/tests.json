@@ -277,7 +277,7 @@
   {
     "id": "T023",
     "description": "Verify EE root, MSP, and Client Portal layouts export the expected metadata templates/defaults",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F108",
       "F109",
