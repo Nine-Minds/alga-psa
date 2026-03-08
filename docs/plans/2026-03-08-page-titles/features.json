@@ -474,7 +474,7 @@
   {
     "id": "F060",
     "description": "MSP page title: /msp/settings/notifications — title: 'Notification Settings'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
