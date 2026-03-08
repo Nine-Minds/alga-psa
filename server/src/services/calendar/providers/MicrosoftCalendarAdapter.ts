@@ -591,7 +591,7 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
 
     try {
       while (requestUrl) {
-        const response = await this.httpClient.get(requestUrl, {
+        const response: any = await this.httpClient.get(requestUrl, {
           headers: deltaLink ? {} : { Prefer: 'odata.track-changes' }
         });
 

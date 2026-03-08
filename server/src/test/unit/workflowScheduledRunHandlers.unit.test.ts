@@ -31,7 +31,7 @@ vi.mock('@shared/workflow/persistence/workflowScheduleStateModel', () => ({
   }
 }));
 
-vi.mock('server/src/lib/workflow-runtime-v2/workflowRunLauncher', () => ({
+vi.mock('@alga-psa/workflows/lib/workflowRunLauncher', () => ({
   launchPublishedWorkflowRun: (...args: unknown[]) => launchPublishedWorkflowRun(...args)
 }));
 

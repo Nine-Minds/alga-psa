@@ -25,9 +25,9 @@ import {
   createExternalWorkflowScheduleState,
   deleteWorkflowScheduleStateById,
   setExternalWorkflowScheduleEnabled,
-  type DesiredWorkflowSchedule,
-  updateExternalWorkflowScheduleState
-} from 'server/src/lib/workflow-runtime-v2/workflowScheduleLifecycle';
+  updateExternalWorkflowScheduleState,
+  type DesiredWorkflowSchedule
+} from '../lib/workflowScheduleLifecycle';
 import {
   CreateWorkflowScheduleInput,
   DeleteWorkflowScheduleInput,

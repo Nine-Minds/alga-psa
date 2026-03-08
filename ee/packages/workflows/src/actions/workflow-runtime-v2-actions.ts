@@ -27,7 +27,6 @@ import {
   type WorkflowTrigger,
   type PublishError
 } from '@shared/workflow/runtime';
-import { isEnterpriseEdition } from 'server/src/lib/features';
 import { verifySecretsExist } from '@shared/workflow/runtime/validation/publishValidation';
 import { createTenantSecretProvider } from '@alga-psa/shared/workflow/secrets';
 import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
@@ -40,19 +39,19 @@ import WorkflowActionInvocationModelV2 from '@shared/workflow/persistence/workfl
 import WorkflowRuntimeEventModelV2 from '@shared/workflow/persistence/workflowRuntimeEventModelV2';
 import WorkflowRunLogModelV2 from '@shared/workflow/persistence/workflowRunLogModelV2';
 import type { WorkflowScheduleStateRecord } from '@shared/workflow/persistence/workflowScheduleStateModel';
+import { auditLog } from '@alga-psa/db';
+import { analytics } from '@alga-psa/analytics';
+import { EventCatalogModel } from '../models/eventCatalog';
 import {
   buildDesiredWorkflowSchedule,
   deleteWorkflowScheduleState,
   revalidateExternalWorkflowSchedulesForPublishedVersion,
   syncWorkflowScheduleState
-} from 'server/src/lib/workflow-runtime-v2/workflowScheduleLifecycle';
+} from '../lib/workflowScheduleLifecycle';
 import {
   launchPublishedWorkflowRun,
   recordFailedWorkflowRunLaunch
-} from 'server/src/lib/workflow-runtime-v2/workflowRunLauncher';
-import { auditLog } from '@alga-psa/db';
-import { analytics } from '@alga-psa/analytics';
-import { EventCatalogModel } from '../models/eventCatalog';
+} from '../lib/workflowRunLauncher';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import {
   CreateWorkflowDefinitionInput,
@@ -112,6 +111,12 @@ const hashDefinition = (definition: Record<string, unknown>) => {
   } catch {
     return null;
   }
+};
+
+const isEnterpriseEdition = (): boolean => {
+  const edition = (process.env.EDITION ?? '').toLowerCase();
+  const publicEdition = (process.env.NEXT_PUBLIC_EDITION ?? '').toLowerCase();
+  return edition === 'ee' || edition === 'enterprise' || publicEdition === 'enterprise';
 };
 
 const formatSchedulePayloadValidationMessage = (issues: Array<{ path?: Array<string | number>; message?: string }>): string => {
@@ -1758,7 +1763,11 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
       await syncWorkflowScheduleState(knex, {
         tenantId: tenant,
         workflowId: parsed.workflowId,
-        desired: buildDesiredWorkflowSchedule(definition as any, record.version, !(workflow.is_paused ?? false))
+        desired: buildDesiredWorkflowSchedule(
+          definition as any,
+          record.version,
+          !(workflow.is_paused ?? false)
+        )
       });
     }
 

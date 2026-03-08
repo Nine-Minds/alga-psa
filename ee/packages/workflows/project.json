@@ -1,7 +1,7 @@
 {
   "name": "@alga-psa/workflows",
-  "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "packages/workflows/src",
+  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "ee/packages/workflows/src",
   "projectType": "library",
   "tags": ["scope:workflows", "type:vertical"],
   "targets": {
@@ -10,7 +10,7 @@
     },
     "test": {
       "executor": "@nx/vite:test",
-      "outputs": ["{workspaceRoot}/coverage/packages/workflows"],
+      "outputs": ["{workspaceRoot}/coverage/ee/packages/workflows"],
       "options": {
         "passWithNoTests": true
       }
@@ -19,7 +19,7 @@
       "executor": "@nx/eslint:lint",
       "outputs": ["{options.outputFile}"],
       "options": {
-        "lintFilePatterns": ["packages/workflows/**/*.{ts,tsx}"]
+        "lintFilePatterns": ["ee/packages/workflows/**/*.{ts,tsx}"]
       }
     }
   }

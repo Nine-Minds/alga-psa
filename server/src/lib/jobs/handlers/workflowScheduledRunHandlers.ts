@@ -1,7 +1,7 @@
 import WorkflowScheduleStateModel from '@shared/workflow/persistence/workflowScheduleStateModel';
 import { createTenantKnex } from 'server/src/lib/db';
+import { launchPublishedWorkflowRun } from '@alga-psa/workflows/lib/workflowRunLauncher';
 import type { BaseJobData } from '../interfaces';
-import { launchPublishedWorkflowRun } from 'server/src/lib/workflow-runtime-v2/workflowRunLauncher';
 
 export interface WorkflowScheduledRunJobData extends BaseJobData {
   workflowId: string;

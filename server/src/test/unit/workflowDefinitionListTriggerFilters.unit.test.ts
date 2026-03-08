@@ -77,7 +77,7 @@ vi.mock('@alga-psa/auth', () => ({
   preCheckDeletion: vi.fn()
 }));
 
-import { listWorkflowDefinitionsPagedAction } from '../../../../packages/workflows/src/actions/workflow-runtime-v2-actions';
+import { listWorkflowDefinitionsPagedAction } from '@alga-psa/workflows/actions/workflow-runtime-v2-actions';
 
 describe('Workflow definition list trigger filters', () => {
   beforeEach(() => {

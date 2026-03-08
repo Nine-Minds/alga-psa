@@ -4,6 +4,10 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { v4 as uuidv4 } from 'uuid';
 
+import {
+  registerWorkflowScheduleJobRunner,
+  resetWorkflowScheduleJobRunner
+} from '@alga-psa/workflows/lib/jobRunnerProvider';
 import { createTestDbConnection } from '@main-test-utils/dbConfig';
 
 const require = createRequire(import.meta.url);
@@ -32,11 +36,7 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: db, tenant: tenantId }))
 }));
 
-vi.mock('server/src/lib/jobs/initializeJobRunner', () => ({
-  initializeJobRunner: vi.fn(async () => runner)
-}));
-
-type WorkflowScheduleActionsModule = typeof import('../../../../../packages/workflows/src/actions/workflow-schedule-v2-actions');
+type WorkflowScheduleActionsModule = typeof import('@alga-psa/workflows/actions/workflow-schedule-v2-actions');
 let listWorkflowSchedulesAction: WorkflowScheduleActionsModule['listWorkflowSchedulesAction'];
 let getWorkflowScheduleAction: WorkflowScheduleActionsModule['getWorkflowScheduleAction'];
 let createWorkflowScheduleAction: WorkflowScheduleActionsModule['createWorkflowScheduleAction'];
@@ -130,10 +130,11 @@ describe('Workflow external schedules actions – DB integration', () => {
       pauseWorkflowScheduleAction,
       resumeWorkflowScheduleAction,
       deleteWorkflowScheduleAction
-    } = await import('../../../../../packages/workflows/src/actions/workflow-schedule-v2-actions'));
+    } = await import('@alga-psa/workflows/actions/workflow-schedule-v2-actions'));
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
+    resetWorkflowScheduleJobRunner();
     await db?.destroy().catch(() => undefined);
   }, HOOK_TIMEOUT);
 
@@ -145,6 +146,7 @@ describe('Workflow external schedules actions – DB integration', () => {
     runner.scheduleRecurringJob.mockClear();
     runner.cancelJob.mockClear();
     runner.getJobStatus.mockClear();
+    registerWorkflowScheduleJobRunner(async () => runner);
 
     await db('tenant_workflow_schedule').delete().catch(() => undefined);
     await db('workflow_definition_versions').delete().catch(() => undefined);

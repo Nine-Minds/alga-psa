@@ -76,7 +76,7 @@ vi.mock('@shared/workflow/runtime', async (importOriginal) => {
 import {
   launchPublishedWorkflowRun,
   recordFailedWorkflowRunLaunch
-} from 'server/src/lib/workflow-runtime-v2/workflowRunLauncher';
+} from '@alga-psa/workflows/lib/workflowRunLauncher';
 
 describe('Workflow run launcher', () => {
   const knexMock: any = vi.fn((table: string) => {

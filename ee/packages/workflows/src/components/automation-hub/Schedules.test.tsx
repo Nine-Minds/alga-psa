@@ -1,3 +1,4 @@
+/// <reference types="@testing-library/jest-dom/vitest" />
 /** @vitest-environment jsdom */
 
 import React from 'react';

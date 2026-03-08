@@ -26,6 +26,7 @@ import { initializeNotificationAccumulator, shutdownNotificationAccumulator } fr
 import { DelayedEmailQueue, TenantEmailService, StaticTemplateProcessor, EmailProviderManager, TokenBucketRateLimiter, BucketConfig, sendPasswordResetEmail, getSystemEmailService } from '@alga-psa/email';
 import { registerAuthEmailProvider } from '@alga-psa/auth';
 import { registerWorkflowEmailProvider } from '@alga-psa/shared/workflow/runtime';
+import { registerWorkflowScheduleJobRunner } from '@alga-psa/workflows/lib/jobRunnerProvider';
 import { getRedisClient } from '../config/redisConfig';
 import { registerEnterpriseStorageProviders } from './storage/registerEnterpriseStorageProviders';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
@@ -121,6 +122,7 @@ export async function initializeApp() {
       StaticTemplateProcessor: StaticTemplateProcessor as any,
       EmailProviderManager: EmailProviderManager as any,
     });
+    registerWorkflowScheduleJobRunner(async () => initializeJobRunner());
     logger.info('Email provider registries initialized');
 
     // Initialize notification accumulator for batching ticket update emails

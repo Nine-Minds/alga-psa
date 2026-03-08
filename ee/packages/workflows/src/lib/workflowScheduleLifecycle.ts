@@ -1,13 +1,15 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 
-import type { ScheduleJobResult } from 'server/src/lib/jobs/interfaces/IJobRunner';
-import { initializeJobRunner } from 'server/src/lib/jobs/initializeJobRunner';
 import type { WorkflowDefinition, WorkflowTimeTrigger } from '@shared/workflow/runtime';
 import WorkflowScheduleStateModel, {
   type WorkflowScheduleStateRecord,
   type WorkflowScheduleStateStatus
 } from '@shared/workflow/persistence/workflowScheduleStateModel';
+import {
+  getWorkflowScheduleJobRunner,
+  type WorkflowScheduleJobResult as ScheduleJobResult
+} from './jobRunnerProvider';
 
 export const WORKFLOW_ONE_TIME_TRIGGER_JOB = 'workflow-time-trigger-once';
 export const WORKFLOW_RECURRING_TRIGGER_JOB = 'workflow-time-trigger-recurring';
@@ -131,7 +133,7 @@ async function scheduleDesiredWorkflow(
 ): Promise<ScheduleJobResult | null> {
   if (!desired.enabled) return null;
 
-  const runner = await initializeJobRunner();
+  const runner = await getWorkflowScheduleJobRunner();
   const jobData: WorkflowScheduleJobData = {
     tenantId,
     workflowId,
@@ -183,7 +185,7 @@ async function cancelScheduledWorkflow(
 ): Promise<void> {
   const jobId = existing.job_id ? String(existing.job_id) : '';
   if (!jobId) return;
-  const runner = await initializeJobRunner();
+  const runner = await getWorkflowScheduleJobRunner();
   const cancelled = await runner.cancelJob(jobId, tenantId);
   if (cancelled) return;
 

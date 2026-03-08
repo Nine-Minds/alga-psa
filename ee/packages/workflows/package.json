@@ -20,6 +20,16 @@
       "types": "./src/components/index.ts",
       "import": "./dist/components/index.mjs",
       "require": "./dist/components/index.js"
+    },
+    "./lib/*": {
+      "types": "./src/lib/*.ts",
+      "import": "./dist/lib/*.mjs",
+      "require": "./dist/lib/*.js"
+    },
+    "./models/*": {
+      "types": "./src/models/*.ts",
+      "import": "./dist/models/*.mjs",
+      "require": "./dist/models/*.js"
     }
   },
   "scripts": {

@@ -102,23 +102,23 @@ vi.mock('@shared/workflow/persistence/workflowRunWaitModelV2', () => ({
   default: workflowWaits
 }));
 
-vi.mock('../../../../packages/workflows/src/models/eventCatalog', () => ({
+vi.mock('@alga-psa/workflows/models/eventCatalog', () => ({
   EventCatalogModel: {
     getByEventType: vi.fn(async () => null)
   }
 }));
 
-vi.mock('server/src/lib/workflow-runtime-v2/workflowRunLauncher', () => ({
+vi.mock('@alga-psa/workflows/lib/workflowRunLauncher', () => ({
   launchPublishedWorkflowRun: (...args: unknown[]) => launchPublishedWorkflowRun(...args)
 }));
 
-vi.mock('server/src/lib/workflow-runtime-v2/workflowScheduleLifecycle', () => ({
+vi.mock('@alga-psa/workflows/lib/workflowScheduleLifecycle', () => ({
   buildDesiredWorkflowSchedule: vi.fn(),
   deleteWorkflowScheduleState: vi.fn(),
   syncWorkflowScheduleState: vi.fn()
 }));
 
-import { submitWorkflowEventAction } from '../../../../packages/workflows/src/actions/workflow-runtime-v2-actions';
+import { submitWorkflowEventAction } from '@alga-psa/workflows/actions/workflow-runtime-v2-actions';
 
 describe('Workflow event launcher routing', () => {
   beforeEach(() => {

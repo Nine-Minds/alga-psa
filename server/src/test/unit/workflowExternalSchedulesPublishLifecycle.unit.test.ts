@@ -1,7 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 
+import {
+  registerWorkflowScheduleJobRunner,
+  resetWorkflowScheduleJobRunner
+} from '@alga-psa/workflows/lib/jobRunnerProvider';
 import { getSchemaRegistry, initializeWorkflowRuntimeV2 } from '@shared/workflow/runtime';
 import {
   buildWorkflowDefinition,
@@ -62,10 +66,6 @@ vi.mock('@alga-psa/auth', () => ({
   hasPermission: (...args: any[]) => hasPermissionMock(...args),
   getCurrentUser: vi.fn(async () => ({ user_id: 'user-1', user_type: 'internal', roles: [] })),
   preCheckDeletion: vi.fn()
-}));
-
-vi.mock('server/src/lib/jobs/initializeJobRunner', () => ({
-  initializeJobRunner: vi.fn(async () => runner)
 }));
 
 vi.mock('@shared/workflow/persistence/workflowDefinitionModelV2', () => ({
@@ -141,7 +141,7 @@ vi.mock('@shared/workflow/persistence/workflowScheduleStateModel', () => ({
   }
 }));
 
-vi.mock('../../../../packages/workflows/src/models/eventCatalog', () => ({
+vi.mock('@alga-psa/workflows/models/eventCatalog', () => ({
   EventCatalogModel: {
     getByEventType: vi.fn(async () => null)
   }
@@ -150,7 +150,7 @@ vi.mock('../../../../packages/workflows/src/models/eventCatalog', () => ({
 import {
   createWorkflowDefinitionAction,
   publishWorkflowDefinitionAction
-} from '../../../../packages/workflows/src/actions/workflow-runtime-v2-actions';
+} from '@alga-psa/workflows/actions/workflow-runtime-v2-actions';
 
 const SCHEDULE_PUBLISH_V1_REF = 'payload.SchedulePublish.v1';
 const SCHEDULE_PUBLISH_V2_REF = 'payload.SchedulePublish.v2';
@@ -217,6 +217,10 @@ function seedSchedule(params: {
 }
 
 describe('workflow external schedules publish lifecycle unit tests', () => {
+  afterEach(() => {
+    resetWorkflowScheduleJobRunner();
+  });
+
   beforeEach(() => {
     workflowRecord = null;
     versionRecords.clear();
@@ -228,6 +232,7 @@ describe('workflow external schedules publish lifecycle unit tests', () => {
     runner.scheduleRecurringJob.mockClear();
     runner.cancelJob.mockClear();
     runner.getJobStatus.mockClear();
+    registerWorkflowScheduleJobRunner(async () => runner);
 
     initializeWorkflowRuntimeV2();
     ensureWorkflowRuntimeV2TestRegistrations();
