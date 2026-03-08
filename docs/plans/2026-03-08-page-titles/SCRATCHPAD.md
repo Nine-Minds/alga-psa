@@ -145,3 +145,4 @@
 - (2026-03-08) F095: Auth page title: /auth/portal/setup — title: 'Portal Setup'
 - (2026-03-08) F096: Auth page title: /auth/msp/signin — title: 'MSP Sign In'
 - (2026-03-08) F097: Auth page title: /auth/msp/forgot-password — title: 'Forgot Password'
+- (2026-03-08) F098: Auth page title: /auth/client-portal/signin — title: 'Client Portal Sign In'

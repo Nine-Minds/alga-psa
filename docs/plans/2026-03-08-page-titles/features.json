@@ -778,7 +778,7 @@
   {
     "id": "F098",
     "description": "Auth page title: /auth/client-portal/signin — title: 'Client Portal Sign In'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3b"
     ]
