@@ -216,3 +216,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddTicketPrefill.test.tsx -t T021`
 - 2026-03-08 T022: Extended `QuickAddTicketPrefill.test.tsx` again so the mocked `QuickAddClient` creates a client and closes via `onOpenChange(false)`, then verified `QuickAddTicket` appends the new client and auto-selects `client-new`.
 - Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddTicketPrefill.test.tsx -t T022`
+- 2026-03-08 T023: Added `packages/projects/src/components/ProjectQuickAdd.quick-add-client.contract.test.ts` to preserve the `ProjectQuickAdd` client-picker wiring that opens `QuickAddClient`, merges the created client into local options, auto-selects it, and clears any stale contact selection.
+- Validation: `cd packages/projects && npx vitest run --config vitest.config.ts src/components/ProjectQuickAdd.quick-add-client.contract.test.ts`
