@@ -124,7 +124,7 @@
   {
     "id": "T008",
     "description": "Batch verify: all static Client Portal pages (F076-F079, F081, F085, F087) export 'export const metadata' with correct title strings",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F076",
       "F077",
