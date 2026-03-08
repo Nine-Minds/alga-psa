@@ -642,7 +642,7 @@
   {
     "id": "F081",
     "description": "Client Portal page title: /client-portal/billing — title: 'Billing'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3b"
     ]
