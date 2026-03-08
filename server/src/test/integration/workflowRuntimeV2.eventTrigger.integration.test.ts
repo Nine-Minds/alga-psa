@@ -3,7 +3,10 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import { z } from 'zod';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
-import { resetWorkflowRuntimeTables } from '../helpers/workflowRuntimeV2TestUtils';
+import {
+  ensureWorkflowScheduleStateTable,
+  resetWorkflowRuntimeTables
+} from '../helpers/workflowRuntimeV2TestUtils';
 import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import {
@@ -63,9 +66,11 @@ async function publishWorkflow(workflowId: string, version: number, definition?:
 beforeAll(async () => {
   ensureWorkflowRuntimeV2TestRegistrations();
   db = await createTestDbConnection();
+  await ensureWorkflowScheduleStateTable(db);
 });
 
 beforeEach(async () => {
+  await ensureWorkflowScheduleStateTable(db);
   await resetWorkflowRuntimeTables(db);
   tenantId = uuidv4();
   userId = uuidv4();
@@ -148,6 +153,35 @@ describe('workflow runtime v2 event trigger integration tests', () => {
     });
     const run = await WorkflowRunModelV2.getById(db, result.startedRuns[0]);
     expect(run?.workflow_version).toBe(2);
+  });
+
+  it('T046: event-triggered workflows still publish and start correctly after launcher extraction. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [stateSetStep('state-1', 'READY')],
+      trigger: { type: 'event', eventName: 'REGRESSION', sourcePayloadSchemaRef: TEST_SCHEMA_REF }
+    });
+
+    const publishResult = await publishWorkflow(workflowId, 1);
+    expect(publishResult.ok).toBe(true);
+
+    const result = await submitWorkflowEventAction({
+      eventName: 'REGRESSION',
+      correlationKey: 'regression-key',
+      payload: { foo: 'bar' },
+      payloadSchemaRef: TEST_SCHEMA_REF
+    });
+
+    expect(result.startedRuns.length).toBe(1);
+
+    const run = await WorkflowRunModelV2.getById(db, result.startedRuns[0]);
+    expect(run?.workflow_id).toBe(workflowId);
+    expect(run?.workflow_version).toBe(1);
+    expect(run?.status).toBe('SUCCEEDED');
+    expect(run?.trigger_type).toBe('event');
+    expect(run?.trigger_metadata_json).toMatchObject({
+      eventName: 'REGRESSION',
+      payloadSchemaRef: TEST_SCHEMA_REF
+    });
   });
 
   it('Event trigger validates event payload against workflow payload schema. Mocks: non-target dependencies.', async () => {

@@ -38,6 +38,8 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-07) `payload_schema_mode` is persisted on the workflow definition record, not on publish input. That means publish must explicitly reject time-trigger definitions if an older draft is still marked `inferred`.
 - (2026-03-07) Local Workflow V2 integration tests in this worktree could not use the usual DB-backed harness because PostgreSQL was unavailable on `localhost:5438`; a mock-backed unit suite was a better fit for publish-path validation coverage.
 - (2026-03-07) The paged workflow list action still filtered `scheduled` workflows by checking `trigger.eventName` for `schedule`/`cron` substrings. Real trigger filtering needs to key off `trigger.type`.
+- (2026-03-08) Workflow V2 server actions resolve auth/database through `@alga-psa/auth` and `@alga-psa/db`, not the older `server/src/lib/db` seam used by some legacy tests. The new DB-backed integration coverage had to mock those actual entrypoints to keep action writes on the test database.
+- (2026-03-08) The EE schedule-state table stores `job_id` as a UUID, so DB-backed scheduling tests must return UUID-shaped mocked runner job ids even when the runner itself is stubbed.
 
 ## Commands / Runbooks
 
@@ -78,6 +80,9 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
   - `cd ee/server && pnpm vitest run src/__tests__/unit/workflowRunTriggerPresentation.unit.test.ts`
   - `cd ee/server && npm run typecheck`
   - `cd ee/temporal-workflows && npm run type-check`
+- (2026-03-08) Validate DB-backed schedule registration and publish/event regressions against the local GreenMail PostgreSQL instance:
+  - `cd server && DB_HOST=localhost DB_PORT=55433 DB_PASSWORD_ADMIN=postpass123 DB_PASSWORD_SERVER=postpass123 DB_USER_ADMIN=postgres DB_USER_SERVER=app_user pnpm vitest run src/test/integration/workflowTimeTriggerScheduling.integration.test.ts --coverage.enabled=false --config vitest.config.ts`
+  - `cd server && DB_HOST=localhost DB_PORT=55433 DB_PASSWORD_ADMIN=postpass123 DB_PASSWORD_SERVER=postpass123 DB_USER_ADMIN=postgres DB_USER_SERVER=app_user pnpm vitest run src/test/integration/workflowTimeTriggerRegression.integration.test.ts --coverage.enabled=false --config vitest.config.ts`
 
 ## Progress Log
 
@@ -132,10 +137,11 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
   - Corrected the recurring dedupe design after discovering runner `jobId` is the stable registration id, not a per-occurrence id. PgBoss now injects `jobExecutionId = job.id` and Temporal now injects `jobExecutionId = workflowInfo().workflowId`; schedule fire keys now use that runner-supplied execution id so later recurring occurrences still launch while retries of the same occurrence remain idempotent.
   - One-time schedule handlers now store `last_fire_key` and complete/disable the schedule after a successful fire; recurring handlers store `last_fire_key` per occurrence while leaving the schedule active.
   - Added/updated unit coverage in `server/src/test/unit/workflowScheduledRunHandlers.unit.test.ts`, `server/src/test/unit/workflowRunLauncher.unit.test.ts`, and `ee/server/src/__tests__/unit/workflowRunTriggerPresentation.unit.test.ts`.
-  - Remaining unchecked tests are still environment-blocked:
-    - T022-T024 need a real PostgreSQL-backed integration harness with `tenant_workflow_schedule` available.
-    - T045-T046 need the same DB-backed integration harness to execute the publish/start regression paths.
-    - Local verification is currently blocked because no PostgreSQL server is reachable on `localhost:5432`, and Docker commands time out in this shell before a base-compose `postgres` service can be started.
+- (2026-03-08) Completed T022-T024 and T045-T046.
+  - Added `ensureWorkflowScheduleStateTable()` to `server/src/test/helpers/workflowRuntimeV2TestUtils.ts` and made table resets include `tenant_workflow_schedule` when present so DB-backed Workflow V2 suites can exercise the EE schedule lifecycle safely.
+  - Added `server/src/test/integration/workflowTimeTriggerScheduling.integration.test.ts` covering one-time schedule row creation, recurring schedule row creation, and persisted runner identifiers through the real publish action with a real PostgreSQL test database and mocked job runner.
+  - Added `server/src/test/integration/workflowTimeTriggerRegression.integration.test.ts` covering no-trigger publish/start regression and event-trigger publish/start regression through the shared launcher path with persisted run provenance assertions.
+  - Verified the new DB-backed coverage against the local `greenmail_imap_postgres` container exposed on `localhost:55433`.
 
 ## Links / References
 
@@ -152,6 +158,8 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - EE extension scheduler API: `ee/server/src/lib/extensions/schedulerHostApi.ts`
 - Extension schedule handler: `server/src/lib/jobs/handlers/extensionScheduledInvocationHandler.ts`
 - Related existing schedule table migration: `ee/server/migrations/20260101120000_create_extension_schedule_tables.cjs`
+- New DB-backed schedule tests: `server/src/test/integration/workflowTimeTriggerScheduling.integration.test.ts`
+- New launcher regression tests: `server/src/test/integration/workflowTimeTriggerRegression.integration.test.ts`
 
 ## Open Questions
 

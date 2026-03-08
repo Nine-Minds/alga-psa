@@ -128,19 +128,19 @@
   {
     "id": "T022",
     "description": "DB integration: publishing a one-time scheduled workflow creates a workflow schedule state row",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014", "F020"]
   },
   {
     "id": "T023",
     "description": "DB integration: publishing a recurring scheduled workflow creates a workflow schedule state row",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014", "F021"]
   },
   {
     "id": "T024",
     "description": "DB integration: workflow schedule state row persists runner job identifiers after registration",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015", "F020", "F021"]
   },
   {
@@ -266,13 +266,13 @@
   {
     "id": "T045",
     "description": "Regression: no-trigger workflows still publish and run correctly after time-trigger support is added",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F016"]
   },
   {
     "id": "T046",
     "description": "Regression: event-triggered workflows still publish and start correctly after launcher extraction",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   }
 ]
