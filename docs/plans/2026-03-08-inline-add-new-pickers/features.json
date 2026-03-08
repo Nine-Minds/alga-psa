@@ -98,7 +98,7 @@
   {
     "id": "F013",
     "description": "UserManagement wires ContactPicker onAddNew to open QuickAddContact",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2"
     ]

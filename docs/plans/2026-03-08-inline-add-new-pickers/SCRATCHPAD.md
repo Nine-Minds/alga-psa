@@ -135,3 +135,6 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `npx tsc -p packages/clients/tsconfig.json --noEmit`
 - 2026-03-08 F012: Wired `packages/clients/src/components/clients/BillingConfigForm.tsx` billing-contact picker to open `QuickAddContact` with the current client preselected, merge the new contact into local picker state, and apply it as the billing contact while clearing the fallback billing email.
 - Validation: `npx tsc -p packages/clients/tsconfig.json --noEmit`
+- 2026-03-08 F013: Wired `server/src/components/settings/general/UserManagement.tsx` existing-contact picker to open `QuickAddContact`, append the created contact to the invitation picker state, auto-select it, and prefill the new user form from the created contact.
+- Validation attempt: `npx tsc -p server/tsconfig.json --noEmit` crashed with `Signal(6)` before reporting file-level diagnostics.
+- Validation attempt: `npx esbuild server/src/components/settings/general/UserManagement.tsx --bundle --platform=node --format=esm --tsconfig=server/tsconfig.json --outfile=/tmp/user-management-check.js` reached unrelated asset/font resolution errors outside this change.
