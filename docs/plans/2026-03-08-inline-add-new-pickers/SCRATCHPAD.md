@@ -164,3 +164,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
 - 2026-03-08 F026: `QuickAddCategory` now validates the create request, calls `createCategory` with board/parent inheritance, shows a success toast, and hands the created `ITicketCategory` back through `onCategoryCreated` so consumers can update local picker state.
 - Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
+- 2026-03-08 F027: `QuickAddCategory` loads boards internally via `getAllBoards` when the consumer does not pass a board list, while still honoring injected board data from settings or inline ticket forms.
+- Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`

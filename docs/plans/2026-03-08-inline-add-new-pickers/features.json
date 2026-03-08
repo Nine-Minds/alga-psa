@@ -210,7 +210,7 @@
   {
     "id": "F027",
     "description": "QuickAddCategory fetches boards internally if not provided via props",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-5"
     ]
