@@ -162,3 +162,4 @@
 - (2026-03-08) F112: EE MSP page title: /msp/licenses/purchase — title: 'Purchase Licenses'
 - (2026-03-08) F113: EE MSP page title: /msp/licenses/purchase/success — title: 'Purchase Success'
 - (2026-03-08) F114: EE MSP page title: /msp/settings — title: 'Settings'
+- (2026-03-08) F115: EE Client Portal page title: /client-portal/extensions/[id] — title: 'Extension' (generateMetadata)
