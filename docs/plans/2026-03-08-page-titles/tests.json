@@ -34,7 +34,7 @@
   {
     "id": "T005",
     "description": "Verify Static layout exports metadata with default 'Alga PSA'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
