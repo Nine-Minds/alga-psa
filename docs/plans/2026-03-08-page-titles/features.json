@@ -418,7 +418,7 @@
   {
     "id": "F053",
     "description": "MSP page title: /msp/automation-hub — title: 'Automation Hub'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
