@@ -82,7 +82,7 @@
   {
     "id": "T011",
     "description": "OverallInteractionsFeed: clicking '+ Add new contact' opens QuickAddContact",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
