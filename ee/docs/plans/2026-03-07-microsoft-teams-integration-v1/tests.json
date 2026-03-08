@@ -1458,7 +1458,7 @@
   {
     "id": "T183",
     "description": "Happy path: Teams identity: Teams-facing auth errors remain safe to show inside Teams UI constraints.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F092"
     ]
@@ -1466,7 +1466,7 @@
   {
     "id": "T184",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: teams-facing auth errors remain safe to show inside teams ui constraints.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F092"
     ]
@@ -1474,7 +1474,7 @@
   {
     "id": "T185",
     "description": "Happy path: Personal tab: a Teams personal tab entry point exists for PSA.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F093"
     ]
@@ -1482,7 +1482,7 @@
   {
     "id": "T186",
     "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: a teams personal tab entry point exists for psa.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F093"
     ]
@@ -1490,7 +1490,7 @@
   {
     "id": "T187",
     "description": "Happy path: Personal tab: the default landing view opens a PSA \u201cmy work\u201d style starting point for technicians.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F094"
     ]
@@ -1498,7 +1498,7 @@
   {
     "id": "T188",
     "description": "Guard: inaccessible, deleted, or unsupported destinations fall back safely for personal tab: the default landing view opens a psa \u201cmy work\u201d style starting point for technicians.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F094"
     ]

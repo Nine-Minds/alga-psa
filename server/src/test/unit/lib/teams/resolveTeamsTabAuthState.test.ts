@@ -212,4 +212,54 @@ describe('resolveTeamsTabAuthState', () => {
         'This Teams request was issued for a different Microsoft tenant than the one configured for this PSA tenant.',
     });
   });
+
+  it('T183/T184: returns Teams-safe auth remediation messages without leaking raw OAuth or provider error details into Teams surfaces', async () => {
+    getSessionWithRevocationCheckMock.mockResolvedValueOnce(null);
+
+    const unauthenticated = await resolveTeamsTabAuthState();
+    expect(unauthenticated).toEqual({
+      status: 'unauthenticated',
+      message: 'Sign in with your MSP account to open Alga PSA in Teams.',
+    });
+
+    getSessionWithRevocationCheckMock.mockResolvedValueOnce({
+      user: {
+        id: 'client-user',
+        tenant: 'tenant-1',
+        user_type: 'client',
+      },
+    });
+
+    const clientUser = await resolveTeamsTabAuthState();
+    expect(clientUser).toEqual({
+      status: 'forbidden',
+      reason: 'client_user',
+      tenantId: 'tenant-1',
+      message: 'Microsoft Teams access is available only to MSP users in v1.',
+    });
+
+    getSessionWithRevocationCheckMock.mockResolvedValueOnce({
+      user: {
+        id: 'user-5',
+        tenant: 'tenant-1',
+        user_type: 'internal',
+      },
+    });
+    resolveTeamsMicrosoftProviderConfigMock.mockResolvedValueOnce({
+      status: 'invalid_profile',
+      tenantId: 'tenant-1',
+      message: 'Selected Teams Microsoft profile is missing required credentials',
+    });
+
+    const invalidProfile = await resolveTeamsTabAuthState();
+    expect(invalidProfile).toEqual({
+      status: 'invalid_profile',
+      tenantId: 'tenant-1',
+      message: 'Selected Teams Microsoft profile is missing required credentials',
+    });
+
+    for (const state of [unauthenticated, clientUser, invalidProfile]) {
+      expect(state.message).not.toMatch(/aadsts|oauth|openid|nextauth|token/i);
+    }
+  });
 });

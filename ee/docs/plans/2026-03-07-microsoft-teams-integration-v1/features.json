@@ -838,7 +838,7 @@
   {
     "id": "F092",
     "description": "Teams identity: Teams-facing auth errors remain safe to show inside Teams UI constraints.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Security / Permissions",
@@ -848,7 +848,7 @@
   {
     "id": "F093",
     "description": "Personal tab: a Teams personal tab entry point exists for PSA.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -858,7 +858,7 @@
   {
     "id": "F094",
     "description": "Personal tab: the default landing view opens a PSA \u201cmy work\u201d style starting point for technicians.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",

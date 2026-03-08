@@ -55,6 +55,38 @@ describe('TeamsTabPage', () => {
     );
   });
 
+  it('T185/T187: renders the Teams personal tab entry point at the default my-work landing destination', async () => {
+    resolveTeamsTabAuthStateMock.mockResolvedValue({
+      status: 'ready',
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+      userName: 'Taylor Tech',
+      userEmail: 'taylor@example.com',
+      profileId: 'profile-1',
+      microsoftTenantId: 'entra-tenant-1',
+    });
+
+    const result = await TeamsTabPage({
+      searchParams: Promise.resolve({}),
+    });
+
+    expect(redirectMock).not.toHaveBeenCalled();
+    expect(resolveTeamsTabAccessStateMock).toHaveBeenCalledWith(
+      {
+        status: 'ready',
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+        userName: 'Taylor Tech',
+        userEmail: 'taylor@example.com',
+        profileId: 'profile-1',
+        microsoftTenantId: 'entra-tenant-1',
+      },
+      { type: 'my_work' }
+    );
+    expect((result as any)?.props?.['data-teams-tab-state']).toBe('ready');
+    expect((result as any)?.props?.['data-teams-tab-destination']).toBe('my_work');
+  });
+
   it('T169: bootstraps a deep-linked Teams tab destination without requiring a second PSA sign-in prompt inside Teams', async () => {
     resolveTeamsTabAuthStateMock.mockResolvedValue({
       status: 'ready',

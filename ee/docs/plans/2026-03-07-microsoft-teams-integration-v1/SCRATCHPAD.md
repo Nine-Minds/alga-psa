@@ -130,6 +130,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/app/teams/tab/page.test.tsx src/app/api/teams/auth/callback/bot/route.test.ts src/test/unit/lib/teams/resolveTeamsTabAccessState.test.ts src/test/unit/lib/teams/resolveTeamsTabAuthState.test.ts`
 - (2026-03-07) Verified Teams selected-profile precedence over broad Microsoft env credentials with:
   - `cd packages/auth && npx vitest run --config vitest.config.ts src/lib/sso/teamsMicrosoftProviderResolution.test.ts`
+- (2026-03-07) Verified Teams-safe auth remediation copy with:
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/resolveTeamsTabAuthState.test.ts`
+- (2026-03-07) Verified Teams personal-tab default landing and fallback routing with:
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/app/teams/tab/page.test.tsx src/test/unit/lib/teams/resolveTeamsTabDestination.test.ts`
 
 ## Progress Log
 
@@ -167,6 +171,12 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Completed `T179` and `T180` with explicit resolver regression tests asserting Teams ignores broad Microsoft env credentials both when a valid selected profile exists and when Teams setup/profile state is missing or invalid.
 - (2026-03-07) Completed `F091` by verifying the Teams tab page and Teams bot auth callback keep `unauthenticated`, `forbidden`, and `not_configured` outcomes distinct at the surface boundary instead of collapsing them into one generic failure path.
 - (2026-03-07) Completed `T181` and `T182` with surface-level tests covering not-configured Teams tab rendering and not-configured bot auth callback payloads alongside the existing unauthenticated redirect and forbidden-access cases.
+- (2026-03-07) Completed `F092` by verifying the shared Teams auth-state resolver only returns human-readable remediation copy that remains safe to surface inside Teams tab/callback UI constraints.
+- (2026-03-07) Completed `T183` and `T184` with a focused auth-state test asserting unauthenticated, client-user, and invalid-profile failures use safe remediation text and avoid raw OAuth/provider jargon.
+- (2026-03-07) Completed `F093` by verifying the existing `/teams/tab` route acts as the Teams personal-tab entry point for PSA and can render a ready default destination without additional Teams context.
+- (2026-03-07) Completed `T185` and `T187` with a Teams-tab page test asserting the default ready state renders the `my_work` destination for the personal-tab entry path.
+- (2026-03-07) Completed `F094` by verifying the default Teams tab destination model already resolves to `my_work`, which matches the intended PSA technician landing surface for the personal tab.
+- (2026-03-07) Completed `T186` and `T188` with destination-parser coverage asserting unsupported or malformed Teams context falls back safely to `my_work` instead of failing open.
   - `server/migrations/20260307120000_create_microsoft_profiles.cjs`
   - `server/migrations/20260307143000_create_microsoft_profile_consumer_bindings.cjs`
   - `server/migrations/20260307153000_create_teams_integrations.cjs`
@@ -174,7 +184,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `server/src/test/unit/migrations/teamsIntegrationsMigration.test.ts`
 - (2026-03-07) The focused vitest slice still emits pre-existing React `act(...)` warnings from `MicrosoftIntegrationSettings.contract.test.tsx`; the tests pass, but the harness remains noisy.
 - (2026-03-07) The Teams setup contract tests currently emit similar non-blocking React `act(...)` warnings while asserting async save flows; the tests pass, but the harness remains noisy.
-- (2026-03-07) Next unchecked feature after this slice is `F092` (Teams-facing auth errors remain safe to show inside Teams UI constraints).
+- (2026-03-07) Next unchecked feature after this slice is `F095` (Teams personal tab deep links can open a specific ticket view).
 
 ## Links / References
 
