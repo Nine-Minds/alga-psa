@@ -29,7 +29,7 @@ interface TimeSheetListViewProps {
         defaultStartTime?: string;
         defaultEndTime?: string;
     }) => void;
-    onAddWorkItem: () => void;
+    onAddWorkItem: (date?: string) => void;
     onWorkItemClick: (workItem: IExtendedWorkItem) => void;
 }
 
@@ -63,6 +63,8 @@ export function TimeSheetListView({
 }: TimeSheetListViewProps): React.JSX.Element {
     const [selectedWorkItemToDelete, setSelectedWorkItemToDelete] = useState<string | null>(null);
     const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+    const headerColumnWidths = ['3%', '40%', '15%', '15%', '15%', '12%'] as const;
+    const dayColumnWidths = ['3%', '40%', '15%', '15%', '15%', '10%'] as const;
 
     // Get date range boundaries for filtering
     const dateRange = useMemo(() => {
@@ -283,12 +285,9 @@ export function TimeSheetListView({
                                 <div className="bg-gray-50 border-b border-gray-200">
                                     <table className="w-full table-fixed">
                                         <colgroup>
-                                            <col style={{ width: '3%' }} />
-                                            <col style={{ width: '40%' }} />
-                                            <col style={{ width: '15%' }} />
-                                            <col style={{ width: '15%' }} />
-                                            <col style={{ width: '15%' }} />
-                                            <col style={{ width: '12%' }} />
+                                            {headerColumnWidths.map((width, index) => (
+                                                <col key={`header-col-${index}`} style={{ width }} />
+                                            ))}
                                         </colgroup>
                                         <thead>
                                             <tr>
@@ -322,12 +321,9 @@ export function TimeSheetListView({
                                             {/* Day header and entries use same table structure for column alignment */}
                                             <table className="w-full table-fixed">
                                                 <colgroup>
-                                                    <col style={{ width: '3%' }} />  {/* Indent */}
-                                                    <col style={{ width: '40%' }} /> {/* Work item / Date */}
-                                                    <col style={{ width: '15%' }} /> {/* Time range / Entries count */}
-                                                    <col style={{ width: '15%' }} /> {/* Duration */}
-                                                    <col style={{ width: '15%' }} /> {/* Billable */}
-                                                    <col style={{ width: '10%' }} /> {/* Actions */}
+                                                    {dayColumnWidths.map((width, index) => (
+                                                        <col key={`${group.dateKey}-col-${index}`} style={{ width }} />
+                                                    ))}
                                                 </colgroup>
                                                 {/* Day header row */}
                                                 <thead>
@@ -368,7 +364,23 @@ export function TimeSheetListView({
                                                         <td className="py-2 px-3 text-sm font-medium text-[rgb(var(--color-primary-600))]">
                                                             {hasEntries && formatDuration(group.totalBillable)}
                                                         </td>
-                                                        <td className="py-2 px-3" />
+                                                        <td className="py-2 px-3 text-right">
+                                                            {isEditable && (
+                                                                <Button
+                                                                    id={`add-entry-${group.dateKey}`}
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        onAddWorkItem(group.dateKey);
+                                                                    }}
+                                                                    className="inline-flex items-center gap-1.5"
+                                                                >
+                                                                    <Plus className="h-4 w-4" />
+                                                                    Entry
+                                                                </Button>
+                                                            )}
+                                                        </td>
                                                     </tr>
                                                 </thead>
                                                 {/* Entry rows */}
