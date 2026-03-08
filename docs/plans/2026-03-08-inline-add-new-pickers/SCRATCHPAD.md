@@ -176,3 +176,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `npx tsc -p packages/ui/tsconfig.json --noEmit && npx tsc -p packages/tickets/tsconfig.json --noEmit`
 - 2026-03-08 F032: Wired `packages/tickets/src/components/QuickAddTicket.tsx` category picker to open `QuickAddCategory` with `boardId` preselected, merge the created category into local state, and auto-select it immediately in the ticket form.
 - Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
+- 2026-03-08 F033: Wired `packages/tickets/src/components/ticket/TicketInfo.tsx` category editor to open `QuickAddCategory` with the effective board context, merge created categories into either saved or pending category state, and set `category_id`/`subcategory_id` correctly for newly created parent or child categories.
+- Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
