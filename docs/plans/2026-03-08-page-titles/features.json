@@ -786,7 +786,7 @@
   {
     "id": "F099",
     "description": "Auth page title: /auth/client-portal/forgot-password — title: 'Forgot Password'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3b"
     ]
