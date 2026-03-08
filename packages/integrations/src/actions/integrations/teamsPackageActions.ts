@@ -7,6 +7,15 @@ import { createTenantKnex } from '@alga-psa/db';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
 
 type TeamsInstallStatus = 'not_configured' | 'install_pending' | 'active' | 'error';
+export const TEAMS_PERSONAL_TAB_ENTITY_ID = 'alga-psa-personal-tab';
+
+export type TeamsDeepLinkDestination =
+  | { type: 'my_work' }
+  | { type: 'ticket'; ticketId: string }
+  | { type: 'project_task'; projectId: string; taskId: string }
+  | { type: 'approval'; approvalId: string }
+  | { type: 'time_entry'; entryId: string }
+  | { type: 'contact'; contactId: string };
 
 interface TeamsIntegrationRow {
   tenant: string;
@@ -124,6 +133,14 @@ export interface TeamsAppPackageStatusResponse {
       id: string;
       resource: string;
     };
+    deepLinks: {
+      myWork: string;
+      ticketTemplate: string;
+      projectTaskTemplate: string;
+      approvalTemplate: string;
+      timeEntryTemplate: string;
+      contactTemplate: string;
+    };
     manifest: TeamsAppManifest;
   };
 }
@@ -181,6 +198,56 @@ function getTeamsApplicationIdUri(baseUrl: string, clientId: string): string {
   return `api://${url.host}/teams/${clientId}`;
 }
 
+function buildTeamsTabWebUrl(baseUrl: string, destination: TeamsDeepLinkDestination): string {
+  switch (destination.type) {
+    case 'my_work':
+      return `${baseUrl}/teams/tab`;
+    case 'ticket':
+      return `${baseUrl}/msp/tickets/${destination.ticketId}`;
+    case 'project_task':
+      return `${baseUrl}/msp/projects/${destination.projectId}?taskId=${encodeURIComponent(destination.taskId)}`;
+    case 'approval':
+      return `${baseUrl}/msp/approvals/${destination.approvalId}`;
+    case 'time_entry':
+      return `${baseUrl}/msp/time?entryId=${encodeURIComponent(destination.entryId)}`;
+    case 'contact':
+      return `${baseUrl}/msp/contacts/${destination.contactId}`;
+    default: {
+      const exhaustive: never = destination;
+      throw new Error(`Unsupported Teams deep-link destination: ${(exhaustive as any).type}`);
+    }
+  }
+}
+
+function buildTeamsTabContext(destination: TeamsDeepLinkDestination): Record<string, string> {
+  switch (destination.type) {
+    case 'my_work':
+      return { page: 'my_work' };
+    case 'ticket':
+      return { page: 'ticket', ticketId: destination.ticketId };
+    case 'project_task':
+      return { page: 'project_task', projectId: destination.projectId, taskId: destination.taskId };
+    case 'approval':
+      return { page: 'approval', approvalId: destination.approvalId };
+    case 'time_entry':
+      return { page: 'time_entry', entryId: destination.entryId };
+    case 'contact':
+      return { page: 'contact', contactId: destination.contactId };
+    default: {
+      const exhaustive: never = destination;
+      throw new Error(`Unsupported Teams deep-link destination: ${(exhaustive as any).type}`);
+    }
+  }
+}
+
+export function buildTeamsPersonalTabDeepLink(baseUrl: string, appId: string, destination: TeamsDeepLinkDestination): string {
+  const params = new URLSearchParams({
+    webUrl: buildTeamsTabWebUrl(baseUrl, destination),
+    context: JSON.stringify(buildTeamsTabContext(destination)),
+  });
+  return `https://teams.microsoft.com/l/entity/${encodeURIComponent(appId)}/${encodeURIComponent(TEAMS_PERSONAL_TAB_ENTITY_ID)}?${params.toString()}`;
+}
+
 function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: MicrosoftProfileRow): TeamsAppManifest {
   const host = new URL(baseUrl).host;
   const appIdUri = getTeamsApplicationIdUri(baseUrl, profile.client_id);
@@ -212,7 +279,7 @@ function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: Microso
     accentColor: '#0F766E',
     staticTabs: [
       {
-        entityId: 'alga-psa-personal-tab',
+        entityId: TEAMS_PERSONAL_TAB_ENTITY_ID,
         name: 'Alga PSA',
         contentUrl: `${baseUrl}/teams/tab`,
         websiteUrl: `${baseUrl}/teams/tab`,
@@ -344,6 +411,18 @@ export const getTeamsAppPackageStatus = withAuth(async (
 
     const baseUrl = await getDeploymentBaseUrl();
     const manifest = buildTeamsAppManifest(baseUrl, tenant, profile);
+    const deepLinks = {
+      myWork: buildTeamsPersonalTabDeepLink(baseUrl, profile.client_id, { type: 'my_work' }),
+      ticketTemplate: buildTeamsPersonalTabDeepLink(baseUrl, profile.client_id, { type: 'ticket', ticketId: '{ticketId}' }),
+      projectTaskTemplate: buildTeamsPersonalTabDeepLink(baseUrl, profile.client_id, {
+        type: 'project_task',
+        projectId: '{projectId}',
+        taskId: '{taskId}',
+      }),
+      approvalTemplate: buildTeamsPersonalTabDeepLink(baseUrl, profile.client_id, { type: 'approval', approvalId: '{approvalId}' }),
+      timeEntryTemplate: buildTeamsPersonalTabDeepLink(baseUrl, profile.client_id, { type: 'time_entry', entryId: '{entryId}' }),
+      contactTemplate: buildTeamsPersonalTabDeepLink(baseUrl, profile.client_id, { type: 'contact', contactId: '{contactId}' }),
+    };
     const fileName = `alga-psa-teams-${tenant}.zip`;
     const packageMetadata: PersistedTeamsPackageMetadata = {
       manifestVersion: TEAMS_MANIFEST_VERSION,
@@ -377,6 +456,7 @@ export const getTeamsAppPackageStatus = withAuth(async (
         baseUrl,
         validDomains: manifest.validDomains,
         webApplicationInfo: manifest.webApplicationInfo,
+        deepLinks,
         manifest,
       },
     };

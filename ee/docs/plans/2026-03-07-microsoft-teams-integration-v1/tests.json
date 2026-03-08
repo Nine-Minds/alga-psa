@@ -1170,7 +1170,7 @@
   {
     "id": "T147",
     "description": "Happy path: Teams app package: deep-link targets used by notifications and action results stay consistent with the manifest capabilities.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F074"
     ]
@@ -1178,7 +1178,7 @@
   {
     "id": "T148",
     "description": "Guard: tenant isolation, invalid configuration, and missing prerequisites are enforced for teams app package: deep-link targets used by notifications and action results stay consistent with the manifest capabilities.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F074"
     ]

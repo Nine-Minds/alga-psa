@@ -659,7 +659,7 @@
   {
     "id": "F074",
     "description": "Teams app package: deep-link targets used by notifications and action results stay consistent with the manifest capabilities.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"

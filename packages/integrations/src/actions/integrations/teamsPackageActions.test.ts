@@ -161,7 +161,7 @@ describe('Teams app package actions', () => {
     hasPermissionMock.mockResolvedValue(true);
   });
 
-  it('T117/T119/T121/T123/T125/T127/T129/T131/T133/T135/T137/T141: returns Teams manifest metadata with declared surfaces, app identity, install state, and environment base URL', async () => {
+  it('T117/T119/T121/T123/T125/T127/T129/T131/T133/T135/T137/T141/T147: returns Teams manifest metadata with declared surfaces, app identity, install state, environment base URL, and shared deep-link targets', async () => {
     appSecrets.set('NEXT_PUBLIC_BASE_URL', 'https://tenant.example.com/');
     addMicrosoftProfile({
       tenant: 'tenant-1',
@@ -195,6 +195,14 @@ describe('Teams app package actions', () => {
         id: 'teams-client-id',
         resource: 'api://tenant.example.com/teams/teams-client-id',
       },
+      deepLinks: {
+        myWork: expect.stringContaining('/l/entity/teams-client-id/alga-psa-personal-tab'),
+        ticketTemplate: expect.stringContaining(encodeURIComponent('{"page":"ticket","ticketId":"{ticketId}"}')),
+        projectTaskTemplate: expect.stringContaining(encodeURIComponent('{"page":"project_task","projectId":"{projectId}","taskId":"{taskId}"}')),
+        approvalTemplate: expect.stringContaining(encodeURIComponent('{"page":"approval","approvalId":"{approvalId}"}')),
+        timeEntryTemplate: expect.stringContaining(encodeURIComponent('{"page":"time_entry","entryId":"{entryId}"}')),
+        contactTemplate: expect.stringContaining(encodeURIComponent('{"page":"contact","contactId":"{contactId}"}')),
+      },
     });
 
     expect(result.package?.manifest.staticTabs[0]).toMatchObject({
@@ -215,6 +223,9 @@ describe('Teams app package actions', () => {
     expect(result.package?.manifest.composeExtensions[0]?.commands[1]?.contexts).toEqual(['message']);
     expect(result.package?.manifest.activities.activityTypes).toHaveLength(5);
     expect(JSON.stringify(result.package?.manifest)).not.toContain('channel-routing');
+    expect(result.package?.deepLinks.ticketTemplate).toContain(encodeURIComponent('https://tenant.example.com/msp/tickets/{ticketId}'));
+    expect(result.package?.deepLinks.projectTaskTemplate).toContain(encodeURIComponent('https://tenant.example.com/msp/projects/{projectId}?taskId=%7BtaskId%7D'));
+    expect(result.package?.deepLinks.approvalTemplate).toContain(encodeURIComponent('https://tenant.example.com/msp/approvals/{approvalId}'));
     expect(teamsIntegrations[0]).toMatchObject({
       tenant: 'tenant-1',
       selected_profile_id: 'profile-1',
@@ -236,7 +247,7 @@ describe('Teams app package actions', () => {
     });
   });
 
-  it('T118/T120/T122/T124/T126/T128/T130/T132/T134/T136/T138/T142: rejects missing or unready selected profiles before package generation', async () => {
+  it('T118/T120/T122/T124/T126/T128/T130/T132/T134/T136/T138/T142/T148: rejects missing or unready selected profiles before package generation so no stale Teams deep-link targets are exposed', async () => {
     const missingIntegration = await getTeamsAppPackageStatus();
     expect(missingIntegration).toEqual({
       success: false,
