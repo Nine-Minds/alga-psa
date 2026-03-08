@@ -251,7 +251,7 @@
   {
     "id": "T032",
     "description": "QuickAddCategory shows validation error when category name is empty",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]

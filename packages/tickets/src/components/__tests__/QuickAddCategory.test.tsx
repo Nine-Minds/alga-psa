@@ -151,4 +151,14 @@ describe('QuickAddCategory', () => {
     }));
     expect(onCategoryCreated).toHaveBeenCalledWith(createdCategory);
   });
+
+  it('T032: shows validation error when category name is empty', async () => {
+    renderDialog();
+
+    fireEvent.change(screen.getByRole('combobox', { name: /select a board/i }), { target: { value: 'board-1' } });
+    fireEvent.click(screen.getByRole('button', { name: /^create$/i }));
+
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Category name is required'));
+    expect(createCategoryMock).not.toHaveBeenCalled();
+  });
 });
