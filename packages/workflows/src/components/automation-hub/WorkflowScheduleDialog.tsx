@@ -21,6 +21,7 @@ import {
   getWorkflowScheduleAction,
   getWorkflowSchemaAction,
   listWorkflowDefinitionsPagedAction,
+  listWorkflowSchemaRefsAction,
   updateWorkflowScheduleAction
 } from '@alga-psa/workflows/actions';
 
@@ -202,7 +203,10 @@ const toIsoString = (value: string): string | undefined => {
   return date.toISOString();
 };
 
-const buildWorkflowEligibilityMessage = (workflow: WorkflowOption | null): string | null => {
+const buildWorkflowEligibilityMessage = (
+  workflow: WorkflowOption | null,
+  availableSchemaRefs?: ReadonlySet<string>
+): string | null => {
   if (!workflow) return 'Choose a workflow before saving.';
   if (!workflow.published_version) {
     return 'Schedules can only be created for workflows with a published version.';
@@ -212,6 +216,9 @@ const buildWorkflowEligibilityMessage = (workflow: WorkflowOption | null): strin
   }
   if (!workflow.payload_schema_ref) {
     return 'The selected workflow does not expose a pinned payload schema.';
+  }
+  if (availableSchemaRefs && !availableSchemaRefs.has(workflow.payload_schema_ref)) {
+    return `The selected workflow uses an unavailable payload schema ref: ${workflow.payload_schema_ref}.`;
   }
   return null;
 };
@@ -225,6 +232,7 @@ export default function WorkflowScheduleDialog({
   onSaved
 }: WorkflowScheduleDialogProps) {
   const [workflowOptions, setWorkflowOptions] = useState<WorkflowOption[]>([]);
+  const [availableSchemaRefs, setAvailableSchemaRefs] = useState<Set<string>>(new Set());
   const [isLoadingWorkflows, setIsLoadingWorkflows] = useState(false);
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -250,8 +258,8 @@ export default function WorkflowScheduleDialog({
     [selectedWorkflowId, workflowOptions]
   );
   const workflowEligibilityMessage = useMemo(
-    () => buildWorkflowEligibilityMessage(selectedWorkflow),
-    [selectedWorkflow]
+    () => buildWorkflowEligibilityMessage(selectedWorkflow, availableSchemaRefs),
+    [availableSchemaRefs, selectedWorkflow]
   );
 
   useEffect(() => {
@@ -261,20 +269,25 @@ export default function WorkflowScheduleDialog({
     const loadWorkflows = async () => {
       setIsLoadingWorkflows(true);
       try {
-        const result = await listWorkflowDefinitionsPagedAction({
-          page: 1,
-          pageSize: 200,
-          status: 'all',
-          trigger: 'all',
-          sortBy: 'name',
-          sortDirection: 'asc'
-        });
+        const [workflowResult, schemaRefResult] = await Promise.all([
+          listWorkflowDefinitionsPagedAction({
+            page: 1,
+            pageSize: 200,
+            status: 'all',
+            trigger: 'all',
+            sortBy: 'name',
+            sortDirection: 'asc'
+          }),
+          listWorkflowSchemaRefsAction()
+        ]);
         if (cancelled) return;
-        setWorkflowOptions(((result as { items?: WorkflowOption[] } | null)?.items ?? []) as WorkflowOption[]);
+        setWorkflowOptions(((workflowResult as { items?: WorkflowOption[] } | null)?.items ?? []) as WorkflowOption[]);
+        setAvailableSchemaRefs(new Set(((schemaRefResult as { refs?: string[] } | null)?.refs ?? []) as string[]));
       } catch (error) {
         if (cancelled) return;
         console.error('Failed to load workflows for schedule dialog', error);
         setWorkflowOptions([]);
+        setAvailableSchemaRefs(new Set());
       } finally {
         if (!cancelled) {
           setIsLoadingWorkflows(false);
@@ -400,7 +413,7 @@ export default function WorkflowScheduleDialog({
 
   const workflowPickerOptions = useMemo<SelectOption[]>(
     () => workflowOptions.map((workflow) => {
-      const eligibilityMessage = buildWorkflowEligibilityMessage(workflow);
+      const eligibilityMessage = buildWorkflowEligibilityMessage(workflow, availableSchemaRefs);
       return {
         value: workflow.workflow_id,
         label: (
@@ -424,7 +437,7 @@ export default function WorkflowScheduleDialog({
         textValue: workflow.name
       };
     }),
-    [workflowOptions]
+    [availableSchemaRefs, workflowOptions]
   );
 
   const parsePayloadForSubmit = (): Record<string, unknown> | null => {

@@ -4678,14 +4678,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   variant="outline"
                   onClick={() => {
                     if (!activeWorkflowId) {
-                      router.push('/msp/workflows?tab=schedules');
+                      router.push('/msp/automation-hub?tab=schedules');
                       return;
                     }
                     const params = new URLSearchParams({
                       tab: 'schedules',
                       scheduleWorkflowId: activeWorkflowId
                     });
-                    router.push(`/msp/workflows?${params.toString()}`);
+                    router.push(`/msp/automation-hub?${params.toString()}`);
                   }}
                 >
                   Schedules
