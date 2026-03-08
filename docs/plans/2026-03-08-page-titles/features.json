@@ -258,7 +258,7 @@
   {
     "id": "F033",
     "description": "MSP page title: /msp/time-entry/timesheet/[id] — title: 'Timesheet' (generateMetadata)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3c"
     ]
