@@ -202,7 +202,7 @@
   {
     "id": "T026",
     "description": "QuickAddAsset: clicking '+ Add new client' opens QuickAddClient and auto-selects new client",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
