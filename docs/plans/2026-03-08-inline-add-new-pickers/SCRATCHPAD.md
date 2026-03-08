@@ -144,3 +144,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `npx tsc -p packages/ui/tsconfig.json --noEmit`
 - 2026-03-08 F016: `ClientPicker` now resets the search term, closes the dropdown, and only then invokes the consumer's `onAddNew` callback so the QuickAdd dialog can take focus immediately.
 - Validation: `npx tsc -p packages/ui/tsconfig.json --noEmit`
+- 2026-03-08 F017: Confirmed `ClientPicker` remains backward compatible because the new separator/button are fully gated behind the optional `onAddNew` prop; consumers that omit it still render the original dropdown content only.
+- Validation: `npx tsc -p packages/ui/tsconfig.json --noEmit`

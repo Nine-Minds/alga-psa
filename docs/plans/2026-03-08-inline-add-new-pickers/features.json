@@ -130,7 +130,7 @@
   {
     "id": "F017",
     "description": "ClientPicker renders identically to current when onAddNew is not provided (backward compatible)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-3"
     ]
