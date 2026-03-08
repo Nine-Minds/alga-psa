@@ -9,9 +9,11 @@ export { default as ClientDetails } from './clients/ClientDetails';
 
 export { default as ContactsLayout } from './contacts/ContactsLayout';
 export { default as ContactDetails } from './contacts/ContactDetails';
+export { default as QuickAddContact } from './contacts/QuickAddContact';
 
 export { default as InteractionsFeed } from './interactions/InteractionsFeed';
 export { default as OverallInteractionsFeed } from './interactions/OverallInteractionsFeed';
 export { default as InteractionDetails } from './interactions/InteractionDetails';
 
 export { default as AccountManagerDashboard } from './account-manager/AccountManagerDashboard';
+export { default as QuickAddClient } from './clients/QuickAddClient';

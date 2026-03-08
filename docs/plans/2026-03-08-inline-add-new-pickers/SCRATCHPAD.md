@@ -117,3 +117,6 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - 2026-03-08 T003: Verified the add button keeps the requested utility classes and renders a `Plus` icon.
 - 2026-03-08 T004: Verified clicking the add button calls the consumer callback exactly once.
 - 2026-03-08 T005: Verified clicking the add button closes the dropdown portal.
+- 2026-03-08 F004: Wired `packages/tickets/src/components/QuickAddTicket.tsx` to pass `onAddNew` into `ContactPicker`, open `QuickAddContact`, and prefill it with the current `clientId`. Also exported `QuickAddContact` from `packages/clients/src/components/index.ts` so consumers can use the package surface instead of a non-exported deep path.
+- Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
+- Test blocker: `packages/tickets` Vitest still resolves deep server/auth imports while loading `QuickAddTicket`, so the new `QuickAddTicketPrefill` assertions for T006-T008 are written but not yet checklisted. I added `vite-tsconfig-paths` plus ticket-package aliases/mocks to reduce the surface, but the suite still bottoms out in unrelated auth/db module resolution.

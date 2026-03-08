@@ -8,7 +8,29 @@ import { QuickAddTicket } from '../QuickAddTicket';
 
 const addTicketMock = vi.fn();
 const getTicketFormDataMock = vi.fn();
+const getContactsByClientMock = vi.fn();
+const getClientLocationsMock = vi.fn();
 const pushMock = vi.fn();
+
+vi.mock('next/server', () => ({
+  NextRequest: class NextRequest {},
+  NextResponse: {
+    next: vi.fn(),
+    json: vi.fn(),
+  },
+}));
+
+vi.mock('next-auth', () => ({}));
+
+vi.mock('next-auth/lib/env', () => ({
+  setEnvDefaults: vi.fn(),
+}));
+
+vi.mock('next-auth/react', () => ({
+  useSession: () => ({ data: null, status: 'unauthenticated' }),
+  signOut: vi.fn(),
+  SessionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -20,8 +42,17 @@ vi.mock('../actions/ticketActions', () => ({
   addTicket: (...args: unknown[]) => addTicketMock(...args)
 }));
 
+vi.mock('../actions/ticketResourceActions', () => ({
+  addTicketResource: vi.fn()
+}));
+
 vi.mock('../actions/ticketFormActions', () => ({
   getTicketFormData: (...args: unknown[]) => getTicketFormDataMock(...args)
+}));
+
+vi.mock('../actions/clientLookupActions', () => ({
+  getContactsByClient: (...args: unknown[]) => getContactsByClientMock(...args),
+  getClientLocations: (...args: unknown[]) => getClientLocationsMock(...args)
 }));
 
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
@@ -34,6 +65,47 @@ vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
     }, [onSelect, selectedClientId]);
     return <div data-testid="client-picker" />;
   }
+}));
+
+vi.mock('@alga-psa/ui/components/ContactPicker', () => ({
+  ContactPicker: ({ onAddNew, value, contacts }: any) => (
+    <div data-testid="contact-picker">
+      <div data-testid="contact-picker-value">{value}</div>
+      <div data-testid="contact-picker-count">{contacts.length}</div>
+      {onAddNew ? (
+        <button type="button" onClick={onAddNew}>
+          + Add new contact
+        </button>
+      ) : null}
+    </div>
+  )
+}));
+
+vi.mock('@alga-psa/clients/components', () => ({
+    __esModule: true,
+    QuickAddContact: ({ isOpen, selectedClientId, onContactAdded }: any) => {
+      if (!isOpen) {
+        return null;
+      }
+
+      return (
+        <div data-testid="quick-add-contact-dialog">
+          <div data-testid="quick-add-contact-client">{selectedClientId}</div>
+          <button
+            type="button"
+            onClick={() => onContactAdded({
+              contact_name_id: 'contact-new',
+              full_name: 'Grace Hopper',
+              email: 'grace@example.com',
+              client_id: selectedClientId,
+              is_inactive: false,
+            })}
+          >
+            Create Contact
+          </button>
+        </div>
+      );
+    }
 }));
 
 vi.mock('@alga-psa/ui/components/UserPicker', () => ({
@@ -85,8 +157,22 @@ vi.mock('@alga-psa/reference-data/actions', () => ({
   getAllPriorities: vi.fn().mockResolvedValue([])
 }));
 
+vi.mock('@alga-psa/user-composition/actions', () => ({
+  getCurrentUser: vi.fn().mockResolvedValue({ user_id: 'user-1' }),
+  getUserAvatarUrlsBatchAction: vi.fn()
+}));
+
 vi.mock('@alga-psa/tags/components', () => ({
   QuickAddTagPicker: () => <div data-testid="tag-picker" />
+}));
+
+vi.mock('@alga-psa/tags/actions', () => ({
+  createTagsForEntity: vi.fn()
+}));
+
+vi.mock('@alga-psa/teams/actions', () => ({
+  getTeams: vi.fn().mockResolvedValue([]),
+  getTeamAvatarUrlsBatchAction: vi.fn()
 }));
 
 vi.mock('@alga-psa/ui/components/DatePicker', () => ({
@@ -99,9 +185,15 @@ vi.mock('@alga-psa/ui/components/TimePicker', () => ({
   TimePicker: () => <input data-testid="due-time" />
 }));
 
+vi.mock('@alga-psa/ui/hooks', () => ({
+  useFeatureFlag: () => ({ enabled: false })
+}));
+
 describe('QuickAddTicket prefills', () => {
   beforeEach(() => {
     pushMock.mockReset();
+    getContactsByClientMock.mockResolvedValue([]);
+    getClientLocationsMock.mockResolvedValue([]);
     getTicketFormDataMock.mockResolvedValue({
       users: [],
       boards: [{ board_id: 'board-1', board_name: 'Support' }],
@@ -177,6 +269,58 @@ describe('QuickAddTicket prefills', () => {
     await waitFor(() => expect(addTicketMock).toHaveBeenCalled());
     await waitFor(() => expect(onTicketAdded).toHaveBeenCalled());
     expect(pushMock).toHaveBeenCalledWith('/msp/tickets/ticket-1');
+  });
+
+  it('T006: clicking add new contact opens QuickAddContact dialog', async () => {
+    render(
+      <QuickAddTicket
+        open={true}
+        onOpenChange={() => undefined}
+        onTicketAdded={() => undefined}
+      />
+    );
+
+    await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('button', { name: /\+ add new contact/i }));
+
+    expect(screen.getByTestId('quick-add-contact-dialog')).toBeInTheDocument();
+  });
+
+  it('T007: QuickAddContact receives the current selected client id', async () => {
+    render(
+      <QuickAddTicket
+        open={true}
+        onOpenChange={() => undefined}
+        onTicketAdded={() => undefined}
+      />
+    );
+
+    await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('button', { name: /\+ add new contact/i }));
+
+    expect(screen.getByTestId('quick-add-contact-client')).toHaveTextContent('client-1');
+  });
+
+  it('T008: creating a contact adds it locally and auto-selects it', async () => {
+    render(
+      <QuickAddTicket
+        open={true}
+        onOpenChange={() => undefined}
+        onTicketAdded={() => undefined}
+      />
+    );
+
+    await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
+    expect(screen.getByTestId('contact-picker-count')).toHaveTextContent('0');
+
+    fireEvent.click(screen.getByRole('button', { name: /\+ add new contact/i }));
+    fireEvent.click(screen.getByRole('button', { name: /create contact/i }));
+
+    await waitFor(() => expect(screen.queryByTestId('quick-add-contact-dialog')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('contact-picker-count')).toHaveTextContent('1'));
+    expect(screen.getByTestId('contact-picker-value')).toHaveTextContent('contact-new');
   });
 
 });

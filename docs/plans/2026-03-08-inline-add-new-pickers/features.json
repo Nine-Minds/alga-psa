@@ -26,7 +26,7 @@
   {
     "id": "F004",
     "description": "QuickAddTicket wires ContactPicker onAddNew to open QuickAddContact dialog with selectedClientId pre-filled",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2"
     ]

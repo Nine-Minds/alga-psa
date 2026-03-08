@@ -42,6 +42,7 @@ import { assignTeamToTicket } from '@alga-psa/tickets/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import type { ITeam } from '@alga-psa/types';
 import { useRouter } from 'next/navigation';
+import { QuickAddContact } from '@alga-psa/clients/components';
 
 /** Renders a <form> normally, or a plain <div> when embedded to avoid nested form tags. */
 function FormOrDiv({ isEmbedded, onSubmit, children }: { isEmbedded: boolean; onSubmit: (e: React.FormEvent) => void; children: React.ReactNode }) {
@@ -208,6 +209,7 @@ export function QuickAddTicket({
   const [locations, setLocations] = useState<IClientLocation[]>([]);
   const [locationId, setLocationId] = useState<string | null>(null);
   const [isPrefilledClient, setIsPrefilledClient] = useState(false);
+  const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const [quickAddBoardFilterState, setQuickAddBoardFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
   const [dueDateDate, setDueDateDate] = useState<Date | undefined>(() => {
@@ -572,6 +574,7 @@ export function QuickAddTicket({
     setItilUrgency(undefined);
     setShowPriorityMatrix(false);
     setPendingTags([]);
+    setIsQuickAddContactOpen(false);
     if (prefilledDueDate) {
       const parsed = typeof prefilledDueDate === 'string' ? new Date(prefilledDueDate) : prefilledDueDate;
       setDueDateDate(Number.isNaN(parsed.getTime()) ? undefined : parsed);
@@ -875,8 +878,8 @@ export function QuickAddTicket({
                           ? "No contacts for selected client"
                           : "Select contact"
                       }
-                      disabled={contacts.length === 0}
                       buttonWidth="full"
+                      onAddNew={() => setIsQuickAddContactOpen(true)}
                     />
                   )}
                   {clientId && (
@@ -1234,6 +1237,25 @@ export function QuickAddTicket({
           )}
         </DialogContent>
       </Dialog>
+      <QuickAddContact
+        isOpen={isQuickAddContactOpen}
+        onClose={() => setIsQuickAddContactOpen(false)}
+        onContactAdded={(newContact) => {
+          setContacts((prevContacts) => {
+            const existingIndex = prevContacts.findIndex((contact) => contact.contact_name_id === newContact.contact_name_id);
+            if (existingIndex >= 0) {
+              const nextContacts = [...prevContacts];
+              nextContacts[existingIndex] = newContact;
+              return nextContacts;
+            }
+            return [...prevContacts, newContact];
+          });
+          setContactId(newContact.contact_name_id);
+          setIsQuickAddContactOpen(false);
+        }}
+        clients={clients}
+        selectedClientId={clientId}
+      />
     </div>
   );
 }
