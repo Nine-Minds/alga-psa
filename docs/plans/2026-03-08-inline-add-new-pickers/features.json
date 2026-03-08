@@ -154,7 +154,7 @@
   {
     "id": "F020",
     "description": "ContractBasicsStep wires ClientPicker onAddNew to open QuickAddClient and auto-selects new client",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-4"
     ]

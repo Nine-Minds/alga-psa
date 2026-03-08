@@ -29,6 +29,7 @@ import { format as formatDateFns, parse as parseDateFns } from 'date-fns';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { IClient } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { QuickAddClient } from '@alga-psa/clients/components';
 
 type TemplateOption = {
   contract_id: string;
@@ -74,6 +75,7 @@ export function ContractBasicsStep({
   const [disabledClientIds, setDisabledClientIds] = useState<Set<string>>(new Set());
   const [startDate, setStartDate] = useState<Date | undefined>(parseLocalYMD(data.start_date));
   const [endDate, setEndDate] = useState<Date | undefined>(parseLocalYMD(data.end_date));
+  const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
 
   const currencyMeta = useMemo(() => {
     const currencyCode = data.currency_code || 'USD';
@@ -229,6 +231,26 @@ export function ContractBasicsStep({
           disabledClientIds={disabledClientIds}
           placeholder={isLoadingClients ? 'Loading clients…' : 'Select a client'}
           className="w-full"
+          onAddNew={() => setIsQuickAddClientOpen(true)}
+        />
+        <QuickAddClient
+          open={isQuickAddClientOpen}
+          onOpenChange={setIsQuickAddClientOpen}
+          onClientAdded={(newClient) => {
+            setClients((prevClients) => {
+              const existingIndex = prevClients.findIndex((client) => client.client_id === newClient.client_id);
+              if (existingIndex >= 0) {
+                const nextClients = [...prevClients];
+                nextClients[existingIndex] = newClient;
+                return nextClients;
+              }
+              return [...prevClients, newClient];
+            });
+            updateData({
+              client_id: newClient.client_id,
+              currency_code: newClient.default_currency_code || data.currency_code,
+            });
+          }}
         />
         {!data.client_id && (
           <p className="text-xs text-[rgb(var(--color-text-400))]">Choose the client this contract is for.</p>
