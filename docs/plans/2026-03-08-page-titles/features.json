@@ -458,7 +458,7 @@
   {
     "id": "F058",
     "description": "MSP page title: /msp/settings/extensions/[id]/settings — title: 'Extension Configuration' (generateMetadata)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3c"
     ]
