@@ -10,7 +10,7 @@
   {
     "id": "T002",
     "description": "Verify MSP layout exports metadata with template '%s | Alga PSA' and default 'Dashboard | Alga PSA'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ]

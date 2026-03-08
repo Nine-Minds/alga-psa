@@ -164,3 +164,4 @@
 - (2026-03-08) F114: EE MSP page title: /msp/settings — title: 'Settings'
 - (2026-03-08) F115: EE Client Portal page title: /client-portal/extensions/[id] — title: 'Extension' (generateMetadata)
 - (2026-03-08) T001: Verify root layout generateMetadata() returns title object with template '%s | Alga PSA' and default 'Alga PSA'
+- (2026-03-08) T002: Verify MSP layout exports metadata with template '%s | Alga PSA' and default 'Dashboard | Alga PSA'
