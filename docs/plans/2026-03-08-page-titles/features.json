@@ -298,7 +298,7 @@
   {
     "id": "F038",
     "description": "MSP page title: /msp/jobs — title: 'Jobs'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
