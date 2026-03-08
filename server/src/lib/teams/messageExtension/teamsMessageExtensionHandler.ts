@@ -23,6 +23,21 @@ interface TeamsMessageExtensionParameter {
   value?: string | null;
 }
 
+interface TeamsMessagePayload {
+  id?: string | null;
+  subject?: string | null;
+  summary?: string | null;
+  body?: {
+    content?: string | null;
+  } | null;
+  from?: {
+    user?: {
+      displayName?: string | null;
+    } | null;
+  } | null;
+  linkToMessage?: string | null;
+}
+
 export interface TeamsMessageExtensionActivity {
   type?: string;
   name?: string | null;
@@ -39,6 +54,8 @@ export interface TeamsMessageExtensionActivity {
     commandId?: string | null;
     commandContext?: string | null;
     parameters?: TeamsMessageExtensionParameter[] | null;
+    messagePayload?: TeamsMessagePayload | null;
+    data?: Record<string, unknown> | null;
   } | null;
 }
 
@@ -64,7 +81,7 @@ interface TeamsMessageExtensionAttachment {
   };
 }
 
-export interface TeamsMessageExtensionResponse {
+interface TeamsMessageExtensionComposeResponse {
   composeExtension: {
     type: 'result' | 'message';
     attachmentLayout?: 'list';
@@ -75,6 +92,26 @@ export interface TeamsMessageExtensionResponse {
     cacheType: 'no-cache';
   };
 }
+
+interface TeamsTaskModuleResponse {
+  task: {
+    type: 'continue' | 'message';
+    value:
+      | string
+      | {
+          title: string;
+          width: 'medium' | 'large';
+          height: 'medium' | 'large';
+          card: {
+            type: 'AdaptiveCard';
+            version: '1.5';
+            body: Array<Record<string, unknown>>;
+          };
+        };
+  };
+}
+
+export type TeamsMessageExtensionResponse = TeamsMessageExtensionComposeResponse | TeamsTaskModuleResponse;
 
 interface HandleTeamsMessageExtensionActivityOptions {
   tenantIdHint?: string | null;
@@ -98,11 +135,17 @@ function getMicrosoftAccountId(activity: TeamsMessageExtensionActivity): string 
 }
 
 function getCommandContext(activity: TeamsMessageExtensionActivity): string | null {
-  return normalizeOptionalString(activity.value?.commandContext);
+  const rawContext =
+    activity.value?.commandContext ||
+    (typeof activity.value?.data?.commandContext === 'string' ? activity.value.data.commandContext : undefined);
+  return normalizeOptionalString(rawContext);
 }
 
 function getCommandId(activity: TeamsMessageExtensionActivity): string | null {
-  return normalizeOptionalString(activity.value?.commandId);
+  const rawCommandId =
+    activity.value?.commandId ||
+    (typeof activity.value?.data?.commandId === 'string' ? activity.value.data.commandId : undefined);
+  return normalizeOptionalString(rawCommandId);
 }
 
 function getQueryParameter(activity: TeamsMessageExtensionActivity): string | null {
@@ -132,6 +175,173 @@ function buildMessageResponse(text: string): TeamsMessageExtensionResponse {
     },
     cacheInfo: {
       cacheType: 'no-cache',
+    },
+  };
+}
+
+function buildTaskMessageResponse(text: string): TeamsMessageExtensionResponse {
+  return {
+    task: {
+      type: 'message',
+      value: text,
+    },
+  };
+}
+
+function isQueryRequest(activity: TeamsMessageExtensionActivity): boolean {
+  return activity.type === 'invoke' && normalizeOptionalString(activity.name) === 'composeExtension/query';
+}
+
+function isActionRequest(activity: TeamsMessageExtensionActivity): boolean {
+  const name = normalizeOptionalString(activity.name);
+  return activity.type === 'invoke' && (name === 'composeExtension/fetchTask' || name === 'composeExtension/submitAction');
+}
+
+function stripHtml(value: string): string {
+  return value
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function truncateText(value: string, maxLength: number): string {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return `${value.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
+}
+
+function getMessagePayload(activity: TeamsMessageExtensionActivity): TeamsMessagePayload | null {
+  const directPayload = activity.value?.messagePayload;
+  if (directPayload && typeof directPayload === 'object') {
+    return directPayload;
+  }
+
+  const nestedPayload = activity.value?.data?.messagePayload;
+  if (nestedPayload && typeof nestedPayload === 'object') {
+    return nestedPayload as TeamsMessagePayload;
+  }
+
+  return null;
+}
+
+function buildMessagePreview(activity: TeamsMessageExtensionActivity): {
+  author: string | null;
+  subject: string | null;
+  summary: string | null;
+  linkToMessage: string | null;
+} | null {
+  const payload = getMessagePayload(activity);
+  if (!payload) {
+    return null;
+  }
+
+  const subject = normalizeOptionalString(payload.subject) || normalizeOptionalString(payload.summary);
+  const bodyText = normalizeOptionalString(stripHtml(payload.body?.content || ''));
+  const summary = bodyText ? truncateText(bodyText, 280) : null;
+  const author = normalizeOptionalString(payload.from?.user?.displayName);
+  const linkToMessage = normalizeOptionalString(payload.linkToMessage);
+
+  if (!subject && !summary && !author && !linkToMessage) {
+    return null;
+  }
+
+  return {
+    author,
+    subject,
+    summary,
+    linkToMessage,
+  };
+}
+
+function buildActionTaskResponse(params: {
+  commandId: 'createTicketFromMessage' | 'updateFromMessage';
+  preview: NonNullable<ReturnType<typeof buildMessagePreview>>;
+}): TeamsMessageExtensionResponse {
+  const title =
+    params.commandId === 'createTicketFromMessage'
+      ? 'Create ticket from Teams message'
+      : 'Update PSA record from Teams message';
+  const guidance =
+    params.commandId === 'createTicketFromMessage'
+      ? 'Review the selected Teams message before the ticket-create workflow is completed in a follow-up slice.'
+      : 'Review the selected Teams message before the PSA update workflow is completed in a follow-up slice.';
+
+  const body: Array<Record<string, unknown>> = [
+    {
+      type: 'TextBlock',
+      text: title,
+      wrap: true,
+      weight: 'Bolder',
+      size: 'Medium',
+    },
+  ];
+
+  if (params.preview.author) {
+    body.push({
+      type: 'TextBlock',
+      text: `From: ${params.preview.author}`,
+      wrap: true,
+      spacing: 'Small',
+    });
+  }
+
+  if (params.preview.subject) {
+    body.push({
+      type: 'TextBlock',
+      text: `Subject: ${params.preview.subject}`,
+      wrap: true,
+      spacing: 'Small',
+    });
+  }
+
+  if (params.preview.summary) {
+    body.push({
+      type: 'TextBlock',
+      text: params.preview.summary,
+      wrap: true,
+      spacing: 'Small',
+    });
+  }
+
+  body.push({
+    type: 'TextBlock',
+    text: guidance,
+    wrap: true,
+    spacing: 'Medium',
+    isSubtle: true,
+  });
+
+  if (params.preview.linkToMessage) {
+    body.push({
+      type: 'TextBlock',
+      text: `Source message: ${params.preview.linkToMessage}`,
+      wrap: true,
+      spacing: 'Small',
+      isSubtle: true,
+    });
+  }
+
+  return {
+    task: {
+      type: 'continue',
+      value: {
+        title,
+        width: 'medium',
+        height: 'medium',
+        card: {
+          type: 'AdaptiveCard',
+          version: '1.5',
+          body,
+        },
+      },
     },
   };
 }
@@ -324,24 +534,43 @@ async function searchApprovalHits(params: {
   }));
 }
 
-export async function handleTeamsMessageExtensionActivity(
-  activity: TeamsMessageExtensionActivity,
-  options: HandleTeamsMessageExtensionActivityOptions = {}
-): Promise<TeamsMessageExtensionResponse> {
-  const tenantContext = await resolveTeamsTenantContext({
-    explicitTenantId: options.tenantIdHint || undefined,
-    microsoftTenantId: getTeamsTenantId(activity) || undefined,
-    requiredCapability: 'message_extension',
+async function resolveInvokingUser(params: {
+  activity: TeamsMessageExtensionActivity;
+  tenantId: string;
+}): Promise<
+  | { success: true; user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>> }
+  | { success: false; message: string }
+> {
+  const linkedUser = await resolveTeamsLinkedUser({
+    tenantId: params.tenantId,
+    microsoftAccountId: getMicrosoftAccountId(params.activity),
   });
 
-  if (tenantContext.status !== 'resolved') {
-    return buildMessageResponse(tenantContext.message);
+  if (linkedUser.status !== 'linked') {
+    return {
+      success: false,
+      message: linkedUser.message,
+    };
   }
 
-  if (activity.type !== 'invoke' || normalizeOptionalString(activity.name) !== 'composeExtension/query') {
-    return buildMessageResponse('The Teams message extension only supports search queries in v1.');
+  const user = await getUserWithRoles(linkedUser.userId, params.tenantId);
+  if (!user || user.user_type !== 'internal') {
+    return {
+      success: false,
+      message: 'The Teams message extension could not resolve an MSP technician for this request.',
+    };
   }
 
+  return {
+    success: true,
+    user,
+  };
+}
+
+async function handleQueryRequest(
+  activity: TeamsMessageExtensionActivity,
+  tenantId: string
+): Promise<TeamsMessageExtensionResponse> {
   const commandId = getCommandId(activity);
   if (commandId !== 'searchRecords') {
     return buildMessageResponse('This Teams message extension command is not supported yet.');
@@ -357,30 +586,24 @@ export async function handleTeamsMessageExtensionActivity(
     return buildMessageResponse('Enter a search query to look up PSA records from Teams.');
   }
 
-  const linkedUser = await resolveTeamsLinkedUser({
-    tenantId: tenantContext.tenantId,
-    microsoftAccountId: getMicrosoftAccountId(activity),
+  const invokingUser = await resolveInvokingUser({
+    activity,
+    tenantId,
   });
-
-  if (linkedUser.status !== 'linked') {
-    return buildMessageResponse(linkedUser.message);
-  }
-
-  const user = await getUserWithRoles(linkedUser.userId, tenantContext.tenantId);
-  if (!user || user.user_type !== 'internal') {
-    return buildMessageResponse('The Teams message extension could not resolve an MSP technician for this search.');
+  if (!invokingUser.success) {
+    return buildMessageResponse(invokingUser.message);
   }
 
   const hits = [
-    ...(await searchTicketHits({ tenantId: tenantContext.tenantId, user, query })),
-    ...(await searchTaskHits({ tenantId: tenantContext.tenantId, user, query })),
-    ...(await searchContactHits({ tenantId: tenantContext.tenantId, user, query })),
-    ...(await searchApprovalHits({ tenantId: tenantContext.tenantId, user, query })),
+    ...(await searchTicketHits({ tenantId, user: invokingUser.user, query })),
+    ...(await searchTaskHits({ tenantId, user: invokingUser.user, query })),
+    ...(await searchContactHits({ tenantId, user: invokingUser.user, query })),
+    ...(await searchApprovalHits({ tenantId, user: invokingUser.user, query })),
   ].slice(0, 12);
 
   const attachments = await buildSearchAttachments({
-    tenantId: tenantContext.tenantId,
-    user,
+    tenantId,
+    user: invokingUser.user,
     hits,
   });
 
@@ -398,6 +621,74 @@ export async function handleTeamsMessageExtensionActivity(
       cacheType: 'no-cache',
     },
   };
+}
+
+async function handleActionRequest(
+  activity: TeamsMessageExtensionActivity,
+  tenantId: string
+): Promise<TeamsMessageExtensionResponse> {
+  const commandId = getCommandId(activity);
+  if (commandId !== 'createTicketFromMessage' && commandId !== 'updateFromMessage') {
+    return buildTaskMessageResponse('This Teams message action is not supported yet.');
+  }
+
+  const commandContext = getCommandContext(activity);
+  if (commandContext !== 'message') {
+    return buildTaskMessageResponse('This Teams message action is available from message context only.');
+  }
+
+  const preview = buildMessagePreview(activity);
+  if (!preview) {
+    return buildTaskMessageResponse('Select a Teams message with usable content before starting this PSA workflow.');
+  }
+
+  const invokingUser = await resolveInvokingUser({
+    activity,
+    tenantId,
+  });
+  if (!invokingUser.success) {
+    return buildTaskMessageResponse(invokingUser.message);
+  }
+
+  if (normalizeOptionalString(activity.name) === 'composeExtension/submitAction') {
+    return buildTaskMessageResponse(
+      commandId === 'createTicketFromMessage'
+        ? 'The Teams message-to-ticket handoff is ready. Continue in the Alga PSA personal tab while inline submission is completed in a follow-up slice.'
+        : 'The Teams message-to-update handoff is ready. Continue in the Alga PSA personal tab while inline submission is completed in a follow-up slice.'
+    );
+  }
+
+  return buildActionTaskResponse({
+    commandId,
+    preview,
+  });
+}
+
+export async function handleTeamsMessageExtensionActivity(
+  activity: TeamsMessageExtensionActivity,
+  options: HandleTeamsMessageExtensionActivityOptions = {}
+): Promise<TeamsMessageExtensionResponse> {
+  const tenantContext = await resolveTeamsTenantContext({
+    explicitTenantId: options.tenantIdHint || undefined,
+    microsoftTenantId: getTeamsTenantId(activity) || undefined,
+    requiredCapability: 'message_extension',
+  });
+
+  if (tenantContext.status !== 'resolved') {
+    return isActionRequest(activity)
+      ? buildTaskMessageResponse(tenantContext.message)
+      : buildMessageResponse(tenantContext.message);
+  }
+
+  if (isQueryRequest(activity)) {
+    return handleQueryRequest(activity, tenantContext.tenantId);
+  }
+
+  if (isActionRequest(activity)) {
+    return handleActionRequest(activity, tenantContext.tenantId);
+  }
+
+  return buildMessageResponse('The Teams message extension supports search queries and message actions in v1.');
 }
 
 export async function handleTeamsMessageExtensionRequest(request: Request): Promise<NextResponse> {

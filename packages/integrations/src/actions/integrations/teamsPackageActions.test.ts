@@ -166,7 +166,7 @@ describe('Teams app package actions', () => {
     hasPermissionMock.mockResolvedValue(true);
   });
 
-  it('T117/T119/T121/T123/T125/T127/T129/T131/T133/T135/T137/T141/T147: returns Teams manifest metadata with declared surfaces, app identity, install state, environment base URL, and shared deep-link targets', async () => {
+  it('T117/T119/T121/T123/T125/T127/T129/T131/T133/T135/T137/T141/T147/T349: returns Teams manifest metadata with declared surfaces, app identity, install state, environment base URL, and focused lookup/message-action command definitions', async () => {
     appSecrets.set('NEXT_PUBLIC_BASE_URL', 'https://tenant.example.com/');
     addMicrosoftProfile({
       tenant: 'tenant-1',

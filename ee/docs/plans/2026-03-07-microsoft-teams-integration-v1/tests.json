@@ -2562,7 +2562,7 @@
   {
     "id": "T321",
     "description": "Happy path: Message extension: action commands work from message context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F161"
     ]
@@ -2570,7 +2570,7 @@
   {
     "id": "T322",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: action commands work from message context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F161"
     ]
@@ -2578,7 +2578,7 @@
   {
     "id": "T323",
     "description": "Happy path: Message extension: search queries remain tenant-scoped.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F162"
     ]
@@ -2586,7 +2586,7 @@
   {
     "id": "T324",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search queries remain tenant-scoped.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F162"
     ]
@@ -2594,7 +2594,7 @@
   {
     "id": "T325",
     "description": "Happy path: Message extension: search queries respect the invoking user's PSA permissions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F163"
     ]
@@ -2602,7 +2602,7 @@
   {
     "id": "T326",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search queries respect the invoking user's psa permissions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F163"
     ]
@@ -2626,7 +2626,7 @@
   {
     "id": "T329",
     "description": "Happy path: Message extension: search results show compact summary information appropriate to Teams.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F165"
     ]
@@ -2634,7 +2634,7 @@
   {
     "id": "T330",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search results show compact summary information appropriate to teams.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F165"
     ]
@@ -2642,7 +2642,7 @@
   {
     "id": "T331",
     "description": "Happy path: Message extension: search results include deep links to open the selected record in the Teams tab or PSA web app.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F166"
     ]
@@ -2650,7 +2650,7 @@
   {
     "id": "T332",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search results include deep links to open the selected record in the teams tab or psa web app.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F166"
     ]
@@ -2674,7 +2674,7 @@
   {
     "id": "T335",
     "description": "Happy path: Message extension: unsupported message types or contexts return a clear, recoverable response.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F168"
     ]
@@ -2682,7 +2682,7 @@
   {
     "id": "T336",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: unsupported message types or contexts return a clear, recoverable response.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F168"
     ]
@@ -2690,7 +2690,7 @@
   {
     "id": "T337",
     "description": "Happy path: Message extension: the extension is unavailable when the tenant Teams integration is not active.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F169"
     ]
@@ -2698,7 +2698,7 @@
   {
     "id": "T338",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: the extension is unavailable when the tenant teams integration is not active.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F169"
     ]
@@ -2722,7 +2722,7 @@
   {
     "id": "T341",
     "description": "Happy path: Message extension: Teams-authenticated context is available to search and action commands.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F171"
     ]
@@ -2730,7 +2730,7 @@
   {
     "id": "T342",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: teams-authenticated context is available to search and action commands.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F171"
     ]
@@ -2738,7 +2738,7 @@
   {
     "id": "T343",
     "description": "Happy path: Message extension: users can open a matching ticket directly from search results.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F172"
     ]
@@ -2746,7 +2746,7 @@
   {
     "id": "T344",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: users can open a matching ticket directly from search results.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F172"
     ]
@@ -2754,7 +2754,7 @@
   {
     "id": "T345",
     "description": "Happy path: Message extension: users can open a matching task directly from search results.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F173"
     ]
@@ -2762,7 +2762,7 @@
   {
     "id": "T346",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: users can open a matching task directly from search results.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F173"
     ]
@@ -2770,7 +2770,7 @@
   {
     "id": "T347",
     "description": "Happy path: Message extension: users can open a matching contact or approval directly from search results when permitted.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F174"
     ]
@@ -2778,7 +2778,7 @@
   {
     "id": "T348",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: users can open a matching contact or approval directly from search results when permitted.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F174"
     ]
@@ -2786,7 +2786,7 @@
   {
     "id": "T349",
     "description": "Happy path: Message extension: command definitions remain focused on lookup and message-driven actions rather than general chat.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F175"
     ]
@@ -2794,7 +2794,7 @@
   {
     "id": "T350",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: command definitions remain focused on lookup and message-driven actions rather than general chat.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F175"
     ]
@@ -2802,7 +2802,7 @@
   {
     "id": "T351",
     "description": "Happy path: Message extension: result rendering reuses the shared Teams action/result model.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F176"
     ]
@@ -2810,7 +2810,7 @@
   {
     "id": "T352",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: result rendering reuses the shared teams action/result model.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F176"
     ]

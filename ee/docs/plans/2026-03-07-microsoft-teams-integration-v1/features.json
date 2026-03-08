@@ -1528,7 +1528,7 @@
   {
     "id": "F161",
     "description": "Message extension: action commands work from message context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1538,7 +1538,7 @@
   {
     "id": "F162",
     "description": "Message extension: search queries remain tenant-scoped.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1548,7 +1548,7 @@
   {
     "id": "F163",
     "description": "Message extension: search queries respect the invoking user's PSA permissions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1568,7 +1568,7 @@
   {
     "id": "F165",
     "description": "Message extension: search results show compact summary information appropriate to Teams.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1578,7 +1578,7 @@
   {
     "id": "F166",
     "description": "Message extension: search results include deep links to open the selected record in the Teams tab or PSA web app.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1598,7 +1598,7 @@
   {
     "id": "F168",
     "description": "Message extension: unsupported message types or contexts return a clear, recoverable response.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1608,7 +1608,7 @@
   {
     "id": "F169",
     "description": "Message extension: the extension is unavailable when the tenant Teams integration is not active.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1628,7 +1628,7 @@
   {
     "id": "F171",
     "description": "Message extension: Teams-authenticated context is available to search and action commands.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1638,7 +1638,7 @@
   {
     "id": "F172",
     "description": "Message extension: users can open a matching ticket directly from search results.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1648,7 +1648,7 @@
   {
     "id": "F173",
     "description": "Message extension: users can open a matching task directly from search results.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1658,7 +1658,7 @@
   {
     "id": "F174",
     "description": "Message extension: users can open a matching contact or approval directly from search results when permitted.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1668,7 +1668,7 @@
   {
     "id": "F175",
     "description": "Message extension: command definitions remain focused on lookup and message-driven actions rather than general chat.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1678,7 +1678,7 @@
   {
     "id": "F176",
     "description": "Message extension: result rendering reuses the shared Teams action/result model.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",

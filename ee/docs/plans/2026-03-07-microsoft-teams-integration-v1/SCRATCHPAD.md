@@ -256,6 +256,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) The first Teams message-extension slice can stay SDK-free like the bot transport: a Next.js invoke route can accept `composeExtension/query` payloads directly and reuse tenant/user resolution plus the shared Teams action layer for result cards.
 - (2026-03-07) Approval lookup needed a reusable helper outside the action registry so both bot approvals and message-extension search can share the same manager/reports-to visibility rules and optional query filtering.
 - (2026-03-07) The smallest safe v1 message-extension search surface is one `searchRecords` command for `compose` and `commandBox` contexts that aggregates tickets, tasks, contacts, and approvals into shared `open_record` hero cards.
+- (2026-03-07) The first message-context action slice can reuse the same message-extension route by handling `composeExtension/fetchTask` and `composeExtension/submitAction`, returning Teams-safe task responses without introducing a second webhook surface.
+- (2026-03-07) The current message-action transport is intentionally a handoff foundation: it preserves Teams-authenticated message context and shows a task-module preview while later slices add actual message-to-ticket and message-to-update mutations.
 
 ## Progress Log
 
@@ -289,6 +291,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Verified Teams message-extension search with:
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/actions/teamsActionRegistry.test.ts src/test/unit/lib/teams/messageExtension/teamsMessageExtensionHandler.test.ts src/app/api/teams/message-extension/query/route.test.ts`
   - `pnpm --dir server exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-07) Verified Teams message-extension action transport and focused command definitions with:
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/messageExtension/teamsMessageExtensionHandler.test.ts src/app/api/teams/message-extension/query/route.test.ts ../packages/integrations/src/actions/integrations/teamsPackageActions.test.ts`
+  - `pnpm --dir server exec tsc -p tsconfig.json --noEmit --pretty false`
+  - `pnpm --dir packages/integrations typecheck`
 
 - (2026-03-07) Completed `F140`, `F141`, `F142`, and `F143` by teaching `server/src/lib/teams/bot/teamsBotHandler.ts` to parse `assign ticket` commands, default `assign ticket <ticket-id>` to self-assignment, resolve other assignees from active internal users with explicit `user:read` gating, and return the shared action result with an assignee-specific success summary plus Teams-tab/full-PSA links.
 - (2026-03-07) Completed `F144`, `F145`, and `F146` by teaching the same bot handler to parse `add note <ticket-id>: <note>`, preserve ticket context when the note body is missing, execute the shared `add_note` Teams action, and return the saved-note confirmation with follow-up deep links.
@@ -304,4 +310,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Completed `T307` and `T308` with bot-handler coverage for approval approval/request-changes execution plus missing-reference and missing-comment remediation.
 - (2026-03-07) Completed `F155`, `F156`, `F157`, `F158`, `F159`, and `F160` by adding the SDK-free Teams message-extension route in `server/src/app/api/teams/message-extension/query/route.ts` plus `server/src/lib/teams/messageExtension/teamsMessageExtensionHandler.ts`, which resolves tenant and linked-user context, accepts `searchRecords` queries from compose/command-box contexts, and returns ticket/task/contact/approval hero-card results through the shared `open_record` Teams action mapping.
 - (2026-03-07) Completed `T309` through `T320` with `server/src/app/api/teams/message-extension/query/route.test.ts` and `server/src/test/unit/lib/teams/messageExtension/teamsMessageExtensionHandler.test.ts`, covering route delegation, invalid JSON handling, tenant/user-gated search aggregation, permission-based suppression, empty-state recovery, and compose/command-box context enforcement.
-- (2026-03-07) Next unchecked feature after this slice is `F161` (Message extension: action commands work from message context).
+- (2026-03-07) Completed `F161` by extending `server/src/lib/teams/messageExtension/teamsMessageExtensionHandler.ts` to accept `composeExtension/fetchTask` and `composeExtension/submitAction` requests for `createTicketFromMessage` and `updateFromMessage`, returning Teams-safe task-module and task-message responses from message context.
+- (2026-03-07) Completed `F162`, `F163`, `F165`, `F166`, `F168`, `F169`, `F171`, `F172`, `F173`, `F174`, `F175`, and `F176` by tightening the message-extension transport around tenant-scoped/user-scoped search execution, compact shared-result card rendering, Teams-tab/full-PSA deep links, inactive-tenant remediation, focused command definitions, and shared `open_record` result mapping.
+- (2026-03-07) Completed `T321` through `T352` with focused handler/package coverage for message-context action requests, tenant/user resolution, permission-scoped search behavior, compact result cards, deep-link buttons, inactive-tenant remediation, focused command definitions, and shared result mapping.
+- (2026-03-07) Next unchecked feature after this slice is `F164` (Message extension: search results support pagination or continuation for longer result sets).

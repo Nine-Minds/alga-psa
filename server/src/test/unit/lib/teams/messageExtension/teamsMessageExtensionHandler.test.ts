@@ -240,7 +240,7 @@ describe('teamsMessageExtensionHandler', () => {
     );
   });
 
-  it('T312/T314/T316/T318: search suppresses entity types the user cannot read and returns a recoverable empty-state message', async () => {
+  it('T312/T314/T316/T318/T325/T326: search suppresses entity types the user cannot read and returns a recoverable empty-state message', async () => {
     hasPermissionMock.mockImplementation(async (_user: IUserWithRoles, resource: string) => resource === 'ticket');
     vi.spyOn(TicketService.prototype, 'search').mockResolvedValue([]);
     vi.spyOn(ContactService.prototype, 'search').mockResolvedValue([]);
@@ -264,7 +264,7 @@ describe('teamsMessageExtensionHandler', () => {
     expect(executeTeamsActionMock).not.toHaveBeenCalled();
   });
 
-  it('T319/T320: search works from compose and command-box contexts and rejects unsupported contexts with recoverable guidance', async () => {
+  it('T319/T320/T335/T336: search works from compose and command-box contexts and rejects unsupported contexts with recoverable guidance', async () => {
     const composeResponse = await handleTeamsMessageExtensionActivity(
       buildActivity({
         value: {
@@ -300,5 +300,218 @@ describe('teamsMessageExtensionHandler', () => {
     expect(commandBoxResponse.composeExtension.type).toBe('result');
     expect(invalidContextResponse.composeExtension.type).toBe('message');
     expect(invalidContextResponse.composeExtension.text).toContain('compose and command box contexts only');
+  });
+
+  it('T321/T322/T341/T342: action commands resolve Teams-authenticated context from message scope and return a task-module response for supported commands', async () => {
+    const response = await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        name: 'composeExtension/fetchTask',
+        value: {
+          commandId: 'createTicketFromMessage',
+          commandContext: 'message',
+          messagePayload: {
+            id: 'message-1',
+            subject: 'VPN outage from Teams',
+            body: {
+              content: '<div>The VPN has been down since 9 AM.</div>',
+            },
+            from: {
+              user: {
+                displayName: 'Morgan Message',
+              },
+            },
+            linkToMessage: 'https://teams.example.test/messages/1',
+          },
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    expect(resolveTeamsLinkedUserMock).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      microsoftAccountId: 'aad-user-1',
+    });
+    expect(getUserWithRolesMock).toHaveBeenCalledWith('user-1', 'tenant-1');
+    expect(response).toMatchObject({
+      task: {
+        type: 'continue',
+        value: {
+          title: 'Create ticket from Teams message',
+          width: 'medium',
+          height: 'medium',
+        },
+      },
+    });
+    expect((response as any).task.value.card.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ text: 'Create ticket from Teams message' }),
+        expect.objectContaining({ text: 'From: Morgan Message' }),
+        expect.objectContaining({ text: 'Subject: VPN outage from Teams' }),
+      ])
+    );
+  });
+
+  it('T322/T342: action commands reject unsupported contexts or missing message payloads with recoverable task messages', async () => {
+    const wrongContextResponse = await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        name: 'composeExtension/fetchTask',
+        value: {
+          commandId: 'createTicketFromMessage',
+          commandContext: 'compose',
+          messagePayload: {
+            subject: 'VPN outage from Teams',
+          },
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    const missingPayloadResponse = await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        name: 'composeExtension/fetchTask',
+        value: {
+          commandId: 'updateFromMessage',
+          commandContext: 'message',
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    expect(wrongContextResponse).toEqual({
+      task: {
+        type: 'message',
+        value: 'This Teams message action is available from message context only.',
+      },
+    });
+    expect(missingPayloadResponse).toEqual({
+      task: {
+        type: 'message',
+        value: 'Select a Teams message with usable content before starting this PSA workflow.',
+      },
+    });
+  });
+
+  it('T323/T324/T337/T338: search remains tenant-scoped and returns clear remediation when the Teams integration is unavailable', async () => {
+    await handleTeamsMessageExtensionActivity(buildActivity(), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(resolveTeamsTenantContextMock).toHaveBeenCalledWith({
+      explicitTenantId: 'tenant-1',
+      microsoftTenantId: 'entra-tenant-1',
+      requiredCapability: 'message_extension',
+    });
+    expect(TicketService.prototype.search).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-1',
+        userId: 'user-1',
+      })
+    );
+    expect(createTenantKnexMock).toHaveBeenCalledWith('tenant-1');
+
+    resolveTeamsTenantContextMock.mockResolvedValueOnce({
+      status: 'not_ready',
+      message: 'Teams message extension is not active for this tenant.',
+    });
+
+    const unavailableResponse = await handleTeamsMessageExtensionActivity(buildActivity(), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(unavailableResponse).toEqual({
+      composeExtension: {
+        type: 'message',
+        text: 'Teams message extension is not active for this tenant.',
+      },
+      cacheInfo: {
+        cacheType: 'no-cache',
+      },
+    });
+  });
+
+  it('T329/T330/T331/T332/T343/T345/T347/T351/T352: search results reuse shared action summaries and deep links for compact Teams cards', async () => {
+    const response = await handleTeamsMessageExtensionActivity(buildActivity(), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(response.composeExtension.type).toBe('result');
+    expect(response.composeExtension.attachments?.[0]).toEqual(
+      expect.objectContaining({
+        contentType: 'application/vnd.microsoft.card.hero',
+        content: expect.objectContaining({
+          title: 'Ticket T-1001',
+          text: 'VPN outage • In progress',
+          buttons: [
+            { type: 'openUrl', title: 'Open in Teams tab', value: 'https://teams.test/ticket' },
+            { type: 'openUrl', title: 'Open in full PSA', value: '/msp/ticket' },
+          ],
+        }),
+      })
+    );
+    expect(response.composeExtension.attachments?.[1]?.content.title).toBe('Project task VPN cleanup');
+    expect(response.composeExtension.attachments?.[2]?.content.title).toBe('Contact Taylor Nguyen');
+    expect(response.composeExtension.attachments?.[3]?.content.title).toBe('Approval approval-1');
+    expect(executeTeamsActionMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        actionId: 'open_record',
+        surface: 'message_extension',
+      })
+    );
+  });
+
+  it('T344/T346/T348: search result links only include entities returned by the shared open-record action mapping', async () => {
+    executeTeamsActionMock.mockResolvedValueOnce({
+      success: false,
+      actionId: 'open_record',
+      surface: 'message_extension',
+      operation: 'lookup',
+      error: {
+        code: 'forbidden',
+        message: 'Permission denied',
+      },
+      warnings: [],
+      metadata: {
+        surface: 'message_extension',
+        idempotencyKey: null,
+        idempotentReplay: false,
+        invokingSurface: 'message_extension',
+        businessOperations: ['TicketService.getById'],
+      },
+    });
+
+    const response = await handleTeamsMessageExtensionActivity(buildActivity(), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(response.composeExtension.type).toBe('result');
+    expect(response.composeExtension.attachments).toHaveLength(3);
+    expect(response.composeExtension.attachments?.map((attachment) => attachment.content.title)).not.toContain(
+      'Ticket T-1001'
+    );
+  });
+
+  it('T350: action/query command support stays focused on PSA lookup and message-driven commands instead of accepting arbitrary message-extension commands', async () => {
+    const unsupportedCommand = await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        value: {
+          commandId: 'freeFormChat',
+          commandContext: 'compose',
+          parameters: [{ name: 'query', value: 'vpn' }],
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    expect(unsupportedCommand).toEqual({
+      composeExtension: {
+        type: 'message',
+        text: 'This Teams message extension command is not supported yet.',
+      },
+      cacheInfo: {
+        cacheType: 'no-cache',
+      },
+    });
   });
 });
