@@ -194,3 +194,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd packages/clients && npx vitest run --config vitest.config.ts src/components/interactions/QuickAddInteraction.quick-add-contact.contract.test.ts`
 - 2026-03-08 T011: Added `packages/clients/src/components/interactions/OverallInteractionsFeed.quick-add-contact.contract.test.ts` to pin the filter dialog wiring that opens `QuickAddContact`, forwards the current client context, and auto-selects the created contact in filter state.
 - Validation: `cd packages/clients && npx vitest run --config vitest.config.ts src/components/interactions/OverallInteractionsFeed.quick-add-contact.contract.test.ts`
+- 2026-03-08 T012: Added `packages/projects/src/components/ProjectQuickAdd.quick-add-contact.contract.test.ts` to lock the `ProjectQuickAdd` contact-picker wiring that gates `onAddNew` on a selected client, opens `QuickAddContact`, and auto-selects the created contact.
+- Validation: `cd packages/projects && npx vitest run --config vitest.config.ts src/components/ProjectQuickAdd.quick-add-contact.contract.test.ts`
