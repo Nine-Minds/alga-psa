@@ -95,3 +95,4 @@
 - (2026-03-08) F045: MSP page title: /msp/surveys/settings — title: 'Survey Settings'
 - (2026-03-08) F046: MSP page title: /msp/workflow-editor — title: 'Workflow Editor'
 - (2026-03-08) F047: MSP page title: /msp/workflow-editor/new — title: 'New Workflow'
+- (2026-03-08) F048: MSP page title: /msp/workflow-editor/[workflowId] — title: 'Edit Workflow' (generateMetadata)
