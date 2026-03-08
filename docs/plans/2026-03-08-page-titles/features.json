@@ -154,7 +154,7 @@
   {
     "id": "F020",
     "description": "MSP page title: /msp/projects/templates/create — title: 'Create Template'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
