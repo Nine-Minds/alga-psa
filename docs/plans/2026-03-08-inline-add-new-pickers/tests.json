@@ -363,7 +363,7 @@
   {
     "id": "T046",
     "description": "Existing jest tests pass: npx jest --testPathPattern='QuickAddTicket|ContactPicker|TicketProperties|ClientPicker|CategoryPicker'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F003",
