@@ -18,7 +18,7 @@
   {
     "id": "T003",
     "description": "ContactPicker button has Plus icon and correct styling (w-full flex items-center gap-2 px-3 py-2)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001"
     ]
