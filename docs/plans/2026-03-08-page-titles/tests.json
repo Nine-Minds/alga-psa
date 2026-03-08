@@ -2,127 +2,327 @@
   {
     "id": "T001",
     "description": "Verify root layout generateMetadata() returns title object with template '%s | Alga PSA' and default 'Alga PSA'",
-    "implemented": false,
-    "featureIds": ["F001"]
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
   },
   {
     "id": "T002",
     "description": "Verify MSP layout exports metadata with template '%s | Alga PSA' and default 'Dashboard | Alga PSA'",
     "implemented": false,
-    "featureIds": ["F002"]
+    "featureIds": [
+      "F002"
+    ]
   },
   {
     "id": "T003",
     "description": "Verify Client Portal layout exports metadata with template '%s | Client Portal' and default 'Dashboard | Client Portal'",
     "implemented": false,
-    "featureIds": ["F003"]
+    "featureIds": [
+      "F003"
+    ]
   },
   {
     "id": "T004",
     "description": "Verify Auth layout exports metadata with template '%s | Alga PSA' and default 'Sign In | Alga PSA'",
     "implemented": false,
-    "featureIds": ["F004"]
+    "featureIds": [
+      "F004"
+    ]
   },
   {
     "id": "T005",
     "description": "Verify Static layout exports metadata with default 'Alga PSA'",
     "implemented": false,
-    "featureIds": ["F005"]
+    "featureIds": [
+      "F005"
+    ]
   },
   {
     "id": "T006",
     "description": "Batch verify: all static MSP pages (F006-F075) export 'export const metadata' with correct title strings",
     "implemented": false,
-    "featureIds": ["F006", "F007", "F008", "F009", "F010", "F012", "F014", "F017", "F019", "F020", "F022", "F025", "F026", "F027", "F028", "F029", "F030", "F031", "F032", "F034", "F035", "F036", "F037", "F038", "F039", "F040", "F041", "F042", "F043", "F045", "F046", "F047", "F049", "F050", "F053", "F054", "F055", "F056", "F059", "F060", "F061", "F062", "F063", "F066", "F067", "F068", "F069", "F070", "F071", "F072", "F073", "F074", "F075"]
+    "featureIds": [
+      "F006",
+      "F007",
+      "F008",
+      "F009",
+      "F010",
+      "F012",
+      "F014",
+      "F017",
+      "F019",
+      "F020",
+      "F022",
+      "F025",
+      "F026",
+      "F027",
+      "F028",
+      "F029",
+      "F030",
+      "F031",
+      "F032",
+      "F034",
+      "F035",
+      "F036",
+      "F037",
+      "F038",
+      "F039",
+      "F040",
+      "F041",
+      "F042",
+      "F043",
+      "F045",
+      "F046",
+      "F047",
+      "F049",
+      "F050",
+      "F053",
+      "F054",
+      "F055",
+      "F056",
+      "F059",
+      "F060",
+      "F061",
+      "F062",
+      "F063",
+      "F066",
+      "F067",
+      "F068",
+      "F069",
+      "F070",
+      "F071",
+      "F072",
+      "F073",
+      "F074",
+      "F075"
+    ]
   },
   {
     "id": "T007",
     "description": "Batch verify: all dynamic MSP pages (F011, F013, F015, F016, F018, F021, F023, F033, F044, F048, F051, F052, F057, F058, F065) export generateMetadata with correct title",
     "implemented": false,
-    "featureIds": ["F011", "F013", "F015", "F016", "F018", "F021", "F023", "F033", "F044", "F048", "F051", "F052", "F057", "F058", "F065"]
+    "featureIds": [
+      "F011",
+      "F013",
+      "F015",
+      "F016",
+      "F018",
+      "F021",
+      "F023",
+      "F033",
+      "F044",
+      "F048",
+      "F051",
+      "F052",
+      "F057",
+      "F058",
+      "F065"
+    ]
   },
   {
     "id": "T008",
     "description": "Batch verify: all static Client Portal pages (F076-F079, F081, F085, F087) export 'export const metadata' with correct title strings",
     "implemented": false,
-    "featureIds": ["F076", "F077", "F078", "F079", "F081", "F085", "F087"]
+    "featureIds": [
+      "F076",
+      "F077",
+      "F078",
+      "F079",
+      "F081",
+      "F085",
+      "F087"
+    ]
   },
   {
     "id": "T009",
     "description": "Batch verify: all dynamic Client Portal pages (F080, F082, F083, F086, F088) export generateMetadata with correct title",
     "implemented": false,
-    "featureIds": ["F080", "F082", "F083", "F086", "F088"]
+    "featureIds": [
+      "F080",
+      "F082",
+      "F083",
+      "F086",
+      "F088"
+    ]
   },
   {
     "id": "T010",
     "description": "Batch verify: all Auth pages (F090-F102) export 'export const metadata' with correct title strings",
     "implemented": false,
-    "featureIds": ["F090", "F091", "F093", "F094", "F095", "F096", "F097", "F098", "F099", "F100", "F101", "F102"]
+    "featureIds": [
+      "F090",
+      "F091",
+      "F093",
+      "F094",
+      "F095",
+      "F096",
+      "F097",
+      "F098",
+      "F099",
+      "F100",
+      "F101",
+      "F102"
+    ]
   },
   {
     "id": "T011",
     "description": "Batch verify: static/public pages (F103, F104) export metadata with correct titles",
     "implemented": false,
-    "featureIds": ["F103", "F104"]
+    "featureIds": [
+      "F103",
+      "F104"
+    ]
   },
   {
     "id": "T012",
     "description": "Verify existing metadata compatibility: /msp/assets/[asset_id]/edit title 'Edit Asset' is a plain string (works with template)",
     "implemented": false,
-    "featureIds": ["F024"]
+    "featureIds": [
+      "F024"
+    ]
   },
   {
     "id": "T013",
     "description": "Verify existing metadata compatibility: /auth/verify layout title 'Verify Email' is a plain string (works with template)",
     "implemented": false,
-    "featureIds": ["F092"]
+    "featureIds": [
+      "F092"
+    ]
   },
   {
     "id": "T014",
     "description": "Verify existing metadata compatibility: /client-portal/client-settings layout title 'Company Settings' is a plain string (works with template)",
     "implemented": false,
-    "featureIds": ["F084"]
+    "featureIds": [
+      "F084"
+    ]
   },
   {
     "id": "T015",
     "description": "Verify existing metadata compatibility: /msp/extensions/[id] re-exported metadata from @product/extensions/entry uses string title",
     "implemented": false,
-    "featureIds": ["F064"]
+    "featureIds": [
+      "F064"
+    ]
   },
   {
     "id": "T016",
     "description": "Verify existing metadata compatibility: /client-portal/extensions/[id] re-exported metadata is compatible with Client Portal template",
     "implemented": false,
-    "featureIds": ["F089"]
+    "featureIds": [
+      "F089"
+    ]
   },
   {
     "id": "T017",
     "description": "Verify existing metadata compatibility: /surveys/respond/[token] generateMetadata() returns a string title (works with root template)",
     "implemented": false,
-    "featureIds": ["F105"]
+    "featureIds": [
+      "F105"
+    ]
   },
   {
     "id": "T018",
     "description": "TypeScript: no type errors introduced by metadata exports (run tsc --noEmit)",
     "implemented": false,
-    "featureIds": ["F001", "F002", "F003", "F004", "F005"]
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F005"
+    ]
   },
   {
     "id": "T019",
     "description": "Build: project builds successfully with all metadata changes (npm run build)",
     "implemented": false,
-    "featureIds": ["F001", "F002", "F003", "F004", "F005"]
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F005"
+    ]
   },
   {
     "id": "T020",
     "description": "Verify no page uses client-side document.title for setting titles",
     "implemented": false,
-    "featureIds": ["F001"]
+    "featureIds": [
+      "F001"
+    ]
   },
   {
     "id": "T021",
     "description": "Verify pages without explicit metadata fall back to their section layout default title",
     "implemented": false,
-    "featureIds": ["F002", "F003", "F004"]
+    "featureIds": [
+      "F002",
+      "F003",
+      "F004"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Verify uncovered community routes /msp/documents and /test-routing export metadata titles",
+    "implemented": false,
+    "featureIds": [
+      "F106",
+      "F107"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Verify EE root, MSP, and Client Portal layouts export the expected metadata templates/defaults",
+    "implemented": false,
+    "featureIds": [
+      "F108",
+      "F109",
+      "F110"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Verify EE MSP routes /msp/chat, /msp/licenses/purchase, /msp/licenses/purchase/success, and /msp/settings export or inherit metadata titles",
+    "implemented": false,
+    "featureIds": [
+      "F111",
+      "F112",
+      "F113",
+      "F114"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Verify EE Client Portal extension route exports generateMetadata with title 'Extension'",
+    "implemented": false,
+    "featureIds": [
+      "F115"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Audit every page route under server/src/app and ee/server/src/app for metadata coverage via page export or route layout",
+    "implemented": false,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F004",
+      "F005",
+      "F106",
+      "F107",
+      "F108",
+      "F109",
+      "F110",
+      "F111",
+      "F112",
+      "F113",
+      "F114",
+      "F115"
+    ]
   }
 ]
