@@ -188,36 +188,7 @@ type WorkflowPlaywrightOverrides = {
   registryActions?: ActionRegistryItem[];
 };
 
-type TriggerTypeSelection = 'manual' | 'event' | 'schedule' | 'recurring';
-
-type StoredContractSelection = {
-  mode: 'inferred' | 'pinned';
-  payloadSchemaRef: string;
-  pinnedPayloadSchemaRef: string;
-};
-
-const COMMON_TIMEZONES = [
-  'UTC',
-  'America/New_York',
-  'America/Chicago',
-  'America/Denver',
-  'America/Los_Angeles',
-  'Europe/London',
-  'Europe/Paris',
-  'Asia/Tokyo',
-  'Australia/Sydney'
-];
-
-const CLOCK_TRIGGER_CONTRACT_FIELDS = [
-  'triggerType',
-  'scheduleId',
-  'scheduledFor',
-  'firedAt',
-  'timezone',
-  'workflowId',
-  'workflowVersion',
-  'cron'
-] as const;
+type TriggerTypeSelection = 'manual' | 'event';
 
 const getWorkflowPlaywrightOverrides = (): WorkflowPlaywrightOverrides | null => {
   if (typeof window === 'undefined') return null;
@@ -312,46 +283,6 @@ const LEGACY_WORKFLOW_NODE_IDS = new Set<string>([
 ]);
 
 const DEFAULT_PAYLOAD_SCHEMA = 'payload.EmailWorkflowPayload.v1';
-
-const getDefaultTriggerTimezone = (): string => {
-  if (typeof Intl !== 'undefined' && typeof Intl.DateTimeFormat === 'function') {
-    const resolved = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (resolved) return resolved;
-  }
-  return 'UTC';
-};
-
-const listWorkflowTriggerTimezones = (): string[] => {
-  const supported = typeof Intl !== 'undefined' && typeof Intl.supportedValuesOf === 'function'
-    ? Intl.supportedValuesOf('timeZone')
-    : [];
-  return Array.from(new Set([...COMMON_TIMEZONES, ...supported]));
-};
-
-const formatDateTimeLocalInput = (isoValue?: string | null): string => {
-  if (!isoValue) return '';
-  const parsed = new Date(isoValue);
-  if (Number.isNaN(parsed.getTime())) return '';
-  const year = parsed.getFullYear();
-  const month = String(parsed.getMonth() + 1).padStart(2, '0');
-  const day = String(parsed.getDate()).padStart(2, '0');
-  const hours = String(parsed.getHours()).padStart(2, '0');
-  const minutes = String(parsed.getMinutes()).padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-};
-
-const parseDateTimeLocalInput = (value: string): string => {
-  if (!value.trim()) return '';
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return '';
-  return parsed.toISOString();
-};
-
-const getDefaultScheduleRunAt = (): string => {
-  const next = new Date();
-  next.setHours(next.getHours() + 1, 0, 0, 0);
-  return next.toISOString();
-};
 
 const isTimeTrigger = (trigger?: WorkflowTrigger | null): boolean =>
   trigger?.type === 'schedule' || trigger?.type === 'recurring';
@@ -1585,11 +1516,6 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const [triggerTypeSelection, setTriggerTypeSelection] = useState<TriggerTypeSelection>('manual');
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
   const [stepsViewMode, setStepsViewMode] = useState<'list' | 'graph'>('list');
-  const lastNonTimeTriggerContractRef = useRef<StoredContractSelection>({
-    mode: 'inferred',
-    payloadSchemaRef: DEFAULT_PAYLOAD_SCHEMA,
-    pinnedPayloadSchemaRef: DEFAULT_PAYLOAD_SCHEMA
-  });
   const designerFloatAnchorRef = useRef<HTMLDivElement | null>(null);
   const designerFloatAnchorRectRef = useRef<{
     top: number;
@@ -2117,111 +2043,26 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     [canManage, canAdmin, activeWorkflowRecord]
   );
 
-  const timezoneOptions = useMemo(
-    () => listWorkflowTriggerTimezones().map((timezone) => ({ value: timezone, label: timezone })),
-    []
-  );
-
   const currentTriggerSelection = useMemo<TriggerTypeSelection>(() => {
     const actualTriggerType = activeDefinition?.trigger?.type;
-    if (actualTriggerType === 'event' || actualTriggerType === 'schedule' || actualTriggerType === 'recurring') {
-      return actualTriggerType;
+    if (actualTriggerType === 'event') {
+      return 'event';
     }
-    return triggerTypeSelection;
+    return triggerTypeSelection === 'event' ? 'event' : 'manual';
   }, [activeDefinition?.trigger?.type, triggerTypeSelection]);
-
-  const rememberCurrentContractSelection = useCallback(() => {
-    if (!activeDefinition || isTimeTrigger(activeDefinition.trigger)) return;
-    lastNonTimeTriggerContractRef.current = {
-      mode: payloadSchemaModeDraft,
-      payloadSchemaRef: activeDefinition.payloadSchemaRef ?? '',
-      pinnedPayloadSchemaRef: pinnedPayloadSchemaRefDraft || (activeDefinition.payloadSchemaRef ?? '')
-    };
-  }, [activeDefinition, payloadSchemaModeDraft, pinnedPayloadSchemaRefDraft]);
-
-  const restorePreviousNonTimeContract = useCallback(() => {
-    const previous = lastNonTimeTriggerContractRef.current;
-    setPayloadSchemaModeDraft(previous.mode);
-    setSchemaInferenceEnabled(previous.mode === 'inferred');
-    setPinnedPayloadSchemaRefDraft(previous.pinnedPayloadSchemaRef);
-    setSchemaRefAdvanced(previous.mode === 'pinned' && Boolean(previous.pinnedPayloadSchemaRef));
-    if (previous.mode === 'inferred') {
-      lastAppliedInferredRef.current = null;
-    }
-    setActiveDefinition((current) => {
-      if (!current || current.payloadSchemaRef === previous.payloadSchemaRef) return current;
-      return { ...current, payloadSchemaRef: previous.payloadSchemaRef };
-    });
-  }, []);
-
-  const enforceTimeTriggerContract = useCallback(() => {
-    setPayloadSchemaModeDraft('pinned');
-    setSchemaInferenceEnabled(false);
-    setSchemaRefAdvanced(false);
-    setPinnedPayloadSchemaRefDraft(WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF);
-    setActiveDefinition((current) => {
-      if (!current || current.payloadSchemaRef === WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF) return current;
-      return { ...current, payloadSchemaRef: WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF };
-    });
-  }, []);
 
   const handleTriggerTypeSelectionChange = useCallback((nextType: TriggerTypeSelection) => {
     setTriggerTypeSelection(nextType);
 
     if (nextType === 'manual') {
-      if (isTimeTrigger(activeDefinition?.trigger)) {
-        restorePreviousNonTimeContract();
-      }
       setActiveDefinition((current) => (current ? { ...current, trigger: undefined } : current));
       return;
     }
 
-    if (nextType === 'event') {
-      if (isTimeTrigger(activeDefinition?.trigger)) {
-        restorePreviousNonTimeContract();
-      }
-      if (activeDefinition?.trigger?.type !== 'event') {
-        setActiveDefinition((current) => (current ? { ...current, trigger: undefined } : current));
-      }
-      return;
+    if (activeDefinition?.trigger?.type !== 'event') {
+      setActiveDefinition((current) => (current ? { ...current, trigger: undefined } : current));
     }
-
-    if (!activeDefinition) return;
-
-    if (!isTimeTrigger(activeDefinition.trigger)) {
-      rememberCurrentContractSelection();
-    }
-    enforceTimeTriggerContract();
-
-    if (nextType === 'schedule') {
-      setActiveDefinition((current) => {
-        if (!current) return current;
-        const existingRunAt = current.trigger?.type === 'schedule' ? current.trigger.runAt : '';
-        return {
-          ...current,
-          payloadSchemaRef: WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF,
-          trigger: {
-            type: 'schedule',
-            runAt: existingRunAt || getDefaultScheduleRunAt()
-          }
-        };
-      });
-      return;
-    }
-
-    setActiveDefinition((current) => {
-      if (!current) return current;
-      return {
-        ...current,
-        payloadSchemaRef: WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF,
-        trigger: {
-          type: 'recurring',
-          cron: current.trigger?.type === 'recurring' ? current.trigger.cron : '0 9 * * *',
-          timezone: current.trigger?.type === 'recurring' ? current.trigger.timezone : getDefaultTriggerTimezone()
-        }
-      };
-    });
-  }, [activeDefinition, enforceTimeTriggerContract, rememberCurrentContractSelection, restorePreviousNonTimeContract]);
+  }, [activeDefinition?.trigger?.type]);
 
 	  const loadDefinitions = useCallback(async () => {
 	    setIsLoading(true);
@@ -2674,14 +2515,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     // we don't show stale data if there's any delay
     setActiveDefinition(record.draft_definition);
     setActiveWorkflowId(record.workflow_id);
-    setTriggerTypeSelection(record.draft_definition.trigger?.type ?? 'manual');
-    if (!isTimeTrigger(record.draft_definition.trigger)) {
-      lastNonTimeTriggerContractRef.current = {
-        mode: (record.payload_schema_mode === 'inferred' ? 'inferred' : 'pinned'),
-        payloadSchemaRef: record.draft_definition.payloadSchemaRef ?? '',
-        pinnedPayloadSchemaRef: record.pinned_payload_schema_ref ?? record.draft_definition.payloadSchemaRef ?? ''
-      };
-    }
+    setTriggerTypeSelection(record.draft_definition.trigger?.type === 'event' ? 'event' : 'manual');
     
     // Always reset these when selecting a workflow
     setPublishErrors([]);
@@ -2731,11 +2565,6 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     setContractSettingsExpanded(false);
     setSchemaRefAdvanced(false);
     setPinnedPayloadSchemaRefDraft(draft.payloadSchemaRef ?? '');
-    lastNonTimeTriggerContractRef.current = {
-      mode: 'inferred',
-      payloadSchemaRef: draft.payloadSchemaRef ?? '',
-      pinnedPayloadSchemaRef: draft.payloadSchemaRef ?? ''
-    };
     setSelectedStepId(null);
     setSelectedPipePath('root');
     setPublishErrors([]);
@@ -3727,9 +3556,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                     const showTriggerSchemaDetails = contractSettingsExpanded;
                     const triggerTypeOptions: Array<{ value: TriggerTypeSelection; label: string }> = [
                       { value: 'manual', label: 'No trigger' },
-                      { value: 'event', label: 'Event' },
-                      { value: 'schedule', label: 'One-time schedule' },
-                      { value: 'recurring', label: 'Recurring schedule' }
+                      { value: 'event', label: 'Event' }
                     ];
                     const eventOptions: Array<{ value: string; label: string }> = eventCatalogOptions.map((e) => ({
                       value: e.event_type,
@@ -3741,10 +3568,6 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                     }
 
                     const showEventConfiguration = currentTriggerSelection === 'event';
-                    const showScheduleConfiguration = currentTriggerSelection === 'schedule';
-                    const showRecurringConfiguration = currentTriggerSelection === 'recurring';
-                    const scheduleTrigger = trigger?.type === 'schedule' ? trigger : null;
-                    const recurringTrigger = trigger?.type === 'recurring' ? trigger : null;
 
                     return (
                       <div className="space-y-3">
@@ -3763,14 +3586,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                               disabled={!canManage}
                             />
                             <div className="mt-1 text-xs text-gray-500">
-                              Choose how this workflow starts. Time triggers use a fixed clock payload contract.
+                              Choose whether this workflow starts manually or from an event. Reusable schedules are managed in Automation Hub.
                             </div>
                           </div>
 
                           <div className="space-y-3">
                             {currentTriggerSelection === 'manual' && (
                               <div className="rounded border border-dashed border-gray-300 bg-gray-50 px-3 py-3 text-xs text-gray-600">
-                                This workflow has no trigger. It can still be drafted, but it needs a locked payload schema before publish or run.
+                                This workflow has no trigger. It can still be run manually and scheduled from Automation Hub once it has a pinned payload schema and a published version.
                               </div>
                             )}
 
@@ -3913,118 +3736,6 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                               </div>
                             )}
 
-                            {showScheduleConfiguration && (
-                              <div
-                                id="workflow-designer-trigger-schedule-panel"
-                                className="rounded border border-gray-200 bg-gray-50 px-3 py-3 space-y-3"
-                              >
-                                <div>
-                                  <Label htmlFor="workflow-designer-trigger-run-at">Run at</Label>
-                                  <Input
-                                    id="workflow-designer-trigger-run-at"
-                                    type="datetime-local"
-                                    value={formatDateTimeLocalInput(scheduleTrigger?.runAt)}
-                                    onChange={(event) => {
-                                      const nextRunAt = parseDateTimeLocalInput(event.target.value) || getDefaultScheduleRunAt();
-                                      handleDefinitionChange({
-                                        trigger: {
-                                          type: 'schedule',
-                                          runAt: nextRunAt
-                                        }
-                                      });
-                                    }}
-                                    disabled={!canManage}
-                                  />
-                                  <div className="mt-1 text-xs text-gray-500">
-                                    Pick a future timestamp. The designer uses your local browser time while editing and stores UTC.
-                                  </div>
-                                  {scheduleTrigger?.runAt && (
-                                    <div className="mt-1 text-[11px] text-gray-500">
-                                      Stored as <span className="font-mono">{scheduleTrigger.runAt}</span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-
-                            {showRecurringConfiguration && (
-                              <div
-                                id="workflow-designer-trigger-recurring-panel"
-                                className="rounded border border-gray-200 bg-gray-50 px-3 py-3 space-y-3"
-                              >
-                                <div>
-                                  <Input
-                                    id="workflow-designer-trigger-cron"
-                                    label="Cron expression"
-                                    value={recurringTrigger?.cron ?? ''}
-                                    onChange={(event) => {
-                                      handleDefinitionChange({
-                                        trigger: {
-                                          type: 'recurring',
-                                          cron: event.target.value,
-                                          timezone: recurringTrigger?.timezone || getDefaultTriggerTimezone()
-                                        }
-                                      });
-                                    }}
-                                    disabled={!canManage}
-                                    placeholder="0 9 * * 1-5"
-                                  />
-                                  <div className="mt-1 text-xs text-gray-500">
-                                    Use 5 fields only: minute hour day month weekday. Seconds are not supported.
-                                  </div>
-                                </div>
-
-                                <div>
-                                  <Label htmlFor="workflow-designer-trigger-timezone">Timezone</Label>
-                                  <SearchableSelect
-                                    id="workflow-designer-trigger-timezone"
-                                    value={recurringTrigger?.timezone ?? getDefaultTriggerTimezone()}
-                                    onChange={(value) => {
-                                      handleDefinitionChange({
-                                        trigger: {
-                                          type: 'recurring',
-                                          cron: recurringTrigger?.cron || '0 9 * * *',
-                                          timezone: value || getDefaultTriggerTimezone()
-                                        }
-                                      });
-                                    }}
-                                    placeholder="Select timezone"
-                                    dropdownMode="overlay"
-                                    options={timezoneOptions}
-                                    disabled={!canManage}
-                                  />
-                                  <div className="mt-1 text-xs text-gray-500">
-                                    Use an IANA timezone such as <span className="font-mono">America/New_York</span>.
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {(showScheduleConfiguration || showRecurringConfiguration) && (
-                              <div
-                                id="workflow-designer-trigger-clock-contract"
-                                className="rounded border border-sky-200 bg-sky-50 px-3 py-3 space-y-2"
-                              >
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                  <div className="text-xs font-semibold text-sky-900">Clock trigger payload contract</div>
-                                  <Badge className="bg-sky-500/15 text-sky-700 border-sky-500/30">Fixed schema</Badge>
-                                </div>
-                                <div className="text-xs text-sky-900/80">
-                                  Time-triggered workflows always use <span className="font-mono">{WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF}</span> in pinned mode.
-                                </div>
-                                <div className="flex flex-wrap gap-1">
-                                  {CLOCK_TRIGGER_CONTRACT_FIELDS.map((field) => (
-                                    <span
-                                      key={field}
-                                      className="rounded border border-sky-200 bg-white px-2 py-0.5 text-[11px] text-sky-900"
-                                    >
-                                      {field}
-                                      {field === 'cron' ? ' (recurring only)' : ''}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -4960,6 +4671,25 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   {workflowValidationBadge.label}
                   {currentValidationErrors.length > 0 && <span>({currentValidationErrors.length})</span>}
                 </span>
+              )}
+              {canManage && (
+                <Button
+                  id="workflow-designer-open-schedules"
+                  variant="outline"
+                  onClick={() => {
+                    if (!activeWorkflowId) {
+                      router.push('/msp/workflows?tab=schedules');
+                      return;
+                    }
+                    const params = new URLSearchParams({
+                      tab: 'schedules',
+                      scheduleWorkflowId: activeWorkflowId
+                    });
+                    router.push(`/msp/workflows?${params.toString()}`);
+                  }}
+                >
+                  Schedules
+                </Button>
               )}
               {canManage && (
                 <Button

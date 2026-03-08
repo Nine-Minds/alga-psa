@@ -548,4 +548,97 @@ describe('Workflow external schedules actions – DB integration', () => {
     expect(Array.isArray(failure.issues)).toBe(true);
     expect(failure.issues?.length).toBeGreaterThan(0);
   });
+
+  it('T052: users without workflow manage permission cannot create schedules', async () => {
+    const { workflowId } = await seedWorkflow();
+    hasPermissionMock.mockResolvedValue(false);
+
+    await expect(createWorkflowScheduleAction({
+      workflowId,
+      name: 'Forbidden create',
+      triggerType: 'schedule',
+      runAt: '2099-01-01T10:00:00.000Z',
+      payload: {},
+      enabled: true
+    })).rejects.toThrow('Forbidden');
+  });
+
+  it('T053: users without workflow manage permission cannot edit, pause, resume, or delete schedules', async () => {
+    const { workflowId } = await seedWorkflow();
+    const created = await createWorkflowScheduleAction({
+      workflowId,
+      name: 'Protected schedule',
+      triggerType: 'recurring',
+      cron: '0 9 * * *',
+      timezone: 'UTC',
+      payload: {},
+      enabled: true
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+
+    hasPermissionMock.mockResolvedValue(false);
+
+    await expect(updateWorkflowScheduleAction({
+      scheduleId: created.schedule.id,
+      workflowId,
+      name: 'Protected schedule',
+      triggerType: 'recurring',
+      cron: '15 9 * * *',
+      timezone: 'UTC',
+      payload: {},
+      enabled: true
+    })).rejects.toThrow('Forbidden');
+
+    await expect(pauseWorkflowScheduleAction({ scheduleId: created.schedule.id })).rejects.toThrow('Forbidden');
+    await expect(resumeWorkflowScheduleAction({ scheduleId: created.schedule.id })).rejects.toThrow('Forbidden');
+    await expect(deleteWorkflowScheduleAction({ scheduleId: created.schedule.id })).rejects.toThrow('Forbidden');
+  });
+
+  it('T055: creates a recurring schedule row with payload_json and runner identifiers in the migrated database', async () => {
+    const { workflowId } = await seedWorkflow({ name: 'Recurring workflow' });
+
+    const result = await createWorkflowScheduleAction({
+      workflowId,
+      name: 'DB recurring schedule',
+      triggerType: 'recurring',
+      cron: '0 9 * * *',
+      timezone: 'UTC',
+      payload: {},
+      enabled: true
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const row = await db('tenant_workflow_schedule').where({ id: result.schedule.id }).first();
+    expect(row).toBeDefined();
+    expect(row.trigger_type).toBe('recurring');
+    expect(row.payload_json).toEqual({});
+    expect(row.job_id).toBeTruthy();
+    expect(row.runner_schedule_id).toBeTruthy();
+  });
+
+  it('T056: invalid payload_json leaves no row behind in the migrated database', async () => {
+    const { workflowId } = await seedWorkflow();
+
+    const result = await createWorkflowScheduleAction({
+      workflowId,
+      name: 'Rollback invalid payload',
+      triggerType: 'schedule',
+      runAt: '2099-01-01T10:00:00.000Z',
+      payload: { unexpected: true },
+      enabled: true
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      throw new Error('Expected schedule creation to fail validation');
+    }
+
+    const rows = await db('tenant_workflow_schedule')
+      .where({ tenant_id: tenantId, name: 'Rollback invalid payload' })
+      .select('*');
+    expect(rows).toHaveLength(0);
+  });
 });

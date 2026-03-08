@@ -1,7 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF } from '@shared/workflow/runtime';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
 import { rollbackTenant } from '../../lib/testing/tenant-creation';
 import type { TenantTestData } from '../../lib/testing/tenant-test-factory';
@@ -31,10 +30,6 @@ const ADMIN_PERMISSIONS = [
   }
 ];
 
-function parseJsonValue<T>(value: unknown): T {
-  return (typeof value === 'string' ? JSON.parse(value) : value) as T;
-}
-
 async function setupDesigner(page: Page): Promise<{
   db: Knex;
   tenantData: TenantTestData;
@@ -59,104 +54,67 @@ async function setupDesigner(page: Page): Promise<{
   return { db, tenantData, workflowPage };
 }
 
-test.describe('Workflow Designer UI - time triggers', () => {
-  test('T018: user can select One-time schedule trigger and save a draft definition', async ({ page }) => {
+test.describe('Workflow Designer UI - external schedules', () => {
+  test('T047: trigger selector only shows No trigger and Event', async ({ page }) => {
     test.setTimeout(180000);
 
     const { db, tenantData, workflowPage } = await setupDesigner(page);
-    const workflowName = `One-time ${uuidv4().slice(0, 8)}`;
-    const localRunAt = '2030-05-01T09:30';
 
     try {
       await workflowPage.clickNewWorkflow();
-      await workflowPage.setName(workflowName);
-      await workflowPage.selectTriggerType('One-time schedule');
-      await workflowPage.setOneTimeRunAt(localRunAt);
+      await workflowPage.triggerTypeInput.click();
 
-      await expect(page.locator('#workflow-designer-trigger-schedule-panel')).toBeVisible();
-      await expect(page.locator('#workflow-designer-trigger-clock-contract')).toContainText(WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF);
-
-      await workflowPage.saveDraft();
-
-      const row = await db('workflow_definitions')
-        .where({ name: workflowName, tenant: tenantData.tenant.tenantId })
-        .first([
-          'trigger',
-          'draft_definition',
-          'payload_schema_ref',
-          'payload_schema_mode',
-          'pinned_payload_schema_ref'
-        ]);
-
-      expect(row).toBeDefined();
-      const trigger = parseJsonValue<{ type: string; runAt?: string }>(row?.trigger);
-      const draftDefinition = parseJsonValue<{ trigger?: { type: string; runAt?: string } }>(row?.draft_definition);
-
-      expect(trigger.type).toBe('schedule');
-      expect(trigger.runAt).toBe(new Date(localRunAt).toISOString());
-      expect(draftDefinition.trigger?.type).toBe('schedule');
-      expect(row?.payload_schema_ref).toBe(WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF);
-      expect(row?.payload_schema_mode).toBe('pinned');
-      expect(row?.pinned_payload_schema_ref).toBe(WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF);
+      await expect(page.getByRole('option', { name: 'No trigger', exact: true })).toBeVisible();
+      await expect(page.getByRole('option', { name: 'Event', exact: true })).toBeVisible();
+      await expect(page.getByRole('option', { name: 'One-time schedule', exact: true })).toHaveCount(0);
+      await expect(page.getByRole('option', { name: 'Recurring schedule', exact: true })).toHaveCount(0);
     } finally {
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
       await db.destroy();
     }
   });
 
-  test('T019: user can select Recurring schedule trigger and save a draft definition', async ({ page }) => {
+  test('T048: one-time and recurring inline trigger panels are removed', async ({ page }) => {
     test.setTimeout(180000);
 
     const { db, tenantData, workflowPage } = await setupDesigner(page);
-    const workflowName = `Recurring ${uuidv4().slice(0, 8)}`;
 
     try {
       await workflowPage.clickNewWorkflow();
-      await workflowPage.setName(workflowName);
-      await workflowPage.selectTriggerType('Recurring schedule');
-      await workflowPage.setRecurringCron('15 9 * * 1-5');
-      await workflowPage.selectRecurringTimezone('America/New_York');
 
-      await expect(page.locator('#workflow-designer-trigger-recurring-panel')).toBeVisible();
-
-      await workflowPage.saveDraft();
-
-      const row = await db('workflow_definitions')
-        .where({ name: workflowName, tenant: tenantData.tenant.tenantId })
-        .first([
-          'trigger',
-          'draft_definition',
-          'payload_schema_ref',
-          'payload_schema_mode',
-          'pinned_payload_schema_ref'
-        ]);
-
-      expect(row).toBeDefined();
-      const trigger = parseJsonValue<{ type: string; cron?: string; timezone?: string }>(row?.trigger);
-      const draftDefinition = parseJsonValue<{ trigger?: { type: string; cron?: string; timezone?: string } }>(row?.draft_definition);
-
-      expect(trigger).toEqual({
-        type: 'recurring',
-        cron: '15 9 * * 1-5',
-        timezone: 'America/New_York'
-      });
-      expect(draftDefinition.trigger).toEqual({
-        type: 'recurring',
-        cron: '15 9 * * 1-5',
-        timezone: 'America/New_York'
-      });
-      expect(row?.payload_schema_ref).toBe(WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF);
-      expect(row?.payload_schema_mode).toBe('pinned');
-      expect(row?.pinned_payload_schema_ref).toBe(WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF);
+      await expect(page.locator('#workflow-designer-trigger-schedule-panel')).toHaveCount(0);
+      await expect(page.locator('#workflow-designer-trigger-recurring-panel')).toHaveCount(0);
+      await expect(page.locator('#workflow-designer-trigger-clock-contract')).toHaveCount(0);
     } finally {
-      await db('workflow_definitions').where({ name: workflowName }).del().catch(() => undefined);
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
       await db.destroy();
     }
   });
 
-  test('T020: time-trigger selection hides event catalog and trigger mapping controls', async ({ page }) => {
+  test('T049: no-trigger workflow still allows manual run using the existing run dialog', async ({ page }) => {
+    test.setTimeout(180000);
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    const workflowName = `Manual Run ${uuidv4().slice(0, 8)}`;
+
+    try {
+      await workflowPage.clickNewWorkflow();
+      await workflowPage.setName(workflowName);
+      await workflowPage.setContractModePinned();
+      await workflowPage.saveDraft();
+
+      await expect(page.locator('#workflow-designer-run')).toBeEnabled({ timeout: 60_000 });
+      await page.locator('#workflow-designer-run').click();
+
+      await expect(page.getByRole('dialog', { name: /Run Workflow/i })).toBeVisible();
+      await expect(page.getByText('Start Run')).toBeVisible();
+    } finally {
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
+      await db.destroy();
+    }
+  });
+
+  test('T050: event-trigger workflow still shows event catalog and mapping controls', async ({ page }) => {
     test.setTimeout(180000);
 
     const { db, tenantData, workflowPage } = await setupDesigner(page);
@@ -169,39 +127,32 @@ test.describe('Workflow Designer UI - time triggers', () => {
 
       await expect(workflowPage.triggerInput).toBeVisible();
       await expect(page.locator('#workflow-designer-trigger-source-schema')).toBeVisible();
-
-      await workflowPage.selectTriggerType('One-time schedule');
-
-      await expect(workflowPage.triggerInput).toHaveCount(0);
-      await expect(page.locator('#workflow-designer-trigger-source-schema')).toHaveCount(0);
-      await expect(page.locator('#workflow-designer-trigger-mapping-toggle')).toHaveCount(0);
-      await expect(page.locator('#workflow-designer-trigger-schedule-panel')).toBeVisible();
+      await expect(page.getByText('Trigger mapping', { exact: true })).toBeVisible();
     } finally {
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
       await db.destroy();
     }
   });
 
-  test('T021: time-trigger selection shows the fixed clock payload schema preview', async ({ page }) => {
+  test('T051: workflow-context schedules link opens the schedules screen filtered to the current workflow', async ({ page }) => {
     test.setTimeout(180000);
 
     const { db, tenantData, workflowPage } = await setupDesigner(page);
+    const workflowName = `Schedules Link ${uuidv4().slice(0, 8)}`;
 
     try {
       await workflowPage.clickNewWorkflow();
-      await workflowPage.selectTriggerType('Recurring schedule');
+      await workflowPage.setName(workflowName);
+      await workflowPage.saveDraft();
 
-      const contractCard = page.locator('#workflow-designer-trigger-clock-contract');
-      await expect(contractCard).toBeVisible();
-      await expect(contractCard).toContainText(WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF);
-      await expect(contractCard).toContainText('triggerType');
-      await expect(contractCard).toContainText('scheduleId');
-      await expect(contractCard).toContainText('scheduledFor');
-      await expect(contractCard).toContainText('firedAt');
-      await expect(contractCard).toContainText('timezone');
-      await expect(contractCard).toContainText('workflowId');
-      await expect(contractCard).toContainText('workflowVersion');
-      await expect(contractCard).toContainText('cron (recurring only)');
+      const currentUrl = new URL(page.url());
+      const workflowId = currentUrl.searchParams.get('workflowId');
+      expect(workflowId).toBeTruthy();
+
+      await workflowPage.schedulesButton.click();
+
+      await expect(page).toHaveURL(new RegExp(`tab=schedules.*scheduleWorkflowId=${workflowId}`));
+      await expect(page.getByRole('heading', { name: 'Schedules' })).toBeVisible();
     } finally {
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => undefined);
       await db.destroy();

@@ -265,7 +265,7 @@
   {
     "id": "F031",
     "description": "Reduce workflow editor trigger options to No trigger and Event",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -274,7 +274,7 @@
   {
     "id": "F032",
     "description": "Remove inline one-time and recurring schedule authoring panels from the workflow editor",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Rollout / Migration"
@@ -283,7 +283,7 @@
   {
     "id": "F033",
     "description": "Keep no-trigger workflows manually runnable after schedule authoring moves \u062e\u0627\u0631\u062c of the workflow editor",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -292,7 +292,7 @@
   {
     "id": "F034",
     "description": "Keep event-trigger configuration and mapping behavior unchanged in the workflow editor",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -301,7 +301,7 @@
   {
     "id": "F035",
     "description": "Add workflow-context navigation into the global schedules screen prefiltered to the current workflow",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]

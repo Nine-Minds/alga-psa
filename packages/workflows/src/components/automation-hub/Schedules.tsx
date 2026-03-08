@@ -349,8 +349,6 @@ export default function Schedules() {
     scheduleToDelete
       ? {
         canDelete: true,
-        code: 'OK',
-        message: '',
         dependencies: [],
         alternatives: []
       }

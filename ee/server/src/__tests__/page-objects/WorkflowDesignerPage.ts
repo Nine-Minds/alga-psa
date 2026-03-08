@@ -9,6 +9,7 @@ export class WorkflowDesignerPage {
   readonly designerTab: Locator;
   readonly workflowListCreateButton: Locator;
   readonly newWorkflowButton: Locator;
+  readonly schedulesButton: Locator;
   readonly saveDraftButton: Locator;
   readonly publishButton: Locator;
   readonly nameInput: Locator;
@@ -43,6 +44,7 @@ export class WorkflowDesignerPage {
     this.designerTab = page.getByRole('tab', { name: 'Designer' });
     this.workflowListCreateButton = page.locator('#workflow-list-create-btn');
     this.newWorkflowButton = page.locator('#workflow-designer-create');
+    this.schedulesButton = page.locator('#workflow-designer-open-schedules');
     this.saveDraftButton = page.locator('#workflow-designer-save');
     this.publishButton = page.locator('#workflow-designer-publish');
     this.nameInput = page.locator('#workflow-designer-name');
@@ -233,7 +235,7 @@ export class WorkflowDesignerPage {
   }
 
   // Trigger event helpers
-  async selectTriggerType(triggerType: 'No trigger' | 'Event' | 'One-time schedule' | 'Recurring schedule'): Promise<void> {
+  async selectTriggerType(triggerType: 'No trigger' | 'Event'): Promise<void> {
     await expect(this.triggerTypeInput).toBeVisible({ timeout: 60_000 });
     await this.triggerTypeInput.click();
     await this.page.getByRole('option', { name: triggerType, exact: true }).click();

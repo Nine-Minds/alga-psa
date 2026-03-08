@@ -463,7 +463,7 @@ export async function revalidateExternalWorkflowSchedulesForPublishedVersion(
     const payload = (schedule.payload_json ?? {}) as Record<string, unknown> | unknown[];
     const validation = await params.validatePayload(payload);
 
-    if (!validation.ok) {
+    if (validation.ok === false) {
       await cancelScheduledWorkflow(params.tenantId, schedule).catch(() => undefined);
       await WorkflowScheduleStateModel.update(knex, schedule.id, {
         enabled: false,
