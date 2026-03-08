@@ -268,7 +268,7 @@
   {
     "id": "T022",
     "description": "Verify uncovered community routes /msp/documents and /test-routing export metadata titles",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F106",
       "F107"
