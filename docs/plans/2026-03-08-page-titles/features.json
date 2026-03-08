@@ -714,7 +714,7 @@
   {
     "id": "F090",
     "description": "Auth page title: /auth/signin — title: 'Sign In'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3b"
     ]
