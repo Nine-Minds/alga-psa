@@ -906,7 +906,7 @@
   {
     "id": "F114",
     "description": "EE MSP page title: /msp/settings — title: 'Settings'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria"
     ]
