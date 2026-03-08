@@ -666,7 +666,7 @@
   {
     "id": "F084",
     "description": "Client Portal page title: /client-portal/client-settings — verify existing 'Company Settings' metadata in layout.tsx is compatible",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3b"
     ]
