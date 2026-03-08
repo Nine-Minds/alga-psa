@@ -11,6 +11,7 @@ import WorkflowScheduleStateModel, {
 
 export const WORKFLOW_ONE_TIME_TRIGGER_JOB = 'workflow-time-trigger-once';
 export const WORKFLOW_RECURRING_TRIGGER_JOB = 'workflow-time-trigger-recurring';
+const LEGACY_INLINE_SCHEDULE_NAME = 'Workflow schedule';
 
 export type DesiredWorkflowSchedule = {
   triggerType: 'schedule' | 'recurring';
@@ -20,6 +21,13 @@ export type DesiredWorkflowSchedule = {
   timezone?: string | null;
   enabled: boolean;
   status: WorkflowScheduleStateStatus;
+};
+
+export type PersistedWorkflowScheduleFields = {
+  workflowId: string;
+  name: string;
+  payloadJson: Record<string, unknown> | unknown[];
+  desired: DesiredWorkflowSchedule;
 };
 
 type WorkflowScheduleJobData = {
@@ -63,6 +71,23 @@ const buildRestoreDesiredSchedule = (
     timezone: existing.timezone ?? null,
     enabled: Boolean(existing.enabled),
     status: existing.status
+  };
+};
+
+const buildDesiredScheduleFromExisting = (
+  existing: WorkflowScheduleStateRecord,
+  enabled: boolean = Boolean(existing.enabled)
+): DesiredWorkflowSchedule | null => {
+  if (existing.trigger_type === 'schedule' && !existing.run_at) return null;
+  if (existing.trigger_type === 'recurring' && !existing.cron) return null;
+  return {
+    triggerType: existing.trigger_type,
+    workflowVersion: existing.workflow_version,
+    runAt: existing.run_at ?? null,
+    cron: existing.cron ?? null,
+    timezone: existing.timezone ?? null,
+    enabled,
+    status: toDesiredScheduleStatus(enabled)
   };
 };
 
@@ -155,6 +180,59 @@ async function restorePreviousScheduleRegistration(
   });
 }
 
+async function persistScheduleCreate(
+  knex: Knex,
+  params: {
+    tenantId: string;
+    scheduleId: string;
+    record: PersistedWorkflowScheduleFields;
+    scheduled: ScheduleJobResult | null;
+  }
+): Promise<WorkflowScheduleStateRecord> {
+  return WorkflowScheduleStateModel.create(knex, {
+    id: params.scheduleId,
+    tenant_id: params.tenantId,
+    workflow_id: params.record.workflowId,
+    workflow_version: params.record.desired.workflowVersion,
+    name: params.record.name,
+    trigger_type: params.record.desired.triggerType,
+    run_at: params.record.desired.runAt ?? null,
+    cron: params.record.desired.cron ?? null,
+    timezone: params.record.desired.timezone ?? null,
+    payload_json: params.record.payloadJson,
+    enabled: params.record.desired.enabled,
+    status: params.record.desired.status,
+    job_id: params.scheduled?.jobId ?? null,
+    runner_schedule_id: params.scheduled?.externalId ?? null,
+    last_error: null
+  });
+}
+
+async function persistScheduleUpdate(
+  knex: Knex,
+  params: {
+    existing: WorkflowScheduleStateRecord;
+    record: PersistedWorkflowScheduleFields;
+    scheduled: ScheduleJobResult | null;
+  }
+): Promise<WorkflowScheduleStateRecord> {
+  return WorkflowScheduleStateModel.update(knex, params.existing.id, {
+    workflow_id: params.record.workflowId,
+    workflow_version: params.record.desired.workflowVersion,
+    name: params.record.name,
+    trigger_type: params.record.desired.triggerType,
+    run_at: params.record.desired.runAt ?? null,
+    cron: params.record.desired.cron ?? null,
+    timezone: params.record.desired.timezone ?? null,
+    payload_json: params.record.payloadJson,
+    enabled: params.record.desired.enabled,
+    status: params.record.desired.status,
+    job_id: params.scheduled?.jobId ?? null,
+    runner_schedule_id: params.scheduled?.externalId ?? null,
+    last_error: null
+  });
+}
+
 export function buildDesiredWorkflowSchedule(
   definition: WorkflowDefinition,
   workflowVersion: number,
@@ -182,6 +260,155 @@ export function buildDesiredWorkflowSchedule(
   };
 }
 
+export async function createExternalWorkflowScheduleState(
+  knex: Knex,
+  params: {
+    tenantId: string;
+    record: PersistedWorkflowScheduleFields;
+  }
+): Promise<WorkflowScheduleStateRecord> {
+  const scheduleId = uuidv4();
+  const scheduled = await scheduleDesiredWorkflow(
+    params.tenantId,
+    params.record.workflowId,
+    scheduleId,
+    params.record.desired
+  );
+
+  try {
+    return await persistScheduleCreate(knex, {
+      tenantId: params.tenantId,
+      scheduleId,
+      record: params.record,
+      scheduled
+    });
+  } catch (error) {
+    if (scheduled?.jobId) {
+      await cancelScheduledWorkflow(params.tenantId, { job_id: scheduled.jobId }).catch(() => undefined);
+    }
+    throw error;
+  }
+}
+
+export async function updateExternalWorkflowScheduleState(
+  knex: Knex,
+  params: {
+    tenantId: string;
+    scheduleId: string;
+    record: PersistedWorkflowScheduleFields;
+  }
+): Promise<WorkflowScheduleStateRecord> {
+  const existing = await WorkflowScheduleStateModel.getById(knex, params.scheduleId);
+  if (!existing) {
+    throw new Error('Workflow schedule not found');
+  }
+
+  const runnerConfigUnchanged =
+    existing.workflow_id === params.record.workflowId &&
+    hasSameRunnerConfiguration(existing, params.record.desired);
+
+  if (runnerConfigUnchanged) {
+    return persistScheduleUpdate(knex, {
+      existing,
+      record: params.record,
+      scheduled: {
+        jobId: existing.job_id ?? undefined,
+        externalId: existing.runner_schedule_id ?? undefined
+      }
+    });
+  }
+
+  const existingSnapshot = { ...existing };
+  const needsCancellation = Boolean(existing.job_id);
+  let scheduledReplacement: ScheduleJobResult | null = null;
+
+  if (needsCancellation) {
+    await cancelScheduledWorkflow(params.tenantId, existing);
+  }
+
+  try {
+    scheduledReplacement = await scheduleDesiredWorkflow(
+      params.tenantId,
+      params.record.workflowId,
+      existing.id,
+      params.record.desired
+    );
+  } catch (error) {
+    if (needsCancellation) {
+      await restorePreviousScheduleRegistration(knex, existingSnapshot).catch(() => undefined);
+    }
+    throw error;
+  }
+
+  try {
+    return await persistScheduleUpdate(knex, {
+      existing,
+      record: params.record,
+      scheduled: scheduledReplacement
+    });
+  } catch (error) {
+    if (scheduledReplacement?.jobId) {
+      await cancelScheduledWorkflow(params.tenantId, { job_id: scheduledReplacement.jobId }).catch(() => undefined);
+    }
+    if (needsCancellation) {
+      await restorePreviousScheduleRegistration(knex, existingSnapshot).catch(async () => {
+        await WorkflowScheduleStateModel.update(knex, existing.id, {
+          enabled: false,
+          status: 'failed',
+          job_id: null,
+          runner_schedule_id: null,
+          last_error: 'Failed to restore workflow schedule after persistence failure'
+        }).catch(() => undefined);
+      });
+    }
+    throw error;
+  }
+}
+
+export async function setExternalWorkflowScheduleEnabled(
+  knex: Knex,
+  params: {
+    tenantId: string;
+    scheduleId: string;
+    enabled: boolean;
+  }
+): Promise<WorkflowScheduleStateRecord> {
+  const existing = await WorkflowScheduleStateModel.getById(knex, params.scheduleId);
+  if (!existing) {
+    throw new Error('Workflow schedule not found');
+  }
+
+  const desired = buildDesiredScheduleFromExisting(existing, params.enabled);
+  if (!desired) {
+    throw new Error('Workflow schedule is missing required timing details');
+  }
+
+  return updateExternalWorkflowScheduleState(knex, {
+    tenantId: params.tenantId,
+    scheduleId: existing.id,
+    record: {
+      workflowId: existing.workflow_id,
+      name: existing.name,
+      payloadJson: (existing.payload_json ?? {}) as Record<string, unknown> | unknown[],
+      desired
+    }
+  });
+}
+
+export async function deleteWorkflowScheduleStateById(
+  knex: Knex,
+  params: {
+    tenantId: string;
+    scheduleId: string;
+  }
+): Promise<void> {
+  const existing = await WorkflowScheduleStateModel.getById(knex, params.scheduleId);
+  if (!existing) return;
+
+  await cancelScheduledWorkflow(params.tenantId, existing);
+  await WorkflowScheduleStateModel.deleteById(knex, params.scheduleId);
+}
+
 export async function syncWorkflowScheduleState(
   knex: Knex,
   params: {
@@ -200,6 +427,7 @@ export async function syncWorkflowScheduleState(
       return await WorkflowScheduleStateModel.update(knex, existing.id, {
         enabled: false,
         status: 'disabled',
+        name: existing.name ?? LEGACY_INLINE_SCHEDULE_NAME,
         job_id: null,
         runner_schedule_id: null
       });
@@ -218,10 +446,12 @@ export async function syncWorkflowScheduleState(
         tenant_id: params.tenantId,
         workflow_id: params.workflowId,
         workflow_version: params.desired.workflowVersion,
+        name: LEGACY_INLINE_SCHEDULE_NAME,
         trigger_type: params.desired.triggerType,
         run_at: params.desired.runAt ?? null,
         cron: params.desired.cron ?? null,
         timezone: params.desired.timezone ?? null,
+        payload_json: {},
         enabled: params.desired.enabled,
         status: params.desired.status,
         job_id: scheduled?.jobId ?? null,
@@ -238,6 +468,7 @@ export async function syncWorkflowScheduleState(
   if (hasSameRunnerConfiguration(existing, params.desired)) {
     return WorkflowScheduleStateModel.update(knex, existing.id, {
       workflow_version: params.desired.workflowVersion,
+      name: existing.name ?? LEGACY_INLINE_SCHEDULE_NAME,
       status: params.desired.status
     });
   }
@@ -267,10 +498,12 @@ export async function syncWorkflowScheduleState(
   try {
     return await WorkflowScheduleStateModel.update(knex, existing.id, {
       workflow_version: params.desired.workflowVersion,
+      name: existing.name ?? LEGACY_INLINE_SCHEDULE_NAME,
       trigger_type: params.desired.triggerType,
       run_at: params.desired.runAt ?? null,
       cron: params.desired.cron ?? null,
       timezone: params.desired.timezone ?? null,
+      payload_json: existing.payload_json ?? {},
       enabled: params.desired.enabled,
       status: params.desired.status,
       job_id: scheduledReplacement?.jobId ?? null,
@@ -300,9 +533,11 @@ export async function deleteWorkflowScheduleState(
   knex: Knex,
   params: { tenantId: string; workflowId: string }
 ): Promise<void> {
-  const existing = await WorkflowScheduleStateModel.getByWorkflowId(knex, params.workflowId);
-  if (!existing) return;
+  const existing = await WorkflowScheduleStateModel.listByWorkflowId(knex, params.workflowId);
+  if (!existing.length) return;
 
-  await cancelScheduledWorkflow(params.tenantId, existing);
+  for (const schedule of existing) {
+    await cancelScheduledWorkflow(params.tenantId, schedule);
+  }
   await WorkflowScheduleStateModel.deleteByWorkflowId(knex, params.workflowId);
 }

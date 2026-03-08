@@ -2,121 +2,121 @@
   {
     "id": "T001",
     "description": "Migration: schedule table no longer enforces one record per workflow_id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
     "id": "T002",
     "description": "Migration: existing schedule rows survive the many-per-workflow migration with intact runner state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002", "F005"]
   },
   {
     "id": "T003",
     "description": "DB: schedule create persists required name",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003", "F006"]
   },
   {
     "id": "T004",
     "description": "DB: schedule create rejects empty name",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003", "F008"]
   },
   {
     "id": "T005",
     "description": "DB: schedule create persists payload_json",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F006"]
   },
   {
     "id": "T006",
     "description": "DB: schedule update persists modified payload_json",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F009"]
   },
   {
     "id": "T007",
     "description": "Action: global list returns schedules across workflows for the tenant",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006", "F007"]
   },
   {
     "id": "T008",
     "description": "Action: get schedule returns schedule payload and timing data for editing",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006", "F007"]
   },
   {
     "id": "T009",
     "description": "Action: create schedule succeeds for a published workflow with pinned payload schema and valid one-time payload",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F012", "F013", "F014"]
   },
   {
     "id": "T010",
     "description": "Action: create schedule succeeds for a published workflow with pinned payload schema and valid recurring payload",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F012", "F013", "F014"]
   },
   {
     "id": "T011",
     "description": "Action: edit schedule updates runAt and payload for a one-time schedule",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009", "F015"]
   },
   {
     "id": "T012",
     "description": "Action: edit schedule updates cron, timezone, and payload for a recurring schedule",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009", "F015"]
   },
   {
     "id": "T013",
     "description": "Action: pause schedule clears or disables runner registration without deleting the record",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {
     "id": "T014",
     "description": "Action: resume schedule re-registers the runner using current schedule payload and timing",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {
     "id": "T015",
     "description": "Action: delete schedule removes the schedule record and associated runner registration",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
     "id": "T016",
     "description": "Guard: create schedule fails when the workflow has no published version",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
     "id": "T017",
     "description": "Guard: create schedule fails when the workflow payload schema mode is inferred",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {
     "id": "T018",
     "description": "Guard: edit schedule fails when the target workflow is not schedulable due to inferred schema mode",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013", "F015"]
   },
   {
     "id": "T019",
     "description": "Validation: create schedule returns schema issues for invalid payload_json",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
     "id": "T020",
     "description": "Validation: edit schedule returns schema issues for invalid payload_json",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {
@@ -320,7 +320,7 @@
   {
     "id": "T054",
     "description": "Tenant isolation: schedule list only returns schedules for the current tenant",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F036", "F007"]
   },
   {

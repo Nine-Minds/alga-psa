@@ -2,25 +2,25 @@
   {
     "id": "F001",
     "description": "Create a new EE ALGA plan for the external workflow schedules redesign without overwriting the prior inline time-trigger plan",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Summary", "Rollout / Migration"]
   },
   {
     "id": "F002",
     "description": "Change workflow schedule persistence from one-schedule-per-workflow to many-schedules-per-workflow",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Data / API / Integrations"]
   },
   {
     "id": "F003",
     "description": "Add required schedule name storage to the workflow schedule model",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements"]
   },
   {
     "id": "F004",
     "description": "Add static payload_json storage to the workflow schedule model",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Data / API / Integrations"]
   },
   {
@@ -32,61 +32,61 @@
   {
     "id": "F006",
     "description": "Add schedule CRUD persistence helpers for list, get, create, update, and delete operations",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {
     "id": "F007",
     "description": "Add server actions for listing schedules in a global Automation Hub screen",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Data / API / Integrations"]
   },
   {
     "id": "F008",
     "description": "Add server actions for creating schedules for published workflows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "Requirements"]
   },
   {
     "id": "F009",
     "description": "Add server actions for editing existing schedules including timing and payload changes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "Requirements"]
   },
   {
     "id": "F010",
     "description": "Add pause and resume actions for existing schedules",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements"]
   },
   {
     "id": "F011",
     "description": "Add delete actions that remove both schedule persistence and runner registration state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements", "Rollout / Migration"]
   },
   {
     "id": "F012",
     "description": "Require workflows to have a published version before schedules can be created",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements"]
   },
   {
     "id": "F013",
     "description": "Restrict schedule creation and editing to workflows with pinned payload schemas",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements"]
   },
   {
     "id": "F014",
     "description": "Validate saved schedule payload_json against the workflow payload schema on create",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements"]
   },
   {
     "id": "F015",
     "description": "Validate saved schedule payload_json against the workflow payload schema on edit",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements"]
   },
   {
@@ -212,7 +212,7 @@
   {
     "id": "F036",
     "description": "Gate schedule CRUD by existing workflow management permissions and tenant scope",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Security / Permissions"]
   }
 ]
