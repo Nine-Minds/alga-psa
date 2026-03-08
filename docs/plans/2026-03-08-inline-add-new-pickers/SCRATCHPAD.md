@@ -182,3 +182,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
 - 2026-03-08 F035: The ticket-details screen now inherits inline category creation through `packages/tickets/src/components/ticket/TicketInfo.tsx`, which `TicketDetails` renders with the current ticket board/category context and updated category state.
 - Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
+- 2026-03-08 T006: Fixed the `packages/tickets` Vitest aliases/mocks that `QuickAddTicket` needs, then validated that clicking `+ Add new contact` in `QuickAddTicketPrefill.test.tsx` opens the mocked `QuickAddContact` dialog.
+- Validation: `cd packages/tickets && npx vitest run --config vitest.config.ts src/components/__tests__/QuickAddTicketPrefill.test.tsx -t "T00[678]"`

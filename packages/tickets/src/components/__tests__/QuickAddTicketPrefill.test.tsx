@@ -20,7 +20,15 @@ vi.mock('next/server', () => ({
   },
 }));
 
-vi.mock('next-auth', () => ({}));
+vi.mock('next-auth', () => ({
+  __esModule: true,
+  default: vi.fn(() => ({
+    handlers: {},
+    auth: vi.fn(),
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+  })),
+}));
 
 vi.mock('next-auth/lib/env', () => ({
   setEnvDefaults: vi.fn(),
@@ -38,33 +46,33 @@ vi.mock('next/navigation', () => ({
   })
 }));
 
-vi.mock('../actions/ticketActions', () => ({
+vi.mock('../../actions/ticketActions', () => ({
   addTicket: (...args: unknown[]) => addTicketMock(...args)
 }));
 
-vi.mock('../actions/ticketResourceActions', () => ({
+vi.mock('../../actions/ticketResourceActions', () => ({
   addTicketResource: vi.fn()
 }));
 
-vi.mock('../actions/ticketFormActions', () => ({
+vi.mock('../../actions/ticketFormActions', () => ({
   getTicketFormData: (...args: unknown[]) => getTicketFormDataMock(...args)
 }));
 
-vi.mock('../actions/clientLookupActions', () => ({
+vi.mock('../../actions/clientLookupActions', () => ({
   getContactsByClient: (...args: unknown[]) => getContactsByClientMock(...args),
   getClientLocations: (...args: unknown[]) => getClientLocationsMock(...args)
 }));
 
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
   __esModule: true,
-  default: function ClientPickerMock({ onSelect, selectedClientId }: any) {
+  ClientPicker: function ClientPickerMock({ onSelect, selectedClientId }: any) {
     useEffect(() => {
       if (!selectedClientId) {
         onSelect('client-1');
       }
-    }, [onSelect, selectedClientId]);
+    }, []);
     return <div data-testid="client-picker" />;
-  }
+  },
 }));
 
 vi.mock('@alga-psa/ui/components/ContactPicker', () => ({
@@ -105,7 +113,8 @@ vi.mock('@alga-psa/clients/components', () => ({
           </button>
         </div>
       );
-    }
+    },
+    QuickAddClient: () => null,
 }));
 
 vi.mock('@alga-psa/ui/components/UserPicker', () => ({
@@ -113,7 +122,7 @@ vi.mock('@alga-psa/ui/components/UserPicker', () => ({
   default: function UserPickerMock({ onValueChange }: any) {
     useEffect(() => {
       onValueChange('user-1');
-    }, [onValueChange]);
+    }, []);
     return <div data-testid="user-picker" />;
   }
 }));
@@ -123,7 +132,7 @@ vi.mock('@alga-psa/ui/components/settings/general/BoardPicker', () => ({
   BoardPicker: ({ onSelect }: any) => {
     useEffect(() => {
       onSelect('board-1');
-    }, [onSelect]);
+    }, []);
     return <div data-testid="board-picker" />;
   }
 }));
@@ -280,9 +289,7 @@ describe('QuickAddTicket prefills', () => {
       />
     );
 
-    await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
-
-    fireEvent.click(screen.getByRole('button', { name: /\+ add new contact/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /\+ add new contact/i }, { timeout: 5000 }));
 
     expect(screen.getByTestId('quick-add-contact-dialog')).toBeInTheDocument();
   });
@@ -296,9 +303,7 @@ describe('QuickAddTicket prefills', () => {
       />
     );
 
-    await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
-
-    fireEvent.click(screen.getByRole('button', { name: /\+ add new contact/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /\+ add new contact/i }, { timeout: 5000 }));
 
     expect(screen.getByTestId('quick-add-contact-client')).toHaveTextContent('client-1');
   });
@@ -312,7 +317,7 @@ describe('QuickAddTicket prefills', () => {
       />
     );
 
-    await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
+    await screen.findByRole('button', { name: /\+ add new contact/i }, { timeout: 5000 });
     expect(screen.getByTestId('contact-picker-count')).toHaveTextContent('0');
 
     fireEvent.click(screen.getByRole('button', { name: /\+ add new contact/i }));

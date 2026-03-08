@@ -42,7 +42,7 @@
   {
     "id": "T006",
     "description": "QuickAddTicket: clicking '+ Add new contact' opens QuickAddContact dialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
