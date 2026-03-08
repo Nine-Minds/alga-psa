@@ -306,7 +306,7 @@
   {
     "id": "F039",
     "description": "MSP page title: /msp/technician-dispatch — title: 'Technician Dispatch'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
