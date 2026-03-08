@@ -50,7 +50,7 @@
   {
     "id": "F007",
     "description": "QuickAddInteraction wires ContactPicker onAddNew to open QuickAddContact with selectedClientId",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-2"
     ]

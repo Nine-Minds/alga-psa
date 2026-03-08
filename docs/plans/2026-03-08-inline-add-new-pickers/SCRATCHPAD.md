@@ -123,3 +123,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - 2026-03-08 F005: `QuickAddTicket` now merges the created contact into local picker state, selects its `contact_name_id`, and closes the dialog after creation.
 - 2026-03-08 F006: Wired `packages/tickets/src/components/ticket/TicketProperties.tsx` to open `QuickAddContact` from the inline contact editor, prefill it with the ticket/client context, and keep a local picker contact list synchronized so newly created contacts can be chosen immediately.
 - Validation: `npx tsc -p packages/tickets/tsconfig.json --noEmit`
+- 2026-03-08 F007: Wired `packages/clients/src/components/interactions/QuickAddInteraction.tsx` to offer inline contact creation when a client is selected, reuse `QuickAddContact`, append the new contact into local state, and auto-select it for the in-progress interaction.
+- Validation: `npx tsc -p packages/clients/tsconfig.json --noEmit`
