@@ -76,3 +76,4 @@
 - (2026-03-08) F026: MSP page title: /msp/assets/imports — title: 'Asset Imports'
 - (2026-03-08) F027: MSP page title: /msp/assets/integrations — title: 'Asset Integrations'
 - (2026-03-08) F028: MSP page title: /msp/assets/maintenance — title: 'Asset Maintenance'
+- (2026-03-08) F029: MSP page title: /msp/assets/policies — title: 'Asset Policies'

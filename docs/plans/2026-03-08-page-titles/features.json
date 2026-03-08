@@ -226,7 +226,7 @@
   {
     "id": "F029",
     "description": "MSP page title: /msp/assets/policies — title: 'Asset Policies'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
