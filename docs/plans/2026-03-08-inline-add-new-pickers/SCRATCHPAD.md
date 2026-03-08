@@ -220,3 +220,5 @@ const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 - Validation: `cd packages/projects && npx vitest run --config vitest.config.ts src/components/ProjectQuickAdd.quick-add-client.contract.test.ts`
 - 2026-03-08 T024: Added `packages/billing/tests/contract-basics-step.quick-add-client.contract.test.ts` to preserve the contract-wizard client picker wiring that opens `QuickAddClient`, merges the created client, auto-selects it, and updates contract currency from the new client defaults.
 - Validation: `cd packages/billing && npx vitest run --config vitest.config.ts tests/contract-basics-step.quick-add-client.contract.test.ts`
+- 2026-03-08 T025: Added `packages/billing/tests/manual-invoices.quick-add-client.contract.test.ts` to preserve the manual-invoice client picker wiring that opens `QuickAddClient`, merges created clients into local options, and auto-selects the new client.
+- Validation: `cd packages/billing && npx vitest run --config vitest.config.ts tests/manual-invoices.quick-add-client.contract.test.ts`
