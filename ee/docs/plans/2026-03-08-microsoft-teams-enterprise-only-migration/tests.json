@@ -186,7 +186,7 @@
   {
     "id": "T024",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for availability model: the shared Teams availability helper accepts tenant context for server-side runtime checks.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]
@@ -258,7 +258,7 @@
   {
     "id": "T033",
     "description": "Happy path: Availability model: Teams notification delivery checks the shared availability helper before attempting runtime work.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
@@ -266,7 +266,7 @@
   {
     "id": "T034",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for availability model: Teams notification delivery checks the shared availability helper before attempting runtime work.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
@@ -2274,7 +2274,7 @@
   {
     "id": "T285",
     "description": "Happy path: Notification boundary: CE notification broadcasting never attempts Teams delivery after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F143"
     ]
@@ -2282,7 +2282,7 @@
   {
     "id": "T286",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for notification boundary: CE notification broadcasting never attempts Teams delivery after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F143"
     ]
@@ -2290,7 +2290,7 @@
   {
     "id": "T287",
     "description": "Happy path: Notification boundary: EE flag-off notification broadcasting never attempts Teams delivery after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F144"
     ]
@@ -2298,7 +2298,7 @@
   {
     "id": "T288",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for notification boundary: EE flag-off notification broadcasting never attempts Teams delivery after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F144"
     ]

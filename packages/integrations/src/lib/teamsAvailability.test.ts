@@ -59,6 +59,23 @@ describe('teamsAvailability', () => {
     });
   });
 
+  it('T024/T049: requires tenant context before evaluating the Teams flag for server-side runtime checks', async () => {
+    const evaluateFlag = vi.fn(async () => true);
+
+    const availability = await getTeamsAvailability({
+      evaluateFlag,
+      isEnterpriseEdition: true,
+    });
+
+    expect(availability).toEqual({
+      enabled: false,
+      reason: 'tenant_not_configured',
+      flagKey: TEAMS_INTEGRATION_UI_FLAG,
+      message: 'Microsoft Teams integration requires tenant context.',
+    });
+    expect(evaluateFlag).not.toHaveBeenCalled();
+  });
+
   it('T037/T041/T043/T047/T049: resolves EE with the UI flag off as disabled and supports UI wrappers that do not require tenant context', () => {
     expect(
       resolveTeamsAvailability({

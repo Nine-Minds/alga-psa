@@ -44,6 +44,7 @@ Prefer short bullets. Append new entries as the migration progresses and revise 
 - (2026-03-08) Completed availability/settings checklist `F011-F014`, `F016`, `F018-F021`, `F025-F029`, `F031-F041`, `F048-F049`, `F051`, `F174-F175`, plus test coverage for the implemented subset: added shared helper `packages/integrations/src/lib/teamsAvailability.ts`, wired Teams settings/actions through it, moved the Teams settings surface from `Providers` to `Communication`, and added targeted contract tests for helper behavior, action gating, and settings placement.
 - (2026-03-08) Reused the same availability helper in client settings code by allowing the settings wrapper to skip tenant-context enforcement while still using the canonical EE-plus-flag rule. Rationale: the UI hook already evaluates tenant-scoped flags, while route/action runtime still requires explicit tenant context and keeps the `tenant_not_configured` state distinct.
 - (2026-03-08) Completed route-boundary checklist `F015`, `F023-F024`, `F030`, `F055-F072`, `F078`, `F080`, `F082-F083`, and `F176`: shared Teams tab/API files now only delegate, CE returns explicit 501-unavailable responses, EE flag-off returns explicit disabled responses, the concrete tab page now lives at `ee/server/src/app/teams/tab/page.tsx`, and shared request/auth handlers now call the shared Teams availability helper before continuing when tenant context can be resolved.
+- (2026-03-08) Completed notification-gating checklist `F017`, `F143-F144`: `packages/notifications/src/realtime/teamsNotificationDelivery.ts` now calls the shared Teams availability helper with tenant/user context before any Teams Graph or package-link work, so CE and EE-flag-off tenants short-circuit with skipped delivery results instead of attempting Teams delivery runtime.
 
 ## Commands / Runbooks
 
@@ -75,6 +76,8 @@ Prefer short bullets. Append new entries as the migration progresses and revise 
     Run from `/Users/roberisaacs/alga-psa.worktrees/feature/teams-integration/server`
   - `pnpm vitest run --coverage.enabled false src/test/unit/lib/teams/bot/teamsBotHandler.test.ts src/test/unit/lib/teams/quickActions/teamsQuickActionHandler.test.ts src/test/unit/lib/teams/messageExtension/teamsMessageExtensionHandler.test.ts`
     Run from `/Users/roberisaacs/alga-psa.worktrees/feature/teams-integration/server`
+  - `pnpm vitest run --coverage.enabled false ../packages/integrations/src/lib/teamsAvailability.test.ts src/test/unit/internal-notifications/teamsNotificationDelivery.test.ts`
+    Run from `/Users/roberisaacs/alga-psa.worktrees/feature/teams-integration/server`
 
 ## Links / References
 
@@ -93,6 +96,9 @@ Prefer short bullets. Append new entries as the migration progresses and revise 
   - `ee/server/src/app/teams/tab/page.tsx`
   - `server/src/app/api/teams/_ceStub.ts`
   - `server/src/test/unit/api/teamsRoutes.delegator.test.ts`
+- Teams notification gating:
+  - `packages/notifications/src/realtime/teamsNotificationDelivery.ts`
+  - `server/src/test/unit/internal-notifications/teamsNotificationDelivery.test.ts`
 - Shared feature-flag registry:
   - `packages/core/src/lib/features.ts`
 

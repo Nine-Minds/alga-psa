@@ -3,6 +3,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex } from '@alga-psa/db';
 import { getSSORegistry } from '@alga-psa/auth';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { getTeamsAvailability } from '@alga-psa/integrations/lib/teamsAvailability';
 import { buildTeamsPersonalTabDeepLinkFromPsaUrl } from '@alga-psa/integrations/actions/integrations/teamsPackageShared';
 import type { InternalNotification } from '../types/internalNotification';
 import {
@@ -261,6 +262,14 @@ export async function deliverTeamsNotification(
   const link = normalizeString(notification.link);
   if (!link) {
     return { status: 'skipped', reason: 'missing_link' };
+  }
+
+  const availability = await getTeamsAvailability({
+    tenantId: notification.tenant,
+    userId: notification.user_id,
+  });
+  if (!availability.enabled) {
+    return { status: 'skipped', reason: availability.reason };
   }
 
   const { knex } = await createTenantKnex();

@@ -78,6 +78,11 @@ const hoisted = vi.hoisted(() => {
       state.accountLinks.filter((link) => link.tenant === tenant && link.user_id === userId).map((link) => clone(link))
     ),
     publishWorkflowEventMock: vi.fn(async () => undefined),
+    getTeamsAvailabilityMock: vi.fn(async () => ({
+      enabled: true,
+      reason: 'enabled',
+      flagKey: 'teams-integration-ui',
+    })),
     buildTeamsPersonalTabDeepLinkFromPsaUrlMock: vi.fn(
       (baseUrl: string, appId: string, psaUrl: string) => `https://teams.microsoft.com/l/entity/${appId}/alga-psa-personal-tab?base=${encodeURIComponent(baseUrl)}&psa=${encodeURIComponent(psaUrl)}`
     ),
@@ -102,6 +107,10 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: hoisted.publishWorkflowEventMock,
+}));
+
+vi.mock('@alga-psa/integrations/lib/teamsAvailability', () => ({
+  getTeamsAvailability: hoisted.getTeamsAvailabilityMock,
 }));
 
 vi.mock('@alga-psa/integrations/actions/integrations/teamsPackageShared', () => ({
@@ -150,9 +159,15 @@ describe('Teams notification delivery', () => {
     hoisted.getTenantSecretMock.mockClear();
     hoisted.listOAuthAccountLinksForUserMock.mockClear();
     hoisted.publishWorkflowEventMock.mockClear();
+    hoisted.getTeamsAvailabilityMock.mockClear();
     hoisted.buildTeamsPersonalTabDeepLinkFromPsaUrlMock.mockClear();
     fetchMock.mockReset();
     vi.stubGlobal('fetch', fetchMock);
+    hoisted.getTeamsAvailabilityMock.mockResolvedValue({
+      enabled: true,
+      reason: 'enabled',
+      flagKey: 'teams-integration-ui',
+    });
 
     hoisted.state.teamsIntegrations.push({
       tenant: 'tenant-1',
@@ -413,5 +428,46 @@ describe('Teams notification delivery', () => {
         retryable: true,
       }),
     });
+  });
+
+  it('T033/T034/T287/T288: skips Teams delivery before Graph/runtime work when the shared availability helper disables the tenant', async () => {
+    hoisted.getTeamsAvailabilityMock.mockResolvedValue({
+      enabled: false,
+      reason: 'flag_disabled',
+      flagKey: 'teams-integration-ui',
+      message: 'Microsoft Teams integration is disabled for this tenant.',
+    });
+
+    const result = await deliverTeamsNotification(makeNotification());
+
+    expect(result).toEqual({
+      status: 'skipped',
+      reason: 'flag_disabled',
+    });
+    expect(hoisted.getTeamsAvailabilityMock).toHaveBeenCalledWith({
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(hoisted.publishWorkflowEventMock).not.toHaveBeenCalled();
+    expect(hoisted.buildTeamsPersonalTabDeepLinkFromPsaUrlMock).not.toHaveBeenCalled();
+  });
+
+  it('T285/T286: skips Teams delivery before Graph/runtime work when the tenant is not in Enterprise Edition', async () => {
+    hoisted.getTeamsAvailabilityMock.mockResolvedValue({
+      enabled: false,
+      reason: 'ce_unavailable',
+      flagKey: 'teams-integration-ui',
+      message: 'Microsoft Teams integration is only available in Enterprise Edition.',
+    });
+
+    const result = await deliverTeamsNotification(makeNotification());
+
+    expect(result).toEqual({
+      status: 'skipped',
+      reason: 'ce_unavailable',
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(hoisted.publishWorkflowEventMock).not.toHaveBeenCalled();
   });
 });

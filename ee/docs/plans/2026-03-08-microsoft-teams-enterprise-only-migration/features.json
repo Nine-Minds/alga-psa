@@ -146,7 +146,7 @@
   {
     "id": "F017",
     "description": "Availability model: Teams notification delivery checks the shared availability helper before attempting runtime work.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Rollout / Migration"
@@ -1280,7 +1280,7 @@
   {
     "id": "F143",
     "description": "Notification boundary: CE notification broadcasting never attempts Teams delivery after the migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"
@@ -1289,7 +1289,7 @@
   {
     "id": "F144",
     "description": "Notification boundary: EE flag-off notification broadcasting never attempts Teams delivery after the migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"
