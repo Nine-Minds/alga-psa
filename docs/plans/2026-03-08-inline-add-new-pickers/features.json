@@ -250,7 +250,7 @@
   {
     "id": "F032",
     "description": "QuickAddTicket wires CategoryPicker onAddNew to open QuickAddCategory with boardId pre-selected, auto-selects new category",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-8"
     ]

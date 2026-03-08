@@ -43,6 +43,7 @@ import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import type { ITeam } from '@alga-psa/types';
 import { useRouter } from 'next/navigation';
 import { QuickAddClient, QuickAddContact } from '@alga-psa/clients/components';
+import QuickAddCategory from './QuickAddCategory';
 
 /** Renders a <form> normally, or a plain <div> when embedded to avoid nested form tags. */
 function FormOrDiv({ isEmbedded, onSubmit, children }: { isEmbedded: boolean; onSubmit: (e: React.FormEvent) => void; children: React.ReactNode }) {
@@ -210,6 +211,7 @@ export function QuickAddTicket({
   const [locationId, setLocationId] = useState<string | null>(null);
   const [isPrefilledClient, setIsPrefilledClient] = useState(false);
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
+  const [isQuickAddCategoryOpen, setIsQuickAddCategoryOpen] = useState(false);
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const [quickAddBoardFilterState, setQuickAddBoardFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
@@ -972,6 +974,7 @@ export function QuickAddTicket({
                       placeholder={boardConfig.category_type === 'custom' ? "Select category" : "Select ITIL category"}
                       multiSelect={false}
                       className="w-full"
+                      onAddNew={() => setIsQuickAddCategoryOpen(true)}
                     />
                   )}
 
@@ -1276,6 +1279,26 @@ export function QuickAddTicket({
           setSelectedClientType(newClient.client_type === 'company' || newClient.client_type === 'individual' ? newClient.client_type : null);
           clearErrorIfSubmitted();
         }}
+      />
+      <QuickAddCategory
+        isOpen={isQuickAddCategoryOpen}
+        onClose={() => setIsQuickAddCategoryOpen(false)}
+        onCategoryCreated={(newCategory) => {
+          setCategories((prevCategories) => {
+            const existingIndex = prevCategories.findIndex((category) => category.category_id === newCategory.category_id);
+            if (existingIndex >= 0) {
+              const nextCategories = [...prevCategories];
+              nextCategories[existingIndex] = newCategory;
+              return nextCategories;
+            }
+            return [...prevCategories, newCategory];
+          });
+          setSelectedCategories([newCategory.category_id]);
+          clearErrorIfSubmitted();
+          setIsQuickAddCategoryOpen(false);
+        }}
+        preselectedBoardId={boardId}
+        categories={categories}
       />
     </div>
   );
