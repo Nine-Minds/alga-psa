@@ -794,7 +794,7 @@
   {
     "id": "F100",
     "description": "Auth page title: /auth/client-portal/handoff — title: 'Signing In'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3b"
     ]
