@@ -66,4 +66,13 @@ describe('Teams enterprise-only migration plan contract', () => {
     expect(featureIds[0]).toBe('F001');
     expect(testIds[0]).toBe('T001');
   });
+
+  it('T055/T056: records the canonical CE-unavailable and EE-flag-disabled wrapper copy in the migration scratchpad', () => {
+    expect(scratchpad).toContain(
+      'Canonical unavailable copy for CE wrappers: `Microsoft Teams integration is only available in Enterprise Edition.`'
+    );
+    expect(scratchpad).toContain(
+      'Canonical disabled copy for EE flag-off wrappers: `Microsoft Teams integration is disabled for this tenant.`'
+    );
+  });
 });

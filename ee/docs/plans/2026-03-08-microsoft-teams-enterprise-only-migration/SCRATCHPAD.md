@@ -20,6 +20,8 @@ Prefer short bullets. Append new entries as the migration progresses and revise 
 - (2026-03-08) Existing local/dev Teams data is disposable; no production-style backfill path is required.
 - (2026-03-08) The Entra CE-stub plus EE-delegation pattern is the precedent for Teams route and settings ownership.
 - (2026-03-08) Use one availability helper for settings, routes, actions, and notification delivery to avoid drift.
+- (2026-03-08) Canonical unavailable copy for CE wrappers: `Microsoft Teams integration is only available in Enterprise Edition.`
+- (2026-03-08) Canonical disabled copy for EE flag-off wrappers: `Microsoft Teams integration is disabled for this tenant.`
 
 ## Discoveries / Constraints
 
@@ -45,6 +47,7 @@ Prefer short bullets. Append new entries as the migration progresses and revise 
 - (2026-03-08) Reused the same availability helper in client settings code by allowing the settings wrapper to skip tenant-context enforcement while still using the canonical EE-plus-flag rule. Rationale: the UI hook already evaluates tenant-scoped flags, while route/action runtime still requires explicit tenant context and keeps the `tenant_not_configured` state distinct.
 - (2026-03-08) Completed route-boundary checklist `F015`, `F023-F024`, `F030`, `F055-F072`, `F078`, `F080`, `F082-F083`, and `F176`: shared Teams tab/API files now only delegate, CE returns explicit 501-unavailable responses, EE flag-off returns explicit disabled responses, the concrete tab page now lives at `ee/server/src/app/teams/tab/page.tsx`, and shared request/auth handlers now call the shared Teams availability helper before continuing when tenant context can be resolved.
 - (2026-03-08) Completed notification-gating checklist `F017`, `F143-F144`: `packages/notifications/src/realtime/teamsNotificationDelivery.ts` now calls the shared Teams availability helper with tenant/user context before any Teams Graph or package-link work, so CE and EE-flag-off tenants short-circuit with skipped delivery results instead of attempting Teams delivery runtime.
+- (2026-03-08) Chose the optional disabled-shell variant for settings `F022`/`F038`: `TeamsEnterpriseIntegrationSettings` now renders a non-active Communication-card placeholder in EE when the tenant flag is off instead of rendering nothing, while CE still renders no Teams surface at all.
 
 ## Commands / Runbooks
 

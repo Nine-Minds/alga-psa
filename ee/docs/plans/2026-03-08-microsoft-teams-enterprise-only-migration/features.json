@@ -191,7 +191,7 @@
   {
     "id": "F022",
     "description": "Availability model: Teams settings wrappers can render a disabled-state shell when EE is present but the tenant flag is off.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Rollout / Migration"
@@ -245,7 +245,7 @@
   {
     "id": "F028",
     "description": "Availability model: the plan records the canonical unavailable copy for CE and disabled-flag states so wrappers are consistent.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Rollout / Migration"

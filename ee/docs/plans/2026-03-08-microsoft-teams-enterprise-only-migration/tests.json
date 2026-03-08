@@ -202,7 +202,7 @@
   {
     "id": "T026",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for availability model: the shared Teams availability helper accepts optional user context for flag evaluations that support user-aware targeting.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
@@ -338,7 +338,7 @@
   {
     "id": "T043",
     "description": "Happy path: Availability model: Teams settings wrappers can render a disabled-state shell when EE is present but the tenant flag is off.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
@@ -346,7 +346,7 @@
   {
     "id": "T044",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for availability model: Teams settings wrappers can render a disabled-state shell when EE is present but the tenant flag is off.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
@@ -394,7 +394,7 @@
   {
     "id": "T050",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for availability model: Teams availability helpers are imported from a shared non-`use server` module so they are safe in both action and UI code.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
@@ -434,7 +434,7 @@
   {
     "id": "T055",
     "description": "Happy path: Availability model: the plan records the canonical unavailable copy for CE and disabled-flag states so wrappers are consistent.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
@@ -442,7 +442,7 @@
   {
     "id": "T056",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for availability model: the plan records the canonical unavailable copy for CE and disabled-flag states so wrappers are consistent.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
@@ -602,7 +602,7 @@
   {
     "id": "T076",
     "description": "Guard: edition, flag, tenancy, or unavailable-state handling is enforced for settings IA: the Teams settings wrapper renders nothing in EE when the tenant flag is disabled unless an explicit disabled-state shell is intentionally chosen.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038"
     ]

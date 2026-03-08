@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import {
   TEAMS_INTEGRATION_UI_FLAG,
@@ -76,6 +78,27 @@ describe('teamsAvailability', () => {
     expect(evaluateFlag).not.toHaveBeenCalled();
   });
 
+  it('T026/T049: treats user context as optional and omits blank user IDs from tenant-scoped flag evaluation', async () => {
+    const evaluateFlag = vi.fn(async () => true);
+
+    const availability = await getTeamsAvailability({
+      evaluateFlag,
+      isEnterpriseEdition: true,
+      tenantId: 'tenant-1',
+      userId: '   ',
+    });
+
+    expect(availability).toEqual({
+      enabled: true,
+      reason: 'enabled',
+      flagKey: TEAMS_INTEGRATION_UI_FLAG,
+    });
+    expect(evaluateFlag).toHaveBeenCalledWith(TEAMS_INTEGRATION_UI_FLAG, {
+      tenantId: 'tenant-1',
+      userId: undefined,
+    });
+  });
+
   it('T037/T041/T043/T047/T049: resolves EE with the UI flag off as disabled and supports UI wrappers that do not require tenant context', () => {
     expect(
       resolveTeamsAvailability({
@@ -109,5 +132,13 @@ describe('teamsAvailability', () => {
       flagKey: TEAMS_INTEGRATION_UI_FLAG,
       message: 'Microsoft Teams integration is disabled for this tenant.',
     });
+  });
+
+  it('T050: keeps the shared Teams availability helpers outside use-server modules so UI and action code can import the same file safely', () => {
+    const moduleSource = fs.readFileSync(path.resolve(__dirname, 'teamsAvailability.ts'), 'utf8');
+
+    expect(moduleSource).not.toMatch(/['"]use server['"]/);
+    expect(moduleSource).toContain('export function resolveTeamsAvailability');
+    expect(moduleSource).toContain('export async function getTeamsAvailability');
   });
 });

@@ -34,6 +34,22 @@ export function TeamsEnterpriseIntegrationSettings() {
   });
 
   if (!availability.enabled) {
+    if (availability.reason === 'flag_disabled' && process.env.NEXT_PUBLIC_EDITION === 'enterprise') {
+      return (
+        <Card data-testid="teams-integration-disabled-shell">
+          <CardContent className="py-8">
+            <div className="space-y-2">
+              <h3 className="text-lg font-medium text-foreground">Microsoft Teams integration disabled</h3>
+              <p className="text-sm text-muted-foreground">{availability.message}</p>
+              <p className="text-sm text-muted-foreground">
+                Teams setup will appear here once the tenant rollout is enabled.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
     return null;
   }
 
