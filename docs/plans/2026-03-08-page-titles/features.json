@@ -746,7 +746,7 @@
   {
     "id": "F094",
     "description": "Auth page title: /auth/check-email — title: 'Check Email'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3b"
     ]

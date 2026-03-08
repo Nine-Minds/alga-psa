@@ -141,3 +141,4 @@
 - (2026-03-08) F091: Auth page title: /auth/register — title: 'Register'
 - (2026-03-08) F092: Auth page title: /auth/verify — verify existing 'Verify Email' metadata in layout.tsx is compatible
 - (2026-03-08) F093: Auth page title: /auth/verify-email — title: 'Verify Email'
+- (2026-03-08) F094: Auth page title: /auth/check-email — title: 'Check Email'
