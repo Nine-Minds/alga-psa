@@ -106,6 +106,7 @@ const _middleware = auth((request) => {
       '/api/email/webhooks/',
       '/api/calendar/webhooks/',
       '/api/email/oauth/',
+      '/api/teams/auth/',
       '/api/client-portal/domain-session',
       // Mobile auth endpoints use OTT/refresh tokens (no x-api-key)
       '/api/v1/mobile/auth/',

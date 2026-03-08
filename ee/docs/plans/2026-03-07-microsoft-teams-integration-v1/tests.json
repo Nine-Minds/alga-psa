@@ -1202,7 +1202,7 @@
   {
     "id": "T151",
     "description": "Happy path: Teams identity: tab SSO resolves PSA tenant and MSP user context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F076"
     ]
@@ -1210,7 +1210,7 @@
   {
     "id": "T152",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: tab sso resolves psa tenant and msp user context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F076"
     ]
@@ -1218,7 +1218,7 @@
   {
     "id": "T153",
     "description": "Happy path: Teams identity: bot SSO resolves PSA tenant and MSP user context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F077"
     ]
@@ -1226,7 +1226,7 @@
   {
     "id": "T154",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: bot sso resolves psa tenant and msp user context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F077"
     ]
@@ -1234,7 +1234,7 @@
   {
     "id": "T155",
     "description": "Happy path: Teams identity: message extension SSO resolves PSA tenant and MSP user context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F078"
     ]
@@ -1242,7 +1242,7 @@
   {
     "id": "T156",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: message extension sso resolves psa tenant and msp user context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F078"
     ]
@@ -1250,7 +1250,7 @@
   {
     "id": "T157",
     "description": "Happy path: Teams identity: only MSP users are accepted into Teams flows in v1.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F079"
     ]
@@ -1258,7 +1258,7 @@
   {
     "id": "T158",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: only msp users are accepted into teams flows in v1.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F079"
     ]
@@ -1266,7 +1266,7 @@
   {
     "id": "T159",
     "description": "Happy path: Teams identity: client-portal users are rejected from Teams flows in v1.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080"
     ]
@@ -1274,7 +1274,7 @@
   {
     "id": "T160",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: client-portal users are rejected from teams flows in v1.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080"
     ]
@@ -1282,7 +1282,7 @@
   {
     "id": "T161",
     "description": "Happy path: Teams identity: Teams-authenticated requests reuse existing NextAuth/MSP SSO user resolution patterns where possible.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F081"
     ]
@@ -1290,7 +1290,7 @@
   {
     "id": "T162",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: teams-authenticated requests reuse existing nextauth/msp sso user resolution patterns where possible.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F081"
     ]
@@ -1298,7 +1298,7 @@
   {
     "id": "T163",
     "description": "Happy path: Teams identity: missing, inactive, or unready selected profiles block Teams auth with admin-readable remediation state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F082"
     ]
@@ -1306,7 +1306,7 @@
   {
     "id": "T164",
     "description": "Guard: unauthenticated, wrong-tenant, unauthorized, and client-user access is rejected for teams identity: missing, inactive, or unready selected profiles block teams auth with admin-readable remediation state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F082"
     ]

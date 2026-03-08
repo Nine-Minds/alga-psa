@@ -678,7 +678,7 @@
   {
     "id": "F076",
     "description": "Teams identity: tab SSO resolves PSA tenant and MSP user context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Security / Permissions",
@@ -688,7 +688,7 @@
   {
     "id": "F077",
     "description": "Teams identity: bot SSO resolves PSA tenant and MSP user context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Security / Permissions",
@@ -698,7 +698,7 @@
   {
     "id": "F078",
     "description": "Teams identity: message extension SSO resolves PSA tenant and MSP user context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Security / Permissions",
@@ -708,7 +708,7 @@
   {
     "id": "F079",
     "description": "Teams identity: only MSP users are accepted into Teams flows in v1.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Security / Permissions",
@@ -718,7 +718,7 @@
   {
     "id": "F080",
     "description": "Teams identity: client-portal users are rejected from Teams flows in v1.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Security / Permissions",
@@ -728,7 +728,7 @@
   {
     "id": "F081",
     "description": "Teams identity: Teams-authenticated requests reuse existing NextAuth/MSP SSO user resolution patterns where possible.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Security / Permissions",
@@ -738,7 +738,7 @@
   {
     "id": "F082",
     "description": "Teams identity: missing, inactive, or unready selected profiles block Teams auth with admin-readable remediation state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Security / Permissions",
