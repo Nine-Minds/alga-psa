@@ -50,7 +50,7 @@
   {
     "id": "T007",
     "description": "QuickAddTicket: QuickAddContact receives the currently selected clientId as selectedClientId",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
