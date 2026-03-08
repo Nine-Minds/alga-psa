@@ -1558,7 +1558,7 @@
   {
     "id": "F164",
     "description": "Message extension: search results support pagination or continuation for longer result sets.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1588,7 +1588,7 @@
   {
     "id": "F167",
     "description": "Message extension: search results can surface allowed quick actions where supported.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1618,7 +1618,7 @@
   {
     "id": "F170",
     "description": "Message extension: the extension respects tenant-level allowed-action configuration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1688,7 +1688,7 @@
   {
     "id": "F177",
     "description": "Message extension: command invocation records which surface triggered the action for downstream processing.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",
@@ -1698,7 +1698,7 @@
   {
     "id": "F178",
     "description": "Message extension: search behavior prefers existing PSA data-access patterns rather than Teams-specific record indexes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "UX / UI Notes",

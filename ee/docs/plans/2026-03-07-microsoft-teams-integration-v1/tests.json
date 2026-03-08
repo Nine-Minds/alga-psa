@@ -2610,7 +2610,7 @@
   {
     "id": "T327",
     "description": "Happy path: Message extension: search results support pagination or continuation for longer result sets.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F164"
     ]
@@ -2618,7 +2618,7 @@
   {
     "id": "T328",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search results support pagination or continuation for longer result sets.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F164"
     ]
@@ -2658,7 +2658,7 @@
   {
     "id": "T333",
     "description": "Happy path: Message extension: search results can surface allowed quick actions where supported.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F167"
     ]
@@ -2666,7 +2666,7 @@
   {
     "id": "T334",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search results can surface allowed quick actions where supported.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F167"
     ]
@@ -2706,7 +2706,7 @@
   {
     "id": "T339",
     "description": "Happy path: Message extension: the extension respects tenant-level allowed-action configuration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F170"
     ]
@@ -2714,7 +2714,7 @@
   {
     "id": "T340",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: the extension respects tenant-level allowed-action configuration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F170"
     ]
@@ -2818,7 +2818,7 @@
   {
     "id": "T353",
     "description": "Happy path: Message extension: command invocation records which surface triggered the action for downstream processing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F177"
     ]
@@ -2826,7 +2826,7 @@
   {
     "id": "T354",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: command invocation records which surface triggered the action for downstream processing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F177"
     ]
@@ -2834,7 +2834,7 @@
   {
     "id": "T355",
     "description": "Happy path: Message extension: search behavior prefers existing PSA data-access patterns rather than Teams-specific record indexes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F178"
     ]
@@ -2842,7 +2842,7 @@
   {
     "id": "T356",
     "description": "Guard: invalid input, missing target state, and insufficient permission return recoverable errors for message extension: search behavior prefers existing psa data-access patterns rather than teams-specific record indexes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F178"
     ]

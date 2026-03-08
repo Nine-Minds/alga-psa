@@ -5,6 +5,8 @@ import { ContactService } from 'server/src/lib/api/services/ContactService';
 import { TicketService } from 'server/src/lib/api/services/TicketService';
 import {
   executeTeamsAction,
+  listAvailableTeamsActions,
+  listTeamsActionDefinitions,
   type TeamsActionEntityReference,
   type TeamsActionLink,
   type TeamsActionResult,
@@ -17,6 +19,8 @@ import { resolveTeamsTenantContext } from 'server/src/lib/teams/resolveTeamsTena
 const MESSAGE_EXTENSION_SURFACE: TeamsActionSurface = 'message_extension';
 const ticketService = new TicketService();
 const contactService = new ContactService();
+const teamsActionTitleById = new Map(listTeamsActionDefinitions().map((definition) => [definition.id, definition.title]));
+const SEARCH_SURFACED_ACTION_IDS = new Set(['assign_ticket', 'add_note', 'reply_to_contact', 'log_time', 'approval_response']);
 
 interface TeamsMessageExtensionParameter {
   name?: string | null;
@@ -38,6 +42,11 @@ interface TeamsMessagePayload {
   linkToMessage?: string | null;
 }
 
+interface TeamsMessageExtensionQueryOptions {
+  skip?: number | string | null;
+  count?: number | string | null;
+}
+
 export interface TeamsMessageExtensionActivity {
   type?: string;
   name?: string | null;
@@ -54,6 +63,7 @@ export interface TeamsMessageExtensionActivity {
     commandId?: string | null;
     commandContext?: string | null;
     parameters?: TeamsMessageExtensionParameter[] | null;
+    queryOptions?: TeamsMessageExtensionQueryOptions | null;
     messagePayload?: TeamsMessagePayload | null;
     data?: Record<string, unknown> | null;
   } | null;
@@ -157,6 +167,50 @@ function getQueryParameter(activity: TeamsMessageExtensionActivity): string | nu
   }
 
   return null;
+}
+
+function parseQueryOption(value: number | string | null | undefined): number | null {
+  if (typeof value === 'number' && Number.isInteger(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string' && value.trim().length > 0) {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isInteger(parsed)) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
+function getQueryPagination(activity: TeamsMessageExtensionActivity):
+  | { success: true; skip: number; count: number }
+  | { success: false; message: string } {
+  const rawSkip = parseQueryOption(activity.value?.queryOptions?.skip);
+  const rawCount = parseQueryOption(activity.value?.queryOptions?.count);
+  const skip = rawSkip ?? 0;
+  const count = rawCount ?? 10;
+
+  if (skip < 0) {
+    return {
+      success: false,
+      message: 'Search pagination must use a non-negative skip value.',
+    };
+  }
+
+  if (count < 1 || count > 25) {
+    return {
+      success: false,
+      message: 'Search pagination count must be between 1 and 25 results.',
+    };
+  }
+
+  return {
+    success: true,
+    skip,
+    count,
+  };
 }
 
 function buildOpenUrlButton(link: TeamsActionLink): TeamsMessageExtensionButton {
@@ -346,14 +400,19 @@ function buildActionTaskResponse(params: {
   };
 }
 
-function buildAttachmentFromActionResult(result: TeamsActionResult): TeamsMessageExtensionAttachment | null {
+function buildAttachmentFromActionResult(
+  result: TeamsActionResult,
+  quickActionTitles: string[] = []
+): TeamsMessageExtensionAttachment | null {
   if (!result.success) {
     return null;
   }
 
   const primaryItem = result.items[0];
   const title = primaryItem?.title || result.summary.title;
-  const text = primaryItem?.summary || result.summary.text;
+  const baseText = primaryItem?.summary || result.summary.text;
+  const text =
+    quickActionTitles.length > 0 ? `${baseText}\nQuick actions: ${quickActionTitles.join(', ')}` : baseText;
   const buttons = result.links.map(buildOpenUrlButton);
 
   return {
@@ -389,7 +448,17 @@ async function buildSearchAttachments(params: {
       target: hit.target,
     });
 
-    const attachment = buildAttachmentFromActionResult(result);
+    const availableActions = await listAvailableTeamsActions({
+      surface: MESSAGE_EXTENSION_SURFACE,
+      tenantId: params.tenantId,
+      user: params.user,
+      target: hit.target,
+    });
+    const quickActionTitles = availableActions
+      .filter((action) => action.available && action.operation === 'mutation' && SEARCH_SURFACED_ACTION_IDS.has(action.actionId))
+      .map((action) => teamsActionTitleById.get(action.actionId) || action.actionId);
+
+    const attachment = buildAttachmentFromActionResult(result, quickActionTitles);
     if (attachment) {
       attachments.push(attachment);
     }
@@ -402,6 +471,7 @@ async function searchTicketHits(params: {
   tenantId: string;
   user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>;
   query: string;
+  limit: number;
 }): Promise<TeamsMessageSearchHit[]> {
   if (!(await hasPermission(params.user, 'ticket', 'read'))) {
     return [];
@@ -412,7 +482,7 @@ async function searchTicketHits(params: {
       query: params.query,
       fields: ['title', 'ticket_number', 'client_name', 'contact_name'],
       include_closed: false,
-      limit: 5,
+      limit: params.limit,
     } as any,
     {
       tenant: params.tenantId,
@@ -436,6 +506,7 @@ async function searchTaskHits(params: {
   tenantId: string;
   user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>;
   query: string;
+  limit: number;
 }): Promise<TeamsMessageSearchHit[]> {
   if (!(await hasPermission(params.user, 'project', 'read'))) {
     return [];
@@ -455,7 +526,7 @@ async function searchTaskHits(params: {
     })
     .select('pt.task_id', 'pt.project_id')
     .orderBy('pt.updated_at', 'desc')
-    .limit(5)) as Array<{ task_id?: string | null; project_id?: string | null }>;
+    .limit(params.limit)) as Array<{ task_id?: string | null; project_id?: string | null }>;
 
   return rows
     .map((row) => ({
@@ -476,6 +547,7 @@ async function searchContactHits(params: {
   tenantId: string;
   user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>;
   query: string;
+  limit: number;
 }): Promise<TeamsMessageSearchHit[]> {
   if (!(await hasPermission(params.user, 'contact', 'read'))) {
     return [];
@@ -486,7 +558,7 @@ async function searchContactHits(params: {
       query: params.query,
       fields: ['full_name', 'email', 'phone_number', 'role'],
       include_inactive: false,
-      limit: 5,
+      limit: params.limit,
     } as any,
     {
       tenant: params.tenantId,
@@ -514,6 +586,7 @@ async function searchApprovalHits(params: {
   tenantId: string;
   user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>;
   query: string;
+  limit: number;
 }): Promise<TeamsMessageSearchHit[]> {
   if (!(await hasPermission(params.user, 'timesheet', 'approve'))) {
     return [];
@@ -522,7 +595,7 @@ async function searchApprovalHits(params: {
   const approvals = await listPendingApprovalsForTeams({
     tenantId: params.tenantId,
     user: params.user,
-    limit: 5,
+    limit: params.limit,
     query: params.query,
   });
 
@@ -586,6 +659,11 @@ async function handleQueryRequest(
     return buildMessageResponse('Enter a search query to look up PSA records from Teams.');
   }
 
+  const pagination = getQueryPagination(activity);
+  if (!pagination.success) {
+    return buildMessageResponse(pagination.message);
+  }
+
   const invokingUser = await resolveInvokingUser({
     activity,
     tenantId,
@@ -594,12 +672,13 @@ async function handleQueryRequest(
     return buildMessageResponse(invokingUser.message);
   }
 
+  const fetchLimit = Math.min(pagination.skip + pagination.count, 25);
   const hits = [
-    ...(await searchTicketHits({ tenantId, user: invokingUser.user, query })),
-    ...(await searchTaskHits({ tenantId, user: invokingUser.user, query })),
-    ...(await searchContactHits({ tenantId, user: invokingUser.user, query })),
-    ...(await searchApprovalHits({ tenantId, user: invokingUser.user, query })),
-  ].slice(0, 12);
+    ...(await searchTicketHits({ tenantId, user: invokingUser.user, query, limit: fetchLimit })),
+    ...(await searchTaskHits({ tenantId, user: invokingUser.user, query, limit: fetchLimit })),
+    ...(await searchContactHits({ tenantId, user: invokingUser.user, query, limit: fetchLimit })),
+    ...(await searchApprovalHits({ tenantId, user: invokingUser.user, query, limit: fetchLimit })),
+  ].slice(pagination.skip, pagination.skip + pagination.count);
 
   const attachments = await buildSearchAttachments({
     tenantId,

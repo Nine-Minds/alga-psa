@@ -14,6 +14,7 @@ const {
   createTenantKnexMock,
   hasPermissionMock,
   executeTeamsActionMock,
+  listAvailableTeamsActionsMock,
   listPendingApprovalsForTeamsMock,
 } = vi.hoisted(() => ({
   resolveTeamsTenantContextMock: vi.fn(),
@@ -22,6 +23,7 @@ const {
   createTenantKnexMock: vi.fn(),
   hasPermissionMock: vi.fn(),
   executeTeamsActionMock: vi.fn(),
+  listAvailableTeamsActionsMock: vi.fn(),
   listPendingApprovalsForTeamsMock: vi.fn(),
 }));
 
@@ -48,6 +50,14 @@ vi.mock('server/src/lib/auth/rbac', () => ({
 
 vi.mock('server/src/lib/teams/actions/teamsActionRegistry', () => ({
   executeTeamsAction: executeTeamsActionMock,
+  listAvailableTeamsActions: listAvailableTeamsActionsMock,
+  listTeamsActionDefinitions: () => [
+    { id: 'assign_ticket', title: 'Assign ticket', description: '', operation: 'mutation', targetEntityTypes: [] },
+    { id: 'add_note', title: 'Add note', description: '', operation: 'mutation', targetEntityTypes: [] },
+    { id: 'reply_to_contact', title: 'Reply to contact', description: '', operation: 'mutation', targetEntityTypes: [] },
+    { id: 'log_time', title: 'Log time', description: '', operation: 'mutation', targetEntityTypes: [] },
+    { id: 'approval_response', title: 'Approval response', description: '', operation: 'mutation', targetEntityTypes: [] },
+  ],
 }));
 
 vi.mock('server/src/lib/teams/approvals/queryPendingApprovalsForTeams', () => ({
@@ -120,6 +130,7 @@ describe('teamsMessageExtensionHandler', () => {
     });
     getUserWithRolesMock.mockResolvedValue(buildUser());
     hasPermissionMock.mockResolvedValue(true);
+    listAvailableTeamsActionsMock.mockResolvedValue([]);
     listPendingApprovalsForTeamsMock.mockResolvedValue([
       {
         id: 'approval-1',
@@ -431,6 +442,19 @@ describe('teamsMessageExtensionHandler', () => {
   });
 
   it('T329/T330/T331/T332/T343/T345/T347/T351/T352: search results reuse shared action summaries and deep links for compact Teams cards', async () => {
+    listAvailableTeamsActionsMock.mockResolvedValueOnce([
+      {
+        actionId: 'assign_ticket',
+        operation: 'mutation',
+        available: true,
+      },
+      {
+        actionId: 'add_note',
+        operation: 'mutation',
+        available: true,
+      },
+    ]);
+
     const response = await handleTeamsMessageExtensionActivity(buildActivity(), {
       tenantIdHint: 'tenant-1',
     });
@@ -441,7 +465,7 @@ describe('teamsMessageExtensionHandler', () => {
         contentType: 'application/vnd.microsoft.card.hero',
         content: expect.objectContaining({
           title: 'Ticket T-1001',
-          text: 'VPN outage • In progress',
+          text: 'VPN outage • In progress\nQuick actions: Assign ticket, Add note',
           buttons: [
             { type: 'openUrl', title: 'Open in Teams tab', value: 'https://teams.test/ticket' },
             { type: 'openUrl', title: 'Open in full PSA', value: '/msp/ticket' },
@@ -459,6 +483,153 @@ describe('teamsMessageExtensionHandler', () => {
         surface: 'message_extension',
       })
     );
+  });
+
+  it('T333/T334/T339/T340: search results only surface quick actions that are currently available for the tenant and entity', async () => {
+    listAvailableTeamsActionsMock
+      .mockResolvedValueOnce([
+        {
+          actionId: 'assign_ticket',
+          operation: 'mutation',
+          available: true,
+        },
+        {
+          actionId: 'reply_to_contact',
+          operation: 'mutation',
+          available: false,
+        },
+      ])
+      .mockResolvedValue([]);
+
+    const response = await handleTeamsMessageExtensionActivity(buildActivity(), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(response.composeExtension.type).toBe('result');
+    expect(response.composeExtension.attachments?.[0]?.content.text).toContain('Quick actions: Assign ticket');
+    expect(response.composeExtension.attachments?.[0]?.content.text).not.toContain('Reply to contact');
+    expect(response.composeExtension.attachments?.[1]?.content.text).not.toContain('Quick actions:');
+  });
+
+  it('T353/T354/T355/T356: message-extension search records the invoking surface and reuses existing PSA data-access patterns', async () => {
+    await handleTeamsMessageExtensionActivity(buildActivity(), {
+      tenantIdHint: 'tenant-1',
+    });
+
+    expect(executeTeamsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        surface: 'message_extension',
+      })
+    );
+    expect(TicketService.prototype.search).toHaveBeenCalled();
+    expect(ContactService.prototype.search).toHaveBeenCalled();
+    expect(createTenantKnexMock).toHaveBeenCalledWith('tenant-1');
+    expect(listPendingApprovalsForTeamsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        query: 'vpn',
+      })
+    );
+  });
+
+  it('T327/T328: search supports paged result windows via Teams queryOptions and rejects invalid pagination values', async () => {
+    vi.spyOn(TicketService.prototype, 'search').mockResolvedValue([
+      { ticket_id: 'ticket-1' } as any,
+      { ticket_id: 'ticket-2' } as any,
+      { ticket_id: 'ticket-3' } as any,
+    ]);
+    vi.spyOn(ContactService.prototype, 'search').mockResolvedValue([]);
+    listPendingApprovalsForTeamsMock.mockResolvedValue([]);
+    createTenantKnexMock.mockResolvedValue({
+      knex: vi.fn(() => ({
+        join: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue([]),
+      })),
+    });
+    executeTeamsActionMock.mockImplementation(
+      async ({ target }: { target: { ticketId?: string; entityType: string } }) => ({
+        success: true,
+        actionId: 'open_record',
+        surface: 'message_extension',
+        operation: 'lookup',
+        summary: {
+          title: `Ticket ${target.ticketId}`,
+          text: `Summary for ${target.ticketId}`,
+        },
+        links: [{ type: 'teams_tab', label: 'Open in Teams tab', url: `https://teams.test/${target.ticketId}` }],
+        items: [
+          {
+            id: target.ticketId || 'record-1',
+            title: `Ticket ${target.ticketId}`,
+            summary: `Summary for ${target.ticketId}`,
+            entityType: 'ticket',
+            links: [{ type: 'teams_tab', label: 'Open in Teams tab', url: `https://teams.test/${target.ticketId}` }],
+          },
+        ],
+        warnings: [],
+        metadata: {
+          surface: 'message_extension',
+          idempotencyKey: null,
+          idempotentReplay: false,
+          invokingSurface: 'message_extension',
+          businessOperations: ['TicketService.getById'],
+        },
+      })
+    );
+
+    const pagedResponse = await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        value: {
+          commandId: 'searchRecords',
+          commandContext: 'compose',
+          parameters: [{ name: 'query', value: 'vpn' }],
+          queryOptions: {
+            skip: 1,
+            count: 2,
+          },
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    const invalidPaginationResponse = await handleTeamsMessageExtensionActivity(
+      buildActivity({
+        value: {
+          commandId: 'searchRecords',
+          commandContext: 'compose',
+          parameters: [{ name: 'query', value: 'vpn' }],
+          queryOptions: {
+            skip: -1,
+            count: 50,
+          },
+        },
+      }),
+      { tenantIdHint: 'tenant-1' }
+    );
+
+    expect(pagedResponse.composeExtension.type).toBe('result');
+    expect(pagedResponse.composeExtension.attachments?.map((attachment) => attachment.content.title)).toEqual([
+      'Ticket ticket-2',
+      'Ticket ticket-3',
+    ]);
+    expect(TicketService.prototype.search).toHaveBeenCalledWith(
+      expect.objectContaining({
+        limit: 3,
+      }),
+      expect.anything()
+    );
+    expect(invalidPaginationResponse).toEqual({
+      composeExtension: {
+        type: 'message',
+        text: 'Search pagination must use a non-negative skip value.',
+      },
+      cacheInfo: {
+        cacheType: 'no-cache',
+      },
+    });
   });
 
   it('T344/T346/T348: search result links only include entities returned by the shared open-record action mapping', async () => {

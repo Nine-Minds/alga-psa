@@ -258,6 +258,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) The smallest safe v1 message-extension search surface is one `searchRecords` command for `compose` and `commandBox` contexts that aggregates tickets, tasks, contacts, and approvals into shared `open_record` hero cards.
 - (2026-03-07) The first message-context action slice can reuse the same message-extension route by handling `composeExtension/fetchTask` and `composeExtension/submitAction`, returning Teams-safe task responses without introducing a second webhook surface.
 - (2026-03-07) The current message-action transport is intentionally a handoff foundation: it preserves Teams-authenticated message context and shows a task-module preview while later slices add actual message-to-ticket and message-to-update mutations.
+- (2026-03-07) Teams message-extension pagination can use native `queryOptions.skip/count` windowing instead of a custom continuation token; for the merged multi-entity result set, fetching up to `skip + count` per entity and slicing centrally is sufficient for the first paged slice.
+- (2026-03-07) The cleanest way to surface message-extension quick actions is to reuse `listAvailableTeamsActions(...)` per search hit and append only currently available mutation titles to the shared `open_record` card summary, which keeps result cards aligned with tenant allowed-action settings without introducing premature action buttons.
 
 ## Progress Log
 
@@ -295,6 +297,15 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/messageExtension/teamsMessageExtensionHandler.test.ts src/app/api/teams/message-extension/query/route.test.ts ../packages/integrations/src/actions/integrations/teamsPackageActions.test.ts`
   - `pnpm --dir server exec tsc -p tsconfig.json --noEmit --pretty false`
   - `pnpm --dir packages/integrations typecheck`
+- (2026-03-07) Verified Teams message-extension pagination with:
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/messageExtension/teamsMessageExtensionHandler.test.ts`
+  - `pnpm --dir server exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-07) Verified Teams message-extension quick-action surfacing with:
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/messageExtension/teamsMessageExtensionHandler.test.ts`
+  - `pnpm --dir server exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-07) Verified Teams message-extension shared surface metadata and PSA-first search access patterns with:
+  - `cd server && npx vitest run --config vitest.config.ts src/test/unit/lib/teams/messageExtension/teamsMessageExtensionHandler.test.ts`
+  - `pnpm --dir server exec tsc -p tsconfig.json --noEmit --pretty false`
 
 - (2026-03-07) Completed `F140`, `F141`, `F142`, and `F143` by teaching `server/src/lib/teams/bot/teamsBotHandler.ts` to parse `assign ticket` commands, default `assign ticket <ticket-id>` to self-assignment, resolve other assignees from active internal users with explicit `user:read` gating, and return the shared action result with an assignee-specific success summary plus Teams-tab/full-PSA links.
 - (2026-03-07) Completed `F144`, `F145`, and `F146` by teaching the same bot handler to parse `add note <ticket-id>: <note>`, preserve ticket context when the note body is missing, execute the shared `add_note` Teams action, and return the saved-note confirmation with follow-up deep links.
@@ -313,4 +324,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-07) Completed `F161` by extending `server/src/lib/teams/messageExtension/teamsMessageExtensionHandler.ts` to accept `composeExtension/fetchTask` and `composeExtension/submitAction` requests for `createTicketFromMessage` and `updateFromMessage`, returning Teams-safe task-module and task-message responses from message context.
 - (2026-03-07) Completed `F162`, `F163`, `F165`, `F166`, `F168`, `F169`, `F171`, `F172`, `F173`, `F174`, `F175`, and `F176` by tightening the message-extension transport around tenant-scoped/user-scoped search execution, compact shared-result card rendering, Teams-tab/full-PSA deep links, inactive-tenant remediation, focused command definitions, and shared `open_record` result mapping.
 - (2026-03-07) Completed `T321` through `T352` with focused handler/package coverage for message-context action requests, tenant/user resolution, permission-scoped search behavior, compact result cards, deep-link buttons, inactive-tenant remediation, focused command definitions, and shared result mapping.
-- (2026-03-07) Next unchecked feature after this slice is `F164` (Message extension: search results support pagination or continuation for longer result sets).
+- (2026-03-07) Completed `F164` by teaching `server/src/lib/teams/messageExtension/teamsMessageExtensionHandler.ts` to honor Teams `queryOptions.skip/count` search windows and validate pagination input before returning a paged attachment list.
+- (2026-03-07) Completed `T327` and `T328` with handler coverage for paged ticket result windows plus recoverable invalid-pagination messaging.
+- (2026-03-07) Completed `F167` and `F170` by extending message-extension search cards to append tenant-allowed mutation titles from `listAvailableTeamsActions(...)`, so search results surface only currently supported quick actions for the current entity and tenant.
+- (2026-03-07) Completed `T333`, `T334`, `T339`, and `T340` with handler coverage for available-action summaries plus suppression of unavailable tenant-disabled actions.
+- (2026-03-07) Completed `F177` and `F178` by asserting message-extension search continues to invoke the shared Teams action layer with `surface: 'message_extension'` while reusing existing PSA ticket, contact, task, and approval access paths instead of introducing a Teams-only index.
+- (2026-03-07) Completed `T353`, `T354`, `T355`, and `T356` with handler coverage for shared invoking-surface metadata plus explicit assertions against `TicketService.search`, `ContactService.search`, tenant task queries, and `listPendingApprovalsForTeams(...)`.
+- (2026-03-07) Next unchecked feature after this slice is `F179` (Message action `create ticket from message`: supports creating a new PSA ticket from a Teams message).
