@@ -12,6 +12,7 @@ import TemplateLibrary from './TemplateLibrary';
 import Workflows from './Workflows';
 import EventsCatalogV2 from './EventsCatalogV2';
 import LogsHistory from './LogsHistory';
+import Schedules from './Schedules';
 
 export default function AutomationHub() {
   const router = useRouter();
@@ -25,6 +26,9 @@ export default function AutomationHub() {
   
   // Get workflow ID if present
   const workflowId = searchParams?.get('workflowId');
+
+  // Get schedule workflow filter if present
+  const scheduleWorkflowId = searchParams?.get('scheduleWorkflowId');
   
   const handleTabChange = (value: string) => {
     // Preserve other query parameters like executionId and workflowId
@@ -36,9 +40,17 @@ export default function AutomationHub() {
       params.delete('executionId');
     }
     
-    // If switching away from workflows tab, remove workflowId
+    // Preserve workflow editor routing only for the workflows tab.
     if (value !== 'workflows') {
       params.delete('workflowId');
+    }
+
+    // Schedule filter only applies to the schedules tab.
+    if (value !== 'schedules') {
+      params.delete('scheduleWorkflowId');
+      params.delete('scheduleSearch');
+      params.delete('scheduleStatus');
+      params.delete('scheduleTrigger');
     }
     
     router.push(`/msp/automation-hub?${params.toString()}`);
@@ -55,6 +67,10 @@ export default function AutomationHub() {
       content: <Workflows workflowId={workflowId} />
     },
     {
+      label: 'Schedules',
+      content: <Schedules key={scheduleWorkflowId ?? 'all-schedules'} />
+    },
+    {
       label: 'Events Catalog',
       content: <EventsCatalogV2 />
     },
@@ -68,6 +84,7 @@ export default function AutomationHub() {
   const tabValues: Record<string, string> = {
     'Template Library': 'template-library',
     'Workflows': 'workflows',
+    'Schedules': 'schedules',
     'Events Catalog': 'events-catalog',
     'Logs & History': 'logs-history',
   };
@@ -76,6 +93,7 @@ export default function AutomationHub() {
   const valueToLabel: Record<string, string> = {
     'template-library': 'Template Library',
     'workflows': 'Workflows',
+    'schedules': 'Schedules',
     'events-catalog': 'Events Catalog',
     'logs-history': 'Logs & History',
   };
@@ -95,7 +113,7 @@ export default function AutomationHub() {
         if (href) {
           // Extract the section from the URL
           const section = href.split('/').pop();
-          if (section && ['template-library', 'workflows', 'events-catalog', 'logs-history'].includes(section)) {
+          if (section && ['template-library', 'workflows', 'schedules', 'events-catalog', 'logs-history'].includes(section)) {
             link.setAttribute('href', `/msp/automation-hub?tab=${section}`);
           }
         }

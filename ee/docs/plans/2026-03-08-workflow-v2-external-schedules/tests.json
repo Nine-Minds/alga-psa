@@ -170,31 +170,31 @@
   {
     "id": "T029",
     "description": "UI: Automation Hub shows a Schedules tab and route state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {
     "id": "T030",
     "description": "UI: schedules list shows schedule name, workflow, trigger type, timing, status, and error columns",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
     "id": "T031",
     "description": "UI: schedules list filters by workflow",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   },
   {
     "id": "T032",
     "description": "UI: schedules list filters by trigger type",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   },
   {
     "id": "T033",
     "description": "UI: schedules list filters by status",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   },
   {

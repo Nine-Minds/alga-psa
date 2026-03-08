@@ -122,43 +122,43 @@
   {
     "id": "F021",
     "description": "Add a new Automation Hub Schedules tab and menu entry under the Automation Hub parent menu",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
     "id": "F022",
     "description": "Build a global schedules list with workflow, trigger type, status, next fire or run-at, last fire, and error visibility",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
     "id": "F023",
     "description": "Add filtering and search on the schedules list for workflow, status, trigger type, and text query",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
     "id": "F024",
     "description": "Add row-level actions for edit, pause/resume, and delete on the schedules list",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Requirements"]
   },
   {
     "id": "F025",
     "description": "Build a schedule create/edit dialog with workflow picker, schedule name, trigger type, and timing inputs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
     "id": "F026",
     "description": "Support one-time schedule entry using a runAt picker in the schedule dialog",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
     "id": "F027",
     "description": "Support recurring schedule entry using 5-field cron plus timezone in the schedule dialog",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Requirements"]
   },
   {
@@ -176,7 +176,7 @@
   {
     "id": "F030",
     "description": "Show inline payload validation errors in the schedule dialog and block save when invalid",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "UX / UI Notes"]
   },
   {

@@ -21,6 +21,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-08) External schedule server actions should register only payload schemas, not the full workflow runtime, so schedule validation does not drag in unrelated action/node dependencies during request handling or test startup.
 - (2026-03-08) The publish path must only invoke legacy inline schedule sync when either the old or new workflow definition uses an inline time trigger; otherwise it will accidentally disable external schedules on non-time-trigger workflows.
 - (2026-03-08) Scheduled execution should pass `tenant_workflow_schedule.payload_json` straight through as workflow run input and move timing details into `trigger_metadata_json`; the old synthetic clock contract is now provenance-only data.
+- (2026-03-08) The schedules list does not need debounced search in v1; immediate server-backed filtering keeps the URL state simple and avoids timer complexity in the new client surface.
 
 ## Discoveries / Constraints
 
@@ -34,6 +35,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-08) Importing `@shared/workflow/runtime` from the new schedule actions eagerly loads workflow runtime initialization exports, which in turn pull unrelated email/storage dependencies into Vitest resolution. Direct imports from the schema registry and schema modules avoid that coupling. Key files: `packages/workflows/src/actions/workflow-schedule-v2-actions.ts`, `shared/workflow/runtime/index.ts`.
 - (2026-03-08) The new backend checkpoint covers persistence, migration, CRUD actions, validation guards, permission checks, and tenant-scoped list/get flows, but not publish-time rebinding/revalidation or runner launch payload changes yet. Keep `F005` and `F016`-`F020` false until that lifecycle work lands.
 - (2026-03-08) The EE server DB-backed harness started hitting `KnexTimeoutError` during database recreation after multiple suite runs against the shared local Postgres container. For the publish lifecycle slice, unit coverage around the publish action and schedule lifecycle was faster and more reliable than retrying the saturated DB harness.
+- (2026-03-08) The new schedules UI test harness is stable for exact per-test Vitest runs, but broad shuffled runs of the whole file still hang around the text-search case. Keep `T034` false until that harness issue is resolved or the search assertions are reworked.
 
 ## Implementation Log
 
@@ -46,6 +48,8 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-08) Completed `T021`-`T024` with unit coverage on `publishWorkflowDefinitionAction`, using in-memory persistence mocks to verify valid-only rebinding, mixed validity handling, and per-schedule revalidation across all attached schedules. Key file: `server/src/test/unit/workflowExternalSchedulesPublishLifecycle.unit.test.ts`.
 - (2026-03-08) Completed `F019`-`F020` by updating the scheduled run handlers to send saved schedule payload JSON into `launchPublishedWorkflowRun` while preserving schedule/timing provenance in trigger metadata. Key file: `server/src/lib/jobs/handlers/workflowScheduledRunHandlers.ts`.
 - (2026-03-08) Completed `T025`-`T028` with unit coverage proving one-time and recurring schedules now launch with saved payload input, provenance metadata is retained, and invalid payloads at fire time are recorded as schedule errors without pretending the launch succeeded. Key file: `server/src/test/unit/workflowScheduledRunHandlers.unit.test.ts`.
+- (2026-03-08) Completed `F021`-`F027` and `F030` by adding a `Schedules` tab to Automation Hub, wiring a server-backed schedules list with workflow/trigger/status filters, row-level edit/pause/resume/delete actions, and a create/edit dialog with workflow selection, one-time `runAt`, recurring `cron + timezone`, and inline payload validation. Key files: `packages/workflows/src/components/automation-hub/AutomationHub.tsx`, `packages/workflows/src/components/automation-hub/Schedules.tsx`, `packages/workflows/src/components/automation-hub/WorkflowScheduleDialog.tsx`, `packages/workflows/src/actions/index.ts`.
+- (2026-03-08) Completed `T029`-`T033` with client-side Vitest coverage for the new Automation Hub schedules tab, list columns, and workflow/trigger/status filters. Key files: `packages/workflows/src/components/automation-hub/AutomationHub.schedules.test.tsx`, `packages/workflows/src/components/automation-hub/Schedules.test.tsx`.
 
 ## Commands / Runbooks
 
@@ -69,6 +73,11 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
   - `cd server && npx vitest run src/test/unit/workflowExternalSchedulesPublishLifecycle.unit.test.ts`
 - (2026-03-08) Verify scheduled-run payload handoff and provenance behavior:
   - `cd server && npx vitest run src/test/unit/workflowScheduledRunHandlers.unit.test.ts`
+- (2026-03-08) Verify the new schedules tab route state:
+  - `cd server && npx vitest run ../packages/workflows/src/components/automation-hub/AutomationHub.schedules.test.tsx --coverage=false`
+- (2026-03-08) Verify exact schedules list UI cases without the broad shuffled suite:
+  - `cd server && npx vitest run ../packages/workflows/src/components/automation-hub/Schedules.test.tsx -t "shows schedule name, workflow, trigger type, timing, status, and error columns" --coverage=false`
+  - `cd server && npx vitest run ../packages/workflows/src/components/automation-hub/Schedules.test.tsx -t "filters the schedules list by status" --coverage=false`
 
 ## Links / References
 
@@ -86,6 +95,10 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - Publish lifecycle unit test: `server/src/test/unit/workflowExternalSchedulesPublishLifecycle.unit.test.ts`
 - Scheduled run handler unit test: `server/src/test/unit/workflowScheduledRunHandlers.unit.test.ts`
 - Automation Hub tabs: `packages/workflows/src/components/automation-hub/AutomationHub.tsx`
+- Schedules list UI: `packages/workflows/src/components/automation-hub/Schedules.tsx`
+- Schedule dialog UI: `packages/workflows/src/components/automation-hub/WorkflowScheduleDialog.tsx`
+- Automation Hub schedules tab test: `packages/workflows/src/components/automation-hub/AutomationHub.schedules.test.tsx`
+- Schedules UI test: `packages/workflows/src/components/automation-hub/Schedules.test.tsx`
 
 ## Open Questions
 
