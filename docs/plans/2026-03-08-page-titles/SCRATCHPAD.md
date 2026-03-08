@@ -106,3 +106,4 @@
 - (2026-03-08) F056: MSP page title: /msp/settings/extensions/install — title: 'Install Extension'
 - (2026-03-08) F057: MSP page title: /msp/settings/extensions/[id] — title: 'Extension Settings' (generateMetadata)
 - (2026-03-08) F058: MSP page title: /msp/settings/extensions/[id]/settings — title: 'Extension Configuration' (generateMetadata)
+- (2026-03-08) F059: MSP page title: /msp/settings/integrations/qbo/callback — title: 'QuickBooks Integration'
