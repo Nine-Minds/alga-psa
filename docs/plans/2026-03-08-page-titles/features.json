@@ -122,7 +122,7 @@
   {
     "id": "F016",
     "description": "MSP page title: /msp/contacts/[id]/activity — title: 'Contact Activity' (generateMetadata)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3c"
     ]

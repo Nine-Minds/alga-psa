@@ -63,3 +63,4 @@
 - (2026-03-08) F013: MSP page title: /msp/clients/[id] — title: 'Client Details' (generateMetadata)
 - (2026-03-08) F014: MSP page title: /msp/contacts — title: 'Contacts'
 - (2026-03-08) F015: MSP page title: /msp/contacts/[id] — title: 'Contact Details' (generateMetadata)
+- (2026-03-08) F016: MSP page title: /msp/contacts/[id]/activity — title: 'Contact Activity' (generateMetadata)
