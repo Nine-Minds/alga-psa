@@ -50,31 +50,31 @@
   {
     "id": "F009",
     "description": "Add a trigger-type selector to Workflow Designer with No trigger, Event, One-time schedule, and Recurring schedule options",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
     "id": "F010",
     "description": "Add Workflow Designer configuration UI for one-time schedule triggers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
     "id": "F011",
     "description": "Add Workflow Designer configuration UI for recurring schedule triggers with timezone selection and 5-field cron guidance",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
     "id": "F012",
     "description": "Hide event catalog and trigger-mapping controls when a workflow uses a time trigger",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
     "id": "F013",
     "description": "Show the fixed time-trigger payload contract in Workflow Designer when a time trigger is selected",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Data / API / Integrations"]
   },
   {

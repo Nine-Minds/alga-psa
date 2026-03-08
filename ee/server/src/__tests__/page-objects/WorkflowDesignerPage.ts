@@ -17,7 +17,11 @@ export class WorkflowDesignerPage {
   readonly payloadSchemaSelectButton: Locator;
   readonly payloadSchemaAdvancedToggle: Locator;
   readonly payloadSchemaInput: Locator;
+  readonly triggerTypeInput: Locator;
   readonly triggerInput: Locator;
+  readonly oneTimeRunAtInput: Locator;
+  readonly recurringCronInput: Locator;
+  readonly recurringTimezoneInput: Locator;
   readonly paletteSearchInput: Locator;
 
   // Contract section locators
@@ -48,8 +52,12 @@ export class WorkflowDesignerPage {
     this.payloadSchemaSelectButton = page.locator('#workflow-designer-schema-ref-select[role="combobox"]');
     this.payloadSchemaAdvancedToggle = page.locator('#workflow-designer-schema-advanced');
     this.payloadSchemaInput = page.locator('#workflow-designer-schema');
+    this.triggerTypeInput = page.locator('#workflow-designer-trigger-type[role="combobox"]');
     // Trigger is now a SearchableSelect (combobox), use the button with role="combobox"
     this.triggerInput = page.locator('#workflow-designer-trigger-event[role="combobox"]');
+    this.oneTimeRunAtInput = page.locator('#workflow-designer-trigger-run-at');
+    this.recurringCronInput = page.locator('#workflow-designer-trigger-cron');
+    this.recurringTimezoneInput = page.locator('#workflow-designer-trigger-timezone[role="combobox"]');
     this.paletteSearchInput = page.locator('#workflow-designer-search');
 
     // Contract section locators
@@ -225,6 +233,12 @@ export class WorkflowDesignerPage {
   }
 
   // Trigger event helpers
+  async selectTriggerType(triggerType: 'No trigger' | 'Event' | 'One-time schedule' | 'Recurring schedule'): Promise<void> {
+    await expect(this.triggerTypeInput).toBeVisible({ timeout: 60_000 });
+    await this.triggerTypeInput.click();
+    await this.page.getByRole('option', { name: triggerType, exact: true }).click();
+  }
+
   async selectTriggerEvent(eventName: string): Promise<void> {
     await expect(this.triggerInput).toBeVisible({ timeout: 60_000 });
     await this.triggerInput.click();
@@ -236,9 +250,27 @@ export class WorkflowDesignerPage {
   }
 
   async clearTriggerEvent(): Promise<void> {
-    // Select "Manual (no trigger)" option
-    await this.triggerInput.click();
-    await this.page.getByRole('option', { name: /Manual.*no trigger/i }).click();
+    await this.selectTriggerType('No trigger');
+  }
+
+  async setOneTimeRunAt(localDateTimeValue: string): Promise<void> {
+    await expect(this.oneTimeRunAtInput).toBeVisible({ timeout: 30_000 });
+    await this.oneTimeRunAtInput.fill(localDateTimeValue);
+  }
+
+  async setRecurringCron(cron: string): Promise<void> {
+    await expect(this.recurringCronInput).toBeVisible({ timeout: 30_000 });
+    await this.recurringCronInput.fill(cron);
+  }
+
+  async selectRecurringTimezone(timezone: string): Promise<void> {
+    await expect(this.recurringTimezoneInput).toBeVisible({ timeout: 30_000 });
+    await this.recurringTimezoneInput.click();
+    const searchInput = this.page.locator('#workflow-designer-trigger-timezone-search');
+    if (await searchInput.isVisible()) {
+      await searchInput.fill(timezone);
+    }
+    await this.page.getByRole('option', { name: timezone, exact: true }).click();
   }
 
   // Contract mode helpers

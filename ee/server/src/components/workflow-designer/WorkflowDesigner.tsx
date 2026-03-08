@@ -70,6 +70,7 @@ import {
 
 import type {
   WorkflowDefinition,
+  WorkflowTrigger,
   Step,
   NodeStep,
   IfBlock,
@@ -82,6 +83,7 @@ import type {
   InputMapping,
   MappingValue
 } from '@shared/workflow/runtime';
+import { WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF } from '@shared/workflow/runtime';
 import { validateExpressionSource } from '@shared/workflow/runtime/expressionEngine';
 import { partitionStepExpressionValidations, validateStepExpressions } from './expressionValidation';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -173,6 +175,37 @@ type WorkflowPlaywrightOverrides = {
   registryNodes?: NodeRegistryItem[];
   registryActions?: ActionRegistryItem[];
 };
+
+type TriggerTypeSelection = 'manual' | 'event' | 'schedule' | 'recurring';
+
+type StoredContractSelection = {
+  mode: 'inferred' | 'pinned';
+  payloadSchemaRef: string;
+  pinnedPayloadSchemaRef: string;
+};
+
+const COMMON_TIMEZONES = [
+  'UTC',
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'Europe/London',
+  'Europe/Paris',
+  'Asia/Tokyo',
+  'Australia/Sydney'
+];
+
+const CLOCK_TRIGGER_CONTRACT_FIELDS = [
+  'triggerType',
+  'scheduleId',
+  'scheduledFor',
+  'firedAt',
+  'timezone',
+  'workflowId',
+  'workflowVersion',
+  'cron'
+] as const;
 
 const getWorkflowPlaywrightOverrides = (): WorkflowPlaywrightOverrides | null => {
   if (typeof window === 'undefined') return null;
@@ -267,6 +300,49 @@ const LEGACY_WORKFLOW_NODE_IDS = new Set<string>([
 ]);
 
 const DEFAULT_PAYLOAD_SCHEMA = 'payload.EmailWorkflowPayload.v1';
+
+const getDefaultTriggerTimezone = (): string => {
+  if (typeof Intl !== 'undefined' && typeof Intl.DateTimeFormat === 'function') {
+    const resolved = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (resolved) return resolved;
+  }
+  return 'UTC';
+};
+
+const listWorkflowTriggerTimezones = (): string[] => {
+  const supported = typeof Intl !== 'undefined' && typeof Intl.supportedValuesOf === 'function'
+    ? Intl.supportedValuesOf('timeZone')
+    : [];
+  return Array.from(new Set([...COMMON_TIMEZONES, ...supported]));
+};
+
+const formatDateTimeLocalInput = (isoValue?: string | null): string => {
+  if (!isoValue) return '';
+  const parsed = new Date(isoValue);
+  if (Number.isNaN(parsed.getTime())) return '';
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, '0');
+  const day = String(parsed.getDate()).padStart(2, '0');
+  const hours = String(parsed.getHours()).padStart(2, '0');
+  const minutes = String(parsed.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const parseDateTimeLocalInput = (value: string): string => {
+  if (!value.trim()) return '';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '';
+  return parsed.toISOString();
+};
+
+const getDefaultScheduleRunAt = (): string => {
+  const next = new Date();
+  next.setHours(next.getHours() + 1, 0, 0, 0);
+  return next.toISOString();
+};
+
+const isTimeTrigger = (trigger?: WorkflowTrigger | null): boolean =>
+  trigger?.type === 'schedule' || trigger?.type === 'recurring';
 
 type WorkflowDesignerMode = 'control-panel' | 'editor-list' | 'editor-designer';
 
@@ -1494,8 +1570,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   } | null>(null);
   const [payloadSchemaModeDraft, setPayloadSchemaModeDraft] = useState<'inferred' | 'pinned'>('pinned');
   const [pinnedPayloadSchemaRefDraft, setPinnedPayloadSchemaRefDraft] = useState<string>('');
+  const [triggerTypeSelection, setTriggerTypeSelection] = useState<TriggerTypeSelection>('manual');
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
   const [stepsViewMode, setStepsViewMode] = useState<'list' | 'graph'>('list');
+  const lastNonTimeTriggerContractRef = useRef<StoredContractSelection>({
+    mode: 'inferred',
+    payloadSchemaRef: DEFAULT_PAYLOAD_SCHEMA,
+    pinnedPayloadSchemaRef: DEFAULT_PAYLOAD_SCHEMA
+  });
   const designerFloatAnchorRef = useRef<HTMLDivElement | null>(null);
   const designerFloatAnchorRectRef = useRef<{
     top: number;
@@ -1939,6 +2021,16 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const payloadSchemaPolicy = useMemo(() => {
     const ref = effectivePayloadSchemaRef ?? '';
     if (!ref) return { ok: true, level: 'none' as const, message: '' };
+    if (isTimeTrigger(activeDefinition?.trigger)) {
+      if (payloadSchemaModeDraft !== 'pinned' || ref !== WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF) {
+        return {
+          ok: false,
+          level: 'error' as const,
+          message: 'Time-triggered workflows use the fixed clock payload contract and cannot infer or override a different schema.'
+        };
+      }
+      return { ok: true, level: 'none' as const, message: '' };
+    }
     // Manual workflows in inferred mode require pinning (explicit contract selection).
     if (payloadSchemaModeDraft === 'inferred' && !(activeDefinition?.trigger?.type === 'event')) {
       return {
@@ -2005,6 +2097,112 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     () => canManage && (!activeWorkflowRecord?.is_system || canAdmin),
     [canManage, canAdmin, activeWorkflowRecord]
   );
+
+  const timezoneOptions = useMemo(
+    () => listWorkflowTriggerTimezones().map((timezone) => ({ value: timezone, label: timezone })),
+    []
+  );
+
+  const currentTriggerSelection = useMemo<TriggerTypeSelection>(() => {
+    const actualTriggerType = activeDefinition?.trigger?.type;
+    if (actualTriggerType === 'event' || actualTriggerType === 'schedule' || actualTriggerType === 'recurring') {
+      return actualTriggerType;
+    }
+    return triggerTypeSelection;
+  }, [activeDefinition?.trigger?.type, triggerTypeSelection]);
+
+  const rememberCurrentContractSelection = useCallback(() => {
+    if (!activeDefinition || isTimeTrigger(activeDefinition.trigger)) return;
+    lastNonTimeTriggerContractRef.current = {
+      mode: payloadSchemaModeDraft,
+      payloadSchemaRef: activeDefinition.payloadSchemaRef ?? '',
+      pinnedPayloadSchemaRef: pinnedPayloadSchemaRefDraft || (activeDefinition.payloadSchemaRef ?? '')
+    };
+  }, [activeDefinition, payloadSchemaModeDraft, pinnedPayloadSchemaRefDraft]);
+
+  const restorePreviousNonTimeContract = useCallback(() => {
+    const previous = lastNonTimeTriggerContractRef.current;
+    setPayloadSchemaModeDraft(previous.mode);
+    setSchemaInferenceEnabled(previous.mode === 'inferred');
+    setPinnedPayloadSchemaRefDraft(previous.pinnedPayloadSchemaRef);
+    setSchemaRefAdvanced(previous.mode === 'pinned' && Boolean(previous.pinnedPayloadSchemaRef));
+    if (previous.mode === 'inferred') {
+      lastAppliedInferredRef.current = null;
+    }
+    setActiveDefinition((current) => {
+      if (!current || current.payloadSchemaRef === previous.payloadSchemaRef) return current;
+      return { ...current, payloadSchemaRef: previous.payloadSchemaRef };
+    });
+  }, []);
+
+  const enforceTimeTriggerContract = useCallback(() => {
+    setPayloadSchemaModeDraft('pinned');
+    setSchemaInferenceEnabled(false);
+    setSchemaRefAdvanced(false);
+    setPinnedPayloadSchemaRefDraft(WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF);
+    setActiveDefinition((current) => {
+      if (!current || current.payloadSchemaRef === WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF) return current;
+      return { ...current, payloadSchemaRef: WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF };
+    });
+  }, []);
+
+  const handleTriggerTypeSelectionChange = useCallback((nextType: TriggerTypeSelection) => {
+    setTriggerTypeSelection(nextType);
+
+    if (nextType === 'manual') {
+      if (isTimeTrigger(activeDefinition?.trigger)) {
+        restorePreviousNonTimeContract();
+      }
+      setActiveDefinition((current) => (current ? { ...current, trigger: undefined } : current));
+      return;
+    }
+
+    if (nextType === 'event') {
+      if (isTimeTrigger(activeDefinition?.trigger)) {
+        restorePreviousNonTimeContract();
+      }
+      if (activeDefinition?.trigger?.type !== 'event') {
+        setActiveDefinition((current) => (current ? { ...current, trigger: undefined } : current));
+      }
+      return;
+    }
+
+    if (!activeDefinition) return;
+
+    if (!isTimeTrigger(activeDefinition.trigger)) {
+      rememberCurrentContractSelection();
+    }
+    enforceTimeTriggerContract();
+
+    if (nextType === 'schedule') {
+      setActiveDefinition((current) => {
+        if (!current) return current;
+        const existingRunAt = current.trigger?.type === 'schedule' ? current.trigger.runAt : '';
+        return {
+          ...current,
+          payloadSchemaRef: WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF,
+          trigger: {
+            type: 'schedule',
+            runAt: existingRunAt || getDefaultScheduleRunAt()
+          }
+        };
+      });
+      return;
+    }
+
+    setActiveDefinition((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        payloadSchemaRef: WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF,
+        trigger: {
+          type: 'recurring',
+          cron: current.trigger?.type === 'recurring' ? current.trigger.cron : '0 9 * * *',
+          timezone: current.trigger?.type === 'recurring' ? current.trigger.timezone : getDefaultTriggerTimezone()
+        }
+      };
+    });
+  }, [activeDefinition, enforceTimeTriggerContract, rememberCurrentContractSelection, restorePreviousNonTimeContract]);
 
 	  const loadDefinitions = useCallback(async () => {
 	    setIsLoading(true);
@@ -2437,6 +2635,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     // we don't show stale data if there's any delay
     setActiveDefinition(record.draft_definition);
     setActiveWorkflowId(record.workflow_id);
+    setTriggerTypeSelection(record.draft_definition.trigger?.type ?? 'manual');
+    if (!isTimeTrigger(record.draft_definition.trigger)) {
+      lastNonTimeTriggerContractRef.current = {
+        mode: (record.payload_schema_mode === 'inferred' ? 'inferred' : 'pinned'),
+        payloadSchemaRef: record.draft_definition.payloadSchemaRef ?? '',
+        pinnedPayloadSchemaRef: record.pinned_payload_schema_ref ?? record.draft_definition.payloadSchemaRef ?? ''
+      };
+    }
     
     // Always reset these when selecting a workflow
     setPublishErrors([]);
@@ -2481,10 +2687,16 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     setActiveDefinition(draft);
     setActiveWorkflowId(null);
     setPayloadSchemaModeDraft('inferred');
+    setTriggerTypeSelection('manual');
     setSchemaInferenceEnabled(true);
     setContractSettingsExpanded(false);
     setSchemaRefAdvanced(false);
     setPinnedPayloadSchemaRefDraft(draft.payloadSchemaRef ?? '');
+    lastNonTimeTriggerContractRef.current = {
+      mode: 'inferred',
+      payloadSchemaRef: draft.payloadSchemaRef ?? '',
+      pinnedPayloadSchemaRef: draft.payloadSchemaRef ?? ''
+    };
     setSelectedStepId(null);
     setSelectedPipePath('root');
     setPublishErrors([]);
@@ -2506,8 +2718,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   }, [handleCreateDefinition, mode, requestedNewWorkflow]);
 
   const handleDefinitionChange = (changes: Partial<WorkflowDefinition>) => {
-    if (!activeDefinition) return;
-    setActiveDefinition({ ...activeDefinition, ...changes });
+    setActiveDefinition((current) => (current ? { ...current, ...changes } : current));
   };
 
   const persistMetadataDraft = useCallback(async (
@@ -3459,7 +3670,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                     rows={2}
                   />
                   {(() => {
-                    const selectedEventName = activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger.eventName : '';
+                    const trigger = activeDefinition?.trigger;
+                    const selectedEventName = trigger?.type === 'event' ? trigger.eventName : '';
                     const selectedOption = selectedEventName
                       ? eventCatalogOptions.find((e) => e.event_type === selectedEventName) ?? null
                       : null;
@@ -3474,139 +3686,308 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                       return 'Schema';
                     };
                     const showTriggerSchemaDetails = contractSettingsExpanded;
-
-                    const options: Array<{ value: string; label: string }> = [
-                      { value: '', label: 'Manual (no trigger)' },
-                      ...eventCatalogOptions.map((e) => ({
-                        value: e.event_type,
-                        label: e.category ? `${e.name} · ${e.category} (${e.event_type})` : `${e.name} (${e.event_type})`
-                      }))
+                    const triggerTypeOptions: Array<{ value: TriggerTypeSelection; label: string }> = [
+                      { value: 'manual', label: 'No trigger' },
+                      { value: 'event', label: 'Event' },
+                      { value: 'schedule', label: 'One-time schedule' },
+                      { value: 'recurring', label: 'Recurring schedule' }
                     ];
+                    const eventOptions: Array<{ value: string; label: string }> = eventCatalogOptions.map((e) => ({
+                      value: e.event_type,
+                      label: e.category ? `${e.name} · ${e.category} (${e.event_type})` : `${e.name} (${e.event_type})`
+                    }));
 
                     if (selectedEventName && !selectedOption) {
-                      options.unshift({ value: selectedEventName, label: `Unknown event (${selectedEventName})` });
+                      eventOptions.unshift({ value: selectedEventName, label: `Unknown event (${selectedEventName})` });
                     }
 
-	                    return (
-	                      <div className="space-y-2">
-	                        <label htmlFor="workflow-designer-trigger-event" className="block text-sm font-medium text-gray-700 mb-1">Event Trigger</label>
-	                        {eventCatalogStatus === 'loading' ? (
-	                          <Skeleton className="h-10 w-full" />
-	                        ) : (
-	                          <SearchableSelect
-	                            id="workflow-designer-trigger-event"
-	                            value={selectedEventName}
-	                            onChange={(value) => {
-	                              const next = value.trim();
-	                              if (!next) {
-	                                handleDefinitionChange({ trigger: undefined });
-	                                return;
-	                              }
-	                              const chosen = eventCatalogOptions.find((e) => e.event_type === next) ?? null;
-	                              if (chosen?.source === 'system' && (chosen.payload_schema_ref_status !== 'known' || !chosen.payload_schema_ref)) {
-	                                toast.error('This system event is missing a valid schema and cannot be selected until fixed.');
-	                                return;
-	                              }
-	                              const existing = activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger : undefined;
-	                              handleDefinitionChange({ trigger: { ...(existing as any), type: 'event', eventName: next } });
-	                            }}
-	                            placeholder="Select trigger event"
-	                            dropdownMode="overlay"
-	                            options={options}
-	                            disabled={!canManage}
-	                          />
-	                        )}
-	                        {eventCatalogStatus === 'loading' && (
-	                          <div className="rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2">
-	                            <div className="flex flex-wrap items-center gap-2">
-	                              <Skeleton className="h-5 w-16 rounded-full" />
-	                              <Skeleton className="h-5 w-16 rounded-full" />
-	                              <Skeleton className="h-5 w-20 rounded-full" />
-	                            </div>
-	                            <Skeleton className="h-3 w-2/3" />
-	                          </div>
-	                        )}
-	                        {selectedOption && (
-	                          <div className="rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-1">
-	                            <div className="flex flex-wrap items-center gap-2">
-	                              <Badge className={selectedOption.source === 'system' ? 'bg-purple-500/15 text-purple-600 border-purple-500/30' : 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'}>
-                                {selectedOption.source === 'system' ? 'System' : 'Tenant'}
-                              </Badge>
-                              <Badge className={
-                                selectedOption.status === 'active' ? 'bg-success/15 text-success border-success/30'
-                                  : selectedOption.status === 'beta' ? 'bg-warning/15 text-warning-foreground border-warning/30'
-                                    : selectedOption.status === 'draft' ? 'bg-muted text-muted-foreground border-border'
-                                      : 'bg-destructive/15 text-destructive border-destructive/30'
-                              }>
-                                {selectedOption.status.charAt(0).toUpperCase() + selectedOption.status.slice(1)}
-                              </Badge>
-                              {(showTriggerSchemaDetails || selectedOption.payload_schema_ref_status !== 'known') && (
-                                <Badge className={schemaBadgeClass(selectedOption.payload_schema_ref_status)}>
-                                  {schemaBadgeLabel(selectedOption.payload_schema_ref_status)}
-                                </Badge>
-                              )}
-                              {selectedOption.category && (
-                                <Badge className="bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-[rgb(var(--color-border-200))]">{selectedOption.category}</Badge>
-                              )}
+                    const showEventConfiguration = currentTriggerSelection === 'event';
+                    const showScheduleConfiguration = currentTriggerSelection === 'schedule';
+                    const showRecurringConfiguration = currentTriggerSelection === 'recurring';
+                    const scheduleTrigger = trigger?.type === 'schedule' ? trigger : null;
+                    const recurringTrigger = trigger?.type === 'recurring' ? trigger : null;
+
+                    return (
+                      <div className="space-y-3">
+                        <div className="grid gap-4 lg:grid-cols-[220px,1fr]">
+                          <div>
+                            <label htmlFor="workflow-designer-trigger-type" className="block text-sm font-medium text-gray-700 mb-1">
+                              Trigger type
+                            </label>
+                            <SearchableSelect
+                              id="workflow-designer-trigger-type"
+                              value={currentTriggerSelection}
+                              onChange={(value) => handleTriggerTypeSelectionChange((value || 'manual') as TriggerTypeSelection)}
+                              placeholder="Select trigger type"
+                              dropdownMode="overlay"
+                              options={triggerTypeOptions}
+                              disabled={!canManage}
+                            />
+                            <div className="mt-1 text-xs text-gray-500">
+                              Choose how this workflow starts. Time triggers use a fixed clock payload contract.
                             </div>
-                            {selectedOption.description && (
-                              <div className="text-xs text-gray-600">{selectedOption.description}</div>
+                          </div>
+
+                          <div className="space-y-3">
+                            {currentTriggerSelection === 'manual' && (
+                              <div className="rounded border border-dashed border-gray-300 bg-gray-50 px-3 py-3 text-xs text-gray-600">
+                                This workflow has no trigger. It can still be drafted, but it needs a locked payload schema before publish or run.
+                              </div>
                             )}
-                            {showTriggerSchemaDetails && (
-                              <div className="flex flex-wrap items-center justify-between gap-3">
-                                <div className="text-[11px] text-gray-600">
-                                  <span className="text-gray-500">Catalog schema:</span>{' '}
-                                  <span className="font-mono break-all">{selectedOption.payload_schema_ref ?? '—'}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    id="workflow-designer-trigger-event-view-catalog-schema"
-                                    variant="ghost"
-                                    size="sm"
-                                    type="button"
-                                    className="h-auto px-2 py-1 text-xs text-gray-600 hover:text-gray-800"
-                                    onClick={() => {
-                                      if (!selectedOption.payload_schema_ref) return;
-                                      openSchemaModalForRef({ schemaRef: selectedOption.payload_schema_ref, title: 'Trigger event schema' });
+
+                            {showEventConfiguration && (
+                              <div className="space-y-2">
+                                <label htmlFor="workflow-designer-trigger-event" className="block text-sm font-medium text-gray-700 mb-1">
+                                  Event trigger
+                                </label>
+                                {eventCatalogStatus === 'loading' ? (
+                                  <Skeleton className="h-10 w-full" />
+                                ) : (
+                                  <SearchableSelect
+                                    id="workflow-designer-trigger-event"
+                                    value={selectedEventName}
+                                    onChange={(value) => {
+                                      const next = value.trim();
+                                      if (!next) {
+                                        setTriggerTypeSelection('manual');
+                                        handleDefinitionChange({ trigger: undefined });
+                                        return;
+                                      }
+                                      const chosen = eventCatalogOptions.find((e) => e.event_type === next) ?? null;
+                                      if (chosen?.source === 'system' && (chosen.payload_schema_ref_status !== 'known' || !chosen.payload_schema_ref)) {
+                                        toast.error('This system event is missing a valid schema and cannot be selected until fixed.');
+                                        return;
+                                      }
+                                      setTriggerTypeSelection('event');
+                                      const existing = activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger : undefined;
+                                      handleDefinitionChange({ trigger: { ...(existing as any), type: 'event', eventName: next } });
                                     }}
-                                    disabled={!selectedOption.payload_schema_ref}
-                                  >
-                                    View schema
-                                  </Button>
-                                  {triggerSourceSchemaRef && selectedOption.payload_schema_ref && triggerSourceSchemaRef !== selectedOption.payload_schema_ref && (
-                                    <Button
-                                      id="workflow-designer-trigger-event-view-effective-schema"
-                                      variant="ghost"
-                                      size="sm"
-                                      type="button"
-                                      className="h-auto px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
-                                      onClick={() => {
-                                        openSchemaModalForRef({ schemaRef: triggerSourceSchemaRef, title: 'Effective trigger source schema' });
-                                      }}
-                                    >
-                                      View effective
-                                    </Button>
+                                    placeholder="Select trigger event"
+                                    dropdownMode="overlay"
+                                    options={eventOptions}
+                                    disabled={!canManage}
+                                  />
+                                )}
+
+                                {!selectedEventName && eventCatalogStatus !== 'loading' && (
+                                  <div className="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                                    Select an event to finish configuring this trigger.
+                                  </div>
+                                )}
+
+                                {eventCatalogStatus === 'loading' && (
+                                  <div className="rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-2">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <Skeleton className="h-5 w-16 rounded-full" />
+                                      <Skeleton className="h-5 w-16 rounded-full" />
+                                      <Skeleton className="h-5 w-20 rounded-full" />
+                                    </div>
+                                    <Skeleton className="h-3 w-2/3" />
+                                  </div>
+                                )}
+
+                                {selectedOption && (
+                                  <div className="rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2 space-y-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <Badge className={selectedOption.source === 'system' ? 'bg-purple-500/15 text-purple-600 border-purple-500/30' : 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30'}>
+                                        {selectedOption.source === 'system' ? 'System' : 'Tenant'}
+                                      </Badge>
+                                      <Badge className={
+                                        selectedOption.status === 'active' ? 'bg-success/15 text-success border-success/30'
+                                          : selectedOption.status === 'beta' ? 'bg-warning/15 text-warning-foreground border-warning/30'
+                                            : selectedOption.status === 'draft' ? 'bg-muted text-muted-foreground border-border'
+                                              : 'bg-destructive/15 text-destructive border-destructive/30'
+                                      }>
+                                        {selectedOption.status.charAt(0).toUpperCase() + selectedOption.status.slice(1)}
+                                      </Badge>
+                                      {(showTriggerSchemaDetails || selectedOption.payload_schema_ref_status !== 'known') && (
+                                        <Badge className={schemaBadgeClass(selectedOption.payload_schema_ref_status)}>
+                                          {schemaBadgeLabel(selectedOption.payload_schema_ref_status)}
+                                        </Badge>
+                                      )}
+                                      {selectedOption.category && (
+                                        <Badge className="bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-[rgb(var(--color-border-200))]">
+                                          {selectedOption.category}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    {selectedOption.description && (
+                                      <div className="text-xs text-gray-600">{selectedOption.description}</div>
+                                    )}
+                                    {showTriggerSchemaDetails && (
+                                      <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <div className="text-[11px] text-gray-600">
+                                          <span className="text-gray-500">Catalog schema:</span>{' '}
+                                          <span className="font-mono break-all">{selectedOption.payload_schema_ref ?? '—'}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <Button
+                                            id="workflow-designer-trigger-event-view-catalog-schema"
+                                            variant="ghost"
+                                            size="sm"
+                                            type="button"
+                                            className="h-auto px-2 py-1 text-xs text-gray-600 hover:text-gray-800"
+                                            onClick={() => {
+                                              if (!selectedOption.payload_schema_ref) return;
+                                              openSchemaModalForRef({ schemaRef: selectedOption.payload_schema_ref, title: 'Trigger event schema' });
+                                            }}
+                                            disabled={!selectedOption.payload_schema_ref}
+                                          >
+                                            View schema
+                                          </Button>
+                                          {triggerSourceSchemaRef && selectedOption.payload_schema_ref && triggerSourceSchemaRef !== selectedOption.payload_schema_ref && (
+                                            <Button
+                                              id="workflow-designer-trigger-event-view-effective-schema"
+                                              variant="ghost"
+                                              size="sm"
+                                              type="button"
+                                              className="h-auto px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
+                                              onClick={() => {
+                                                openSchemaModalForRef({ schemaRef: triggerSourceSchemaRef, title: 'Effective trigger source schema' });
+                                              }}
+                                            >
+                                              View effective
+                                            </Button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {eventCatalogStatus === 'loaded' && selectedOption.payload_schema_ref_status !== 'known' && (
+                                      <div className="mt-2 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                                        This event is missing a valid schema reference. Publishing and running are disabled until it is fixed.
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+
+                                {eventCatalogStatus === 'loaded' && !selectedOption && selectedEventName && (
+                                  <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                                    Trigger event <span className="font-mono">{selectedEventName}</span> is not present in the event catalog. Publishing and running are disabled until it is fixed.
+                                  </div>
+                                )}
+
+                                {eventCatalogStatus === 'error' && (
+                                  <div className="text-xs text-destructive">
+                                    Failed to load the event catalog. Publishing and running are disabled for event-triggered workflows until this loads.
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {showScheduleConfiguration && (
+                              <div
+                                id="workflow-designer-trigger-schedule-panel"
+                                className="rounded border border-gray-200 bg-gray-50 px-3 py-3 space-y-3"
+                              >
+                                <div>
+                                  <Label htmlFor="workflow-designer-trigger-run-at">Run at</Label>
+                                  <Input
+                                    id="workflow-designer-trigger-run-at"
+                                    type="datetime-local"
+                                    value={formatDateTimeLocalInput(scheduleTrigger?.runAt)}
+                                    onChange={(event) => {
+                                      const nextRunAt = parseDateTimeLocalInput(event.target.value) || getDefaultScheduleRunAt();
+                                      handleDefinitionChange({
+                                        trigger: {
+                                          type: 'schedule',
+                                          runAt: nextRunAt
+                                        }
+                                      });
+                                    }}
+                                    disabled={!canManage}
+                                  />
+                                  <div className="mt-1 text-xs text-gray-500">
+                                    Pick a future timestamp. The designer uses your local browser time while editing and stores UTC.
+                                  </div>
+                                  {scheduleTrigger?.runAt && (
+                                    <div className="mt-1 text-[11px] text-gray-500">
+                                      Stored as <span className="font-mono">{scheduleTrigger.runAt}</span>
+                                    </div>
                                   )}
                                 </div>
                               </div>
                             )}
-                            {eventCatalogStatus === 'loaded' && selectedOption.payload_schema_ref_status !== 'known' && (
-                              <div className="mt-2 rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                                This event is missing a valid schema reference. Publishing and running are disabled until it is fixed.
+
+                            {showRecurringConfiguration && (
+                              <div
+                                id="workflow-designer-trigger-recurring-panel"
+                                className="rounded border border-gray-200 bg-gray-50 px-3 py-3 space-y-3"
+                              >
+                                <div>
+                                  <Input
+                                    id="workflow-designer-trigger-cron"
+                                    label="Cron expression"
+                                    value={recurringTrigger?.cron ?? ''}
+                                    onChange={(event) => {
+                                      handleDefinitionChange({
+                                        trigger: {
+                                          type: 'recurring',
+                                          cron: event.target.value,
+                                          timezone: recurringTrigger?.timezone || getDefaultTriggerTimezone()
+                                        }
+                                      });
+                                    }}
+                                    disabled={!canManage}
+                                    placeholder="0 9 * * 1-5"
+                                  />
+                                  <div className="mt-1 text-xs text-gray-500">
+                                    Use 5 fields only: minute hour day month weekday. Seconds are not supported.
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <Label htmlFor="workflow-designer-trigger-timezone">Timezone</Label>
+                                  <SearchableSelect
+                                    id="workflow-designer-trigger-timezone"
+                                    value={recurringTrigger?.timezone ?? getDefaultTriggerTimezone()}
+                                    onChange={(value) => {
+                                      handleDefinitionChange({
+                                        trigger: {
+                                          type: 'recurring',
+                                          cron: recurringTrigger?.cron || '0 9 * * *',
+                                          timezone: value || getDefaultTriggerTimezone()
+                                        }
+                                      });
+                                    }}
+                                    placeholder="Select timezone"
+                                    dropdownMode="overlay"
+                                    options={timezoneOptions}
+                                    disabled={!canManage}
+                                  />
+                                  <div className="mt-1 text-xs text-gray-500">
+                                    Use an IANA timezone such as <span className="font-mono">America/New_York</span>.
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {(showScheduleConfiguration || showRecurringConfiguration) && (
+                              <div
+                                id="workflow-designer-trigger-clock-contract"
+                                className="rounded border border-sky-200 bg-sky-50 px-3 py-3 space-y-2"
+                              >
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <div className="text-xs font-semibold text-sky-900">Clock trigger payload contract</div>
+                                  <Badge className="bg-sky-500/15 text-sky-700 border-sky-500/30">Fixed schema</Badge>
+                                </div>
+                                <div className="text-xs text-sky-900/80">
+                                  Time-triggered workflows always use <span className="font-mono">{WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF}</span> in pinned mode.
+                                </div>
+                                <div className="flex flex-wrap gap-1">
+                                  {CLOCK_TRIGGER_CONTRACT_FIELDS.map((field) => (
+                                    <span
+                                      key={field}
+                                      className="rounded border border-sky-200 bg-white px-2 py-0.5 text-[11px] text-sky-900"
+                                    >
+                                      {field}
+                                      {field === 'cron' ? ' (recurring only)' : ''}
+                                    </span>
+                                  ))}
+                                </div>
                               </div>
                             )}
                           </div>
-                        )}
-                        {eventCatalogStatus === 'loaded' && !selectedOption && selectedEventName && (
-                          <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                            Trigger event <span className="font-mono">{selectedEventName}</span> is not present in the event catalog. Publishing and running are disabled until it is fixed.
-                          </div>
-                        )}
-                        {eventCatalogStatus === 'error' && (
-                          <div className="text-xs text-destructive">
-                            Failed to load the event catalog. Publishing and running are disabled for event-triggered workflows until this loads.
-                          </div>
-                        )}
+                        </div>
                       </div>
                     );
                   })()}
@@ -3799,6 +4180,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                         <div className="text-xs text-gray-500">
                           {activeDefinition?.trigger?.type === 'event' ? (
                             'Your steps read data from the selected trigger.'
+                          ) : isTimeTrigger(activeDefinition?.trigger) ? (
+                            <>
+                              This workflow receives a fixed synthetic clock payload. The contract is pinned to{' '}
+                              <span className="font-mono">{WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF}</span>.
+                            </>
                           ) : (
                             <>
                               Choose a trigger to define available data. Manual workflows need a locked schema before publishing or running.
@@ -3819,7 +4205,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                           type="button"
                           className="text-xs"
                           onClick={() => {
-                            const triggerElement = document.getElementById('workflow-designer-trigger-event');
+                            const triggerElement = document.getElementById('workflow-designer-trigger-type');
                             if (!triggerElement) return;
                             triggerElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                             triggerElement.focus();
@@ -3835,7 +4221,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                         {payloadSchemaModeDraft === 'pinned' ? 'Schema version locked' : 'Auto-selected from trigger'}
                       </span>
                       <span className="text-gray-600">
-                        {payloadSchemaModeDraft === 'pinned'
+                        {isTimeTrigger(activeDefinition?.trigger)
+                          ? ' to the fixed clock payload contract.'
+                          : payloadSchemaModeDraft === 'pinned'
                           ? ' to keep this workflow stable if trigger schemas change.'
                           : '.'}
                       </span>
@@ -3915,7 +4303,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                           <div>
                             <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">Lock schema version</div>
                             <div className="text-xs text-gray-500">
-                              Lock schema version to prevent future trigger changes from affecting this workflow.
+                              {isTimeTrigger(activeDefinition?.trigger)
+                                ? 'Clock triggers always stay pinned to the fixed workflow clock contract.'
+                                : 'Lock schema version to prevent future trigger changes from affecting this workflow.'}
                             </div>
                           </div>
                           <Switch
@@ -3959,7 +4349,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                 handleDefinitionChange({ payloadSchemaRef: inferredSchemaRef });
                               }
                             }}
-                            disabled={!canManage}
+                            disabled={!canManage || isTimeTrigger(activeDefinition?.trigger)}
                           />
                         </div>
 
@@ -3986,6 +4376,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                   })()}
                                   value={activeDefinition?.payloadSchemaRef ?? ''}
                                   onChange={(value) => {
+                                    if (isTimeTrigger(activeDefinition?.trigger)) return;
                                     setPinnedPayloadSchemaRefDraft(value);
                                     analytics.capture('workflow.payload_schema_ref.selected', {
                                       schemaRef: value || null,
@@ -3997,7 +4388,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                   }}
                                   placeholder="Select schema version…"
                                   emptyMessage="No schemas found"
-                                  disabled={registryError || !canManage}
+                                  disabled={registryError || !canManage || isTimeTrigger(activeDefinition?.trigger)}
                                   required
                                   dropdownMode="overlay"
                                 />
@@ -4006,18 +4397,22 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
                             <div className="mt-2 flex items-center justify-between">
                               <div className="text-xs text-gray-600">Manual schema ref</div>
-                              <Button
-                                id="workflow-designer-schema-advanced"
-                                variant="ghost"
-                                size="sm"
-                                type="button"
-                                className="h-auto px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
-                                onClick={() => setSchemaRefAdvanced((prev) => !prev)}
-                              >
-                                {schemaRefAdvanced ? 'Hide' : 'Edit'}
-                              </Button>
+                              {isTimeTrigger(activeDefinition?.trigger) ? (
+                                <span className="text-[11px] text-gray-500">Fixed for time triggers</span>
+                              ) : (
+                                <Button
+                                  id="workflow-designer-schema-advanced"
+                                  variant="ghost"
+                                  size="sm"
+                                  type="button"
+                                  className="h-auto px-2 py-1 text-xs text-gray-500 hover:text-gray-700"
+                                  onClick={() => setSchemaRefAdvanced((prev) => !prev)}
+                                >
+                                  {schemaRefAdvanced ? 'Hide' : 'Edit'}
+                                </Button>
+                              )}
                             </div>
-                            {schemaRefAdvanced && (
+                            {schemaRefAdvanced && !isTimeTrigger(activeDefinition?.trigger) && (
                               <div className="mt-2">
                                 <Input
                                   id="workflow-designer-schema"
@@ -4062,6 +4457,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                             type="button"
                             className="h-auto px-2 py-1 text-xs text-destructive hover:text-destructive"
                             onClick={() => {
+                              if (isTimeTrigger(activeDefinition?.trigger)) return;
                               if (payloadSchemaModeDraft === 'pinned') {
                                 setPinnedPayloadSchemaRefDraft('');
                                 handleDefinitionChange({ payloadSchemaRef: '' });
@@ -4583,8 +4979,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         onClose={() => setShowRunDialog(false)}
         workflowId={activeWorkflowId}
         workflowName={activeWorkflowRecord?.name ?? activeDefinition?.name ?? ''}
-        triggerLabel={activeDefinition?.trigger?.eventName ? `Event: ${activeDefinition.trigger.eventName}` : 'Manual'}
-        triggerEventName={activeDefinition?.trigger?.eventName ?? null}
+        triggerLabel={activeDefinition?.trigger?.type === 'event' && activeDefinition.trigger.eventName
+          ? `Event: ${activeDefinition.trigger.eventName}`
+          : activeDefinition?.trigger?.type === 'schedule'
+            ? 'One-time schedule'
+            : activeDefinition?.trigger?.type === 'recurring'
+              ? 'Recurring schedule'
+              : 'Manual'}
+        triggerEventName={activeDefinition?.trigger?.type === 'event' ? activeDefinition.trigger.eventName : null}
         triggerSourcePayloadSchemaRef={triggerSourceSchemaRef}
         triggerPayloadMappingProvided={triggerPayloadMappingInfo.mappingProvided}
         triggerPayloadMappingRequired={triggerPayloadMappingInfo.mappingRequired}

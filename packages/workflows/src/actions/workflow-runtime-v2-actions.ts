@@ -221,7 +221,7 @@ const collectTimeTriggerValidationErrors = (trigger: unknown): PublishError[] =>
   if (isWorkflowRecurringScheduleTrigger(trigger)) {
     const cronResult = validateFiveFieldCron(trigger.cron);
     if (!cronResult.ok) {
-      return [buildTimeTriggerInvalidCronError(cronResult.message)];
+      return [buildTimeTriggerInvalidCronError('message' in cronResult ? cronResult.message : 'Recurring schedule triggers require a valid cron expression.')];
     }
     if (!trigger.timezone || !validateTimeTriggerTimezone(trigger.timezone)) {
       return [buildTimeTriggerInvalidTimezoneError()];

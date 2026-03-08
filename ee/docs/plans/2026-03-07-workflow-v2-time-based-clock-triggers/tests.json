@@ -104,25 +104,25 @@
   {
     "id": "T018",
     "description": "Designer: user can select One-time schedule trigger and save a draft definition",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009", "F010"]
   },
   {
     "id": "T019",
     "description": "Designer: user can select Recurring schedule trigger and save a draft definition",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009", "F011"]
   },
   {
     "id": "T020",
     "description": "Designer: time-trigger selection hides event catalog and trigger mapping controls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
     "id": "T021",
     "description": "Designer: time-trigger selection shows fixed clock payload schema preview",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {

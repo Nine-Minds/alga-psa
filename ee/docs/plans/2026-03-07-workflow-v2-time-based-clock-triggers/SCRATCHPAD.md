@@ -58,6 +58,10 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-07) Validate workflow list trigger-type filtering:
   - `cd server && pnpm vitest run src/test/unit/workflowDefinitionListTriggerFilters.unit.test.ts --config vitest.config.ts`
   - `pnpm exec eslint packages/workflows/src/actions/workflow-runtime-v2-schemas.ts packages/workflows/src/actions/workflow-runtime-v2-actions.ts packages/workflows/src/components/automation-hub/WorkflowList.tsx server/src/test/unit/workflowDefinitionListTriggerFilters.unit.test.ts`
+- (2026-03-07) Validate Workflow Designer time-trigger UI:
+  - `pnpm exec eslint ee/server/src/components/workflow-designer/WorkflowDesigner.tsx ee/server/src/__tests__/page-objects/WorkflowDesignerPage.ts ee/server/src/__tests__/integration/workflow-designer-time-triggers.playwright.test.ts`
+  - `cd ee/server && npm run typecheck`
+  - `cd ee/server && npx playwright test -c playwright.config.ts src/__tests__/integration/workflow-designer-time-triggers.playwright.test.ts --headed`
 
 ## Progress Log
 
@@ -78,6 +82,14 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
   - Preserved backward compatibility for legacy `trigger=scheduled` URLs by mapping that filter to both `schedule` and `recurring` trigger types.
   - Updated the workflow list UI to label and iconize `event`, `schedule`, `recurring`, and `manual` directly from persisted trigger types.
   - Added `server/src/test/unit/workflowDefinitionListTriggerFilters.unit.test.ts` to verify one-time and recurring filters hit the real `trigger.type` query path and return the corresponding trigger types intact.
+- (2026-03-07) Completed F009-F013 and T018-T021.
+  - Replaced the event-only trigger control in `WorkflowDesigner.tsx` with an explicit trigger-type selector that switches among no trigger, event, one-time schedule, and recurring schedule.
+  - Added one-time schedule editing via a future `datetime-local` input and recurring schedule editing via a cron input plus searchable timezone selector with 5-field guidance.
+  - Time-trigger selection now hides event-only catalog/mapping controls, forces the fixed clock contract into pinned mode, and disables schema overrides while a time trigger is active.
+  - Added an inline clock-contract preview card that surfaces `payload.WorkflowClockTrigger.v1` and its fixed payload fields directly in the trigger section.
+  - Added `ee/server/src/__tests__/integration/workflow-designer-time-triggers.playwright.test.ts` plus page-object helpers for the new controls.
+  - `npm run typecheck` passed in `ee/server`.
+  - The targeted Playwright run could not complete in this environment because the EE Playwright web-server bootstrap never brought `http://localhost:3300` up; the worker stalled before any browser steps ran.
 
 ## Links / References
 
