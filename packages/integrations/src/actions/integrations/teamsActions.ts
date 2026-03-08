@@ -4,35 +4,35 @@ import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex } from '@alga-psa/db';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
+import { getTeamsAvailability } from '../../lib/teamsAvailability';
+import {
+  type TeamsAllowedAction,
+  type TeamsCapability,
+  type TeamsInstallStatus,
+  type TeamsNotificationCategory,
+} from './teamsShared';
 
-export const TEAMS_INSTALL_STATUSES = ['not_configured', 'install_pending', 'active', 'error'] as const;
-export type TeamsInstallStatus = typeof TEAMS_INSTALL_STATUSES[number];
-
-export const TEAMS_CAPABILITIES = [
+const TEAMS_INSTALL_STATUSES = ['not_configured', 'install_pending', 'active', 'error'] as const;
+const TEAMS_CAPABILITIES = [
   'personal_tab',
   'personal_bot',
   'message_extension',
   'activity_notifications',
 ] as const;
-export type TeamsCapability = typeof TEAMS_CAPABILITIES[number];
-
-export const TEAMS_NOTIFICATION_CATEGORIES = [
+const TEAMS_NOTIFICATION_CATEGORIES = [
   'assignment',
   'customer_reply',
   'approval_request',
   'escalation',
   'sla_risk',
 ] as const;
-export type TeamsNotificationCategory = typeof TEAMS_NOTIFICATION_CATEGORIES[number];
-
-export const TEAMS_ALLOWED_ACTIONS = [
+const TEAMS_ALLOWED_ACTIONS = [
   'assign_ticket',
   'add_note',
   'reply_to_contact',
   'log_time',
   'approval_response',
 ] as const;
-export type TeamsAllowedAction = typeof TEAMS_ALLOWED_ACTIONS[number];
 
 interface TeamsIntegrationRow {
   tenant: string;
@@ -189,6 +189,14 @@ export const getTeamsIntegrationStatus = withAuth(async (
   { tenant }
 ): Promise<TeamsIntegrationStatusResponse> => {
   try {
+    const availability = await getTeamsAvailability({
+      tenantId: tenant,
+      userId: (user as any)?.user_id,
+    });
+    if (!availability.enabled) {
+      return { success: false, error: availability.message };
+    }
+
     if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
     if (!(await canManageTeamsSettings(user))) return { success: false, error: 'Forbidden' };
 
@@ -233,6 +241,14 @@ export const saveTeamsIntegrationSettings = withAuth(async (
   }
 ): Promise<TeamsIntegrationStatusResponse> => {
   try {
+    const availability = await getTeamsAvailability({
+      tenantId: tenant,
+      userId: (user as any)?.user_id,
+    });
+    if (!availability.enabled) {
+      return { success: false, error: availability.message };
+    }
+
     if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
     if (!(await canManageTeamsSettings(user))) return { success: false, error: 'Forbidden' };
 

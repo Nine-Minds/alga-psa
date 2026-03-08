@@ -3,7 +3,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex } from '@alga-psa/db';
 import { getSSORegistry } from '@alga-psa/auth';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { buildTeamsPersonalTabDeepLinkFromPsaUrl } from '@alga-psa/integrations/actions/integrations/teamsPackageActions';
+import { buildTeamsPersonalTabDeepLinkFromPsaUrl } from '@alga-psa/integrations/actions/integrations/teamsPackageShared';
 import type { InternalNotification } from '../types/internalNotification';
 import {
   buildNotificationDeliveredPayload,

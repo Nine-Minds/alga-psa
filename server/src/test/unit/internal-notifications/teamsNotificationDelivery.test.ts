@@ -104,7 +104,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: hoisted.publishWorkflowEventMock,
 }));
 
-vi.mock('@alga-psa/integrations/actions/integrations/teamsPackageActions', () => ({
+vi.mock('@alga-psa/integrations/actions/integrations/teamsPackageShared', () => ({
   buildTeamsPersonalTabDeepLinkFromPsaUrl: hoisted.buildTeamsPersonalTabDeepLinkFromPsaUrlMock,
 }));
 

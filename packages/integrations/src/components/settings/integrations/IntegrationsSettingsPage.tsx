@@ -28,7 +28,7 @@ import { CalendarIntegrationsSettings } from '@alga-psa/integrations/components'
 import { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
 import { MicrosoftIntegrationSettings } from './MicrosoftIntegrationSettings';
 import { MspSsoLoginDomainsSettings } from './MspSsoLoginDomainsSettings';
-import { TeamsIntegrationSettings } from './TeamsIntegrationSettings';
+import { TeamsEnterpriseIntegrationSettings } from './TeamsEnterpriseIntegrationSettings';
 import dynamic from 'next/dynamic';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
@@ -125,7 +125,7 @@ const IntegrationsSettingsPage: React.FC = () => {
     {
       id: 'communication',
       label: 'Communication',
-      description: 'Connect email services for ticket processing',
+      description: 'Connect inbox and collaboration surfaces for ticket processing, operator workflows, and Microsoft Teams access.',
       icon: Mail,
       integrations: [
         {
@@ -145,6 +145,13 @@ const IntegrationsSettingsPage: React.FC = () => {
               </CardContent>
             </Card>
           ),
+        },
+        {
+          id: 'teams',
+          name: 'Microsoft Teams',
+          description: 'Configure Teams collaboration surfaces for MSP technicians',
+          component: TeamsEnterpriseIntegrationSettings,
+          isEE: true,
         },
       ],
     },
@@ -177,7 +184,7 @@ const IntegrationsSettingsPage: React.FC = () => {
     {
       id: 'providers',
       label: 'Providers',
-      description: 'Configure shared provider credentials used by integrations.',
+      description: 'Configure shared provider credentials used by email, calendar, SSO, and other integrations.',
       icon: Cloud,
       integrations: [
         {
@@ -197,7 +204,6 @@ const IntegrationsSettingsPage: React.FC = () => {
               </Card>
               <GoogleIntegrationSettings />
               <MicrosoftIntegrationSettings />
-              <TeamsIntegrationSettings />
               <MspSsoLoginDomainsSettings />
             </div>
           ),

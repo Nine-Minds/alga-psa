@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MICROSOFT_PROFILE_CONSUMERS } from './microsoftShared';
 
 const hoisted = vi.hoisted(() => {
   type MicrosoftProfileRecord = {
@@ -152,7 +153,6 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 import {
-  MICROSOFT_PROFILE_CONSUMERS,
   createMicrosoftProfile,
   listMicrosoftConsumerBindings,
   resolveMicrosoftProfileForConsumer,

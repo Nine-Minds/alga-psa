@@ -1,7 +1,7 @@
 import { createTenantKnex, getUserWithRoles } from '@alga-psa/db';
 import {
   buildTeamsMessageExtensionResultDeepLinkFromPsaUrl,
-} from '@alga-psa/integrations/actions/integrations/teamsPackageActions';
+} from '@alga-psa/integrations/actions/integrations/teamsPackageShared';
 import { getTeamsIntegrationExecutionState } from '@alga-psa/integrations/actions/integrations/teamsActions';
 import { NextResponse } from 'next/server';
 import { hasPermission } from 'server/src/lib/auth/rbac';

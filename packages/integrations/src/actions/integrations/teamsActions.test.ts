@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
   type MicrosoftProfileRecord = {
@@ -106,12 +106,13 @@ const hoisted = vi.hoisted(() => {
   return {
     state,
     hasPermissionMock: vi.fn(async (..._args: unknown[]) => true),
+    isFeatureFlagEnabledMock: vi.fn(async (..._args: unknown[]) => true),
     knexMock,
   };
 });
 
 const { microsoftProfiles, teamsIntegrations, microsoftConsumerBindings, tenantSecrets } = hoisted.state;
-const { hasPermissionMock, knexMock } = hoisted;
+const { hasPermissionMock, isFeatureFlagEnabledMock, knexMock } = hoisted;
 
 vi.mock('@alga-psa/auth/withAuth', () => ({
   withAuth:
@@ -127,6 +128,14 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: async () => ({ knex: hoisted.knexMock }),
 }));
+
+vi.mock('@alga-psa/core', async () => {
+  const actual = await vi.importActual<object>('@alga-psa/core');
+  return {
+    ...actual,
+    isFeatureFlagEnabled: hoisted.isFeatureFlagEnabledMock,
+  };
+});
 
 vi.mock('./providerReadiness', () => ({
   getMicrosoftProfileReadiness: vi.fn(async (tenant: string, config: any) => {
@@ -173,14 +182,60 @@ function addMicrosoftProfile({
 }
 
 describe('Teams integration actions', () => {
+  const originalEdition = process.env.NEXT_PUBLIC_EDITION;
+
   beforeEach(() => {
     hoisted.state.mockUser = { user_id: 'user-1', user_type: 'internal' };
     hoisted.state.mockCtx = { tenant: 'tenant-1' };
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     microsoftProfiles.length = 0;
     teamsIntegrations.length = 0;
     microsoftConsumerBindings.length = 0;
     tenantSecrets.clear();
+    hasPermissionMock.mockClear();
     hasPermissionMock.mockResolvedValue(true);
+    isFeatureFlagEnabledMock.mockClear();
+    isFeatureFlagEnabledMock.mockResolvedValue(true);
+  });
+
+  afterEach(() => {
+    if (originalEdition === undefined) {
+      delete process.env.NEXT_PUBLIC_EDITION;
+    } else {
+      process.env.NEXT_PUBLIC_EDITION = originalEdition;
+    }
+  });
+
+  it('T031/T035: returns an EE-unavailable result before permissions or database access in CE mode', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'community';
+
+    const result = await getTeamsIntegrationStatus();
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Microsoft Teams integration is only available in Enterprise Edition.',
+    });
+    expect(isFeatureFlagEnabledMock).not.toHaveBeenCalled();
+    expect(hasPermissionMock).not.toHaveBeenCalled();
+  });
+
+  it('T032/T037: returns a flag-disabled result before permissions or database access when the tenant flag is off', async () => {
+    isFeatureFlagEnabledMock.mockResolvedValue(false);
+
+    const result = await saveTeamsIntegrationSettings({
+      selectedProfileId: 'profile-1',
+      installStatus: 'install_pending',
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Microsoft Teams integration is disabled for this tenant.',
+    });
+    expect(isFeatureFlagEnabledMock).toHaveBeenCalledWith('teams-integration-ui', {
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+    });
+    expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 
   it('T083/T084: keeps the Teams integration record tenant-scoped and returns defaults when missing', async () => {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
   type MicrosoftProfileRecord = {
@@ -75,6 +75,7 @@ const hoisted = vi.hoisted(() => {
   return {
     state,
     hasPermissionMock: vi.fn(async (..._args: unknown[]) => true),
+    isFeatureFlagEnabledMock: vi.fn(async (..._args: unknown[]) => true),
     getTenantSecretMock: vi.fn(async (tenant: string, key: string) => state.tenantSecrets.get(`${tenant}:${key}`) || null),
     getAppSecretMock: vi.fn(async (key: string) => state.appSecrets.get(key) || null),
     knexMock,
@@ -82,7 +83,7 @@ const hoisted = vi.hoisted(() => {
 });
 
 const { microsoftProfiles, teamsIntegrations, tenantSecrets, appSecrets } = hoisted.state;
-const { hasPermissionMock, getTenantSecretMock, getAppSecretMock, knexMock } = hoisted;
+const { hasPermissionMock, isFeatureFlagEnabledMock, getTenantSecretMock, getAppSecretMock, knexMock } = hoisted;
 
 vi.mock('@alga-psa/auth/withAuth', () => ({
   withAuth:
@@ -106,6 +107,14 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: async () => ({ knex: hoisted.knexMock }),
 }));
 
+vi.mock('@alga-psa/core', async () => {
+  const actual = await vi.importActual<object>('@alga-psa/core');
+  return {
+    ...actual,
+    isFeatureFlagEnabled: hoisted.isFeatureFlagEnabledMock,
+  };
+});
+
 vi.mock('./providerReadiness', () => ({
   getMicrosoftProfileReadiness: vi.fn(async (tenant: string, config: any) => {
     const secret = tenantSecrets.get(`${tenant}:${config.clientSecretRef}`) || null;
@@ -120,12 +129,12 @@ vi.mock('./providerReadiness', () => ({
   }),
 }));
 
+import { getTeamsAppPackageStatus } from './teamsPackageActions';
 import {
   buildTeamsBotResultDeepLinkFromPsaUrl,
   buildTeamsMessageExtensionResultDeepLinkFromPsaUrl,
   buildTeamsPersonalTabDeepLinkFromPsaUrl,
-  getTeamsAppPackageStatus,
-} from './teamsPackageActions';
+} from './teamsPackageShared';
 
 function addMicrosoftProfile({
   tenant,
@@ -156,14 +165,57 @@ function addMicrosoftProfile({
 }
 
 describe('Teams app package actions', () => {
+  const originalEdition = process.env.NEXT_PUBLIC_EDITION;
+
   beforeEach(() => {
     hoisted.state.mockUser = { user_id: 'user-1', user_type: 'internal' };
     hoisted.state.mockCtx = { tenant: 'tenant-1' };
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     microsoftProfiles.length = 0;
     teamsIntegrations.length = 0;
     tenantSecrets.clear();
     appSecrets.clear();
+    hasPermissionMock.mockClear();
     hasPermissionMock.mockResolvedValue(true);
+    isFeatureFlagEnabledMock.mockClear();
+    isFeatureFlagEnabledMock.mockResolvedValue(true);
+  });
+
+  afterEach(() => {
+    if (originalEdition === undefined) {
+      delete process.env.NEXT_PUBLIC_EDITION;
+    } else {
+      process.env.NEXT_PUBLIC_EDITION = originalEdition;
+    }
+  });
+
+  it('T031/T035: returns EE-unavailable package results in CE mode before loading Teams state', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'community';
+
+    const result = await getTeamsAppPackageStatus();
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Microsoft Teams integration is only available in Enterprise Edition.',
+    });
+    expect(isFeatureFlagEnabledMock).not.toHaveBeenCalled();
+    expect(hasPermissionMock).not.toHaveBeenCalled();
+  });
+
+  it('T032/T037: returns flag-disabled package results before loading Teams state when the tenant flag is off', async () => {
+    isFeatureFlagEnabledMock.mockResolvedValue(false);
+
+    const result = await getTeamsAppPackageStatus();
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Microsoft Teams integration is disabled for this tenant.',
+    });
+    expect(isFeatureFlagEnabledMock).toHaveBeenCalledWith('teams-integration-ui', {
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+    });
+    expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 
   it('T117/T119/T121/T123/T125/T127/T129/T131/T133/T135/T137/T141/T147/T349: returns Teams manifest metadata with declared surfaces, app identity, install state, environment base URL, and focused lookup/message-action command definitions', async () => {

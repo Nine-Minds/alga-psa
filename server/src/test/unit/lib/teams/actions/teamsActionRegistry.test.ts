@@ -53,7 +53,7 @@ vi.mock('@alga-psa/integrations/actions/integrations/teamsActions', () => ({
   getTeamsIntegrationExecutionState: getTeamsIntegrationExecutionStateMock,
 }));
 
-vi.mock('@alga-psa/integrations/actions/integrations/teamsPackageActions', () => ({
+vi.mock('@alga-psa/integrations/actions/integrations/teamsPackageShared', () => ({
   buildTeamsBotResultDeepLinkFromPsaUrl: buildTeamsBotResultDeepLinkFromPsaUrlMock,
   buildTeamsMessageExtensionResultDeepLinkFromPsaUrl: buildTeamsMessageExtensionResultDeepLinkFromPsaUrlMock,
   buildTeamsPersonalTabDeepLinkFromPsaUrl: buildTeamsPersonalTabDeepLinkFromPsaUrlMock,

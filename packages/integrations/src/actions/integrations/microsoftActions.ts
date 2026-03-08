@@ -9,15 +9,14 @@ import {
   getMicrosoftProfileReadiness,
   type ProviderReadinessResult,
 } from './providerReadiness';
+import type { MicrosoftProfileConsumer } from './microsoftShared';
 
 const MICROSOFT_CLIENT_ID_SECRET = 'microsoft_client_id';
 const MICROSOFT_CLIENT_SECRET_SECRET = 'microsoft_client_secret';
 const MICROSOFT_TENANT_ID_SECRET = 'microsoft_tenant_id';
 const DEFAULT_MICROSOFT_PROFILE_NAME = 'Default Microsoft Profile';
-export const MICROSOFT_PROFILE_CONSUMERS = ['msp_sso', 'email', 'calendar', 'teams'] as const;
+const MICROSOFT_PROFILE_CONSUMERS = ['msp_sso', 'email', 'calendar', 'teams'] as const;
 const LEGACY_MICROSOFT_PROFILE_CONSUMERS = ['email', 'calendar', 'msp_sso'] as const;
-
-export type MicrosoftProfileConsumer = typeof MICROSOFT_PROFILE_CONSUMERS[number];
 
 interface MicrosoftProfileRow {
   tenant: string;

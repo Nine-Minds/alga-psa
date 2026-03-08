@@ -52,7 +52,7 @@ vi.mock('@alga-psa/integrations/actions/integrations/teamsActions', () => ({
   getTeamsIntegrationExecutionState: getTeamsIntegrationExecutionStateMock,
 }));
 
-vi.mock('@alga-psa/integrations/actions/integrations/teamsPackageActions', () => ({
+vi.mock('@alga-psa/integrations/actions/integrations/teamsPackageShared', () => ({
   buildTeamsMessageExtensionResultDeepLinkFromPsaUrl: vi.fn(
     (_baseUrl: string, _appId: string, psaUrl: string) => `https://teams.test/deeplink?target=${encodeURIComponent(psaUrl)}`
   ),
