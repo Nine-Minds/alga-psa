@@ -119,6 +119,8 @@ vi.mock('@alga-psa/integrations/actions/integrations/teamsPackageShared', () => 
 
 import {
   classifyTeamsNotificationCategory,
+} from '../../../../../ee/server/src/lib/notifications/teamsNotificationDelivery';
+import {
   deliverTeamsNotification,
 } from '../../../../../packages/notifications/src/realtime/teamsNotificationDelivery';
 

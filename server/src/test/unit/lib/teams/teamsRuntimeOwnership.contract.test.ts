@@ -41,4 +41,16 @@ describe('teams runtime EE ownership', () => {
     expect(sharedPackageActionsSource).toContain('getTeamsAppPackageStatusImpl');
     expect(sharedPackageActionsSource).not.toContain('function buildTeamsAppManifest');
   });
+
+  it('T181/T283: keeps Teams notification delivery implementation under EE while leaving the shared broadcaster wrapper in place', () => {
+    const sharedTeamsNotificationPath = repoPath('packages/notifications/src/realtime/teamsNotificationDelivery.ts');
+    const sharedTeamsNotificationSource = fs.readFileSync(sharedTeamsNotificationPath, 'utf8');
+
+    expect(fs.existsSync(sharedTeamsNotificationPath)).toBe(true);
+    expect(fs.existsSync(repoPath('ee/server/src/lib/notifications/teamsNotificationDelivery.ts'))).toBe(true);
+    expect(sharedTeamsNotificationSource).toContain('loadEeTeamsNotificationDelivery');
+    expect(sharedTeamsNotificationSource).toContain('getTeamsAvailability');
+    expect(sharedTeamsNotificationSource).toContain('deliverTeamsNotificationImpl');
+    expect(sharedTeamsNotificationSource).not.toContain('teamwork/sendActivityNotification');
+  });
 });

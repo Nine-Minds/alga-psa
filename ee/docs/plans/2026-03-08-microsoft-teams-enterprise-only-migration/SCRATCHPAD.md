@@ -39,7 +39,7 @@ Prefer short bullets. Append new entries as the migration progresses and revise 
 - (2026-03-08) `packages/integrations/src/actions/integrations/teamsPackageActions.ts` is now a shared wrapper that gates with `getTeamsAvailability(...)` and delegates into `ee/server/src/lib/actions/integrations/teamsPackageActions.ts`, leaving concrete manifest/package logic under EE while preserving the shared action signature.
 - (2026-03-08) `packages/integrations/src/actions/integrations/teamsActions.ts` and `packages/integrations/src/actions/integrations/teamsPackageActions.ts` are still shared server-action entrypoints for Teams settings/runtime/package behavior, so they need shared CE-safe gating before any deeper EE extraction.
 - (2026-03-08) `server/src/app/teams/tab/page.tsx`, `server/src/app/api/teams/bot/messages/route.ts`, `server/src/app/api/teams/message-extension/query/route.ts`, `server/src/app/api/teams/quick-actions/route.ts`, and the three `server/src/app/api/teams/auth/callback/*/route.ts` files are still active shared runtime entrypoints; none has a Teams-specific EE delegator yet.
-- (2026-03-08) `packages/notifications/src/realtime/teamsNotificationDelivery.ts` and `packages/notifications/src/realtime/internalNotificationBroadcaster.ts` remain shared notification entrypoints for Teams delivery and still need EE-boundary work.
+- (2026-03-08) `packages/notifications/src/realtime/internalNotificationBroadcaster.ts` remains the shared notification fan-out entrypoint, but `packages/notifications/src/realtime/teamsNotificationDelivery.ts` is now only a shared availability-gated wrapper that delegates into `ee/server/src/lib/notifications/teamsNotificationDelivery.ts`.
 - (2026-03-08) `server/src/lib/teams/handleTeamsAuthCallback.ts`, `server/src/lib/teams/resolveTeamsTabAuthState.ts`, `server/src/lib/teams/actions/teamsActionRegistry.ts`, `server/src/lib/teams/bot/teamsBotHandler.ts`, and `server/src/lib/teams/messageExtension/teamsMessageExtensionHandler.ts` remain shared concrete runtime modules with no existing Teams EE twin.
 - (2026-03-08) `@enterprise/*` resolves to `packages/ee/src/*` stubs in the shared/server test context, so new Teams route boundary work must add both `packages/ee/src/app/...` stubs and `ee/server/src/app/...` real EE files to match the existing Entra packaging pattern.
 - (2026-03-08) The current message-extension public route is a single endpoint at `server/src/app/api/teams/message-extension/query/route.ts`; it handles both `composeExtension/query` and `composeExtension/submitAction`, so one EE delegator covers both search and action traffic.
@@ -51,6 +51,8 @@ Prefer short bullets. Append new entries as the migration progresses and revise 
 - (2026-03-08) Reused the same availability helper in client settings code by allowing the settings wrapper to skip tenant-context enforcement while still using the canonical EE-plus-flag rule. Rationale: the UI hook already evaluates tenant-scoped flags, while route/action runtime still requires explicit tenant context and keeps the `tenant_not_configured` state distinct.
 - (2026-03-08) Completed route-boundary checklist `F015`, `F023-F024`, `F030`, `F055-F072`, `F078`, `F080`, `F082-F083`, and `F176`: shared Teams tab/API files now only delegate, CE returns explicit 501-unavailable responses, EE flag-off returns explicit disabled responses, the concrete tab page now lives at `ee/server/src/app/teams/tab/page.tsx`, and shared request/auth handlers now call the shared Teams availability helper before continuing when tenant context can be resolved.
 - (2026-03-08) Completed notification-gating checklist `F017`, `F143-F144`: `packages/notifications/src/realtime/teamsNotificationDelivery.ts` now calls the shared Teams availability helper with tenant/user context before any Teams Graph or package-link work, so CE and EE-flag-off tenants short-circuit with skipped delivery results instead of attempting Teams delivery runtime.
+- (2026-03-08) Completed notification-ownership checklist `F091`, `F142`, `F145-F147`, `F152` and tests `T181`, `T283-T284`, `T289`, `T291`, `T303-T304`, `T438`: concrete Teams activity-feed delivery and category/deep-link composition now live in `ee/server/src/lib/notifications/teamsNotificationDelivery.ts`, while the shared wrapper only checks availability, caches a dynamic EE import, and returns a stable `delivery_unavailable` skip when the EE implementation cannot be loaded.
+- (2026-03-08) Added wrapper-level tests for notification delegation/import failure plus broadcaster coverage that Redis in-app delivery still succeeds when Teams EE delivery is unavailable. Rationale: the migration needs bounded EE import failures to fail closed without breaking the broader notification path.
 - (2026-03-08) Chose the optional disabled-shell variant for settings `F022`/`F038`: `TeamsEnterpriseIntegrationSettings` now renders a non-active Communication-card placeholder in EE when the tenant flag is off instead of rendering nothing, while CE still renders no Teams surface at all.
 - (2026-03-08) Moved the concrete Teams settings UI into `ee/server/src/components/settings/integrations/TeamsIntegrationSettings.tsx` and deleted the shared `packages/integrations` copy. Rationale: shared settings composition now imports an EE-owned implementation through the existing `@enterprise/components/...` boundary, while `packages/ee` remains a null CE stub.
 - (2026-03-08) The EE-owned Teams settings UI continues to use the shared Microsoft profile selector/status data instead of duplicating client ID, tenant ID, or secret entry fields. Rationale: Microsoft profiles remain shared infrastructure even though the Teams surface moved into EE ownership.
@@ -94,6 +96,9 @@ Prefer short bullets. Append new entries as the migration progresses and revise 
     Run from `/Users/roberisaacs/alga-psa.worktrees/feature/teams-integration/server`
   - `pnpm vitest run --coverage.enabled false ../packages/integrations/src/lib/teamsAvailability.test.ts src/test/unit/internal-notifications/teamsNotificationDelivery.test.ts`
     Run from `/Users/roberisaacs/alga-psa.worktrees/feature/teams-integration/server`
+- (2026-03-08) Notification-boundary verification commands:
+  - `pnpm vitest run --coverage.enabled false src/test/unit/internal-notifications/teamsNotificationDelivery.wrapper.test.ts src/test/unit/internal-notifications/teamsNotificationDelivery.test.ts src/test/unit/internal-notifications/internalNotificationBroadcaster.test.ts src/test/unit/lib/teams/teamsRuntimeOwnership.contract.test.ts`
+    Run from `/Users/roberisaacs/alga-psa.worktrees/feature/teams-integration/server`
 
 ## Links / References
 
@@ -114,7 +119,9 @@ Prefer short bullets. Append new entries as the migration progresses and revise 
   - `server/src/test/unit/api/teamsRoutes.delegator.test.ts`
 - Teams notification gating:
   - `packages/notifications/src/realtime/teamsNotificationDelivery.ts`
+  - `ee/server/src/lib/notifications/teamsNotificationDelivery.ts`
   - `server/src/test/unit/internal-notifications/teamsNotificationDelivery.test.ts`
+  - `server/src/test/unit/internal-notifications/teamsNotificationDelivery.wrapper.test.ts`
 - Shared feature-flag registry:
   - `packages/core/src/lib/features.ts`
 

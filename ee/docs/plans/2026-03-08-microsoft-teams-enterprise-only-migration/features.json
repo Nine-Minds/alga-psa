@@ -812,7 +812,7 @@
   {
     "id": "F091",
     "description": "EE ownership: concrete Teams notification delivery logic lives under an EE-owned path after the migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -1271,7 +1271,7 @@
   {
     "id": "F142",
     "description": "Notification boundary: Teams notification delivery is moved behind EE ownership or EE-safe wrappers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"
@@ -1298,7 +1298,7 @@
   {
     "id": "F145",
     "description": "Notification boundary: EE flag-on notification broadcasting can reach Teams delivery through EE-owned code.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"
@@ -1307,7 +1307,7 @@
   {
     "id": "F146",
     "description": "Notification boundary: shared notification broadening does not import concrete Teams delivery modules directly.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"
@@ -1316,7 +1316,7 @@
   {
     "id": "F147",
     "description": "Notification boundary: Teams-specific notification templates or feed payload helpers used only for Teams delivery are EE-owned.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"
@@ -1361,7 +1361,7 @@
   {
     "id": "F152",
     "description": "Notification boundary: failures to load EE Teams notification delivery do not break the broader notification broadcast path.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Security / Permissions"

@@ -102,4 +102,28 @@ describe('internalNotificationBroadcaster', () => {
       })
     );
   });
+
+  it('T303/T304: keeps the Redis in-app broadcast path working when Teams EE delivery is unavailable', async () => {
+    hoisted.deliverTeamsNotificationMock.mockResolvedValue({
+      status: 'skipped',
+      reason: 'delivery_unavailable',
+    });
+
+    await expect(broadcastNotification(makeNotification())).resolves.toBeUndefined();
+
+    expect(hoisted.publishMock).toHaveBeenCalledWith(
+      'test:internal-notifications:tenant-1:user-1',
+      expect.stringContaining('"type":"notification.created"')
+    );
+    expect(hoisted.deliverTeamsNotificationMock).toHaveBeenCalledTimes(1);
+    expect(hoisted.publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'NOTIFICATION_DELIVERED',
+        payload: expect.objectContaining({
+          channel: 'in_app',
+          recipientId: 'user-1',
+        }),
+      })
+    );
+  });
 });
