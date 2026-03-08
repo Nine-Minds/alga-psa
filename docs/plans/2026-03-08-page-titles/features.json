@@ -450,7 +450,7 @@
   {
     "id": "F057",
     "description": "MSP page title: /msp/settings/extensions/[id] — title: 'Extension Settings' (generateMetadata)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3c"
     ]
