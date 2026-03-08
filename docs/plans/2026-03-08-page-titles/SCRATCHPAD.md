@@ -74,3 +74,4 @@
 - (2026-03-08) F024: MSP page title: /msp/assets/[asset_id]/edit — verify existing metadata 'Edit Asset' is compatible with template
 - (2026-03-08) F025: MSP page title: /msp/assets/automation — title: 'Asset Automation'
 - (2026-03-08) F026: MSP page title: /msp/assets/imports — title: 'Asset Imports'
+- (2026-03-08) F027: MSP page title: /msp/assets/integrations — title: 'Asset Integrations'

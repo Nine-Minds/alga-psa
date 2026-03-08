@@ -210,7 +210,7 @@
   {
     "id": "F027",
     "description": "MSP page title: /msp/assets/integrations — title: 'Asset Integrations'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Phase 3a"
     ]
