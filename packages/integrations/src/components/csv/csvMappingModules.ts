@@ -9,13 +9,13 @@ import {
 } from '@alga-psa/integrations/actions';
 import { getServices } from '@alga-psa/integrations/actions';
 import { getTaxRegions } from '@alga-psa/integrations/actions';
-import { getAllClients } from '@alga-psa/clients/actions';
 import type { IClient, IService, ITaxRegion } from '@alga-psa/types';
 import type {
   AccountingMappingContext,
   AccountingMappingModule,
   AccountingMappingLoadResult
 } from '@alga-psa/integrations/components';
+import { getIntegrationClients } from '../../actions/clientLookupActions';
 
 const ADAPTER_TYPE = 'quickbooks_csv';
 
@@ -88,7 +88,7 @@ function createCustomerModule(): AccountingMappingModule {
       return loadMappings<IClient>({
         context,
         algaEntityType: 'client',
-        loadAlgaEntities: async () => getAllClients(true),
+        loadAlgaEntities: async () => getIntegrationClients(true),
         mapAlga: (client) => ({
           id: client.client_id,
           name: client.client_name

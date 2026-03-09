@@ -4,7 +4,6 @@ import React from 'react';
 import { IExtendedWorkItem } from '@alga-psa/types';
 import { IProjectTask } from '@alga-psa/types';
 import { IScheduleEntry } from '@alga-psa/types';
-import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { getTaskWithDetails } from '@alga-psa/projects/actions/projectTaskActions';
 import { getWorkItemById } from '@alga-psa/scheduling/actions';
 import { getCurrentUser, getAllUsersBasic } from '@alga-psa/user-composition/actions';
@@ -12,11 +11,12 @@ import { getScheduleEntries } from '@alga-psa/scheduling/actions';
 import { getSchedulingInteractionById } from '../../actions/clientInteractionLookupActions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import TaskEdit from '@alga-psa/projects/components/TaskEdit';
 import EntryPopup from '@alga-psa/scheduling/components/schedule/EntryPopup';
 import { SchedulingInteractionDetails } from '../shared/SchedulingInteractionDetails';
+import { SchedulingTicketDetails } from '../shared/SchedulingTicketDetails';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
+import { getSchedulingTicketById } from '../../actions/ticketLookupActions';
 
 interface WorkItemDetailsDrawerProps {
     workItem: IExtendedWorkItem;
@@ -84,31 +84,14 @@ export function WorkItemDetailsDrawer({
 
             switch(workItem.type) {
                 case 'ticket': {
-                    const ticketData = await getConsolidatedTicketData(workItem.work_item_id);
+                    const ticketData = await getSchedulingTicketById(workItem.work_item_id);
+                    if (!ticketData) {
+                        toast.error('Failed to load ticket data');
+                        return null;
+                    }
                     return (
                         <div className="h-full">
-                            <TicketDetails
-                                isInDrawer={true}
-                                initialTicket={ticketData.ticket}
-                                initialComments={ticketData.comments}
-                                initialBoard={ticketData.board}
-                                initialClient={ticketData.client}
-                                initialContacts={ticketData.contacts}
-                                initialContactInfo={ticketData.contactInfo}
-                                initialCreatedByUser={ticketData.createdByUser}
-                                initialAdditionalAgents={ticketData.additionalAgents}
-                                statusOptions={ticketData.options.status}
-                                agentOptions={ticketData.options.agent}
-                                boardOptions={ticketData.options.board}
-                                priorityOptions={ticketData.options.priority}
-                                initialCategories={ticketData.categories}
-                                initialClients={ticketData.clients}
-                                initialLocations={ticketData.locations}
-                                initialAgentSchedules={ticketData.agentSchedules}
-                                initialUserMap={ticketData.userMap}
-                                initialAvailableAgents={ticketData.availableAgents}
-                                onClose={onClose}
-                            />
+                            <SchedulingTicketDetails ticket={ticketData} />
                         </div>
                     );
                 }

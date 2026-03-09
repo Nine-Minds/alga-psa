@@ -17,12 +17,12 @@ import type { InboundTicketDefaults, TicketFieldOptions } from '@alga-psa/types'
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { PrioritySelect } from '@alga-psa/ui/components';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { getAllClients } from '@alga-psa/clients/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import type { IPriority } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
 import type { IUser } from '@shared/interfaces/user.interfaces';
+import { getIntegrationClients } from '../../../actions/clientLookupActions';
 
 export interface InboundTicketDefaultsFormProps {
   defaults?: InboundTicketDefaults | null;
@@ -122,7 +122,7 @@ export function InboundTicketDefaultsForm({
 
       // Hydrate dedicated pickers with richer datasets
       const [allClients, allPriorities, allUsers] = await Promise.all([
-        getAllClients(true),
+        getIntegrationClients(true),
         getAllPriorities('ticket'),
         getAllUsersBasic(true, 'internal')
       ]);

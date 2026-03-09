@@ -7,7 +7,7 @@ import { isFeatureFlagEnabled } from '@alga-psa/core';
 import { routes } from '@alga-psa/integrations/entra/routes/entry';
 import { createTenantKnex } from '@alga-psa/db';
 import { generateMicrosoftAuthUrl, generateNonce } from '../../utils/email/oauthHelpers';
-import { createClient } from '@alga-psa/clients/actions/clientActions';
+import { createIntegrationClient } from '../clientLookupActions';
 
 const isEnterpriseEdition =
   (process.env.EDITION ?? '').toLowerCase() === 'ee' ||
@@ -1001,7 +1001,7 @@ export const importEntraTenantAsClient = withAuth(async (
     return { success: false, error: 'Managed tenant not found' } as const;
   }
 
-  const newClientResult = await createClient(
+  const newClientResult = await createIntegrationClient(
     {
       client_name: managedTenant.display_name || 'Imported Entra Tenant',
       url: managedTenant.primary_domain || undefined,
