@@ -21,6 +21,8 @@ describe('contact phone number migrations', () => {
     expect(migration).toContain("createTable('contact_phone_numbers'");
     expect(migration).toContain("table.text('canonical_type').nullable()");
     expect(migration).toContain("table.uuid('custom_phone_type_id').nullable()");
+    expect(migration).toContain('ADD COLUMN normalized_phone_number text');
+    expect(migration).toContain('GENERATED ALWAYS AS');
     expect(migration).toContain('ADD CONSTRAINT chk_contact_phone_numbers_type_source');
     expect(migration).toContain('canonical_type IS NOT NULL');
     expect(migration).toContain('custom_phone_type_id IS NOT NULL');

@@ -32,7 +32,7 @@
   {
     "id": "T006",
     "description": "DB-backed integration: normalized phone values are stored in searchable form independently of punctuation/spacing in the display phone string.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {

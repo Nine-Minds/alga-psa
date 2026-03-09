@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "Store searchable normalized phone values on contact phone rows rather than relying only on formatted phone strings.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-006", "NFR-005"]
   },
   {

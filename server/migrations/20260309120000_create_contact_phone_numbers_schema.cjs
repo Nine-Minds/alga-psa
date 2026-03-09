@@ -31,7 +31,6 @@ exports.up = async function up(knex) {
     table.uuid('contact_phone_number_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
     table.uuid('contact_name_id').notNullable();
     table.text('phone_number').notNullable();
-    table.text('normalized_phone_number').notNullable();
     table.text('canonical_type').nullable();
     table.uuid('custom_phone_type_id').nullable();
     table.boolean('is_default').notNullable().defaultTo(false);
@@ -44,6 +43,15 @@ exports.up = async function up(knex) {
     table.foreign(['tenant', 'contact_name_id']).references(['tenant', 'contact_name_id']).inTable('contacts').onDelete('CASCADE');
     table.foreign(['tenant', 'custom_phone_type_id']).references(['tenant', 'contact_phone_type_id']).inTable('contact_phone_type_definitions').onDelete('RESTRICT');
     table.index(['tenant', 'contact_name_id', 'display_order'], 'idx_contact_phone_numbers_contact_order');
+  });
+
+  await knex.raw(`
+    ALTER TABLE contact_phone_numbers
+    ADD COLUMN normalized_phone_number text
+    GENERATED ALWAYS AS (${normalizedPhoneSql('phone_number')}) STORED
+  `);
+
+  await knex.schema.alterTable('contact_phone_numbers', (table) => {
     table.index(['tenant', 'normalized_phone_number'], 'idx_contact_phone_numbers_normalized_phone');
   });
 
@@ -84,7 +92,6 @@ exports.up = async function up(knex) {
       contact_phone_number_id,
       contact_name_id,
       phone_number,
-      normalized_phone_number,
       canonical_type,
       custom_phone_type_id,
       is_default,
@@ -97,7 +104,6 @@ exports.up = async function up(knex) {
       gen_random_uuid(),
       contact_name_id,
       BTRIM(phone_number),
-      ${normalizedPhoneSql('phone_number')},
       'work',
       NULL,
       true,

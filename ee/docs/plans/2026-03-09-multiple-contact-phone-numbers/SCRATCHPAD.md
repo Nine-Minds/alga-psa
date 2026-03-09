@@ -17,6 +17,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-09) Custom phone types should behave like tags: tenant-scoped reusable suggestions created on demand, with normalization-based deduplication.
 - (2026-03-09) List/detail/ticket surfaces should display the derived default phone rather than attempt to render every phone row in summary views.
 - (2026-03-09) Migration A is implemented as one additive schema file that creates both normalized phone tables, backfills scalar contact phones, and intentionally leaves `contacts.phone_number` in place for deploy safety. Rationale: it satisfies the rollout sequencing requirement without coupling the later cutover/drop step to the initial schema release.
+- (2026-03-09) `contact_phone_numbers.normalized_phone_number` is implemented as a generated stored column derived from `phone_number` instead of an app-populated plain text field. Rationale: it guarantees searchable normalized digits for every insert/update path, including direct SQL fixtures and future services that have not been cut over yet.
 
 ## Discoveries / Constraints
 
@@ -35,6 +36,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-09) Contact workflow/domain events and API schemas currently still emit/validate scalar phone fields (`phoneNumber`, `phone_number`).
 - (2026-03-09) Entra sync currently collapses `mobilePhone` and `businessPhones[0]` into one scalar `phone_number`; the new model should preserve more than one external number.
 - (2026-03-09) Existing repo migration tests commonly use file-content contract assertions rather than spinning up a database for every migration case; the first phone migration coverage follows that pattern in `server/src/test/unit/migrations/contactPhoneNumbersMigration.test.ts`.
+- (2026-03-09) This worktree’s `.env.localtest` points at `localhost:5438`, but the active local Postgres for integration tests is the Docker container exposed on `localhost:55433` with `postgres` / `app_user` passwords from `secrets/postgres_password` and `secrets/db_password_server` (`postpass123`).
 
 ## Commands / Runbooks
 
@@ -48,6 +50,8 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `cd server && npx vitest run src/test/unit/migrations/contactPhoneNumbersMigration.test.ts`
 - (2026-03-09) Quick syntax-load check for the new migration:
   - `node -e "require('./server/migrations/20260309120000_create_contact_phone_numbers_schema.cjs'); console.log('migration-load-ok')"`
+- (2026-03-09) Run the DB-backed normalized phone storage test against the live local Postgres container:
+  - `cd server && DB_PORT=55433 DB_PASSWORD_ADMIN=postpass123 DB_PASSWORD_SERVER=postpass123 DB_USER_ADMIN=postgres DB_USER_SERVER=app_user npx vitest run src/test/integration/contactPhoneNumbers.integration.test.ts --coverage=false`
 
 ## Links / References
 
@@ -72,3 +76,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Backfilled non-empty legacy `contacts.phone_number` values into default `work` phone rows while retaining the legacy column for the later cutover/drop sequence.
 - (2026-03-09) Completed `T001` through `T005` with `server/src/test/unit/migrations/contactPhoneNumbersMigration.test.ts`.
   - Coverage asserts the migration contract for custom type deduplication, phone-row type exclusivity, default uniqueness, and the scalar-phone backfill rules.
+- (2026-03-09) Completed `F003` by switching `contact_phone_numbers.normalized_phone_number` to a generated stored column in `server/migrations/20260309120000_create_contact_phone_numbers_schema.cjs`.
+  - Searchable normalized digits are now derived by the database from the display phone value, which avoids drift between formatted and normalized storage.
+- (2026-03-09) Completed `T006` with `server/src/test/integration/contactPhoneNumbers.integration.test.ts`.
+  - The integration test inserts a formatted phone row and verifies the stored/generated normalized digits can be queried without punctuation.
