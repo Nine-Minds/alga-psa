@@ -261,5 +261,42 @@
       "Rollout / Migration",
       "Acceptance Criteria (Definition of Done)"
     ]
+  },
+  {
+    "id": "F031",
+    "description": "Implement Ticket List Comments operation mapped to `GET /api/v1/tickets/{id}/comments` with optional `limit`, `offset`, and `order` query parameters.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Implement Ticket Add Comment operation mapped to `POST /api/v1/tickets/{id}/comments` with required `comment_text` and optional `is_internal`.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Keep ticket comment operations under the existing `Ticket` resource and omit `time_spent` from the n8n node because the current Alga PSA implementation does not persist or consume it.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Update package documentation and examples to reflect the new ticket comment operations and their supported fields.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Acceptance Criteria (Definition of Done)"
+    ]
   }
 ]
