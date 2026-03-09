@@ -6,6 +6,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import TicketConversation from './TicketConversation';
 import { TICKET_CONVERSATION_ORDER_STORAGE_KEY } from './ticketConversationOrderPreference';
 
+type TicketConversationProps = React.ComponentProps<typeof TicketConversation>;
+
 vi.mock('next/dynamic', () => ({
   default: () => () => null,
 }));
@@ -109,7 +111,7 @@ const localStorageMock = {
   },
 };
 
-const defaultProps = {
+const defaultProps: TicketConversationProps = {
   id: 'ticket-conversation',
   ticket: { ticket_id: 'ticket-1', tenant: 'tenant-1' } as any,
   conversations: [
@@ -134,7 +136,7 @@ const defaultProps = {
   onContentChange: vi.fn(),
 };
 
-function renderConversation(overrides: Partial<typeof defaultProps> = {}) {
+function renderConversation(overrides: Partial<TicketConversationProps> = {}) {
   return render(
     <TicketConversation
       {...defaultProps}
