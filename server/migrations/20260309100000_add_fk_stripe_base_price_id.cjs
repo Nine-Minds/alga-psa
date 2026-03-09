@@ -6,6 +6,22 @@
  */
 
 exports.up = async function (knex) {
+  // Check if the stripe_prices table exists and has a unique constraint on stripe_price_id.
+  // The table is created by an EE migration and may not exist in CE deployments.
+  const tableExists = await knex.schema.hasTable('stripe_prices');
+  if (!tableExists) return;
+
+  const uniqueExists = await knex.raw(`
+    SELECT 1 FROM information_schema.table_constraints tc
+    JOIN information_schema.key_column_usage kcu
+      ON tc.constraint_name = kcu.constraint_name
+    WHERE tc.table_name = 'stripe_prices'
+      AND tc.constraint_type = 'UNIQUE'
+      AND kcu.column_name = 'stripe_price_id'
+    LIMIT 1
+  `);
+  if (uniqueExists.rows.length === 0) return;
+
   // Check if FK already exists
   const fkExists = await knex.raw(`
     SELECT 1 FROM information_schema.table_constraints
