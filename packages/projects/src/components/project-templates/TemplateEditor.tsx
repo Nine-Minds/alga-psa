@@ -7,6 +7,7 @@ import { useTheme } from 'next-themes';
 import { darkenColor } from '@alga-psa/ui/lib/colorUtils';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -167,6 +168,14 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   const [clientPortalConfig, setClientPortalConfig] = useState<IClientPortalConfig>(
     initialTemplate.client_portal_config || DEFAULT_CLIENT_PORTAL_CONFIG
   );
+
+  // Confirmation dialog state
+  const [deletePhaseConfirmation, setDeletePhaseConfirmation] = useState<{
+    phaseId: string;
+    phaseName: string;
+  } | null>(null);
+  const [showDeleteTemplateConfirmation, setShowDeleteTemplateConfirmation] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<IProjectTemplateTask | null>(null);
 
   // View mode state
   type TemplateViewMode = 'kanban' | 'list';
@@ -441,10 +450,6 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   // ============================================================
 
   async function handleDeleteTemplate() {
-    if (!confirm('Are you sure you want to delete this template?')) {
-      return;
-    }
-
     try {
       setIsDeleting(true);
       await deleteTemplate(template.template_id);
@@ -454,6 +459,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       handleError(error, 'Failed to delete template');
     } finally {
       setIsDeleting(false);
+      setShowDeleteTemplateConfirmation(false);
     }
   }
 
@@ -521,20 +527,27 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     }
   };
 
-  const handleDeletePhase = async (phase: IProjectTemplatePhase) => {
-    if (!confirm(`Delete phase "${phase.phase_name}" and all its tasks?`)) {
-      return;
-    }
+  const handleDeletePhaseClick = (phase: IProjectTemplatePhase) => {
+    setDeletePhaseConfirmation({
+      phaseId: phase.template_phase_id,
+      phaseName: phase.phase_name,
+    });
+  };
+
+  const handleDeletePhase = async () => {
+    if (!deletePhaseConfirmation) return;
     try {
-      await deleteTemplatePhase(phase.template_phase_id);
-      setPhases((prev) => prev.filter((p) => p.template_phase_id !== phase.template_phase_id));
-      setTasks((prev) => prev.filter((t) => t.template_phase_id !== phase.template_phase_id));
-      if (selectedPhase?.template_phase_id === phase.template_phase_id) {
-        setSelectedPhase(phases.find((p) => p.template_phase_id !== phase.template_phase_id) || null);
+      await deleteTemplatePhase(deletePhaseConfirmation.phaseId);
+      setPhases((prev) => prev.filter((p) => p.template_phase_id !== deletePhaseConfirmation.phaseId));
+      setTasks((prev) => prev.filter((t) => t.template_phase_id !== deletePhaseConfirmation.phaseId));
+      if (selectedPhase?.template_phase_id === deletePhaseConfirmation.phaseId) {
+        setSelectedPhase(phases.find((p) => p.template_phase_id !== deletePhaseConfirmation.phaseId) || null);
       }
       toast.success('Phase deleted');
     } catch (error) {
       handleError(error, 'Failed to delete phase');
+    } finally {
+      setDeletePhaseConfirmation(null);
     }
   };
 
@@ -752,16 +765,20 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     }
   };
 
-  const handleDeleteTask = async (task: IProjectTemplateTask) => {
-    if (!confirm(`Delete task "${task.task_name}"?`)) {
-      return;
-    }
+  const handleDeleteTaskClick = (task: IProjectTemplateTask) => {
+    setTaskToDelete(task);
+  };
+
+  const handleDeleteTask = async () => {
+    if (!taskToDelete) return;
     try {
-      await deleteTemplateTask(task.template_task_id);
-      setTasks((prev) => prev.filter((t) => t.template_task_id !== task.template_task_id));
+      await deleteTemplateTask(taskToDelete.template_task_id);
+      setTasks((prev) => prev.filter((t) => t.template_task_id !== taskToDelete.template_task_id));
       toast.success('Task deleted');
     } catch (error) {
       handleError(error, 'Failed to delete task');
+    } finally {
+      setTaskToDelete(null);
     }
   };
 
@@ -1010,6 +1027,42 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
         />
       )}
 
+      {showDeleteTemplateConfirmation && (
+        <ConfirmationDialog
+          isOpen={true}
+          onClose={() => setShowDeleteTemplateConfirmation(false)}
+          onConfirm={handleDeleteTemplate}
+          title="Delete Template"
+          message={`Are you sure you want to delete template "${template.template_name}"? This action cannot be undone.`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+        />
+      )}
+
+      {deletePhaseConfirmation && (
+        <ConfirmationDialog
+          isOpen={true}
+          onClose={() => setDeletePhaseConfirmation(null)}
+          onConfirm={handleDeletePhase}
+          title="Delete Phase"
+          message={`Are you sure you want to delete phase "${deletePhaseConfirmation.phaseName}"? This will also delete all tasks in this phase.`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+        />
+      )}
+
+      {taskToDelete && (
+        <ConfirmationDialog
+          isOpen={true}
+          onClose={() => setTaskToDelete(null)}
+          onConfirm={handleDeleteTask}
+          title="Delete Task"
+          message={`Are you sure you want to delete task "${taskToDelete.task_name}"?`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+        />
+      )}
+
       <div className={styles.pageContainer}>
         {/* Template Header */}
         <div className="border-b px-6 py-4">
@@ -1062,7 +1115,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                     Client Portal Visibility
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onSelect={handleDeleteTemplate}
+                    onSelect={() => setShowDeleteTemplateConfirmation(true)}
                     disabled={isDeleting}
                     className="text-destructive focus:text-destructive focus:bg-destructive/10"
                   >
@@ -1130,7 +1183,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                 taskTypes={taskTypes}
                 priorities={priorities}
                 onTaskClick={handleEditTask}
-                onTaskDelete={handleDeleteTask}
+                onTaskDelete={handleDeleteTaskClick}
                 onAddPhase={handleAddPhase}
                 onAddTask={(phaseId, statusMappingId) => {
                   const phase = phases.find((p) => p.template_phase_id === phaseId);
@@ -1155,8 +1208,8 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
               <div className={`${styles.phasesContainer} ${isPhasesPanelVisible ? styles.phasesContainerExpanded : styles.phasesContainerCollapsed}`}>
                 <Button
                   id="toggle-phases-panel"
-                  variant="ghost"
-                  size="sm"
+                  variant="default"
+                  size="icon"
                   className={styles.phasesPanelToggle}
                   onClick={() => setIsPhasesPanelVisible(!isPhasesPanelVisible)}
                   aria-label={isPhasesPanelVisible ? 'Hide phases panel' : 'Show phases panel'}
@@ -1340,7 +1393,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                                   className="p-1 h-auto w-auto text-destructive hover:text-destructive hover:bg-destructive/10"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleDeletePhase(phase);
+                                    handleDeletePhaseClick(phase);
                                   }}
                                 >
                                   <Trash className="w-4 h-4" />
@@ -1451,7 +1504,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                             onClick={handleToggleHeaderPinned}
                             aria-label={isHeaderPinned ? "Unpin header" : "Pin header to top"}
                           >
-                            <Pin className="h-4 w-4" />
+                            <Pin className={`h-4 w-4 ${isHeaderPinned ? 'fill-current' : ''}`} />
                           </Button>
                         </Tooltip>
                       </div>
@@ -1574,7 +1627,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                               onTaskDragEnd={handleTaskDragEnd}
                               onTaskDrop={handleTaskDrop}
                               onEditTask={handleEditTask}
-                              onDeleteTask={handleDeleteTask}
+                              onDeleteTask={handleDeleteTaskClick}
                               onAddTask={handleAddTask}
                               onAssigneeChange={handleAssigneeChange}
                               draggedTaskId={draggedTaskId}
@@ -1995,15 +2048,18 @@ function TaskCard({
           )}
         </div>
         {(isTitleTruncated || isTitleExpanded) && (
-          <button
+          <Button
+            id={`toggle-title-${task.template_task_id}`}
+            variant="ghost"
+            size="sm"
+            className={`${zoomScales.metaSize} text-purple-600 hover:text-purple-700 font-medium p-0 h-auto w-auto ${isCompact ? '' : 'mt-1'}`}
             onClick={(e) => {
               e.stopPropagation();
               setIsTitleExpanded(!isTitleExpanded);
             }}
-            className={`${zoomScales.metaSize} text-purple-600 hover:text-purple-700 font-medium ${isCompact ? '' : 'mt-1'}`}
           >
             {isTitleExpanded ? 'See less' : 'See more'}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -2017,15 +2073,18 @@ function TaskCard({
             {task.description}
           </p>
           {(isDescriptionTruncated || isDescriptionExpanded) && (
-            <button
+            <Button
+              id={`toggle-desc-${task.template_task_id}`}
+              variant="ghost"
+              size="sm"
+              className={`${zoomScales.metaSize} text-purple-600 hover:text-purple-700 font-medium p-0 h-auto w-auto ${isCompact ? '' : 'mt-1'}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setIsDescriptionExpanded(!isDescriptionExpanded);
               }}
-              className={`${zoomScales.metaSize} text-purple-600 hover:text-purple-700 font-medium ${isCompact ? '' : 'mt-1'}`}
             >
               {isDescriptionExpanded ? 'See less' : 'See more'}
-            </button>
+            </Button>
           )}
         </div>
       )}

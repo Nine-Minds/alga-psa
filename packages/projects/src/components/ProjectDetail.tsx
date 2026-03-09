@@ -1890,17 +1890,20 @@ export default function ProjectDetail({
             <h2 className="text-xl font-bold">Task List</h2>
             <div className="flex items-center gap-4">
               <Tooltip content={isHeaderPinned ? "Unpin header" : "Pin header to top"}>
-                <button
-                  onClick={() => setIsHeaderPinned(!isHeaderPinned)}
-                  className={`p-1.5 rounded-md transition-colors ${
+                <Button
+                  id="pin-header-toggle-list"
+                  variant="ghost"
+                  size="sm"
+                  className={`p-1.5 h-auto w-auto transition-colors ${
                     isHeaderPinned
                       ? 'bg-primary-100 text-primary-600'
-                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                      : 'text-gray-400 hover:text-gray-600'
                   }`}
+                  onClick={() => setIsHeaderPinned(!isHeaderPinned)}
                   aria-label={isHeaderPinned ? "Unpin header" : "Pin header to top"}
                 >
                   <Pin className={`h-4 w-4 ${isHeaderPinned ? 'fill-current' : ''}`} />
-                </button>
+                </Button>
               </Tooltip>
               <ViewSwitcher
                 currentView={viewMode}
@@ -1928,14 +1931,16 @@ export default function ProjectDetail({
                   className="pl-8 pr-8 py-1.5 text-sm border border-gray-300 dark:border-[rgb(var(--color-border-200))] rounded-md w-64 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                 />
                 {searchQuery && (
-                  <button
-                    type="button"
+                  <Button
+                    id="clear-search"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 p-1 h-auto w-auto text-gray-400 hover:text-gray-600"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     aria-label="Clear search"
                   >
                     <X className="h-4 w-4" />
-                  </button>
+                  </Button>
                 )}
               </div>
               <Button
@@ -2089,31 +2094,36 @@ export default function ProjectDetail({
               onZoomChange={setKanbanZoomLevel}
             />
             <Tooltip content={showStickyStatusNames ? "Hide sticky status names" : "Show sticky status names"}>
-              <button
+              <Button
                 id="sticky-status-names-toggle-kanban"
-                onClick={() => setShowStickyStatusNames(!showStickyStatusNames)}
-                className={`p-1.5 rounded-md transition-colors ${
+                variant="ghost"
+                size="sm"
+                className={`p-1.5 h-auto w-auto transition-colors ${
                   showStickyStatusNames
                     ? 'bg-primary-100 text-primary-600'
-                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                    : 'text-gray-400 hover:text-gray-600'
                 }`}
+                onClick={() => setShowStickyStatusNames(!showStickyStatusNames)}
                 aria-label={showStickyStatusNames ? "Hide sticky status names" : "Show sticky status names"}
               >
                 <Columns3 className="h-4 w-4" />
-              </button>
+              </Button>
             </Tooltip>
             <Tooltip content={isHeaderPinned ? "Unpin header" : "Pin header to top"}>
-              <button
-                onClick={() => setIsHeaderPinned(!isHeaderPinned)}
-                className={`p-1.5 rounded-md transition-colors ${
+              <Button
+                id="pin-header-toggle-kanban"
+                variant="ghost"
+                size="sm"
+                className={`p-1.5 h-auto w-auto transition-colors ${
                   isHeaderPinned
                     ? 'bg-primary-100 text-primary-600'
-                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                    : 'text-gray-400 hover:text-gray-600'
                 }`}
+                onClick={() => setIsHeaderPinned(!isHeaderPinned)}
                 aria-label={isHeaderPinned ? "Unpin header" : "Pin header to top"}
               >
                 <Pin className={`h-4 w-4 ${isHeaderPinned ? 'fill-current' : ''}`} />
-              </button>
+              </Button>
             </Tooltip>
             <ViewSwitcher
               currentView={viewMode}
@@ -2142,14 +2152,16 @@ export default function ProjectDetail({
                   className="pl-8 pr-8 py-1.5 text-sm border border-gray-300 dark:border-[rgb(var(--color-border-200))] rounded-md w-64 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
                 />
                 {searchQuery && (
-                  <button
-                    type="button"
+                  <Button
+                    id="clear-search"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 p-1 h-auto w-auto text-gray-400 hover:text-gray-600"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     aria-label="Clear search"
                   >
                     <X className="h-4 w-4" />
-                  </button>
+                  </Button>
                 )}
               </div>
               <Button
@@ -2433,14 +2445,16 @@ export default function ProjectDetail({
           {viewMode === 'kanban' && (
             <div className={`${styles.phasesContainer} ${isPhasesPanelVisible ? styles.phasesContainerExpanded : styles.phasesContainerCollapsed}`}>
               {/* Toggle button */}
-              <button
-                onClick={() => setIsPhasesPanelVisible(!isPhasesPanelVisible)}
+              <Button
+                id="toggle-phases-panel"
+                variant="default"
+                size="icon"
                 className={styles.phasesPanelToggle}
-                title={isPhasesPanelVisible ? 'Hide phases panel' : 'Show phases panel'}
+                onClick={() => setIsPhasesPanelVisible(!isPhasesPanelVisible)}
                 aria-label={isPhasesPanelVisible ? 'Hide phases panel' : 'Show phases panel'}
               >
                 <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${isPhasesPanelVisible ? 'rotate-180' : ''}`} />
-              </button>
+              </Button>
 
               {/* Phases panel content */}
               <div className={`${styles.phasesList} ${isPhasesPanelVisible ? styles.phasesListVisible : styles.phasesListHidden}`}>
@@ -2554,13 +2568,16 @@ export default function ProjectDetail({
       {(showQuickAdd && (currentPhase || selectedPhase)) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg relative w-full max-w-3xl">
-            <button
+            <Button
+              id="close-quick-add"
+              variant="ghost"
+              size="sm"
+              className="absolute top-2 right-2 p-1 h-auto w-auto text-gray-500 hover:text-gray-700"
               onClick={handleCloseQuickAdd}
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
               aria-label="Close"
             >
               ×
-            </button>
+            </Button>
             {selectedTask ? (
               <TaskEdit
                 task={selectedTask}

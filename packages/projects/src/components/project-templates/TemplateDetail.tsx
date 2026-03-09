@@ -11,6 +11,7 @@ import { IProjectTemplateWithDetails, IProjectTemplateTask, IProjectTemplatePhas
 import { deleteTemplate } from '../../actions/projectTemplateActions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,16 +31,13 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [showApplyDialog, setShowApplyDialog] = useState(false);
   const [selectedPhase, setSelectedPhase] = useState<IProjectTemplatePhase | null>(
     template.phases?.[0] || null
   );
 
   async function handleDelete() {
-    if (!confirm('Are you sure you want to delete this template?')) {
-      return;
-    }
-
     try {
       setIsDeleting(true);
       await deleteTemplate(template.template_id);
@@ -49,6 +47,7 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
       handleError(error, 'Failed to delete template');
     } finally {
       setIsDeleting(false);
+      setShowDeleteConfirmation(false);
     }
   }
 
@@ -166,6 +165,18 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
 
   return (
     <>
+      {showDeleteConfirmation && (
+        <ConfirmationDialog
+          isOpen={true}
+          onClose={() => setShowDeleteConfirmation(false)}
+          onConfirm={handleDelete}
+          title="Delete Template"
+          message={`Are you sure you want to delete template "${template.template_name}"? This action cannot be undone.`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+        />
+      )}
+
       <ApplyTemplateDialog
         open={showApplyDialog}
         onClose={() => setShowApplyDialog(false)}
@@ -208,7 +219,7 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
               <Button
                 id="delete-template"
                 variant="outline"
-                onClick={handleDelete}
+                onClick={() => setShowDeleteConfirmation(true)}
                 disabled={isDeleting}
               >
                 <Trash className="h-4 w-4 mr-2" />

@@ -13,6 +13,7 @@ import {
 } from '../../actions/projectTemplateActions';
 import { createTenantProjectStatus } from '../../actions/projectTaskStatusActions';
 import { toast } from 'react-hot-toast';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { QuickAddStatus } from '@alga-psa/ui/components/QuickAddStatus';
 import type { IStatus } from '@alga-psa/types';
@@ -43,6 +44,7 @@ export function TemplateStatusManager({
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [showQuickAddStatus, setShowQuickAddStatus] = useState(false);
   const [localAvailableStatuses, setLocalAvailableStatuses] = useState(availableStatuses);
+  const [removeConfirmation, setRemoveConfirmation] = useState<string | null>(null);
 
   // Get IDs of statuses already in the template
   const usedStatusIds = new Set(statusMappings.map((m) => m.status_id).filter(Boolean));
@@ -68,17 +70,16 @@ export function TemplateStatusManager({
     }
   };
 
-  const handleRemoveStatus = async (mappingId: string) => {
-    if (!confirm('Remove this status column? Tasks in this column will be moved to the first column.')) {
-      return;
-    }
-
+  const handleRemoveStatus = async () => {
+    if (!removeConfirmation) return;
     try {
-      await removeTemplateStatusMapping(mappingId);
-      onStatusRemoved(mappingId);
+      await removeTemplateStatusMapping(removeConfirmation);
+      onStatusRemoved(removeConfirmation);
       toast.success('Status column removed');
     } catch (error) {
       handleError(error, 'Failed to remove status column');
+    } finally {
+      setRemoveConfirmation(null);
     }
   };
 
@@ -142,6 +143,18 @@ export function TemplateStatusManager({
 
   return (
     <>
+      {removeConfirmation && (
+        <ConfirmationDialog
+          isOpen={true}
+          onClose={() => setRemoveConfirmation(null)}
+          onConfirm={handleRemoveStatus}
+          title="Remove Status Column"
+          message="Remove this status column? Tasks in this column will be moved to the first column."
+          confirmLabel="Remove"
+          cancelLabel="Cancel"
+        />
+      )}
+
       <Dialog
         isOpen={open}
         onClose={onClose}
@@ -191,7 +204,7 @@ export function TemplateStatusManager({
                       id={`remove-status-${mapping.template_status_mapping_id}`}
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleRemoveStatus(mapping.template_status_mapping_id)}
+                      onClick={() => setRemoveConfirmation(mapping.template_status_mapping_id)}
                       disabled={sortedMappings.length <= 1}
                       title={sortedMappings.length <= 1 ? 'Cannot remove last status column' : 'Remove'}
                     >

@@ -323,15 +323,18 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           )}
         </div>
         {(isTitleTruncated || isTitleExpanded) && (
-          <button
+          <Button
+            id={`toggle-title-${task.task_id}`}
+            variant="ghost"
+            size="sm"
+            className={`${zoomScales.metaSize} text-purple-600 hover:text-purple-700 font-medium p-0 h-auto w-auto ${isCompact ? '' : 'mt-1'}`}
             onClick={(e) => {
               e.stopPropagation();
               setIsTitleExpanded(!isTitleExpanded);
             }}
-            className={`${zoomScales.metaSize} text-purple-600 hover:text-purple-700 font-medium ${isCompact ? '' : 'mt-1'}`}
           >
             {isTitleExpanded ? 'See less' : 'See more'}
-          </button>
+          </Button>
         )}
       </div>
       {task.description && zoomScales.showDescription && (
@@ -343,15 +346,18 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             {highlightSearchMatch(task.description, searchQuery, searchCaseSensitive, searchWholeWord)}
           </p>
           {(isDescriptionTruncated || isDescriptionExpanded) && (
-            <button
+            <Button
+              id={`toggle-desc-${task.task_id}`}
+              variant="ghost"
+              size="sm"
+              className={`${zoomScales.metaSize} text-purple-600 hover:text-purple-700 font-medium p-0 h-auto w-auto ${isCompact ? '' : 'mt-1'}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setIsDescriptionExpanded(!isDescriptionExpanded);
               }}
-              className={`${zoomScales.metaSize} text-purple-600 hover:text-purple-700 font-medium ${isCompact ? '' : 'mt-1'}`}
             >
               {isDescriptionExpanded ? 'See less' : 'See more'}
-            </button>
+            </Button>
           )}
         </div>
       )}
@@ -527,30 +533,33 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           hasAnyTags && (
             <div>
               {!isTagsExpanded ? (
-                <button
-                  type="button"
+                <Button
+                  id={`show-tags-${task.task_id}`}
+                  variant="ghost"
+                  size="sm"
+                  className={`flex items-center gap-1 text-gray-500 hover:text-gray-700 transition-colors p-0 h-auto w-auto ${isCompact ? 'text-[10px]' : 'text-xs'}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsTagsExpanded(true);
                   }}
-                  className={`flex items-center gap-1 text-gray-500 hover:text-gray-700 transition-colors ${isCompact ? 'text-[10px]' : 'text-xs'}`}
-                  title={`${taskTagsList.length} tag${taskTagsList.length !== 1 ? 's' : ''} - click to show`}
                 >
                   <Tag className={isCompact ? 'w-3 h-3' : 'w-3.5 h-3.5'} />
                   <span>{taskTagsList.length}</span>
-                </button>
+                </Button>
               ) : (
                 <div className="space-y-1">
-                  <button
-                    type="button"
+                  <Button
+                    id={`hide-tags-${task.task_id}`}
+                    variant="ghost"
+                    size="sm"
+                    className={`text-gray-400 hover:text-gray-600 transition-colors p-0 h-auto w-auto ${isCompact ? 'text-[10px]' : 'text-xs'}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       setIsTagsExpanded(false);
                     }}
-                    className={`text-gray-400 hover:text-gray-600 transition-colors ${isCompact ? 'text-[10px]' : 'text-xs'}`}
                   >
                     Hide tags
-                  </button>
+                  </Button>
                   {onTaskTagsChange && task.task_id ? (
                     <TagManager
                       id={`task-tags-${task.task_id}`}
