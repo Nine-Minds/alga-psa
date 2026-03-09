@@ -23,6 +23,18 @@ type IncomingChatMessage = {
   tool_call_id?: string;
 };
 
+type IncomingUiContext = {
+  pathname: string;
+  screen: {
+    key: string;
+    label: string;
+  };
+  record?: {
+    type: 'ticket' | 'project' | 'client' | 'contact' | 'asset';
+    id: string;
+  };
+};
+
 type RawCompletionChunk = {
   type?: unknown;
   delta?: unknown;
@@ -34,7 +46,7 @@ type RawCompletionChunk = {
 type ChatCompletionsServiceLike = {
   createStructuredCompletionStream: (
     conversation: IncomingChatMessage[],
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; uiContext?: IncomingUiContext },
   ) => Promise<AsyncIterable<RawCompletionChunk>>;
 };
 
@@ -115,6 +127,55 @@ function validateMessages(raw: unknown): IncomingChatMessage[] {
   });
 }
 
+function validateUiContext(raw: unknown): IncomingUiContext | undefined {
+  if (raw === undefined || raw === null) {
+    return undefined;
+  }
+
+  const obj = asRecord(raw);
+  const pathname = readOptionalStringField(obj, 'pathname');
+  if (!pathname) {
+    throw new Error('Invalid uiContext payload');
+  }
+
+  const screen = asRecord(obj.screen);
+  const key = readOptionalStringField(screen, 'key');
+  const label = readOptionalStringField(screen, 'label');
+  if (!key || !label) {
+    throw new Error('Invalid uiContext payload');
+  }
+
+  let record:
+    | {
+        type: 'ticket' | 'project' | 'client' | 'contact' | 'asset';
+        id: string;
+      }
+    | undefined;
+
+  if (obj.record !== undefined) {
+    const recordObj = asRecord(obj.record);
+    const type = readOptionalStringField(recordObj, 'type');
+    const id = readOptionalStringField(recordObj, 'id');
+    if (
+      !id ||
+      (type !== 'ticket' &&
+        type !== 'project' &&
+        type !== 'client' &&
+        type !== 'contact' &&
+        type !== 'asset')
+    ) {
+      throw new Error('Invalid uiContext payload');
+    }
+    record = { type, id };
+  }
+
+  return {
+    pathname,
+    screen: { key, label },
+    ...(record ? { record } : {}),
+  };
+}
+
 function encodeSseData(encoder: TextEncoder, payload: unknown): Uint8Array {
   return encoder.encode(`data: ${JSON.stringify(payload)}\n\n`);
 }
@@ -191,11 +252,13 @@ export async function POST(req: NextRequest) {
   }
 
   let messages: IncomingChatMessage[];
+  let uiContext: IncomingUiContext | undefined;
   try {
     const bodyObj = asRecord(body);
     messages = validateMessages(bodyObj.messages);
+    uiContext = validateUiContext(bodyObj.uiContext);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Invalid messages payload';
+    const message = error instanceof Error ? error.message : 'Invalid payload';
     return new Response(JSON.stringify({ error: message }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
@@ -226,7 +289,7 @@ export async function POST(req: NextRequest) {
         };
         const completionStream = await mod.ChatCompletionsService.createStructuredCompletionStream(
           messages,
-          { signal: req.signal },
+          { signal: req.signal, uiContext },
         );
 
         for await (const event of completionStream) {

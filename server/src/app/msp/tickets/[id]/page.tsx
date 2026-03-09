@@ -8,6 +8,7 @@ import { getSurveyTicketSummary } from '@alga-psa/surveys/actions/survey-actions
 import AssociatedAssets from '@alga-psa/assets/components/AssociatedAssets';
 import { MspTicketDetailsContainerClient } from '@alga-psa/msp-composition/tickets';
 import { getTicketById } from '@alga-psa/tickets/actions/ticketActions';
+import { AIChatContextBoundary } from '@product/chat/context';
 import type { Metadata } from 'next';
 
 const getCachedTicket = cache((id: string) => getTicketById(id));
@@ -64,6 +65,19 @@ export default async function TicketDetailsPage({ params }: TicketDetailsPagePro
       ) : null;
     
     return (
+      <AIChatContextBoundary
+        value={{
+          pathname: `/msp/tickets/${id}`,
+          screen: {
+            key: 'tickets.detail',
+            label: 'Ticket Details',
+          },
+          record: {
+            type: 'ticket',
+            id,
+          },
+        }}
+      >
         <div id="ticket-details-container" className="bg-gray-100">
           <Suspense fallback={<TicketDetailsSkeleton />}>
             <MspTicketDetailsContainerClient
@@ -73,6 +87,7 @@ export default async function TicketDetailsPage({ params }: TicketDetailsPagePro
             />
           </Suspense>
         </div>
+      </AIChatContextBoundary>
     );
   } catch (error) {
     console.error(`Error fetching ticket with id ${id}:`, error);
