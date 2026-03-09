@@ -21,6 +21,7 @@ COPY package.json package-lock.json ./
 COPY server/package.json ./server/
 COPY shared/package.json ./shared/
 COPY ee/server/package.json ./ee/server/
+COPY ee/packages/workflows/package.json ./ee/packages/workflows/
 COPY services/workflow-worker/package.json ./services/workflow-worker/
 
 # Install only production dependencies.
