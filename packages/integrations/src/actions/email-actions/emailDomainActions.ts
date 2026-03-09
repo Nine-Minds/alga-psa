@@ -6,8 +6,6 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
-import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
-import { getActionRegistry } from '@shared/workflow/core/index';
 
 interface DomainStatus {
   domain: string;
@@ -86,30 +84,9 @@ export const addEmailDomain = withAuth(async (
 
     await knex('email_domains').insert(domainData);
 
-    // Trigger domain verification workflow
-    try {
-      const workflowRuntime = getWorkflowRuntime(getActionRegistry());
-      
-      await workflowRuntime.startWorkflowByVersionId(knex, {
-        versionId: 'domain_verification',
-        tenant: tenant || '',
-        initialData: {
-          tenantId: tenant,
-          domain: domainName
-        },
-        userId: user.user_id,
-        isSystemManaged: false
-      });
-
-      console.log(`[EmailDomains] Started domain verification workflow for ${domainName}`);
-    } catch (workflowError: any) {
-      console.error('[EmailDomains] Failed to start domain verification workflow:', workflowError);
-      // Don't fail the action if workflow fails - domain is still added
-    }
-
     return {
       success: true,
-      message: 'Domain added and verification process started'
+      message: 'Domain added'
     };
   } catch (error: any) {
     console.error('Error adding domain:', error);
@@ -134,56 +111,9 @@ export const verifyEmailDomain = withAuth(async (
       throw new Error('Domain not found');
     }
 
-    // Trigger domain verification workflow event
-    try {
-      const workflowRuntime = getWorkflowRuntime(getActionRegistry());
-      
-      // Find active workflow for this domain
-      const activeWorkflow = await knex('workflow_executions')
-        .where({ 
-          tenant: tenant,
-          status: 'running'
-        })
-        .whereRaw("initial_data->>'domain' = ?", [domainName])
-        .first();
-
-      if (activeWorkflow) {
-        // Send DNS_CONFIGURED event to the workflow
-        await workflowRuntime.submitEvent(knex, {
-          execution_id: activeWorkflow.execution_id,
-          event_name: 'DNS_CONFIGURED',
-          payload: {
-            domain: domainName,
-            tenantId: tenant
-          },
-          tenant: tenant || ''
-        });
-
-        console.log(`[EmailDomains] Sent DNS_CONFIGURED event for ${domainName}`);
-      } else {
-        // Start new verification workflow
-        await workflowRuntime.startWorkflowByVersionId(knex, {
-          versionId: 'domain_verification',
-          tenant: tenant || '',
-          initialData: {
-            tenantId: tenant,
-            domain: domainName,
-            skipDNSWait: true // Skip waiting since user says it's configured
-          },
-          userId: user.user_id,
-          isSystemManaged: false
-        });
-
-        console.log(`[EmailDomains] Started new verification workflow for ${domainName}`);
-      }
-    } catch (workflowError: any) {
-      console.error('[EmailDomains] Failed to trigger verification workflow:', workflowError);
-      throw new Error('Failed to trigger verification process');
-    }
-
     return {
       success: true,
-      message: 'Verification process triggered'
+      message: 'Verification requested'
     };
   } catch (error: any) {
     console.error('Error verifying domain:', error);

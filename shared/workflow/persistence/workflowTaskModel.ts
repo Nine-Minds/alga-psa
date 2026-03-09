@@ -98,8 +98,6 @@ const WorkflowTaskModel = {
         event_id: task.event_id || undefined,
       };
       
-      console.log('DEBUG WorkflowTaskModel.createTask - About to insert task:', JSON.stringify(taskToInsert, null, 2));
-      
       // Ensure JSON fields are correctly formatted for PostgreSQL
       const finalTaskRecord = {
         ...taskToInsert,
@@ -109,8 +107,6 @@ const WorkflowTaskModel = {
         response_data: taskToInsert.response_data ? JSON.stringify(taskToInsert.response_data) : null,
       };
       
-      console.log('DEBUG WorkflowTaskModel.createTask - Final record for DB:', JSON.stringify(finalTaskRecord, null, 2));
-      
       const [result] = await knex('workflow_tasks')
         .insert(finalTaskRecord)
         .returning('task_id');
@@ -119,7 +115,6 @@ const WorkflowTaskModel = {
         throw new Error('Task creation failed, no task_id returned.');
       }
       
-      console.log('DEBUG WorkflowTaskModel.createTask - Successfully inserted task with ID:', result.task_id);
       return result.task_id;
     } catch (error) {
       console.error('Error creating workflow task:', error);

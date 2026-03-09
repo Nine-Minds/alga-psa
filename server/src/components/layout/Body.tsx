@@ -13,8 +13,7 @@ export default function Body({
   const [prevPathname, setPrevPathname] = useState('');
   const lockBodyScroll = (pathname?.startsWith('/msp/workflows') ?? false)
     || (pathname?.startsWith('/msp/workflow-control') ?? false)
-    || (pathname?.startsWith('/msp/workflow-editor') ?? false)
-    || (pathname?.startsWith('/msp/automation-hub') ?? false);
+    || (pathname?.startsWith('/msp/workflow-editor') ?? false);
 
   // Handle navigation transitions
   useEffect(() => {

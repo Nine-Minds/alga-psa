@@ -1,4 +1,3 @@
-import logger from '../logger';
 import type { ISecretProvider } from './ISecretProvider';
 
 /**
@@ -11,11 +10,6 @@ export class EnvSecretProvider implements ISecretProvider {
 
   constructor() {
     this.prefix = process.env.SECRET_ENV_PREFIX || '';
-    if (this.prefix) {
-      logger.info(`EnvSecretProvider initialized with prefix: ${this.prefix}`);
-    } else {
-      logger.info('EnvSecretProvider initialized without prefix');
-    }
   }
 
   /**
@@ -27,11 +21,7 @@ export class EnvSecretProvider implements ISecretProvider {
    */
   async getAppSecret(name: string): Promise<string | undefined> {
     const envKey = this.prefix ? `${this.prefix}_${name}` : name;
-    const value = process.env[envKey];
-    if (value !== undefined) {
-      logger.debug(`EnvSecretProvider found app secret: ${envKey}`);
-    }
-    return value;
+    return process.env[envKey];
   }
 
   /**
@@ -46,11 +36,7 @@ export class EnvSecretProvider implements ISecretProvider {
     const envKey = this.prefix
       ? `${this.prefix}_TENANT_${tenantId}_${name}`
       : `TENANT_${tenantId}_${name}`;
-    const value = process.env[envKey];
-    if (value !== undefined) {
-      logger.debug(`EnvSecretProvider found tenant secret: ${envKey}`);
-    }
-    return value;
+    return process.env[envKey];
   }
 
   /**

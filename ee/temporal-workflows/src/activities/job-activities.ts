@@ -98,9 +98,10 @@ export async function executeJobHandler(input: {
   jobId: string;
   jobName: string;
   tenantId: string;
+  jobExecutionId: string;
   data: Record<string, unknown>;
 }): Promise<{ success: boolean; error?: string; result?: Record<string, unknown> }> {
-  const { jobId, jobName, tenantId, data } = input;
+  const { jobId, jobName, tenantId, jobExecutionId, data } = input;
 
   logger.info('Executing job handler activity', { jobId, jobName, tenantId });
 
@@ -123,7 +124,11 @@ export async function executeJobHandler(input: {
 
   try {
     const result = await runWithTenant(tenantId, async () => {
-      const maybeResult = await handler(jobId, { ...data, tenantId });
+      const maybeResult = await handler(jobId, {
+        ...data,
+        tenantId,
+        jobExecutionId,
+      });
       if (maybeResult && typeof maybeResult === 'object') {
         return maybeResult as Record<string, unknown>;
       }

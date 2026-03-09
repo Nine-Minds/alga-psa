@@ -118,8 +118,6 @@ async function buildSecretProviders(): Promise<ISecretProvider> {
     throw new Error('SECRET_READ_CHAIN cannot be empty');
   }
 
-  logger.info(`Building composite secret provider. Read chain: [${readChain.join(', ')}], Write provider: ${writeProviderEnv}`);
-
   // Validate configuration
   validateProviderConfiguration(readChain, writeProviderEnv as ProviderType);
 
@@ -158,7 +156,6 @@ export async function getSecretProviderInstance(): Promise<ISecretProvider> {
     const hasCompositeConfig = getEnvVar('SECRET_READ_CHAIN') || getEnvVar('SECRET_WRITE_PROVIDER');
 
     if (hasCompositeConfig) {
-      logger.info('Initializing composite secret provider system');
       secretProviderInstance = await buildSecretProviders();
     } else {
       // Legacy mode: prefer filesystem for Node runtimes while retaining env-only support for Edge.
@@ -167,8 +164,6 @@ export async function getSecretProviderInstance(): Promise<ISecretProvider> {
         ? ['env', 'filesystem']
         : ['env'];
       const writeProviderType: ProviderType = isNodeRuntime ? 'filesystem' : 'env';
-
-      logger.info(`Initializing secret provider (legacy mode with composite fallback). Using read chain [${readChain.join(', ')}] with write provider ${writeProviderType}`);
 
       const readProviders = await Promise.all(readChain.map((provider) => getProviderInstance(provider)));
       const writeProvider = await getProviderInstance(writeProviderType);

@@ -2,12 +2,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { DynamicWorkflowComponent } from '@alga-psa/workflows/components/WorkflowComponentLoader';
 import type { WorkflowProps } from '@alga-psa/workflows/components/WorkflowComponentLoader';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
@@ -18,35 +18,42 @@ interface WorkflowAutomationGateProps {
 
 export default function WorkflowAutomationGate({ workflowProps }: WorkflowAutomationGateProps) {
   const router = useRouter();
+  const { status } = useSession();
   const [workflowAutomationEnabled, setWorkflowAutomationEnabled] = useState<boolean | null>(null);
 
   useEffect(() => {
+    if (status === 'loading') {
+      return;
+    }
+
+    if (status === 'unauthenticated') {
+      router.push('/auth/msp/signin');
+      return;
+    }
+
+    let isMounted = true;
+
     const bootstrap = async () => {
       try {
-        const user = await getCurrentUser();
-        if (!user) {
-          router.push('/auth/msp/signin');
-          return;
+        const enabled = await isExperimentalFeatureEnabled('workflowAutomation');
+        if (isMounted) {
+          setWorkflowAutomationEnabled(enabled);
         }
       } catch (error) {
-        console.error('Authentication check failed:', error);
-        router.push('/auth/msp/signin');
-        return;
-      }
-
-      try {
-        const enabled = await isExperimentalFeatureEnabled('workflowAutomation');
-        setWorkflowAutomationEnabled(enabled);
-      } catch (error) {
         console.error('[WorkflowAutomationGate] Failed to check workflowAutomation feature flag', error);
-        setWorkflowAutomationEnabled(false);
+        if (isMounted) {
+          setWorkflowAutomationEnabled(false);
+        }
       }
     };
 
     void bootstrap();
-  }, [router]);
+    return () => {
+      isMounted = false;
+    };
+  }, [router, status]);
 
-  if (workflowAutomationEnabled === null) {
+  if (status === 'loading' || workflowAutomationEnabled === null) {
     return (
       <div className="flex items-center justify-center py-8">
         <LoadingIndicator layout="stacked" text="Loading workflow automation..." spinnerProps={{ size: 'md' }} />

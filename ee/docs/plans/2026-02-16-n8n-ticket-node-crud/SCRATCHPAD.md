@@ -17,6 +17,8 @@ Working notes for the n8n ticket-node plan. This captures scope decisions made i
 - (2026-02-16) Credential model for v1 is `baseUrl + apiKey` only (no tenant header field in UX).
 - (2026-02-16) Expose helper operations (`List Clients`, `List Boards`, `List Statuses`, `List Priorities`) in addition to internal lookup use.
 - (2026-02-16) Distribution target is npm availability for Alga users; n8n community-portal submission is not required for v1.
+- (2026-03-08) Extend the existing `Ticket` resource instead of adding a separate `Comment` resource; new scope is `List Comments` and `Add Comment`.
+- (2026-03-08) Do not expose `time_spent` in the n8n node because current Alga PSA ticket comments do not persist it or translate it into time entries.
 
 ## Discoveries / Constraints
 
@@ -36,6 +38,14 @@ Working notes for the n8n ticket-node plan. This captures scope decisions made i
   - `GET /api/v1/priorities`
 - (2026-02-16) n8n docs indicate installation from npm/manual path for community nodes is self-hosted; unverified community nodes are not available on n8n Cloud.
 - (2026-02-16) n8n docs recommend choosing declarative vs programmatic/hybrid style; this plan uses declarative-first with focused programmatic request/normalization logic.
+- (2026-03-08) Ticket comment API endpoints already exist:
+  - `GET /api/v1/tickets/{id}/comments`
+  - `POST /api/v1/tickets/{id}/comments`
+- (2026-03-08) `createTicketCommentSchema` still exposes `time_spent`, but `TicketService.addComment()` ignores it and the `comments` table has no `time_spent` column:
+  - `server/src/lib/api/schemas/ticket.ts`
+  - `server/src/lib/api/services/TicketService.ts`
+  - `server/migrations/202409071803_initial_schema.cjs`
+- (2026-03-08) `TicketService.getTicketComments()` supports `limit`, `offset`, and `order`, which are the only list-query knobs needed for the n8n comment-read operation.
 
 ## Commands / Runbooks
 
@@ -47,6 +57,10 @@ Working notes for the n8n ticket-node plan. This captures scope decisions made i
   - `find server/src/app/api/v1/tickets -maxdepth 3 -type f | sort`
 - (2026-02-16) Confirm helper route existence quickly:
   - `find server/src/app/api/v1 -maxdepth 3 -type f | sort | rg "boards|statuses|priorities|clients"`
+- (2026-03-08) Verify n8n package after adding ticket comments:
+  - `npm install --workspace packages/n8n-nodes-alga-psa --ignore-scripts`
+  - `npm -w packages/n8n-nodes-alga-psa test`
+  - `npm -w packages/n8n-nodes-alga-psa run build`
 
 ## Links / References
 
@@ -66,6 +80,9 @@ Working notes for the n8n ticket-node plan. This captures scope decisions made i
 - Final npm package name/scope decision for discoverability (`n8n-nodes-alga-psa` vs `@alga-psa/n8n-nodes-alga-psa`).
 - Confirm minimum supported n8n version and Node runtime for package README.
 - Decide whether to add optional `x-tenant-id` header support in a v1.1 credential update.
+- (2026-03-08) Resolved: ticket comments in n8n will include only current server-backed capabilities (`List Comments`, `Add Comment`) and will not surface `time_spent`.
+- (2026-03-08) Implemented F031/F032/F033/F034: added `Ticket -> List Comments` and `Ticket -> Add Comment`, omitted unsupported `time_spent`, updated README, and added `examples/add-comment-then-list-comments.workflow.json`.
+- (2026-03-08) Verification: `npm -w packages/n8n-nodes-alga-psa test` passed (`52` tests) and `npm -w packages/n8n-nodes-alga-psa run build` passed after installing the declared `n8n-workflow` dependency into this worktree with `npm install --workspace packages/n8n-nodes-alga-psa --ignore-scripts`.
 - (2026-02-16) Implemented F001: scaffolded `packages/n8n-nodes-alga-psa` with npm-valid community node package name and canonical n8n folder layout (`nodes/AlgaPsa`, `credentials`) to establish distribution-ready project boundaries.
 - (2026-02-16) Implemented F002: added package build metadata/scripts (`clean`, `build`, `typecheck`), TypeScript config, and n8n manifest entries so compiled credential/node artifacts emit under `dist/` for installable packaging.
 - (2026-02-16) Verified build artifact emission:

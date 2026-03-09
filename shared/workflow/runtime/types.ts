@@ -257,18 +257,37 @@ const stepSchemaInner = z.unknown().transform((val, ctx) => {
 
 export const stepSchema: z.ZodType<Step> = z.lazy(() => stepSchemaInner) as z.ZodType<Step>;
 
+export const workflowEventTriggerSchema = z.object({
+  type: z.literal('event'),
+  eventName: z.string().min(1),
+  sourcePayloadSchemaRef: z.string().min(1).optional(),
+  payloadMapping: inputMappingSchema.optional()
+}).strict();
+
+export const workflowOneTimeScheduleTriggerSchema = z.object({
+  type: z.literal('schedule'),
+  runAt: z.string().min(1)
+}).strict();
+
+export const workflowRecurringScheduleTriggerSchema = z.object({
+  type: z.literal('recurring'),
+  cron: z.string().min(1),
+  timezone: z.string().min(1)
+}).strict();
+
+export const workflowTriggerSchema = z.discriminatedUnion('type', [
+  workflowEventTriggerSchema,
+  workflowOneTimeScheduleTriggerSchema,
+  workflowRecurringScheduleTriggerSchema
+]);
+
 export const workflowDefinitionSchema = z.object({
   id: z.string().min(1),
   version: z.number().int().positive(),
   name: z.string().min(1),
   description: z.string().optional(),
   payloadSchemaRef: z.string().min(1),
-  trigger: z.object({
-    type: z.literal('event'),
-    eventName: z.string().min(1),
-    sourcePayloadSchemaRef: z.string().min(1).optional(),
-    payloadMapping: inputMappingSchema.optional()
-  }).optional(),
+  trigger: workflowTriggerSchema.optional(),
   steps: z.array(stepSchema)
 }).strict();
 
@@ -306,12 +325,31 @@ export const envelopeSchema = z.object({
 
 export type Envelope = z.infer<typeof envelopeSchema>;
 
-export type WorkflowTrigger = {
-  type: 'event';
-  eventName: string;
-  sourcePayloadSchemaRef?: string;
-  payloadMapping?: InputMapping;
-};
+export type WorkflowEventTrigger = z.infer<typeof workflowEventTriggerSchema>;
+export type WorkflowOneTimeScheduleTrigger = z.infer<typeof workflowOneTimeScheduleTriggerSchema>;
+export type WorkflowRecurringScheduleTrigger = z.infer<typeof workflowRecurringScheduleTriggerSchema>;
+export type WorkflowTrigger = z.infer<typeof workflowTriggerSchema>;
+export type WorkflowTimeTrigger = WorkflowOneTimeScheduleTrigger | WorkflowRecurringScheduleTrigger;
+
+export function isWorkflowEventTrigger(trigger: WorkflowTrigger | null | undefined): trigger is WorkflowEventTrigger {
+  return trigger?.type === 'event';
+}
+
+export function isWorkflowOneTimeScheduleTrigger(
+  trigger: WorkflowTrigger | null | undefined
+): trigger is WorkflowOneTimeScheduleTrigger {
+  return trigger?.type === 'schedule';
+}
+
+export function isWorkflowRecurringScheduleTrigger(
+  trigger: WorkflowTrigger | null | undefined
+): trigger is WorkflowRecurringScheduleTrigger {
+  return trigger?.type === 'recurring';
+}
+
+export function isWorkflowTimeTrigger(trigger: WorkflowTrigger | null | undefined): trigger is WorkflowTimeTrigger {
+  return trigger?.type === 'schedule' || trigger?.type === 'recurring';
+}
 
 export type WorkflowRunStatus = 'RUNNING' | 'WAITING' | 'SUCCEEDED' | 'FAILED' | 'CANCELED';
 export type WorkflowRunStepStatus = 'STARTED' | 'SUCCEEDED' | 'FAILED' | 'RETRY_SCHEDULED' | 'CANCELED';

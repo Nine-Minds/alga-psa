@@ -1,4 +1,9 @@
 import WorkflowAutomationGate from '../../_components/WorkflowAutomationGate';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Edit Workflow',
+};
 
 interface WorkflowEditorPageProps {
   params: Promise<{

@@ -30,5 +30,5 @@
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.d.ts", "lib/**/*.ts"],
-  "exclude": ["node_modules", "dist", "workflow/workflows/system-email-processing-workflow.ts"]
+  "exclude": ["node_modules", "dist"]
 }

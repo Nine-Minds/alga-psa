@@ -1,0 +1,242 @@
+[
+  {
+    "id": "T001",
+    "description": "Control panel no longer renders a Template Library tab.",
+    "implemented": false,
+    "featureIds": ["F001", "F012"]
+  },
+  {
+    "id": "T002",
+    "description": "No remaining workflow-control or workflow-editor link routes the user into the removed template-library screen.",
+    "implemented": false,
+    "featureIds": ["F001", "F012"]
+  },
+  {
+    "id": "T003",
+    "description": "Legacy TemplateLibrary component tree is removed from build inputs without breaking workflow-control render.",
+    "implemented": false,
+    "featureIds": ["F002", "F012"]
+  },
+  {
+    "id": "T004",
+    "description": "Legacy WorkflowEditorComponent/TestWorkflowModal/WorkflowVersionsDialog are removed or unreachable without compile errors.",
+    "implemented": false,
+    "featureIds": ["F002", "F005"]
+  },
+  {
+    "id": "T005",
+    "description": "packages/workflows action barrel no longer exports workflow-editor-actions.",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T006",
+    "description": "packages/workflows action barrel no longer exports workflow-runtime-actions.",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T007",
+    "description": "packages/workflows action barrel no longer exports template-library-actions.",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T008",
+    "description": "Deleting legacy action modules does not leave unresolved imports in workflow package components.",
+    "implemented": false,
+    "featureIds": ["F004", "F005"]
+  },
+  {
+    "id": "T009",
+    "description": "No component or action in active workflow-v2 UI imports workflow-editor-actions after the cut.",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T010",
+    "description": "No component or action in active workflow-v2 UI imports template-library-actions after the cut.",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T011",
+    "description": "No active server code calls getWorkflowRuntime() after the cut.",
+    "implemented": false,
+    "featureIds": ["F006", "F007", "F008"]
+  },
+  {
+    "id": "T012",
+    "description": "Server/shared init no longer imports shared/workflow/init legacy bootstrap modules.",
+    "implemented": false,
+    "featureIds": ["F007", "F008"]
+  },
+  {
+    "id": "T013",
+    "description": "The app boots without constructing the legacy TypeScriptWorkflowRuntime singleton.",
+    "implemented": false,
+    "featureIds": ["F007", "F008", "F018"]
+  },
+  {
+    "id": "T014",
+    "description": "Legacy shared persistence models for workflow_executions/events/event_processing/snapshots are removed from compile inputs.",
+    "implemented": false,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T015",
+    "description": "Integration email domain actions no longer depend on workflow v1 runtime or workflow_executions.",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T016",
+    "description": "Invoice or related legacy workflow helper actions no longer query workflow_executions.",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T017",
+    "description": "Workflow visualization actions no longer depend on workflow_registrations or system_workflow_registrations.",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T018",
+    "description": "Workflow event attachment actions/models no longer depend on legacy registration/version tables.",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T019",
+    "description": "Workflow editor still loads the v2 list/designer surface after template-library removal.",
+    "implemented": false,
+    "featureIds": ["F012", "F018"]
+  },
+  {
+    "id": "T020",
+    "description": "Workflow control still loads the v2 operational tabs after template-library removal.",
+    "implemented": false,
+    "featureIds": ["F012", "F018"]
+  },
+  {
+    "id": "T021",
+    "description": "Legacy v1 unit tests are removed or updated so the workflow package test suite no longer expects getWorkflowRuntime().",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T022",
+    "description": "Migration drops workflow_template_categories if present.",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T023",
+    "description": "Migration drops workflow_templates if present.",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T024",
+    "description": "Migration drops workflow_registrations if present.",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T025",
+    "description": "Migration drops workflow_registration_versions if present.",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T026",
+    "description": "Migration drops system_workflow_registrations if present.",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T027",
+    "description": "Migration drops system_workflow_registration_versions if present.",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T028",
+    "description": "Migration drops workflow_executions if present.",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T029",
+    "description": "Migration drops workflow_events if present.",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T030",
+    "description": "Migration drops workflow_event_processing if present.",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T031",
+    "description": "Migration drops workflow_snapshots if present.",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T032",
+    "description": "Migration succeeds in an environment where some legacy workflow tables are already absent.",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T033",
+    "description": "Legacy workflow template seed files are removed or no longer run during seeding.",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T034",
+    "description": "Legacy system-workflow seed data for the retired runtime is removed or no longer referenced.",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T035",
+    "description": "Tenant export no longer references dropped workflow_executions/workflow_events tables.",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T036",
+    "description": "Tenant deletion logic no longer references dropped workflow_snapshots or other v1 tables.",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T037",
+    "description": "Citus/distribution migration helpers no longer fail when v1 workflow tables are removed.",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T038",
+    "description": "The local app boots to /msp/workflow-editor after the v1 hard cut.",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T039",
+    "description": "The local app boots to /msp/workflow-control after the v1 hard cut.",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T040",
+    "description": "Stale docs/comments/menu labels do not describe template library or workflow v1 editor as active product behavior.",
+    "implemented": false,
+    "featureIds": ["F019"]
+  }
+]

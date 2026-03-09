@@ -11,6 +11,8 @@ import type {
   JsonObject,
 } from 'n8n-workflow';
 import {
+  buildTicketCommentListQuery,
+  buildTicketCommentPayload,
   buildTicketCreatePayload,
   buildTicketListQuery,
   buildTicketSearchQuery,
@@ -32,8 +34,10 @@ type TicketOperation =
   | 'create'
   | 'get'
   | 'list'
+  | 'listComments'
   | 'search'
   | 'update'
+  | 'addComment'
   | 'updateStatus'
   | 'updateAssignment'
   | 'delete';
@@ -195,8 +199,18 @@ export class AlgaPsa implements INodeType {
           { name: 'Create', value: 'create', action: 'Create a ticket' },
           { name: 'Get', value: 'get', action: 'Get a ticket' },
           { name: 'List', value: 'list', action: 'List tickets' },
+          {
+            name: 'List Comments',
+            value: 'listComments',
+            action: 'List comments for a ticket',
+          },
           { name: 'Search', value: 'search', action: 'Search tickets' },
           { name: 'Update', value: 'update', action: 'Update a ticket' },
+          {
+            name: 'Add Comment',
+            value: 'addComment',
+            action: 'Add a comment to a ticket',
+          },
           {
             name: 'Update Status',
             value: 'updateStatus',
@@ -407,9 +421,100 @@ export class AlgaPsa implements INodeType {
         displayOptions: {
           show: {
             resource: ['ticket'],
-            ticketOperation: ['get', 'update', 'updateStatus', 'updateAssignment', 'delete'],
+            ticketOperation: [
+              'get',
+              'update',
+              'listComments',
+              'addComment',
+              'updateStatus',
+              'updateAssignment',
+              'delete',
+            ],
           },
         },
+      },
+      {
+        displayName: 'Comment List Options',
+        name: 'commentListOptions',
+        type: 'collection',
+        default: {},
+        placeholder: 'Add Option',
+        displayOptions: {
+          show: {
+            resource: ['ticket'],
+            ticketOperation: ['listComments'],
+          },
+        },
+        options: [
+          {
+            displayName: 'Limit',
+            name: 'limit',
+            type: 'number',
+            default: 50,
+            typeOptions: {
+              minValue: 1,
+              maxValue: 200,
+              numberPrecision: 0,
+            },
+          },
+          {
+            displayName: 'Offset',
+            name: 'offset',
+            type: 'number',
+            default: 0,
+            typeOptions: {
+              minValue: 0,
+              numberPrecision: 0,
+            },
+          },
+          {
+            displayName: 'Order',
+            name: 'order',
+            type: 'options',
+            default: 'asc',
+            options: [
+              { name: 'Ascending', value: 'asc' },
+              { name: 'Descending', value: 'desc' },
+            ],
+          },
+        ],
+      },
+      {
+        displayName: 'Comment Text',
+        name: 'commentText',
+        type: 'string',
+        required: true,
+        default: '',
+        typeOptions: {
+          rows: 4,
+        },
+        displayOptions: {
+          show: {
+            resource: ['ticket'],
+            ticketOperation: ['addComment'],
+          },
+        },
+      },
+      {
+        displayName: 'Comment Additional Fields',
+        name: 'commentAdditionalFields',
+        type: 'collection',
+        default: {},
+        placeholder: 'Add Field',
+        displayOptions: {
+          show: {
+            resource: ['ticket'],
+            ticketOperation: ['addComment'],
+          },
+        },
+        options: [
+          {
+            displayName: 'Is Internal',
+            name: 'is_internal',
+            type: 'boolean',
+            default: false,
+          },
+        ],
       },
       {
         displayName: 'Assignment Action',
@@ -1135,6 +1240,30 @@ async function executeTicketOperation(
       return normalizeSuccessResponse(response);
     }
 
+    case 'listComments': {
+      const ticketId = requireUuid(
+        context,
+        context.getNodeParameter('ticketId', itemIndex) as string,
+        'ticketId',
+        itemIndex,
+      );
+      const commentListOptions = context.getNodeParameter(
+        'commentListOptions',
+        itemIndex,
+        {},
+      ) as IDataObject;
+
+      const query = buildTicketCommentListQuery(commentListOptions);
+      const response = await algaApiRequest(
+        context,
+        'GET',
+        `/api/v1/tickets/${ticketId}/comments`,
+        query,
+      );
+
+      return normalizeSuccessResponse(response);
+    }
+
     case 'search': {
       const queryText = requireNonEmpty(
         context,
@@ -1198,6 +1327,37 @@ async function executeTicketOperation(
         context,
         'PUT',
         `/api/v1/tickets/${ticketId}`,
+        undefined,
+        payload,
+      );
+
+      return normalizeSuccessResponse(response);
+    }
+
+    case 'addComment': {
+      const ticketId = requireUuid(
+        context,
+        context.getNodeParameter('ticketId', itemIndex) as string,
+        'ticketId',
+        itemIndex,
+      );
+      const commentText = requireNonEmpty(
+        context,
+        context.getNodeParameter('commentText', itemIndex) as string,
+        'commentText',
+        itemIndex,
+      );
+      const commentAdditionalFields = context.getNodeParameter(
+        'commentAdditionalFields',
+        itemIndex,
+        {},
+      ) as IDataObject;
+
+      const payload = buildTicketCommentPayload(commentText, commentAdditionalFields);
+      const response = await algaApiRequest(
+        context,
+        'POST',
+        `/api/v1/tickets/${ticketId}/comments`,
         undefined,
         payload,
       );

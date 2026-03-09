@@ -7,6 +7,9 @@ export type WorkflowRunRecord = {
   tenant_id?: string | null;
   status: string;
   node_path?: string | null;
+  trigger_type?: 'event' | 'schedule' | 'recurring' | null;
+  trigger_metadata_json?: Record<string, unknown> | null;
+  trigger_fire_key?: string | null;
   event_type?: string | null;
   source_payload_schema_ref?: string | null;
   trigger_mapping_applied?: boolean | null;
@@ -48,6 +51,13 @@ const WorkflowRunModelV2 = {
   getById: async (knex: Knex, runId: string): Promise<WorkflowRunRecord | null> => {
     const record = await knex<WorkflowRunRecord>('workflow_runs')
       .where({ run_id: runId })
+      .first();
+    return record || null;
+  },
+
+  getByTriggerFireKey: async (knex: Knex, fireKey: string): Promise<WorkflowRunRecord | null> => {
+    const record = await knex<WorkflowRunRecord>('workflow_runs')
+      .where({ trigger_fire_key: fireKey })
       .first();
     return record || null;
   },

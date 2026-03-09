@@ -21,7 +21,6 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useBranding } from '@alga-psa/tenancy/components';
 import { ClientExtensionsMenu } from '@alga-psa/client-portal/components';
 import { NotificationBell } from '@alga-psa/notifications/components';
-import { ActivityDrawerProvider } from '@alga-psa/workflows/components';
 import { DrawerProvider, DrawerOutlet } from '@alga-psa/ui';
 import { ThemeToggle } from '@alga-psa/ui/components/ThemeToggle';
 
@@ -73,7 +72,6 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
 
   return (
     <DrawerProvider>
-      <ActivityDrawerProvider>
         <div className="min-h-screen bg-background flex flex-col">
         {/* Navigation Bar */}
         <nav className="bg-transparent shadow-[0_5px_10px_rgba(0,0,0,0.1)]">
@@ -219,7 +217,6 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
           </main>
         </div>
         <DrawerOutlet />
-      </ActivityDrawerProvider>
     </DrawerProvider>
   );
 }

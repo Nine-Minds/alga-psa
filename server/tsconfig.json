@@ -163,10 +163,10 @@
         "../packages/scheduling/src/*"
       ],
       "@alga-psa/workflows": [
-        "../packages/workflows/src"
+        "../ee/packages/workflows/src"
       ],
       "@alga-psa/workflows/*": [
-        "../packages/workflows/src/*"
+        "../ee/packages/workflows/src/*"
       ],
       "@alga-psa/documents": [
         "../packages/documents/src"

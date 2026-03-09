@@ -46,6 +46,11 @@ import {
   extensionScheduledInvocationHandler,
   ExtensionScheduledInvocationJobData,
 } from './handlers/extensionScheduledInvocationHandler';
+import {
+  workflowOneTimeScheduledRunHandler,
+  workflowRecurringScheduledRunHandler,
+  WorkflowScheduledRunJobData,
+} from './handlers/workflowScheduledRunHandlers';
 import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
 
 /**
@@ -251,6 +256,30 @@ export async function registerAllJobHandlers(
         },
         retry: { maxAttempts: 3 },
         timeoutMs: 300000, // 5 minutes
+      },
+      registerOpts
+    );
+
+    JobHandlerRegistry.register<WorkflowScheduledRunJobData & BaseJobData>(
+      {
+        name: 'workflow-time-trigger-once',
+        handler: async (jobId, data) => {
+          await workflowOneTimeScheduledRunHandler(jobId, data as any);
+        },
+        retry: { maxAttempts: 3 },
+        timeoutMs: 300000,
+      },
+      registerOpts
+    );
+
+    JobHandlerRegistry.register<WorkflowScheduledRunJobData & BaseJobData>(
+      {
+        name: 'workflow-time-trigger-recurring',
+        handler: async (jobId, data) => {
+          await workflowRecurringScheduledRunHandler(jobId, data as any);
+        },
+        retry: { maxAttempts: 3 },
+        timeoutMs: 300000,
       },
       registerOpts
     );

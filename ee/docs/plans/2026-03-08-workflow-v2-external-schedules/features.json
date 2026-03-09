@@ -1,0 +1,317 @@
+[
+  {
+    "id": "F001",
+    "description": "Create a new EE ALGA plan for the external workflow schedules redesign without overwriting the prior inline time-trigger plan",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Change workflow schedule persistence from one-schedule-per-workflow to many-schedules-per-workflow",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Add required schedule name storage to the workflow schedule model",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Add static payload_json storage to the workflow schedule model",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Preserve workflow_version binding on each schedule and update it when the latest published version changes",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Add schedule CRUD persistence helpers for list, get, create, update, and delete operations",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Add server actions for listing schedules in a global Automation Hub screen",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Add server actions for creating schedules for published workflows",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Add server actions for editing existing schedules including timing and payload changes",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Add pause and resume actions for existing schedules",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Add delete actions that remove both schedule persistence and runner registration state",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Require workflows to have a published version before schedules can be created",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Restrict schedule creation and editing to workflows with pinned payload schemas",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Validate saved schedule payload_json against the workflow payload schema on create",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Validate saved schedule payload_json against the workflow payload schema on edit",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Revalidate all schedules when a workflow publishes a new latest version",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Automatically rebind valid schedules to the latest published workflow version",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Preserve invalid schedules after publish and mark them non-runnable with validation errors",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Update scheduled job handlers to launch workflows with the saved schedule payload instead of the fixed clock payload contract",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Keep schedule provenance metadata on workflow runs even though input_json comes from the saved static schedule payload",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Add a new Automation Hub Schedules tab and menu entry under the Automation Hub parent menu",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Build a global schedules list with workflow, trigger type, status, next fire or run-at, last fire, and error visibility",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Add filtering and search on the schedules list for workflow, status, trigger type, and text query",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Add row-level actions for edit, pause/resume, and delete on the schedules list",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Build a schedule create/edit dialog with workflow picker, schedule name, trigger type, and timing inputs",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Support one-time schedule entry using a runAt picker in the schedule dialog",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Support recurring schedule entry using 5-field cron plus timezone in the schedule dialog",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Reuse the existing workflow run dialog schema-driven form mode for schedule payload authoring",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Reuse the existing workflow run dialog JSON mode for schedule payload authoring",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Show inline payload validation errors in the schedule dialog and block save when invalid",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Reduce workflow editor trigger options to No trigger and Event",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Remove inline one-time and recurring schedule authoring panels from the workflow editor",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Keep no-trigger workflows manually runnable after schedule authoring moves \u062e\u0627\u0631\u062c of the workflow editor",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Keep event-trigger configuration and mapping behavior unchanged in the workflow editor",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Add workflow-context navigation into the global schedules screen prefiltered to the current workflow",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Gate schedule CRUD by existing workflow management permissions and tenant scope",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  }
+]

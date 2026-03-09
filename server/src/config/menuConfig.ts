@@ -140,7 +140,7 @@ export const navigationSections: NavigationSection[] = [
         href: '/msp/technician-dispatch'
       },
       {
-        name: 'Automation Hub',
+        name: 'Workflows',
         icon: Rocket,
         subItems: [
           { name: 'Control Panel', icon: Gauge, href: '/msp/workflow-control' },

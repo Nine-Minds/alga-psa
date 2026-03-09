@@ -31,7 +31,7 @@ import {
 import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
-import type { Step, IfBlock, ForEachBlock, TryCatchBlock, NodeStep } from '@shared/workflow/runtime';
+import type { Step, IfBlock, ForEachBlock, TryCatchBlock, NodeStep } from '@shared/workflow/runtime/client';
 
 /**
  * Step type color configuration

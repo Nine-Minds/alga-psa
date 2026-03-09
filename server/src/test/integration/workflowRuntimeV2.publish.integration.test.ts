@@ -3,7 +3,10 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
-import { resetWorkflowRuntimeTables } from '../helpers/workflowRuntimeV2TestUtils';
+import {
+  ensureWorkflowScheduleStateTable,
+  resetWorkflowRuntimeTables
+} from '../helpers/workflowRuntimeV2TestUtils';
 import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import {
@@ -91,9 +94,11 @@ async function publishWorkflow(workflowId: string, version: number, definition?:
 beforeAll(async () => {
   ensureWorkflowRuntimeV2TestRegistrations();
   db = await createTestDbConnection();
+  await ensureWorkflowScheduleStateTable(db);
 });
 
 beforeEach(async () => {
+  await ensureWorkflowScheduleStateTable(db);
   await resetWorkflowRuntimeTables(db);
   tenantId = uuidv4();
   userId = uuidv4();
@@ -554,6 +559,23 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     const runResult = await startWorkflowRunAction({ workflowId, payload: {} });
     const run = await WorkflowRunModelV2.getById(db, runResult.runId);
     expect(run?.workflow_version).toBe(2);
+  });
+
+  it('T045: no-trigger workflows still publish and run correctly after time-trigger support is added. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [stateSetStep('state-1', 'READY')],
+      name: 'No trigger regression'
+    });
+
+    const publishResult = await publishWorkflow(workflowId, 1);
+    expect(publishResult.ok).toBe(true);
+
+    const runResult = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    const run = await WorkflowRunModelV2.getById(db, runResult.runId);
+    expect(run?.workflow_id).toBe(workflowId);
+    expect(run?.workflow_version).toBe(1);
+    expect(run?.status).toBe('SUCCEEDED');
+    expect(run?.trigger_type ?? null).toBeNull();
   });
 
   it('Start run validates payload against payload schema and rejects invalid payloads. Mocks: non-target dependencies.', async () => {
