@@ -71,6 +71,7 @@ export interface IProjectTemplateStatusMapping extends TenantEntity {
   status_name?: string;
   color?: string;
   is_closed?: boolean;
+  icon?: string | null;
 }
 
 export interface IProjectTemplateTaskAssignment extends TenantEntity {

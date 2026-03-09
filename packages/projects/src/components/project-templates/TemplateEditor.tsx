@@ -36,10 +36,6 @@ import {
   X,
   Columns3,
   ChevronRight,
-  PlayCircle,
-  PauseCircle,
-  CheckCircle,
-  XCircle,
 } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import {
@@ -83,6 +79,7 @@ import { TemplateStatusManager } from './TemplateStatusManager';
 import TemplateTaskListView from './TemplateTaskListView';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import KanbanZoomControl, { calculateCardGap, calculateColumnWidth, calculateZoomScales } from '../KanbanZoomControl';
+import * as LucideIcons from 'lucide-react';
 import { LayoutGrid, List } from 'lucide-react';
 import styles from '../ProjectDetail.module.css';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
@@ -121,24 +118,11 @@ const taskTypeIcons: Record<string, React.ComponentType<{ className?: string; st
 };
 
 const getTemplateStatusIcon = (statusMapping: IProjectTemplateStatusMapping): React.ReactNode => {
-  if (statusMapping.is_closed) {
-    return <CheckCircle className="w-4 h-4" />;
-  }
-
-  const displayName = statusMapping.status_name || statusMapping.custom_status_name || 'Status';
-  const lowerName = displayName.toLowerCase();
-
-  if (lowerName.includes('progress') || lowerName.includes('doing')) {
-    return <PlayCircle className="w-4 h-4" />;
-  }
-  if (lowerName.includes('hold') || lowerName.includes('blocked') || lowerName.includes('waiting')) {
-    return <PauseCircle className="w-4 h-4" />;
-  }
-  if (lowerName.includes('cancel')) {
-    return <XCircle className="w-4 h-4" />;
-  }
-  if (lowerName.includes('done') || lowerName.includes('complete')) {
-    return <CheckCircle className="w-4 h-4" />;
+  if (statusMapping.icon) {
+    const IconComponent = (LucideIcons as any)[statusMapping.icon];
+    if (IconComponent) {
+      return <IconComponent className="w-4 h-4" />;
+    }
   }
 
   return <Clipboard className="w-4 h-4" />;
@@ -1169,14 +1153,16 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
             >
               {/* Collapsible Phases Panel */}
               <div className={`${styles.phasesContainer} ${isPhasesPanelVisible ? styles.phasesContainerExpanded : styles.phasesContainerCollapsed}`}>
-                <button
-                  onClick={() => setIsPhasesPanelVisible(!isPhasesPanelVisible)}
+                <Button
+                  id="toggle-phases-panel"
+                  variant="ghost"
+                  size="sm"
                   className={styles.phasesPanelToggle}
-                  title={isPhasesPanelVisible ? 'Hide phases panel' : 'Show phases panel'}
+                  onClick={() => setIsPhasesPanelVisible(!isPhasesPanelVisible)}
                   aria-label={isPhasesPanelVisible ? 'Hide phases panel' : 'Show phases panel'}
                 >
                   <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${isPhasesPanelVisible ? 'rotate-180' : ''}`} />
-                </button>
+                </Button>
                 <div className={`${styles.phasesList} ${isPhasesPanelVisible ? styles.phasesListVisible : styles.phasesListHidden}`}>
                   <div className={styles.phasesPanel}>
                     <div className={styles.phasesPanelHeader}>
@@ -1200,12 +1186,15 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                       <div className="text-sm text-gray-500 text-center py-4">
                         No phases yet.
                         <br />
-                        <button
-                          className="text-purple-600 hover:underline mt-1"
+                        <Button
+                          id="add-first-phase"
+                          variant="ghost"
+                          size="sm"
+                          className="text-purple-600 hover:text-purple-700 mt-1"
                           onClick={handleAddPhase}
                         >
                           Add your first phase
-                        </button>
+                        </Button>
                       </div>
                     ) : (
                       sortedPhases.map((phase) => {
@@ -1332,24 +1321,30 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                                 </div>
                               </div>
                               <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 shrink-0">
-                                <button
+                                <Button
+                                  id={`edit-phase-${phase.template_phase_id}`}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="p-1 h-auto w-auto"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleEditPhase(phase);
                                   }}
-                                  className="p-1 rounded hover:bg-gray-200 dark:hover:bg-[rgb(var(--color-border-200))]"
                                 >
                                   <Pencil className="w-4 h-4" />
-                                </button>
-                                <button
+                                </Button>
+                                <Button
+                                  id={`delete-phase-${phase.template_phase_id}`}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="p-1 h-auto w-auto text-destructive hover:text-destructive hover:bg-destructive/10"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleDeletePhase(phase);
                                   }}
-                                  className="p-1 rounded hover:bg-destructive/10 text-destructive"
                                 >
                                   <Trash className="w-4 h-4" />
-                                </button>
+                                </Button>
                               </div>
                             </>
                           )}
@@ -1397,21 +1392,27 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                                 autoFocus
                               />
                             </div>
-                            <button
+                            <Button
+                              id="close-search-bar"
+                              variant="ghost"
+                              size="sm"
+                              className="p-1 h-auto w-auto text-gray-400 hover:text-gray-600"
                               onClick={() => { setShowSearchBar(false); setSearchQuery(''); }}
-                              className="p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
                             >
                               <X className="h-4 w-4" />
-                            </button>
+                            </Button>
                           </div>
                         ) : (
                           <Tooltip content="Search tasks">
-                            <button
+                            <Button
+                              id="open-search-bar"
+                              variant="ghost"
+                              size="sm"
+                              className="p-1.5 h-auto w-auto text-gray-400 hover:text-gray-600"
                               onClick={() => setShowSearchBar(true)}
-                              className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
                             >
                               <Search className="h-4 w-4" />
-                            </button>
+                            </Button>
                           </Tooltip>
                         )}
                         {/* Zoom */}
@@ -1421,29 +1422,37 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                         />
                         {/* Sticky status names toggle */}
                         <Tooltip content={showStickyStatusNames ? "Hide sticky status names" : "Show sticky status names"}>
-                          <button
-                            onClick={handleToggleStickyStatusNames}
-                            className={`p-1.5 rounded-md transition-colors ${
+                          <Button
+                            id="sticky-status-names-toggle"
+                            variant="ghost"
+                            size="sm"
+                            className={`p-1.5 h-auto w-auto transition-colors ${
                               showStickyStatusNames
                                 ? 'bg-primary-100 text-primary-600'
-                                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                                : 'text-gray-400 hover:text-gray-600'
                             }`}
+                            onClick={handleToggleStickyStatusNames}
+                            aria-label={showStickyStatusNames ? "Hide sticky status names" : "Show sticky status names"}
                           >
                             <Columns3 className="h-4 w-4" />
-                          </button>
+                          </Button>
                         </Tooltip>
                         {/* Pin header toggle */}
                         <Tooltip content={isHeaderPinned ? "Unpin header" : "Pin header to top"}>
-                          <button
-                            onClick={handleToggleHeaderPinned}
-                            className={`p-1.5 rounded-md transition-colors ${
+                          <Button
+                            id="pin-header-toggle"
+                            variant="ghost"
+                            size="sm"
+                            className={`p-1.5 h-auto w-auto transition-colors ${
                               isHeaderPinned
                                 ? 'bg-primary-100 text-primary-600'
-                                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                                : 'text-gray-400 hover:text-gray-600'
                             }`}
+                            onClick={handleToggleHeaderPinned}
+                            aria-label={isHeaderPinned ? "Unpin header" : "Pin header to top"}
                           >
                             <Pin className="h-4 w-4" />
-                          </button>
+                          </Button>
                         </Tooltip>
                       </div>
                     </div>
