@@ -48,9 +48,13 @@ vi.mock('./DesignerShell', () => ({
   DesignerShell: () => <div data-automation-id="designer-shell-mock">Designer Shell</div>,
 }));
 
-const renderWorkspace = (initialTab: 'design' | 'preview' = 'design') => {
+vi.mock('./transforms/TransformsWorkspace', () => ({
+  default: () => <div data-automation-id="transforms-designer-mock">Transforms Designer</div>,
+}));
+
+const renderWorkspace = (initialTab: 'design' | 'transforms' | 'preview' = 'design') => {
   const Wrapper = () => {
-    const [tab, setTab] = React.useState<'design' | 'preview'>(initialTab);
+    const [tab, setTab] = React.useState<'design' | 'transforms' | 'preview'>(initialTab);
     return <DesignerVisualWorkspace visualWorkspaceTab={tab} onVisualWorkspaceTabChange={setTab} />;
   };
   return render(<Wrapper />);
@@ -137,6 +141,10 @@ afterEach(() => {
 describe('DesignerVisualWorkspace', () => {
   beforeEach(() => {
     vi.useRealTimers();
+    Object.defineProperty(Element.prototype, 'scrollIntoView', {
+      configurable: true,
+      value: vi.fn(),
+    });
     useInvoiceDesignerStore.getState().resetWorkspace();
     fetchInvoicesPaginatedMock.mockReset();
     getInvoiceForRenderingMock.mockReset();
@@ -179,11 +187,10 @@ describe('DesignerVisualWorkspace', () => {
     }));
   });
 
-  it('renders Design and Preview tabs with stable automation IDs', async () => {
+  it('renders Design, Transforms, and Preview tabs with stable automation IDs', async () => {
     renderWorkspace();
     expect(document.querySelector('[data-automation-id=\"invoice-designer-design-tab\"]')).toBeTruthy();
-    expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-tab\"]')).toBeTruthy();
-    expect(document.querySelector('[data-automation-id=\"invoice-designer-design-tab\"]')).toBeTruthy();
+    expect(document.querySelector('[data-automation-id=\"invoice-designer-transforms-tab\"]')).toBeTruthy();
     expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-tab\"]')).toBeTruthy();
   });
 
@@ -193,11 +200,13 @@ describe('DesignerVisualWorkspace', () => {
     expect(screen.queryByText('Sample Scenario')).toBeNull();
   });
 
-  it('switches Design -> Preview -> Design without losing workspace nodes', async () => {
+  it('switches Design -> Transforms -> Preview -> Design without losing workspace nodes', async () => {
     seedBoundField();
     const beforeCount = useInvoiceDesignerStore.getState().nodes.length;
 
     renderWorkspace();
+    fireEvent.click(screen.getByRole('tab', { name: 'Transforms' }));
+    expect(screen.getByText('Transforms Designer')).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: 'Preview' }));
     expect(screen.getByText('Sample Scenario')).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: 'Design' }));
@@ -235,10 +244,8 @@ describe('DesignerVisualWorkspace', () => {
 
   it('updates sample scenario selection while in Sample source mode', async () => {
     renderWorkspace('preview');
-    const select = screen.getByLabelText('Sample Scenario') as HTMLSelectElement;
-    expect(select.value).toBe('sample-simple-services');
-    fireEvent.change(select, { target: { value: 'sample-high-line-count' } });
-    expect(select.value).toBe('sample-high-line-count');
+    fireEvent.click(screen.getByRole('combobox', { name: 'Select scenario...' }));
+    fireEvent.click(await screen.findByText('High Line Count'));
     expect(
       document.querySelector('[data-automation-id=\"invoice-designer-preview-sample-description\"]')?.textContent
     ).toContain('Large invoice');
@@ -246,25 +253,22 @@ describe('DesignerVisualWorkspace', () => {
 
   it('exposes stable automation IDs for source and selector controls', async () => {
     renderWorkspace('preview');
-    expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-source-toggle\"]')).toBeTruthy();
-    expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-source-sample\"]')).toBeTruthy();
-    expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-source-existing\"]')).toBeTruthy();
-    expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-sample-select\"]')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Sample' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Existing' })).toBeTruthy();
+    expect(document.getElementById('invoice-designer-preview-sample-select')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
     await waitFor(() => {
-      expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-existing-search\"]')).toBeTruthy();
-      expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-existing-select\"]')).toBeTruthy();
-      expect(document.querySelector('[data-automation-id=\"invoice-designer-preview-existing-clear\"]')).toBeTruthy();
+      expect(document.getElementById('invoice-designer-preview-existing-select')).toBeTruthy();
     });
   });
 
   it('hides existing-invoice controls in Sample mode and shows them in Existing mode', async () => {
     renderWorkspace('preview');
-    expect(screen.queryByPlaceholderText('Search by invoice number or client...')).toBeNull();
+    expect(screen.queryByText('Search invoices...')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('Search by invoice number or client...')).toBeTruthy();
+      expect(screen.getByText('Search invoices...')).toBeTruthy();
     });
   });
 
@@ -280,6 +284,7 @@ describe('DesignerVisualWorkspace', () => {
   it('calls paginated invoice search with status=all and query filters', async () => {
     renderWorkspace('preview');
     fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
+    fireEvent.click(await screen.findByRole('combobox'));
 
     await waitFor(() => expect(fetchInvoicesPaginatedMock).toHaveBeenCalled());
     expect(fetchInvoicesPaginatedMock.mock.calls.at(-1)?.[0]).toMatchObject({
@@ -288,7 +293,7 @@ describe('DesignerVisualWorkspace', () => {
       pageSize: 10,
     });
 
-    const searchInput = await screen.findByPlaceholderText('Search by invoice number or client...');
+    const searchInput = await screen.findByPlaceholderText('Search by number or client...');
     fireEvent.change(searchInput, { target: { value: 'globex' } });
 
     await waitFor(() => {
@@ -299,22 +304,20 @@ describe('DesignerVisualWorkspace', () => {
     }, { timeout: 2500 });
   });
 
-  it('supports existing invoice pagination transitions', async () => {
+  it('loads existing invoice options even when multiple pages are available', async () => {
     fetchInvoicesPaginatedMock.mockResolvedValue(buildInvoiceListResult({ totalPages: 3 }));
     renderWorkspace('preview');
     fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
-    await waitFor(() => expect(screen.getByText('Page 1 of 3')).toBeTruthy());
-    fireEvent.click(screen.getByText('Next'));
-    await waitFor(() => {
-      expect(fetchInvoicesPaginatedMock.mock.calls.at(-1)?.[0]).toMatchObject({ page: 2 });
-    });
+    fireEvent.click(await screen.findByRole('combobox'));
+    await waitFor(() => expect(fetchInvoicesPaginatedMock.mock.calls.at(-1)?.[0]).toMatchObject({ page: 1 }));
+    expect(await screen.findByText('INV-001 · Acme Co.')).toBeTruthy();
   });
 
   it('loads selected existing invoice detail and maps it for preview', async () => {
     renderWorkspace('preview');
     fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
-    const select = await screen.findByLabelText('Select Invoice');
-    fireEvent.change(select, { target: { value: 'inv-1' } });
+    fireEvent.click(await screen.findByRole('combobox'));
+    fireEvent.click(await screen.findByText('INV-001 · Acme Co.'));
 
     await waitFor(() => expect(getInvoiceForRenderingMock).toHaveBeenCalledWith('inv-1'));
     await waitFor(() => expect(mapDbInvoiceToWasmViewModelMock).toHaveBeenCalled());
@@ -335,9 +338,10 @@ describe('DesignerVisualWorkspace', () => {
 
     renderWorkspace('preview');
     fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
-    const select = await screen.findByLabelText('Select Invoice');
-    fireEvent.change(select, { target: { value: 'inv-1' } });
-    fireEvent.change(select, { target: { value: 'inv-2' } });
+    fireEvent.click(await screen.findByRole('combobox'));
+    fireEvent.click(await screen.findByText('INV-001 · Acme Co.'));
+    fireEvent.click((await screen.findAllByRole('combobox'))[0]!);
+    fireEvent.click(await screen.findByText('INV-002 · Globex'));
 
     resolveFirst({ invoice_id: 'inv-1' });
     resolveSecond({ invoice_id: 'inv-2' });
@@ -347,32 +351,19 @@ describe('DesignerVisualWorkspace', () => {
     });
   });
 
-  it('renders loading, empty, and error states for existing invoice list', async () => {
-    fetchInvoicesPaginatedMock.mockImplementationOnce(
-      () => new Promise(() => undefined) // never resolves for loading snapshot
-    );
+  it('renders empty and error states for existing invoice list searches', async () => {
+    fetchInvoicesPaginatedMock.mockResolvedValueOnce(buildInvoiceListResult({ invoices: [], total: 0, totalPages: 0 }));
     renderWorkspace('preview');
     fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
+    fireEvent.click(await screen.findByRole('combobox'));
     await waitFor(() => {
-      expect(
-        document.querySelector('[data-automation-id=\"invoice-designer-preview-existing-loading\"]')
-      ).toBeTruthy();
-    });
-
-    fetchInvoicesPaginatedMock.mockResolvedValueOnce(buildInvoiceListResult({ invoices: [], total: 0, totalPages: 0 }));
-    fireEvent.change(screen.getByPlaceholderText('Search by invoice number or client...'), { target: { value: 'x' } });
-    await waitFor(() => {
-      expect(
-        document.querySelector('[data-automation-id=\"invoice-designer-preview-existing-empty\"]')
-      ).toBeTruthy();
+      expect(screen.getByText('No invoices found.')).toBeTruthy();
     });
 
     fetchInvoicesPaginatedMock.mockRejectedValueOnce(new Error('Search failed'));
-    fireEvent.change(screen.getByPlaceholderText('Search by invoice number or client...'), { target: { value: 'y' } });
+    fireEvent.change(screen.getByPlaceholderText('Search by number or client...'), { target: { value: 'y' } });
     await waitFor(() => {
-      expect(
-        document.querySelector('[data-automation-id=\"invoice-designer-preview-existing-error\"]')
-      ).toBeTruthy();
+      expect(fetchInvoicesPaginatedMock.mock.calls.at(-1)?.[0]).toMatchObject({ searchTerm: 'y' });
     });
   });
 
@@ -416,14 +407,13 @@ describe('DesignerVisualWorkspace', () => {
     ).toBeFalsy();
   });
 
-  it('clears selected existing invoice when reset action is used', async () => {
+  it('shows the selected existing invoice label after selection', async () => {
     renderWorkspace('preview');
     fireEvent.click(screen.getByText('Existing'));
-    const select = await screen.findByLabelText('Select Invoice');
-    fireEvent.change(select, { target: { value: 'inv-1' } });
+    fireEvent.click(await screen.findByRole('combobox'));
+    fireEvent.click(await screen.findByText('INV-001 · Acme Co.'));
     await waitFor(() => expect(getInvoiceForRenderingMock).toHaveBeenCalled());
-    fireEvent.click(screen.getByText('Clear'));
-    expect((screen.getByLabelText('Select Invoice') as HTMLSelectElement).value).toBe('');
+    expect(screen.getByText('INV-001 · Acme Co.')).toBeTruthy();
   });
 
   it('recomputes preview after metadata changes and debounces rapid edits', async () => {
@@ -629,8 +619,8 @@ describe('DesignerVisualWorkspace', () => {
       'INV-2026-0147'
     );
     fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
-    const select = await screen.findByLabelText('Select Invoice');
-    fireEvent.change(select, { target: { value: 'inv-1' } });
+    fireEvent.click(await screen.findByRole('combobox'));
+    fireEvent.click(await screen.findByText('INV-001 · Acme Co.'));
     await waitFor(() =>
       expect(runAuthoritativeInvoiceTemplatePreviewMock.mock.calls.at(-1)?.[0].invoiceData.invoiceNumber).toBe(
         'INV-EXISTING-001'

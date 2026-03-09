@@ -57,6 +57,31 @@ const createWorkspaceWithFieldAndDynamicTable = (): DesignerWorkspaceSnapshot =>
   };
 };
 
+const createWorkspaceWithTransforms = (): DesignerWorkspaceSnapshot => ({
+  ...createWorkspaceWithFieldAndDynamicTable(),
+  transforms: {
+    sourceBindingId: 'collection.items',
+    outputBindingId: 'transformed.items',
+    operations: [
+      {
+        id: 'filter-positive',
+        type: 'filter',
+        predicate: {
+          type: 'comparison',
+          path: 'total',
+          op: 'gt',
+          value: 0,
+        },
+      },
+      {
+        id: 'sort-description',
+        type: 'sort',
+        keys: [{ path: 'description', direction: 'asc' }],
+      },
+    ],
+  },
+});
+
 describe('exportWorkspaceToInvoiceTemplateAst', () => {
   it('exports designer workspace to a versioned AST document', () => {
     const workspace = createWorkspaceWithFieldAndDynamicTable();
@@ -101,6 +126,33 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
     expect(Object.values(hydrated.nodesById).some((node) => node.type === 'dynamic-table')).toBe(true);
     const page = Object.values(hydrated.nodesById).find((node) => node.type === 'page');
     expect(page?.children.length).toBeGreaterThan(0);
+  });
+
+  it('imports a template with no transforms into an empty transform workspace', () => {
+    const workspace = createWorkspaceWithFieldAndDynamicTable();
+    const ast = exportWorkspaceToInvoiceTemplateAst(workspace);
+    const hydrated = importInvoiceTemplateAstToWorkspace(ast);
+
+    expect(hydrated.transforms).toEqual({
+      sourceBindingId: '',
+      outputBindingId: '',
+      operations: [],
+    });
+  });
+
+  it('imports template transforms preserving source, output, ids, and order', () => {
+    const workspace = createWorkspaceWithTransforms();
+    const ast = exportWorkspaceToInvoiceTemplateAst(workspace);
+    const hydrated = importInvoiceTemplateAstToWorkspace(ast);
+
+    expect(hydrated.transforms).toMatchObject({
+      sourceBindingId: 'collection.items',
+      outputBindingId: 'transformed.items',
+    });
+    expect(hydrated.transforms.operations.map((operation) => operation.id)).toEqual([
+      'filter-positive',
+      'sort-description',
+    ]);
   });
 
   it('imports dynamic-table columns without undefined optional keys', () => {
@@ -362,6 +414,36 @@ describe('exportWorkspaceToInvoiceTemplateAst', () => {
     const ast1 = exportWorkspaceToInvoiceTemplateAst(workspace);
     const hydrated = importInvoiceTemplateAstToWorkspace(ast1);
     const ast2 = exportWorkspaceToInvoiceTemplateAst(hydrated);
+    expect(ast2).toEqual(ast1);
+  });
+
+  it('omits transforms from generated AST when the workspace has no authored transform pipeline', () => {
+    const workspace = createWorkspaceWithFieldAndDynamicTable();
+    const ast = exportWorkspaceToInvoiceTemplateAst(workspace);
+
+    expect(ast.transforms).toBeUndefined();
+  });
+
+  it('exports authored transform pipelines into the generated AST', () => {
+    const workspace = createWorkspaceWithTransforms();
+    const ast = exportWorkspaceToInvoiceTemplateAst(workspace);
+
+    expect(ast.transforms).toMatchObject({
+      sourceBindingId: 'collection.items',
+      outputBindingId: 'transformed.items',
+      operations: [
+        { id: 'filter-positive', type: 'filter' },
+        { id: 'sort-description', type: 'sort' },
+      ],
+    });
+  });
+
+  it('roundtrips transformed AST deterministically (export -> import -> export)', () => {
+    const workspace = createWorkspaceWithTransforms();
+    const ast1 = exportWorkspaceToInvoiceTemplateAst(workspace);
+    const hydrated = importInvoiceTemplateAstToWorkspace(ast1);
+    const ast2 = exportWorkspaceToInvoiceTemplateAst(hydrated);
+
     expect(ast2).toEqual(ast1);
   });
 

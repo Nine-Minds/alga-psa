@@ -15,6 +15,7 @@ import { exportWorkspaceToInvoiceTemplateAst } from './ast/workspaceAst';
 import PaperInvoice from '../billing-dashboard/PaperInvoice';
 import { TemplateRenderer } from '../billing-dashboard/TemplateRenderer';
 import { DesignerShell } from './DesignerShell';
+import TransformsWorkspace from './transforms/TransformsWorkspace';
 import { useInvoiceDesignerStore } from './state/designerStore';
 import {
   createInitialPreviewSessionState,
@@ -32,7 +33,7 @@ import {
   INVOICE_PREVIEW_SAMPLE_SCENARIOS,
 } from './preview/sampleScenarios';
 
-type VisualWorkspaceTab = 'design' | 'preview';
+type VisualWorkspaceTab = 'design' | 'transforms' | 'preview';
 
 type DesignerVisualWorkspaceProps = {
   visualWorkspaceTab: VisualWorkspaceTab;
@@ -64,6 +65,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
   const gridSize = useInvoiceDesignerStore((state) => state.gridSize);
   const snapToGrid = useInvoiceDesignerStore((state) => state.snapToGrid);
   const rootId = useInvoiceDesignerStore((state) => state.rootId);
+  const transforms = useInvoiceDesignerStore((state) => state.transforms);
 
   const [previewState, dispatch] = useReducer(previewSessionReducer, undefined, createInitialPreviewSessionState);
   const [authoritativePreview, setAuthoritativePreview] = useState<
@@ -98,13 +100,14 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
           { id: node.id, type: node.type, props: node.props, children: node.children },
         ])
       ),
+      transforms,
       snapToGrid,
       gridSize,
       showGuides,
       showRulers,
       canvasScale,
     }),
-    [canvasScale, debouncedNodes, gridSize, rootId, showGuides, showRulers, snapToGrid]
+    [canvasScale, debouncedNodes, gridSize, rootId, showGuides, showRulers, snapToGrid, transforms]
   );
   const previewTemplate = useMemo<IInvoiceTemplate | null>(() => {
     if (!previewData) {
@@ -145,6 +148,31 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
     previewState.shapeStatus === 'running' ||
     previewState.renderStatus === 'running' ||
     previewState.verifyStatus === 'running';
+  const loadExistingInvoiceOptions = async ({
+    search,
+    page,
+    limit,
+  }: {
+    search: string;
+    page: number;
+    limit: number;
+  }) => {
+    const result = await fetchInvoicesPaginated({
+      page,
+      pageSize: limit,
+      searchTerm: search,
+      status: 'all',
+      sortBy: 'invoice_date',
+      sortOrder: 'desc',
+    });
+    return {
+      options: result.invoices.map((inv) => ({
+        value: inv.invoice_id,
+        label: `${inv.invoice_number} · ${inv.client.name}`,
+      })),
+      total: result.total,
+    };
+  };
 
   useEffect(() => {
     if (previewState.sourceKind !== 'existing' || !previewState.selectedInvoiceId) {
@@ -259,6 +287,9 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
         <TabsTrigger value="design" data-automation-id="invoice-designer-design-tab">
           Design
         </TabsTrigger>
+        <TabsTrigger value="transforms" data-automation-id="invoice-designer-transforms-tab">
+          Transforms
+        </TabsTrigger>
         <TabsTrigger value="preview" data-automation-id="invoice-designer-preview-tab">
           Preview
         </TabsTrigger>
@@ -266,6 +297,19 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
 
       <TabsContent value="design" className="pt-3">
         <DesignerShell />
+      </TabsContent>
+
+      <TabsContent value="transforms" className="pt-3">
+        <TransformsWorkspace
+          previewState={previewState}
+          previewData={previewData}
+          activeSample={activeSample}
+          onSourceKindChange={(source) => dispatch({ type: 'set-source', source })}
+          onSampleChange={(sampleId) => dispatch({ type: 'set-sample', sampleId })}
+          onExistingInvoiceChange={(invoiceId) => dispatch({ type: 'select-existing-invoice', invoiceId })}
+          onClearExistingInvoice={() => dispatch({ type: 'clear-existing-invoice' })}
+          loadExistingInvoiceOptions={loadExistingInvoiceOptions}
+        />
       </TabsContent>
 
       <TabsContent value="preview" className="pt-3 space-y-3">
@@ -313,23 +357,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
                   }
                   dispatch({ type: 'select-existing-invoice', invoiceId: value });
                 }}
-                loadOptions={async ({ search, page, limit }) => {
-                  const result = await fetchInvoicesPaginated({
-                    page,
-                    pageSize: limit,
-                    searchTerm: search,
-                    status: 'all',
-                    sortBy: 'invoice_date',
-                    sortOrder: 'desc',
-                  });
-                  return {
-                    options: result.invoices.map((inv) => ({
-                      value: inv.invoice_id,
-                      label: `${inv.invoice_number} · ${inv.client.name}`,
-                    })),
-                    total: result.total,
-                  };
-                }}
+                loadOptions={loadExistingInvoiceOptions}
                 placeholder="Search invoices..."
                 searchPlaceholder="Search by number or client..."
                 emptyMessage="No invoices found."

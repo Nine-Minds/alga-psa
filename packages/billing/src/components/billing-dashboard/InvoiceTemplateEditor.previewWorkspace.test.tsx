@@ -41,13 +41,16 @@ vi.mock('../invoice-designer/DesignerVisualWorkspace', () => ({
     visualWorkspaceTab,
     onVisualWorkspaceTabChange,
   }: {
-    visualWorkspaceTab: 'design' | 'preview';
-    onVisualWorkspaceTabChange: (tab: 'design' | 'preview') => void;
+    visualWorkspaceTab: 'design' | 'transforms' | 'preview';
+    onVisualWorkspaceTabChange: (tab: 'design' | 'transforms' | 'preview') => void;
   }) => (
     <div data-testid="designer-visual-workspace">
       <span data-testid="designer-visual-workspace-tab">{visualWorkspaceTab}</span>
       <button type="button" onClick={() => onVisualWorkspaceTabChange('preview')}>
         Switch Preview
+      </button>
+      <button type="button" onClick={() => onVisualWorkspaceTabChange('transforms')}>
+        Switch Transforms
       </button>
     </div>
   ),
@@ -112,6 +115,67 @@ const createWorkspaceWithFieldAndDynamicTable = (fieldId: string): DesignerWorks
   };
 };
 
+const buildTransformedTemplateAst = () => {
+  const workspace = createWorkspaceWithFieldAndDynamicTable('transforms-field');
+  const pageNode = Object.values(workspace.nodesById).find((node) => node.type === 'page');
+  const pageId = pageNode?.id;
+  if (pageId) {
+    workspace.nodesById[pageId] = {
+      ...workspace.nodesById[pageId],
+      children: [...workspace.nodesById[pageId].children, 'grouped-table'],
+    };
+    workspace.nodesById['grouped-table'] = {
+      id: 'grouped-table',
+      type: 'dynamic-table',
+      props: {
+        name: 'Grouped Line Items',
+        metadata: {
+          collectionBindingKey: 'lineItems.grouped',
+          columns: [
+            { id: 'col-key', header: 'Category', key: 'item.key' },
+            { id: 'col-total', header: 'Amount', key: 'item.aggregates.sumTotal' },
+          ],
+        },
+      },
+      children: [],
+    };
+  }
+
+  workspace.transforms = {
+    sourceBindingId: 'lineItems',
+    outputBindingId: 'lineItems.grouped',
+    operations: [
+      {
+        id: 'filter-positive',
+        type: 'filter',
+        predicate: {
+          type: 'comparison',
+          path: 'total',
+          op: 'gt',
+          value: 0,
+        },
+      },
+      {
+        id: 'sort-total',
+        type: 'sort',
+        keys: [{ path: 'total', direction: 'desc' }],
+      },
+      {
+        id: 'group-category',
+        type: 'group',
+        key: 'category',
+      },
+      {
+        id: 'aggregate-total',
+        type: 'aggregate',
+        aggregations: [{ id: 'sumTotal', op: 'sum', path: 'total' }],
+      },
+    ] as any,
+  };
+
+  return exportWorkspaceToInvoiceTemplateAst(workspace);
+};
+
 const installLocalStorageMock = () => {
   const backing = new Map<string, string>();
   const storageMock: Storage = {
@@ -132,6 +196,33 @@ const installLocalStorageMock = () => {
     value: storageMock,
     configurable: true,
   });
+};
+
+const transformedWorkspaceState = {
+  sourceBindingId: 'collection.items',
+  outputBindingId: 'transformed.items',
+  operations: [
+    {
+      id: 'filter-positive',
+      type: 'filter' as const,
+      predicate: {
+        type: 'comparison' as const,
+        path: 'total',
+        op: 'gt' as const,
+        value: 0,
+      },
+    },
+    {
+      id: 'group-category',
+      type: 'group' as const,
+      key: 'category',
+    },
+    {
+      id: 'aggregate-total',
+      type: 'aggregate' as const,
+      aggregations: [{ id: 'sumTotal', op: 'sum' as const, path: 'total' }],
+    },
+  ],
 };
 
 describe('InvoiceTemplateEditor preview workspace integration', () => {
@@ -173,6 +264,19 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
     expect(screen.getByTestId('designer-visual-workspace-tab').textContent).toBe('preview');
   });
 
+  it('renders the Transforms sub-tab and preserves it across Visual -> Code -> Visual switches', async () => {
+    render(<InvoiceTemplateEditor templateId="tpl-1" />);
+
+    await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
+    fireEvent.click(screen.getByText('Switch Transforms'));
+    expect(screen.getByTestId('designer-visual-workspace-tab').textContent).toBe('transforms');
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Code' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Visual' }));
+
+    expect(screen.getByTestId('designer-visual-workspace-tab').textContent).toBe('transforms');
+  });
+
   it('hydrates workspace from localStorage fallback', async () => {
     const workspace = createWorkspaceWithField('local-field');
     const storage = globalThis.localStorage as Storage | undefined;
@@ -182,11 +286,7 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
     getInvoiceTemplateMock.mockResolvedValueOnce({
       template_id: 'tpl-local',
       name: 'Template Local',
-      templateAst: {
-        kind: 'invoice-template-ast',
-        version: 1,
-        layout: { id: 'root', type: 'document', children: [] },
-      },
+      templateAst: null,
       isStandard: false,
     });
 
@@ -231,6 +331,162 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
       kind: 'invoice-template-ast',
       version: 1,
     });
+    expect(payload.templateAst.transforms).toBeUndefined();
+  });
+
+  it('persists authored transform workspace state into the save payload', async () => {
+    render(<InvoiceTemplateEditor templateId="tpl-1" />);
+    await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
+    await waitFor(() => expect(getInvoiceTemplateMock).toHaveBeenCalled());
+
+    act(() => {
+      useInvoiceDesignerStore.getState().setTransforms(transformedWorkspaceState);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Template' }));
+    await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalled());
+
+    const payload = saveInvoiceTemplateMock.mock.calls.at(-1)?.[0];
+    expect(payload.templateAst.transforms).toMatchObject({
+      sourceBindingId: 'collection.items',
+      outputBindingId: 'transformed.items',
+      operations: [
+        { id: 'filter-positive', type: 'filter' },
+        { id: 'group-category', type: 'group' },
+        { id: 'aggregate-total', type: 'aggregate' },
+      ],
+    });
+  });
+
+  it('renders the authored transforms block in the read-only code tab', async () => {
+    render(<InvoiceTemplateEditor templateId="tpl-1" />);
+    await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
+    await waitFor(() => expect(getInvoiceTemplateMock).toHaveBeenCalled());
+
+    act(() => {
+      useInvoiceDesignerStore.getState().setTransforms(transformedWorkspaceState);
+    });
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Code' }));
+
+    await waitFor(() => {
+      const editor = screen.getByTestId('monaco-mock') as HTMLTextAreaElement;
+      const parsed = JSON.parse(editor.value);
+      expect(parsed.transforms).toMatchObject({
+        sourceBindingId: 'collection.items',
+        outputBindingId: 'transformed.items',
+        operations: [
+          { id: 'filter-positive', type: 'filter' },
+          { id: 'group-category', type: 'group' },
+          { id: 'aggregate-total', type: 'aggregate' },
+        ],
+      });
+    });
+  });
+
+  it('keeps the read-only code tab valid JSON when no transforms are authored', async () => {
+    render(<InvoiceTemplateEditor templateId="tpl-1" />);
+    await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Code' }));
+
+    const editor = screen.getByTestId('monaco-mock') as HTMLTextAreaElement;
+    const parsed = JSON.parse(editor.value);
+    expect(parsed.kind).toBe('invoice-template-ast');
+    expect(parsed.version).toBe(1);
+    expect(parsed.transforms).toBeUndefined();
+  });
+
+  it('preserves authored transforms after save and reopen without edits', async () => {
+    const firstRender = render(<InvoiceTemplateEditor templateId="tpl-1" />);
+    await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
+    await waitFor(() => expect(getInvoiceTemplateMock).toHaveBeenCalled());
+
+    act(() => {
+      useInvoiceDesignerStore.getState().setTransforms(transformedWorkspaceState);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Template' }));
+    await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalled());
+
+    const savedPayload = saveInvoiceTemplateMock.mock.calls.at(-1)?.[0];
+    expect(savedPayload.templateAst.transforms).toMatchObject(transformedWorkspaceState);
+
+    firstRender.unmount();
+    useInvoiceDesignerStore.getState().resetWorkspace();
+    getInvoiceTemplateMock.mockResolvedValueOnce({
+      template_id: 'tpl-1',
+      name: 'Template A',
+      templateAst: savedPayload.templateAst,
+      isStandard: false,
+    });
+
+    render(<InvoiceTemplateEditor templateId="tpl-1" />);
+
+    await waitFor(() =>
+      expect(useInvoiceDesignerStore.getState().transforms).toMatchObject(transformedWorkspaceState)
+    );
+  });
+
+  it('preserves reordered transforms after save and reopen', async () => {
+    const reorderedTransforms = {
+      sourceBindingId: 'collection.items',
+      outputBindingId: 'transformed.items',
+      operations: [
+        {
+          id: 'sort-total',
+          type: 'sort' as const,
+          keys: [{ path: 'total', direction: 'desc' as const }],
+        },
+        {
+          id: 'group-category',
+          type: 'group' as const,
+          key: 'category',
+        },
+        {
+          id: 'aggregate-total',
+          type: 'aggregate' as const,
+          aggregations: [{ id: 'sumTotal', op: 'sum' as const, path: 'total' }],
+        },
+      ],
+    };
+
+    const firstRender = render(<InvoiceTemplateEditor templateId="tpl-1" />);
+    await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
+    await waitFor(() => expect(getInvoiceTemplateMock).toHaveBeenCalled());
+
+    act(() => {
+      useInvoiceDesignerStore.getState().setTransforms(reorderedTransforms);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Template' }));
+    await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalled());
+
+    const savedPayload = saveInvoiceTemplateMock.mock.calls.at(-1)?.[0];
+    expect(savedPayload.templateAst.transforms.operations.map((operation: { id: string }) => operation.id)).toEqual([
+      'sort-total',
+      'group-category',
+      'aggregate-total',
+    ]);
+
+    firstRender.unmount();
+    useInvoiceDesignerStore.getState().resetWorkspace();
+    getInvoiceTemplateMock.mockResolvedValueOnce({
+      template_id: 'tpl-1',
+      name: 'Template A',
+      templateAst: savedPayload.templateAst,
+      isStandard: false,
+    });
+
+    render(<InvoiceTemplateEditor templateId="tpl-1" />);
+
+    await waitFor(() =>
+      expect(useInvoiceDesignerStore.getState().transforms.operations.map((operation) => operation.id)).toEqual([
+        'sort-total',
+        'group-category',
+        'aggregate-total',
+      ])
+    );
   });
 
   it('does not trigger save writes from preview interactions alone', async () => {
@@ -267,6 +523,160 @@ describe('InvoiceTemplateEditor preview workspace integration', () => {
       kind: 'invoice-template-ast',
       version: 1,
     });
+  });
+
+  it('shows the generated transforms block in the read-only code tab when transforms are authored', async () => {
+    render(<InvoiceTemplateEditor templateId="tpl-1" />);
+    await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
+    await waitFor(() => expect(getInvoiceTemplateMock).toHaveBeenCalled());
+
+    act(() => {
+      useInvoiceDesignerStore.getState().setTransforms({
+        sourceBindingId: 'lineItems',
+        outputBindingId: 'lineItems.grouped',
+        operations: [
+          {
+            id: 'group-category',
+            type: 'group',
+            key: 'category',
+          },
+          {
+            id: 'aggregate-total',
+            type: 'aggregate',
+            aggregations: [{ id: 'sumTotal', op: 'sum', path: 'total' }],
+          },
+        ] as any,
+      });
+    });
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Code' }));
+
+    await waitFor(() => {
+      const editor = screen.getByTestId('monaco-mock') as HTMLTextAreaElement;
+      expect(editor.value).toContain('"transforms"');
+      expect(editor.value).toContain('"outputBindingId": "lineItems.grouped"');
+      expect(editor.value).toContain('"aggregate-total"');
+    });
+  });
+
+  it('keeps the generated code tab as valid AST JSON when no transforms are authored', async () => {
+    render(<InvoiceTemplateEditor templateId="tpl-1" />);
+    await waitFor(() => expect(screen.getByTestId('designer-visual-workspace')).toBeTruthy());
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Code' }));
+
+    const editor = await screen.findByTestId('monaco-mock');
+    const generatedAst = JSON.parse((editor as HTMLTextAreaElement).value);
+    expect(generatedAst.kind).toBe('invoice-template-ast');
+    expect(generatedAst.version).toBe(1);
+    expect(generatedAst.transforms).toBeUndefined();
+  });
+
+  it('round-trips unchanged transforms through save and reopen without losing configuration', async () => {
+    const transformedAst = buildTransformedTemplateAst();
+    getInvoiceTemplateMock.mockResolvedValueOnce({
+      template_id: 'tpl-roundtrip',
+      name: 'Template Roundtrip',
+      templateAst: transformedAst,
+      isStandard: false,
+    });
+
+    const rendered = render(<InvoiceTemplateEditor templateId="tpl-roundtrip" />);
+
+    await waitFor(() =>
+      expect(useInvoiceDesignerStore.getState().transforms.operations.map((operation) => operation.id)).toEqual([
+        'filter-positive',
+        'sort-total',
+        'group-category',
+        'aggregate-total',
+      ])
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Template' }));
+    await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalledTimes(1));
+
+    const savedAst = saveInvoiceTemplateMock.mock.calls[0]?.[0]?.templateAst;
+    expect(savedAst.transforms).toEqual(transformedAst.transforms);
+
+    rendered.unmount();
+    useInvoiceDesignerStore.getState().resetWorkspace();
+    getInvoiceTemplateMock.mockResolvedValueOnce({
+      template_id: 'tpl-roundtrip',
+      name: 'Template Roundtrip',
+      templateAst: savedAst,
+      isStandard: false,
+    });
+
+    render(<InvoiceTemplateEditor templateId="tpl-roundtrip" />);
+
+    await waitFor(() =>
+      expect(useInvoiceDesignerStore.getState().transforms.operations.map((operation) => operation.id)).toEqual([
+        'filter-positive',
+        'sort-total',
+        'group-category',
+        'aggregate-total',
+      ])
+    );
+    expect(useInvoiceDesignerStore.getState().transforms.outputBindingId).toBe('lineItems.grouped');
+  });
+
+  it('preserves reordered transform order through save and reopen', async () => {
+    const transformedAst = buildTransformedTemplateAst();
+    getInvoiceTemplateMock.mockResolvedValueOnce({
+      template_id: 'tpl-reorder',
+      name: 'Template Reorder',
+      templateAst: transformedAst,
+      isStandard: false,
+    });
+
+    const rendered = render(<InvoiceTemplateEditor templateId="tpl-reorder" />);
+    await waitFor(() =>
+      expect(useInvoiceDesignerStore.getState().transforms.operations.map((operation) => operation.id)).toEqual([
+        'filter-positive',
+        'sort-total',
+        'group-category',
+        'aggregate-total',
+      ])
+    );
+
+    act(() => {
+      const current = useInvoiceDesignerStore.getState().transforms;
+      useInvoiceDesignerStore.getState().setTransforms({
+        ...current,
+        operations: [current.operations[1]!, current.operations[0]!, current.operations[2]!, current.operations[3]!],
+      });
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Template' }));
+    await waitFor(() => expect(saveInvoiceTemplateMock).toHaveBeenCalledTimes(1));
+
+    const savedAst = saveInvoiceTemplateMock.mock.calls[0]?.[0]?.templateAst;
+    expect(savedAst.transforms.operations.map((operation: any) => operation.id)).toEqual([
+      'sort-total',
+      'filter-positive',
+      'group-category',
+      'aggregate-total',
+    ]);
+
+    rendered.unmount();
+    useInvoiceDesignerStore.getState().resetWorkspace();
+    getInvoiceTemplateMock.mockResolvedValueOnce({
+      template_id: 'tpl-reorder',
+      name: 'Template Reorder',
+      templateAst: savedAst,
+      isStandard: false,
+    });
+
+    render(<InvoiceTemplateEditor templateId="tpl-reorder" />);
+
+    await waitFor(() =>
+      expect(useInvoiceDesignerStore.getState().transforms.operations.map((operation) => operation.id)).toEqual([
+        'sort-total',
+        'filter-positive',
+        'group-category',
+        'aggregate-total',
+      ])
+    );
   });
 
   it('keeps generated source synchronized with GUI model while switching Visual and Code', async () => {

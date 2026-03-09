@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/state/designerStore';
+import {
+  createEmptyDesignerTransformWorkspace,
+  type DesignerWorkspaceSnapshot,
+} from '../components/invoice-designer/state/designerStore';
 
 const storedTemplates: Array<Record<string, unknown>> = [];
 
@@ -112,6 +115,7 @@ const workspace: DesignerWorkspaceSnapshot = {
   showGuides: true,
   showRulers: true,
   canvasScale: 1,
+  transforms: createEmptyDesignerTransformWorkspace(),
 };
 
 const invoiceData = {

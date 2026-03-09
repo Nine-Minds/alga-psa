@@ -1,0 +1,254 @@
+[
+  {
+    "id": "T001",
+    "description": "Integration: the invoice template editor renders Design, Preview, and Transforms tabs together for editable templates.",
+    "implemented": true,
+    "featureIds": ["F001", "F002"]
+  },
+  {
+    "id": "T002",
+    "description": "Regression: switching between Design, Preview, and Transforms preserves existing designer workspace state.",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: designer workspace snapshot includes transform source binding, output binding, and ordered operations.",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: importing a template with no transforms produces empty/default transform workspace state.",
+    "implemented": true,
+    "featureIds": ["F003", "F006"]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: importing a template with transforms preserves operation IDs, order, source binding, and output binding.",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: exporting workspace with no transforms omits the transforms block from generated AST.",
+    "implemented": true,
+    "featureIds": ["F005", "F006"]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: exporting workspace with transforms generates a valid AST transforms block with the authored order and fields.",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T008",
+    "description": "Regression: an existing non-transformed template can still be loaded, previewed, and saved unchanged.",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T009",
+    "description": "Integration: source collection selector lists all collection bindings defined in the current template AST/workspace.",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T010",
+    "description": "Integration: source collection selector updates the source data panel when a different collection binding is chosen.",
+    "implemented": true,
+    "featureIds": ["F007", "F008"]
+  },
+  {
+    "id": "T011",
+    "description": "Integration: source data panel shows binding ID, row count, and field discovery when sample preview data is available.",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T012",
+    "description": "Integration: transform pipeline renders cards in authored order and highlights the selected transform for editing.",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T013",
+    "description": "Integration: adding a transform inserts a new pipeline card and selects it for inspection.",
+    "implemented": true,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T014",
+    "description": "Integration: deleting a selected transform removes it from the pipeline and keeps selection state stable.",
+    "implemented": true,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T015",
+    "description": "Integration: duplicating a transform copies its configuration with a distinct operation identity.",
+    "implemented": true,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T016",
+    "description": "Integration: reordering transforms updates pipeline order and generated AST order consistently.",
+    "implemented": true,
+    "featureIds": ["F010", "F024"]
+  },
+  {
+    "id": "T017",
+    "description": "Integration: filter inspector edits field, operator, and value and the generated AST reflects the change.",
+    "implemented": true,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T018",
+    "description": "Integration: sort inspector supports one or more sort keys with direction metadata and preserves order.",
+    "implemented": true,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T019",
+    "description": "Integration: group inspector edits group key field and optional strategy metadata.",
+    "implemented": true,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T020",
+    "description": "Integration: aggregate inspector can add, edit, and remove aggregate definitions such as sum/count/avg.",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T021",
+    "description": "Integration: output binding editor persists a non-empty binding ID into workspace and generated AST.",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T022",
+    "description": "Integration: output preview shows transformed flat rows when the pipeline does not group.",
+    "implemented": true,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T023",
+    "description": "Integration: output preview shows grouped rows with key and aggregates when the pipeline includes group + aggregate.",
+    "implemented": true,
+    "featureIds": ["F016", "F017"]
+  },
+  {
+    "id": "T024",
+    "description": "Integration: grouped output preview updates immediately when group key or aggregate definitions change.",
+    "implemented": true,
+    "featureIds": ["F016", "F017"]
+  },
+  {
+    "id": "T025",
+    "description": "Integration: a dynamic table can switch its source binding from a raw collection to the transform output binding.",
+    "implemented": true,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T026",
+    "description": "Integration: dynamic-table preview renders transformed/grouped data correctly after source binding is changed.",
+    "implemented": true,
+    "featureIds": ["F018", "F022"]
+  },
+  {
+    "id": "T027",
+    "description": "Integration: table column mapping UI offers transformed row paths such as key and aggregates.sumTotal for grouped output.",
+    "implemented": true,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T028",
+    "description": "Integration: selecting a different output binding shape refreshes available table column mapping options.",
+    "implemented": true,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T029",
+    "description": "Validation: UI blocks or warns on illegal transform sequences that the evaluator does not support after grouped output.",
+    "implemented": true,
+    "featureIds": ["F020", "F021"]
+  },
+  {
+    "id": "T030",
+    "description": "Validation: transform-specific errors are surfaced inline with enough context to identify the offending operation.",
+    "implemented": true,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T031",
+    "description": "Regression: valid transform pipelines do not show false-positive validation errors.",
+    "implemented": true,
+    "featureIds": ["F020", "F021"]
+  },
+  {
+    "id": "T032",
+    "description": "Integration: authoritative preview compiles successfully for a transformed template with filter/sort/group/aggregate operations.",
+    "implemented": true,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T033",
+    "description": "Integration: authoritative preview rendered HTML includes grouped/aggregated invoice rows when the layout table targets the output binding.",
+    "implemented": true,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T034",
+    "description": "Regression: read-only code tab includes the generated transforms block once the template has authored transforms.",
+    "implemented": true,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T035",
+    "description": "Regression: read-only code tab remains valid generated AST JSON for templates with no transforms.",
+    "implemented": true,
+    "featureIds": ["F023", "F006"]
+  },
+  {
+    "id": "T036",
+    "description": "Round-trip: load a transformed template, make no changes, save, and confirm transforms remain identical after reopen.",
+    "implemented": true,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T037",
+    "description": "Round-trip: reorder transforms, save, reopen, and confirm both workspace order and generated AST order are preserved.",
+    "implemented": true,
+    "featureIds": ["F024", "F010"]
+  },
+  {
+    "id": "T038",
+    "description": "Round-trip: update a group/aggregate pipeline, save, reopen, and confirm output preview still matches the saved transform configuration.",
+    "implemented": true,
+    "featureIds": ["F024", "F016", "F017"]
+  },
+  {
+    "id": "T039",
+    "description": "Regression: templates without transforms still pass the existing preview pipeline and design workspace tests.",
+    "implemented": true,
+    "featureIds": ["F002", "F006", "F022"]
+  },
+  {
+    "id": "T040",
+    "description": "Unit: AST import/export round-trip remains deterministic for transformed templates.",
+    "implemented": true,
+    "featureIds": ["F004", "F005", "F024"]
+  },
+  {
+    "id": "T041",
+    "description": "Unit: grouped output binding resolution exposes key/items/aggregates through the same collection resolution path used by the renderer.",
+    "implemented": true,
+    "featureIds": ["F017", "F018", "F019"]
+  },
+  {
+    "id": "T042",
+    "description": "Smoke: aggregation-first workflow can reproduce the example use case of grouping repeated invoice rows into rolled-up table rows.",
+    "implemented": true,
+    "featureIds": ["F011", "F012", "F013", "F014", "F016", "F018"]
+  }
+]

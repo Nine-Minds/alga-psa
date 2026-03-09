@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import type { InvoiceTemplateTransformOperation } from '@alga-psa/types';
 
 import {
   deleteNode as patchDeleteNode,
@@ -191,11 +192,18 @@ interface DesignerMetrics {
 export interface DesignerWorkspaceSnapshot {
   rootId: string;
   nodesById: Record<string, { id: string; type: DesignerComponentType; props: Record<string, unknown>; children: string[] }>;
+  transforms: DesignerTransformWorkspace;
   snapToGrid: boolean;
   gridSize: number;
   showGuides: boolean;
   showRulers: boolean;
   canvasScale: number;
+}
+
+export interface DesignerTransformWorkspace {
+  sourceBindingId: string;
+  outputBindingId: string;
+  operations: InvoiceTemplateTransformOperation[];
 }
 
 interface DesignerState {
@@ -204,6 +212,7 @@ interface DesignerState {
   rootId: string;
   nodesById: Record<string, DesignerNode>;
   nodes: DesignerNode[];
+  transforms: DesignerTransformWorkspace;
   selectedNodeId: string | null;
   hoverNodeId: string | null;
   snapToGrid: boolean;
@@ -242,11 +251,13 @@ interface DesignerState {
   loadNodes: (nodes: DesignerNode[]) => void;
   loadWorkspace: (workspace: DesignerWorkspaceLoadInput) => void;
   exportWorkspace: () => DesignerWorkspaceSnapshot;
+  setTransforms: (transforms: DesignerTransformWorkspace, commit?: boolean) => void;
   recordDropResult: (success: boolean) => void;
 }
 
 type DesignerHistoryEntry = {
   nodes: DesignerNode[];
+  transforms: DesignerTransformWorkspace;
 };
 
 const MAX_HISTORY_LENGTH = 50;
@@ -260,6 +271,12 @@ const generateId = () =>
     : Math.random().toString(36).slice(2);
 
 const deepCloneJson = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
+
+export const createEmptyDesignerTransformWorkspace = (): DesignerTransformWorkspace => ({
+  sourceBindingId: '',
+  outputBindingId: '',
+  operations: [],
+});
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -286,6 +303,32 @@ const normalizeDesignerPatchPath = (input: string): string => {
   if (path === 'style' || path.startsWith('style.')) return `props.${path}`;
 
   return path;
+};
+
+const sanitizeTransformWorkspace = (value: unknown): DesignerTransformWorkspace => {
+  if (!isPlainObject(value)) {
+    return createEmptyDesignerTransformWorkspace();
+  }
+
+  const sourceBindingId = typeof value.sourceBindingId === 'string' ? value.sourceBindingId.trim() : '';
+  const outputBindingId = typeof value.outputBindingId === 'string' ? value.outputBindingId.trim() : '';
+  const operations = Array.isArray(value.operations)
+    ? deepCloneJson(
+        value.operations.filter(
+          (operation): operation is InvoiceTemplateTransformOperation =>
+            isPlainObject(operation) &&
+            typeof operation.id === 'string' &&
+            operation.id.trim().length > 0 &&
+            typeof operation.type === 'string'
+        )
+      )
+    : [];
+
+  return {
+    sourceBindingId,
+    outputBindingId,
+    operations,
+  };
 };
 
 const snapshotWorkspaceNodesById = (
@@ -696,12 +739,17 @@ const snapshotNodes = (nodes: DesignerNode[]): DesignerNode[] =>
     };
   });
 
-const createHistoryEntry = (nodes: DesignerNode[]): DesignerHistoryEntry => ({
+const createHistoryEntry = (nodes: DesignerNode[], transforms: DesignerTransformWorkspace): DesignerHistoryEntry => ({
   nodes: snapshotNodes(nodes),
+  transforms: deepCloneJson(transforms),
 });
 
-const appendHistory = (state: Pick<DesignerState, 'history' | 'historyIndex'>, nodes: DesignerNode[]) => {
-  const nextHistory = [...state.history.slice(0, state.historyIndex + 1), createHistoryEntry(nodes)];
+const appendHistory = (
+  state: Pick<DesignerState, 'history' | 'historyIndex'>,
+  nodes: DesignerNode[],
+  transforms: DesignerTransformWorkspace
+) => {
+  const nextHistory = [...state.history.slice(0, state.historyIndex + 1), createHistoryEntry(nodes, transforms)];
   if (nextHistory.length > MAX_HISTORY_LENGTH) {
     nextHistory.shift();
   }
@@ -765,6 +813,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     rootId: DOCUMENT_NODE_ID,
     nodesById: indexNodesById(initialNodes),
     nodes: initialNodes,
+    transforms: createEmptyDesignerTransformWorkspace(),
     selectedNodeId: null,
     hoverNodeId: null,
     snapToGrid: true,
@@ -772,7 +821,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
     showGuides: true,
     showRulers: true,
     canvasScale: 1,
-    history: [createHistoryEntry(initialNodes)],
+    history: [createHistoryEntry(initialNodes, createEmptyDesignerTransformWorkspace())],
     historyIndex: 0,
     metrics: {
       totalDrags: 0,
@@ -869,7 +918,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         const parent = state.nodesById[resolvedParentId];
         const insertIndex = parent ? parent.children.length : 0;
         const withParentLink = patchInsertChild(appendedNodes, resolvedParentId, node.id, insertIndex);
-        const { history, historyIndex } = appendHistory(state, withParentLink);
+        const { history, historyIndex } = appendHistory(state, withParentLink, state.transforms);
         return {
           nodes: withParentLink,
           history,
@@ -994,7 +1043,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           nextNodes = attachChildAtIndex(nextNodes, node.parentId, node.id);
         });
 
-        const { history, historyIndex } = appendHistory(state, nextNodes);
+        const { history, historyIndex } = appendHistory(state, nextNodes, state.transforms);
         return {
           ...state,
           nodes: nextNodes,
@@ -1013,7 +1062,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 
         if (!commit) return { nodes };
 
-        const { history, historyIndex } = appendHistory(state, nodes);
+        const { history, historyIndex } = appendHistory(state, nodes, state.transforms);
         return { nodes, history, historyIndex };
       }, false, 'designer/setNodeProp');
     },
@@ -1026,7 +1075,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 
         if (!commit) return { nodes };
 
-        const { history, historyIndex } = appendHistory(state, nodes);
+        const { history, historyIndex } = appendHistory(state, nodes, state.transforms);
         return { nodes, history, historyIndex };
       }, false, 'designer/unsetNodeProp');
     },
@@ -1040,7 +1089,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 
         const nodes = patchInsertChild(state.nodes, parentId, childId, index);
         if (nodes === state.nodes) return state;
-        const { history, historyIndex } = appendHistory(state, nodes);
+        const { history, historyIndex } = appendHistory(state, nodes, state.transforms);
         return { nodes, history, historyIndex };
       }, false, 'designer/insertChild');
     },
@@ -1053,7 +1102,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 
         const nodes = patchRemoveChild(state.nodes, parentId, childId);
         if (nodes === state.nodes) return state;
-        const { history, historyIndex } = appendHistory(state, nodes);
+        const { history, historyIndex } = appendHistory(state, nodes, state.transforms);
         return { nodes, history, historyIndex };
       }, false, 'designer/removeChild');
     },
@@ -1068,7 +1117,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
 
         const nodes = patchMoveNode(state.nodes, nodeId, nextParentId, nextIndex);
         if (nodes === state.nodes) return state;
-        const { history, historyIndex } = appendHistory(state, nodes);
+        const { history, historyIndex } = appendHistory(state, nodes, state.transforms);
         return { nodes, history, historyIndex };
       }, false, 'designer/moveNode');
     },
@@ -1078,7 +1127,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         const nodes = patchDeleteNode(state.nodes, nodeId);
         if (nodes === state.nodes) return state;
         const remainingIds = new Set(nodes.map((node) => node.id));
-        const { history, historyIndex } = appendHistory(state, nodes);
+        const { history, historyIndex } = appendHistory(state, nodes, state.transforms);
         return {
           nodes,
           history,
@@ -1130,6 +1179,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         return {
           ...state,
           nodes: snapshotNodes(entry.nodes),
+          transforms: deepCloneJson(entry.transforms),
           historyIndex: nextIndex,
         };
       }, false, 'designer/undo');
@@ -1148,6 +1198,7 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         return {
           ...state,
           nodes: snapshotNodes(entry.nodes),
+          transforms: deepCloneJson(entry.transforms),
           historyIndex: nextIndex,
         };
       }, false, 'designer/redo');
@@ -1157,9 +1208,10 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
       const nodes = createInitialNodes();
       setWithIndex(() => ({
         nodes,
+        transforms: createEmptyDesignerTransformWorkspace(),
         selectedNodeId: null,
         hoverNodeId: null,
-        history: [createHistoryEntry(nodes)],
+        history: [createHistoryEntry(nodes, createEmptyDesignerTransformWorkspace())],
         historyIndex: 0,
       }));
     },
@@ -1169,7 +1221,8 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
         const nextNodes = snapshotNodes(nodes);
         return {
           nodes: nextNodes,
-          history: [createHistoryEntry(nextNodes)],
+          transforms: createEmptyDesignerTransformWorkspace(),
+          history: [createHistoryEntry(nextNodes, createEmptyDesignerTransformWorkspace())],
           historyIndex: 0,
           selectedNodeId: null,
         };
@@ -1199,15 +1252,17 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
           nodesById: incomingNodesById,
           rootId: nextRootId,
         });
+        const nextTransforms = sanitizeTransformWorkspace(workspace.transforms);
         return {
           rootId: nextRootId,
           nodes: nextNodes,
+          transforms: nextTransforms,
           snapToGrid: typeof workspace.snapToGrid === 'boolean' ? workspace.snapToGrid : state.snapToGrid,
           gridSize: typeof workspace.gridSize === 'number' ? workspace.gridSize : state.gridSize,
           showGuides: typeof workspace.showGuides === 'boolean' ? workspace.showGuides : state.showGuides,
           showRulers: typeof workspace.showRulers === 'boolean' ? workspace.showRulers : state.showRulers,
           canvasScale: typeof workspace.canvasScale === 'number' ? workspace.canvasScale : state.canvasScale,
-          history: [createHistoryEntry(nextNodes)],
+          history: [createHistoryEntry(nextNodes, nextTransforms)],
           historyIndex: 0,
           selectedNodeId: null,
           hoverNodeId: null,
@@ -1220,12 +1275,30 @@ export const useInvoiceDesignerStore = create<DesignerState>()(
       return {
         rootId: state.rootId,
         nodesById: snapshotWorkspaceNodesById(state.nodes),
+        transforms: deepCloneJson(state.transforms),
         snapToGrid: state.snapToGrid,
         gridSize: state.gridSize,
         showGuides: state.showGuides,
         showRulers: state.showRulers,
         canvasScale: state.canvasScale,
       };
+    },
+
+    setTransforms: (transforms, commit = true) => {
+      setWithIndex((state) => {
+        const nextTransforms = sanitizeTransformWorkspace(transforms);
+        if (!commit) {
+          return {
+            transforms: nextTransforms,
+          };
+        }
+        const { history, historyIndex } = appendHistory(state, state.nodes, nextTransforms);
+        return {
+          transforms: nextTransforms,
+          history,
+          historyIndex,
+        };
+      }, false, 'designer/setTransforms');
     },
 
     recordDropResult: (success) => {

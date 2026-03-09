@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
 import * as workspaceAstModule from '../components/invoice-designer/ast/workspaceAst';
-import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/state/designerStore';
+import {
+  createEmptyDesignerTransformWorkspace,
+  type DesignerWorkspaceSnapshot,
+} from '../components/invoice-designer/state/designerStore';
 
 const getAllTemplatesMock = vi.fn();
 
@@ -44,6 +47,7 @@ const workspace: DesignerWorkspaceSnapshot = {
   showGuides: true,
   showRulers: true,
   canvasScale: 1,
+  transforms: createEmptyDesignerTransformWorkspace(),
 };
 
 const invoiceData = {
