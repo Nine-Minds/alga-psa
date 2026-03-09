@@ -23,6 +23,7 @@ import {
   switchBillingIntervalAction,
   getIntervalSwitchPreviewAction,
   sendPremiumTrialRequestAction,
+  startSelfServicePremiumTrialAction,
 } from 'ee/server/src/lib/actions/license-actions';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
 import { useRouter } from 'next/navigation';
@@ -328,10 +329,14 @@ export default function AccountManagement() {
     }
   };
 
-  // Premium trial request state
+  // Premium trial request state (for trialing Pro users — manual request)
   const [trialRequestMessage, setTrialRequestMessage] = useState('');
   const [sendingTrialRequest, setSendingTrialRequest] = useState(false);
   const [trialRequestSent, setTrialRequestSent] = useState(false);
+
+  // Self-service Premium trial state (for paying Pro users)
+  const [startingSelfServiceTrial, setStartingSelfServiceTrial] = useState(false);
+  const [showTrialConfirm, setShowTrialConfirm] = useState(false);
 
   const handleSendTrialRequest = async () => {
     if (!trialRequestMessage.trim()) {
@@ -354,6 +359,25 @@ export default function AccountManagement() {
       toast.error('Failed to send request');
     } finally {
       setSendingTrialRequest(false);
+    }
+  };
+
+  const handleStartSelfServiceTrial = async () => {
+    setStartingSelfServiceTrial(true);
+    try {
+      const result = await startSelfServicePremiumTrialAction();
+      if (result.success) {
+        toast.success('Premium trial started! You have 30 days to explore Premium features.');
+        setShowTrialConfirm(false);
+        await refreshTier();
+      } else {
+        toast.error(result.error || 'Failed to start Premium trial');
+      }
+    } catch (error) {
+      console.error('Error starting Premium trial:', error);
+      toast.error('Failed to start Premium trial');
+    } finally {
+      setStartingSelfServiceTrial(false);
     }
   };
 
@@ -639,8 +663,24 @@ export default function AccountManagement() {
                 </div>
               )}
 
-              {/* Premium Trial Request */}
+              {/* Premium Trial — self-service for paying Pro, manual request for trialing Pro */}
               {isPro && !isTrialing && (
+                <div className="mt-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
+                  <h4 className="font-semibold mb-1">Try Premium Free for 30 Days</h4>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Start a 30-day Premium trial to explore advanced features like the Visual Invoice Designer.
+                    After the trial, your subscription will automatically convert to Premium pricing.
+                  </p>
+                  <Button
+                    id="start-premium-trial-btn"
+                    size="sm"
+                    onClick={() => setShowTrialConfirm(true)}
+                  >
+                    Start 30-Day Premium Trial
+                  </Button>
+                </div>
+              )}
+              {isPro && isTrialing && (
                 <div className="mt-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
                   <h4 className="font-semibold mb-1">Try Premium Free for 30 Days</h4>
                   <p className="text-sm text-muted-foreground mb-3">
@@ -1137,6 +1177,39 @@ export default function AccountManagement() {
           ) : (
             'Loading pricing details...'
           )
+        }
+      />
+
+      <ConfirmationDialog
+        id="start-premium-trial-confirm"
+        isOpen={showTrialConfirm}
+        onClose={() => setShowTrialConfirm(false)}
+        onConfirm={handleStartSelfServiceTrial}
+        title="Start 30-Day Premium Trial"
+        confirmLabel={startingSelfServiceTrial ? 'Starting...' : 'Start Premium Trial'}
+        isConfirming={startingSelfServiceTrial}
+        message={
+          <div className="space-y-4">
+            <p>You are about to start a <strong>30-day free trial</strong> of the Premium plan.</p>
+
+            <div className="rounded-lg border p-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Trial period</span>
+                <span>30 days — no charge</span>
+              </div>
+              <div className="flex justify-between text-sm pt-2 border-t">
+                <span className="text-muted-foreground">After trial ends</span>
+                <span>Converts to Premium pricing automatically</span>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 p-3">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                After the 30-day trial, your subscription will automatically convert to Premium pricing.
+                You can cancel or downgrade back to Pro at any time before the trial ends.
+              </p>
+            </div>
+          </div>
         }
       />
     </div>

@@ -1216,6 +1216,53 @@ export async function startPremiumTrialAction(
 }
 
 /**
+ * Self-service Premium trial for paying Pro customers.
+ * Unlike startPremiumTrialAction (admin-only), this lets the tenant start their own trial.
+ * Only allowed for tenants with an active (non-trialing) Pro subscription.
+ */
+export async function startSelfServicePremiumTrialAction(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getSession();
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const hasPermission = await checkAccountManagementPermission(session);
+    if (!hasPermission) {
+      return { success: false, error: 'You do not have permission to manage the subscription' };
+    }
+
+    const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return { success: false, error: 'Stripe billing is not configured' };
+    }
+
+    // Verify the tenant is on an active (non-trialing) Pro subscription
+    const knex = await getConnection(session.user.tenant);
+    const subscription = await knex<IStripeSubscription>('stripe_subscriptions')
+      .where('tenant', session.user.tenant)
+      .whereIn('status', ['active', 'trialing'])
+      .first();
+
+    if (!subscription) {
+      return { success: false, error: 'No active subscription found' };
+    }
+
+    if (subscription.status === 'trialing') {
+      return { success: false, error: 'Cannot self-start a Premium trial while on a Pro trial. Please contact support.' };
+    }
+
+    return await stripeService.startPremiumTrial(session.user.tenant);
+  } catch (error) {
+    logger.error('[startSelfServicePremiumTrialAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to start Premium trial',
+    };
+  }
+}
+
+/**
  * Send a Premium trial request email to Nine Minds.
  * Called by tenants who want to try Premium.
  */
@@ -1231,7 +1278,7 @@ export async function sendPremiumTrialRequestAction(
     const knex = await getConnection(session.user.tenant);
     const tenant = await knex('tenants')
       .where('tenant', session.user.tenant)
-      .select('tenant', 'company_name', 'email', 'plan')
+      .select('tenant', 'client_name', 'email', 'plan')
       .first();
 
     if (!tenant) {
@@ -1242,7 +1289,7 @@ export async function sendPremiumTrialRequestAction(
     const { sendPremiumTrialRequestEmail } = await import('@alga-psa/email');
     await sendPremiumTrialRequestEmail({
       tenantId: session.user.tenant,
-      tenantName: tenant.company_name || 'Unknown',
+      tenantName: tenant.client_name || 'Unknown',
       tenantEmail: tenant.email || session.user.email,
       currentPlan: tenant.plan || 'unknown',
       requestedByName: session.user.name || 'Unknown',

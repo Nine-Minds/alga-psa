@@ -303,6 +303,17 @@ export async function startPremiumTrialAction(
 /**
  * CE Stub - Not available in Community Edition
  */
+export async function startSelfServicePremiumTrialAction(): Promise<{ success: boolean; error?: string }> {
+  logger.warn('[CE] startSelfServicePremiumTrialAction called but Stripe integration is EE-only');
+  return {
+    success: false,
+    error: 'Premium trials are only available in Enterprise Edition',
+  };
+}
+
+/**
+ * CE Stub - Not available in Community Edition
+ */
 export async function sendPremiumTrialRequestAction(
   _message: string
 ): Promise<{ success: boolean; error?: string }> {

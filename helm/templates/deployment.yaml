@@ -632,6 +632,38 @@ spec:
           - name: STRIPE_LICENSE_PRICE_ID
             value: "{{ .Values.stripe.license_price_id }}"
           {{- end }}
+          {{- if .Values.stripe.pro_base_price_id }}
+          - name: STRIPE_PRO_BASE_PRICE_ID
+            value: "{{ .Values.stripe.pro_base_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.pro_user_price_id }}
+          - name: STRIPE_PRO_USER_PRICE_ID
+            value: "{{ .Values.stripe.pro_user_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.premium_base_price_id }}
+          - name: STRIPE_PREMIUM_BASE_PRICE_ID
+            value: "{{ .Values.stripe.premium_base_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.premium_user_price_id }}
+          - name: STRIPE_PREMIUM_USER_PRICE_ID
+            value: "{{ .Values.stripe.premium_user_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.pro_base_annual_price_id }}
+          - name: STRIPE_PRO_BASE_ANNUAL_PRICE_ID
+            value: "{{ .Values.stripe.pro_base_annual_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.pro_user_annual_price_id }}
+          - name: STRIPE_PRO_USER_ANNUAL_PRICE_ID
+            value: "{{ .Values.stripe.pro_user_annual_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.premium_base_annual_price_id }}
+          - name: STRIPE_PREMIUM_BASE_ANNUAL_PRICE_ID
+            value: "{{ .Values.stripe.premium_base_annual_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.premium_user_annual_price_id }}
+          - name: STRIPE_PREMIUM_USER_ANNUAL_PRICE_ID
+            value: "{{ .Values.stripe.premium_user_annual_price_id }}"
+          {{- end }}
           {{- end }}
 
           # ----------- IPINFO INTEGRATION ----------------
