@@ -2057,7 +2057,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     });
   });
 
-  it('Unmatched sender: system follows the defined behavior without throwing', async () => {
+  it('Unmatched sender: inbound email is treated as customer-authored and awaits internal response', async () => {
     const providerId = uuidv4();
     const mailbox = `support-unmatched-${uuidv4().slice(0, 6)}@example.com`;
     const { defaultsId } = await setupInboundDefaults({ providerId, mailbox });
@@ -2095,10 +2095,11 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
     expect(ticket.board_id).toBe(boardId);
     expect(ticket.client_id).toBe(clientId);
     expect(ticket.contact_name_id ?? null).toBeNull();
+    expect(ticket.response_state).toBe('awaiting_internal');
 
     const comments = await db('comments').where({ tenant: tenantId, ticket_id: ticket.ticket_id });
     expect(comments).toHaveLength(1);
-    expect(comments[0].author_type).toBe('internal');
+    expect(comments[0].author_type).toBe('client');
     expect(comments[0].contact_id ?? null).toBeNull();
     expect(comments[0].user_id ?? null).toBeNull();
 
