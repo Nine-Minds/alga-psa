@@ -154,8 +154,13 @@ export class PgBossJobRunner implements IJobRunner {
             );
           }
 
-          // Execute the handler
-          await config.handler(jobData.jobServiceId || job.id, jobData);
+          // Preserve the stable job service id for lifecycle updates, but also
+          // pass the per-delivery pg-boss id so handlers can distinguish
+          // recurring occurrences from retries of the same occurrence.
+          await config.handler(jobData.jobServiceId || job.id, {
+            ...jobData,
+            jobExecutionId: job.id
+          });
 
           // Update status to completed
           if (jobData.jobServiceId) {

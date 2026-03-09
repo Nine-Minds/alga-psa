@@ -7,7 +7,7 @@ import {
 } from '@/lib/schemas/appointmentSchemas';
 import { getTenantIdBySlug } from '@alga-psa/db';
 import { getConnection } from '@/lib/db/db';
-import { getServicesForPublicBooking } from '@/lib/services/availabilityService';
+import { getServicesForPublicBooking } from '@alga-psa/client-portal/services/availabilityService';
 import { SystemEmailService } from '@alga-psa/email';
 import {
   getTenantSettings,

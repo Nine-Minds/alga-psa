@@ -86,6 +86,8 @@ export interface BaseJobData extends Record<string, unknown> {
   tenantId: string;
   /** Optional job service ID for tracking */
   jobServiceId?: string;
+  /** Optional per-delivery execution identifier supplied by the runner */
+  jobExecutionId?: string;
 }
 
 /**

@@ -19,7 +19,12 @@ const addSchemaRefsFromDefinition = (definition: any, schemaRefs: Set<string>) =
     schemaRefs.add(definition.payloadSchemaRef.trim());
   }
   const trigger = definition.trigger;
-  if (isPlainObject(trigger) && typeof trigger.sourcePayloadSchemaRef === 'string' && trigger.sourcePayloadSchemaRef.trim()) {
+  if (
+    isPlainObject(trigger)
+    && trigger.type === 'event'
+    && typeof trigger.sourcePayloadSchemaRef === 'string'
+    && trigger.sourcePayloadSchemaRef.trim()
+  ) {
     schemaRefs.add(trigger.sourcePayloadSchemaRef.trim());
   }
 };
@@ -97,4 +102,3 @@ export const mergeDependencySummariesV1 = (
     schemaRefs: Array.from(schemaRefs).sort((a, b) => a.localeCompare(b))
   };
 };
-

@@ -1,0 +1,673 @@
+/// <reference types="@testing-library/jest-dom/vitest" />
+/** @vitest-environment jsdom */
+
+import React from 'react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const actionMocks = vi.hoisted(() => ({
+  listWorkflowSchedulesAction: vi.fn(),
+  listWorkflowDefinitionsPagedAction: vi.fn(),
+  getWorkflowScheduleAction: vi.fn(),
+  pauseWorkflowScheduleAction: vi.fn(),
+  resumeWorkflowScheduleAction: vi.fn(),
+  deleteWorkflowScheduleAction: vi.fn(),
+  createWorkflowScheduleAction: vi.fn(),
+  updateWorkflowScheduleAction: vi.fn(),
+  getWorkflowSchemaAction: vi.fn()
+}));
+
+const router = {
+  push: vi.fn(),
+  replace: vi.fn()
+};
+
+let currentSearchParams = new URLSearchParams('tab=schedules');
+
+const workflowFixtures = [
+  {
+    workflow_id: '00000000-0000-0000-0000-000000000001',
+    name: 'Billing sync',
+    published_version: 2,
+    payload_schema_mode: 'pinned',
+    payload_schema_ref: 'schema.billing'
+  },
+  {
+    workflow_id: '00000000-0000-0000-0000-000000000002',
+    name: 'Ticket follow-up',
+    published_version: 1,
+    payload_schema_mode: 'pinned',
+    payload_schema_ref: 'schema.ticket'
+  },
+  {
+    workflow_id: '00000000-0000-0000-0000-000000000003',
+    name: 'Legacy inferred',
+    published_version: 1,
+    payload_schema_mode: 'inferred',
+    payload_schema_ref: null
+  }
+];
+
+let scheduleFixtures = [
+  {
+    id: '10000000-0000-0000-0000-000000000001',
+    tenant_id: 'tenant-1',
+    workflow_id: workflowFixtures[0].workflow_id,
+    workflow_version: 2,
+    name: 'Weekday billing',
+    workflow_name: workflowFixtures[0].name,
+    trigger_type: 'recurring',
+    cron: '0 9 * * 1-5',
+    timezone: 'America/New_York',
+    run_at: null,
+    next_fire_at: '2026-03-09T14:00:00.000Z',
+    last_fire_at: '2026-03-08T14:00:00.000Z',
+    payload_json: { customerId: 'C-100', notify: true },
+    enabled: true,
+    status: 'scheduled',
+    last_error: null,
+    created_at: '2026-03-08T10:00:00.000Z',
+    updated_at: '2026-03-08T10:00:00.000Z'
+  },
+  {
+    id: '10000000-0000-0000-0000-000000000002',
+    tenant_id: 'tenant-1',
+    workflow_id: workflowFixtures[0].workflow_id,
+    workflow_version: 2,
+    name: 'Month-end billing',
+    workflow_name: workflowFixtures[0].name,
+    trigger_type: 'schedule',
+    cron: null,
+    timezone: null,
+    run_at: '2026-03-31T12:00:00.000Z',
+    next_fire_at: null,
+    last_fire_at: null,
+    payload_json: { customerId: 'C-200', notify: false },
+    enabled: false,
+    status: 'paused',
+    last_error: null,
+    created_at: '2026-03-08T10:00:00.000Z',
+    updated_at: '2026-03-08T10:00:00.000Z'
+  },
+  {
+    id: '10000000-0000-0000-0000-000000000003',
+    tenant_id: 'tenant-1',
+    workflow_id: workflowFixtures[1].workflow_id,
+    workflow_version: 1,
+    name: 'Ticket reminder',
+    workflow_name: workflowFixtures[1].name,
+    trigger_type: 'recurring',
+    cron: '0 10 * * *',
+    timezone: 'UTC',
+    run_at: null,
+    next_fire_at: '2026-03-09T10:00:00.000Z',
+    last_fire_at: '2026-03-08T10:00:00.000Z',
+    payload_json: { ticketId: 'T-100' },
+    enabled: true,
+    status: 'failed',
+    last_error: 'Schema mismatch after publish',
+    created_at: '2026-03-08T10:00:00.000Z',
+    updated_at: '2026-03-08T10:00:00.000Z'
+  }
+];
+
+const billingSchema = {
+  type: 'object',
+  required: ['customerId'],
+  properties: {
+    customerId: { type: 'string', title: 'customerId' },
+    notify: { type: 'boolean', title: 'notify' }
+  }
+};
+
+const ticketSchema = {
+  type: 'object',
+  required: ['ticketId'],
+  properties: {
+    ticketId: { type: 'string', title: 'ticketId' }
+  }
+};
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => router,
+  useSearchParams: () => currentSearchParams
+}));
+
+vi.mock('@radix-ui/react-dropdown-menu', () => {
+  const passthrough = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
+  return {
+    Root: passthrough,
+    Trigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+    Portal: passthrough,
+    Content: passthrough,
+    Separator: () => <hr />,
+    Item: ({ children, onSelect }: { children: React.ReactNode; onSelect?: () => void }) => (
+      <button type="button" onClick={onSelect}>{children}</button>
+    )
+  };
+});
+
+vi.mock('@alga-psa/ui/ui-reflection/ReflectionContainer', () => ({
+  ReflectionContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>
+}));
+
+vi.mock('@alga-psa/ui/components/Button', () => ({
+  Button: ({
+    children,
+    onClick,
+    disabled,
+    id,
+    type = 'button'
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    disabled?: boolean;
+    id?: string;
+    type?: 'button' | 'submit' | 'reset';
+  }) => (
+    <button type={type} onClick={onClick} disabled={disabled} id={id}>
+      {children}
+    </button>
+  )
+}));
+
+vi.mock('@alga-psa/ui/components/Badge', () => ({
+  Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>
+}));
+
+vi.mock('@alga-psa/ui/components/SearchInput', () => ({
+  SearchInput: ({
+    value,
+    onChange,
+    placeholder,
+    className
+  }: {
+    value: string;
+    onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    placeholder?: string;
+    className?: string;
+  }) => (
+    <input
+      aria-label={placeholder ?? className ?? 'search'}
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
+    />
+  )
+}));
+
+vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
+  default: ({
+    value,
+    onValueChange,
+    options,
+    label,
+    id
+  }: {
+    value?: string | null;
+    onValueChange: (value: string) => void;
+    options: Array<{ value: string; label: React.ReactNode; textValue?: string }>;
+    label?: string;
+    id?: string;
+  }) => (
+    <label>
+      {label ?? id}
+      <select
+        aria-label={label ?? id ?? 'select'}
+        value={value ?? ''}
+        onChange={(event) => onValueChange(event.target.value)}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {typeof option.label === 'string' ? option.label : (option.textValue ?? option.value)}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}));
+
+vi.mock('@alga-psa/ui/components/DataTable', () => ({
+  DataTable: ({
+    data,
+    columns
+  }: {
+    data: Array<Record<string, unknown>>;
+    columns: Array<{ title: React.ReactNode; dataIndex: string | string[]; render?: (value: unknown, record: Record<string, unknown>, index: number) => React.ReactNode }>;
+  }) => (
+    <table>
+      <thead>
+        <tr>
+          {columns.map((column, index) => (
+            <th key={index}>{column.title}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {data.map((record, rowIndex) => (
+          <tr key={String(record.id ?? rowIndex)}>
+            {columns.map((column, columnIndex) => {
+              const value = Array.isArray(column.dataIndex)
+                ? column.dataIndex.reduce<unknown>((acc, part) => (acc as any)?.[part], record)
+                : (record as any)[column.dataIndex];
+              return (
+                <td key={columnIndex}>
+                  {column.render ? column.render(value, record, rowIndex) : String(value ?? '')}
+                </td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}));
+
+vi.mock('@alga-psa/ui', () => ({
+  DeleteEntityDialog: ({
+    isOpen,
+    onClose,
+    onConfirmDelete,
+    entityName
+  }: {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirmDelete: () => void;
+    entityName: string;
+  }) => isOpen ? (
+    <div role="dialog" aria-label="Delete schedule">
+      <div>Delete {entityName}</div>
+      <button type="button" onClick={onConfirmDelete}>Confirm Delete</button>
+      <button type="button" onClick={onClose}>Cancel</button>
+    </div>
+  ) : null
+}));
+
+vi.mock('@alga-psa/ui/components/Dialog', () => ({
+  Dialog: ({
+    isOpen,
+    title,
+    children
+  }: {
+    isOpen: boolean;
+    title?: string;
+    children: React.ReactNode;
+  }) => isOpen ? <div role="dialog" aria-label={title}>{children}</div> : null,
+  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
+  DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>
+}));
+
+vi.mock('@alga-psa/ui/components/Input', () => ({
+  Input: ({
+    label,
+    id,
+    value,
+    onChange,
+    type = 'text',
+    disabled,
+    ...props
+  }: {
+    label?: string;
+    id?: string;
+    value?: string;
+    onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    type?: string;
+    disabled?: boolean;
+    [key: string]: unknown;
+  }) => (
+    <label>
+      {label ?? id}
+      <input
+        aria-label={(props['aria-label'] as string | undefined) ?? label ?? id ?? 'input'}
+        id={id}
+        type={type}
+        value={value ?? ''}
+        onChange={onChange}
+        disabled={disabled}
+      />
+    </label>
+  )
+}));
+
+vi.mock('@alga-psa/ui/components/TextArea', () => ({
+  TextArea: ({
+    id,
+    value,
+    onChange
+  }: {
+    id?: string;
+    value?: string;
+    onChange?: (event: React.ChangeEvent<HTMLTextAreaElement>) => void;
+  }) => (
+    <textarea aria-label={id ?? 'textarea'} id={id} value={value ?? ''} onChange={onChange} />
+  )
+}));
+
+vi.mock('@alga-psa/ui/components/Switch', () => ({
+  Switch: ({
+    checked,
+    onCheckedChange,
+    ...props
+  }: {
+    checked: boolean;
+    onCheckedChange: (value: boolean) => void;
+    [key: string]: unknown;
+  }) => (
+    <input
+      aria-label={(props['aria-label'] as string | undefined) ?? "switch"}
+      type="checkbox"
+      checked={checked}
+      onChange={(event) => onCheckedChange(event.target.checked)}
+    />
+  )
+}));
+
+vi.mock('@alga-psa/workflows/actions', () => ({
+  listWorkflowSchedulesAction: actionMocks.listWorkflowSchedulesAction,
+  listWorkflowDefinitionsPagedAction: actionMocks.listWorkflowDefinitionsPagedAction,
+  getWorkflowScheduleAction: actionMocks.getWorkflowScheduleAction,
+  pauseWorkflowScheduleAction: actionMocks.pauseWorkflowScheduleAction,
+  resumeWorkflowScheduleAction: actionMocks.resumeWorkflowScheduleAction,
+  deleteWorkflowScheduleAction: actionMocks.deleteWorkflowScheduleAction,
+  createWorkflowScheduleAction: actionMocks.createWorkflowScheduleAction,
+  updateWorkflowScheduleAction: actionMocks.updateWorkflowScheduleAction,
+  getWorkflowSchemaAction: actionMocks.getWorkflowSchemaAction
+}));
+
+import Schedules from './Schedules';
+
+describe('Schedules', () => {
+  beforeEach(() => {
+    vi.useRealTimers();
+    vi.clearAllMocks();
+    currentSearchParams = new URLSearchParams('tab=schedules');
+    router.push.mockReset();
+    router.replace.mockReset();
+    scheduleFixtures = [...scheduleFixtures];
+    actionMocks.listWorkflowSchedulesAction.mockImplementation(async (input: {
+      workflowId?: string;
+      status?: string;
+      triggerType?: string;
+      search?: string;
+    }) => {
+      const search = (input.search ?? '').toLowerCase();
+      const items = scheduleFixtures.filter((schedule) => {
+        if (input.workflowId && schedule.workflow_id !== input.workflowId) return false;
+        if (input.triggerType && input.triggerType !== 'all' && schedule.trigger_type !== input.triggerType) return false;
+        if (input.status && input.status !== 'all') {
+          if (input.status === 'enabled' && !schedule.enabled) return false;
+          if (input.status !== 'enabled' && schedule.status !== input.status) return false;
+        }
+        if (search) {
+          return schedule.name.toLowerCase().includes(search) || String(schedule.workflow_name ?? '').toLowerCase().includes(search);
+        }
+        return true;
+      });
+
+      return { items };
+    });
+    actionMocks.listWorkflowDefinitionsPagedAction.mockResolvedValue({ items: workflowFixtures });
+    actionMocks.getWorkflowScheduleAction.mockImplementation(async ({ scheduleId }: { scheduleId: string }) =>
+      scheduleFixtures.find((schedule) => schedule.id === scheduleId)
+    );
+    actionMocks.pauseWorkflowScheduleAction.mockResolvedValue({ ok: true });
+    actionMocks.resumeWorkflowScheduleAction.mockResolvedValue({ ok: true });
+    actionMocks.deleteWorkflowScheduleAction.mockResolvedValue({ ok: true });
+    actionMocks.createWorkflowScheduleAction.mockResolvedValue({ ok: true, schedule: scheduleFixtures[0] });
+    actionMocks.updateWorkflowScheduleAction.mockResolvedValue({ ok: true, schedule: scheduleFixtures[0] });
+    actionMocks.getWorkflowSchemaAction.mockImplementation(async ({ schemaRef }: { schemaRef: string }) => ({
+      schema: schemaRef === 'schema.ticket' ? ticketSchema : billingSchema
+    }));
+  });
+
+  afterEach(() => {
+    cleanup();
+    try {
+      vi.runOnlyPendingTimers();
+    } catch {}
+    vi.useRealTimers();
+  });
+
+  const renderSchedules = async () => {
+    render(<Schedules />);
+    await screen.findByText('Weekday billing');
+  };
+
+  it('shows schedule name, workflow, trigger type, timing, status, and error columns', async () => {
+    await renderSchedules();
+
+    expect(screen.getByText('Schedule')).toBeInTheDocument();
+    expect(screen.getByText('Workflow')).toBeInTheDocument();
+    expect(screen.getByText('Trigger Type')).toBeInTheDocument();
+    expect(screen.getByText('Next Fire / Run At')).toBeInTheDocument();
+    expect(screen.getByText('Last Fire')).toBeInTheDocument();
+    expect(screen.getByText('Status')).toBeInTheDocument();
+    expect(screen.getByText('Last Error')).toBeInTheDocument();
+    expect(screen.getByText('Weekday billing')).toBeInTheDocument();
+    expect(screen.getAllByText('Billing sync').length).toBeGreaterThan(0);
+    expect(screen.getByText('Schema mismatch after publish')).toBeInTheDocument();
+  });
+
+  it('filters the schedules list by workflow', async () => {
+    await renderSchedules();
+    const initialCalls = actionMocks.listWorkflowSchedulesAction.mock.calls.length;
+
+    fireEvent.change(screen.getByLabelText('schedules-filter-workflow'), {
+      target: { value: workflowFixtures[0].workflow_id }
+    });
+
+    await waitFor(() => {
+      expect(actionMocks.listWorkflowSchedulesAction).toHaveBeenCalledTimes(initialCalls + 1);
+      expect(screen.getByText('Weekday billing')).toBeInTheDocument();
+      expect(screen.queryByText('Ticket reminder')).not.toBeInTheDocument();
+    });
+  });
+
+  it('filters the schedules list by trigger type', async () => {
+    await renderSchedules();
+    const initialCalls = actionMocks.listWorkflowSchedulesAction.mock.calls.length;
+
+    fireEvent.change(screen.getByLabelText('schedules-filter-trigger'), {
+      target: { value: 'schedule' }
+    });
+
+    await waitFor(() => {
+      expect(actionMocks.listWorkflowSchedulesAction).toHaveBeenCalledTimes(initialCalls + 1);
+      expect(screen.getByText('Month-end billing')).toBeInTheDocument();
+      expect(screen.queryByText('Weekday billing')).not.toBeInTheDocument();
+    });
+  });
+
+  it('filters the schedules list by status', async () => {
+    await renderSchedules();
+    const initialCalls = actionMocks.listWorkflowSchedulesAction.mock.calls.length;
+
+    fireEvent.change(screen.getByLabelText('schedules-filter-status'), {
+      target: { value: 'failed' }
+    });
+
+    await waitFor(() => {
+      expect(actionMocks.listWorkflowSchedulesAction).toHaveBeenCalledTimes(initialCalls + 1);
+      expect(screen.getByText('Ticket reminder')).toBeInTheDocument();
+      expect(screen.queryByText('Weekday billing')).not.toBeInTheDocument();
+    });
+  });
+
+  it('matches schedule name and workflow name in text search', async () => {
+    await renderSchedules();
+    const initialCalls = actionMocks.listWorkflowSchedulesAction.mock.calls.length;
+
+    fireEvent.change(screen.getByPlaceholderText('Search schedules...'), {
+      target: { value: 'Billing sync' }
+    });
+
+    await waitFor(() => {
+      expect(actionMocks.listWorkflowSchedulesAction).toHaveBeenCalledTimes(initialCalls + 1);
+      expect(screen.getByText('Weekday billing')).toBeInTheDocument();
+      expect(screen.getByText('Month-end billing')).toBeInTheDocument();
+      expect(screen.queryByText('Ticket reminder')).not.toBeInTheDocument();
+    });
+  });
+
+  it('opens the edit dialog with the current schedule values', async () => {
+    await renderSchedules();
+
+    const row = screen.getByText('Weekday billing').closest('tr');
+    expect(row).not.toBeNull();
+    fireEvent.click(within(row as HTMLTableRowElement).getByText('Edit'));
+
+    await screen.findByRole('dialog', { name: 'Edit Schedule' });
+    expect(screen.getByLabelText('Schedule name')).toHaveValue('Weekday billing');
+    expect(screen.getByLabelText('Trigger type')).toHaveValue('recurring');
+    expect(screen.getByLabelText('Timezone')).toHaveValue('America/New_York');
+  });
+
+  it('pauses a currently enabled schedule from the row action', async () => {
+    await renderSchedules();
+
+    const row = screen.getByText('Weekday billing').closest('tr');
+    fireEvent.click(within(row as HTMLTableRowElement).getByText('Pause'));
+
+    await waitFor(() => {
+      expect(actionMocks.pauseWorkflowScheduleAction).toHaveBeenCalledWith({ scheduleId: '10000000-0000-0000-0000-000000000001' });
+    });
+  });
+
+  it('resumes a paused schedule from the row action', async () => {
+    await renderSchedules();
+
+    const row = screen.getByText('Month-end billing').closest('tr');
+    fireEvent.click(within(row as HTMLTableRowElement).getByText('Resume'));
+
+    await waitFor(() => {
+      expect(actionMocks.resumeWorkflowScheduleAction).toHaveBeenCalledWith({ scheduleId: '10000000-0000-0000-0000-000000000002' });
+    });
+  });
+
+  it('deletes a schedule after confirmation', async () => {
+    await renderSchedules();
+
+    const row = screen.getByText('Ticket reminder').closest('tr');
+    fireEvent.click(within(row as HTMLTableRowElement).getByText('Delete'));
+    fireEvent.click(screen.getByText('Confirm Delete'));
+
+    await waitFor(() => {
+      expect(actionMocks.deleteWorkflowScheduleAction).toHaveBeenCalledWith({ scheduleId: '10000000-0000-0000-0000-000000000003' });
+    });
+  });
+
+  it('requires workflow selection and schedule name before create can save', async () => {
+    await renderSchedules();
+
+    fireEvent.click(screen.getByText('New Schedule'));
+    await screen.findByRole('dialog', { name: 'Create Schedule' });
+    expect(screen.getByLabelText('Run at')).toBeInTheDocument();
+    expect(screen.getByText('Create Schedule', { selector: 'button' })).toBeDisabled();
+  });
+
+  it('shows the runAt input for one-time schedules', async () => {
+    await renderSchedules();
+
+    fireEvent.click(screen.getByText('New Schedule'));
+    await screen.findByRole('dialog', { name: 'Create Schedule' });
+    expect(screen.getByLabelText('Run at')).toBeInTheDocument();
+  });
+
+  it('shows cron and timezone inputs for recurring schedules', async () => {
+    await renderSchedules();
+
+    fireEvent.click(screen.getByText('New Schedule'));
+    await screen.findByRole('dialog', { name: 'Create Schedule' });
+    fireEvent.change(screen.getByLabelText('Trigger type'), { target: { value: 'recurring' } });
+
+    expect(screen.getByLabelText('Cron')).toBeInTheDocument();
+    expect(screen.getByLabelText('Timezone')).toBeInTheDocument();
+  });
+
+  it('renders schema-driven form fields for payload editing', async () => {
+    await renderSchedules();
+
+    fireEvent.click(screen.getByText('New Schedule'));
+    await screen.findByRole('dialog', { name: 'Create Schedule' });
+    fireEvent.change(screen.getByLabelText('Workflow'), {
+      target: { value: workflowFixtures[0].workflow_id }
+    });
+
+    await screen.findByLabelText('customerId');
+    expect(screen.getByLabelText('notify')).toBeInTheDocument();
+  });
+
+  it('allows raw JSON payload editing in JSON mode', async () => {
+    await renderSchedules();
+
+    fireEvent.click(screen.getByText('New Schedule'));
+    await screen.findByRole('dialog', { name: 'Create Schedule' });
+    fireEvent.change(screen.getByLabelText('Workflow'), {
+      target: { value: workflowFixtures[0].workflow_id }
+    });
+    await screen.findByLabelText('customerId');
+
+    fireEvent.click(screen.getByText('JSON Mode'));
+    expect(screen.getByLabelText('schedule-dialog-payload-json')).toBeInTheDocument();
+  });
+
+  it('blocks save and shows field-level issues when form mode payload is invalid', async () => {
+    await renderSchedules();
+
+    fireEvent.click(screen.getByText('New Schedule'));
+    await screen.findByRole('dialog', { name: 'Create Schedule' });
+    fireEvent.change(screen.getByLabelText('Workflow'), {
+      target: { value: workflowFixtures[0].workflow_id }
+    });
+    await screen.findByLabelText('customerId');
+
+    fireEvent.change(screen.getByLabelText('Schedule name'), { target: { value: 'Daily sync' } });
+    fireEvent.change(screen.getByLabelText('Run at'), { target: { value: '2026-03-10T09:00' } });
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Required field missing.').length).toBeGreaterThan(0);
+      expect(screen.getByText('Create Schedule', { selector: 'button' })).toBeDisabled();
+    });
+  });
+
+  it('blocks save and shows schema issues when JSON mode payload is invalid', async () => {
+    await renderSchedules();
+
+    fireEvent.click(screen.getByText('New Schedule'));
+    await screen.findByRole('dialog', { name: 'Create Schedule' });
+    fireEvent.change(screen.getByLabelText('Workflow'), {
+      target: { value: workflowFixtures[0].workflow_id }
+    });
+    await screen.findByLabelText('customerId');
+
+    fireEvent.change(screen.getByLabelText('Schedule name'), { target: { value: 'Daily sync' } });
+    fireEvent.change(screen.getByLabelText('Run at'), { target: { value: '2026-03-10T09:00' } });
+    fireEvent.click(screen.getByText('JSON Mode'));
+    fireEvent.change(screen.getByLabelText('schedule-dialog-payload-json'), {
+      target: { value: JSON.stringify({ notify: true }, null, 2) }
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/customerId: Required field missing\./)).toBeInTheDocument();
+      expect(screen.getByText('Create Schedule', { selector: 'button' })).toBeDisabled();
+    });
+  });
+
+  it('explains why inferred-schema workflows cannot be scheduled', async () => {
+    await renderSchedules();
+
+    fireEvent.click(screen.getByText('New Schedule'));
+    await screen.findByRole('dialog', { name: 'Create Schedule' });
+    fireEvent.change(screen.getByLabelText('Workflow'), {
+      target: { value: workflowFixtures[2].workflow_id }
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Schedules are only supported for workflows with a pinned payload schema.')).toBeInTheDocument();
+      expect(screen.getByText('Create Schedule', { selector: 'button' })).toBeDisabled();
+    });
+  });
+});

@@ -58,11 +58,9 @@ export class E2ETestContext extends TestContext {
         'tickets',
         'contacts', 
         'email_providers',
-        'workflow_events',
         'email_messages',
         'attachments',
         'workflow_definitions',
-        'workflow_instances',
         ...options.cleanupTables || []
       ]
     };

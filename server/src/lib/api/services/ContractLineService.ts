@@ -16,7 +16,7 @@ import { cloneTemplateContractLine } from 'server/src/lib/billing/utils/template
 // Import existing models and actions for integration
 import ContractLine from '@alga-psa/billing/models/contractLine';
 import ContractLineFixedConfig from '@alga-psa/billing/models/contractLineFixedConfig';
-import { ContractLineServiceConfigurationService } from 'server/src/lib/services/contractLineServiceConfigurationService';
+import { ContractLineServiceConfigurationService } from '@alga-psa/billing/services';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import {
   addContractLine as repositoryAddContractLine,

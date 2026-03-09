@@ -8,18 +8,14 @@ import { withTransaction } from '@alga-psa/db';
 
 export async function getCurrentUser(): Promise<IUserWithRoles | null> {
   try {
-    logger.debug('Getting current user from session');
     const session = await getSession();
 
     if (!session?.user) {
-      logger.debug('No user found in session');
       return null;
     }
 
     const sessionUser = session.user as any;
     if (sessionUser.id && sessionUser.tenant) {
-      logger.debug(`Using user ID from session: ${sessionUser.id}, tenant: ${sessionUser.tenant}`);
-
       return runWithTenant(sessionUser.tenant, async () => {
         const { knex, tenant } = await createTenantKnex();
 
@@ -36,11 +32,9 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
             .first();
 
           if (!user) {
-            logger.debug(`User not found for ID: ${sessionUser.id} in tenant: ${sessionUser.tenant}`);
             return null;
           }
 
-          logger.debug(`Fetching roles for user ID: ${user.user_id}`);
           const roles = await trx<IRole>('roles')
             .join('user_roles', function () {
               this.on('roles.role_id', '=', 'user_roles.role_id')
@@ -51,7 +45,6 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
             .where('roles.tenant', sessionUser.tenant)
             .select('roles.*');
 
-          logger.debug(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
           return { ...user, roles };
         });
 
@@ -70,7 +63,6 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
     }
 
     if (!session.user.email) {
-      logger.debug('No user email found in session');
       return null;
     }
 
@@ -83,8 +75,6 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
     }
 
     if (sessionUser.user_type && session.user?.email) {
-      logger.debug(`Looking up user by email and type: ${session.user.email}, ${sessionUser.user_type}, tenant: ${tenant}`);
-
       const userWithRoles = await withTransaction(knex, async (trx: Knex.Transaction) => {
         const user = await trx<IUser>('users')
           .select('*')
@@ -94,7 +84,6 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
           .first();
 
         if (!user) {
-          logger.debug(`User not found for email: ${session.user!.email}, type: ${sessionUser.user_type}, tenant: ${tenant}`);
           return null;
         }
 
@@ -108,7 +97,6 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
           .where('roles.tenant', tenant)
           .select('roles.*');
 
-        logger.debug(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
         return { ...user, roles };
       });
 
@@ -136,7 +124,6 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
         .first();
 
       if (!user) {
-        logger.debug(`User not found for email: ${session.user!.email} in tenant: ${tenant}`);
         return null;
       }
 
@@ -150,7 +137,6 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
         .where('roles.tenant', tenant)
         .select('roles.*');
 
-      logger.debug(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
       return { ...user, roles };
     });
 

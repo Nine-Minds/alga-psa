@@ -8,7 +8,7 @@ import { IUser } from '@shared/interfaces/user.interfaces';
 import { DropEvent, EventDrop, WorkItemDrop } from '@alga-psa/types';
 import { View, NavigateAction } from 'react-big-calendar';
 import { withDragAndDropProps } from 'react-big-calendar/lib/addons/dragAndDrop';
-import { XCircle, Plus } from 'lucide-react';
+import { XCircle } from 'lucide-react';
 import moment from 'moment';
 
 interface ScheduleViewPanelProps {
@@ -33,7 +33,6 @@ interface ScheduleViewPanelProps {
   canEdit?: boolean;
   showInactiveUsers?: boolean;
   onShowInactiveUsersChange?: (show: boolean) => void;
-  onQuickAddTicket?: () => void;
 }
 
 const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
@@ -58,7 +57,6 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
   canEdit,
   showInactiveUsers = false,
   onShowInactiveUsersChange,
-  onQuickAddTicket,
 }) => {
 
   const handleNavigate = (newDate: Date, view: string, action: string) => {
@@ -152,16 +150,6 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
               checked={showInactiveUsers}
               onCheckedChange={onShowInactiveUsersChange || (() => {})}
             />
-            {/* Quick Add Ticket Button */}
-            <Button
-              id="quick-add-ticket-button"
-              onClick={onQuickAddTicket}
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Add Ticket
-            </Button>
           </div>
         </div>
         <div className="flex justify-between items-center w-full">

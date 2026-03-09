@@ -50,6 +50,9 @@ export type StartRunParams = {
   payload: Record<string, unknown>;
   tenantId?: string | null;
   triggerEvent?: { name: string; payload: Record<string, unknown> };
+  triggerType?: 'event' | 'schedule' | 'recurring' | null;
+  triggerMetadata?: Record<string, unknown> | null;
+  triggerFireKey?: string | null;
   eventType?: string | null;
   sourcePayloadSchemaRef?: string | null;
   triggerMappingApplied?: boolean;
@@ -110,6 +113,9 @@ export class WorkflowRuntimeV2 {
       status: 'RUNNING',
       node_path: nodePath,
       input_json: params.payload,
+      trigger_type: params.triggerType ?? null,
+      trigger_metadata_json: params.triggerMetadata ?? null,
+      trigger_fire_key: params.triggerFireKey ?? null,
       event_type: params.eventType ?? null,
       source_payload_schema_ref: params.sourcePayloadSchemaRef ?? null,
       trigger_mapping_applied: params.triggerMappingApplied ?? false,
@@ -124,6 +130,9 @@ export class WorkflowRuntimeV2 {
         workflowId: params.workflowId,
         workflowVersion: params.version,
         payloadSizeBytes: jsonSize(params.payload),
+        triggerType: params.triggerType ?? null,
+        triggerMetadata: params.triggerMetadata ?? null,
+        triggerFireKey: params.triggerFireKey ?? null,
         triggerEventName: params.triggerEvent?.name ?? null,
         eventType: params.eventType ?? null,
         sourcePayloadSchemaRef: params.sourcePayloadSchemaRef ?? null,

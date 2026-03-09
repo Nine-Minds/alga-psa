@@ -60,7 +60,6 @@ type WorkflowRunDialogProps = {
   draftVersion?: number | null;
   isSystem?: boolean;
   isPaused?: boolean;
-  validationStatus?: string | null;
   concurrencyLimit?: number | null;
   canPublish?: boolean;
   onPublishDraft?: () => Promise<void> | void;
@@ -262,7 +261,6 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   draftVersion,
   isSystem,
   isPaused,
-  validationStatus,
   concurrencyLimit,
   canPublish = false,
   onPublishDraft
@@ -368,7 +366,6 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
 
   const canRun = !!workflowId
     && !!publishedVersion
-    && validationStatus !== 'error'
     && !isPaused;
 
   useEffect(() => {
@@ -1072,8 +1069,7 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
                     id="run-dialog-publish-draft"
                     size="sm"
                     onClick={() => void onPublishDraft()}
-                    disabled={validationStatus === 'error' || isPaused}
-                    title={validationStatus === 'error' ? 'Fix validation errors before publishing.' : undefined}
+                    disabled={isPaused}
                   >
                     Publish draft
                   </Button>

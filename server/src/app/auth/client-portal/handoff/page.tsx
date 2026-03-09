@@ -1,4 +1,9 @@
 import { PortalSessionHandoff } from '@alga-psa/auth/client';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Signing In',
+};
 
 function buildFallbackLoginUrl(): string {
   const authUrl = process.env.NEXTAUTH_URL;

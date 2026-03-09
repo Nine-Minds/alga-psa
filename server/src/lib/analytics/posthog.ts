@@ -31,10 +31,6 @@ export class UsageAnalytics {
           flushInterval: 30000,
         }
       );
-      
-      console.log(`Usage statistics enabled (user IDs ${this.anonymizeUserIds ? 'anonymized' : 'preserved'})`);
-    } else {
-      console.log('Usage statistics disabled by ALGA_USAGE_STATS=false');
     }
   }
   

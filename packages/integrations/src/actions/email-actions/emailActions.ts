@@ -1,11 +1,14 @@
 'use server'
 
-import { findContactByEmailAddress, createOrFindContactByEmail } from '@alga-psa/clients/actions';
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  createOrFindIntegrationContactByEmail,
+  findIntegrationContactByEmailAddress,
+} from '../clientLookupActions';
 
 // =============================================================================
 // INTERFACES
@@ -106,7 +109,7 @@ export interface SaveEmailClientAssociationOutput {
  * This is a thin wrapper around the contactActions domain function
  */
 export async function findContactByEmail(email: string): Promise<FindContactByEmailOutput | null> {
-  const contact = await findContactByEmailAddress(email);
+  const contact = await findIntegrationContactByEmailAddress(email);
   
   if (!contact) {
     return null;
@@ -129,7 +132,7 @@ export async function findContactByEmail(email: string): Promise<FindContactByEm
  * This is a thin wrapper around the contactActions domain function
  */
 export async function createOrFindContact(input: CreateOrFindContactInput): Promise<CreateOrFindContactOutput> {
-  const result = await createOrFindContactByEmail({
+  const result = await createOrFindIntegrationContactByEmail({
     email: input.email,
     name: input.name,
     clientId: input.client_id,

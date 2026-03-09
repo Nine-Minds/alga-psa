@@ -1,0 +1,108 @@
+# n8n-nodes-alga-psa
+
+Alga PSA community node package for self-hosted n8n instances.
+
+## What This Package Provides
+
+This package adds one node to n8n:
+
+- Node name: `Alga PSA`
+- Credential: `Alga PSA API`
+- Resources:
+  - Ticket
+  - Client
+  - Board
+  - Status
+  - Priority
+
+## Requirements
+
+- Self-hosted n8n (community nodes are not available on n8n Cloud when unverified)
+- Alga PSA API access with an API key
+
+## Installation
+
+### Option 1: n8n UI (Self-Hosted)
+
+1. Open your n8n instance.
+2. Go to `Settings -> Community Nodes`.
+3. Install package: `n8n-nodes-alga-psa`.
+4. Restart n8n if prompted.
+
+### Option 2: Manual npm Install (Self-Hosted)
+
+Install in the n8n environment where your instance runs:
+
+```bash
+npm install n8n-nodes-alga-psa
+```
+
+Then restart n8n.
+
+For manual/custom installation paths, follow n8n's manual community-node installation guidance for your deployment type.
+
+## Credential Setup
+
+Create credential type `Alga PSA API` with:
+
+- `Base URL` example: `https://api.algapsa.com`
+- `API Key` your Alga PSA key (sent as `x-api-key` header)
+- Field names in node credentials: `baseUrl`, `apiKey`
+
+## Operation Matrix
+
+| Resource | Operations |
+| --- | --- |
+| Ticket | Create, Get, List, List Comments, Search, Update, Add Comment, Update Status, Update Assignment, Delete |
+| Client | List |
+| Board | List |
+| Status | List |
+| Priority | List |
+
+## Ticket Field Requirements
+
+Ticket create requires:
+
+- `title`
+- `client_id`
+- `board_id`
+- `status_id`
+- `priority_id`
+
+Create/Update optional fields are grouped under additional options.
+
+## Ticket Comment Operations
+
+Ticket comment support stays under the `Ticket` resource:
+
+- `List Comments` requires `ticketId` and supports optional `limit`, `offset`, and `order`.
+- `Add Comment` requires `ticketId` and `comment_text`, with optional `is_internal`.
+- `time_spent` is intentionally not exposed because the current Alga PSA ticket comment implementation does not persist or use it.
+
+## Lookup Fields and Manual Fallback
+
+For `client_id`, `board_id`, `status_id`, and `priority_id`:
+
+- Use dynamic list lookups (`From List`) when available.
+- Use manual UUID input (`By ID`) if lookups fail or if you already know the ID.
+
+## Output and Error Behavior
+
+- API responses unwrap `{ data: ... }` for easier downstream use.
+- Paginated list responses preserve `pagination` metadata.
+- Delete returns a non-empty success object containing `success`, `id`, and `deleted`.
+- Continue On Fail is supported with item-level error objects containing `error.code`, `error.message`, and `error.details` when available.
+
+## Example Workflows
+
+Three minimal importable examples are included:
+
+- `examples/create-update-assignment.workflow.json`
+- `examples/search-update-status.workflow.json`
+- `examples/add-comment-then-list-comments.workflow.json`
+
+These demonstrate:
+
+1. Ticket create -> update assignment
+2. Ticket search -> update status
+3. Ticket add comment -> list comments

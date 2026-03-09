@@ -77,6 +77,7 @@ const activities = proxyActivities<{
     jobId: string;
     jobName: string;
     tenantId: string;
+    jobExecutionId: string;
     data: Record<string, unknown>;
   }): Promise<{ success: boolean; error?: string; result?: Record<string, unknown> }>;
   updateJobStatus(input: {
@@ -215,6 +216,7 @@ export async function genericJobWorkflow(
       jobId,
       jobName,
       tenantId,
+      jobExecutionId: workflowInfo().workflowId,
       data,
     });
 

@@ -22,9 +22,8 @@ import {
   declineAppointmentRequest as declineRequest,
   IAppointmentRequest
 } from '@alga-psa/scheduling/actions';
-import { getTicketById } from '@alga-psa/tickets/actions/ticketActions';
-import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
-import { ITicket } from '@alga-psa/types';
+import { getSchedulingTicketById, type SchedulingTicketDetailsRecord } from '../../actions/ticketLookupActions';
+import { SchedulingTicketDetails } from '../shared/SchedulingTicketDetails';
 
 interface AppointmentRequestsPanelProps {
   isOpen: boolean;
@@ -56,7 +55,7 @@ export default function AppointmentRequestsPanel({
   const [showDeclineForm, setShowDeclineForm] = useState(false);
 
   // Ticket drawer state
-  const [selectedTicket, setSelectedTicket] = useState<(ITicket & { tenant: string | undefined }) | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<SchedulingTicketDetailsRecord | null>(null);
   const [isTicketDrawerOpen, setIsTicketDrawerOpen] = useState(false);
 
   // Users for technician assignment
@@ -186,13 +185,7 @@ export default function AppointmentRequestsPanel({
 
   const handleOpenTicket = async (ticketId: string) => {
     try {
-      const currentUser = await getCurrentUser();
-      if (!currentUser) {
-        toast.error('User not authenticated');
-        return;
-      }
-
-      const ticketData = await getTicketById(ticketId);
+      const ticketData = await getSchedulingTicketById(ticketId);
       if (ticketData) {
         setSelectedTicket(ticketData);
         setIsTicketDrawerOpen(true);
@@ -644,14 +637,7 @@ export default function AppointmentRequestsPanel({
           }}
           id="appointment-ticket-drawer"
         >
-          <TicketDetails
-            initialTicket={selectedTicket}
-            isInDrawer={true}
-            onClose={() => {
-              setIsTicketDrawerOpen(false);
-              setSelectedTicket(null);
-            }}
-          />
+          <SchedulingTicketDetails ticket={selectedTicket} />
         </Drawer>
       )}
     </>

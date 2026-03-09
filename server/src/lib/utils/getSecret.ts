@@ -19,19 +19,17 @@ export async function getSecret(secretName: string, envVar: string, defaultValue
   const providerSecret = await secrets.getAppSecret(secretName);
 
   if (providerSecret !== undefined && providerSecret !== '') {
-    logger.debug(`Retrieved secret '${secretName}' from configured provider.`);
     return providerSecret;
   }
 
   // 2. If provider didn't find it, try the environment variable
-  logger.debug(`Secret '${secretName}' not found via provider, checking env var '${envVar}'.`);
   const envSecret = process.env[envVar];
   if (envSecret !== undefined) {
-    logger.warn(`Using environment variable '${envVar}' for secret '${secretName}'.`);
+    logger.warn(`Using environment variable fallback for secret ${envVar}.`);
     return envSecret;
   }
 
   // 3. If neither worked, use the default value
-  logger.warn(`Secret '${secretName}' not found via provider or env var '${envVar}'. Using default value.`);
+  logger.warn(`Secret not found via provider or environment fallback (${envVar}). Using default value.`);
   return defaultValue;
 }

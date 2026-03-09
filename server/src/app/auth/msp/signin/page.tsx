@@ -7,6 +7,11 @@ import {
   normalizeRememberedEmail,
 } from '@alga-psa/auth/lib/mspRememberedEmail';
 import { UserSession } from '@alga-psa/db/models/UserSession';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'MSP Sign In',
+};
 
 export default async function MspSignInPage({
   searchParams,

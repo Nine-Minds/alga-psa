@@ -7,7 +7,7 @@ import { TaxRegion } from '@alga-psa/types';
 import { fetchClientTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from '../../../../actions/timeEntryActions';
 import { getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
 import { formatISO, parseISO } from 'date-fns';
-import { getClientById } from '@alga-psa/clients/actions';
+import { getSchedulingClientById } from '../../../../actions/clientInteractionLookupActions';
 import { Service, ITimeEntryWithNew } from './types';
 
 interface TimeEntryState {
@@ -136,7 +136,7 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
       const [services, taxRegions, client] = await Promise.all([
         fetchServicesForTimeEntry(workItem.type),
         fetchTaxRegions(),
-        clientId ? getClientById(clientId) : Promise.resolve(null)
+        clientId ? getSchedulingClientById(clientId) : Promise.resolve(null)
       ]);
 
       dispatch({
