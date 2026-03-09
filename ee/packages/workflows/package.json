@@ -7,29 +7,36 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
     },
     "./actions": {
-      "types": "./src/actions/index.ts",
-      "import": "./dist/actions/index.mjs",
-      "require": "./dist/actions/index.js"
+      "import": "./src/actions/index.ts",
+      "types": "./src/actions/index.ts"
+    },
+    "./actions/*": {
+      "import": "./src/actions/*.ts",
+      "types": "./src/actions/*.ts"
     },
     "./components": {
-      "types": "./src/components/index.ts",
-      "import": "./dist/components/index.mjs",
-      "require": "./dist/components/index.js"
+      "import": "./src/components/index.ts",
+      "types": "./src/components/index.ts"
+    },
+    "./components/*": {
+      "import": "./src/components/*.tsx",
+      "types": "./src/components/*.tsx"
+    },
+    "./forms/*": {
+      "import": "./src/forms/*.ts",
+      "types": "./src/forms/*.ts"
     },
     "./lib/*": {
-      "types": "./src/lib/*.ts",
-      "import": "./dist/lib/*.mjs",
-      "require": "./dist/lib/*.js"
+      "import": "./src/lib/*.ts",
+      "types": "./src/lib/*.ts"
     },
     "./models/*": {
-      "types": "./src/models/*.ts",
-      "import": "./dist/models/*.mjs",
-      "require": "./dist/models/*.js"
+      "import": "./src/models/*.ts",
+      "types": "./src/models/*.ts"
     }
   },
   "scripts": {
