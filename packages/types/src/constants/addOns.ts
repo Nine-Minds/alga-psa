@@ -16,7 +16,11 @@
 
 /**
  * Available add-ons. Add new add-on keys here as they become available.
- * Currently empty — placeholder for future add-ons.
+ *
+ * Scaffolding: not yet integrated into access checks. The `tenant_addons`
+ * table exists and `tenantHasAddOn()` is ready, but no runtime code reads
+ * add-ons yet. When the first add-on is defined, wire it into TierContext
+ * and assertTierAccess alongside the tier feature checks.
  */
 export enum ADD_ONS {
   // Future examples:

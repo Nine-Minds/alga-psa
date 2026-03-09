@@ -61,6 +61,20 @@ function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, proto
 const SESSION_MAX_AGE = getSessionMaxAge();
 const SESSION_COOKIE = getSessionCookieConfig();
 
+/**
+ * Fetches the tenant's plan from the database.
+ * Used for both initial sign-in and throttled refresh in JWT callbacks.
+ */
+async function fetchTenantPlan(tenantId: string): Promise<string | undefined> {
+    const { getAdminConnection } = await import('@alga-psa/db/admin');
+    const knex = await getAdminConnection();
+    const tenantRecord = await knex('tenants')
+        .where('tenant', tenantId)
+        .select('plan')
+        .first();
+    return tenantRecord?.plan ?? undefined;
+}
+
 const NEXTAUTH_SECURE_COOKIES = process.env.NODE_ENV === 'production';
 const NEXTAUTH_COOKIE_PREFIX = NEXTAUTH_SECURE_COOKIES ? '__Secure-' : '';
 const PLAYWRIGHT_FAKE_GOOGLE_OAUTH_ENABLED = process.env.PLAYWRIGHT_FAKE_GOOGLE_OAUTH === 'true';
@@ -1536,13 +1550,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 // Fetch tenant plan on initial sign-in
                 if (extendedUser.tenant) {
                     try {
-                        const { getAdminConnection } = await import('@alga-psa/db/admin');
-                        const knex = await getAdminConnection();
-                        const tenantRecord = await knex('tenants')
-                            .where('tenant', extendedUser.tenant)
-                            .select('plan')
-                            .first();
-                        token.plan = tenantRecord?.plan ?? undefined;
+                        token.plan = await fetchTenantPlan(extendedUser.tenant);
                         token.last_plan_check = Date.now();
                     } catch (error) {
                         console.error('[auth] Failed to fetch tenant plan:', error);
@@ -1647,13 +1655,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
 
                 if (shouldRefreshPlan) {
                     try {
-                        const { getAdminConnection } = await import('@alga-psa/db/admin');
-                        const knex = await getAdminConnection();
-                        const tenantRecord = await knex('tenants')
-                            .where('tenant', token.tenant)
-                            .select('plan')
-                            .first();
-                        token.plan = tenantRecord?.plan ?? undefined;
+                        token.plan = await fetchTenantPlan(token.tenant as string);
                         token.last_plan_check = now;
                     } catch (error) {
                         console.error('[auth] Failed to refresh tenant plan:', error);
@@ -2263,13 +2265,7 @@ export const options: NextAuthConfig = {
                 // Fetch tenant plan on initial sign-in
                 if (extendedUser.tenant) {
                     try {
-                        const { getAdminConnection } = await import('@alga-psa/db/admin');
-                        const knex = await getAdminConnection();
-                        const tenantRecord = await knex('tenants')
-                            .where('tenant', extendedUser.tenant)
-                            .select('plan')
-                            .first();
-                        token.plan = tenantRecord?.plan ?? undefined;
+                        token.plan = await fetchTenantPlan(extendedUser.tenant);
                         token.last_plan_check = Date.now();
                     } catch (error) {
                         console.error('[auth] Failed to fetch tenant plan:', error);
@@ -2374,13 +2370,7 @@ export const options: NextAuthConfig = {
 
                 if (shouldRefreshPlan) {
                     try {
-                        const { getAdminConnection } = await import('@alga-psa/db/admin');
-                        const knex = await getAdminConnection();
-                        const tenantRecord = await knex('tenants')
-                            .where('tenant', token.tenant)
-                            .select('plan')
-                            .first();
-                        token.plan = tenantRecord?.plan ?? undefined;
+                        token.plan = await fetchTenantPlan(token.tenant as string);
                         token.last_plan_check = now;
                     } catch (error) {
                         console.error('[auth] Failed to refresh tenant plan:', error);

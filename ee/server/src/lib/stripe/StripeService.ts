@@ -679,15 +679,19 @@ export class StripeService {
         }
 
         // Build phase items — include base fee item if this is a multi-item subscription
+        // Resolve price IDs based on the tenant's actual tier to avoid mismatched pricing
+        const tenantRecord = await knex('tenants').where('tenant', tenantId).select('plan').first();
+        const tenantTierPrices = tenantRecord?.plan ? this.getTierPriceIds(tenantRecord.plan) : null;
+
         const userPriceId = existingSubscription.stripe_base_item_id
-          ? (this.config.proUserPriceId || this.config.premiumUserPriceId || this.config.licensePriceId!)
+          ? (tenantTierPrices?.userPriceId || this.config.licensePriceId!)
           : this.config.licensePriceId!;
 
         const buildPhaseItems = (qty: number): Stripe.SubscriptionScheduleUpdateParams.Phase.Item[] => {
           const items: Stripe.SubscriptionScheduleUpdateParams.Phase.Item[] = [];
           // Base fee item (if multi-item subscription)
           if (existingSubscription.stripe_base_item_id) {
-            const basePriceId = this.config.proBasePriceId || this.config.premiumBasePriceId;
+            const basePriceId = tenantTierPrices?.basePriceId;
             if (basePriceId) {
               items.push({ price: basePriceId, quantity: 1 });
             }

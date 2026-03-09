@@ -36,7 +36,7 @@ export function isValidTier(value: unknown): value is TenantTier {
  * Result of resolving a plan value to a tier.
  */
 export interface ResolvedTier {
-  /** The resolved tier (defaults to 'basic' if invalid/null) */
+  /** The resolved tier (defaults to 'pro' if invalid/null) */
   tier: TenantTier;
   /** True if the plan was NULL, undefined, or invalid */
   isMisconfigured: boolean;
@@ -44,7 +44,7 @@ export interface ResolvedTier {
 
 /**
  * Resolves a plan value to a tier.
- * - Valid tiers ('basic', 'pro', 'premium') return as-is with isMisconfigured: false
+ * - Valid tiers ('pro', 'premium') return as-is with isMisconfigured: false
  * - NULL, undefined, or invalid values return 'pro' with isMisconfigured: true
  *
  * @param plan - The plan value from the tenants table

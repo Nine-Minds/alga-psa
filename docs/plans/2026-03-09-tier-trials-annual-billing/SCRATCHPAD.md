@@ -87,6 +87,41 @@ Both paths end with: customer sees Premium features + countdown banner + pricing
 - **Customer cancels** → Cancel Premium subscription → `trialing` → `canceled` → webhook reverts `tenants.plan` to `'pro'`
 - **Charge fails** → `trialing` → `past_due` → banner of shame, Nine Minds contacts manually
 
+## nm-store Dependency
+
+The 7-day Pro trial and annual billing toggle both require changes in **nm-store** (separate repo at `/Users/natalliabukhtsik/Desktop/projects/nm-store`).
+
+Existing plan: `/Users/natalliabukhtsik/Desktop/projects/nm-store/.ai/tier-checkout-plan.md`
+
+nm-store changes needed (out of scope for this plan, but must coordinate):
+1. **Trial**: Add `subscription_data: { trial_period_days: 7 }` to Stripe session creation in `src/utils/stripe.ts` for tiered products
+2. **Annual billing**: Add monthly/annual toggle to `OrderForm.tsx`, pass annual price IDs when selected
+3. **Annual env vars**: `STRIPE_PRO_BASE_ANNUAL_PRICE_ID`, `STRIPE_PRO_USER_ANNUAL_PRICE_ID`, `STRIPE_PREMIUM_BASE_ANNUAL_PRICE_ID`, `STRIPE_PREMIUM_USER_ANNUAL_PRICE_ID`
+
+The alga-psa side (this plan) handles: receiving trial subscriptions via webhook, displaying trial state, managing trials post-creation. nm-store handles: creating the initial checkout session with trial + pricing.
+
+## Implementation Log
+
+### Phase 1: Bug Fixes & Documentation (2026-03-09)
+
+**BF1** — Fixed JSDoc in `tenantTiers.ts`: replaced 'basic' with 'pro' in `ResolvedTier` and `resolveTier()` docstrings.
+
+**BF2** — Fixed `buildPhaseItems` in `StripeService.ts`: now fetches `tenants.plan` and uses `getTierPriceIds()` to resolve the correct tier-specific prices for scheduled reductions, instead of blindly picking first configured price.
+
+**BF3** — Verified: `saveInvoiceTemplate` serves both visual AND code templates. Can't blanket-gate the save action without distinguishing template type. The visual designer is already UI-gated via `canUseVisualDesigner` in `BillingPageClient.tsx`. Server-side enforcement of visual-only saves deferred — would require a `templateType` flag in the save payload.
+
+**BF4** — Extracted `fetchTenantPlan(tenantId)` helper at module level in `nextAuthOptions.ts`. Replaced all 4 duplicated DB query blocks (2 initial sign-in + 2 throttled refresh) with calls to the shared helper.
+
+**BF5** — Added `console.warn` in `tierFromStripeProduct()` when product name is null or doesn't match any known mapping. Includes the product name in the warning for debugging.
+
+**BF6** — Replaced `return null` in `TierGate` loading state with animated skeleton (3 pulse bars using theme border colors).
+
+**BF7** — Created migration `20260309100000_add_fk_stripe_base_price_id.cjs` adding FK from `stripe_subscriptions.stripe_base_price_id` to `stripe_prices.stripe_price_id` with CASCADE delete.
+
+**BF8** — Added detailed JSDoc to `addOns.ts` explaining it's intentional scaffolding and how to wire it in when first add-on is defined.
+
+**DOC1** — Created `docs/tier-gating-guide.md` with 7-step guide: enum → feature map → minimum tier → UI gate → server gate → display name → tests. Includes code examples from existing INVOICE_DESIGNER implementation, CE bypass docs, and key file reference table.
+
 ## Open Questions
 
 - What if a paying Pro customer's card fails during Premium trial activation? (Premium trial is free, so this shouldn't matter — they keep Pro subscription active)

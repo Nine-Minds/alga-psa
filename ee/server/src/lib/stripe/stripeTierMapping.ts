@@ -36,7 +36,12 @@ const DEFAULT_TIER: TenantTier = 'pro';
  */
 export function tierFromStripeProduct(productName: string | null | undefined): TenantTier {
   if (!productName) {
+    console.warn('[stripeTierMapping] No product name provided, defaulting to pro');
     return DEFAULT_TIER;
   }
-  return STRIPE_PRODUCT_TIER_MAP[productName] ?? DEFAULT_TIER;
+  const tier = STRIPE_PRODUCT_TIER_MAP[productName];
+  if (!tier) {
+    console.warn(`[stripeTierMapping] Unknown Stripe product name "${productName}", defaulting to pro`);
+  }
+  return tier ?? DEFAULT_TIER;
 }
