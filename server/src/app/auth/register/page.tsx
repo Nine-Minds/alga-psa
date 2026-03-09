@@ -12,8 +12,6 @@ import { registerUser } from '@alga-psa/auth/actions';
 import { Alert } from '@alga-psa/auth/client';
 import { Input } from '@alga-psa/ui/components/Input';
 
-
-
 export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [hasStartedTyping, setHasStartedTyping] = useState(false);
@@ -35,7 +33,6 @@ export default function Register() {
     password: '',
   });
 
-
   useEffect(() => {
     if (formData.password) {
       setHasStartedTyping(true);
@@ -50,8 +47,6 @@ export default function Register() {
     }
 
   }, [formData.password]);
-
-
 
   const allCriteriaMet = Object.values(passwordCriteria).every(Boolean);
 
@@ -100,7 +95,6 @@ export default function Register() {
     }
   };
 
-
   const handleGoogleSignIn = async (e: React.MouseEvent<HTMLButtonElement>) => {
     try {
       e.preventDefault();
@@ -113,8 +107,6 @@ export default function Register() {
       // Handle unexpected errors
     }
   };
-
-
 
   const CriteriaIcon = ({ met }: { met: boolean }) =>
     !hasStartedTyping ? null : met ? <CheckCircle className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-destructive" />;

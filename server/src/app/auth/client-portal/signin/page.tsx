@@ -6,6 +6,11 @@ import { getTenantBrandingByDomain, getTenantLocaleByDomain } from '@alga-psa/te
 import { getSession } from '@alga-psa/auth';
 import { isValidTenantSlug } from '@shared/utils/tenantSlug';
 import { UserSession } from '@alga-psa/db/models/UserSession';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Client Portal Sign In',
+};
 
 export default async function ClientSignInPage({
   searchParams,

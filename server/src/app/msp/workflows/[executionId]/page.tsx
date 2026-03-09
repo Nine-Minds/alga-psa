@@ -1,3 +1,4 @@
+import { cache } from 'react';
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { getWorkflowExecutionDetails } from '@alga-psa/workflows/actions/workflow-actions';
@@ -8,6 +9,7 @@ import Link from 'next/link';
 import WorkflowEventTimeline from '@alga-psa/workflows/components/WorkflowEventTimeline';
 import WorkflowActionsList from '@alga-psa/workflows/components/WorkflowActionsList';
 import WorkflowControls from '@alga-psa/workflows/components/WorkflowControls';
+import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,12 +18,27 @@ interface WorkflowDetailPageProps {
     executionId: string;
   }>;
 }
+
+const getCachedWorkflowDetails = cache((id: string) => getWorkflowExecutionDetails(id));
+
+export async function generateMetadata({ params }: WorkflowDetailPageProps): Promise<Metadata> {
+  try {
+    const { executionId } = await params;
+    const details = await getCachedWorkflowDetails(executionId);
+    if (details?.execution?.workflow_name) {
+      return { title: details.execution.workflow_name };
+    }
+  } catch (error) {
+    console.error('[generateMetadata] Failed to fetch workflow title:', error);
+  }
+  return { title: 'Workflow Execution' };
+}
 export default async function WorkflowDetailPage({ params }: WorkflowDetailPageProps) {
   const resolvedParams = await params;
   const { executionId } = resolvedParams;
-  
-  // Get workflow execution details
-  const workflowDetails = await getWorkflowExecutionDetails(executionId);
+
+  // Get workflow execution details (uses React.cache — deduped with generateMetadata)
+  const workflowDetails = await getCachedWorkflowDetails(executionId);
   
   if (!workflowDetails) {
     notFound();

@@ -1,0 +1,197 @@
+# Scratchpad — Dynamic Browser Tab Titles
+
+- Plan slug: `page-titles`
+- Created: `2026-03-08`
+
+## Decisions
+
+- (2026-03-08) Use Next.js metadata template pattern — zero runtime cost, built-in support.
+- (2026-03-08) Client Portal gets `| Client Portal` suffix to distinguish from MSP tabs.
+- (2026-03-08) Phase 4 (entity name fetching) deferred — keep initial scope to static titles + route params.
+- (2026-03-08) Dynamic pages use generic titles like "Ticket Details" rather than fetching entity names.
+
+## Discoveries / Constraints
+
+- (2026-03-08) Root layout uses `generateMetadata()` (async) — must keep title.template inside the function return, not switch to static `metadata` export.
+- (2026-03-08) 5 files already have metadata exports:
+  - `server/src/app/auth/verify/layout.tsx` — `title: 'Verify Email'` (string format, compatible)
+  - `server/src/app/client-portal/client-settings/layout.tsx` — `title: 'Company Settings'` (string format, compatible)
+  - `server/src/app/msp/assets/[asset_id]/edit/page.tsx` — `title: 'Edit Asset'` (string format, compatible)
+  - `server/src/app/msp/extensions/[id]/page.tsx` — re-exports from `@product/extensions/entry` (verify)
+  - `server/src/app/surveys/respond/[token]/page.tsx` — uses `generateMetadata()` with translation
+- (2026-03-08) EE directory has 3 additional extension pages with metadata in `ee/server/src/app/msp/`
+- (2026-03-08) EE directory has 3 MSP pages without metadata: chat, licenses/purchase, licenses/purchase/success
+- (2026-03-08) Client portal `extensions/[id]/page.tsx` also re-exports from `@product/extensions/entry`
+- (2026-03-08) Pages listed in original plan but NOT found on disk: `/msp/knowledge-base`, `/msp/documents`, `/client-portal/knowledge-base`, `/client-portal/documents`, `/share/[token]`. Skip these.
+- (2026-03-08) MSP layout, Client Portal layout, Auth layout, Static layout are all server components — safe to add metadata exports.
+
+## Commands / Runbooks
+
+- Validate plan: `python scripts/validate_plan.py docs/plans/2026-03-08-page-titles`
+- Validate T019 build (EE): `NODE_OPTIONS='--max-old-space-size=8192' npm --prefix ee/server run build`
+- Validate T019 build (community): `NODE_OPTIONS='--max-old-space-size=8192' npm --prefix server run build`
+
+## Links / References
+
+- Original plan: `.ai/page-title-plan.md`
+- Root layout: `server/src/app/layout.tsx` (line 24: `generateMetadata()`)
+- MSP layout: `server/src/app/msp/layout.tsx`
+- Client Portal layout: `server/src/app/client-portal/layout.tsx`
+- Auth layout: `server/src/app/auth/layout.tsx`
+- Static layout: `server/src/app/static/layout.tsx`
+- Next.js metadata template docs: https://nextjs.org/docs/app/building-your-application/optimizing/metadata#title
+
+## Open Questions
+
+- Should EE pages (ee/server/src/app/msp/) also get title metadata? Likely yes for consistency.
+- (2026-03-08) Audit correction: `/msp/documents` exists on disk and needed explicit metadata despite the original scratch note.
+- (2026-03-08) Audit discovery: `/test-routing` had no title metadata and needed a public-page title entry.
+- (2026-03-08) EE builds use standalone `ee/server` app layouts, so matching root/MSP/Client Portal metadata templates were required there too.
+- (2026-03-08) Validation runbook: `npm --prefix server run test -- src/test/unit/app/pageTitles.metadata.test.ts` verifies title coverage from source.
+- (2026-03-08) Validation runbook: `NODE_OPTIONS='--max-old-space-size=8192' npm --prefix server run typecheck && NODE_OPTIONS='--max-old-space-size=8192' npm --prefix ee/server run typecheck` passes.
+- (2026-03-08) Build blocker: `npm run build` and `npm --prefix ee/server run build` fail on pre-existing missing-module issues in `@alga-psa/product-extension-actions`, `@alga-psa/storage/StorageService`, and `packages/workflows` exports.
+- (2026-03-08) EE build config bug: `ee/server/next.config.mjs` resolved monorepo package aliases from `../packages/*`, which pointed at a non-existent `ee/packages/*` tree instead of the repo-root `packages/*` directory.
+- (2026-03-08) EE build fix: add stable-specifier aliases for `@alga-psa/product-extension-actions`, `@alga-psa/product-extension-initialization`, `@alga-psa/product-auth-ee`, `@alga-psa/storage/StorageService`, and `@alga-psa/workflows/entry`.
+- (2026-03-08) EE build fix: add `ee/server/src/empty/workflows/entry.tsx` so the package-level workflow loader fallback resolves inside the EE app during production builds.
+- (2026-03-08) Build validation: both Next.js apps completed production builds with `NODE_OPTIONS='--max-old-space-size=8192'`; the default heap on this machine aborted before completion.
+- (2026-03-08) F001: Root layout: change generateMetadata() title from static string to template object with `template: '%s | Alga PSA'` and `default: 'Alga PSA'`
+- (2026-03-08) F002: MSP layout: add metadata export with `template: '%s | Alga PSA'` and `default: 'Dashboard | Alga PSA'`
+- (2026-03-08) F003: Client Portal layout: add metadata export with `template: '%s | Client Portal'` and `default: 'Dashboard | Client Portal'`
+- (2026-03-08) F004: Auth layout: add metadata export with `template: '%s | Alga PSA'` and `default: 'Sign In | Alga PSA'`
+- (2026-03-08) F005: Static layout: add metadata export with `default: 'Alga PSA'`
+- (2026-03-08) F006: MSP page title: /msp/dashboard — title: 'Dashboard'
+- (2026-03-08) F007: MSP page title: /msp/account — title: 'Account'
+- (2026-03-08) F008: MSP page title: /msp/account-manager — title: 'Account Manager'
+- (2026-03-08) F009: MSP page title: /msp/profile — title: 'Profile'
+- (2026-03-08) F010: MSP page title: /msp/tickets — title: 'Tickets'
+- (2026-03-08) F011: MSP page title: /msp/tickets/[id] — title: 'Ticket Details' (generateMetadata)
+- (2026-03-08) F012: MSP page title: /msp/clients — title: 'Clients'
+- (2026-03-08) F013: MSP page title: /msp/clients/[id] — title: 'Client Details' (generateMetadata)
+- (2026-03-08) F014: MSP page title: /msp/contacts — title: 'Contacts'
+- (2026-03-08) F015: MSP page title: /msp/contacts/[id] — title: 'Contact Details' (generateMetadata)
+- (2026-03-08) F016: MSP page title: /msp/contacts/[id]/activity — title: 'Contact Activity' (generateMetadata)
+- (2026-03-08) F017: MSP page title: /msp/projects — title: 'Projects'
+- (2026-03-08) F018: MSP page title: /msp/projects/[id] — title: 'Project Details' (generateMetadata)
+- (2026-03-08) F019: MSP page title: /msp/projects/templates — title: 'Project Templates'
+- (2026-03-08) F020: MSP page title: /msp/projects/templates/create — title: 'Create Template'
+- (2026-03-08) F021: MSP page title: /msp/projects/templates/[templateId] — title: 'Template Details' (generateMetadata)
+- (2026-03-08) F022: MSP page title: /msp/assets — title: 'Assets'
+- (2026-03-08) F023: MSP page title: /msp/assets/[asset_id] — title: 'Asset Details' (generateMetadata)
+- (2026-03-08) F024: MSP page title: /msp/assets/[asset_id]/edit — verify existing metadata 'Edit Asset' is compatible with template
+- (2026-03-08) F025: MSP page title: /msp/assets/automation — title: 'Asset Automation'
+- (2026-03-08) F026: MSP page title: /msp/assets/imports — title: 'Asset Imports'
+- (2026-03-08) F027: MSP page title: /msp/assets/integrations — title: 'Asset Integrations'
+- (2026-03-08) F028: MSP page title: /msp/assets/maintenance — title: 'Asset Maintenance'
+- (2026-03-08) F029: MSP page title: /msp/assets/policies — title: 'Asset Policies'
+- (2026-03-08) F030: MSP page title: /msp/billing — title: 'Billing'
+- (2026-03-08) F031: MSP page title: /msp/billing/credits — title: 'Credits'
+- (2026-03-08) F032: MSP page title: /msp/time-entry — title: 'Time Entry'
+- (2026-03-08) F033: MSP page title: /msp/time-entry/timesheet/[id] — title: 'Timesheet' (generateMetadata)
+- (2026-03-08) F034: MSP page title: /msp/time-sheet-approvals — title: 'Timesheet Approvals'
+- (2026-03-08) F035: MSP page title: /msp/chat — title: 'Chat'
+- (2026-03-08) F036: MSP page title: /msp/email-logs — title: 'Email Logs'
+- (2026-03-08) F037: MSP page title: /msp/schedule — title: 'Schedule'
+- (2026-03-08) F038: MSP page title: /msp/jobs — title: 'Jobs'
+- (2026-03-08) F039: MSP page title: /msp/technician-dispatch — title: 'Technician Dispatch'
+- (2026-03-08) F040: MSP page title: /msp/surveys — title: 'Surveys'
+- (2026-03-08) F041: MSP page title: /msp/surveys/dashboard — title: 'Survey Dashboard'
+- (2026-03-08) F042: MSP page title: /msp/surveys/analytics — title: 'Survey Analytics'
+- (2026-03-08) F043: MSP page title: /msp/surveys/responses — title: 'Survey Responses'
+- (2026-03-08) F044: MSP page title: /msp/surveys/responses/[id] — title: 'Response Details' (generateMetadata)
+- (2026-03-08) F045: MSP page title: /msp/surveys/settings — title: 'Survey Settings'
+- (2026-03-08) F046: MSP page title: /msp/workflow-editor — title: 'Workflow Editor'
+- (2026-03-08) F047: MSP page title: /msp/workflow-editor/new — title: 'New Workflow'
+- (2026-03-08) F048: MSP page title: /msp/workflow-editor/[workflowId] — title: 'Edit Workflow' (generateMetadata)
+- (2026-03-08) F049: MSP page title: /msp/workflow-control — title: 'Workflow Control'
+- (2026-03-08) F050: MSP page title: /msp/workflows — title: 'Workflows'
+- (2026-03-08) F051: MSP page title: /msp/workflows/[executionId] — title: 'Workflow Execution' (generateMetadata)
+- (2026-03-08) F052: MSP page title: /msp/workflows/runs/[runId] — title: 'Workflow Run' (generateMetadata)
+- (2026-03-08) F053: MSP page title: /msp/automation-hub — title: 'Automation Hub'
+- (2026-03-08) F054: MSP page title: /msp/settings — title: 'Settings'
+- (2026-03-08) F055: MSP page title: /msp/settings/extensions — title: 'Extension Settings'
+- (2026-03-08) F056: MSP page title: /msp/settings/extensions/install — title: 'Install Extension'
+- (2026-03-08) F057: MSP page title: /msp/settings/extensions/[id] — title: 'Extension Settings' (generateMetadata)
+- (2026-03-08) F058: MSP page title: /msp/settings/extensions/[id]/settings — title: 'Extension Configuration' (generateMetadata)
+- (2026-03-08) F059: MSP page title: /msp/settings/integrations/qbo/callback — title: 'QuickBooks Integration'
+- (2026-03-08) F060: MSP page title: /msp/settings/notifications — title: 'Notification Settings'
+- (2026-03-08) F061: MSP page title: /msp/settings/sla — title: 'SLA Settings'
+- (2026-03-08) F062: MSP page title: /msp/security-settings — title: 'Security Settings'
+- (2026-03-08) F063: MSP page title: /msp/extensions — title: 'Extensions'
+- (2026-03-08) F064: MSP page title: /msp/extensions/[id] — verify existing re-exported metadata from @product/extensions/entry is compatible
+- (2026-03-08) F065: MSP page title: /msp/extensions/[id]/debug — title: 'Extension Debug' (generateMetadata)
+- (2026-03-08) F066: MSP page title: /msp/licenses/purchase — title: 'Purchase Licenses'
+- (2026-03-08) F067: MSP page title: /msp/licenses/purchase/success — title: 'Purchase Success'
+- (2026-03-08) F068: MSP page title: /msp/reports — title: 'Reports'
+- (2026-03-08) F069: MSP page title: /msp/user-activities — title: 'User Activities'
+- (2026-03-08) F070: MSP page title: /msp/onboarding — title: 'Onboarding'
+- (2026-03-08) F071: MSP page title: /msp/share_document — title: 'Share Document'
+- (2026-03-08) F072: MSP page title: /msp/test — title: 'Test'
+- (2026-03-08) F073: MSP page title: /msp/test/ui-kit — title: 'UI Kit'
+- (2026-03-08) F074: MSP page title: /msp/test/collab — title: 'Collaboration Test'
+- (2026-03-08) F075: MSP page title: /msp/test/onboarding — title: 'Onboarding Test'
+- (2026-03-08) F076: Client Portal page title: /client-portal/dashboard — title: 'Dashboard'
+- (2026-03-08) F077: Client Portal page title: /client-portal/account — title: 'Account'
+- (2026-03-08) F078: Client Portal page title: /client-portal/profile — title: 'Profile'
+- (2026-03-08) F079: Client Portal page title: /client-portal/appointments — title: 'Appointments'
+- (2026-03-08) F080: Client Portal page title: /client-portal/appointments/[appointmentRequestId] — title: 'Appointment Details' (generateMetadata)
+- (2026-03-08) F081: Client Portal page title: /client-portal/billing — title: 'Billing'
+- (2026-03-08) F082: Client Portal page title: /client-portal/billing/invoices/[invoiceId]/pay — title: 'Pay Invoice' (generateMetadata)
+- (2026-03-08) F083: Client Portal page title: /client-portal/billing/invoices/[invoiceId]/payment-success — title: 'Payment Success' (generateMetadata)
+- (2026-03-08) F084: Client Portal page title: /client-portal/client-settings — verify existing 'Company Settings' metadata in layout.tsx is compatible
+- (2026-03-08) F085: Client Portal page title: /client-portal/tickets — title: 'Tickets'
+- (2026-03-08) F086: Client Portal page title: /client-portal/tickets/[ticketId] — title: 'Ticket Details' (generateMetadata)
+- (2026-03-08) F087: Client Portal page title: /client-portal/projects — title: 'Projects'
+- (2026-03-08) F088: Client Portal page title: /client-portal/projects/[projectId] — title: 'Project Details' (generateMetadata)
+- (2026-03-08) F089: Client Portal page title: /client-portal/extensions/[id] — verify existing re-exported metadata is compatible
+- (2026-03-08) F090: Auth page title: /auth/signin — title: 'Sign In'
+- (2026-03-08) F091: Auth page title: /auth/register — title: 'Register'
+- (2026-03-08) F092: Auth page title: /auth/verify — verify existing 'Verify Email' metadata in layout.tsx is compatible
+- (2026-03-08) F093: Auth page title: /auth/verify-email — title: 'Verify Email'
+- (2026-03-08) F094: Auth page title: /auth/check-email — title: 'Check Email'
+- (2026-03-08) F095: Auth page title: /auth/portal/setup — title: 'Portal Setup'
+- (2026-03-08) F096: Auth page title: /auth/msp/signin — title: 'MSP Sign In'
+- (2026-03-08) F097: Auth page title: /auth/msp/forgot-password — title: 'Forgot Password'
+- (2026-03-08) F098: Auth page title: /auth/client-portal/signin — title: 'Client Portal Sign In'
+- (2026-03-08) F099: Auth page title: /auth/client-portal/forgot-password — title: 'Forgot Password'
+- (2026-03-08) F100: Auth page title: /auth/client-portal/handoff — title: 'Signing In'
+- (2026-03-08) F101: Auth page title: /auth/password-reset/confirmation — title: 'Password Reset'
+- (2026-03-08) F102: Auth page title: /auth/password-reset/set-new-password — title: 'Set New Password'
+- (2026-03-08) F103: Static page title: /static/master_terms — title: 'Master Terms'
+- (2026-03-08) F104: Static page title: /static/privacy_policy — title: 'Privacy Policy'
+- (2026-03-08) F105: Public page title: /surveys/respond/[token] — verify existing generateMetadata() is compatible with root template
+- (2026-03-08) F106: MSP page title: /msp/documents — title: 'Documents'
+- (2026-03-08) F107: Public page title: /test-routing — title: 'Test Routing'
+- (2026-03-08) F108: EE root layout: add metadata title template `'%s | Alga PSA'` and default `'Alga PSA'`
+- (2026-03-08) F109: EE MSP layout: add metadata template `'%s | Alga PSA'` and default `'Dashboard | Alga PSA'`
+- (2026-03-08) F110: EE Client Portal layout: add metadata template `'%s | Client Portal'` and default `'Dashboard | Client Portal'`
+- (2026-03-08) F111: EE MSP page title: /msp/chat — title: 'Chat'
+- (2026-03-08) F112: EE MSP page title: /msp/licenses/purchase — title: 'Purchase Licenses'
+- (2026-03-08) F113: EE MSP page title: /msp/licenses/purchase/success — title: 'Purchase Success'
+- (2026-03-08) F114: EE MSP page title: /msp/settings — title: 'Settings'
+- (2026-03-08) F115: EE Client Portal page title: /client-portal/extensions/[id] — title: 'Extension' (generateMetadata)
+- (2026-03-08) T001: Verify root layout generateMetadata() returns title object with template '%s | Alga PSA' and default 'Alga PSA'
+- (2026-03-08) T002: Verify MSP layout exports metadata with template '%s | Alga PSA' and default 'Dashboard | Alga PSA'
+- (2026-03-08) T003: Verify Client Portal layout exports metadata with template '%s | Client Portal' and default 'Dashboard | Client Portal'
+- (2026-03-08) T004: Verify Auth layout exports metadata with template '%s | Alga PSA' and default 'Sign In | Alga PSA'
+- (2026-03-08) T005: Verify Static layout exports metadata with default 'Alga PSA'
+- (2026-03-08) T006: Batch verify: all static MSP pages (F006-F075) export 'export const metadata' with correct title strings
+- (2026-03-08) T007: Batch verify: all dynamic MSP pages (F011, F013, F015, F016, F018, F021, F023, F033, F044, F048, F051, F052, F057, F058, F065) export generateMetadata with correct title
+- (2026-03-08) T008: Batch verify: all static Client Portal pages (F076-F079, F081, F085, F087) export 'export const metadata' with correct title strings
+- (2026-03-08) T009: Batch verify: all dynamic Client Portal pages (F080, F082, F083, F086, F088) export generateMetadata with correct title
+- (2026-03-08) T010: Batch verify: all Auth pages (F090-F102) export 'export const metadata' with correct title strings
+- (2026-03-08) T011: Batch verify: static/public pages (F103, F104) export metadata with correct titles
+- (2026-03-08) T012: Verify existing metadata compatibility: /msp/assets/[asset_id]/edit title 'Edit Asset' is a plain string (works with template)
+- (2026-03-08) T013: Verify existing metadata compatibility: /auth/verify layout title 'Verify Email' is a plain string (works with template)
+- (2026-03-08) T014: Verify existing metadata compatibility: /client-portal/client-settings layout title 'Company Settings' is a plain string (works with template)
+- (2026-03-08) T015: Verify existing metadata compatibility: /msp/extensions/[id] re-exported metadata from @product/extensions/entry uses string title
+- (2026-03-08) T016: Verify existing metadata compatibility: /client-portal/extensions/[id] re-exported metadata is compatible with Client Portal template
+- (2026-03-08) T017: Verify existing metadata compatibility: /surveys/respond/[token] generateMetadata() returns a string title (works with root template)
+- (2026-03-08) T018: TypeScript: no type errors introduced by metadata exports (run tsc --noEmit)
+- (2026-03-08) T019: Production build verification passed for `server` and `ee/server` after fixing EE alias wiring.
+- (2026-03-08) T020: Verify no page uses client-side document.title for setting titles
+- (2026-03-08) T021: Verify pages without explicit metadata fall back to their section layout default title
+- (2026-03-08) T022: Verify uncovered community routes /msp/documents and /test-routing export metadata titles
+- (2026-03-08) T023: Verify EE root, MSP, and Client Portal layouts export the expected metadata templates/defaults
+- (2026-03-08) T024: Verify EE MSP routes /msp/chat, /msp/licenses/purchase, /msp/licenses/purchase/success, and /msp/settings export or inherit metadata titles
+- (2026-03-08) T025: Verify EE Client Portal extension route exports generateMetadata with title 'Extension'
+- (2026-03-08) T026: Audit every page route under server/src/app and ee/server/src/app for metadata coverage via page export or route layout

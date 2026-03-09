@@ -1,4 +1,9 @@
 import { TextEditor } from '@alga-psa/ui/editor';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Share Document',
+};
 
 // NOTE: Currently not being saved in the Database
 export default async function TaskList() {

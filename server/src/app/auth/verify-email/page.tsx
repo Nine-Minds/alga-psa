@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 import { verifyRegisterUser } from '@alga-psa/auth/actions';
 
-
 const VerifyEmailContent = () => {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -14,7 +13,6 @@ const VerifyEmailContent = () => {
     const [verificationSuccess, setVerificationSuccess] = useState(false);
     const [verificationMessage, setVerificationMessage] = useState('');
     const hasRun = useRef(false);
-
 
     useEffect(() => {
         const verifyToken = async () => {
@@ -34,7 +32,6 @@ const VerifyEmailContent = () => {
 
         verifyToken();
     }, [token]);
-
 
     useEffect(() => {
         const interval = setInterval(() => {

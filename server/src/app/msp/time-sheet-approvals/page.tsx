@@ -5,6 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/component
 import { Button } from '@alga-psa/ui/components/Button';
 import { Users } from 'lucide-react';
 import { getSession } from '@alga-psa/auth';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Timesheet Approvals',
+};
 
 export default async function TimeSheetApprovalsPage() {
   const session = await getSession();
@@ -53,7 +58,6 @@ export default async function TimeSheetApprovalsPage() {
       </div>
     );
   }
-
 
   return <ManagerApprovalDashboard currentUser={currentUser} />;
 }
