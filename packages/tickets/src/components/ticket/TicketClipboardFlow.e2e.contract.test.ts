@@ -35,6 +35,21 @@ describe('ticket clipboard image flow end-to-end contract', () => {
     expect(source).toContain('setShowEditor(false)');
   });
 
+  it('T037: saved comment delete flow offers comment-only and comment-plus-images paths', () => {
+    const ticketDetailsPath = path.resolve(__dirname, './TicketDetails.tsx');
+    const commentItemPath = path.resolve(__dirname, './CommentItem.tsx');
+    const ticketDetailsSource = fs.readFileSync(ticketDetailsPath, 'utf-8');
+    const commentItemSource = fs.readFileSync(commentItemPath, 'utf-8');
+
+    expect(ticketDetailsSource).toContain('resolveCommentReferencedImageDocuments(conversation.note, documents)');
+    expect(ticketDetailsSource).toContain("onConfirm={() => handleDeleteConfirm(true)}");
+    expect(ticketDetailsSource).toContain("onCancel={deleteDialogHasImages ? () => handleDeleteConfirm(false) : undefined}");
+    expect(ticketDetailsSource).toContain("thirdButtonLabel={deleteDialogHasImages ? 'Delete Comment Only' : undefined}");
+    expect(ticketDetailsSource).toContain("confirmLabel={deleteDialogHasImages ? 'Delete Comment + Images' : 'Delete'}");
+    expect(ticketDetailsSource).toContain('const result = await deleteDraftClipboardImages({');
+    expect(commentItemSource).toContain('onClick={() => onDelete(conversation)}');
+  });
+
   it('T034: edit-mode content changes do not mutate TicketDetails currentComment state on every keystroke', () => {
     const ticketDetailsPath = path.resolve(__dirname, './TicketDetails.tsx');
     const source = fs.readFileSync(ticketDetailsPath, 'utf-8');

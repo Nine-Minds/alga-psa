@@ -12,7 +12,6 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { getCommentResponseSource } from '../../lib/responseSource';
@@ -94,7 +93,6 @@ const CommentItem: React.FC<CommentItemProps> = ({
   uploadFile
 }) => {
   const { t } = useTranslation('features/tickets');
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isInternalToggle, setIsInternalToggle] = useState(conversation.is_internal ?? false);
   const [isResolutionToggle, setIsResolutionToggle] = useState(conversation.is_resolution ?? false);
   const [editedContent, setEditedContent] = useState<PartialBlock[]>(() => {
@@ -427,7 +425,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   id={`delete-comment-${conversation.comment_id}-button`}
                   variant="ghost"
                   size="sm"
-                  onClick={() => setIsDeleteDialogOpen(true)}
+                  onClick={() => onDelete(conversation)}
                   aria-label="Delete comment"
                 >
                   <Trash className="w-4 h-4" />
@@ -493,21 +491,6 @@ const CommentItem: React.FC<CommentItemProps> = ({
           )}
         </div>
       </div>
-      
-      {/* Confirmation Dialog for Delete */}
-      <ConfirmationDialog
-        id={`${commentId}-delete-dialog`}
-        isOpen={isDeleteDialogOpen}
-        onClose={() => setIsDeleteDialogOpen(false)}
-        onConfirm={async () => {
-          onDelete(conversation);
-          setIsDeleteDialogOpen(false);
-        }}
-        title="Delete Comment"
-        message="Are you sure you want to delete this comment? This action cannot be undone."
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-      />
     </div>
   );
 };
