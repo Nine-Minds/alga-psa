@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import type { IFolderNode } from '@alga-psa/types';
-import { getFolderTree, deleteFolder } from '../actions/documentActions';
+import { getFolderTree, deleteFolder, toggleFolderVisibilityByPath } from '../actions/documentActions';
 import { ChevronRight, ChevronDown, Folder, FolderOpen, Trash2, ChevronLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -122,6 +122,32 @@ export default function FolderTreeView({
     }
   }
 
+  async function handleToggleVisibility(node: IFolderNode) {
+    const newValue = !node.is_client_visible;
+    try {
+      const result = await toggleFolderVisibilityByPath(
+        node.path,
+        newValue,
+        entityId ?? null,
+        entityType ?? null
+      );
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        return;
+      }
+      if (result.folderUpdated) {
+        toast.success(
+          newValue
+            ? t('documents.visibility.markedVisible', { defaultValue: `"${node.name}" is now visible in client portal` })
+            : t('documents.visibility.markedHidden', { defaultValue: `"${node.name}" is now hidden from client portal` })
+        );
+        await loadFolderTree();
+      }
+    } catch (error) {
+      handleError(error, t('documents.visibility.toggleFailed', 'Failed to update folder visibility'));
+    }
+  }
+
   function renderFolderNode(node: IFolderNode, level: number = 0) {
     const isExpanded = expandedFolders.has(node.path);
     const isSelected = selectedFolder === node.path;
@@ -175,8 +201,7 @@ export default function FolderTreeView({
               <VisibilityToggle
                 id={`folder-visibility-indicator-${node.path.replace(/\//g, '-')}`}
                 isClientVisible={Boolean(node.is_client_visible)}
-                onToggle={() => undefined}
-                disabled
+                onToggle={() => handleToggleVisibility(node)}
               />
             </div>
           )}

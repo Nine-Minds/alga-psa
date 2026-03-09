@@ -274,7 +274,7 @@ export async function GET(
           }
 
           // Check ticket association - allow contact/client users when ticket belongs to them
-          // This allows inline ticket document display regardless of is_client_visible
+          // For client users, require is_client_visible = true
           if (!hasPermission && associatedTicketIds.size > 0 && user.contact_id) {
               // Get user's client_id if not already fetched
               if (!userClientId) {
@@ -298,7 +298,9 @@ export async function GET(
 
               const ticketAccess = await ticketAccessQuery;
               if (ticketAccess?.ticket_id) {
-                  hasPermission = true;
+                  if (!isClientUser || documentRecord.is_client_visible) {
+                      hasPermission = true;
+                  }
               }
           }
         }

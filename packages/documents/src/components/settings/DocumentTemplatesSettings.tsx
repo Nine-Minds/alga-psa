@@ -14,9 +14,10 @@ import {
   ChevronDown,
   Download,
   Save,
+  Info,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   getDefaultFolders,
   saveDefaultFolders,
@@ -35,12 +36,12 @@ const ENTITY_TYPE_LABELS: Record<string, string> = {
 };
 
 const ENTITY_TYPE_COLORS: Record<string, string> = {
-  ticket: 'bg-blue-100 text-blue-800',
-  project_task: 'bg-purple-100 text-purple-800',
-  client: 'bg-orange-100 text-orange-800',
-  contact: 'bg-pink-100 text-pink-800',
-  asset: 'bg-cyan-100 text-cyan-800',
-  contract: 'bg-teal-100 text-teal-800',
+  ticket: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+  project_task: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
+  client: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300',
+  contact: 'bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-300',
+  asset: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/40 dark:text-cyan-300',
+  contract: 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300',
 };
 
 interface FolderItem {
@@ -67,8 +68,8 @@ export default function DocumentTemplatesSettings() {
     setIsLoading(true);
     try {
       const result = await getDefaultFolders();
-      if ('code' in result && result.code === 'PERMISSION_DENIED') {
-        toast.error('Permission denied');
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
         return;
       }
 
@@ -133,7 +134,6 @@ export default function DocumentTemplatesSettings() {
     const section = sections.find(s => s.entityType === entityType);
     if (!section) return;
 
-    // Remove the folder and any child folders
     updateSection(entityType, {
       folders: section.folders.filter(f =>
         f.folderPath !== folderPath && !f.folderPath.startsWith(folderPath + '/')
@@ -183,17 +183,16 @@ export default function DocumentTemplatesSettings() {
 
       if (items.length === 0) {
         const result = await removeDefaultFolders(entityType);
-        if (typeof result === 'object' && 'code' in result) {
-          toast.error('Permission denied');
+        if (isActionPermissionError(result)) {
+          handleError(result.permissionError);
           return;
         }
-        // Remove the section entirely
         setSections(prev => prev.filter(s => s.entityType !== entityType));
         toast.success(`Default folders for ${ENTITY_TYPE_LABELS[entityType] || entityType} removed`);
       } else {
         const result = await saveDefaultFolders(entityType, items);
-        if (typeof result === 'object' && 'code' in result) {
-          toast.error('Permission denied');
+        if (isActionPermissionError(result)) {
+          handleError(result.permissionError);
           return;
         }
         updateSection(entityType, { isDirty: false });
@@ -210,8 +209,8 @@ export default function DocumentTemplatesSettings() {
     setIsLoadingSuggested(true);
     try {
       const result = await loadSuggestedDefaults();
-      if (typeof result === 'object' && 'code' in result) {
-        toast.error('Permission denied');
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
         return;
       }
       if (result === 0) {
@@ -259,16 +258,27 @@ export default function DocumentTemplatesSettings() {
   }
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm">
-      <h3 className="text-lg font-semibold text-gray-800 mb-1">Default Folders</h3>
-      <p className="text-sm text-gray-500 mb-6">
-        Define folder structures that are automatically created when documents are first accessed for an entity.
-      </p>
+    <div>
+      {/* Explanation banner */}
+      <div className="flex items-start gap-3 p-4 mb-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/40">
+        <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+        <div className="text-sm text-blue-800 dark:text-blue-300">
+          <p className="font-medium mb-1">How default folders work</p>
+          <p>
+            These folders are automatically created when documents are first accessed for an entity (e.g. opening a client&apos;s documents).
+            Each client, ticket, or other entity gets its own copy of these folders &mdash; documents are always separated per entity.
+            You don&apos;t need to create folders like &quot;Client A / Invoices&quot;, &quot;Client B / Invoices&quot; &mdash; just define &quot;/Invoices&quot; once and every client gets their own.
+          </p>
+          <p className="mt-1">
+            Folders marked with <Eye className="w-3.5 h-3.5 inline text-green-600" /> are visible in the client portal.
+          </p>
+        </div>
+      </div>
 
       {sections.length === 0 ? (
         <div className="py-12 text-center">
-          <FolderTree className="w-12 h-12 mx-auto mb-4 text-gray-400 opacity-50" />
-          <p className="text-gray-500 mb-4">No default folders configured yet</p>
+          <FolderTree className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-600 opacity-50" />
+          <p className="text-gray-500 dark:text-[rgb(var(--color-text-400))] mb-4">No default folders configured yet</p>
           <div className="flex gap-2 justify-center">
             <Button
               id="default-folders-load-suggested"
@@ -285,12 +295,12 @@ export default function DocumentTemplatesSettings() {
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {sections.map((section) => (
-            <div key={section.entityType} className="border rounded-lg">
+            <div key={section.entityType} className="border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg">
               {/* Section header */}
               <button
-                className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-50))] transition-colors rounded-t-lg"
                 onClick={() => handleToggleExpand(section.entityType)}
               >
                 <div className="flex items-center gap-2">
@@ -302,7 +312,7 @@ export default function DocumentTemplatesSettings() {
                   <Badge className={ENTITY_TYPE_COLORS[section.entityType] || 'bg-gray-100 text-gray-800'}>
                     {ENTITY_TYPE_LABELS[section.entityType] || section.entityType}
                   </Badge>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-gray-500 dark:text-[rgb(var(--color-text-400))]">
                     {section.folders.length} folder{section.folders.length !== 1 ? 's' : ''}
                   </span>
                   {section.isDirty && (
@@ -313,7 +323,7 @@ export default function DocumentTemplatesSettings() {
 
               {/* Section body */}
               {section.isExpanded && (
-                <div className="border-t px-3 pb-3">
+                <div className="border-t border-gray-200 dark:border-[rgb(var(--color-border-200))] px-3 pb-3">
                   {section.folders.length === 0 ? (
                     <p className="text-sm text-gray-400 py-3 text-center">No folders yet</p>
                   ) : (
@@ -323,23 +333,23 @@ export default function DocumentTemplatesSettings() {
                         return (
                           <div
                             key={folder.folderPath}
-                            className="flex items-center gap-2 py-1 px-2 rounded hover:bg-gray-50"
+                            className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-50))]"
                             style={{ paddingLeft: `${depth * 16 + 8}px` }}
                           >
                             <FolderTree className="w-4 h-4 text-gray-400 flex-shrink-0" />
                             <span className="text-sm flex-1 font-mono">{folder.folderPath}</span>
                             <button
                               onClick={() => handleToggleVisibility(section.entityType, folder.folderPath)}
-                              className={`p-1 rounded hover:bg-gray-200 ${
+                              className={`p-1 rounded hover:bg-gray-200 dark:hover:bg-[rgb(var(--color-border-200))] ${
                                 folder.isClientVisible ? 'text-green-600' : 'text-gray-400'
                               }`}
-                              title={folder.isClientVisible ? 'Visible to clients' : 'Hidden from clients'}
+                              title={folder.isClientVisible ? 'Visible in client portal' : 'Hidden from client portal'}
                             >
                               {folder.isClientVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                             </button>
                             <button
                               onClick={() => handleRemoveFolder(section.entityType, folder.folderPath)}
-                              className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500"
+                              className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>

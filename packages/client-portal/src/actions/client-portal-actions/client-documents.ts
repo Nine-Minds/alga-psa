@@ -229,8 +229,8 @@ export const getClientDocumentFolders = withAuth(
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const clientId = await getAuthenticatedClientId(trx, user.user_id, tenant);
 
-      // Get all distinct folder paths from client-visible documents
-      const folderPaths = await trx.raw(
+      // Get folder paths from client-visible documents belonging to this client
+      const docFolderPaths = await trx.raw(
         `
         SELECT DISTINCT d.folder_path
         FROM documents d
@@ -273,15 +273,28 @@ export const getClientDocumentFolders = withAuth(
                 AND cc.client_id = ?
             )
           )
-        ORDER BY folder_path
         `,
         [tenant, clientId, clientId, clientId, clientId]
       );
 
-      const paths = (folderPaths.rows || []).map((r: { folder_path: string }) => r.folder_path);
+      // Also get explicitly client-visible folders scoped to this client
+      const explicitFolders = await trx.raw(
+        `
+        SELECT DISTINCT folder_path
+        FROM document_folders
+        WHERE tenant = ?
+          AND is_client_visible = true
+          AND entity_id = ?
+          AND entity_type = 'client'
+        `,
+        [tenant, clientId]
+      );
 
-      // Build folder tree from paths
-      return buildFolderTreeFromPaths(paths);
+      const docPaths = (docFolderPaths.rows || []).map((r: { folder_path: string }) => r.folder_path);
+      const explicitPaths = (explicitFolders.rows || []).map((r: { folder_path: string }) => r.folder_path);
+      const allPaths = Array.from(new Set([...docPaths, ...explicitPaths])).filter(Boolean).sort();
+
+      return buildFolderTreeFromPaths(allPaths);
     });
   }
 );

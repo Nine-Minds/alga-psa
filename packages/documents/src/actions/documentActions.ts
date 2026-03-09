@@ -2777,6 +2777,14 @@ export const getDocumentsByFolder = withAuth(async (
         })
         .where('da.entity_type', filters.entityType);
     }
+
+    if (filters.clientVisibility === 'visible') {
+      query = query.where('d.is_client_visible', true);
+    } else if (filters.clientVisibility === 'hidden') {
+      query = query.where(function() {
+        this.where('d.is_client_visible', false).orWhereNull('d.is_client_visible');
+      });
+    }
   }
 
   // Get total count
@@ -2938,7 +2946,6 @@ export const toggleFolderVisibility = withAuth(async (
     .andWhere('folder_id', folderId)
     .update({
       is_client_visible: isClientVisible,
-      updated_at: new Date(),
     });
 
   let updatedDocuments = 0;
@@ -2982,6 +2989,51 @@ export const toggleFolderVisibility = withAuth(async (
   return {
     folderUpdated: Number(folderUpdatedCount || 0) > 0,
     updatedDocuments,
+  };
+});
+
+/**
+ * Toggle client visibility for a folder by path (used by FolderTreeView which has paths, not IDs).
+ */
+export const toggleFolderVisibilityByPath = withAuth(async (
+  user,
+  { tenant },
+  folderPath: string,
+  isClientVisible: boolean,
+  entityId?: string | null,
+  entityType?: string | null
+): Promise<{ folderUpdated: boolean; updatedDocuments: number } | ActionPermissionError> => {
+  if (!(await hasPermission(user, 'document', 'update'))) {
+    return permissionError('Permission denied');
+  }
+
+  const { knex } = await createTenantKnex();
+
+  const query = knex('document_folders')
+    .select('folder_id', 'folder_path', 'entity_id', 'entity_type')
+    .where('tenant', tenant)
+    .andWhere('folder_path', folderPath);
+
+  if (entityId && entityType) {
+    query.andWhere('entity_id', entityId).andWhere('entity_type', entityType);
+  }
+
+  const folder = await query.first();
+
+  if (!folder) {
+    throw new Error('Folder not found');
+  }
+
+  const folderUpdatedCount = await knex('document_folders')
+    .where('tenant', tenant)
+    .andWhere('folder_id', folder.folder_id)
+    .update({
+      is_client_visible: isClientVisible,
+    });
+
+  return {
+    folderUpdated: Number(folderUpdatedCount || 0) > 0,
+    updatedDocuments: 0,
   };
 });
 

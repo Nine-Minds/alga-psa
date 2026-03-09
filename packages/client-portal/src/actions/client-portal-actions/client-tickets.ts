@@ -831,7 +831,7 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
         throw new Error('Ticket not found or access denied');
       }
 
-      // Get documents for the ticket
+      // Get client-visible documents for the ticket
       return trx('documents as d')
         .select('d.*')
         .join('document_associations as da', function() {
@@ -841,7 +841,8 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
         .where({
           'da.entity_id': ticketId,
           'da.entity_type': 'ticket',
-          'd.tenant': tenant
+          'd.tenant': tenant,
+          'd.is_client_visible': true,
         });
     });
 
