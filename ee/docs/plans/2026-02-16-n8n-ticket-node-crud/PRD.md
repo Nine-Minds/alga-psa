@@ -6,11 +6,11 @@
 
 ## Summary
 
-Build and publish a new npm-distributed n8n community node package for Alga PSA with a single `Alga PSA` node that supports ticket CRUD plus helper lookup operations.
+Build and publish a new npm-distributed n8n community node package for Alga PSA with a single `Alga PSA` node that supports ticket CRUD, ticket comments, and helper lookup operations.
 
 The v1 node will use one credential (`baseUrl` + `apiKey`) and expose:
 
-- Ticket operations: Create, Get by ID, List, Search, Update, Update Status, Update Assignment, Delete.
+- Ticket operations: Create, Get by ID, List, Search, Update, Update Status, Update Assignment, Delete, List Comments, Add Comment.
 - Helper operations: List Clients, List Boards, List Statuses, List Priorities.
 - Dynamic dropdowns for required ticket reference fields (`client_id`, `board_id`, `status_id`, `priority_id`) with manual UUID fallback.
 
@@ -24,7 +24,8 @@ Alga PSA users who want automation in n8n currently need to use generic HTTP Req
 2. Make the package installable by Alga PSA users via npm without requiring n8n community-portal verification.
 3. Minimize setup friction with a single credential and dynamic lookup dropdowns.
 4. Support real-world ticket workflow patterns by including status and assignment update operations.
-5. Return predictable outputs for downstream n8n nodes, including delete behavior.
+5. Support common ticket collaboration workflows by allowing comment creation and comment retrieval on existing tickets.
+6. Return predictable outputs for downstream n8n nodes, including delete behavior.
 
 ## Non-goals
 
@@ -32,7 +33,7 @@ Alga PSA users who want automation in n8n currently need to use generic HTTP Req
 - Public submission/verification to n8n community directory in v1.
 - Full CRUD for non-ticket resources (clients/boards/statuses/priorities are read-only helpers in v1).
 - OAuth2 credential flow in v1.
-- Additional ticket-adjacent operations (comments, stats, from-asset) in v1.
+- Additional ticket-adjacent operations beyond list/add comments (comment update/delete, stats, from-asset) in v1.
 
 ## Users and Primary Flows
 
@@ -47,7 +48,9 @@ Primary flows:
 2. Add `Alga PSA` credential (`baseUrl`, `apiKey`).
 3. Build workflow with `Ticket -> Create` using dropdown-selected client/board/status/priority.
 4. Build workflow with `Ticket -> List/Search` then branch to `Update Status` or `Update Assignment`.
-5. Build cleanup workflows using `Ticket -> Delete` with explicit output for downstream steps.
+5. Build workflow with `Ticket -> Add Comment` to append automation notes or customer-facing updates to an existing ticket.
+6. Build workflow with `Ticket -> List Comments` to inspect or branch on ticket conversation history.
+7. Build cleanup workflows using `Ticket -> Delete` with explicit output for downstream steps.
 
 ## UX / UI Notes
 
@@ -55,6 +58,8 @@ Primary flows:
 - Resource-first UX: `Ticket`, `Client`, `Board`, `Status`, `Priority`.
 - Operation list should only show operations valid for selected resource.
 - Ticket create/update forms should prioritize commonly-used fields and group optional fields under additional options.
+- Ticket comment operations should remain under the `Ticket` resource rather than introducing a separate comment resource.
+- `Add Comment` should only expose fields that Alga PSA currently persists (`comment_text`, optional `is_internal`) and must not expose stale fields that are ignored server-side.
 - Dropdown-backed fields must still allow manual UUID entry when lookup calls fail.
 - Error messages should preserve Alga API details (`error.code`, `error.message`, `error.details`) in n8n-friendly format.
 
@@ -75,15 +80,20 @@ Primary flows:
 9. Implement `Ticket -> Update Status` mapped to `PUT /api/v1/tickets/{id}/status`.
 10. Implement `Ticket -> Update Assignment` mapped to `PUT /api/v1/tickets/{id}/assignment`.
 11. Implement `Ticket -> Delete` mapped to `DELETE /api/v1/tickets/{id}`.
-12. Implement helper resources:
-   - `Client -> List` -> `GET /api/v1/clients`
-   - `Board -> List` -> `GET /api/v1/boards`
-   - `Status -> List` -> `GET /api/v1/statuses`
-   - `Priority -> List` -> `GET /api/v1/priorities`
-13. Implement dynamic load-options for `client_id`, `board_id`, `status_id`, `priority_id` in ticket create/update operations.
-14. Implement manual UUID fallback entry when load-options cannot populate values.
-15. Normalize outputs so successful operations provide usable JSON payloads and delete returns a non-empty success object.
-16. Support n8n Continue On Fail behavior for item-level failures.
+12. Implement `Ticket -> List Comments` mapped to `GET /api/v1/tickets/{id}/comments`.
+13. Implement `Ticket -> Add Comment` mapped to `POST /api/v1/tickets/{id}/comments`.
+14. `Ticket -> Add Comment` must send `comment_text` and may optionally send `is_internal`.
+15. `Ticket -> List Comments` must expose optional `limit`, `offset`, and `order` query parameters matching the existing API contract.
+16. Do not expose `time_spent` in the n8n node because the current Alga PSA ticket comment implementation does not persist or consume it.
+17. Implement helper resources:
+  - `Client -> List` -> `GET /api/v1/clients`
+  - `Board -> List` -> `GET /api/v1/boards`
+  - `Status -> List` -> `GET /api/v1/statuses`
+  - `Priority -> List` -> `GET /api/v1/priorities`
+18. Implement dynamic load-options for `client_id`, `board_id`, `status_id`, `priority_id` in ticket create/update operations.
+19. Implement manual UUID fallback entry when load-options cannot populate values.
+20. Normalize outputs so successful operations provide usable JSON payloads and delete returns a non-empty success object.
+21. Support n8n Continue On Fail behavior for item-level failures.
 
 ### Non-functional Requirements
 
@@ -105,6 +115,8 @@ Alga API dependencies (existing in this repo):
   - `GET /api/v1/tickets/search`
   - `PUT /api/v1/tickets/{id}/status`
   - `PUT /api/v1/tickets/{id}/assignment`
+  - `GET /api/v1/tickets/{id}/comments`
+  - `POST /api/v1/tickets/{id}/comments`
 - Lookup routes:
   - `GET /api/v1/clients`
   - `GET /api/v1/boards`
@@ -115,6 +127,12 @@ Known ticket create requirements:
 
 - Required: `title`, `client_id`, `board_id`, `status_id`, `priority_id`.
 - Optional include: `location_id`, `contact_name_id`, `category_id`, `subcategory_id`, `assigned_to`, `url`, `attributes`, `tags`.
+
+Known ticket comment requirements:
+
+- `POST /api/v1/tickets/{id}/comments` accepts `comment_text` and optional `is_internal`.
+- The API schema currently mentions `time_spent`, but the ticket comment service and `comments` table do not persist or use it; the n8n node should not expose it.
+- `GET /api/v1/tickets/{id}/comments` supports optional `limit`, `offset`, and `order`.
 
 Auth model:
 
@@ -155,6 +173,8 @@ Auth model:
 4. Ticket list/search operations return structured outputs usable by downstream n8n nodes.
 5. Required ticket reference fields are selectable via dynamic dropdowns with manual UUID fallback.
 6. Helper list operations for clients/boards/statuses/priorities are available and functional.
-7. Error handling exposes actionable API error details in n8n execution output.
-8. Delete operation returns a usable success payload for downstream workflow steps.
-9. README includes installation and usage guidance for Alga users, including self-hosted limitation notes.
+7. Ticket comment list/add operations execute successfully against the existing Alga PSA ticket comment APIs.
+8. `Add Comment` only exposes fields backed by current Alga PSA behavior and does not present unsupported `time_spent` UI.
+9. Error handling exposes actionable API error details in n8n execution output.
+10. Delete operation returns a usable success payload for downstream workflow steps.
+11. README includes installation and usage guidance for Alga users, including self-hosted limitation notes.

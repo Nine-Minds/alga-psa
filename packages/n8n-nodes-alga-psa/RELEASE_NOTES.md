@@ -1,5 +1,19 @@
 # Release Notes
 
+## 0.2.0
+
+Feature release of the `Alga PSA` n8n community node.
+
+### Added
+
+- `Ticket -> List Comments` for reading existing ticket comments with optional `limit`, `offset`, and `order`
+- `Ticket -> Add Comment` for appending comments to existing tickets with supported `comment_text` and `is_internal` fields
+- Comment workflow example: `examples/add-comment-then-list-comments.workflow.json`
+
+### Notes
+
+- `time_spent` is intentionally not exposed in the n8n node because the current Alga PSA ticket comment implementation does not persist or consume it
+
 ## 0.1.2
 
 Patch release of the `Alga PSA` n8n community node.

@@ -358,5 +358,65 @@
     "featureIds": [
       "F030"
     ]
+  },
+  {
+    "id": "T047",
+    "description": "Unit: Ticket List Comments operation sends `GET /api/v1/tickets/{id}/comments` and serializes optional `limit`, `offset`, and `order` query parameters.",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "Integration: Ticket List Comments preserves array output from the API `data` wrapper for downstream n8n nodes.",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "Unit: Ticket Add Comment operation sends `POST /api/v1/tickets/{id}/comments` with `comment_text` and optional `is_internal` only when provided.",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "Integration: Ticket Add Comment unwraps the created comment object from the API `data` wrapper.",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "Unit: Ticket comment operations reject empty or invalid `ticketId` before any outbound API request.",
+    "implemented": true,
+    "featureIds": [
+      "F031",
+      "F032",
+      "F033"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "Unit: Ticket Add Comment rejects empty `comment_text` before any outbound API request.",
+    "implemented": true,
+    "featureIds": [
+      "F032",
+      "F033"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "Docs: operation matrix and usage guidance include Ticket List Comments and Ticket Add Comment without mentioning unsupported `time_spent` input.",
+    "implemented": true,
+    "featureIds": [
+      "F033",
+      "F034"
+    ]
   }
 ]

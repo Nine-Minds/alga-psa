@@ -195,6 +195,60 @@ describe('Node execute operations', () => {
     });
   });
 
+  it('T047: Ticket List Comments sends GET with optional query parameters', async () => {
+    const { requests } = await executeNode(
+      [
+        {
+          resource: 'ticket',
+          ticketOperation: 'listComments',
+          ticketId: '00000000-0000-0000-0000-000000000112',
+          commentListOptions: {
+            limit: 10,
+            offset: 20,
+            order: 'desc',
+          },
+        },
+      ],
+      () => ({ data: [] }),
+    );
+
+    expect(requests[0]?.method).toBe('GET');
+    expect(requests[0]?.url).toBe(
+      'https://api.algapsa.test/api/v1/tickets/00000000-0000-0000-0000-000000000112/comments',
+    );
+    expect(requests[0]?.qs).toMatchObject({
+      limit: 10,
+      offset: 20,
+      order: 'desc',
+    });
+  });
+
+  it('T048: Ticket List Comments preserves array output from API data wrapper', async () => {
+    const { output } = await executeNode(
+      [
+        {
+          resource: 'ticket',
+          ticketOperation: 'listComments',
+          ticketId: '00000000-0000-0000-0000-000000000113',
+          commentListOptions: {},
+        },
+      ],
+      () => ({
+        data: [
+          { comment_id: 'comment-1', comment_text: 'First' },
+          { comment_id: 'comment-2', comment_text: 'Second' },
+        ],
+      }),
+    );
+
+    expect(output[0][0].json).toEqual({
+      data: [
+        { comment_id: 'comment-1', comment_text: 'First' },
+        { comment_id: 'comment-2', comment_text: 'Second' },
+      ],
+    });
+  });
+
   it('T017: Ticket Search serializes query and optional search filters', async () => {
     const { requests } = await executeNode(
       [
@@ -308,6 +362,62 @@ describe('Node execute operations', () => {
     });
   });
 
+  it('T049: Ticket Add Comment sends POST with supported payload fields only', async () => {
+    const { requests } = await executeNode(
+      [
+        {
+          resource: 'ticket',
+          ticketOperation: 'addComment',
+          ticketId: '00000000-0000-0000-0000-000000000114',
+          commentText: 'Automation note',
+          commentAdditionalFields: {
+            is_internal: true,
+          },
+        },
+      ],
+      () => ({ data: { comment_id: 'comment-3' } }),
+    );
+
+    expect(requests[0]?.method).toBe('POST');
+    expect(requests[0]?.url).toBe(
+      'https://api.algapsa.test/api/v1/tickets/00000000-0000-0000-0000-000000000114/comments',
+    );
+    expect(requests[0]?.body).toEqual({
+      comment_text: 'Automation note',
+      is_internal: true,
+    });
+    expect(requests[0]?.body).not.toHaveProperty('time_spent');
+  });
+
+  it('T050: Ticket Add Comment unwraps the created comment object', async () => {
+    const { output } = await executeNode(
+      [
+        {
+          resource: 'ticket',
+          ticketOperation: 'addComment',
+          ticketId: '00000000-0000-0000-0000-000000000115',
+          commentText: 'Customer update',
+          commentAdditionalFields: {},
+        },
+      ],
+      () => ({
+        data: {
+          comment_id: 'comment-4',
+          ticket_id: '00000000-0000-0000-0000-000000000115',
+          comment_text: 'Customer update',
+          is_internal: false,
+        },
+      }),
+    );
+
+    expect(output[0][0].json).toEqual({
+      comment_id: 'comment-4',
+      ticket_id: '00000000-0000-0000-0000-000000000115',
+      comment_text: 'Customer update',
+      is_internal: false,
+    });
+  });
+
   it('T021: Ticket Update Status sends PUT with status_id payload', async () => {
     const { requests } = await executeNode(
       [
@@ -388,6 +498,54 @@ describe('Node execute operations', () => {
       id: '00000000-0000-0000-0000-000000000028',
       deleted: true,
     });
+  });
+
+  it('T051: Ticket comment operations reject empty or invalid ticketId before request', async () => {
+    await expect(
+      executeNode(
+        [
+          {
+            resource: 'ticket',
+            ticketOperation: 'listComments',
+            ticketId: '',
+            commentListOptions: {},
+          },
+        ],
+        () => ({ data: [] }),
+      ),
+    ).rejects.toBeInstanceOf(NodeOperationError);
+
+    await expect(
+      executeNode(
+        [
+          {
+            resource: 'ticket',
+            ticketOperation: 'addComment',
+            ticketId: 'not-a-uuid',
+            commentText: 'Hello',
+            commentAdditionalFields: {},
+          },
+        ],
+        () => ({ data: {} }),
+      ),
+    ).rejects.toBeInstanceOf(NodeOperationError);
+  });
+
+  it('T052: Ticket Add Comment rejects empty comment text before request', async () => {
+    await expect(
+      executeNode(
+        [
+          {
+            resource: 'ticket',
+            ticketOperation: 'addComment',
+            ticketId: '00000000-0000-0000-0000-000000000116',
+            commentText: '   ',
+            commentAdditionalFields: {},
+          },
+        ],
+        () => ({ data: {} }),
+      ),
+    ).rejects.toBeInstanceOf(NodeOperationError);
   });
 
   it('T031: Continue On Fail emits item-level errors and continues remaining items', async () => {

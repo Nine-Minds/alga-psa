@@ -194,6 +194,24 @@ export function buildTicketSearchQuery(input: {
   });
 }
 
+export function buildTicketCommentListQuery(options: IDataObject = {}): IDataObject {
+  return compactObject({
+    limit: options.limit,
+    offset: options.offset,
+    order: options.order,
+  });
+}
+
+export function buildTicketCommentPayload(
+  commentText: string,
+  additionalFields: IDataObject = {},
+): IDataObject {
+  return compactObject({
+    comment_text: commentText,
+    is_internal: additionalFields.is_internal,
+  });
+}
+
 export function normalizeSuccessResponse(response: unknown): IDataObject {
   if (response === undefined || response === null) {
     return {};

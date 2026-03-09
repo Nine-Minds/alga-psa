@@ -53,7 +53,7 @@ Create credential type `Alga PSA API` with:
 
 | Resource | Operations |
 | --- | --- |
-| Ticket | Create, Get, List, Search, Update, Update Status, Update Assignment, Delete |
+| Ticket | Create, Get, List, List Comments, Search, Update, Add Comment, Update Status, Update Assignment, Delete |
 | Client | List |
 | Board | List |
 | Status | List |
@@ -71,6 +71,14 @@ Ticket create requires:
 
 Create/Update optional fields are grouped under additional options.
 
+## Ticket Comment Operations
+
+Ticket comment support stays under the `Ticket` resource:
+
+- `List Comments` requires `ticketId` and supports optional `limit`, `offset`, and `order`.
+- `Add Comment` requires `ticketId` and `comment_text`, with optional `is_internal`.
+- `time_spent` is intentionally not exposed because the current Alga PSA ticket comment implementation does not persist or use it.
+
 ## Lookup Fields and Manual Fallback
 
 For `client_id`, `board_id`, `status_id`, and `priority_id`:
@@ -87,12 +95,14 @@ For `client_id`, `board_id`, `status_id`, and `priority_id`:
 
 ## Example Workflows
 
-Two minimal importable examples are included:
+Three minimal importable examples are included:
 
 - `examples/create-update-assignment.workflow.json`
 - `examples/search-update-status.workflow.json`
+- `examples/add-comment-then-list-comments.workflow.json`
 
 These demonstrate:
 
 1. Ticket create -> update assignment
 2. Ticket search -> update status
+3. Ticket add comment -> list comments

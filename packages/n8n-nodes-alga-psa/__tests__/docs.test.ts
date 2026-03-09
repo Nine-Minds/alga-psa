@@ -66,4 +66,31 @@ describe('Documentation coverage', () => {
       ),
     ).toBe(true);
   });
+
+  it('T053: README documents ticket comment operations without unsupported time_spent input', () => {
+    const readme = read('README.md');
+    const examplePath = path.join(packageRoot, 'examples/add-comment-then-list-comments.workflow.json');
+
+    expect(readme).toContain('## Ticket Comment Operations');
+    expect(readme).toContain('List Comments');
+    expect(readme).toContain('Add Comment');
+    expect(readme).toContain('time_spent');
+    expect(readme).toContain('not exposed');
+    expect(existsSync(examplePath)).toBe(true);
+
+    const commentWorkflow = JSON.parse(readFileSync(examplePath, 'utf8')) as {
+      nodes: Array<{ parameters?: Record<string, unknown> }>;
+    };
+
+    expect(
+      commentWorkflow.nodes.some(
+        (node) => node.parameters?.ticketOperation === 'addComment',
+      ),
+    ).toBe(true);
+    expect(
+      commentWorkflow.nodes.some(
+        (node) => node.parameters?.ticketOperation === 'listComments',
+      ),
+    ).toBe(true);
+  });
 });
