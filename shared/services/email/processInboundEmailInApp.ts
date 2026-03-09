@@ -795,7 +795,9 @@ export async function processInboundEmailInApp(
       ticket_id: ticketResult.ticket_id,
       content: serializedBlocks,
       source: 'email',
-      author_type: commentAuthorContactId ? 'contact' : 'system',
+      // Unmatched inbound senders are still customer-originated replies even
+      // when we cannot resolve them to an existing contact record.
+      author_type: 'contact',
       author_id: commentAuthorUserId ?? undefined,
       contact_id: commentAuthorContactId ?? undefined,
       metadata: {
