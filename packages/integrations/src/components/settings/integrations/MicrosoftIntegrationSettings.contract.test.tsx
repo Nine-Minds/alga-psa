@@ -7,6 +7,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
+const useFeatureFlagMock = vi.hoisted(() => vi.fn());
 const getMicrosoftIntegrationStatusMock = vi.hoisted(() => vi.fn());
 const createMicrosoftProfileMock = vi.hoisted(() => vi.fn());
 const updateMicrosoftProfileMock = vi.hoisted(() => vi.fn());
@@ -27,6 +28,10 @@ vi.mock('@alga-psa/integrations/actions', () => ({
 
 vi.mock('@alga-psa/ui/hooks/use-toast', () => ({
   useToast: () => ({ toast: toastMock }),
+}));
+
+vi.mock('@alga-psa/ui/hooks', () => ({
+  useFeatureFlag: (...args: unknown[]) => useFeatureFlagMock(...args),
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
@@ -143,7 +148,17 @@ function buildStatus(overrides: Record<string, unknown> = {}) {
 }
 
 describe('MicrosoftIntegrationSettings contracts', () => {
+  const originalEdition = process.env.NEXT_PUBLIC_EDITION;
+
   beforeEach(() => {
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+    useFeatureFlagMock.mockReset();
+    useFeatureFlagMock.mockReturnValue({
+      enabled: true,
+      isLoading: false,
+      error: null,
+      value: true,
+    });
     getMicrosoftIntegrationStatusMock.mockReset();
     createMicrosoftProfileMock.mockReset();
     updateMicrosoftProfileMock.mockReset();
@@ -158,6 +173,14 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     setDefaultMicrosoftProfileMock.mockResolvedValue({ success: true });
     resetMicrosoftProvidersToDisconnectedMock.mockResolvedValue({ success: true });
     vi.stubGlobal('open', vi.fn());
+  });
+
+  afterEach(() => {
+    if (originalEdition === undefined) {
+      delete process.env.NEXT_PUBLIC_EDITION;
+    } else {
+      process.env.NEXT_PUBLIC_EDITION = originalEdition;
+    }
   });
 
   it('T037/T039/T053/T055/T057/T059/T061/T063: renders the profile manager list with readiness, bindings, and registration guidance', async () => {
@@ -317,5 +340,33 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     await user.click(screen.getByRole('button', { name: 'Open Teams Setup' }));
 
     expect(window.location.hash).toBe('#teams-integration-settings');
+  });
+
+  it('hides Teams-specific guidance from Providers when the Teams feature flag is disabled', async () => {
+    useFeatureFlagMock.mockReturnValue({
+      enabled: false,
+      isLoading: false,
+      error: null,
+      value: false,
+    });
+
+    const user = userEvent.setup();
+    render(<MicrosoftIntegrationSettings />);
+
+    expect(await screen.findByText('Primary Profile')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open Teams Setup' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Teams application ID URI')).not.toBeInTheDocument();
+    expect(screen.queryByText(/upcoming Teams integration/i)).not.toBeInTheDocument();
+
+    const primaryCard = document.getElementById('microsoft-profile-profile-1');
+    expect(primaryCard).not.toBeNull();
+
+    const summary = within(primaryCard!).getByText('Microsoft app registration guidance');
+    await user.click(summary);
+
+    expect(within(primaryCard!).queryByText('Teams Redirect URIs')).not.toBeInTheDocument();
+    expect(within(primaryCard!).queryByText('Teams SSO scopes')).not.toBeInTheDocument();
+    expect(within(primaryCard!).getByText('Inbound email')).toBeInTheDocument();
+    expect(within(primaryCard!).getByText('Calendar sync')).toBeInTheDocument();
   });
 });

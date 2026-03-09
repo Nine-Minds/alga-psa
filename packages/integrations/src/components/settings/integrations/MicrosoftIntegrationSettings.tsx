@@ -18,6 +18,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import {
   archiveMicrosoftProfile,
@@ -27,6 +28,7 @@ import {
   setDefaultMicrosoftProfile,
   updateMicrosoftProfile,
 } from '@alga-psa/integrations/actions';
+import { resolveTeamsAvailability } from '../../../lib/teamsAvailability';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -127,6 +129,7 @@ function GuidanceBlock({
 
 export function MicrosoftIntegrationSettings() {
   const { toast } = useToast();
+  const teamsUiFlag = useFeatureFlag('teams-integration-ui', { defaultValue: false });
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [resetting, setResetting] = React.useState(false);
@@ -142,6 +145,12 @@ export function MicrosoftIntegrationSettings() {
 
   const profiles = status?.success ? status.profiles ?? [] : [];
   const hasProfiles = profiles.length > 0;
+  const teamsAvailability = resolveTeamsAvailability({
+    flagEnabled: teamsUiFlag.enabled,
+    isEnterpriseEdition: process.env.NEXT_PUBLIC_EDITION === 'enterprise',
+    requireTenantContext: false,
+  });
+  const showTeamsUi = teamsAvailability.enabled;
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -252,7 +261,9 @@ export function MicrosoftIntegrationSettings() {
       toast({
         title: dialogMode === 'create' ? 'Microsoft profile created' : 'Microsoft profile updated',
         description: dialogMode === 'create'
-          ? 'The Microsoft profile is ready for provider and Teams setup.'
+          ? showTeamsUi
+            ? 'The Microsoft profile is ready for provider and Teams setup.'
+            : 'The Microsoft profile is ready for provider setup.'
           : 'The Microsoft profile changes were saved successfully.',
       });
       closeDialog();
@@ -354,7 +365,9 @@ export function MicrosoftIntegrationSettings() {
             <div className="space-y-2">
               <CardTitle>Microsoft</CardTitle>
               <CardDescription>
-                Manage tenant-owned Microsoft profiles for Outlook inbound email, Outlook calendar, MSP SSO, and the upcoming Teams integration.
+                {showTeamsUi
+                  ? 'Manage tenant-owned Microsoft profiles for Outlook inbound email, Outlook calendar, MSP SSO, and Microsoft Teams.'
+                  : 'Manage tenant-owned Microsoft profiles for Outlook inbound email, Outlook calendar, and MSP SSO.'}
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -367,16 +380,18 @@ export function MicrosoftIntegrationSettings() {
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Microsoft Entra
               </Button>
-              <Button
-                id="microsoft-open-teams-setup"
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  window.location.hash = 'teams-integration-settings';
-                }}
-              >
-                Open Teams Setup
-              </Button>
+              {showTeamsUi && (
+                <Button
+                  id="microsoft-open-teams-setup"
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    window.location.hash = 'teams-integration-settings';
+                  }}
+                >
+                  Open Teams Setup
+                </Button>
+              )}
               <Button id="microsoft-settings-refresh" type="button" variant="outline" onClick={load} disabled={loading}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Refresh
@@ -424,7 +439,9 @@ export function MicrosoftIntegrationSettings() {
             <div className="rounded-xl border border-dashed p-8 text-center">
               <div className="text-lg font-semibold">No Microsoft profiles yet</div>
               <div className="mt-2 text-sm text-muted-foreground">
-                Create a named profile first, then reuse it across Outlook, calendar, MSP SSO, and Teams.
+                {showTeamsUi
+                  ? 'Create a named profile first, then reuse it across Outlook, calendar, MSP SSO, and Teams.'
+                  : 'Create a named profile first, then reuse it across Outlook, calendar, and MSP SSO.'}
               </div>
               <Button className="mt-4" id="microsoft-empty-state-create" type="button" onClick={openCreateDialog}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -436,7 +453,12 @@ export function MicrosoftIntegrationSettings() {
               {profiles.map((profile) => {
                 const statusBadge = getProfileStatusBadge(profile);
                 const readinessMessages = getReadinessMessages(profile);
-                const teamsApplicationIdUri = getTeamsApplicationIdUri(status?.baseUrl, profile.clientId);
+                const visibleConsumers = showTeamsUi
+                  ? profile.consumers
+                  : profile.consumers.filter((consumer) => consumer !== 'Teams');
+                const teamsApplicationIdUri = showTeamsUi
+                  ? getTeamsApplicationIdUri(status?.baseUrl, profile.clientId)
+                  : null;
 
                 return (
                   <Card key={profile.profileId} id={`microsoft-profile-${profile.profileId}`}>
@@ -494,7 +516,7 @@ export function MicrosoftIntegrationSettings() {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                      <div className={`grid gap-4 md:grid-cols-2 ${showTeamsUi ? 'xl:grid-cols-4' : 'xl:grid-cols-3'}`}>
                         <div className="rounded-lg border bg-muted/10 p-3">
                           <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Client ID</div>
                           <div className="mt-2 break-all font-mono text-xs">{profile.clientId || 'Not configured'}</div>
@@ -506,8 +528,8 @@ export function MicrosoftIntegrationSettings() {
                         <div className="rounded-lg border bg-muted/10 p-3">
                           <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Current consumers</div>
                           <div className="mt-2 flex flex-wrap gap-2">
-                            {profile.consumers.length > 0 ? (
-                              profile.consumers.map((consumer) => (
+                            {visibleConsumers.length > 0 ? (
+                              visibleConsumers.map((consumer) => (
                                 <Badge key={`${profile.profileId}-${consumer}`} variant="outline">
                                   {consumer}
                                 </Badge>
@@ -517,12 +539,14 @@ export function MicrosoftIntegrationSettings() {
                             )}
                           </div>
                         </div>
-                        <div className="rounded-lg border bg-muted/10 p-3">
-                          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Teams application ID URI</div>
-                          <div className="mt-2 break-all font-mono text-xs">
-                            {teamsApplicationIdUri || 'Requires base URL and client ID'}
+                        {showTeamsUi && (
+                          <div className="rounded-lg border bg-muted/10 p-3">
+                            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Teams application ID URI</div>
+                            <div className="mt-2 break-all font-mono text-xs">
+                              {teamsApplicationIdUri || 'Requires base URL and client ID'}
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
 
                       {readinessMessages.length > 0 ? (
@@ -541,7 +565,9 @@ export function MicrosoftIntegrationSettings() {
                         <Alert>
                           <CheckCircle2 className="h-4 w-4" />
                           <AlertDescription>
-                            This profile is ready for Outlook email, calendar, MSP SSO, and Teams app registration work.
+                            {showTeamsUi
+                              ? 'This profile is ready for Outlook email, calendar, MSP SSO, and Teams app registration work.'
+                              : 'This profile is ready for Outlook email, calendar, and MSP SSO setup.'}
                           </AlertDescription>
                         </Alert>
                       )}
@@ -551,14 +577,16 @@ export function MicrosoftIntegrationSettings() {
                           Microsoft app registration guidance
                         </summary>
                         <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                          <GuidanceBlock
-                            title="Teams Redirect URIs"
-                            items={[
-                              { label: 'Personal tab', value: status?.redirectUris?.teamsTab || 'Unavailable' },
-                              { label: 'Personal bot', value: status?.redirectUris?.teamsBot || 'Unavailable' },
-                              { label: 'Message extension', value: status?.redirectUris?.teamsMessageExtension || 'Unavailable' },
-                            ]}
-                          />
+                          {showTeamsUi && (
+                            <GuidanceBlock
+                              title="Teams Redirect URIs"
+                              items={[
+                                { label: 'Personal tab', value: status?.redirectUris?.teamsTab || 'Unavailable' },
+                                { label: 'Personal bot', value: status?.redirectUris?.teamsBot || 'Unavailable' },
+                                { label: 'Message extension', value: status?.redirectUris?.teamsMessageExtension || 'Unavailable' },
+                              ]}
+                            />
+                          )}
                           <GuidanceBlock
                             title="Existing Redirect URIs"
                             items={[
@@ -567,18 +595,19 @@ export function MicrosoftIntegrationSettings() {
                               { label: 'MSP SSO', value: status?.redirectUris?.sso || 'Unavailable' },
                             ]}
                           />
-                          <GuidanceBlock
-                            title="Teams Scope Guidance"
-                            items={[
-                              { label: 'Teams SSO scopes', value: (status?.scopes?.teams || []).join(', ') || 'Unavailable' },
-                            ]}
-                          />
+                          {showTeamsUi && (
+                            <GuidanceBlock
+                              title="Teams Scope Guidance"
+                              items={[
+                                { label: 'Teams SSO scopes', value: (status?.scopes?.teams || []).join(', ') || 'Unavailable' },
+                              ]}
+                            />
+                          )}
                           <GuidanceBlock
                             title="Current Profile Values"
                             items={[
                               { label: 'Client ID', value: profile.clientId || 'Not configured' },
                               { label: 'Tenant ID', value: profile.tenantId },
-                              { label: 'Application ID URI', value: teamsApplicationIdUri || 'Requires base URL and client ID' },
                               {
                                 label: 'Email / Calendar / MSP SSO scopes',
                                 value: [
@@ -587,6 +616,9 @@ export function MicrosoftIntegrationSettings() {
                                   `MSP SSO: ${(status?.scopes?.sso || []).join(', ') || 'Unavailable'}`,
                                 ].join(' | '),
                               },
+                              ...(showTeamsUi
+                                ? [{ label: 'Application ID URI', value: teamsApplicationIdUri || 'Requires base URL and client ID' }]
+                                : []),
                             ]}
                           />
                         </div>
