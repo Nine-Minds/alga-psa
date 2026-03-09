@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -21,7 +21,9 @@ import {
   IKBArticleWithDocument,
   IArticleFilters,
   createArticle,
+  getArticlesWithTags,
 } from '../../actions/kbArticleActions';
+import type { ITag } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 
@@ -49,6 +51,16 @@ export default function KnowledgeBasePage({ activeTab = 'articles' }: KnowledgeB
   const [userLoadError, setUserLoadError] = useState<string | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
 
+  // Article list data state
+  const [articles, setArticles] = useState<IKBArticleWithDocument[]>([]);
+  const [articleTags, setArticleTags] = useState<Record<string, ITag[]>>({});
+  const [availableTags, setAvailableTags] = useState<ITag[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [isLoadingArticles, setIsLoadingArticles] = useState(true);
+
   const updateUrl = useCallback((params: Record<string, string | null>) => {
     const newParams = new URLSearchParams(searchParams?.toString() ?? '');
     for (const [key, value] of Object.entries(params)) {
@@ -61,6 +73,51 @@ export default function KnowledgeBasePage({ activeTab = 'articles' }: KnowledgeB
     const qs = newParams.toString();
     router.push(`${pathname}${qs ? `?${qs}` : ''}`, { scroll: false });
   }, [router, pathname, searchParams]);
+
+  // Fetch articles when filters, page, pageSize, or listKey change
+  const fetchArticles = useCallback(async () => {
+    setIsLoadingArticles(true);
+    try {
+      const result = await getArticlesWithTags(currentPage, pageSize, filters);
+      if (typeof result === 'object' && 'code' in result) {
+        toast.error(t('kb.loadError', 'Failed to load articles'));
+        return;
+      }
+      const data = result as {
+        articles: IKBArticleWithDocument[];
+        total: number;
+        totalPages: number;
+        articleTags: Record<string, ITag[]>;
+        availableTags: ITag[];
+      };
+      setArticles(data.articles);
+      setTotal(data.total);
+      setTotalPages(data.totalPages);
+      setArticleTags(data.articleTags);
+      setAvailableTags(data.availableTags);
+    } catch (error) {
+      handleError(error, t('kb.loadError', 'Failed to load articles'));
+    } finally {
+      setIsLoadingArticles(false);
+    }
+  }, [currentPage, pageSize, filters, t]);
+
+  useEffect(() => {
+    fetchArticles();
+  }, [fetchArticles, listKey]);
+
+  const handlePageChange = useCallback((page: number) => {
+    setCurrentPage(page);
+  }, []);
+
+  const handlePageSizeChange = useCallback((size: number) => {
+    setPageSize(size);
+    setCurrentPage(1);
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    setListKey((k) => k + 1);
+  }, []);
 
   // Load user on mount
   React.useEffect(() => {
@@ -200,8 +257,9 @@ export default function KnowledgeBasePage({ activeTab = 'articles' }: KnowledgeB
           <div className="w-64 flex-shrink-0">
             <KBArticleFilters
               filters={filters}
-              onFiltersChange={setFilters}
+              onFiltersChange={(f) => { setFilters(f); setCurrentPage(1); }}
               onClearFilters={handleClearFilters}
+              availableTags={availableTags}
             />
           </div>
 
@@ -209,7 +267,16 @@ export default function KnowledgeBasePage({ activeTab = 'articles' }: KnowledgeB
           <div className="flex-1 min-w-0">
             <KBArticleList
               key={listKey}
-              filters={filters}
+              articles={articles}
+              total={total}
+              totalPages={totalPages}
+              articleTags={articleTags}
+              currentPage={currentPage}
+              pageSize={pageSize}
+              isLoading={isLoadingArticles}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+              onRefresh={handleRefresh}
               onEdit={handleEdit}
               onCreateNew={handleCreateNew}
             />

@@ -23,7 +23,6 @@ import {
   Plus,
   MoreVertical,
   Pencil,
-  Trash2,
   Send,
   CheckCircle,
   Archive,

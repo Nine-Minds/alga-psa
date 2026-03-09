@@ -41,8 +41,7 @@ import {
   deleteDocument,
   removeDocumentAssociations,
   updateDocument,
-  toggleDocumentVisibility,
-  ensureEntityFolders
+  toggleDocumentVisibility
 } from '../actions/documentActions';
 import {
   getBlockContent,
@@ -90,6 +89,8 @@ interface DocumentsProps {
   uploadFormRef?: React.RefObject<HTMLDivElement | null>;
   filters?: DocumentFilters;
   namespace?: DocumentsNamespace;
+  /** Override the default folder-fetching function (e.g. for client portal) */
+  getFoldersFn?: () => Promise<string[]>;
 }
 
 const Documents = ({
@@ -105,7 +106,8 @@ const Documents = ({
   uploadFormRef,
   searchTermFromParent = '',
   filters,
-  namespace = 'common'
+  namespace = 'common',
+  getFoldersFn
 }: DocumentsProps): React.JSX.Element => {
   const { t } = useTranslation(namespace);
   const documentKeyPrefix = namespace === 'common' ? 'documents.' : '';
@@ -329,15 +331,6 @@ const Documents = ({
     }
   }, [initialDocuments, inFolderMode]);
 
-  // Entity mode: ensure entity folders are initialized (lazy template application)
-  useEffect(() => {
-    if (inFolderMode || !entityId || !entityType) return;
-
-    // Fire-and-forget: we don't block on this, and failures are silent (best-effort)
-    void ensureEntityFolders(entityId, entityType).catch(() => {
-      // Silent failure — folder initialization is best-effort
-    });
-  }, [inFolderMode, entityId, entityType]);
 
   // Folder mode: fetch documents from server
   // Track all fetch dependencies to detect actual changes vs reference-only changes
@@ -398,21 +391,11 @@ const Documents = ({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, pageSize, inFolderMode, currentFolder, filters]);
 
-  // Entity mode: handle search + folder filtering
+  // Entity mode: handle search filtering
   useEffect(() => {
     if (inFolderMode) return;
 
     let filtered = initialDocuments;
-
-    if (currentFolder) {
-      filtered = filtered.filter(doc => {
-        if (!doc.folder_path) {
-          return false;
-        }
-
-        return doc.folder_path === currentFolder || doc.folder_path.startsWith(`${currentFolder}/`);
-      });
-    }
 
     if (searchTermFromParent) {
       filtered = filtered.filter(doc =>
@@ -421,7 +404,7 @@ const Documents = ({
     }
 
     setDocumentsToDisplay(filtered);
-  }, [searchTermFromParent, inFolderMode, initialDocuments, currentFolder]);
+  }, [searchTermFromParent, inFolderMode, initialDocuments]);
 
   // Refresh documents - handles both folder mode and entity mode
   const refreshDocuments = useCallback(async () => {
@@ -560,13 +543,16 @@ const Documents = ({
   };
 
   const handleCreateDocument = async () => {
-    // In folder mode: auto-save to current folder if browsing one
     if (inFolderMode && currentFolder) {
+      // Folder mode: auto-save to current folder if browsing one
       setDocumentFolderPath(currentFolder);
       await handleDocumentFolderSelected(currentFolder);
-    } else {
-      // Entity mode or root folder: show folder selector
+    } else if (inFolderMode) {
+      // Folder mode at root: show folder selector
       setShowDocumentFolderModal(true);
+    } else {
+      // Entity mode: create document directly without folder
+      await handleDocumentFolderSelected(null);
     }
   };
 
@@ -1611,6 +1597,7 @@ const Documents = ({
             title={tDoc('folderSelector.newDocumentTitle', 'Select Folder for New Document')}
             description={tDoc('folderSelector.newDocumentDescription', 'Choose where to save this new document')}
             namespace={namespace}
+            getFoldersFn={getFoldersFn}
           />
 
           {/* Folder Selector Modal for Moving Documents */}
@@ -1631,6 +1618,7 @@ const Documents = ({
                 : tDoc('folderSelector.moveDescription', 'Select destination folder')
             }
             namespace={namespace}
+            getFoldersFn={getFoldersFn}
           />
 
           {/* Folder Selector Modal for Bulk Moving Documents */}
@@ -1646,6 +1634,7 @@ const Documents = ({
               defaultValue: `Select destination folder for ${selectedDocumentsForMove.size} document${selectedDocumentsForMove.size !== 1 ? 's' : ''}`
             })}
             namespace={namespace}
+            getFoldersFn={getFoldersFn}
           />
 
           {/* Preview Modal for Images/Videos/PDFs */}
@@ -1768,38 +1757,7 @@ const Documents = ({
           </div>
         </div>
 
-        <div className="flex overflow-hidden border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-md bg-white dark:bg-[rgb(var(--color-card))]">
-          {isFoldersPaneCollapsed && (
-            <div className="flex-shrink-0 border-r border-gray-200 dark:border-[rgb(var(--color-border-200))] flex items-start p-2">
-              <button
-                onClick={() => setIsFoldersPaneCollapsed(false)}
-                className="p-1 hover:bg-gray-100 rounded"
-                title="Show folders"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-
-          {!isFoldersPaneCollapsed && (
-            <div className="w-64 flex-shrink-0 border-r border-gray-200 dark:border-[rgb(var(--color-border-200))]">
-              <FolderTreeView
-                key={folderTreeKey}
-                selectedFolder={currentFolder}
-                onFolderSelect={handleFolderSelect}
-                entityId={entityId}
-                entityType={entityType}
-                showVisibilityIndicators={showVisibilityControls}
-                onFolderDeleted={() => {
-                  refreshDocuments();
-                }}
-                isCollapsed={isFoldersPaneCollapsed}
-                onToggleCollapse={() => setIsFoldersPaneCollapsed(!isFoldersPaneCollapsed)}
-              />
-            </div>
-          )}
-
-          <div className="flex-1 min-w-0 p-4 space-y-4">
+        <div className="space-y-4">
             {showUpload && (
               <div ref={uploadFormRef} className="p-4 border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-md bg-white dark:bg-[rgb(var(--color-card))]">
                 <DocumentUpload
@@ -1848,7 +1806,6 @@ const Documents = ({
                 />
               </div>
             )}
-          </div>
         </div>
 
         {showSelector && entityId && entityType ? (
@@ -1865,40 +1822,6 @@ const Documents = ({
             onClose={() => setShowSelector(false)}
           />
         ) : null}
-
-        {/* Folder Selector Modal for New Documents (Entity Mode) */}
-        <FolderSelectorModal
-          isOpen={showDocumentFolderModal}
-          onClose={() => setShowDocumentFolderModal(false)}
-          onSelectFolder={handleDocumentFolderSelected}
-          title={tDoc('folderSelector.newDocumentTitle', 'Select Folder for New Document')}
-          description={tDoc('folderSelector.newDocumentDescription', 'Choose where to save this new document')}
-          namespace={namespace}
-          entityId={entityId}
-          entityType={entityType}
-        />
-
-        {/* Folder Selector Modal for Moving Documents (Entity Mode) */}
-        <FolderSelectorModal
-          isOpen={showMoveFolderModal}
-          onClose={() => {
-            setShowMoveFolderModal(false);
-            setDocumentToMove(null);
-          }}
-          onSelectFolder={handleMoveFolderSelected}
-          title={tDoc('folderSelector.moveTitle', 'Move Document')}
-          description={
-            documentToMove
-              ? tDoc('folderSelector.moveDescriptionWithName', {
-                  name: documentToMove.document_name,
-                  defaultValue: `Select destination folder for "${documentToMove.document_name}"`
-                })
-              : tDoc('folderSelector.moveDescription', 'Select destination folder')
-          }
-          namespace={namespace}
-          entityId={entityId}
-          entityType={entityType}
-        />
 
         {/* Preview Modal for Images/Videos/PDFs */}
         {showPreviewModal && previewDocument && previewDocument.file_id && (

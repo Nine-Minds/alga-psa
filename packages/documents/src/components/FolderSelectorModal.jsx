@@ -7,7 +7,7 @@ import { Folder, Home, FolderPlus, X } from 'lucide-react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-export default function FolderSelectorModal({ isOpen, onClose, onSelectFolder, title: titleProp, description: descriptionProp, namespace = 'common', entityId, entityType }) {
+export default function FolderSelectorModal({ isOpen, onClose, onSelectFolder, title: titleProp, description: descriptionProp, namespace = 'common', entityId, entityType, getFoldersFn }) {
   const [selectedFolder, setSelectedFolder] = useState(null);
   const [folders, setFolders] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -36,13 +36,18 @@ export default function FolderSelectorModal({ isOpen, onClose, onSelectFolder, t
     const loadFolders = async () => {
         setLoading(true);
         try {
-            const folderList = await getFolders(entityId, entityType);
-            if (isActionPermissionError(folderList)) {
-                handleError(folderList.permissionError);
-                setFolders([]);
-                return;
+            if (getFoldersFn) {
+                const folderList = await getFoldersFn();
+                setFolders(folderList);
+            } else {
+                const folderList = await getFolders(entityId, entityType);
+                if (isActionPermissionError(folderList)) {
+                    handleError(folderList.permissionError);
+                    setFolders([]);
+                    return;
+                }
+                setFolders(folderList);
             }
-            setFolders(folderList);
         }
         catch (error) {
             console.error('Error loading folders:', error);

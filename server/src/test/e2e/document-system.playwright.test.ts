@@ -228,51 +228,38 @@ async function createDocumentInFolder(
   return { documentId };
 }
 
-// Helper to create folder template
-async function createFolderTemplate(
+// Helper to create default folders for an entity type
+async function createDefaultFolders(
   db: Knex,
   tenantId: string,
   entityType: string,
-  isDefault: boolean = false
-): Promise<{ templateId: string }> {
-  const templateId = uuidv4();
+): Promise<void> {
+  const now = new Date();
 
-  await db('document_folder_templates').insert({
-    template_id: templateId,
-    tenant: tenantId,
-    template_name: `${entityType} Default Template`,
-    entity_type: entityType,
-    is_default: isDefault,
-    created_at: new Date(),
-    updated_at: new Date(),
-  });
-
-  // Create template items
-  const itemId1 = uuidv4();
-  await db('document_folder_template_items').insert({
-    item_id: itemId1,
-    template_id: templateId,
-    tenant: tenantId,
-    folder_name: 'Contracts',
-    folder_path: '/Contracts',
-    parent_item_id: null,
-    is_client_visible: true,
-    order_index: 0,
-  });
-
-  const itemId2 = uuidv4();
-  await db('document_folder_template_items').insert({
-    item_id: itemId2,
-    template_id: templateId,
-    tenant: tenantId,
-    folder_name: 'Invoices',
-    folder_path: '/Invoices',
-    parent_item_id: null,
-    is_client_visible: true,
-    order_index: 1,
-  });
-
-  return { templateId };
+  await db('document_default_folders').insert([
+    {
+      default_folder_id: uuidv4(),
+      tenant: tenantId,
+      entity_type: entityType,
+      folder_name: 'Contracts',
+      folder_path: '/Contracts',
+      is_client_visible: true,
+      sort_order: 0,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      default_folder_id: uuidv4(),
+      tenant: tenantId,
+      entity_type: entityType,
+      folder_name: 'Invoices',
+      folder_path: '/Invoices',
+      is_client_visible: true,
+      sort_order: 1,
+      created_at: now,
+      updated_at: now,
+    },
+  ]);
 }
 
 // Helper to create document share link
@@ -647,8 +634,8 @@ test.describe('Document System E2E Tests', () => {
 
         const tenantId = tenantData.tenant.tenantId;
 
-        // Create a default folder template for clients
-        const { templateId } = await createFolderTemplate(db, tenantId, 'client', true);
+        // Create default folders for clients
+        await createDefaultFolders(db, tenantId, 'client');
 
         // Create a new client (without pre-existing folders)
         const { clientId, clientName } = await createTestClient(db, tenantId);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -9,7 +9,6 @@ import { TagFilter } from '@alga-psa/ui/components';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { X, Search } from 'lucide-react';
 import { IArticleFilters, ArticleStatus, ArticleAudience, ArticleType } from '../../actions/kbArticleActions';
-import { findAllTagsByType } from '@alga-psa/tags';
 import type { ITag } from '@alga-psa/types';
 
 const STATUS_OPTIONS: SelectOption[] = [
@@ -40,6 +39,7 @@ interface KBArticleFiltersProps {
   onFiltersChange: (filters: IArticleFilters) => void;
   onClearFilters?: () => void;
   categories?: Array<{ id: string; name: string }>;
+  availableTags?: ITag[];
 }
 
 export default function KBArticleFilters({
@@ -47,29 +47,9 @@ export default function KBArticleFilters({
   onFiltersChange,
   onClearFilters,
   categories = [],
+  availableTags = [],
 }: KBArticleFiltersProps) {
   const { t } = useTranslation('features/documents');
-  const [availableTags, setAvailableTags] = useState<ITag[]>([]);
-
-  // Load available tags for knowledge_base_article
-  useEffect(() => {
-    const loadTags = async () => {
-      try {
-        const tags = await findAllTagsByType('knowledge_base_article');
-        // Get unique tags by tag_text
-        const uniqueTags = tags.reduce((acc: ITag[], tag) => {
-          if (!acc.some(t => t.tag_text === tag.tag_text)) {
-            acc.push(tag);
-          }
-          return acc;
-        }, []);
-        setAvailableTags(uniqueTags);
-      } catch (error) {
-        console.error('Failed to load tags:', error);
-      }
-    };
-    loadTags();
-  }, []);
 
   const categoryOptions: SelectOption[] = [
     { value: '', label: t('kb.allCategories', 'All Categories') },

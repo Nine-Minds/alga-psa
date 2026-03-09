@@ -1,72 +1,417 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
-import FolderTemplateList from './FolderTemplateList';
-import FolderTemplateEditor from './FolderTemplateEditor';
-import { IDocumentFolderTemplate } from '@alga-psa/documents/actions';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import {
+  Plus,
+  Trash2,
+  FolderTree,
+  Eye,
+  EyeOff,
+  ChevronRight,
+  ChevronDown,
+  Download,
+  Save,
+} from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getDefaultFolders,
+  saveDefaultFolders,
+  removeDefaultFolders,
+  loadSuggestedDefaults,
+  IDefaultFolder,
+} from '@alga-psa/documents/actions';
 
-type ViewMode = 'list' | 'create' | 'edit';
+const ENTITY_TYPE_LABELS: Record<string, string> = {
+  ticket: 'Ticket',
+  project_task: 'Project Task',
+  client: 'Client',
+  contact: 'Contact',
+  asset: 'Asset',
+  contract: 'Contract',
+};
 
-interface DocumentTemplatesSettingsProps {
-  defaultEntityType?: string | null;
+const ENTITY_TYPE_COLORS: Record<string, string> = {
+  ticket: 'bg-blue-100 text-blue-800',
+  project_task: 'bg-purple-100 text-purple-800',
+  client: 'bg-orange-100 text-orange-800',
+  contact: 'bg-pink-100 text-pink-800',
+  asset: 'bg-cyan-100 text-cyan-800',
+  contract: 'bg-teal-100 text-teal-800',
+};
+
+interface FolderItem {
+  folderPath: string;
+  isClientVisible: boolean;
+  sortOrder: number;
 }
 
-export default function DocumentTemplatesSettings({
-  defaultEntityType = null,
-}: DocumentTemplatesSettingsProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
-  const [listKey, setListKey] = useState(0);
+interface EntitySection {
+  entityType: string;
+  folders: FolderItem[];
+  isExpanded: boolean;
+  isDirty: boolean;
+  isSaving: boolean;
+}
 
-  const handleCreateNew = useCallback(() => {
-    setEditingTemplateId(null);
-    setViewMode('create');
+export default function DocumentTemplatesSettings() {
+  const [sections, setSections] = useState<EntitySection[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingSuggested, setIsLoadingSuggested] = useState(false);
+  const [newFolderInputs, setNewFolderInputs] = useState<Record<string, string>>({});
+
+  const loadDefaults = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const result = await getDefaultFolders();
+      if ('code' in result && result.code === 'PERMISSION_DENIED') {
+        toast.error('Permission denied');
+        return;
+      }
+
+      const folders = result as IDefaultFolder[];
+      const grouped: Record<string, FolderItem[]> = {};
+      for (const f of folders) {
+        if (!grouped[f.entity_type]) grouped[f.entity_type] = [];
+        grouped[f.entity_type].push({
+          folderPath: f.folder_path,
+          isClientVisible: f.is_client_visible,
+          sortOrder: f.sort_order,
+        });
+      }
+
+      const entityTypes = Object.keys(grouped).sort((a, b) =>
+        (ENTITY_TYPE_LABELS[a] || a).localeCompare(ENTITY_TYPE_LABELS[b] || b)
+      );
+
+      setSections(entityTypes.map(et => ({
+        entityType: et,
+        folders: grouped[et].sort((a, b) => a.sortOrder - b.sortOrder),
+        isExpanded: true,
+        isDirty: false,
+        isSaving: false,
+      })));
+    } catch (error) {
+      handleError(error, 'Failed to load default folders');
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const handleEdit = useCallback((template: IDocumentFolderTemplate) => {
-    setEditingTemplateId(template.template_id);
-    setViewMode('edit');
-  }, []);
+  useEffect(() => {
+    loadDefaults();
+  }, [loadDefaults]);
 
-  const handleSave = useCallback(() => {
-    setViewMode('list');
-    setEditingTemplateId(null);
-    // Force list refresh
-    setListKey((k) => k + 1);
-  }, []);
+  const updateSection = (entityType: string, update: Partial<EntitySection>) => {
+    setSections(prev =>
+      prev.map(s => s.entityType === entityType ? { ...s, ...update } : s)
+    );
+  };
 
-  const handleCancel = useCallback(() => {
-    setViewMode('list');
-    setEditingTemplateId(null);
-  }, []);
+  const handleToggleExpand = (entityType: string) => {
+    updateSection(entityType, {
+      isExpanded: !sections.find(s => s.entityType === entityType)?.isExpanded,
+    });
+  };
+
+  const handleToggleVisibility = (entityType: string, folderPath: string) => {
+    const section = sections.find(s => s.entityType === entityType);
+    if (!section) return;
+
+    updateSection(entityType, {
+      folders: section.folders.map(f =>
+        f.folderPath === folderPath ? { ...f, isClientVisible: !f.isClientVisible } : f
+      ),
+      isDirty: true,
+    });
+  };
+
+  const handleRemoveFolder = (entityType: string, folderPath: string) => {
+    const section = sections.find(s => s.entityType === entityType);
+    if (!section) return;
+
+    // Remove the folder and any child folders
+    updateSection(entityType, {
+      folders: section.folders.filter(f =>
+        f.folderPath !== folderPath && !f.folderPath.startsWith(folderPath + '/')
+      ),
+      isDirty: true,
+    });
+  };
+
+  const handleAddFolder = (entityType: string) => {
+    const name = (newFolderInputs[entityType] || '').trim();
+    if (!name) {
+      toast.error('Folder path is required');
+      return;
+    }
+
+    const path = name.startsWith('/') ? name : `/${name}`;
+    const section = sections.find(s => s.entityType === entityType);
+    if (!section) return;
+
+    if (section.folders.some(f => f.folderPath === path)) {
+      toast.error('Folder already exists');
+      return;
+    }
+
+    updateSection(entityType, {
+      folders: [
+        ...section.folders,
+        { folderPath: path, isClientVisible: false, sortOrder: section.folders.length },
+      ],
+      isDirty: true,
+    });
+
+    setNewFolderInputs(prev => ({ ...prev, [entityType]: '' }));
+  };
+
+  const handleSave = async (entityType: string) => {
+    const section = sections.find(s => s.entityType === entityType);
+    if (!section) return;
+
+    updateSection(entityType, { isSaving: true });
+    try {
+      const items = section.folders.map((f, i) => ({
+        folderPath: f.folderPath,
+        isClientVisible: f.isClientVisible,
+        sortOrder: i,
+      }));
+
+      if (items.length === 0) {
+        const result = await removeDefaultFolders(entityType);
+        if (typeof result === 'object' && 'code' in result) {
+          toast.error('Permission denied');
+          return;
+        }
+        // Remove the section entirely
+        setSections(prev => prev.filter(s => s.entityType !== entityType));
+        toast.success(`Default folders for ${ENTITY_TYPE_LABELS[entityType] || entityType} removed`);
+      } else {
+        const result = await saveDefaultFolders(entityType, items);
+        if (typeof result === 'object' && 'code' in result) {
+          toast.error('Permission denied');
+          return;
+        }
+        updateSection(entityType, { isDirty: false });
+        toast.success(`Default folders for ${ENTITY_TYPE_LABELS[entityType] || entityType} saved`);
+      }
+    } catch (error) {
+      handleError(error, 'Failed to save');
+    } finally {
+      updateSection(entityType, { isSaving: false });
+    }
+  };
+
+  const handleLoadSuggested = async () => {
+    setIsLoadingSuggested(true);
+    try {
+      const result = await loadSuggestedDefaults();
+      if (typeof result === 'object' && 'code' in result) {
+        toast.error('Permission denied');
+        return;
+      }
+      if (result === 0) {
+        toast.success('All suggested defaults are already loaded');
+      } else {
+        toast.success(`Loaded defaults for ${result} entity type${result !== 1 ? 's' : ''}`);
+        await loadDefaults();
+      }
+    } catch (error) {
+      handleError(error, 'Failed to load suggested defaults');
+    } finally {
+      setIsLoadingSuggested(false);
+    }
+  };
+
+  const handleAddEntityType = () => {
+    const allTypes = Object.keys(ENTITY_TYPE_LABELS);
+    const usedTypes = new Set(sections.map(s => s.entityType));
+    const available = allTypes.filter(t => !usedTypes.has(t));
+
+    if (available.length === 0) {
+      toast.error('All entity types already have default folders configured');
+      return;
+    }
+
+    const nextType = available[0];
+    setSections(prev => [
+      ...prev,
+      {
+        entityType: nextType,
+        folders: [],
+        isExpanded: true,
+        isDirty: true,
+        isSaving: false,
+      },
+    ]);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-32">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-6">
-          <h2 className="text-xl font-bold text-gray-800">Document Folder Templates</h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Configure default folder structures that are automatically created when documents are first accessed for an entity.
-          </p>
+    <div className="bg-white p-6 rounded-lg shadow-sm">
+      <h3 className="text-lg font-semibold text-gray-800 mb-1">Default Folders</h3>
+      <p className="text-sm text-gray-500 mb-6">
+        Define folder structures that are automatically created when documents are first accessed for an entity.
+      </p>
+
+      {sections.length === 0 ? (
+        <div className="py-12 text-center">
+          <FolderTree className="w-12 h-12 mx-auto mb-4 text-gray-400 opacity-50" />
+          <p className="text-gray-500 mb-4">No default folders configured yet</p>
+          <div className="flex gap-2 justify-center">
+            <Button
+              id="default-folders-load-suggested"
+              onClick={handleLoadSuggested}
+              disabled={isLoadingSuggested}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              {isLoadingSuggested ? 'Loading...' : 'Load Suggested Defaults'}
+            </Button>
+            <Button id="default-folders-add-type" onClick={handleAddEntityType} variant="outline">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Entity Type
+            </Button>
+          </div>
         </div>
+      ) : (
+        <div className="space-y-4">
+          {sections.map((section) => (
+            <div key={section.entityType} className="border rounded-lg">
+              {/* Section header */}
+              <button
+                className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                onClick={() => handleToggleExpand(section.entityType)}
+              >
+                <div className="flex items-center gap-2">
+                  {section.isExpanded ? (
+                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                  )}
+                  <Badge className={ENTITY_TYPE_COLORS[section.entityType] || 'bg-gray-100 text-gray-800'}>
+                    {ENTITY_TYPE_LABELS[section.entityType] || section.entityType}
+                  </Badge>
+                  <span className="text-sm text-gray-500">
+                    {section.folders.length} folder{section.folders.length !== 1 ? 's' : ''}
+                  </span>
+                  {section.isDirty && (
+                    <span className="text-xs text-amber-600 font-medium">unsaved</span>
+                  )}
+                </div>
+              </button>
 
-        {viewMode === 'list' && (
-          <FolderTemplateList
-            key={listKey}
-            entityTypeFilter={defaultEntityType}
-            onEdit={handleEdit}
-            onCreateNew={handleCreateNew}
-          />
-        )}
+              {/* Section body */}
+              {section.isExpanded && (
+                <div className="border-t px-3 pb-3">
+                  {section.folders.length === 0 ? (
+                    <p className="text-sm text-gray-400 py-3 text-center">No folders yet</p>
+                  ) : (
+                    <div className="mt-2 space-y-1">
+                      {section.folders.map((folder) => {
+                        const depth = folder.folderPath.split('/').filter(Boolean).length - 1;
+                        return (
+                          <div
+                            key={folder.folderPath}
+                            className="flex items-center gap-2 py-1 px-2 rounded hover:bg-gray-50"
+                            style={{ paddingLeft: `${depth * 16 + 8}px` }}
+                          >
+                            <FolderTree className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                            <span className="text-sm flex-1 font-mono">{folder.folderPath}</span>
+                            <button
+                              onClick={() => handleToggleVisibility(section.entityType, folder.folderPath)}
+                              className={`p-1 rounded hover:bg-gray-200 ${
+                                folder.isClientVisible ? 'text-green-600' : 'text-gray-400'
+                              }`}
+                              title={folder.isClientVisible ? 'Visible to clients' : 'Hidden from clients'}
+                            >
+                              {folder.isClientVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                            </button>
+                            <button
+                              onClick={() => handleRemoveFolder(section.entityType, folder.folderPath)}
+                              className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
 
-        {(viewMode === 'create' || viewMode === 'edit') && (
-          <FolderTemplateEditor
-            templateId={editingTemplateId}
-            onSave={handleSave}
-            onCancel={handleCancel}
-          />
-        )}
-      </div>
+                  {/* Add folder input */}
+                  <div className="flex items-center gap-2 mt-3">
+                    <Input
+                      value={newFolderInputs[section.entityType] || ''}
+                      onChange={(e) =>
+                        setNewFolderInputs(prev => ({ ...prev, [section.entityType]: e.target.value }))
+                      }
+                      placeholder="/FolderName or /Parent/Child"
+                      className="flex-1 h-8 text-sm font-mono"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleAddFolder(section.entityType);
+                      }}
+                    />
+                    <Button
+                      id={`default-folders-add-${section.entityType}`}
+                      size="sm"
+                      variant="outline"
+                      className="h-8"
+                      onClick={() => handleAddFolder(section.entityType)}
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add
+                    </Button>
+                  </div>
+
+                  {/* Save button */}
+                  {section.isDirty && (
+                    <div className="mt-3 flex justify-end">
+                      <Button
+                        id={`default-folders-save-${section.entityType}`}
+                        size="sm"
+                        onClick={() => handleSave(section.entityType)}
+                        disabled={section.isSaving}
+                      >
+                        <Save className="w-3 h-3 mr-1" />
+                        {section.isSaving ? 'Saving...' : 'Save'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* Bottom actions */}
+          <div className="flex gap-2 pt-2">
+            <Button id="default-folders-add-type" onClick={handleAddEntityType} variant="outline" size="sm">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Entity Type
+            </Button>
+            <Button
+              id="default-folders-load-suggested"
+              variant="outline"
+              size="sm"
+              onClick={handleLoadSuggested}
+              disabled={isLoadingSuggested}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              {isLoadingSuggested ? 'Loading...' : 'Load Suggested Defaults'}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

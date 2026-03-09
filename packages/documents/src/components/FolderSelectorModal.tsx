@@ -18,6 +18,8 @@ interface FolderSelectorModalProps {
   namespace?: 'common' | 'features/documents';
   entityId?: string;
   entityType?: string;
+  /** Override the default folder-fetching function (e.g. for client portal) */
+  getFoldersFn?: () => Promise<string[]>;
 }
 
 export default function FolderSelectorModal({
@@ -28,7 +30,8 @@ export default function FolderSelectorModal({
   description: descriptionProp,
   namespace = 'common',
   entityId,
-  entityType
+  entityType,
+  getFoldersFn
 }: FolderSelectorModalProps) {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [folders, setFolders] = useState<string[]>([]);
@@ -66,13 +69,18 @@ export default function FolderSelectorModal({
   const loadFolders = async () => {
     setLoading(true);
     try {
-      const folderList = await getFolders(entityId, entityType);
-      if (isActionPermissionError(folderList)) {
-        handleError(folderList.permissionError);
-        setFolders([]);
-        return;
+      if (getFoldersFn) {
+        const folderList = await getFoldersFn();
+        setFolders(folderList);
+      } else {
+        const folderList = await getFolders(entityId, entityType);
+        if (isActionPermissionError(folderList)) {
+          handleError(folderList.permissionError);
+          setFolders([]);
+          return;
+        }
+        setFolders(folderList);
       }
-      setFolders(folderList);
     } catch (error) {
       console.error('Error loading folders:', error);
     } finally {

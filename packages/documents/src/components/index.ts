@@ -26,7 +26,7 @@ export { default as VisibilityToggle } from './VisibilityToggle';
 export { default as ShareLinkDialog } from './ShareLinkDialog';
 
 // Settings components
-export { DocumentTemplatesSettings, FolderTemplateEditor, FolderTemplateList } from './settings';
+export { DocumentTemplatesSettings } from './settings';
 
 // Knowledge Base components
 export {

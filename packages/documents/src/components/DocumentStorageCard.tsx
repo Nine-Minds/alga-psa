@@ -366,7 +366,14 @@ function DocumentStorageCardComponent({
         previewQueue.add(async () => {
             try {
                 setIsLoading(true);
-                const preview = await getDocumentPreview(identifierForPreview);
+                // Timeout preview generation to prevent indefinite hangs
+                const timeoutMs = 15000;
+                const preview = await Promise.race([
+                    getDocumentPreview(identifierForPreview),
+                    new Promise<never>((_, reject) =>
+                        setTimeout(() => reject(new Error('Preview generation timed out')), timeoutMs)
+                    ),
+                ]);
                 if (isActionPermissionError(preview)) {
                     throw new Error(preview.permissionError);
                 }
@@ -757,7 +764,7 @@ function DocumentStorageCardComponent({
                                         }
                                     }
                                 }}
-                                disabled={isLoading}
+                                disabled={isDeleteProcessing}
                                 className="text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] p-1.5"
                             >
                                 <Download className="w-4 h-4" />
@@ -773,7 +780,7 @@ function DocumentStorageCardComponent({
                                         e.stopPropagation();
                                         onShare(document);
                                     }}
-                                    disabled={isLoading}
+                                    disabled={isDeleteProcessing}
                                     className="text-[rgb(var(--color-text-600))] hover:text-blue-600 hover:bg-blue-500/10 p-1.5"
                                 >
                                     <Share2 className="w-4 h-4" />
@@ -790,7 +797,7 @@ function DocumentStorageCardComponent({
                                         e.stopPropagation();
                                         handleDisassociate();
                                     }}
-                                    disabled={isLoading}
+                                    disabled={isDeleteProcessing}
                                     className="text-[rgb(var(--color-text-600))] hover:text-orange-600 hover:bg-orange-500/10 p-1.5"
                                 >
                                     <Unlink className="w-4 h-4" />
@@ -807,7 +814,7 @@ function DocumentStorageCardComponent({
                                         e.stopPropagation();
                                         onMove(document);
                                     }}
-                                    disabled={isLoading}
+                                    disabled={isDeleteProcessing}
                                     className="text-[rgb(var(--color-text-600))] hover:text-purple-600 hover:bg-purple-500/10 p-1.5"
                                 >
                                     <FolderInput className="w-4 h-4" />
@@ -824,7 +831,7 @@ function DocumentStorageCardComponent({
                                         e.stopPropagation();
                                         handleDelete();
                                     }}
-                                    disabled={isLoading}
+                                    disabled={isDeleteProcessing}
                                     className="text-[rgb(var(--color-text-600))] hover:text-red-600 hover:bg-red-500/10 p-1.5"
                                 >
                                     <Trash2 className="w-4 h-4" />
