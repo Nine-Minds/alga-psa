@@ -7,9 +7,9 @@ import { setupCommonMocks, createMockUser } from '../../../test-utils/testMocks'
 
 let db: Knex;
 let tenantId: string;
-let getAvailableTimeSlots: typeof import('server/src/lib/services/availabilityService').getAvailableTimeSlots;
-let getAvailableDates: typeof import('server/src/lib/services/availabilityService').getAvailableDates;
-let isSlotAvailable: typeof import('server/src/lib/services/availabilityService').isSlotAvailable;
+let getAvailableTimeSlots: typeof import('@alga-psa/client-portal/services/availabilityService').getAvailableTimeSlots;
+let getAvailableDates: typeof import('@alga-psa/client-portal/services/availabilityService').getAvailableDates;
+let isSlotAvailable: typeof import('@alga-psa/client-portal/services/availabilityService').isSlotAvailable;
 
 type CreatedIds = {
   serviceTypeId?: string;
@@ -55,7 +55,7 @@ describe('Appointment Availability Integration Tests', () => {
     tenantId = await ensureTenant(db);
 
     // Import the functions after mocks are set up
-    ({ getAvailableTimeSlots, getAvailableDates, isSlotAvailable } = await import('server/src/lib/services/availabilityService'));
+    ({ getAvailableTimeSlots, getAvailableDates, isSlotAvailable } = await import('@alga-psa/client-portal/services/availabilityService'));
   }, 120_000);
 
   afterAll(async () => {

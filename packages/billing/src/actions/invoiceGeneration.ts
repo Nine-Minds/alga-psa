@@ -30,7 +30,7 @@ import { TaxService } from '../services/taxService';
 import { ITaxCalculationResult } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { auditLog } from '@alga-psa/db';
-import { getClientLogoUrlAsync } from '../lib/documentsHelpers';
+import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { calculateAndDistributeTax, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
 
 
@@ -331,7 +331,7 @@ async function adaptToWasmViewModel(
       });
 
       if (tenantClientDetails) {
-        const logoUrl = await getClientLogoUrlAsync(tenantClientLink.client_id, tenant);
+        const logoUrl = await getClientLogoUrl(tenantClientLink.client_id, tenant);
         tenantClientInfo = {
           name: tenantClientDetails.client_name,
           address: tenantClientDetails.address || 'N/A',

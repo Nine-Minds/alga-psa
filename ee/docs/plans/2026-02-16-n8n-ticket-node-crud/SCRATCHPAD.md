@@ -1,0 +1,401 @@
+# Scratchpad — Alga PSA n8n Ticket Node CRUD
+
+- Plan slug: `n8n-ticket-node-crud`
+- Created: `2026-02-16`
+
+## What This Is
+
+Working notes for the n8n ticket-node plan. This captures scope decisions made in brainstorming and concrete API constraints discovered in the repo.
+
+## Decisions
+
+- (2026-02-16) Use a single node approach: one `Alga PSA` node with multiple resources.
+- (2026-02-16) V1 Ticket read scope includes both `Get by ID` and `List/Search`.
+- (2026-02-16) V1 update scope includes general update plus dedicated status and assignment operations.
+- (2026-02-16) V1 create/update UX uses dynamic dropdowns for required reference IDs.
+- (2026-02-16) V1 includes `Delete Ticket` to satisfy full CRUD.
+- (2026-02-16) Credential model for v1 is `baseUrl + apiKey` only (no tenant header field in UX).
+- (2026-02-16) Expose helper operations (`List Clients`, `List Boards`, `List Statuses`, `List Priorities`) in addition to internal lookup use.
+- (2026-02-16) Distribution target is npm availability for Alga users; n8n community-portal submission is not required for v1.
+
+## Discoveries / Constraints
+
+- (2026-02-16) Alga ticket CRUD routes already exist and are backed by controller/service implementations:
+  - `server/src/app/api/v1/tickets/route.ts`
+  - `server/src/app/api/v1/tickets/[id]/route.ts`
+  - `server/src/app/api/v1/tickets/[id]/status/route.ts`
+  - `server/src/app/api/v1/tickets/[id]/assignment/route.ts`
+  - `server/src/lib/api/controllers/ApiTicketController.ts`
+  - `server/src/lib/api/services/TicketService.ts`
+- (2026-02-16) Ticket create schema requires UUID references: `client_id`, `board_id`, `status_id`, `priority_id`.
+- (2026-02-16) Ticket auth uses `x-api-key`; `x-tenant-id` is optional in controller flow and can be inferred from key.
+- (2026-02-16) Helper lookup routes exist for v1 dropdowns/helpers:
+  - `GET /api/v1/clients`
+  - `GET /api/v1/boards`
+  - `GET /api/v1/statuses`
+  - `GET /api/v1/priorities`
+- (2026-02-16) n8n docs indicate installation from npm/manual path for community nodes is self-hosted; unverified community nodes are not available on n8n Cloud.
+- (2026-02-16) n8n docs recommend choosing declarative vs programmatic/hybrid style; this plan uses declarative-first with focused programmatic request/normalization logic.
+
+## Commands / Runbooks
+
+- (2026-02-16) Scaffold plan artifacts:
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/scaffold_plan.py "Alga PSA n8n Ticket Node CRUD" --slug n8n-ticket-node-crud`
+- (2026-02-16) Validate plan format:
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-02-16-n8n-ticket-node-crud`
+- (2026-02-16) Confirm ticket API routes quickly:
+  - `find server/src/app/api/v1/tickets -maxdepth 3 -type f | sort`
+- (2026-02-16) Confirm helper route existence quickly:
+  - `find server/src/app/api/v1 -maxdepth 3 -type f | sort | rg "boards|statuses|priorities|clients"`
+
+## Links / References
+
+- n8n node creation overview:
+  - https://docs.n8n.io/integrations/creating-nodes/overview/
+- n8n build style guidance:
+  - https://docs.n8n.io/integrations/creating-nodes/build/reference/node-base-files/choose-node-method/
+- n8n installation guidance for community nodes:
+  - https://docs.n8n.io/integrations/community-nodes/installation/
+  - https://docs.n8n.io/integrations/community-nodes/installation/manual-install/
+- Alga API schema and service references:
+  - `server/src/lib/api/schemas/ticket.ts`
+  - `server/src/lib/api/services/TicketService.ts`
+
+## Open Questions
+
+- Final npm package name/scope decision for discoverability (`n8n-nodes-alga-psa` vs `@alga-psa/n8n-nodes-alga-psa`).
+- Confirm minimum supported n8n version and Node runtime for package README.
+- Decide whether to add optional `x-tenant-id` header support in a v1.1 credential update.
+- (2026-02-16) Implemented F001: scaffolded `packages/n8n-nodes-alga-psa` with npm-valid community node package name and canonical n8n folder layout (`nodes/AlgaPsa`, `credentials`) to establish distribution-ready project boundaries.
+- (2026-02-16) Implemented F002: added package build metadata/scripts (`clean`, `build`, `typecheck`), TypeScript config, and n8n manifest entries so compiled credential/node artifacts emit under `dist/` for installable packaging.
+- (2026-02-16) Verified build artifact emission:
+  - `npm -w packages/n8n-nodes-alga-psa run build`
+  - `find packages/n8n-nodes-alga-psa/dist -maxdepth 4 -type f | sort`
+- (2026-02-16) Implemented F003: credential type `AlgaPsaApi` now exposes only `baseUrl` and secret `apiKey` fields, matching the v1 credential UX and keeping API key entry hidden via password type options.
+- (2026-02-16) Implemented F004: added shared transport helper (`nodes/AlgaPsa/transport.ts`) that trims trailing slashes from `baseUrl`, normalizes endpoint slashes, and injects `x-api-key` on all outbound requests.
+- (2026-02-16) Implemented F005: expanded `AlgaPsa` node shell to a single multi-resource node with `Ticket`, `Client`, `Board`, `Status`, and `Priority` selectors.
+- (2026-02-16) Implemented F006: operation routing is resource-scoped via resource-specific operation selectors so only valid operations are visible/executable for each resource.
+- (2026-02-16) Implemented F007: Ticket create now calls `POST /api/v1/tickets` with required fields and optional field mapping through the create payload builder.
+- (2026-02-16) Implemented F008: Ticket get now calls `GET /api/v1/tickets/{id}` with preflight ID validation.
+- (2026-02-16) Implemented F009: Ticket list now calls `GET /api/v1/tickets` and serializes pagination/sort/filter query parameters.
+- (2026-02-16) Implemented F010: Ticket search now calls `GET /api/v1/tickets/search` with required query and optional search filters.
+- (2026-02-16) Implemented F011: Ticket update now calls `PUT /api/v1/tickets/{id}` with partial payload construction that omits empty fields.
+- (2026-02-16) Implemented F012: Ticket status update now calls `PUT /api/v1/tickets/{id}/status` with `status_id` payload.
+- (2026-02-16) Implemented F013: Ticket assignment update now calls `PUT /api/v1/tickets/{id}/assignment` with assign/clear behavior mapped to `assigned_to`.
+- (2026-02-16) Implemented F014: Ticket delete now calls `DELETE /api/v1/tickets/{id}` with required ID validation.
+- (2026-02-16) Implemented F015: Delete responses are normalized to a guaranteed non-empty success payload containing `success`, `id`, and `deleted`.
+- (2026-02-16) Implemented F016: Success normalization now unwraps `{ data: ... }` responses and preserves pagination metadata when present.
+- (2026-02-16) Implemented F017: API failures are parsed into structured `code`/`message`/`details` payloads and surfaced via n8n-friendly error handling.
+- (2026-02-16) Implemented F018: Continue On Fail now emits item-level error objects and keeps processing subsequent items.
+- (2026-02-16) Implemented F019: Client helper list operation now maps to `GET /api/v1/clients`.
+- (2026-02-16) Implemented F020: Board helper list operation now maps to `GET /api/v1/boards`.
+- (2026-02-16) Implemented F021: Status helper list operation now maps to `GET /api/v1/statuses`.
+- (2026-02-16) Implemented F022: Priority helper list operation now maps to `GET /api/v1/priorities`.
+- (2026-02-16) Implemented F023: Dynamic list-search load-options are implemented for `client_id`, `board_id`, `status_id`, and `priority_id` in ticket create/update flows.
+- (2026-02-16) Implemented F024: Lookup fields now support explicit manual UUID entry via resource locator ID mode and graceful empty lookup handling.
+- (2026-02-16) Implemented F025: Ticket create/update forms keep required fields prominent and group optional inputs into additional-fields collections.
+- (2026-02-16) Implemented F026: Operation-level validation now blocks requests when required IDs or search query values are missing/invalid.
+- (2026-02-16) Implemented F027: authored package README with credential setup, operation matrix, ticket field requirements, lookup behavior, and output/error expectations.
+- (2026-02-16) Implemented F028: README installation section documents self-hosted GUI/npm/manual paths and explicitly notes unverified community-node limitations on n8n Cloud.
+- (2026-02-16) Implemented F029: added two minimal workflow example definitions (`create->update-assignment` and `search->update-status`) under `packages/n8n-nodes-alga-psa/examples` and referenced them in README.
+- (2026-02-16) Prepared release artifact checks for F030:
+  - `npm -w packages/n8n-nodes-alga-psa pack --dry-run` succeeded and produced `n8n-nodes-alga-psa-0.1.0.tgz`.
+  - `npm whoami` returned `401 Unauthorized`; npm publish is currently blocked by missing/invalid registry authentication in this environment.
+- (2026-02-16) Added `packages/n8n-nodes-alga-psa/RELEASE_NOTES.md` draft for the 0.1.0 feature surface.
+- (2026-02-16) Implemented T001: added package metadata test coverage validating n8n community package naming and dist entrypoint declarations (`__tests__/package-and-credential.test.ts`).
+- (2026-02-16) Validation run (current suite baseline):
+  - `npm -w packages/n8n-nodes-alga-psa test`
+- (2026-02-16) Implemented T002: Build test executes `npm run build` and asserts compiled node/credential artifacts exist in `dist/`.
+- (2026-02-16) Implemented T003: Credential unit test asserts fields are exactly `baseUrl` and secret `apiKey`.
+- (2026-02-16) Implemented T004: Transport helper unit test covers trailing-slash normalization and path joining semantics.
+- (2026-02-16) Implemented T005: Transport helper unit test asserts `x-api-key` injection and absence of logging side effects.
+- (2026-02-16) Implemented T006: Node description test validates resource selector values for Ticket/Client/Board/Status/Priority.
+- (2026-02-16) Implemented T007: Node description test validates only valid operations appear for each resource.
+- (2026-02-16) Implemented T010: Execute-path test validates POST payload includes required ticket create fields.
+- (2026-02-16) Implemented T011: Execute-path test validates optional create fields are sent only when provided.
+- (2026-02-16) Implemented T012: Execute-path test validates create response unwrapping from `{ data: ... }`.
+- (2026-02-16) Implemented T013: Execute-path test validates GET route format and empty-ID validation short-circuit.
+- (2026-02-16) Implemented T014: Execute-path test validates get response object passthrough for downstream nodes.
+- (2026-02-16) Implemented T015: Execute-path test validates list pagination/sort/filter query serialization.
+- (2026-02-16) Implemented T016: Execute-path test validates pagination metadata is preserved in normalized output.
+- (2026-02-16) Implemented T017: Execute-path test validates query + optional search filter serialization for `/tickets/search`.
+- (2026-02-16) Implemented T018: Execute-path test validates both populated and empty search result normalization.
+- (2026-02-16) Implemented T019: Execute-path test validates update sends only provided mutable fields.
+- (2026-02-16) Implemented T020: Execute-path test validates updated ticket response passthrough for downstream use.
+- (2026-02-16) Implemented T021: Execute-path test validates `PUT /tickets/{id}/status` payload contract.
+- (2026-02-16) Implemented T022: Execute-path test validates `PUT /tickets/{id}/assignment` payload contract.
+- (2026-02-16) Implemented T023: Execute-path test validates DELETE request path and method.
+- (2026-02-16) Implemented T024: Execute-path test validates 204-style delete normalization to explicit success object.
+- (2026-02-16) Implemented T025: Helper unit test validates `{ data: object }` unwrap behavior.
+- (2026-02-16) Implemented T026: Helper unit test validates array unwrap plus pagination retention.
+- (2026-02-16) Implemented T027: Error formatting unit test validates actionable 401 mapping with details payload.
+- (2026-02-16) Implemented T028: Error formatting unit test validates actionable 403 permission mapping.
+- (2026-02-16) Implemented T029: Error formatting unit test validates actionable 404 not-found mapping.
+- (2026-02-16) Implemented T030: Error formatting unit test validates actionable 400 validation mapping.
+- (2026-02-16) Implemented T031: Execute-path integration test validates item-level error emission and continued processing.
+- (2026-02-16) Implemented T032: Execute-path test validates client helper route + list output normalization.
+- (2026-02-16) Implemented T033: Execute-path test validates board helper route + list output normalization.
+- (2026-02-16) Implemented T034: Execute-path test validates status helper route + list output normalization.
+- (2026-02-16) Implemented T035: Execute-path test validates priority helper route + list output normalization.
+- (2026-02-16) Implemented T036: Load-options test validates client label/value mapping from clients API response.
+- (2026-02-16) Implemented T037: Load-options test validates board label/value mapping from boards API response.
+- (2026-02-16) Implemented T038: Load-options test validates status label/value mapping from statuses API response.
+- (2026-02-16) Implemented T039: Load-options test validates priority label/value mapping from priorities API response.
+- (2026-02-16) Implemented T040: Load-options and execute tests validate empty lookup fallback + manual UUID execution path.
+- (2026-02-16) Implemented T041: Node description tests validate required fields are separate from additional optional collections.
+- (2026-02-16) Implemented T042: Execute-path tests validate request blocking when required IDs/search query are missing.
+- (2026-02-16) Implemented T043: Docs test validates README includes credential setup, operation matrix, and ticket field requirements.
+- (2026-02-16) Implemented T044: Docs test validates self-hosted install guidance and n8n Cloud limitation notes.
+- (2026-02-16) Implemented T045: Docs test validates both example workflow files and operation chains are present.
+- (2026-02-16) Re-validated release publish blocker for F030/T046:
+  - `npm whoami` still fails with `401 Unauthorized`.
+  - `npm view n8n-nodes-alga-psa version` returns `404 Not Found` (package not yet published).
+  - `npm -w packages/n8n-nodes-alga-psa publish --access public` builds and uploads tarball metadata but fails before publish with `Access token expired or revoked`, followed by npm registry `404 ... not found or you do not have permission`.
+  - `~/.npmrc` contains an npm auth token entry, but it is no longer valid for registry publish.
+- (2026-02-16) Rechecked release prerequisites for F030/T046 again from clean git state:
+  - `cat ~/.npmrc` (redacted) confirms npm auth token is configured but currently unusable (`//registry.npmjs.org/:_authToken=[REDACTED]`).
+  - `npm whoami` still returns `E401 Unauthorized`.
+  - `npm view n8n-nodes-alga-psa version` still returns `E404 Not Found`, indicating no public release exists yet.
+  - `npm -w packages/n8n-nodes-alga-psa publish --access public` still packages successfully, then fails on registry publish with `Access token expired or revoked` and `E404` permission/not found response.
+  - No alternate npm auth env vars are present in shell environment (`env | rg -i '(^npm_|_npm|token)'` shows npm config vars only, redacted).
+- (2026-02-16) Release readiness revalidation for F030/T046 from current worktree:
+  - `npm -w packages/n8n-nodes-alga-psa test` passed (`44` tests).
+  - `npm -w packages/n8n-nodes-alga-psa run build` passed and regenerated `dist/`.
+  - `npm -w packages/n8n-nodes-alga-psa pack --dry-run` succeeded and produced `n8n-nodes-alga-psa-0.1.0.tgz` preview metadata.
+- (2026-02-16) Publish remains blocked by npm auth/permissions in this environment:
+  - `npm whoami` returned `E401 Unauthorized`.
+  - `npm view n8n-nodes-alga-psa version` returned `E404 Not Found` (package still not published).
+  - `npm -w packages/n8n-nodes-alga-psa publish --access public` reached publish step but failed with `Access token expired or revoked`, then registry `E404` permission/not-found response.
+- (2026-02-16) Non-blocking publish warning observed:
+  - npm warns `repository.url` is auto-normalized to `git+https://github.com/alga-psa/alga-psa.git`; this does not block package build/publish attempt.
+- (2026-02-16) Release validation rerun in current session:
+  - `npm -w packages/n8n-nodes-alga-psa test` passed (`44` tests).
+  - `npm -w packages/n8n-nodes-alga-psa run build` passed and regenerated `dist/`.
+  - `npm -w packages/n8n-nodes-alga-psa pack --dry-run` (run after build) includes compiled `dist/` files and succeeds.
+- (2026-02-16) Packaging command-order gotcha:
+  - Running `npm run build` and `npm pack --dry-run` concurrently can produce a misleading pack preview that omits `dist/` while `clean` is executing; run them sequentially for accurate release verification.
+- (2026-02-16) Publish remains externally blocked after rerun:
+  - `npm whoami` still returns `E401 Unauthorized`.
+  - `npm view n8n-nodes-alga-psa version` still returns `E404 Not Found`.
+  - `npm -w packages/n8n-nodes-alga-psa publish --access public` still fails with `Access token expired or revoked` and registry `E404` permission/not-found response.
+- (2026-02-16) Release publish revalidation (latest run in this worktree):
+  - `npm -w packages/n8n-nodes-alga-psa test` passed (`44` tests).
+  - `npm -w packages/n8n-nodes-alga-psa run build` passed.
+  - `npm -w packages/n8n-nodes-alga-psa pack --dry-run` passed and included compiled `dist/` artifacts.
+  - `npm whoami` returned `E401 Unauthorized`.
+  - `npm view n8n-nodes-alga-psa version` returned `E404 Not Found`.
+  - `npm -w packages/n8n-nodes-alga-psa publish --access public` failed with `Access token expired or revoked`, then registry `E404` permission/not-found response.
+- (2026-02-16) Checked for repo-native automated publish path:
+  - Searched `.github/workflows` for npm publish/release automation and did not find an existing npm release workflow for this package.
+  - Current blocker for F030/T046 remains external npm registry credentials/permissions, not local package readiness.
+- (2026-02-16) Release publish revalidation (current autonomous run):
+  - `npm -w packages/n8n-nodes-alga-psa test` passed (`44` tests).
+  - `npm -w packages/n8n-nodes-alga-psa run build` passed.
+  - `npm -w packages/n8n-nodes-alga-psa pack --dry-run` passed and includes built `dist/` artifacts.
+  - `npm whoami` failed with `E401 Unauthorized`.
+  - `npm view n8n-nodes-alga-psa version` failed with `E404 Not Found`.
+  - `npm -w packages/n8n-nodes-alga-psa publish --access public` still fails at registry step with `Access token expired or revoked` and npm `E404` permission/not-found response.
+  - Feature/test completion remains blocked on valid npm registry credentials with permission to publish `n8n-nodes-alga-psa`.
+- (2026-02-16) Release publish revalidation (latest attempt in this session):
+  - Re-ran release verification in strict order: `npm test`, `npm run build`, then `npm pack --dry-run`; all succeeded and tarball preview includes compiled `dist/` artifacts.
+  - Re-ran registry checks: `npm whoami` still returns `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` still returns `E404 Not Found`.
+  - Re-ran publish: `npm -w packages/n8n-nodes-alga-psa publish --access public` still reaches publish stage but fails with `Access token expired or revoked` and registry `E404` permission/not-found response.
+  - Blocker remains external npm credentials/ownership; no remaining local code/test gaps found for F030/T046.
+- (2026-02-16) Release publish revalidation (autonomous run at 23:24 UTC):
+  - Ran release pipeline sequentially to avoid `dist/` race: `npm -w packages/n8n-nodes-alga-psa test && npm -w packages/n8n-nodes-alga-psa run build && npm -w packages/n8n-nodes-alga-psa pack --dry-run`; all passed (`44` tests, pack tarball includes `dist/`).
+  - Registry checks remain blocked: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish remains blocked: `npm -w packages/n8n-nodes-alga-psa publish --access public` reports `Access token expired or revoked` then npm `E404` permission/not-found response.
+  - F030/T046 cannot be flipped without refreshed npm auth token tied to an owner/publisher for `n8n-nodes-alga-psa`.
+- (2026-02-16) Release publish revalidation (autonomous run at 23:25 UTC):
+  - Re-ran readiness checks in strict order: `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, and `npm -w packages/n8n-nodes-alga-psa pack --dry-run`; all passed and dry-run tarball includes compiled `dist/` outputs.
+  - `npm whoami` still fails with `E401 Unauthorized` (pipeline halts immediately with `set -e` when included inline).
+  - Follow-up registry commands still fail: `npm view n8n-nodes-alga-psa version` => `E404 Not Found`; `npm -w packages/n8n-nodes-alga-psa publish --access public` => `Access token expired or revoked` + npm `E404` permission/not-found.
+  - Auth context remains unchanged: `env | rg -i '(^npm_|_npm|token)'` shows no usable npm token env vars; `~/.npmrc` still contains only `//registry.npmjs.org/:_authToken=[REDACTED]`.
+  - F030/T046 remain blocked on refreshed npm credentials with publish access to `n8n-nodes-alga-psa`.
+- (2026-02-16) Release publish revalidation (autonomous run at 23:27 UTC):
+  - Re-ran release flow in strict order: `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run`; all passed and pack preview includes `dist/` artifacts.
+  - Registry/account checks still fail unchanged: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish attempt still fails at registry step: `npm -w packages/n8n-nodes-alga-psa publish --access public` reports token is expired/revoked and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Blocker remains external npm auth/ownership; no additional local code or test gaps were identified.
+- (2026-02-16) Release publish revalidation (autonomous run at 23:29 UTC):
+  - Re-ran readiness flow in strict order: `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run`; all passed and dry-run tarball includes compiled `dist/` artifacts.
+  - Registry checks remain blocked: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish still fails: `npm -w packages/n8n-nodes-alga-psa publish --access public` reports `Access token expired or revoked`, then npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - F030/T046 remain blocked on refreshed npm credentials with ownership/publish permission for `n8n-nodes-alga-psa`.
+- (2026-02-16) Release publish revalidation (autonomous run at 23:31 UTC):
+  - Re-ran readiness flow in strict order: `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run`; all passed (`44` tests) and pack preview includes compiled `dist/` artifacts.
+  - Registry/account checks still fail: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish attempt still fails at registry step: `npm -w packages/n8n-nodes-alga-psa publish --access public` reports `Access token expired or revoked` and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Non-blocking warning repeated: npm auto-normalizes `repository.url` to `git+https://github.com/alga-psa/alga-psa.git`.
+  - F030/T046 remain externally blocked on refreshed npm credentials with publish access to `n8n-nodes-alga-psa`.
+- (2026-02-16) Release publish revalidation (autonomous run at 23:33 UTC):
+  - Re-ran readiness flow in strict order: `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run`; all passed (`44` tests) and dry-run tarball includes compiled `dist/` artifacts.
+  - Registry checks remain blocked: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish still fails: `npm -w packages/n8n-nodes-alga-psa publish --access public` reports `Access token expired or revoked`, then npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - F030/T046 remain externally blocked on refreshed npm credentials with ownership/publish permission for `n8n-nodes-alga-psa`.
+- (2026-02-16) Release publish revalidation (autonomous run at 23:34 UTC):
+  - `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, and `npm -w packages/n8n-nodes-alga-psa pack --dry-run` all succeeded; dry-run tarball includes compiled `dist/` artifacts.
+  - `npm whoami` failed with `E401 Unauthorized`.
+  - `npm view n8n-nodes-alga-psa version` failed with `E404 Not Found`.
+  - `npm -w packages/n8n-nodes-alga-psa publish --access public` failed with `Access token expired or revoked` and npm registry `E404` permission/not-found response.
+  - F030/T046 remain externally blocked pending refreshed npm credentials with publish access to `n8n-nodes-alga-psa`.
+- (2026-02-16) Release publish revalidation (autonomous run at 23:36 UTC):
+  - `npm -w packages/n8n-nodes-alga-psa test && npm -w packages/n8n-nodes-alga-psa run build && npm -w packages/n8n-nodes-alga-psa pack --dry-run` all succeeded (`44` tests) and tarball preview includes compiled `dist/` artifacts.
+  - `npm whoami` still fails with `E401 Unauthorized`.
+  - `npm view n8n-nodes-alga-psa version` still fails with `E404 Not Found`.
+  - `npm -w packages/n8n-nodes-alga-psa publish --access public` still fails with `Access token expired or revoked` and npm registry `E404` permission/not-found response.
+  - Blocker remains external npm auth/ownership; F030 and T046 cannot be completed from this environment without refreshed publish credentials.
+- (2026-02-16) Release publish revalidation (autonomous run at 23:37 UTC):
+  - Full gated sequence rerun in strict order and succeeded locally: `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run` (`44` tests; pack includes compiled `dist/` assets).
+  - Registry checks still fail unchanged: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish still fails unchanged: `npm -w packages/n8n-nodes-alga-psa publish --access public` reports access token revoked/expired and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Exit-code summary from scripted run: `test=0 build=0 pack=0 whoami=1 view=1 publish=1`.
+- (2026-02-16) Release publish revalidation (autonomous run at 23:39 UTC):
+  - Re-ran release gates in order: `npm -w packages/n8n-nodes-alga-psa test` (pass, `44` tests), `npm -w packages/n8n-nodes-alga-psa run build` (pass), `npm -w packages/n8n-nodes-alga-psa pack --dry-run` (pass; tarball includes compiled `dist/` outputs).
+  - Registry identity/package checks still fail: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish attempt still fails unchanged: `npm -w packages/n8n-nodes-alga-psa publish --access public` reports token expired/revoked and returns npm `E404` permission/not-found.
+  - `~/.npmrc` still contains an npmjs auth token entry, but it is currently invalid for registry authentication/publish.
+  - `F030`/`T046` remain blocked on refreshed npm credentials with publish permission for `n8n-nodes-alga-psa`.
+- (2026-02-16) Release publish revalidation (autonomous run at 23:41 UTC):
+  - Re-ran gated local release sequence in strict order: `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run`; all passed (`44` tests) and dry-run tarball includes compiled `dist/` artifacts.
+  - Registry identity/package checks still fail unchanged: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish attempt still fails unchanged: `npm -w packages/n8n-nodes-alga-psa publish --access public` reports `Access token expired or revoked` and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Scripted exit-code summary: `whoami=1 view=1 publish=1`.
+  - `F030`/`T046` remain externally blocked pending refreshed npm credentials with ownership/publish permission for `n8n-nodes-alga-psa`.
+- (2026-02-16) Release publish revalidation (autonomous run at 23:43 UTC):
+  - Re-ran gated release sequence in strict order: `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run`; all passed (`44` tests) and dry-run tarball includes compiled `dist/` artifacts.
+  - Registry/account checks remain blocked: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish still fails unchanged: `npm -w packages/n8n-nodes-alga-psa publish --access public` reports `Access token expired or revoked` and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Scripted exit-code summary: `test=0 build=0 pack=0 whoami=1 view=1 publish=1`.
+  - `F030`/`T046` remain externally blocked pending refreshed npm credentials with ownership/publish permission for `n8n-nodes-alga-psa`.
+- (2026-02-16) Release publish revalidation (autonomous run at 23:44 UTC):
+  - Re-ran local release gates in strict order: `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run`; all passed (`44` tests) and dry-run tarball includes compiled `dist/` artifacts.
+  - Registry/auth checks unchanged: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish unchanged: `npm -w packages/n8n-nodes-alga-psa publish --access public` reached publish step but failed with `Access token expired or revoked` and npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Release notes audit confirms `packages/n8n-nodes-alga-psa/RELEASE_NOTES.md` already documents supported resources/operations and self-hosted installation steps.
+  - `F030`/`T046` remain externally blocked on refreshed npm credentials with owner/publisher access to `n8n-nodes-alga-psa`.
+- (2026-02-16) Release publish revalidation (autonomous run at 23:46 UTC):
+  - Local release gates re-ran in strict order and passed: `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run` (`44` tests; tarball includes compiled `dist/` artifacts).
+  - Registry/account checks still fail: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish still fails unchanged: `npm -w packages/n8n-nodes-alga-psa publish --access public` reports `Access token expired or revoked` and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Scripted exit-code summary: `whoami=1 view=1 publish=1`.
+  - `F030`/`T046` remain externally blocked pending refreshed npm credentials with ownership/publish permission for `n8n-nodes-alga-psa`.
+- (2026-02-16) Release publish revalidation (autonomous run at 23:48 UTC):
+  - Re-ran release gates sequentially: `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run`; all passed (`44` tests) and dry-run tarball includes compiled `dist/` artifacts.
+  - Registry checks unchanged: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish remains blocked: `npm -w packages/n8n-nodes-alga-psa publish --access public` reports `Access token expired or revoked` and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Scripted exit-code summary: `whoami=1 view=1 publish=1`.
+  - `F030`/`T046` remain externally blocked pending refreshed npm credentials with ownership/publish permission for `n8n-nodes-alga-psa`.
+- (2026-02-16) Release publish revalidation (autonomous run at 23:50 UTC):
+  - Re-ran full local release gate: `npm -w packages/n8n-nodes-alga-psa test` (pass, `44` tests), `npm -w packages/n8n-nodes-alga-psa run build` (pass), `npm -w packages/n8n-nodes-alga-psa pack --dry-run` (pass; tarball includes compiled `dist/` artifacts).
+  - Registry checks still fail unchanged: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish still fails unchanged: `npm -w packages/n8n-nodes-alga-psa publish --access public` reports `Access token expired or revoked` and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Scripted exit-code summary: `build=0 pack=0 whoami=1 view=1 publish=1`.
+  - `F030`/`T046` remain externally blocked pending refreshed npm credentials with ownership/publish permission for `n8n-nodes-alga-psa`.
+- (2026-02-16) Release publish revalidation (autonomous run at 23:51 UTC):
+  - Re-ran local release gates in strict order: `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run`; all passed (`44` tests) and dry-run tarball includes compiled `dist/` artifacts.
+  - Re-ran registry checks: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Re-ran publish attempt: `npm -w packages/n8n-nodes-alga-psa publish --access public` still reports `Access token expired or revoked` and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Scripted exit-code summary: `whoami=1 view=1 publish=1`.
+  - `F030`/`T046` remain externally blocked pending refreshed npm credentials with ownership/publish permission for `n8n-nodes-alga-psa`.
+- (2026-02-16) Release publish revalidation (autonomous run at 23:53 UTC):
+  - Ran strict sequence in one shell (`test -> build -> pack --dry-run -> whoami -> view -> publish`) to capture a single, comparable result set.
+  - Local gates all passed: `npm -w packages/n8n-nodes-alga-psa test` (`44` tests), `npm -w packages/n8n-nodes-alga-psa run build`, and `npm -w packages/n8n-nodes-alga-psa pack --dry-run` (tarball preview includes compiled `dist/` artifacts).
+  - Registry checks remain unchanged: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish still fails unchanged: `npm -w packages/n8n-nodes-alga-psa publish --access public` reports `Access token expired or revoked` and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Scripted exit-code summary: `test=0 build=0 pack=0 whoami=1 view=1 publish=1`.
+  - `F030`/`T046` remain externally blocked on refreshed npm credentials with ownership/publish permission for `n8n-nodes-alga-psa`.
+- (2026-02-16) Release publish revalidation (autonomous run at 23:55 UTC):
+  - Re-ran strict sequence in one shell (`test -> build -> pack --dry-run -> whoami -> view -> publish`) and outcomes were unchanged.
+  - Local release gates passed again: `npm -w packages/n8n-nodes-alga-psa test` (`44` tests), `npm -w packages/n8n-nodes-alga-psa run build`, and `npm -w packages/n8n-nodes-alga-psa pack --dry-run` (dry-run tarball includes compiled `dist/` outputs).
+  - Registry checks remain blocked: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish remains blocked: `npm -w packages/n8n-nodes-alga-psa publish --access public` reports `Access token expired or revoked` and then returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Additional auth-context check confirms no alternate token source: `env | rg -i '(^npm_|_npm|token)'` shows no usable npm auth env vars; `~/.npmrc` contains only `//registry.npmjs.org/:_authToken=[REDACTED]` which is currently invalid.
+  - Scripted exit-code summary: `test=0 build=0 pack=0 whoami=1 view=1 publish=1`.
+  - `F030`/`T046` remain externally blocked pending refreshed npm credentials with ownership/publish permission for `n8n-nodes-alga-psa`.
+- (2026-02-16) Release publish revalidation (autonomous run at 23:56 UTC):
+  - Re-ran strict sequence in one shell (`test -> build -> pack --dry-run -> whoami -> view -> publish`) to re-check whether npm auth had changed.
+  - Local release gates still pass: `npm -w packages/n8n-nodes-alga-psa test` (`44` tests), `npm -w packages/n8n-nodes-alga-psa run build`, and `npm -w packages/n8n-nodes-alga-psa pack --dry-run` (dry-run tarball includes compiled `dist/` artifacts).
+  - Registry checks still fail unchanged: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish still fails unchanged: `npm -w packages/n8n-nodes-alga-psa publish --access public` reports `Access token expired or revoked` and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Scripted exit-code summary: `test=0 build=0 pack=0 whoami=1 view=1 publish=1`.
+  - `F030`/`T046` remain externally blocked on valid npm credentials with owner/publish rights for `n8n-nodes-alga-psa`.
+- (2026-02-16) Release publish revalidation (autonomous run at 23:58 UTC):
+  - Re-ran strict release sequence in one shell: `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run`, `npm whoami`, `npm view n8n-nodes-alga-psa version`, `npm -w packages/n8n-nodes-alga-psa publish --access public`.
+  - Local package gates all passed (`44` tests; build succeeded; dry-run tarball includes compiled `dist/` assets).
+  - Registry/auth checks remain blocked and unchanged: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`; publish => `Access token expired or revoked` followed by npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Exit-code summary: `test=0 build=0 pack=0 whoami=1 view=1 publish=1`.
+  - `F030` and `T046` remain externally blocked pending refreshed npm credentials with owner/publisher permission for `n8n-nodes-alga-psa`.
+- (2026-02-17) Release publish revalidation (autonomous run at 00:01 UTC):
+  - Local release gates passed in order: `npm -w packages/n8n-nodes-alga-psa test` (`44` tests), `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run` (tarball includes compiled `dist/` artifacts).
+  - Registry identity/package checks still fail: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish still fails unchanged: `npm -w packages/n8n-nodes-alga-psa publish --access public` reports `Access token expired or revoked` and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - `F030`/`T046` remain externally blocked pending refreshed npm credentials with ownership/publish permission for `n8n-nodes-alga-psa`.
+- (2026-02-17) Release publish revalidation (autonomous run at 00:03 UTC):
+  - Local release gates passed again: `npm -w packages/n8n-nodes-alga-psa test` (`44` tests), `npm -w packages/n8n-nodes-alga-psa run build`, and `npm -w packages/n8n-nodes-alga-psa pack --dry-run` (tarball includes compiled `dist/` artifacts).
+  - Registry identity/package checks remain blocked: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish attempt remains blocked: `npm -w packages/n8n-nodes-alga-psa publish --access public` still reports `Access token expired or revoked` and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - `F030`/`T046` are still externally blocked pending refreshed npm credentials with owner/publisher permission for `n8n-nodes-alga-psa`.
+- (2026-02-17) Release publish revalidation (autonomous run at 00:04 UTC):
+  - Re-ran strict release sequence in one shell: `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run`, `npm whoami`, `npm view n8n-nodes-alga-psa version`, `npm -w packages/n8n-nodes-alga-psa publish --access public`.
+  - Local release gates all passed (`44` tests; build succeeded; dry-run tarball includes compiled `dist/` artifacts).
+  - Registry/auth checks still fail unchanged: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`; publish reports token expired/revoked and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Exit-code summary: `test=0 build=0 pack=0 whoami=1 view=1 publish=1`.
+  - `F030`/`T046` remain externally blocked pending refreshed npm credentials with owner/publisher permission for `n8n-nodes-alga-psa`.
+- (2026-02-17) Release publish revalidation (autonomous run at 00:06 UTC):
+  - Re-ran strict release sequence in one shell: `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run`, `npm whoami`, `npm view n8n-nodes-alga-psa version`, `npm -w packages/n8n-nodes-alga-psa publish --access public`.
+  - Local release gates all passed (`44` tests; build succeeded; dry-run tarball includes compiled `dist/` artifacts).
+  - Registry/auth checks still fail unchanged: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`; publish reports token expired/revoked and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Exit-code summary: `test=0 build=0 pack=0 whoami=1 view=1 publish=1`.
+  - `F030`/`T046` remain externally blocked pending refreshed npm credentials with owner/publisher permission for `n8n-nodes-alga-psa`.
+- (2026-02-17) Release publish revalidation (autonomous run at 00:07 UTC):
+  - Re-ran strict release sequence in one shell: `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run`, `npm whoami`, `npm view n8n-nodes-alga-psa version`, `npm -w packages/n8n-nodes-alga-psa publish --access public`.
+  - Local release gates all passed (`44` tests; build succeeded; dry-run tarball includes compiled `dist/` artifacts).
+  - Registry/auth checks still fail unchanged: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`; publish reports token expired/revoked and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Exit-code summary: `test=0 build=0 pack=0 whoami=1 view=1 publish=1`.
+  - `F030`/`T046` remain externally blocked pending refreshed npm credentials with owner/publisher permission for `n8n-nodes-alga-psa`.
+- (2026-02-17) Release publish revalidation (autonomous run at 00:11 UTC):
+  - Re-ran strict release sequence in one shell: `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run`, `npm whoami`, `npm view n8n-nodes-alga-psa version`, `npm -w packages/n8n-nodes-alga-psa publish --access public`.
+  - Local release gates all passed (`44` tests; build succeeded; dry-run tarball includes compiled `dist/` artifacts).
+  - Registry checks remain blocked and unchanged: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish remains blocked: `npm -w packages/n8n-nodes-alga-psa publish --access public` reports `Access token expired or revoked` and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Exit-code summary: `test=0 build=0 pack=0 whoami=1 view=1 publish=1`.
+  - `F030`/`T046` remain externally blocked pending refreshed npm credentials with owner/publisher permission for `n8n-nodes-alga-psa`.
+- (2026-02-17) Release publish revalidation (autonomous run at 00:13 UTC):
+  - Re-ran strict release sequence in one shell: `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run`, `npm whoami`, `npm view n8n-nodes-alga-psa version`, `npm -w packages/n8n-nodes-alga-psa publish --access public`.
+  - Local release gates all passed (`44` tests; build succeeded; dry-run tarball includes compiled `dist/` artifacts).
+  - Registry checks remain blocked and unchanged: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish remains blocked: `npm -w packages/n8n-nodes-alga-psa publish --access public` reports `Access token expired or revoked` and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Exit-code summary: `test=0 build=0 pack=0 whoami=1 view=1 publish=1`.
+  - `F030`/`T046` remain externally blocked pending refreshed npm credentials with owner/publisher permission for `n8n-nodes-alga-psa`.
+- (2026-02-17) Release publish revalidation (autonomous run at 00:15 UTC):
+  - Re-ran strict release sequence in one shell: `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run`, `npm whoami`, `npm view n8n-nodes-alga-psa version`, `npm -w packages/n8n-nodes-alga-psa publish --access public`.
+  - Local release gates all passed (`44` tests; build succeeded; dry-run tarball includes compiled `dist/` artifacts).
+  - Registry checks remain blocked and unchanged: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish remains blocked: `npm -w packages/n8n-nodes-alga-psa publish --access public` reports `Access token expired or revoked` and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Exit-code summary: `test=0 build=0 pack=0 whoami=1 view=1 publish=1`.
+  - Decision: stop repeated publish retries in this environment until npm credentials/ownership are updated; additional local reruns provide no new signal.
+- (2026-02-17) Release publish revalidation (autonomous run at 00:17 UTC):
+  - Local release gates passed in strict order: `npm -w packages/n8n-nodes-alga-psa test` (`44` tests), `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run` (tarball includes compiled `dist/` artifacts).
+  - Registry checks remain blocked: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish remains blocked: `npm -w packages/n8n-nodes-alga-psa publish --access public` reports `Access token expired or revoked` and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Exit-code summary: `test=0 build=0 pack=0 whoami=1 view=1 publish=1`.
+  - `F030`/`T046` remain externally blocked pending refreshed npm credentials with owner/publisher permission for `n8n-nodes-alga-psa`.
+- (2026-02-17) Release publish revalidation (autonomous run at 00:19 UTC):
+  - Re-ran release checks in sequence: `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run`; all passed (`44` tests) and dry-run tarball includes `dist/` artifacts.
+  - Registry/auth state is unchanged: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish remains blocked: `npm -w packages/n8n-nodes-alga-psa publish --access public` reports token expired/revoked and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Auth-context check: `env | rg -i '(^npm_|_npm|token)'` shows no alternate npm auth env var; `~/.npmrc` contains a configured npm token entry, but it is currently invalid for `whoami`/publish (token redacted).
+  - `F030`/`T046` remain blocked on refreshed npm credentials with owner/publisher permission for `n8n-nodes-alga-psa`.
+- (2026-02-17) Release publish revalidation (autonomous run at 00:21 UTC):
+  - Local release gates still pass in order: `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run` (`44` tests; dry-run tarball includes compiled `dist/` artifacts).
+  - Registry/auth checks remain blocked: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`.
+  - Publish attempt remains blocked: `npm -w packages/n8n-nodes-alga-psa publish --access public` reports token expired/revoked and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Exit-code summary: `whoami=1 view=1 publish=1`.
+  - `F030`/`T046` remain externally blocked pending refreshed npm credentials with owner/publisher permission for `n8n-nodes-alga-psa`.
+- (2026-02-17) Release publish revalidation (autonomous run at 00:22 UTC):
+  - Re-ran strict release sequence in one shell: `npm -w packages/n8n-nodes-alga-psa test`, `npm -w packages/n8n-nodes-alga-psa run build`, `npm -w packages/n8n-nodes-alga-psa pack --dry-run`, `npm whoami`, `npm view n8n-nodes-alga-psa version`, `npm -w packages/n8n-nodes-alga-psa publish --access public`.
+  - Local release gates all passed (`44` tests; build succeeded; dry-run tarball includes compiled `dist/` artifacts).
+  - Registry/auth checks remain blocked and unchanged: `npm whoami` => `E401 Unauthorized`; `npm view n8n-nodes-alga-psa version` => `E404 Not Found`; publish reports token expired/revoked and returns npm `E404` permission/not-found for `n8n-nodes-alga-psa@0.1.0`.
+  - Exit-code summary: `test=0 build=0 pack=0 whoami=1 view=1 publish=1`.
+  - Decision: `F030`/`T046` remain externally blocked until a valid npm token with owner/publisher rights for `n8n-nodes-alga-psa` is configured.

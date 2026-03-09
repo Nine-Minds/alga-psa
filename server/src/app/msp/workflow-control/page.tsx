@@ -1,5 +1,10 @@
 import { redirect } from 'next/navigation';
 import WorkflowAutomationGate from '../_components/WorkflowAutomationGate';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Workflow Control',
+};
 
 type WorkflowControlPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;

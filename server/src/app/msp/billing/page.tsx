@@ -5,6 +5,11 @@ import { getDocumentsByContractId } from '@alga-psa/documents/actions/documentAc
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import type { IDocument } from '@alga-psa/types';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Billing',
+};
 
 interface BillingPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;

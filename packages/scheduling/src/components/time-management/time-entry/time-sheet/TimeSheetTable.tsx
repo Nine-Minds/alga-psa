@@ -253,6 +253,7 @@ export function TimeSheetTable({
                                 variant="dashed"
                                 size="sm"
                                 onClick={onAddWorkItem}
+                                disabled={!isEditable}
                             >
                                 <Plus className="h-4 w-4 mr-1.5" />
                                 Add Item
@@ -436,11 +437,14 @@ export function TimeSheetTable({
                                             const isHovered = hoveredCell?.workItemId === workItem.work_item_id &&
                                                             hoveredCell?.date === formatISO(date, { representation: 'date' });
                                             const isTodayDate = isToday(date);
+                                            const canOpenCell = isEditable || dayEntries.length > 0;
 
 	                                            return (
 	                                                <td
 	                                                    key={formatISO(date)}
-	                                                    className={`px-3 py-3 text-sm text-gray-500 cursor-pointer border-r border-gray-200 transition-all relative h-20 ${
+	                                                    className={`px-3 py-3 text-sm text-gray-500 border-r border-gray-200 transition-all relative h-20 ${
+                                                            canOpenCell ? 'cursor-pointer' : 'cursor-default'
+                                                        } ${
 	                                                        isHovered && isEditable ? 'bg-gray-50' : ''
 	                                                    } hover:bg-gray-50 ${isTodayDate ? 'bg-[rgb(var(--color-primary-50))]/30' : ''} ${
 	                                                        isLastWorkItemRow ? '' : 'border-b border-gray-200'
@@ -453,7 +457,7 @@ export function TimeSheetTable({
                                                     })}
                                                     onMouseLeave={() => setHoveredCell(null)}
                                                     onClick={() => {
-                                                        if (!isEditable) return;
+                                                        if (!canOpenCell) return;
 
                                                         let startTime: Date | undefined;
                                                         let endTime: Date | undefined;

@@ -1,0 +1,75 @@
+{
+  "name": "Alga PSA - Search then Update Status",
+  "nodes": [
+    {
+      "parameters": {
+        "resource": "ticket",
+        "ticketOperation": "search",
+        "query": "outage",
+        "searchLimit": 10,
+        "searchAdditionalFields": {
+          "include_closed": false,
+          "fields": [
+            "title",
+            "ticket_number"
+          ]
+        }
+      },
+      "id": "750f4c43-c320-45d6-8dae-9f6d1b0c6e5b",
+      "name": "Search Tickets",
+      "type": "n8n-nodes-alga-psa.algaPsa",
+      "typeVersion": 1,
+      "position": [
+        340,
+        300
+      ],
+      "credentials": {
+        "algaPsaApi": {
+          "id": "1",
+          "name": "Alga PSA API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "ticket",
+        "ticketOperation": "updateStatus",
+        "ticketId": "={{$json.data[0].ticket_id}}",
+        "status_id": {
+          "mode": "id",
+          "value": "00000000-0000-0000-0000-000000000099"
+        }
+      },
+      "id": "4da61dd1-5edf-47ea-97fd-b6d0e477cb31",
+      "name": "Update Status",
+      "type": "n8n-nodes-alga-psa.algaPsa",
+      "typeVersion": 1,
+      "position": [
+        640,
+        300
+      ],
+      "credentials": {
+        "algaPsaApi": {
+          "id": "1",
+          "name": "Alga PSA API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Search Tickets": {
+      "main": [
+        [
+          {
+            "node": "Update Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "1d75dbcf-a9a4-495f-94dc-81e71b90a3f6"
+}

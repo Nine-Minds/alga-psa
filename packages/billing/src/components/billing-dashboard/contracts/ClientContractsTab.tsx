@@ -46,12 +46,7 @@ interface ClientContractsTabProps {
   refreshTrigger?: number;
 }
 
-type UpcomingRenewalBucketCounts = {
-  days0to30: number;
-  days31to60: number;
-  days61to90: number;
-};
-type UpcomingRenewalBucket = '0-30' | '31-60' | '61-90';
+type UpcomingRenewalWindow = '30' | '60' | '90' | 'all';
 type PendingUpcomingRenewalAction = Extract<RenewalQueueAction, 'mark_renewing' | 'mark_non_renewing'>;
 
 const getAvailableActionsForStatus = (status: RenewalQueueRow['status']): RenewalQueueAction[] => {
@@ -73,16 +68,6 @@ const getAvailableActionsForStatus = (status: RenewalQueueRow['status']): Renewa
 const toWidgetRenewalRows = (rows: RenewalQueueRow[]): RenewalQueueRow[] =>
   rows.filter((row) => row.contract_type === 'fixed-term' || row.contract_type === 'evergreen');
 
-const toUpcomingRenewalBucketCounts = (rows: RenewalQueueRow[]): UpcomingRenewalBucketCounts => ({
-  days0to30: rows.filter((row) => (row.days_until_due ?? Number.MAX_SAFE_INTEGER) <= 30).length,
-  days31to60: rows.filter(
-    (row) => (row.days_until_due ?? Number.MAX_SAFE_INTEGER) >= 31 && (row.days_until_due ?? 0) <= 60
-  ).length,
-  days61to90: rows.filter(
-    (row) => (row.days_until_due ?? Number.MAX_SAFE_INTEGER) >= 61 && (row.days_until_due ?? 0) <= 90
-  ).length,
-});
-
 const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded, refreshTrigger }) => {
   const router = useRouter();
   const [clientContracts, setClientContracts] = useState<IContractWithClient[]>([]);
@@ -93,14 +78,9 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
   const [isLoading, setIsLoading] = useState(true);
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [renewalsSearchTerm, setRenewalsSearchTerm] = useState('');
-  const [renewalsBucket, setRenewalsBucket] = useState<UpcomingRenewalBucket>('0-30');
+  const [renewalsWindow, setRenewalsWindow] = useState<UpcomingRenewalWindow>('30');
   const [contractsViewTab, setContractsViewTab] = useState('contracts');
   const [pendingUpcomingRenewalActions, setPendingUpcomingRenewalActions] = useState<Record<string, PendingUpcomingRenewalAction | undefined>>({});
-  const [upcomingRenewalBuckets, setUpcomingRenewalBuckets] = useState<UpcomingRenewalBucketCounts>({
-    days0to30: 0,
-    days31to60: 0,
-    days61to90: 0,
-  });
 
   useEffect(() => {
     void fetchClientContracts();
@@ -109,7 +89,6 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
   const syncRenewalRows = (rows: RenewalQueueRow[]) => {
     const rowsForWidget = toWidgetRenewalRows(rows);
     setRenewalRows(rowsForWidget);
-    setUpcomingRenewalBuckets(toUpcomingRenewalBucketCounts(rowsForWidget));
   };
 
   const refreshRenewalRows = async () => {
@@ -575,26 +554,18 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     },
   ];
 
-  const totalUpcomingRenewals =
-    upcomingRenewalBuckets.days0to30 +
-    upcomingRenewalBuckets.days31to60 +
-    upcomingRenewalBuckets.days61to90;
+  const totalUpcomingRenewals = renewalRows.length;
 
   const renewalBucketOptions: SelectOption[] = [
-    { value: '0-30', label: `0-30 days (${upcomingRenewalBuckets.days0to30})` },
-    { value: '31-60', label: `31-60 days (${upcomingRenewalBuckets.days31to60})` },
-    { value: '61-90', label: `61-90 days (${upcomingRenewalBuckets.days61to90})` },
+    { value: '30', label: 'Next 30 days' },
+    { value: '60', label: 'Next 60 days' },
+    { value: '90', label: 'Next 90 days' },
+    { value: 'all', label: 'All' },
   ];
 
   const filteredUpcomingRenewals = renewalRows.filter((row) => {
     const daysUntilDue = row.days_until_due ?? Number.MAX_SAFE_INTEGER;
-    if (renewalsBucket === '0-30' && (daysUntilDue < 0 || daysUntilDue > 30)) {
-      return false;
-    }
-    if (renewalsBucket === '31-60' && (daysUntilDue < 31 || daysUntilDue > 60)) {
-      return false;
-    }
-    if (renewalsBucket === '61-90' && (daysUntilDue < 61 || daysUntilDue > 90)) {
+    if (renewalsWindow !== 'all' && (daysUntilDue < 0 || daysUntilDue > Number(renewalsWindow))) {
       return false;
     }
 
@@ -725,7 +696,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                   <div>
                     <h3 className="text-sm font-semibold">Upcoming Renewals</h3>
                     <p className="text-xs text-[rgb(var(--color-text-500))]">
-                      Contracts with renewal decisions due in the next 90 days.
+                      Contracts with renewal decisions due within the selected window.
                     </p>
                   </div>
                   <div
@@ -735,8 +706,8 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                     <CustomSelect
                       id="upcoming-renewals-bucket-filter-select"
                       options={renewalBucketOptions}
-                      value={renewalsBucket}
-                      onValueChange={(value) => setRenewalsBucket(value as UpcomingRenewalBucket)}
+                      value={renewalsWindow}
+                      onValueChange={(value) => setRenewalsWindow(value as UpcomingRenewalWindow)}
                       placeholder="Select renewal window"
                     />
                   </div>

@@ -38,6 +38,17 @@ export class TimeEntryService extends BaseService<any> {
     });
   }
 
+  private assertServiceIdPresent(serviceId: string | null | undefined): void {
+    if (!serviceId) {
+      throw new ValidationError('Validation failed', [
+        {
+          path: ['service_id'],
+          message: 'service_id is required for time entries',
+        },
+      ]);
+    }
+  }
+
   protected applyFilters(query: Knex.QueryBuilder, filters: Record<string, any>): Knex.QueryBuilder {
     if (!filters) return query;
     
@@ -233,6 +244,8 @@ export class TimeEntryService extends BaseService<any> {
   async create(data: CreateTimeEntryData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
 
+    this.assertServiceIdPresent(data.service_id);
+
     if (data.work_item_type === 'ticket') {
       if (!data.work_item_id) {
         throw new ValidationError('Validation failed', [
@@ -396,6 +409,8 @@ export class TimeEntryService extends BaseService<any> {
       throw error;
     }
 
+    this.assertServiceIdPresent(data.service_id ?? existing.service_id);
+
     // Extract is_billable from data as it's not a database column
     const { is_billable, ...dataWithoutBillable } = data;
     const updateData: any = {
@@ -547,6 +562,8 @@ export class TimeEntryService extends BaseService<any> {
   // Time tracking sessions
   async startTimeTracking(data: StartTimeTrackingData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
+
+    this.assertServiceIdPresent(data.service_id);
     
     // Check for existing active session (time entry with null end_time)
     const existingSession = await knex(this.tableName)
@@ -613,6 +630,8 @@ export class TimeEntryService extends BaseService<any> {
     if (!session) {
       throw new Error('Active session not found');
     }
+
+    this.assertServiceIdPresent(data.service_id ?? session.service_id);
 
     const endTime = data.end_time ? new Date(data.end_time) : new Date();
     const startTime = new Date(session.start_time);

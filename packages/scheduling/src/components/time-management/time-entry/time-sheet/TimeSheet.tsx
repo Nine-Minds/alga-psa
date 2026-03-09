@@ -688,7 +688,7 @@ export function TimeSheet({
                 />
             )}
 
-            {selectedCell && effectiveIsEditable && timeSheet.time_period && (
+            {selectedCell && timeSheet.time_period && (
                 <TimeEntryDialog
                     id="time-entry-dialog"
                     isOpen={true}
@@ -700,7 +700,7 @@ export function TimeSheet({
                         ...entry,
                     }))}
                     timePeriod={timeSheet.time_period}
-                    isEditable={isEditable}
+                    isEditable={effectiveIsEditable}
                     defaultEndTime={selectedCell.defaultEndTime ? parseISO(selectedCell.defaultEndTime) : undefined}
                     defaultStartTime={selectedCell.defaultStartTime ? parseISO(selectedCell.defaultStartTime) : undefined}
                     timeSheetId={timeSheet.id}

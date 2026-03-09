@@ -175,8 +175,6 @@ export function TimeSheetListView({
     };
 
     const handleEntryClick = (flatEntry: FlattenedEntry) => {
-        if (!isEditable) return;
-
         const { entry, workItem } = flatEntry;
         const dateStr = entry.work_date || formatISO(parseISO(entry.start_time), { representation: 'date' });
 
@@ -272,6 +270,7 @@ export function TimeSheetListView({
                                         id="get-started-button-list"
                                         variant="link"
                                         onClick={onAddWorkItem}
+                                        disabled={!isEditable}
                                     >
                                         Get Started
                                         <ArrowRight className="w-4 h-4 ml-1" />
@@ -388,7 +387,7 @@ export function TimeSheetListView({
                                                             return (
                                                                 <tr
                                                                     key={`${entry.entry_id}-${index}`}
-                                                                    className={`group bg-white hover:bg-gray-50 ${isEditable ? 'cursor-pointer' : ''}`}
+                                                                    className="group bg-white hover:bg-gray-50 cursor-pointer"
                                                                     onClick={() => handleEntryClick(flatEntry)}
                                                                     data-automation-id={`time-entry-row-${entry.entry_id}`}
                                                                 >
