@@ -316,7 +316,7 @@ export const addContact = withAuth(async (
   const createInput: CreateContactInput = {
     full_name: contactData.full_name || '',
     email: contactData.email ?? undefined,
-    phone_numbers: contactData.phone_numbers ?? buildDefaultPhoneNumbers((contactData as any).phone_number),
+    phone_numbers: contactData.phone_numbers ?? [],
     client_id: contactData.client_id || undefined,
     role: contactData.role ?? undefined,
     notes: contactData.notes || undefined,
@@ -448,7 +448,7 @@ export const updateContact = withAuth(async (
       const updated = await ContactModel.updateContact(contactData.contact_name_id!, {
         full_name: contactData.full_name,
         client_id: contactData.client_id === '' ? undefined : contactData.client_id || undefined,
-        phone_numbers: contactData.phone_numbers ?? ('phone_number' in contactData ? buildDefaultPhoneNumbers((contactData as any).phone_number) : undefined),
+        phone_numbers: contactData.phone_numbers,
         email: contactData.email ?? undefined,
         role: contactData.role ?? undefined,
         notes: contactData.notes ?? undefined,

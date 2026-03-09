@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildInboundEmailReplyReceivedPayload } from '../streams/domainEventBuilders/inboundEmailReplyEventBuilders';
 import { normalizeEmailAddress } from '../../lib/email/addressUtils';
+import { ContactModel } from '../../models/contactModel';
 import {
   mergeTicketWatchListRecipients,
   parseTicketWatchListAttributes,
@@ -46,6 +47,28 @@ const OVERSIZED_WORD_PATTERN = /\b\w{200,}\b/g;
 const FALLBACK_INDEX_SAFE_COMMENT_MAX_CHARS = 500_000;
 const EMPTY_FALLBACK_COMMENT =
   '[Inbound email content trimmed due to indexing limits. See attachments for full message content.]';
+
+function buildDefaultPhoneNumbers(phone?: string) {
+  const trimmedPhone = phone?.trim();
+  if (!trimmedPhone) {
+    return [];
+  }
+
+  return [{
+    phone_number: trimmedPhone,
+    canonical_type: 'work' as const,
+    is_default: true,
+    display_order: 0,
+  }];
+}
+
+function getDefaultPhoneNumber(contact: {
+  default_phone_number?: string | null;
+  phone_numbers: Array<{ is_default: boolean; phone_number: string }>;
+}): string | undefined {
+  return contact.default_phone_number
+    || contact.phone_numbers.find((phoneNumber) => phoneNumber.is_default)?.phone_number;
+}
 
 function isTsvectorOverflowError(error: unknown): boolean {
   const message =
@@ -227,6 +250,7 @@ export async function findContactByEmail(
   const contact = await withAdminTransaction(async (trx: Knex.Transaction) => {
       const candidates = await trx('contacts')
         .select(
+          'contacts.contact_name_id',
           'contacts.contact_name_id as contact_id',
           'contacts.full_name as name',
           'contacts.email',
@@ -240,7 +264,6 @@ export async function findContactByEmail(
             .limit(1)
             .as('user_id'),
           'clients.client_name',
-          'contacts.phone_number as phone',
           'contacts.role as title'
         )
         .leftJoin('clients', function() {
@@ -258,10 +281,19 @@ export async function findContactByEmail(
         return null;
       }
 
-      const normalizeCandidate = (candidate: any): FindContactByEmailOutput => ({
-        ...candidate,
-        user_id: candidate?.user_id ?? undefined,
-      });
+      const hydratedCandidates = await ContactModel.hydrateContactsWithPhoneNumbers(candidates as any[], tenant, trx);
+      const candidatesById = new Map(
+        hydratedCandidates.map((candidate: any) => [candidate.contact_name_id, candidate])
+      );
+
+      const normalizeCandidate = (candidate: any): FindContactByEmailOutput => {
+        const hydrated = candidatesById.get(candidate.contact_id) ?? candidate;
+        return {
+          ...candidate,
+          phone: getDefaultPhoneNumber(hydrated),
+          user_id: candidate?.user_id ?? undefined,
+        };
+      };
 
       let ticketClientId = context.ticketClientId ?? null;
       let ticketContactId = context.ticketContactId ?? null;
@@ -634,51 +666,37 @@ export async function createOrFindContact(
 
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
       // First try to find existing contact
-      const existingContact = await trx('contacts')
-        .where({
-          email: normalizedEmail,
-          client_id: input.client_id,
-          tenant
-        })
-        .first();
+      const existingContact = await ContactModel.getContactByEmail(normalizedEmail, tenant, trx);
 
-      if (existingContact) {
+      if (existingContact && existingContact.client_id === input.client_id) {
         return {
           id: existingContact.contact_name_id,
           name: existingContact.full_name,
-          email: existingContact.email,
+          email: existingContact.email || normalizedEmail,
           client_id: existingContact.client_id,
-          phone: existingContact.phone_number,
-          title: existingContact.role,
+          phone: getDefaultPhoneNumber(existingContact),
+          title: existingContact.role || undefined,
           created_at: existingContact.created_at ? new Date(existingContact.created_at).toISOString() : new Date().toISOString(),
           is_new: false
         };
       }
 
-      // Create new contact
-      const contactId = uuidv4();
-      const now = new Date();
-
-      await trx('contacts').insert({
-        contact_name_id: contactId,
-        tenant,
+      const createdContact = await ContactModel.createContact({
         full_name: input.name || normalizedEmail,
         email: normalizedEmail,
         client_id: input.client_id,
-        phone_number: input.phone,
+        phone_numbers: buildDefaultPhoneNumbers(input.phone),
         role: input.title,
-        created_at: now,
-        updated_at: now
-      });
+      }, tenant, trx);
 
       return {
-        id: contactId,
-        name: input.name || normalizedEmail,
-        email: normalizedEmail,
-        client_id: input.client_id,
-        phone: input.phone,
-        title: input.title,
-        created_at: now.toISOString(),
+        id: createdContact.contact_name_id,
+        name: createdContact.full_name,
+        email: createdContact.email || normalizedEmail,
+        client_id: createdContact.client_id || input.client_id,
+        phone: getDefaultPhoneNumber(createdContact),
+        title: createdContact.role || input.title,
+        created_at: createdContact.created_at ? new Date(createdContact.created_at).toISOString() : new Date().toISOString(),
         is_new: true
       };
     });

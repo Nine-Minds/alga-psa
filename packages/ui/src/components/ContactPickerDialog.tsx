@@ -85,6 +85,12 @@ const ContactPickerDialog = ({
     setFilteredContacts(filtered);
   }, [contacts, searchTerm, prefilledClientId]);
 
+  const getDefaultPhoneNumber = (contact: IContact): string => (
+    contact.default_phone_number
+    || contact.phone_numbers.find((phoneNumber) => phoneNumber.is_default)?.phone_number
+    || ''
+  );
+
   const columns: ColumnDefinition<IContact>[] = [
     {
       title: 'Name',
@@ -108,7 +114,8 @@ const ContactPickerDialog = ({
     },
     {
       title: 'Phone',
-      dataIndex: 'phone_number',
+      dataIndex: 'default_phone_number',
+      render: (_, record) => getDefaultPhoneNumber(record),
     },
     {
       title: 'Action',

@@ -52,6 +52,25 @@ const TICKET_LIST_FIELD_ALLOWLIST = new Set<string>([
   'mobile_list',
 ]);
 
+function applyDefaultContactPhoneJoin(
+  query: Knex.QueryBuilder,
+  knex: Knex,
+  ticketAlias = 't',
+  contactAlias = 'cont',
+  phoneAlias = 'cpn_default'
+): Knex.QueryBuilder {
+  return query
+    .leftJoin(`contacts as ${contactAlias}`, function joinContacts() {
+      this.on(`${ticketAlias}.contact_name_id`, '=', `${contactAlias}.contact_name_id`)
+        .andOn(`${ticketAlias}.tenant`, '=', `${contactAlias}.tenant`);
+    })
+    .leftJoin(`contact_phone_numbers as ${phoneAlias}`, function joinDefaultContactPhone() {
+      this.on(`${contactAlias}.contact_name_id`, '=', `${phoneAlias}.contact_name_id`)
+        .andOn(`${contactAlias}.tenant`, '=', `${phoneAlias}.tenant`)
+        .andOn(`${phoneAlias}.is_default`, '=', knex.raw('true'));
+    });
+}
+
 export class TicketService extends BaseService<ITicket> {
   constructor() {
     super({
@@ -267,10 +286,7 @@ export class TicketService extends BaseService<ITicket> {
                   });
             });
       })
-      .leftJoin('contacts as cont', function() {
-        this.on('t.contact_name_id', '=', 'cont.contact_name_id')
-            .andOn('t.tenant', '=', 'cont.tenant');
-      })
+      .modify((queryBuilder) => applyDefaultContactPhoneJoin(queryBuilder, knex))
       .leftJoin('statuses as stat', function() {
         this.on('t.status_id', '=', 'stat.status_id')
             .andOn('t.tenant', '=', 'stat.tenant');
@@ -294,7 +310,7 @@ export class TicketService extends BaseService<ITicket> {
         'cl.phone as client_phone',
         'cont.full_name as contact_name',
         'cont.email as contact_email',
-        'cont.phone_number as contact_phone',
+        'cpn_default.phone_number as contact_phone',
         'stat.name as status_name',
         'stat.is_closed as status_is_closed',
         'pri.priority_name',

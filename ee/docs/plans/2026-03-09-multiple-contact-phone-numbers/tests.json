@@ -206,19 +206,19 @@
   {
     "id": "T035",
     "description": "Regression: contact test factories and seed helpers can create contacts with normalized phone rows without writing `contacts.phone_number` directly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   },
   {
     "id": "T036",
     "description": "DB-backed integration: after application cutover, contact create/update/read flows succeed without reading or writing `contacts.phone_number`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {
     "id": "T037",
     "description": "Migration: after Migration B, the schema no longer contains `contacts.phone_number` and the migrated application test suite still passes for contact flows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006", "F024"]
   }
 ]

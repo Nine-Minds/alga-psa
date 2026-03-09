@@ -42,8 +42,8 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-09) This worktree’s `.env.localtest` points at `localhost:5438`, but the active local Postgres for integration tests is the Docker container exposed on `localhost:55433` with `postgres` / `app_user` passwords from `secrets/postgres_password` and `secrets/db_password_server` (`postpass123`).
 - (2026-03-09) `shared/vitest.config.ts` only discovers tests under `services/**/*.test.ts` and `**/__tests__/**/*.test.ts`, so shared validation tests for this work need to live in `shared/**/__tests__/`.
 - (2026-03-09) The existing shared workflow builder tests import `buildWorkflowPayload` through a package re-export that resolves the published `@alga-psa/event-schemas` entry. In this worktree, the reliable local path is `packages/event-schemas/src/schemas/workflowEventPublishHelpers.ts`.
-- (2026-03-09) `F006` remains intentionally blocked behind `F024`: Migration B cannot land until all remaining app-level readers/writers of `contacts.phone_number` are removed, including UI/ticket/import/Entra/test-factory consumers.
 - (2026-03-09) `server/vitest.config.ts` needed local source aliases for `@alga-psa/clients` and `@alga-psa/user-composition` so server-side Vitest contract tests could import unbuilt package source files directly from the monorepo.
+- (2026-03-09) `npx tsc -p shared/tsconfig.json --noEmit` still fails because the shared TypeScript program pulls in `packages/event-schemas/src/schemas/workflowEventPublishHelpers.ts` outside its configured `rootDir`; that pre-existing config issue is unrelated to the contact-phone cutover.
 
 ## Commands / Runbooks
 
@@ -80,6 +80,11 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-09) Run the Entra normalized-phone coverage:
   - `npx tsc -p ee/server/tsconfig.json --noEmit`
   - `cd ee/server && npx vitest run src/__tests__/unit/entraContactFieldSync.test.ts src/__tests__/unit/entraContactReconciler.test.ts --coverage=false`
+- (2026-03-09) Run the contact helper/seed normalized-phone regression:
+  - `cd server && DB_PORT=55433 DB_PASSWORD_ADMIN=postpass123 DB_PASSWORD_SERVER=postpass123 DB_USER_ADMIN=postgres DB_USER_SERVER=app_user npx vitest run src/test/integration/contactTestHelpersPhoneRows.integration.test.ts --coverage=false`
+- (2026-03-09) Validate the post-cutover server slice and Migration B coverage:
+  - `npx tsc -p server/tsconfig.json --noEmit`
+  - `cd server && DB_PORT=55433 DB_PASSWORD_ADMIN=postpass123 DB_PASSWORD_SERVER=postpass123 DB_USER_ADMIN=postgres DB_USER_SERVER=app_user npx vitest run src/test/integration/contactPhoneColumnCutover.integration.test.ts src/test/unit/migrations/contactPhoneNumbersCutoverMigration.test.ts --coverage=false`
 
 ## Links / References
 
@@ -148,3 +153,21 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-09) Completed `T033` and `T034` with `ee/server/src/__tests__/unit/entraContactFieldSync.test.ts` and `ee/server/src/__tests__/unit/entraContactReconciler.test.ts`.
   - The Entra field-sync tests verify `mobilePhone` becomes canonical `mobile`, `businessPhones[]` become canonical `work`, and the first business phone wins default precedence over mobile.
   - The Entra reconciler tests verify the create path passes normalized `phone_numbers` into `ContactModel.createContact(...)` and linked-contact phone sync uses `ContactModel.updateContact(...)` with the same normalized mapping.
+- (2026-03-09) Completed `F023` by updating contact-facing seeds, factories, and E2E helpers to create normalized phone rows.
+  - `server/seeds/dev/05_contacts.cjs` now inserts contacts without the legacy scalar field and seeds one default `contact_phone_numbers` row per contact.
+  - `server/src/test/e2e/factories/contact.factory.ts` and `server/src/test/e2e/utils/contactTestDataFactory.ts` now create contacts through `ContactModel.createContact(...)`, which leaves `contacts.phone_number` empty while writing normalized child rows.
+  - `server/src/test/e2e/api/contacts.e2e.test.ts` and `server/src/test/e2e/utils/clientTestData.ts` now use the normalized `phone_numbers` shape instead of scalar contact phones in their generated contact payloads.
+- (2026-03-09) Completed `T035` with `server/src/test/integration/contactTestHelpersPhoneRows.integration.test.ts`.
+  - The integration suite verifies the E2E contact factory and contact test data helper leave `contacts.phone_number` null while creating default `contact_phone_numbers` rows.
+  - The same suite contract-checks the dev contacts seed for normalized default phone inserts.
+- (2026-03-09) Completed `F024` by removing the remaining application-level reads and writes of `contacts.phone_number`.
+  - `shared/ticketClients/contacts.ts`, `shared/services/emailService.ts`, and `shared/workflow/actions/emailWorkflowActions.ts` now hydrate contact phones through `ContactModel` and derive the default phone from normalized child rows instead of selecting the legacy scalar field.
+  - `packages/integrations/src/actions/clientLookupActions.ts`, `packages/integrations/src/actions/email-actions/emailActions.ts`, `packages/ui/src/components/ContactPickerDialog.tsx`, `server/src/lib/api/services/TicketService.ts`, and `server/src/lib/eventBus/subscribers/ticketEmailSubscriber.ts` now read or display the default contact phone from `contact_phone_numbers`.
+  - `packages/clients/src/actions/contact-actions/contactActions.tsx` no longer falls back to writing scalar `phone_number` values in the main contact create/update flows after the normalized model cutover.
+- (2026-03-09) Completed `T036` with `server/src/test/integration/contactPhoneColumnCutover.integration.test.ts`.
+  - The DB-backed suite drops `contacts.phone_number` against the live test schema and verifies `ContactService.create(...)`, `update(...)`, and `getById(...)` continue to work through normalized phone rows only.
+- (2026-03-09) Completed `F006` with `server/migrations/20260309183000_drop_contacts_phone_number_column.cjs`.
+  - Migration B now drops `contacts.phone_number` once the app no longer depends on it, and restores the column on rollback so the rollout remains reversible.
+- (2026-03-09) Completed `T037` with `server/src/test/integration/contactPhoneColumnCutover.integration.test.ts` and `server/src/test/unit/migrations/contactPhoneNumbersCutoverMigration.test.ts`.
+  - The migration contract test asserts the new migration explicitly drops and restores `contacts.phone_number`.
+  - The integration coverage verifies contact create/update/read flows still pass after applying Migration B and before rolling it back.

@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "Drop the legacy `contacts.phone_number` column in Migration B after the application cutover is complete.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-023", "Rollout / Migration"]
   },
   {
@@ -134,13 +134,13 @@
   {
     "id": "F023",
     "description": "Update contact-related test factories, fixtures, seeds, and helper utilities to create normalized phone rows instead of scalar phone fields.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-022", "Acceptance Criteria"]
   },
   {
     "id": "F024",
     "description": "Remove remaining application reads and writes of `contacts.phone_number` once all contact-domain code paths have been cut over.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-022", "Acceptance Criteria"]
   }
 ]
