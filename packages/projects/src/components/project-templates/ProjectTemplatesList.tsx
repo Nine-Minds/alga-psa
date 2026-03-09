@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import { IProjectTemplate } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { ColumnDefinition } from '@alga-psa/types';
 import { getTemplates, getTemplateCategories, deleteTemplate } from '../../actions/projectTemplateActions';
 import CreateTemplateDialog from './CreateTemplateDialog';
@@ -42,6 +43,7 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showApplyDialog, setShowApplyDialog] = useState(false);
   const [selectedTemplateForApply, setSelectedTemplateForApply] = useState<IProjectTemplate | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ templateId: string; templateName: string } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   const {
@@ -78,17 +80,16 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
     }
   }
 
-  async function handleDelete(templateId: string) {
-    if (!confirm('Are you sure you want to delete this template?')) {
-      return;
-    }
-
+  async function handleDelete() {
+    if (!deleteConfirmation) return;
     try {
-      await deleteTemplate(templateId);
+      await deleteTemplate(deleteConfirmation.templateId);
       toast.success('Template deleted successfully');
       loadData();
     } catch (error) {
       handleError(error, 'Failed to delete template');
+    } finally {
+      setDeleteConfirmation(null);
     }
   }
 
@@ -168,7 +169,7 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
               Apply Template
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => handleDelete(row.template_id)}
+              onClick={() => setDeleteConfirmation({ templateId: row.template_id, templateName: row.template_name })}
               className="text-destructive"
             >
               <Trash className="mr-2 h-4 w-4" />
@@ -182,6 +183,18 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
 
   return (
     <>
+      {deleteConfirmation && (
+        <ConfirmationDialog
+          isOpen={true}
+          onClose={() => setDeleteConfirmation(null)}
+          onConfirm={handleDelete}
+          title="Delete Template"
+          message={`Are you sure you want to delete template "${deleteConfirmation.templateName}"? This action cannot be undone.`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+        />
+      )}
+
       {showCreateDialog && (
         <CreateTemplateDialog
           onClose={() => setShowCreateDialog(false)}
