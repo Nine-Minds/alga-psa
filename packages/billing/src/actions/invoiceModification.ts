@@ -15,7 +15,6 @@ import { BillingEngine } from '../lib/billing/billingEngine';
 import { persistInvoiceCharges, persistManualInvoiceCharges } from '../services/invoiceService'; // Import persistManualInvoiceCharges
 import Invoice from '@alga-psa/billing/models/invoice';
 import { v4 as uuidv4 } from 'uuid';
-import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core'; // Import runtime getter via package export
 // import { getRedisStreamClient } from '@alga-psa/shared/workflow/streams/redisStreamClient'; // No longer directly used here
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {

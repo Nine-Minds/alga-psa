@@ -8,4 +8,4 @@ export * from './client-projects';
 export * from './client-tickets';
 export * from './clientUserActions';
 export * from './dashboard';
-
+export * from './notificationActivities';

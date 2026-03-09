@@ -953,14 +953,23 @@ describe('Email attachment ingestion (workflow-worker action override)', () => {
 });
 
 async function createRegisteredAttachmentActions(): Promise<Record<string, { execute: (params: any, context: any) => Promise<any> }>> {
-  const { ActionRegistry } = await import('@shared/workflow/core/actionRegistry');
   const workflowWorkerModulePath =
     '../../../../' + 'services/workflow-worker/src/actions/registerEmailAttachmentActions';
   const { registerEmailAttachmentActions } = await import(workflowWorkerModulePath);
 
-  const registry = new ActionRegistry();
+  const actions = new Map<string, { execute: (params: any, context: any) => Promise<any> }>();
+  const registry = {
+    registerSimpleAction(
+      name: string,
+      _description: string,
+      _parameters: Array<{ name: string; type: string; required: boolean; description?: string }>,
+      executeFn: (params: any, context: any) => Promise<any>
+    ) {
+      actions.set(name, { execute: executeFn });
+    }
+  };
   registerEmailAttachmentActions(registry);
-  return registry.getRegisteredActions() as any;
+  return Object.fromEntries(actions.entries()) as any;
 }
 
 async function createAttachmentAction(): Promise<{ action: { execute: (params: any, context: any) => Promise<any> } }> {

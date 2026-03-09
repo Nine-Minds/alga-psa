@@ -17,7 +17,7 @@ import { useMappingPositions } from './useMappingPositions';
 import { MappingConnectionsOverlay, type ConnectionData } from './MappingConnectionsOverlay';
 import { TypeCompatibility, getTypeCompatibility, inferTypeFromJsonSchema } from './typeCompatibility';
 import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import type { Expr, InputMapping } from '@shared/workflow/runtime';
+import type { Expr, InputMapping } from '@shared/workflow/runtime/client';
 import type { ExpressionContext, JsonSchema } from '../expression-editor';
 
 /**

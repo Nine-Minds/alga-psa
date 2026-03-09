@@ -7,30 +7,24 @@ import logger from '@alga-psa/core/logger';
 
 export async function getCurrentUser(): Promise<IUserWithRoles | null> {
   try {
-    logger.debug('Getting current user from session');
     const session = await getSession();
 
     if (!session?.user) {
-      logger.debug('No user found in session');
       return null;
     }
 
     // Use the user ID from the session if available (most reliable)
     const sessionUser = session.user as any;
     if (sessionUser.id && sessionUser.tenant) {
-      logger.debug(`Using user ID from session: ${sessionUser.id}, tenant: ${sessionUser.tenant}`);
-
       const userWithRoles = await getUserWithRoles(
         sessionUser.id,
         sessionUser.tenant
       );
 
       if (!userWithRoles) {
-        logger.debug(`User not found for ID: ${sessionUser.id} in tenant: ${sessionUser.tenant}`);
         return null;
       }
 
-      logger.debug(`Current user retrieved successfully: ${userWithRoles.user_id} with ${userWithRoles.roles?.length || 0} roles`);
       return userWithRoles;
     }
 
@@ -42,7 +36,6 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
 
     // Development-only fallbacks with warnings
     if (!session.user.email) {
-      logger.debug('No user email found in session');
       return null;
     }
 
@@ -61,8 +54,6 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
 
     // If we have user type in session, use it for more accurate lookup
     if (sessionUser.user_type && session.user?.email) {
-      logger.debug(`Looking up user by email and type: ${session.user.email}, ${sessionUser.user_type}, tenant: ${tenant}`);
-
       const userWithRoles = await getUserWithRolesByEmail(
         session.user.email,
         tenant,
@@ -70,11 +61,9 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
       );
 
       if (!userWithRoles) {
-        logger.debug(`User not found for email: ${session.user.email}, type: ${sessionUser.user_type}, tenant: ${tenant}`);
         return null;
       }
 
-      logger.debug(`Current user retrieved successfully: ${userWithRoles.user_id} with ${userWithRoles.roles?.length || 0} roles`);
       return userWithRoles;
     }
 
@@ -93,11 +82,9 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
     );
 
     if (!userWithRoles) {
-      logger.debug(`User not found for email: ${session.user.email} in tenant: ${tenant}`);
       return null;
     }
 
-    logger.debug(`Current user retrieved successfully: ${userWithRoles.user_id} with ${userWithRoles.roles?.length || 0} roles`);
     return userWithRoles;
   } catch (error) {
     logger.error('Failed to get current user:', error);

@@ -28,8 +28,6 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import EntryPopup from '@alga-psa/scheduling/components/schedule/EntryPopup';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { QuickAddTicket } from '@alga-psa/tickets/components';
-import { ITicket } from '@alga-psa/types';
 
 enableMapSet();
 
@@ -89,7 +87,6 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   const [totalItems, setTotalItems] = useState(0);
   const ITEMS_PER_PAGE = 10;
   const [showInactiveUsers, setShowInactiveUsers] = useState<boolean>(false);
-  const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState<boolean>(false);
 
   // Permission states
   const [canView, setCanView] = useState<boolean | null>(null);
@@ -701,11 +698,6 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
     );
   }, [openDrawer, closeDrawer, refreshAllData, events, updateScheduleEntry, addScheduleEntry]);
 
-  const handleTicketAdded = useCallback(async (ticket: ITicket) => {
-    await refreshAllData();
-    toast.success('Ticket created successfully');
-  }, [refreshAllData]);
-
   const handleEventClick = useCallback(async (event: Omit<IScheduleEntry, 'tenant'>) => {
     try {
       // Check if this is a private event that the user doesn't own
@@ -912,7 +904,6 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
           canEdit={canEdit ?? false}
           showInactiveUsers={showInactiveUsers}
           onShowInactiveUsersChange={setShowInactiveUsers}
-          onQuickAddTicket={() => setIsQuickAddTicketOpen(true)}
         />
       </div>
 
@@ -938,13 +929,6 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
           />
         </div>
       )}
-
-      {/* Quick Add Ticket Dialog */}
-      <QuickAddTicket
-        open={isQuickAddTicketOpen}
-        onOpenChange={setIsQuickAddTicketOpen}
-        onTicketAdded={handleTicketAdded}
-      />
     </div>
   );
 };

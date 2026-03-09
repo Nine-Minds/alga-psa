@@ -16,7 +16,7 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { getAllUsersBasic, getCurrentUser, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { getAllClients } from '@alga-psa/clients/actions';
+import { getSchedulingClients } from '../../../../actions/clientInteractionLookupActions';
 import { IClient } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 
@@ -122,7 +122,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
       try {
         const [fetchedUsers, fetchedClients] = await Promise.all([
           getAllUsersBasic(),
-          getAllClients()
+          getSchedulingClients()
         ]);
         setUsers(fetchedUsers);
         setClients(fetchedClients);

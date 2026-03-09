@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { getEligibleContractLinesForUI, getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
-import { getClientById } from '@alga-psa/clients/actions';
+import { getSchedulingClientById } from '../../../../actions/clientInteractionLookupActions';
 import { formatISO, parseISO, addMinutes, setHours, setMinutes, setSeconds } from 'date-fns';
 import { IService } from '@alga-psa/types';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -177,7 +177,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       // 1. Fetch Client Details (if clientId exists) - Still needed for plan logic
       if (clientId) {
         try {
-          clientDetails = await getClientById(clientId);
+          clientDetails = await getSchedulingClientById(clientId);
           console.log('Fetched client details:', clientDetails);
         } catch (error) {
           console.error('Error fetching client details:', error);

@@ -75,16 +75,6 @@ vi.mock('@alga-psa/core/logger', () => ({
   },
 }));
 
-vi.mock('@alga-psa/shared/workflow/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/shared/workflow/core')>();
-  return {
-    ...actual,
-    getWorkflowRuntime: vi.fn(() => ({
-      enqueueEvent: vi.fn(async () => {})
-    }))
-  };
-});
-
 vi.mock('server/src/lib/eventBus', () => ({
   getEventBus: () => ({
     publish: vi.fn(async () => {})

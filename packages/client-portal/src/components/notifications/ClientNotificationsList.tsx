@@ -5,16 +5,17 @@ import { useSearchParams } from 'next/navigation';
 import { ActivityFilters, NotificationActivity } from "@alga-psa/types";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Card } from "@alga-psa/ui/components/Card";
-import { NotificationCard } from "@alga-psa/workflows/components";
-import { fetchNotificationActivities } from "@alga-psa/workflows/actions";
-import { NotificationSectionFiltersDialog } from "@alga-psa/workflows/components";
+import { fetchNotificationActivities } from "@alga-psa/client-portal/actions";
 import { Filter, XCircle } from 'lucide-react';
-import { useActivityDrawer } from "@alga-psa/workflows/components";
 import { getUnreadCountAction } from "@alga-psa/notifications/actions";
+import { NotificationDetailView } from "@alga-psa/notifications/components";
 import { getCurrentUser } from "@alga-psa/user-composition/actions";
 import { Badge } from "@alga-psa/ui/components/Badge";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
+import { useDrawer } from '@alga-psa/ui';
+import { ClientNotificationCard } from './ClientNotificationCard';
+import { ClientNotificationFiltersDialog } from './ClientNotificationFiltersDialog';
 
 // Map URL slugs to tab keys (language-independent)
 const TAB_SLUG_MAP: Record<string, string> = {
@@ -68,7 +69,7 @@ export function ClientNotificationsList() {
 
   const [activities, setActivities] = useState<NotificationActivity[]>([]);
   const [loading, setLoading] = useState(true);
-  const { openActivityDrawer } = useActivityDrawer();
+  const { openDrawer, closeDrawer } = useDrawer();
   const [error, setError] = useState<string | null>(null);
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(initialTab);
@@ -157,6 +158,15 @@ export function ClientNotificationsList() {
     loadActivities(notificationFilters);
     loadUnreadCount();
   };
+
+  const handleOpenNotification = useCallback((activity: NotificationActivity) => {
+    openDrawer(
+      <NotificationDetailView
+        notification={activity}
+        onClose={() => closeDrawer()}
+      />
+    );
+  }, [closeDrawer, openDrawer]);
 
   const handleApplyFilters = (newFilters: Partial<ActivityFilters>) => {
     setNotificationFilters(prevFilters => ({
@@ -252,11 +262,11 @@ export function ClientNotificationsList() {
     return (
       <div className="grid grid-cols-1 gap-4">
         {activities.map(activity => (
-          <NotificationCard
+          <ClientNotificationCard
             key={activity.id}
             activity={activity}
-            onViewDetails={() => openActivityDrawer(activity)}
             onActionComplete={handleRefresh}
+            onOpen={handleOpenNotification}
           />
         ))}
       </div>
@@ -343,7 +353,7 @@ export function ClientNotificationsList() {
         />
 
         {isFilterDialogOpen && (
-          <NotificationSectionFiltersDialog
+          <ClientNotificationFiltersDialog
             isOpen={isFilterDialogOpen}
             onOpenChange={setIsFilterDialogOpen}
             initialFilters={notificationFilters}

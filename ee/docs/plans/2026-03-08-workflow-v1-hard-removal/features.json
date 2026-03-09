@@ -1,0 +1,97 @@
+[
+  {
+    "id": "F001",
+    "description": "Remove the template-library tab and all remaining workflow-v1 navigation entry points from workflow control and related workflow surfaces.",
+    "implemented": false
+  },
+  {
+    "id": "F002",
+    "description": "Delete the legacy workflow v1 template-library React components and related workflow-editor UI components that only operate on AssemblyScript workflows.",
+    "implemented": false
+  },
+  {
+    "id": "F003",
+    "description": "Remove legacy workflow-editor, workflow-runtime, and template-library action exports from the shared workflows action barrel.",
+    "implemented": false
+  },
+  {
+    "id": "F004",
+    "description": "Delete the legacy workflow v1 action modules that operate on workflow registration/version/template tables.",
+    "implemented": false
+  },
+  {
+    "id": "F005",
+    "description": "Remove remaining component imports and callsites that depend on workflow-editor-actions or template-library-actions.",
+    "implemented": false
+  },
+  {
+    "id": "F006",
+    "description": "Remove remaining server-side callsites of getWorkflowRuntime() that are only used by workflow v1 features.",
+    "implemented": false
+  },
+  {
+    "id": "F007",
+    "description": "Delete the legacy shared workflow runtime under shared/workflow/core and its singleton bootstrap entrypoints.",
+    "implemented": false
+  },
+  {
+    "id": "F008",
+    "description": "Delete the legacy workflow init/registration path under shared/workflow/init and stop invoking it during app startup.",
+    "implemented": false
+  },
+  {
+    "id": "F009",
+    "description": "Delete legacy shared persistence helpers under shared/workflow/persistence that only serve workflow v1 execution and event-sourcing tables.",
+    "implemented": false
+  },
+  {
+    "id": "F010",
+    "description": "Remove workflow-v1-only integration codepaths that directly query or depend on workflow_executions or the legacy runtime.",
+    "implemented": false
+  },
+  {
+    "id": "F011",
+    "description": "Remove workflow-v1-only event attachment and visualization codepaths that depend on legacy registration/version tables.",
+    "implemented": false
+  },
+  {
+    "id": "F012",
+    "description": "Update workflow control and workflow editor surfaces so they remain fully operational with workflow v2 only after template-library removal.",
+    "implemented": false
+  },
+  {
+    "id": "F013",
+    "description": "Remove obsolete tests that only exercise the workflow v1 runtime/editor/template stack or rewrite them to target workflow v2 where coverage is still needed.",
+    "implemented": false
+  },
+  {
+    "id": "F014",
+    "description": "Add a destructive migration that deletes legacy workflow v1 data and drops workflow_template_categories, workflow_templates, workflow_registrations, workflow_registration_versions, system_workflow_registrations, system_workflow_registration_versions, workflow_executions, workflow_events, workflow_event_processing, and workflow_snapshots.",
+    "implemented": false
+  },
+  {
+    "id": "F015",
+    "description": "Remove or update seed files that create workflow v1 template or system-workflow data.",
+    "implemented": false
+  },
+  {
+    "id": "F016",
+    "description": "Update tenant export, tenant deletion, and other maintenance code so they no longer reference dropped workflow v1 tables.",
+    "implemented": false
+  },
+  {
+    "id": "F017",
+    "description": "Update citus/distribution or other migration helper code so it does not assume the removed workflow v1 tables still exist.",
+    "implemented": false
+  },
+  {
+    "id": "F018",
+    "description": "Ensure workflow v2 editor routes and workflow control routes still boot successfully after workflow v1 bootstrap removal.",
+    "implemented": false
+  },
+  {
+    "id": "F019",
+    "description": "Remove stale docs, labels, and code comments that describe the retired workflow v1/template system as active product behavior.",
+    "implemented": false
+  }
+]
