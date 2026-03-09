@@ -194,13 +194,13 @@
   {
     "id": "T033",
     "description": "Integration: Entra sync maps `mobilePhone` to canonical `mobile` and preserves at least one `businessPhones[]` entry as canonical `work`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
     "id": "T034",
     "description": "Integration: when Entra supplies both mobile and business phones, the chosen default matches the agreed precedence rule.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {

@@ -77,6 +77,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `cd server && DB_PORT=55433 DB_PASSWORD_ADMIN=postpass123 DB_PASSWORD_SERVER=postpass123 DB_USER_ADMIN=postgres DB_USER_SERVER=app_user npx vitest run src/test/integration/contactServicePhoneSearch.integration.test.ts --coverage=false`
 - (2026-03-09) Run the contact CSV normalized-phone integration coverage:
   - `cd server && DB_PORT=55433 DB_PASSWORD_ADMIN=postpass123 DB_PASSWORD_SERVER=postpass123 DB_USER_ADMIN=postgres DB_USER_SERVER=app_user npx vitest run src/test/integration/contactCsvPhoneImportExport.integration.test.ts --coverage=false`
+- (2026-03-09) Run the Entra normalized-phone coverage:
+  - `npx tsc -p ee/server/tsconfig.json --noEmit`
+  - `cd ee/server && npx vitest run src/__tests__/unit/entraContactFieldSync.test.ts src/__tests__/unit/entraContactReconciler.test.ts --coverage=false`
 
 ## Links / References
 
@@ -139,3 +142,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - The integration suite verifies importing one CSV phone column creates one default normalized `work` phone row.
   - The integration suite verifies contact CSV export emits the derived default phone instead of depending on a legacy scalar field.
   - The same suite contract-checks the import dialog copy for the single-default-phone CSV rule.
+- (2026-03-09) Completed `F022` by mapping Entra contact phones into normalized contact phone rows.
+  - `ee/server/src/lib/integrations/entra/sync/contactFieldSync.ts` now builds `phone_numbers` collections from `businessPhones[]` and `mobilePhone` instead of returning a scalar `phone_number` patch.
+  - `ee/server/src/lib/integrations/entra/sync/contactReconciler.ts` now creates Entra contacts with `phone_numbers` and routes linked-contact phone updates through `ContactModel.updateContact(...)` inside the same transaction rather than trying to update child rows via the raw `contacts` table.
+- (2026-03-09) Completed `T033` and `T034` with `ee/server/src/__tests__/unit/entraContactFieldSync.test.ts` and `ee/server/src/__tests__/unit/entraContactReconciler.test.ts`.
+  - The Entra field-sync tests verify `mobilePhone` becomes canonical `mobile`, `businessPhones[]` become canonical `work`, and the first business phone wins default precedence over mobile.
+  - The Entra reconciler tests verify the create path passes normalized `phone_numbers` into `ContactModel.createContact(...)` and linked-contact phone sync uses `ContactModel.updateContact(...)` with the same normalized mapping.

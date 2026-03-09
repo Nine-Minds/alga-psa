@@ -128,7 +128,7 @@
   {
     "id": "F022",
     "description": "Update Entra contact sync so `mobilePhone` and `businessPhones[]` populate normalized contact phone rows with the agreed canonical type mapping.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-021", "Entra mapping assumption"]
   },
   {

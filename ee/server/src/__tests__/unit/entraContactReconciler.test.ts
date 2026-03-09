@@ -7,6 +7,7 @@ const findContactMatchesByEmailMock = vi.fn();
 const upsertEntraContactLinkActiveMock = vi.fn();
 const queueAmbiguousEntraMatchMock = vi.fn();
 const createContactMock = vi.fn();
+const updateContactMock = vi.fn();
 
 vi.mock('@/lib/db', () => ({
   createTenantKnex: createTenantKnexMock,
@@ -33,6 +34,7 @@ vi.mock('@ee/lib/integrations/entra/reconciliationQueueService', () => ({
 vi.mock('@alga-psa/shared/models/contactModel', () => ({
   ContactModel: {
     createContact: createContactMock,
+    updateContact: updateContactMock,
   },
 }));
 
@@ -125,11 +127,13 @@ describe('reconcileEntraUserToContact', () => {
     upsertEntraContactLinkActiveMock.mockReset();
     queueAmbiguousEntraMatchMock.mockReset();
     createContactMock.mockReset();
+    updateContactMock.mockReset();
 
     runWithTenantMock.mockImplementation(async (_tenant: string, fn: () => Promise<unknown>) => fn());
     upsertEntraContactLinkActiveMock.mockResolvedValue(undefined);
     queueAmbiguousEntraMatchMock.mockResolvedValue({ queueItemId: 'queue-default' });
     createContactMock.mockResolvedValue({ contact_name_id: 'contact-created' });
+    updateContactMock.mockResolvedValue({ contact_name_id: 'contact-created' });
   });
 
   it('T095: exact email match links existing contact and does not create duplicate contact', async () => {
@@ -187,6 +191,8 @@ describe('reconcileEntraUserToContact', () => {
         entraObjectId: 'entra-96',
         userPrincipalName: 'user96@example.com',
         email: 'user96@example.com',
+        mobilePhone: '+1-555-9600',
+        businessPhones: ['+1-555-9601'],
       }),
     });
 
@@ -198,8 +204,77 @@ describe('reconcileEntraUserToContact', () => {
       expect.objectContaining({
         client_id: 'client-96',
         email: 'user96@example.com',
+        phone_numbers: [
+          {
+            phone_number: '+1-555-9601',
+            canonical_type: 'work',
+            is_default: true,
+            display_order: 0,
+          },
+          {
+            phone_number: '+1-555-9600',
+            canonical_type: 'mobile',
+            is_default: false,
+            display_order: 1,
+          },
+        ],
       }),
       'tenant-96',
+      expect.anything()
+    );
+  });
+
+  it('updates linked contacts through ContactModel when phone sync is enabled', async () => {
+    setupReconcilerKnexHarness();
+    findContactMatchesByEmailMock.mockResolvedValue([
+      {
+        contactNameId: 'contact-phone-sync',
+        clientId: 'client-phone-sync',
+        email: 'user-sync@example.com',
+        fullName: 'User Sync',
+        isInactive: false,
+      },
+    ]);
+
+    const { reconcileEntraUserToContact } = await import(
+      '@ee/lib/integrations/entra/sync/contactReconciler'
+    );
+
+    await reconcileEntraUserToContact({
+      tenantId: 'tenant-phone-sync',
+      clientId: 'client-phone-sync',
+      managedTenantId: 'managed-phone-sync',
+      user: buildUser({
+        entraObjectId: 'entra-phone-sync',
+        userPrincipalName: 'user-sync@example.com',
+        email: 'user-sync@example.com',
+        mobilePhone: '+1-555-0400',
+        businessPhones: ['+1-555-0401'],
+      }),
+      fieldSyncConfig: {
+        phone: true,
+      },
+    });
+
+    expect(updateContactMock).toHaveBeenCalledWith(
+      'contact-phone-sync',
+      {
+        phone_numbers: [
+          {
+            phone_number: '+1-555-0401',
+            canonical_type: 'work',
+            is_default: true,
+            display_order: 0,
+          },
+          {
+            phone_number: '+1-555-0400',
+            canonical_type: 'mobile',
+            is_default: false,
+            display_order: 1,
+          },
+        ],
+      },
+      'tenant-phone-sync',
       expect.anything()
     );
   });

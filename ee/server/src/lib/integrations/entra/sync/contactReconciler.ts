@@ -6,7 +6,7 @@ import { findContactMatchesByEmail } from './contactMatcher';
 import { upsertEntraContactLinkActive } from './contactLinkRepository';
 import type { EntraSyncUser } from './types';
 import type { EntraContactMatchCandidate } from './contactMatcher';
-import { buildContactFieldSyncPatch } from './contactFieldSync';
+import { buildContactFieldSyncPatch, buildEntraContactPhoneNumbers } from './contactFieldSync';
 
 export interface EntraLinkedContactResult {
   action: 'linked';
@@ -78,6 +78,21 @@ async function upsertContactLink(
   });
 
   const syncedFieldPatch = buildContactFieldSyncPatch(user, fieldSyncConfig || {});
+  const { phone_numbers, ...directContactPatch } = syncedFieldPatch as Record<string, unknown> & {
+    phone_numbers?: unknown;
+  };
+
+  if (phone_numbers !== undefined) {
+    await ContactModel.updateContact(
+      contactNameId,
+      {
+        phone_numbers: phone_numbers as ReturnType<typeof buildEntraContactPhoneNumbers>,
+      },
+      tenantId,
+      trx
+    );
+  }
+
   await trx('contacts')
     .where({
       tenant: tenantId,
@@ -89,7 +104,7 @@ async function upsertContactLink(
       last_entra_sync_at: now,
       entra_user_principal_name: user.userPrincipalName,
       entra_account_enabled: user.accountEnabled,
-      ...syncedFieldPatch,
+      ...directContactPatch,
       updated_at: now,
     });
 }
@@ -198,7 +213,7 @@ export async function createContactForEntraUser(
           full_name: fallbackDisplayName(user),
           email: normalizedEmail,
           client_id: clientId,
-          phone_number: user.mobilePhone || user.businessPhones[0] || undefined,
+          phone_numbers: buildEntraContactPhoneNumbers(user),
           role: user.jobTitle || undefined,
           is_inactive: false,
         },
