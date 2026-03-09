@@ -52,6 +52,7 @@ COPY ./server/index.ts ./server/
 COPY ./server/migrations/ ./server/migrations/
 COPY ./server/seeds/ ./server/seeds/
 COPY ./server/src/ ./server/src/
+COPY ./ee/packages/workflows/ ./ee/packages/workflows/
 COPY ./scripts ./scripts
 COPY ./shared/workflow/ ./shared/workflow/
 
