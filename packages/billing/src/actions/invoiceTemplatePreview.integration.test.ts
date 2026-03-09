@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
-import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/state/designerStore';
+import {
+  createEmptyDesignerTransformWorkspace,
+  type DesignerWorkspaceSnapshot,
+} from '../components/invoice-designer/state/designerStore';
 import * as workspaceAstModule from '../components/invoice-designer/ast/workspaceAst';
 import * as evaluatorModule from '../lib/invoice-template-ast/evaluator';
 import * as schemaModule from '../lib/invoice-template-ast/schema';
@@ -85,6 +88,7 @@ const workspace: DesignerWorkspaceSnapshot = {
   showGuides: true,
   showRulers: true,
   canvasScale: 1,
+  transforms: createEmptyDesignerTransformWorkspace(),
 };
 
 const invoiceData = {

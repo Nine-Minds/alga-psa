@@ -408,8 +408,9 @@ const TransformsWorkspace: React.FC<Props> = ({
       const ast = exportWorkspaceToInvoiceTemplateAst(workspaceSnapshot);
       const validationResult = validateInvoiceTemplateAst(ast);
       if (!validationResult.success) {
+        const validationErrors = 'errors' in validationResult ? validationResult.errors : [];
         return {
-          issues: validationResult.errors.map((error, index) => ({
+          issues: validationErrors.map((error, index) => ({
             key: `${error.path}-${index}`,
             tone: 'destructive' as const,
             text: `${error.path || '<root>'}: ${error.message}`,

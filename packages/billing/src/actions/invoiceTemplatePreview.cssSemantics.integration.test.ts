@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/state/designerStore';
+import {
+  createEmptyDesignerTransformWorkspace,
+  type DesignerWorkspaceSnapshot,
+} from '../components/invoice-designer/state/designerStore';
 import { runAuthoritativeInvoiceTemplatePreview } from './invoiceTemplatePreview';
 
 vi.mock('@alga-psa/auth', () => ({
@@ -101,6 +104,7 @@ const workspace: DesignerWorkspaceSnapshot = {
   showGuides: false,
   showRulers: false,
   canvasScale: 1,
+  transforms: createEmptyDesignerTransformWorkspace(),
 };
 
 const invoiceData = {
