@@ -81,6 +81,7 @@ export function ContractBasicsStep({
     const fractionDigits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
     return { currencyCode, fractionDigits, minorUnitFactor: Math.pow(10, fractionDigits) };
   }, [data.currency_code]);
+  const currencySymbol = getCurrencySymbol(data.currency_code);
 
   useEffect(() => {
     const loadClients = async () => {
@@ -610,9 +611,9 @@ export function ContractBasicsStep({
 
             <div className="space-y-2">
               <Label htmlFor="po_amount">PO Amount</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--color-text-400))]">
-                  {getCurrencySymbol(data.currency_code)}
+              <div className="flex h-10 items-center rounded-md border border-[rgb(var(--color-border-400))] shadow-sm focus-within:border-transparent focus-within:ring-2 focus-within:ring-[rgb(var(--color-primary-500))]">
+                <span className="shrink-0 pl-3 pr-1 text-[rgb(var(--color-text-400))]">
+                  {currencySymbol}
                 </span>
                 <Input
                   id="po_amount"
@@ -640,7 +641,7 @@ export function ContractBasicsStep({
                   placeholder={
                     currencyMeta.fractionDigits === 0 ? '0' : `0.${'0'.repeat(currencyMeta.fractionDigits)}`
                   }
-                  className="pl-7"
+                  className="h-full rounded-none border-0 py-0 pl-1 pr-3 shadow-none focus:border-transparent focus:ring-0"
                 />
               </div>
               <p className="text-xs text-[rgb(var(--color-text-400))]">
