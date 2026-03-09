@@ -2,12 +2,10 @@
 
 import React from 'react';
 import { IExtendedWorkItem } from '@alga-psa/types';
-import { getTaskWithDetails } from '@alga-psa/projects/actions/projectTaskActions';
 import { getWorkItemById } from '@alga-psa/scheduling/actions';
 import { getCurrentUser, getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import TaskEdit from '@alga-psa/projects/components/TaskEdit';
 import EntryPopup from '../../../schedule/EntryPopup';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import Spinner from '@alga-psa/ui/components/Spinner';
@@ -15,6 +13,8 @@ import { getSchedulingInteractionById } from '../../../../actions/clientInteract
 import { SchedulingInteractionDetails } from '../../../shared/SchedulingInteractionDetails';
 import { getSchedulingTicketById } from '../../../../actions/ticketLookupActions';
 import { SchedulingTicketDetails } from '../../../shared/SchedulingTicketDetails';
+import { getSchedulingProjectTaskById } from '../../../../actions/projectTaskLookupActions';
+import { SchedulingProjectTaskDetails } from '../../../shared/SchedulingProjectTaskDetails';
 
 interface WorkItemDrawerProps {
     workItem: IExtendedWorkItem;
@@ -145,42 +145,14 @@ export function WorkItemDrawer({
                 }
 
                 case 'project_task': {
-                    console.log('Loading project task with details:', {
-                        workItemId: workItem.work_item_id,
-                        isUsersLoading,
-                        usersCount: users.length
-                    });
-                    const taskData = await getTaskWithDetails(workItem.work_item_id);
-                    console.log('Task data loaded:', taskData);
+                    const taskData = await getSchedulingProjectTaskById(workItem.work_item_id);
+                    if (!taskData) {
+                        toast.error('Failed to load project task data');
+                        return null;
+                    }
                     return (
                         <div className="min-w-auto h-full bg-white">
-                            {users.length === 0 ? (
-                                <div className="flex items-center justify-center h-full text-gray-500">
-                                    No users available
-                                </div>
-                            ) : (
-                                <TaskEdit
-                                    task={taskData}
-                                    inDrawer={true}
-                                    phase={{
-                                        phase_id: taskData.phase_id,
-                                        project_id: taskData.project_id || '',
-                                        phase_name: taskData.phase_name || '',
-                                        description: null,
-                                        start_date: null,
-                                        end_date: null,
-                                        status: taskData.status_id || '',
-                                        order_number: 0,
-                                        created_at: new Date(),
-                                        updated_at: new Date(),
-                                        wbs_code: taskData.wbs_code,
-                                        tenant: tenant
-                                    }}
-                                    users={users}
-                                    onClose={onClose}
-                                    onTaskUpdated={onTaskUpdate}
-                                />
-                            )}
+                            <SchedulingProjectTaskDetails task={taskData} />
                         </div>
                     );
                 }
