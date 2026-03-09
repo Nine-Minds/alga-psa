@@ -1318,7 +1318,7 @@ export class ChatCompletionsService {
         }
         case 'project': {
           const project = await getProject(record.id);
-          if (!project) {
+          if (!project || !('project_name' in project)) {
             return null;
           }
           return {
