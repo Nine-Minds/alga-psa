@@ -345,31 +345,40 @@ describe('ChatCompletionsService (unit)', () => {
   });
 
   it('builds prompt context with current user and resolved ticket details', async () => {
-    getTicketByIdMock.mockResolvedValue({
-      ticket_id: 'ticket-123',
-      ticket_number: 'T-123',
-      title: 'Printer jam on floor 2',
-    });
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-03-09T17:50:00Z'));
+    try {
+      getTicketByIdMock.mockResolvedValue({
+        ticket_id: 'ticket-123',
+        ticket_number: 'T-123',
+        title: 'Printer jam on floor 2',
+      });
 
-    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+      const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
 
-    const promptContext = await (ChatCompletionsService as any).buildPromptContext({
-      pathname: '/msp/tickets/ticket-123',
-      screen: {
-        key: 'tickets.detail',
-        label: 'Ticket Details',
-      },
-      record: {
-        type: 'ticket',
-        id: 'ticket-123',
-      },
-    });
+      const promptContext = await (ChatCompletionsService as any).buildPromptContext({
+        pathname: '/msp/tickets/ticket-123',
+        screen: {
+          key: 'tickets.detail',
+          label: 'Ticket Details',
+        },
+        record: {
+          type: 'ticket',
+          id: 'ticket-123',
+        },
+      });
 
-    expect(promptContext).toContain('Pat Lee');
-    expect(promptContext).toContain('pat@example.com');
-    expect(promptContext).toContain('Ticket Details');
-    expect(promptContext).toContain('ticket');
-    expect(promptContext).toContain('#T-123 - Printer jam on floor 2');
+      expect(promptContext).toContain(
+        'Current date/time: March 9, 2026 at 1:50 PM EDT | timezone: America/New_York',
+      );
+      expect(promptContext).toContain('Pat Lee');
+      expect(promptContext).toContain('pat@example.com');
+      expect(promptContext).toContain('Ticket Details');
+      expect(promptContext).toContain('ticket');
+      expect(promptContext).toContain('#T-123 - Printer jam on floor 2');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('appends resolved app context to the system prompt when provided', async () => {

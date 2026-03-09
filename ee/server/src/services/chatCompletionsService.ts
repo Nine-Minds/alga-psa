@@ -1274,6 +1274,25 @@ export class ChatCompletionsService {
     return user.username || user.email || user.user_id;
   }
 
+  private static getCurrentDateTimeContext() {
+    const now = new Date();
+    const timezone = new Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    const formatted = new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZone: timezone,
+      timeZoneName: 'short',
+    }).format(now);
+
+    return {
+      formatted,
+      timezone,
+    };
+  }
+
   private static async resolveRecordDescription(
     record: ChatUiContextRecord | undefined,
   ): Promise<{ type: ChatUiContextRecord['type']; id: string; description: string } | null> {
@@ -1361,6 +1380,8 @@ export class ChatCompletionsService {
     }
 
     const lines = ['Current app context:'];
+    const { formatted, timezone } = this.getCurrentDateTimeContext();
+    lines.push(`- Current date/time: ${formatted} | timezone: ${timezone}`);
     lines.push(
       `- Current user: ${this.formatUserFullName(user)} | email: ${user.email} | user_id: ${user.user_id}`,
     );
