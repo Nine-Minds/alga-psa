@@ -2,6 +2,10 @@ import OpenAI from 'openai';
 import { NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 
+import { getAssetDetailBundle } from '@alga-psa/assets/actions/assetActions';
+import { getClientById, getContactByContactNameId } from '@alga-psa/clients/actions';
+import { getProject } from '@alga-psa/projects/actions/projectActions';
+import { getTicketById } from '@alga-psa/tickets/actions/ticketActions';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getRegistry } from '../chat/registry/apiRegistry.indexer';
 import {
@@ -48,6 +52,20 @@ export type ChatCompletionMessage = {
     arguments: Record<string, unknown>;
   };
   tool_call_id?: string;
+};
+
+type ChatUiContextRecord = {
+  type: 'ticket' | 'project' | 'client' | 'contact' | 'asset';
+  id: string;
+};
+
+type ChatUiContext = {
+  pathname: string;
+  screen: {
+    key: string;
+    label: string;
+  };
+  record?: ChatUiContextRecord;
 };
 
 export interface FunctionMetadata {
@@ -129,6 +147,7 @@ interface InitialCompletionParams {
   baseUrl: string;
   tenantId: string;
   userId: string;
+  uiContext?: ChatUiContext;
 }
 
 interface ExecuteCompletionParams {
@@ -140,6 +159,7 @@ interface ExecuteCompletionParams {
   tenantId: string;
   userId: string;
   cookieHeader?: string;
+  uiContext?: ChatUiContext;
 }
 
 type ParsedToolArgumentsResult =
@@ -174,17 +194,22 @@ export class ChatCompletionsService {
 
   static async *createStructuredCompletionStream(
     messages: ChatCompletionMessage[],
-    options: { signal?: AbortSignal } = {},
+    options: { signal?: AbortSignal; uiContext?: ChatUiContext } = {},
   ): AsyncGenerator<ChatCompletionStreamEvent> {
     const provider = await resolveChatProvider();
     let conversation = this.normalizeConversationHistory(messages);
+    const promptContext = await this.buildPromptContext(options.uiContext);
 
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
       if (options.signal?.aborted) {
         return;
       }
 
-      const completionStream = await this.generateStreamingCompletion(provider, conversation);
+      const completionStream = await this.generateStreamingCompletion(
+        provider,
+        conversation,
+        promptContext,
+      );
       const streamedToolCalls = new Map<number, StreamedToolCallState>();
       let streamedContent = '';
       let streamedReasoning = '';
@@ -375,6 +400,7 @@ export class ChatCompletionsService {
     try {
       const messages = this.validateMessages((body as any)?.messages);
       const chatId = (body as any)?.chatId ?? null;
+      const uiContext = this.validateUiContext((body as any)?.uiContext);
 
       const result = await this.initialCompletion({
         messages,
@@ -382,6 +408,7 @@ export class ChatCompletionsService {
         baseUrl: req.nextUrl.origin,
         tenantId: user.tenant,
         userId: user.user_id,
+        uiContext,
       });
 
       return new Response(JSON.stringify(result), {
@@ -397,7 +424,10 @@ export class ChatCompletionsService {
         );
       }
       const message = error instanceof Error ? error.message : 'Internal Server Error';
-      const status = message === 'Invalid messages payload' ? 400 : 500;
+      const status =
+        message === 'Invalid messages payload' || message === 'Invalid uiContext payload'
+          ? 400
+          : 500;
       return new Response(JSON.stringify({ error: message }), {
         status,
         headers: { 'Content-Type': 'application/json' },
@@ -439,6 +469,7 @@ export class ChatCompletionsService {
       const functionCall = (body as any)?.functionCall;
       const action = ((body as any)?.action ?? 'approve') as 'approve' | 'decline';
       const chatId = (body as any)?.chatId ?? null;
+      const uiContext = this.validateUiContext((body as any)?.uiContext);
 
       if (!functionCall || typeof functionCall.name !== 'string') {
         throw new Error('Missing function call information');
@@ -458,6 +489,7 @@ export class ChatCompletionsService {
         tenantId: user.tenant,
         userId: user.user_id,
         cookieHeader: req.headers.get('cookie') ?? undefined,
+        uiContext,
       });
 
       return new Response(JSON.stringify(result), {
@@ -474,7 +506,9 @@ export class ChatCompletionsService {
       }
       const message = error instanceof Error ? error.message : 'Internal Server Error';
       const status =
-        message === 'Missing function call information' || message === 'Invalid messages payload'
+        message === 'Missing function call information' ||
+        message === 'Invalid messages payload' ||
+        message === 'Invalid uiContext payload'
           ? 400
           : 500;
       return new Response(JSON.stringify({ error: message }), {
@@ -491,6 +525,7 @@ export class ChatCompletionsService {
       baseUrl: params.baseUrl,
       tenantId: params.tenantId,
       userId: params.userId,
+      uiContext: params.uiContext,
     });
   }
 
@@ -504,6 +539,7 @@ export class ChatCompletionsService {
       userId,
       chatId: rawChatId,
       cookieHeader,
+      uiContext,
     } = params;
 
     const chatId = rawChatId ?? null;
@@ -553,6 +589,7 @@ export class ChatCompletionsService {
       baseUrl,
       tenantId,
       userId,
+      uiContext,
     });
 
     if (response.type === 'assistant_message') {
@@ -749,10 +786,12 @@ export class ChatCompletionsService {
     baseUrl: string;
     tenantId: string;
     userId: string;
+    uiContext?: ChatUiContext;
   }): Promise<CompletionResponse> {
-    const { messages, chatId, baseUrl, tenantId, userId } = params;
+    const { messages, chatId, baseUrl, tenantId, userId, uiContext } = params;
     const provider = await resolveChatProvider();
     let conversation = this.normalizeConversationHistory(messages);
+    const promptContext = await this.buildPromptContext(uiContext);
 
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS; iteration += 1) {
       let completion: OpenAI.Chat.Completions.ChatCompletion;
@@ -762,7 +801,7 @@ export class ChatCompletionsService {
 
       try {
         ({ completion, choice, parsedContent, toolCalls } =
-          await this.generateCompletionWithRetry(provider, conversation));
+          await this.generateCompletionWithRetry(provider, conversation, promptContext));
       } catch (error) {
         if (error instanceof Error) {
           if (error.message === EMPTY_RESPONSE_ERROR) {
@@ -972,6 +1011,75 @@ export class ChatCompletionsService {
     });
   }
 
+  private static validateUiContext(raw: unknown): ChatUiContext | undefined {
+    if (raw === undefined || raw === null) {
+      return undefined;
+    }
+
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      throw new Error('Invalid uiContext payload');
+    }
+
+    const record = raw as Record<string, unknown>;
+    const pathname = this.readOptionalUiContextStringField(record, 'pathname');
+    const screenRaw = record.screen;
+    if (!pathname || !screenRaw || typeof screenRaw !== 'object' || Array.isArray(screenRaw)) {
+      throw new Error('Invalid uiContext payload');
+    }
+
+    const screenRecord = screenRaw as Record<string, unknown>;
+    const screenKey = this.readOptionalUiContextStringField(screenRecord, 'key');
+    const screenLabel = this.readOptionalUiContextStringField(screenRecord, 'label');
+    if (!screenKey || !screenLabel) {
+      throw new Error('Invalid uiContext payload');
+    }
+
+    let uiContextRecord: ChatUiContextRecord | undefined;
+    if (record.record !== undefined) {
+      const recordRaw = record.record;
+      if (!recordRaw || typeof recordRaw !== 'object' || Array.isArray(recordRaw)) {
+        throw new Error('Invalid uiContext payload');
+      }
+      const recordValue = recordRaw as Record<string, unknown>;
+      const type = this.readOptionalUiContextStringField(recordValue, 'type');
+      const id = this.readOptionalUiContextStringField(recordValue, 'id');
+      if (
+        !id ||
+        (type !== 'ticket' &&
+          type !== 'project' &&
+          type !== 'client' &&
+          type !== 'contact' &&
+          type !== 'asset')
+      ) {
+        throw new Error('Invalid uiContext payload');
+      }
+      uiContextRecord = { type, id };
+    }
+
+    return {
+      pathname,
+      screen: {
+        key: screenKey,
+        label: screenLabel,
+      },
+      ...(uiContextRecord ? { record: uiContextRecord } : {}),
+    };
+  }
+
+  private static readOptionalUiContextStringField(
+    record: Record<string, unknown>,
+    key: string,
+  ): string | undefined {
+    if (!(key in record) || record[key] === undefined) {
+      return undefined;
+    }
+    if (typeof record[key] !== 'string') {
+      throw new Error('Invalid uiContext payload');
+    }
+    const value = (record[key] as string).trim();
+    return value.length > 0 ? value : undefined;
+  }
+
   private static readOptionalStringField(
     record: Record<string, unknown>,
     key: string,
@@ -1153,9 +1261,131 @@ export class ChatCompletionsService {
     });
   }
 
+  private static formatUserFullName(user: Awaited<ReturnType<typeof getCurrentUser>>) {
+    if (!user) {
+      return null;
+    }
+
+    const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
+    if (fullName.length > 0) {
+      return fullName;
+    }
+
+    return user.username || user.email || user.user_id;
+  }
+
+  private static async resolveRecordDescription(
+    record: ChatUiContextRecord | undefined,
+  ): Promise<{ type: ChatUiContextRecord['type']; id: string; description: string } | null> {
+    if (!record) {
+      return null;
+    }
+
+    try {
+      switch (record.type) {
+        case 'ticket': {
+          const ticket = await getTicketById(record.id);
+          if (!ticket) {
+            return null;
+          }
+          const description = [ticket.ticket_number ? `#${ticket.ticket_number}` : null, ticket.title]
+            .filter(Boolean)
+            .join(' - ');
+          return {
+            type: record.type,
+            id: record.id,
+            description: description || record.id,
+          };
+        }
+        case 'project': {
+          const project = await getProject(record.id);
+          if (!project) {
+            return null;
+          }
+          return {
+            type: record.type,
+            id: record.id,
+            description: project.project_name || record.id,
+          };
+        }
+        case 'client': {
+          const client = await getClientById(record.id);
+          if (!client) {
+            return null;
+          }
+          return {
+            type: record.type,
+            id: record.id,
+            description: client.client_name || record.id,
+          };
+        }
+        case 'contact': {
+          const contact = await getContactByContactNameId(record.id);
+          if (!contact) {
+            return null;
+          }
+          return {
+            type: record.type,
+            id: record.id,
+            description: contact.full_name || record.id,
+          };
+        }
+        case 'asset': {
+          const bundle = await getAssetDetailBundle(record.id);
+          if (!bundle.asset) {
+            return null;
+          }
+          return {
+            type: record.type,
+            id: record.id,
+            description: bundle.asset.name || record.id,
+          };
+        }
+        default:
+          return null;
+      }
+    } catch (error) {
+      console.warn('[ChatCompletionsService] Failed to resolve uiContext record', {
+        recordType: record.type,
+        recordId: record.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }
+
+  private static async buildPromptContext(uiContext?: ChatUiContext): Promise<string | null> {
+    const user = await getCurrentUser();
+    if (!user || !user.user_id) {
+      return null;
+    }
+
+    const lines = ['Current app context:'];
+    lines.push(
+      `- Current user: ${this.formatUserFullName(user)} | email: ${user.email} | user_id: ${user.user_id}`,
+    );
+
+    if (uiContext?.screen?.label) {
+      const pathValue = uiContext.pathname || 'unknown';
+      lines.push(
+        `- Current screen: ${uiContext.screen.label} | key: ${uiContext.screen.key} | pathname: ${pathValue}`,
+      );
+    }
+
+    const record = await this.resolveRecordDescription(uiContext?.record);
+    if (record) {
+      lines.push(
+        `- Active record: ${record.type} | id: ${record.id} | description: ${record.description}`,
+      );
+    }
+
+    return lines.join('\n');
+  }
+
   private static buildOpenAiMessages(
     messages: ChatCompletionMessage[],
     providerId: ChatProviderId,
+    promptContext?: string | null,
   ) {
     const systemPrompt = {
       role: 'system' as const,
@@ -1169,7 +1399,8 @@ export class ChatCompletionsService {
         'Never include properties that are not defined for the selected endpoint; if the user mentions data that cannot be expressed with the documented schema (for example a project name when the ticket create payload does not accept project_id), acknowledge it in the natural-language response but leave it out of the API request. ' +
         'When handling documents, do not assume null file_id means empty content; in-app documents may store content in document_block_content or document_content. Call GET /api/documents/{documentId}/content to retrieve readable content before concluding the document has no data. ' +
         'Do not create or modify unrelated master data (such as categories, boards, or projects) unless the user explicitly asks for that; prefer reusing existing records you just looked up. ' +
-        'After a function result is provided, summarize the outcome for the user and outline any follow-up you will handle automatically.',
+        'After a function result is provided, summarize the outcome for the user and outline any follow-up you will handle automatically.' +
+        (promptContext ? `\n\n${promptContext}` : ''),
     };
 
     const converted = messages.map((message) => {
@@ -1331,10 +1562,11 @@ export class ChatCompletionsService {
     provider: ResolvedChatProvider,
     conversation: ChatCompletionMessage[],
     stream: boolean,
+    promptContext?: string | null,
   ): Record<string, unknown> {
     const request: Record<string, unknown> = {
       model: provider.model,
-      messages: this.buildOpenAiMessages(conversation, provider.providerId),
+      messages: this.buildOpenAiMessages(conversation, provider.providerId, promptContext),
       tools: this.buildToolDefinitions(provider.providerId),
       ...provider.requestOverrides.resolveTurnOverrides(),
       stream,
@@ -1479,9 +1711,15 @@ export class ChatCompletionsService {
   private static async generateCompletionWithRetry(
     provider: ResolvedChatProvider,
     conversation: ChatCompletionMessage[],
+    promptContext?: string | null,
   ) {
     for (let attempt = 0; attempt < MAX_MODEL_RETRIES; attempt += 1) {
-      const request = this.buildCompletionCreateRequest(provider, conversation, false);
+      const request = this.buildCompletionCreateRequest(
+        provider,
+        conversation,
+        false,
+        promptContext,
+      );
       const completion = await this.createWithRateLimitRetry(
         () => provider.client.chat.completions.create(request as any),
         `${provider.providerId} completion`,
@@ -1536,8 +1774,14 @@ export class ChatCompletionsService {
   private static async generateStreamingCompletion(
     provider: ResolvedChatProvider,
     conversation: ChatCompletionMessage[],
+    promptContext?: string | null,
   ): Promise<AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>> {
-    const request = this.buildCompletionCreateRequest(provider, conversation, true);
+    const request = this.buildCompletionCreateRequest(
+      provider,
+      conversation,
+      true,
+      promptContext,
+    );
     const stream = await this.createWithRateLimitRetry(
       () => provider.client.chat.completions.create(request as any),
       `${provider.providerId} stream`,

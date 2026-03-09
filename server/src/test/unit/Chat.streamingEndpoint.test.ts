@@ -6,12 +6,19 @@ describe('EE Chat (source)', () => {
   it('uses the streaming completions endpoint for new messages', () => {
     expect(chatSource).toContain("fetch('/api/chat/v1/completions/stream',");
     expect(chatSource).toContain('messages: conversationWithUser');
+    expect(chatSource).toContain('uiContext: aiContext');
 
     expect(chatSource).not.toContain("fetch('/api/chat/v1/completions'");
   });
 
-  it('reads the streaming response via response.body.getReader()', () => {
-    expect(chatSource).toContain('response.body.getReader()');
-    expect(chatSource).toContain('await reader.read()');
+  it('includes uiContext on execute requests as well', () => {
+    expect(chatSource).toContain("fetch('/api/chat/v1/execute',");
+    expect(chatSource).toContain('chatId: pendingFunction.chatId ?? chatId');
+    expect(chatSource).toContain('uiContext: aiContext');
+  });
+
+  it('reads the streaming response through the SSE helper', () => {
+    expect(chatSource).toContain('readAssistantContentFromSse(response');
+    expect(chatSource).toContain('onToolCalls: (proposal: SseFunctionProposal)');
   });
 });

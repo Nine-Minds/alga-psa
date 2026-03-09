@@ -5,6 +5,11 @@ const openAiCreateSpy = vi.hoisted(() => vi.fn());
 const getSecretMock = vi.hoisted(() => vi.fn());
 const getCurrentUserMock = vi.hoisted(() => vi.fn());
 const getRegistryMock = vi.hoisted(() => vi.fn());
+const getTicketByIdMock = vi.hoisted(() => vi.fn());
+const getProjectMock = vi.hoisted(() => vi.fn());
+const getClientByIdMock = vi.hoisted(() => vi.fn());
+const getContactByContactNameIdMock = vi.hoisted(() => vi.fn());
+const getAssetDetailBundleMock = vi.hoisted(() => vi.fn());
 const secretState = vi.hoisted(() => ({ values: {} as Record<string, string | undefined> }));
 const googleAccessTokenState = vi.hoisted(() => ({ token: 'adc-token' as string | undefined }));
 
@@ -40,6 +45,23 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
 
 vi.mock('@ee/chat/registry/apiRegistry.indexer', () => ({
   getRegistry: getRegistryMock,
+}));
+
+vi.mock('@alga-psa/tickets/actions/ticketActions', () => ({
+  getTicketById: getTicketByIdMock,
+}));
+
+vi.mock('@alga-psa/projects/actions/projectActions', () => ({
+  getProject: getProjectMock,
+}));
+
+vi.mock('@alga-psa/clients/actions', () => ({
+  getClientById: getClientByIdMock,
+  getContactByContactNameId: getContactByContactNameIdMock,
+}));
+
+vi.mock('@alga-psa/assets/actions/assetActions', () => ({
+  getAssetDetailBundle: getAssetDetailBundleMock,
 }));
 
 vi.mock('google-auth-library', () => ({
@@ -141,6 +163,11 @@ describe('ChatCompletionsService (unit)', () => {
     getSecretMock.mockReset();
     getCurrentUserMock.mockReset();
     getRegistryMock.mockReset();
+    getTicketByIdMock.mockReset();
+    getProjectMock.mockReset();
+    getClientByIdMock.mockReset();
+    getContactByContactNameIdMock.mockReset();
+    getAssetDetailBundleMock.mockReset();
     resetManagedEnv();
     secretState.values = {};
     googleAccessTokenState.token = 'adc-token';
@@ -161,6 +188,17 @@ describe('ChatCompletionsService (unit)', () => {
     );
 
     getRegistryMock.mockReturnValue([registryEntry]);
+    getCurrentUserMock.mockResolvedValue({
+      user_id: 'user-1',
+      tenant: 'tenant-1',
+      email: 'pat@example.com',
+      first_name: 'Pat',
+      last_name: 'Lee',
+      username: 'pat',
+      user_type: 'internal',
+      is_inactive: false,
+      roles: [],
+    });
   });
 
   afterEach(() => {
@@ -304,6 +342,59 @@ describe('ChatCompletionsService (unit)', () => {
     expect(systemPrompt.role).toBe('system');
     expect(systemPrompt.content).toContain('GET /api/documents/{documentId}/content');
     expect(systemPrompt.content).toContain('null file_id');
+  });
+
+  it('builds prompt context with current user and resolved ticket details', async () => {
+    getTicketByIdMock.mockResolvedValue({
+      ticket_id: 'ticket-123',
+      ticket_number: 'T-123',
+      title: 'Printer jam on floor 2',
+    });
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const promptContext = await (ChatCompletionsService as any).buildPromptContext({
+      pathname: '/msp/tickets/ticket-123',
+      screen: {
+        key: 'tickets.detail',
+        label: 'Ticket Details',
+      },
+      record: {
+        type: 'ticket',
+        id: 'ticket-123',
+      },
+    });
+
+    expect(promptContext).toContain('Pat Lee');
+    expect(promptContext).toContain('pat@example.com');
+    expect(promptContext).toContain('Ticket Details');
+    expect(promptContext).toContain('ticket');
+    expect(promptContext).toContain('#T-123 - Printer jam on floor 2');
+  });
+
+  it('appends resolved app context to the system prompt when provided', async () => {
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const converted = (ChatCompletionsService as any).buildOpenAiMessages(
+      [{ role: 'user', content: 'Summarize this ticket' }],
+      'openrouter',
+      'Current app context:\n- Current screen: Ticket Details',
+    );
+
+    const systemPrompt = converted[0] as Record<string, unknown>;
+    expect(systemPrompt.content).toContain('Current app context:');
+    expect(systemPrompt.content).toContain('Current screen: Ticket Details');
+  });
+
+  it('rejects malformed uiContext payloads', async () => {
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    expect(() =>
+      (ChatCompletionsService as any).validateUiContext({
+        pathname: '/msp/tickets/ticket-123',
+        screen: { key: 'tickets.detail' },
+      }),
+    ).toThrow('Invalid uiContext payload');
   });
 
   it('extracts reasoning from legacy <think> content when reasoning_content is absent', async () => {
@@ -460,14 +551,15 @@ describe('ChatCompletionsService (unit)', () => {
     );
     expect(openAiCreateSpy).toHaveBeenCalledTimes(2);
     const retryRequest = openAiCreateSpy.mock.calls[1]?.[0] as Record<string, unknown>;
-    expect(retryRequest.messages).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          role: 'function',
-          name: 'call_api_endpoint',
-          content: expect.stringContaining('Tool arguments were invalid JSON. Retry the same function call with a valid JSON object only.'),
-        }),
-      ]),
+    const toolMessage = (retryRequest.messages as Array<Record<string, unknown>>).find(
+      (message) => message.role === 'tool',
+    );
+    expect(toolMessage).toEqual(
+      expect.objectContaining({
+        content: expect.stringContaining(
+          'Tool arguments were invalid JSON. Retry the same function call with a valid JSON object only.',
+        ),
+      }),
     );
   });
 
@@ -632,14 +724,15 @@ describe('ChatCompletionsService (unit)', () => {
     });
     expect(openAiCreateSpy).toHaveBeenCalledTimes(2);
     const retryRequest = openAiCreateSpy.mock.calls[1]?.[0] as Record<string, unknown>;
-    expect(retryRequest.messages).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          role: 'function',
-          name: 'call_api_endpoint',
-          content: expect.stringContaining('Tool arguments were invalid JSON. Retry the same function call with a valid JSON object only.'),
-        }),
-      ]),
+    const toolMessage = (retryRequest.messages as Array<Record<string, unknown>>).find(
+      (message) => message.role === 'tool',
+    );
+    expect(toolMessage).toEqual(
+      expect.objectContaining({
+        content: expect.stringContaining(
+          'Tool arguments were invalid JSON. Retry the same function call with a valid JSON object only.',
+        ),
+      }),
     );
   });
 

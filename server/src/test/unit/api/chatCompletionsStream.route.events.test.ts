@@ -9,7 +9,14 @@ const createStructuredCompletionStreamMock = vi.hoisted(() =>
   vi.fn<
     (
       conversation: Array<Record<string, unknown>>,
-      options?: { signal?: AbortSignal },
+      options?: {
+        signal?: AbortSignal;
+        uiContext?: {
+          pathname: string;
+          screen: { key: string; label: string };
+          record?: { type: string; id: string };
+        };
+      },
     ) => Promise<AsyncIterable<Record<string, unknown>>>
   >(),
 );
@@ -107,8 +114,82 @@ describe('POST /api/chat/v1/completions/stream (structured events)', () => {
           reasoning_content: 'carry this reasoning',
         }),
       ],
-      expect.any(Object),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
+  });
+
+  it('passes uiContext through to the structured stream service', async () => {
+    isExperimentalFeatureEnabledMock.mockResolvedValue(true);
+    createStructuredCompletionStreamMock.mockResolvedValue(
+      (async function* () {
+        yield { type: 'done' };
+      })(),
+    );
+
+    vi.resetModules();
+    const { POST } = await import('@/app/api/chat/v1/completions/stream/route');
+
+    const response = await POST(
+      makeRequest({
+        messages: [{ role: 'user', content: 'What is on this screen?' }],
+        uiContext: {
+          pathname: '/msp/tickets/ticket-123',
+          screen: {
+            key: 'tickets.detail',
+            label: 'Ticket Details',
+          },
+          record: {
+            type: 'ticket',
+            id: 'ticket-123',
+          },
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await response.text();
+    expect(createStructuredCompletionStreamMock).toHaveBeenCalledWith(
+      [{ role: 'user', content: 'What is on this screen?' }],
+      expect.objectContaining({
+        signal: expect.any(AbortSignal),
+        uiContext: {
+          pathname: '/msp/tickets/ticket-123',
+          screen: {
+            key: 'tickets.detail',
+            label: 'Ticket Details',
+          },
+          record: {
+            type: 'ticket',
+            id: 'ticket-123',
+          },
+        },
+      }),
+    );
+  });
+
+  it('returns 400 for malformed uiContext payload', async () => {
+    isExperimentalFeatureEnabledMock.mockResolvedValue(true);
+
+    vi.resetModules();
+    const { POST } = await import('@/app/api/chat/v1/completions/stream/route');
+
+    const response = await POST(
+      makeRequest({
+        messages: [{ role: 'user', content: 'Hello' }],
+        uiContext: {
+          pathname: '/msp/tickets/ticket-123',
+          screen: {
+            key: 'tickets.detail',
+          },
+        },
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: 'Invalid uiContext payload',
+    });
+    expect(createStructuredCompletionStreamMock).not.toHaveBeenCalled();
   });
 
   it('emits structured reasoning-delta SSE events', async () => {

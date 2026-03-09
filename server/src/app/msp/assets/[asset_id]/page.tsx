@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { AssetDetailView } from '@alga-psa/assets/components/AssetDetailView';
 import { getSession } from '@alga-psa/auth';
+import { AIChatContextBoundary } from '@product/chat/context';
 import type { Metadata } from 'next';
 
 const getCachedAssetBundle = cache((id: string) => getAssetDetailBundle(id));
@@ -48,7 +49,23 @@ export default async function AssetPage({ params }: Props) {
       return <div>Asset not found</div>;
     }
 
-    return <AssetDetailView assetId={resolvedParams.asset_id} />;
+    return (
+      <AIChatContextBoundary
+        value={{
+          pathname: `/msp/assets/${resolvedParams.asset_id}`,
+          screen: {
+            key: 'assets.detail',
+            label: 'Asset Details',
+          },
+          record: {
+            type: 'asset',
+            id: resolvedParams.asset_id,
+          },
+        }}
+      >
+        <AssetDetailView assetId={resolvedParams.asset_id} />
+      </AIChatContextBoundary>
+    );
   } catch (error) {
     console.error('Error fetching user or asset:', error);
     return <div>An error occurred. Please try again later.</div>;
