@@ -1,0 +1,146 @@
+[
+  {
+    "id": "F001",
+    "description": "Add a tenant-scoped `contact_phone_type_definitions` table for custom contact phone type labels with case-insensitive deduplication.",
+    "implemented": true,
+    "prdRefs": ["FR-002", "NFR-004"]
+  },
+  {
+    "id": "F002",
+    "description": "Add a `contact_phone_numbers` table that stores one or more phone rows per contact, including default flag and display order.",
+    "implemented": true,
+    "prdRefs": ["FR-001", "FR-004", "FR-005"]
+  },
+  {
+    "id": "F003",
+    "description": "Store searchable normalized phone values on contact phone rows rather than relying only on formatted phone strings.",
+    "implemented": false,
+    "prdRefs": ["FR-006", "NFR-005"]
+  },
+  {
+    "id": "F004",
+    "description": "Backfill existing `contacts.phone_number` values into normalized default contact phone rows during Migration A.",
+    "implemented": true,
+    "prdRefs": ["FR-007", "Rollout / Migration"]
+  },
+  {
+    "id": "F005",
+    "description": "Sequence the rollout so new tables are created and backfilled before application readers/writers stop using the old scalar field.",
+    "implemented": true,
+    "prdRefs": ["NFR-001", "Rollout / Migration"]
+  },
+  {
+    "id": "F006",
+    "description": "Drop the legacy `contacts.phone_number` column in Migration B after the application cutover is complete.",
+    "implemented": false,
+    "prdRefs": ["FR-023", "Rollout / Migration"]
+  },
+  {
+    "id": "F007",
+    "description": "Replace shared and server contact TypeScript interfaces so contacts expose `phone_numbers` instead of scalar `phone_number`.",
+    "implemented": false,
+    "prdRefs": ["FR-008", "FR-009"]
+  },
+  {
+    "id": "F008",
+    "description": "Update contact create and update validation/contracts to accept the normalized phone collection with canonical/custom type rules and default enforcement.",
+    "implemented": false,
+    "prdRefs": ["FR-008", "FR-010"]
+  },
+  {
+    "id": "F009",
+    "description": "Update contact read paths so contact fetches hydrate ordered phone rows and expose default-phone data needed by list/detail callers.",
+    "implemented": false,
+    "prdRefs": ["FR-009", "FR-015", "FR-018"]
+  },
+  {
+    "id": "F010",
+    "description": "Persist contact parent rows and child phone rows transactionally during create, update, import, and sync flows.",
+    "implemented": false,
+    "prdRefs": ["NFR-002", "FR-008", "FR-010"]
+  },
+  {
+    "id": "F011",
+    "description": "Auto-create or reuse tenant-scoped custom phone type definitions when users enter custom labels in contact write flows.",
+    "implemented": false,
+    "prdRefs": ["FR-002", "FR-010"]
+  },
+  {
+    "id": "F012",
+    "description": "Update `ContactDetails.tsx` to edit multiple phone numbers with canonical/custom type selection and explicit default selection.",
+    "implemented": false,
+    "prdRefs": ["FR-011", "UX / UI Notes"]
+  },
+  {
+    "id": "F013",
+    "description": "Update `ContactDetailsEdit.tsx` and `ContactDetailsView.tsx` to render and edit the normalized contact phone model instead of one scalar phone field.",
+    "implemented": false,
+    "prdRefs": ["FR-012", "UX / UI Notes"]
+  },
+  {
+    "id": "F014",
+    "description": "Update `QuickAddContact.tsx` to create contacts with the normalized phone collection.",
+    "implemented": false,
+    "prdRefs": ["FR-013", "UX / UI Notes"]
+  },
+  {
+    "id": "F015",
+    "description": "Update the inline contact section in `QuickAddClient.tsx` to create the new contact with the normalized phone collection.",
+    "implemented": false,
+    "prdRefs": ["FR-014", "UX / UI Notes"]
+  },
+  {
+    "id": "F016",
+    "description": "Update contacts list/table surfaces (`Contacts.tsx`, `ClientContactsList.tsx`) to display the default phone number derived from `phone_numbers`.",
+    "implemented": false,
+    "prdRefs": ["FR-015", "UX / UI Notes"]
+  },
+  {
+    "id": "F017",
+    "description": "Update contact list/query behavior so phone search matches any stored contact phone row and phone sorting uses the default phone number.",
+    "implemented": false,
+    "prdRefs": ["FR-016", "FR-017"]
+  },
+  {
+    "id": "F018",
+    "description": "Update ticket/contact dependent display surfaces such as `TicketProperties.tsx` to show the derived default contact phone.",
+    "implemented": false,
+    "prdRefs": ["FR-018", "UX / UI Notes"]
+  },
+  {
+    "id": "F019",
+    "description": "Update contact CSV import/export behavior so a single imported/exported phone maps to the normalized model as the default phone number in v1.",
+    "implemented": false,
+    "prdRefs": ["FR-019", "Import/export shape"]
+  },
+  {
+    "id": "F020",
+    "description": "Update `ContactsImportDialog.tsx` copy, preview mapping, and import expectations to match the normalized contact phone model.",
+    "implemented": false,
+    "prdRefs": ["FR-019", "UX / UI Notes"]
+  },
+  {
+    "id": "F021",
+    "description": "Update contact API/service schemas and workflow/domain event payloads that currently validate or emit scalar `phone_number` values.",
+    "implemented": false,
+    "prdRefs": ["FR-020"]
+  },
+  {
+    "id": "F022",
+    "description": "Update Entra contact sync so `mobilePhone` and `businessPhones[]` populate normalized contact phone rows with the agreed canonical type mapping.",
+    "implemented": false,
+    "prdRefs": ["FR-021", "Entra mapping assumption"]
+  },
+  {
+    "id": "F023",
+    "description": "Update contact-related test factories, fixtures, seeds, and helper utilities to create normalized phone rows instead of scalar phone fields.",
+    "implemented": false,
+    "prdRefs": ["FR-022", "Acceptance Criteria"]
+  },
+  {
+    "id": "F024",
+    "description": "Remove remaining application reads and writes of `contacts.phone_number` once all contact-domain code paths have been cut over.",
+    "implemented": false,
+    "prdRefs": ["FR-022", "Acceptance Criteria"]
+  }
+]

@@ -1,0 +1,74 @@
+# Scratchpad — Multiple Contact Phone Numbers
+
+- Plan slug: `multiple-contact-phone-numbers`
+- Created: `2026-03-09`
+
+## What This Is
+
+Keep a lightweight, continuously-updated log of discoveries and decisions made while implementing this plan.
+
+Prefer short bullets. Append new entries as you learn things, and also update earlier notes when a decision changes or an open question is resolved.
+
+## Decisions
+
+- (2026-03-09) Canonical contact phone types are `work`, `mobile`, `home`, `fax`, and `other`.
+- (2026-03-09) The application contract is a breaking cutover: contact APIs/types/UI should move to `phone_numbers` rather than keep a long-lived scalar compatibility field.
+- (2026-03-09) The storage model should be normalized instead of JSON on `contacts`.
+- (2026-03-09) Custom phone types should behave like tags: tenant-scoped reusable suggestions created on demand, with normalization-based deduplication.
+- (2026-03-09) List/detail/ticket surfaces should display the derived default phone rather than attempt to render every phone row in summary views.
+- (2026-03-09) Migration A is implemented as one additive schema file that creates both normalized phone tables, backfills scalar contact phones, and intentionally leaves `contacts.phone_number` in place for deploy safety. Rationale: it satisfies the rollout sequencing requirement without coupling the later cutover/drop step to the initial schema release.
+
+## Discoveries / Constraints
+
+- (2026-03-09) `contacts.phone_number` is still assumed broadly across shared types, server interfaces, API schemas, contact actions, query actions, CSV import/export, list tables, detail views, ticket properties, and Entra sync.
+- (2026-03-09) Main contact GUI surfaces in scope include:
+  - `packages/clients/src/components/contacts/ContactDetails.tsx`
+  - `packages/clients/src/components/contacts/ContactDetailsEdit.tsx`
+  - `packages/clients/src/components/contacts/ContactDetailsView.tsx`
+  - `packages/clients/src/components/contacts/QuickAddContact.tsx`
+  - `packages/clients/src/components/contacts/Contacts.tsx`
+  - `packages/clients/src/components/contacts/ClientContactsList.tsx`
+  - `packages/clients/src/components/contacts/ContactsImportDialog.tsx`
+  - `packages/clients/src/components/clients/QuickAddClient.tsx`
+  - `packages/tickets/src/components/ticket/TicketProperties.tsx`
+- (2026-03-09) Contact query actions currently sort and project directly on `contacts.phone_number`, so query behavior needs an explicit default-phone derivation rule after normalization.
+- (2026-03-09) Contact workflow/domain events and API schemas currently still emit/validate scalar phone fields (`phoneNumber`, `phone_number`).
+- (2026-03-09) Entra sync currently collapses `mobilePhone` and `businessPhones[0]` into one scalar `phone_number`; the new model should preserve more than one external number.
+- (2026-03-09) Existing repo migration tests commonly use file-content contract assertions rather than spinning up a database for every migration case; the first phone migration coverage follows that pattern in `server/src/test/unit/migrations/contactPhoneNumbersMigration.test.ts`.
+
+## Commands / Runbooks
+
+- (2026-03-09) Find contact phone usage in contact UI and actions:
+  - `rg -n "phone_number|PhoneInput|ContactDetails|QuickAddContact|ContactsImportDialog|ClientContactsList" packages/clients/src --glob '!**/node_modules/**'`
+- (2026-03-09) Find wider GUI/contact display usage:
+  - `rg -n "phone_number|Phone Number|Phone" packages/clients/src/components packages/tickets/src/components ee/server/src --glob '!**/node_modules/**'`
+- (2026-03-09) Find API/service/event usage:
+  - `rg -n "CONTACT_CREATED|CONTACT_UPDATED|phoneNumber|phone_number" packages server ee --glob '!**/node_modules/**'`
+- (2026-03-09) Validate the new migration contract suite:
+  - `cd server && npx vitest run src/test/unit/migrations/contactPhoneNumbersMigration.test.ts`
+- (2026-03-09) Quick syntax-load check for the new migration:
+  - `node -e "require('./server/migrations/20260309120000_create_contact_phone_numbers_schema.cjs'); console.log('migration-load-ok')"`
+
+## Links / References
+
+- Contact type definition: `packages/types/src/interfaces/contact.interfaces.ts`
+- Contact actions: `packages/clients/src/actions/contact-actions/contactActions.tsx`
+- Contact query actions: `packages/clients/src/actions/queryActions.ts`
+- API contact schemas: `server/src/lib/api/schemas/contact.ts`
+- Initial contacts schema: `server/migrations/202409071803_initial_schema.cjs`
+- Contact details screen explicitly called out by user: `packages/clients/src/components/contacts/ContactDetails.tsx`
+
+## Open Questions
+
+- Should v1 CSV import/export add an explicit phone type column, or should import/export remain single-default-phone only?
+- Should the server expose derived `default_phone_number` convenience fields on list responses, or should callers derive them from `phone_numbers`?
+- Should the new multi-phone editor be contact-local first, or extracted immediately into a shared UI component?
+
+## Completed Items
+
+- (2026-03-09) Completed `F001`, `F002`, `F004`, and `F005` with `server/migrations/20260309120000_create_contact_phone_numbers_schema.cjs`.
+  - Added `contact_phone_type_definitions` with tenant-scoped unique `normalized_label` and a DB check that stored normalized labels are lower-trimmed.
+  - Added `contact_phone_numbers` with canonical/custom type exclusivity, canonical type constraint, per-contact default uniqueness, display ordering, and tenant/contact lookup indexes.
+  - Backfilled non-empty legacy `contacts.phone_number` values into default `work` phone rows while retaining the legacy column for the later cutover/drop sequence.
+- (2026-03-09) Completed `T001` through `T005` with `server/src/test/unit/migrations/contactPhoneNumbersMigration.test.ts`.
+  - Coverage asserts the migration contract for custom type deduplication, phone-row type exclusivity, default uniqueness, and the scalar-phone backfill rules.
