@@ -264,9 +264,9 @@ export function TimePicker({
           <Popover.Anchor asChild>
             <div
               className={cn(
-                'flex h-10 w-full rounded-md border border-gray-300 bg-white text-sm',
+                'flex h-10 w-full rounded-md border border-border bg-background text-sm',
                 'focus-within:ring-2 focus-within:ring-[rgb(var(--color-primary-500))] focus-within:ring-offset-2',
-                disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-400',
+                disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-muted-foreground/50',
               )}
             >
               <input
@@ -288,8 +288,8 @@ export function TimePicker({
                 placeholder={placeholder === 'Select time' ? (timeFormat === '24h' ? '09:00' : '09:00 AM') : placeholder}
                 disabled={disabled}
                 className={cn(
-                  'h-full flex-1 rounded-l-md bg-transparent px-3 py-2',
-                  'focus-visible:outline-none placeholder:text-gray-500',
+                  'h-full flex-1 rounded-l-md bg-transparent px-3 py-2 text-foreground',
+                  'focus-visible:outline-none placeholder:text-muted-foreground',
                   disabled && 'cursor-not-allowed',
                 )}
               />
@@ -299,9 +299,9 @@ export function TimePicker({
                   disabled={disabled}
                   aria-label="Open time picker"
                   className={cn(
-                    'flex h-full w-10 items-center justify-center rounded-r-md border-l border-gray-300',
+                    'flex h-full w-10 items-center justify-center rounded-r-md border-l border-border',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-500))] focus-visible:ring-offset-2',
-                    disabled ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50',
+                    disabled ? 'cursor-not-allowed' : 'cursor-pointer hover:bg-muted',
                   )}
                 >
                   <Clock className="h-4 w-4 opacity-50 shrink-0" />
@@ -312,16 +312,16 @@ export function TimePicker({
 
           <Popover.Portal>
             <Popover.Content
-              className="z-50 w-[240px] p-3 bg-white border border-gray-200 rounded-md shadow-lg animate-in fade-in-0 zoom-in-95"
+              className="z-50 w-[240px] p-3 bg-[rgb(var(--color-card))] border border-[rgb(var(--color-border-200))] rounded-md shadow-lg animate-in fade-in-0 zoom-in-95"
               align="start"
               sideOffset={4}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Hour</label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">Hour</label>
                   <div
                     ref={hourListRef}
-                    className="h-[160px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+                    className="h-[160px] overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent"
                     onWheel={(e) => {
                       const container = e.currentTarget;
                       container.scrollTop += e.deltaY;
@@ -338,8 +338,8 @@ export function TimePicker({
                         className={cn(
                           'w-full px-2 py-1 text-left text-sm rounded-md text-center',
                           selectedHour === hour
-                            ? 'bg-purple-100 text-purple-900'
-                            : 'hover:bg-gray-100'
+                            ? 'bg-primary/20 text-primary'
+                            : 'hover:bg-[rgb(var(--color-border-200))] text-foreground'
                         )}
                       >
                         {hour}
@@ -349,10 +349,10 @@ export function TimePicker({
                 </div>
 
                 <div className="flex-1">
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Minute</label>
+                  <label className="block text-xs font-medium text-muted-foreground mb-1">Minute</label>
                   <div
                     ref={minuteListRef}
-                    className="h-[160px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+                    className="h-[160px] overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent"
                     onWheel={(e) => {
                       const container = e.currentTarget;
                       container.scrollTop += e.deltaY;
@@ -369,8 +369,8 @@ export function TimePicker({
                         className={cn(
                           'w-full px-2 py-1 text-left text-sm rounded-md text-center',
                           selectedMinute === minute
-                            ? 'bg-purple-100 text-purple-900'
-                            : 'hover:bg-gray-100'
+                            ? 'bg-primary/20 text-primary'
+                            : 'hover:bg-[rgb(var(--color-border-200))] text-foreground'
                         )}
                       >
                         {minute}
@@ -381,7 +381,7 @@ export function TimePicker({
 
                 {timeFormat === '12h' && (
                   <div className="w-16">
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Period</label>
+                    <label className="block text-xs font-medium text-muted-foreground mb-1">Period</label>
                     <div>
                       {(['AM', 'PM'] as const).map((p) => (
                         <button
@@ -393,8 +393,8 @@ export function TimePicker({
                           className={cn(
                             'w-full px-2 py-1 text-left text-sm rounded-md text-center',
                             period === p
-                              ? 'bg-purple-100 text-purple-900'
-                              : 'hover:bg-gray-100'
+                              ? 'bg-primary/20 text-primary'
+                              : 'hover:bg-[rgb(var(--color-border-200))] text-foreground'
                           )}
                         >
                           {p}
@@ -419,10 +419,10 @@ export function TimePicker({
           disabled={disabled}
           aria-label={label || placeholder}
           className={`
-            flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm
+            flex h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground
             file:border-0 file:bg-transparent file:text-sm file:font-medium
-            placeholder:text-gray-500
-            hover:border-gray-400
+            placeholder:text-muted-foreground
+            hover:border-muted-foreground/50
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-500))] focus-visible:ring-offset-2
             disabled:cursor-not-allowed disabled:opacity-50
             ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
@@ -519,8 +519,8 @@ export function TimePicker({
                         className={cn(
                           'w-full px-2 py-1 text-left text-sm rounded-md text-center',
                           period === p
-                            ? 'bg-purple-100 text-purple-900'
-                            : 'hover:bg-gray-100'
+                            ? 'bg-primary/20 text-primary'
+                            : 'hover:bg-[rgb(var(--color-border-200))] text-foreground'
                         )}
                       >
                         {p}
