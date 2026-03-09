@@ -90,6 +90,8 @@ const AGGREGATION_OPTIONS = [
   { value: 'max', label: 'Maximum' },
 ];
 
+type ComparisonPredicate = Extract<InvoiceTemplatePredicate, { type: 'comparison' }>;
+
 const createLocalId = (prefix: string) =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
     ? `${prefix}-${crypto.randomUUID()}`
@@ -129,7 +131,7 @@ const formatValuePreview = (value: unknown): string => {
   return String(value);
 };
 
-const parsePredicateValue = (rawValue: string, operator: InvoiceTemplatePredicate extends infer _T ? string : never) => {
+const parsePredicateValue = (rawValue: string, operator: ComparisonPredicate['op']) => {
   const trimmed = rawValue.trim();
   if (operator === 'in') {
     if (!trimmed) {
@@ -235,7 +237,7 @@ const getSourceCollection = (
 const coerceComparisonPredicate = (
   predicate: InvoiceTemplatePredicate,
   fieldPaths: string[]
-): InvoiceTemplateFilterTransform['predicate'] => {
+): ComparisonPredicate => {
   if (predicate.type === 'comparison') {
     return predicate;
   }
@@ -659,7 +661,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                       operation.type === 'filter' ? operation.predicate : predicate,
                       sourceFieldPaths
                     ),
-                    op: value as InvoiceTemplateFilterTransform['predicate']['op'],
+	                    op: value as ComparisonPredicate['op'],
                     value:
                       value === 'in'
                         ? []
@@ -720,12 +722,13 @@ const TransformsWorkspace: React.FC<Props> = ({
         <div className="space-y-3">
           {keys.map((key, index) => (
             <div key={`${selectedOperation.id}-${index}`} className="rounded-md border border-slate-200 bg-slate-50 p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-slate-600">Sort key {index + 1}</p>
-                <Button
-                  variant="outline"
-                  size="xs"
-                  disabled={keys.length === 1}
+	              <div className="flex items-center justify-between">
+	                <p className="text-xs font-semibold text-slate-600">Sort key {index + 1}</p>
+	                <Button
+	                  id={`transform-sort-remove-${selectedOperation.id}-${index}`}
+	                  variant="outline"
+	                  size="xs"
+	                  disabled={keys.length === 1}
                   onClick={() =>
                     updateOperation(selectedOperation.id, (operation) => ({
                       ...operation,
@@ -778,10 +781,11 @@ const TransformsWorkspace: React.FC<Props> = ({
               </div>
             </div>
           ))}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
+	          <Button
+	            id={`transform-sort-add-${selectedOperation.id}`}
+	            variant="outline"
+	            size="sm"
+	            onClick={() =>
               updateOperation(selectedOperation.id, (operation) => ({
                 ...operation,
                 keys: operation.type === 'sort'
@@ -847,12 +851,13 @@ const TransformsWorkspace: React.FC<Props> = ({
         <div className="space-y-3">
           {aggregations.map((aggregation, index) => (
             <div key={`${selectedOperation.id}-${index}`} className="rounded-md border border-slate-200 bg-slate-50 p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-slate-600">Aggregation {index + 1}</p>
-                <Button
-                  variant="outline"
-                  size="xs"
-                  disabled={aggregations.length === 1}
+	              <div className="flex items-center justify-between">
+	                <p className="text-xs font-semibold text-slate-600">Aggregation {index + 1}</p>
+	                <Button
+	                  id={`transform-aggregate-remove-${selectedOperation.id}-${index}`}
+	                  variant="outline"
+	                  size="xs"
+	                  disabled={aggregations.length === 1}
                   onClick={() =>
                     updateOperation(selectedOperation.id, (operation) => ({
                       ...operation,
@@ -944,10 +949,11 @@ const TransformsWorkspace: React.FC<Props> = ({
               )}
             </div>
           ))}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
+	          <Button
+	            id={`transform-aggregate-add-${selectedOperation.id}`}
+	            variant="outline"
+	            size="sm"
+	            onClick={() =>
               updateOperation(selectedOperation.id, (operation) => ({
                 ...operation,
                 aggregations: operation.type === 'aggregate'
@@ -1120,20 +1126,20 @@ const TransformsWorkspace: React.FC<Props> = ({
               <p className="text-xs text-slate-500">Operations run top to bottom.</p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={() => addOperation('filter')}>
-              + Filter
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => addOperation('sort')}>
-              + Sort
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => addOperation('group')}>
-              + Group
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => addOperation('aggregate')}>
-              + Aggregate
-            </Button>
-          </div>
+	          <div className="flex flex-wrap gap-2">
+	            <Button id="transform-add-filter" size="sm" variant="outline" onClick={() => addOperation('filter')}>
+	              + Filter
+	            </Button>
+	            <Button id="transform-add-sort" size="sm" variant="outline" onClick={() => addOperation('sort')}>
+	              + Sort
+	            </Button>
+	            <Button id="transform-add-group" size="sm" variant="outline" onClick={() => addOperation('group')}>
+	              + Group
+	            </Button>
+	            <Button id="transform-add-aggregate" size="sm" variant="outline" onClick={() => addOperation('aggregate')}>
+	              + Aggregate
+	            </Button>
+	          </div>
 
           {transforms.operations.length === 0 ? (
             <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-6 text-sm text-slate-500">
@@ -1171,11 +1177,12 @@ const TransformsWorkspace: React.FC<Props> = ({
                         </div>
                         <p className="mt-1 truncate text-xs text-slate-500">{describeOperation(operation)}</p>
                       </div>
-                      <div className="flex shrink-0 items-center gap-1">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7"
+	                      <div className="flex shrink-0 items-center gap-1">
+	                        <Button
+	                          id={`transform-move-up-${operation.id}`}
+	                          variant="outline"
+	                          size="icon"
+	                          className="h-7 w-7"
                           disabled={index === 0}
                           onClick={(event) => {
                             event.stopPropagation();
@@ -1185,10 +1192,11 @@ const TransformsWorkspace: React.FC<Props> = ({
                         >
                           ↑
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7"
+	                        <Button
+	                          id={`transform-move-down-${operation.id}`}
+	                          variant="outline"
+	                          size="icon"
+	                          className="h-7 w-7"
                           disabled={index === transforms.operations.length - 1}
                           onClick={(event) => {
                             event.stopPropagation();
@@ -1198,10 +1206,11 @@ const TransformsWorkspace: React.FC<Props> = ({
                         >
                           ↓
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7"
+	                        <Button
+	                          id={`transform-duplicate-${operation.id}`}
+	                          variant="outline"
+	                          size="icon"
+	                          className="h-7 w-7"
                           onClick={(event) => {
                             event.stopPropagation();
                             duplicateOperation(operation.id);
@@ -1210,10 +1219,11 @@ const TransformsWorkspace: React.FC<Props> = ({
                         >
                           ⧉
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7"
+	                        <Button
+	                          id={`transform-delete-${operation.id}`}
+	                          variant="outline"
+	                          size="icon"
+	                          className="h-7 w-7"
                           onClick={(event) => {
                             event.stopPropagation();
                             removeOperation(operation.id);
