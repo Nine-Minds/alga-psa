@@ -9,6 +9,7 @@ export interface SchedulingTicketDetailsRecord {
   ticket_number: string | null;
   title: string | null;
   description: string | null;
+  attributes?: Record<string, unknown> | null;
   status: string | null;
   priority: string | null;
   board_name: string | null;
@@ -61,7 +62,7 @@ export const getSchedulingTicketById = withAuth(async (
         't.ticket_id',
         't.ticket_number',
         't.title',
-        't.description',
+        't.attributes',
         't.entered_at',
         't.updated_at',
         't.closed_at',
@@ -77,5 +78,23 @@ export const getSchedulingTicketById = withAuth(async (
       .first();
   });
 
-  return (ticket ?? null) as SchedulingTicketDetailsRecord | null;
+  if (!ticket) {
+    return null;
+  }
+
+  const attributes = (ticket.attributes && typeof ticket.attributes === 'object')
+    ? ticket.attributes as Record<string, unknown>
+    : null;
+  const rawDescription = attributes?.description;
+  const description = typeof rawDescription === 'string'
+    ? rawDescription
+    : rawDescription == null
+      ? null
+      : JSON.stringify(rawDescription);
+
+  return {
+    ...(ticket as Omit<SchedulingTicketDetailsRecord, 'description'>),
+    attributes,
+    description,
+  };
 });
