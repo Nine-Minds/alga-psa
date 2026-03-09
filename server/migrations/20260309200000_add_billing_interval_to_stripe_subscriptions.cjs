@@ -6,9 +6,12 @@
  */
 
 exports.up = async function (knex) {
-  await knex.schema.alterTable('stripe_subscriptions', (table) => {
-    table.text('billing_interval').defaultTo('month').notNullable();
-  });
+  const hasColumn = await knex.schema.hasColumn('stripe_subscriptions', 'billing_interval');
+  if (!hasColumn) {
+    await knex.schema.alterTable('stripe_subscriptions', (table) => {
+      table.text('billing_interval').defaultTo('month').notNullable();
+    });
+  }
 };
 
 exports.down = async function (knex) {

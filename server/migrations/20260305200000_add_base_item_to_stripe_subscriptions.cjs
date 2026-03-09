@@ -9,9 +9,12 @@
  */
 
 exports.up = async function (knex) {
+  const hasBaseItemId = await knex.schema.hasColumn('stripe_subscriptions', 'stripe_base_item_id');
+  const hasBasePriceId = await knex.schema.hasColumn('stripe_subscriptions', 'stripe_base_price_id');
+
   await knex.schema.alterTable('stripe_subscriptions', (table) => {
-    table.text('stripe_base_item_id').nullable();
-    table.uuid('stripe_base_price_id').nullable();
+    if (!hasBaseItemId) table.text('stripe_base_item_id').nullable();
+    if (!hasBasePriceId) table.uuid('stripe_base_price_id').nullable();
   });
 };
 
