@@ -1,0 +1,28 @@
+[
+  {
+    "id": "F001",
+    "description": "Ticket conversation initializes from a browser-stored comment order preference when one exists.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Ticket conversation falls back to the existing defaultNewestFirst prop when no browser preference exists.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Changing the newest/oldest comment order control silently updates the browser preference for future ticket conversations.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements > Functional Requirements"
+    ]
+  }
+]

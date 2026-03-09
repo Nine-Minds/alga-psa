@@ -1,0 +1,34 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: browser preference helper falls back to defaultNewestFirst when storage is missing or invalid.",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Component: TicketConversation uses the stored browser preference instead of defaultNewestFirst when a saved value exists.",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Component: TicketConversation falls back to defaultNewestFirst when no browser preference exists.",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Component: toggling the comment order control updates localStorage and reverses rendered comment order.",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  }
+]
