@@ -13,8 +13,8 @@ import TaskEdit from '@alga-psa/projects/components/TaskEdit';
 import EntryPopup from '../../../schedule/EntryPopup';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { InteractionDetails } from '@alga-psa/clients/components';
-import { getInteractionById } from '@alga-psa/clients/actions';
+import { getSchedulingInteractionById } from '../../../../actions/clientInteractionLookupActions';
+import { SchedulingInteractionDetails } from '../../../shared/SchedulingInteractionDetails';
 
 interface WorkItemDrawerProps {
     workItem: IExtendedWorkItem;
@@ -41,7 +41,7 @@ function InteractionDrawerContent({ workItemId }: { workItemId: string }) {
     React.useEffect(() => {
         const fetchInteraction = async () => {
             try {
-                const interactionData = await getInteractionById(workItemId);
+                const interactionData = await getSchedulingInteractionById(workItemId);
                 setInteraction(interactionData);
             } catch (error) {
                 handleError(error, 'Failed to load interaction details');
@@ -69,13 +69,7 @@ function InteractionDrawerContent({ workItemId }: { workItemId: string }) {
     }
 
     return (
-        <InteractionDetails 
-            interaction={interaction} 
-            isInDrawer={true}
-            onInteractionUpdated={async (updated) => {
-                setInteraction(updated);
-            }}
-        />
+        <SchedulingInteractionDetails interaction={interaction} />
     );
 }
 

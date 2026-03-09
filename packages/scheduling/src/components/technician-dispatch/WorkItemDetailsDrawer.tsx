@@ -9,13 +9,13 @@ import { getTaskWithDetails } from '@alga-psa/projects/actions/projectTaskAction
 import { getWorkItemById } from '@alga-psa/scheduling/actions';
 import { getCurrentUser, getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import { getScheduleEntries } from '@alga-psa/scheduling/actions';
-import { getInteractionById } from '@alga-psa/clients/actions';
+import { getSchedulingInteractionById } from '../../actions/clientInteractionLookupActions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import TaskEdit from '@alga-psa/projects/components/TaskEdit';
 import EntryPopup from '@alga-psa/scheduling/components/schedule/EntryPopup';
-import { InteractionDetails } from '@alga-psa/clients/components';
+import { SchedulingInteractionDetails } from '../shared/SchedulingInteractionDetails';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 
 interface WorkItemDetailsDrawerProps {
@@ -207,7 +207,7 @@ export function WorkItemDetailsDrawer({
 
                 case 'interaction': {
                     console.log('Loading interaction with ID:', workItem.work_item_id);
-                    const interactionData = await getInteractionById(workItem.work_item_id);
+                    const interactionData = await getSchedulingInteractionById(workItem.work_item_id);
                     if (!interactionData) {
                         toast.error('Failed to load interaction data');
                         return null;
@@ -215,15 +215,7 @@ export function WorkItemDetailsDrawer({
 
                     return (
                         <div className="h-full">
-                            <InteractionDetails
-                                interaction={interactionData}
-                                isInDrawer={true}
-                                onInteractionDeleted={onClose}
-                                onInteractionUpdated={async () => {
-                                    // Optionally refresh the data in the parent
-                                    await onTaskUpdate(null);
-                                }}
-                            />
+                            <SchedulingInteractionDetails interaction={interactionData} />
                         </div>
                     );
                 }
