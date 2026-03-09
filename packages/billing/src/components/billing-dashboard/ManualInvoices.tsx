@@ -710,17 +710,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                     open={isQuickAddClientOpen}
                     onOpenChange={setIsQuickAddClientOpen}
                     onClientAdded={(newClient) => {
-                      setClientOptions((prevClients) => {
-                        const existingIndex = prevClients.findIndex((client) => client.client_id === newClient.client_id);
-                        if (existingIndex >= 0) {
-                          const nextClients = [...prevClients];
-                          nextClients[existingIndex] = newClient;
-                          return nextClients;
-                        }
-                        return [...prevClients, newClient];
-                      });
+                      setClientOptions(prev => [...prev, newClient]);
                       setSelectedClient(newClient.client_id);
                     }}
+                    skipSuccessDialog
                   />
                 </div>
               )}

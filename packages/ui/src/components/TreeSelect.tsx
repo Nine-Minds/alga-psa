@@ -70,7 +70,7 @@ function TreeSelect<T extends string>({
   allowEmpty = false,
   modal,
   onAddNew,
-  addNewLabel = '+ Add new',
+  addNewLabel = 'Add new',
 }: TreeSelectProps<T>): React.JSX.Element {
   const { modal: parentModal } = useModality();
   const isClient = useIsClient();
@@ -497,7 +497,7 @@ function TreeSelect<T extends string>({
                     onClick={handleAddNew}
                   >
                     <Plus className="h-4 w-4" />
-                    <span>{addNewLabel}</span>
+                    {addNewLabel}
                   </button>
                 </>
               )}

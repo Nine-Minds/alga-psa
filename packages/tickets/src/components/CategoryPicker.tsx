@@ -264,7 +264,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
           disabled={disabled}
           modal={modal}
           onAddNew={onAddNew}
-          addNewLabel="+ Add new category"
+          addNewLabel="Add new category"
         />
       </div>
     </ReflectionContainer>

@@ -27,7 +27,8 @@ import type { PendingTag } from '@alga-psa/types';
 import { createTagsForEntity } from '@alga-psa/tags/actions';
 import ClientPortalConfigEditor from './ClientPortalConfigEditor';
 import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
-import { QuickAddClient, QuickAddContact } from '@alga-psa/clients/components';
+import QuickAddContact from '@alga-psa/clients/components/contacts/QuickAddContact';
+import QuickAddClient from '@alga-psa/clients/components/clients/QuickAddClient';
 
 interface ProjectQuickAddProps {
   onClose: () => void;
@@ -38,12 +39,12 @@ interface ProjectQuickAddProps {
 const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdded, clients }) => {
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
-  const [clientOptions, setClientOptions] = useState<IClient[]>(clients);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
-  const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
+  const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
+  const [localClients, setLocalClients] = useState<IClient[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
@@ -62,9 +63,10 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   const [clientPortalConfig, setClientPortalConfig] = useState<IClientPortalConfig>(DEFAULT_CLIENT_PORTAL_CONFIG);
   const [showClientPortalConfig, setShowClientPortalConfig] = useState(false);
 
-  useEffect(() => {
-    setClientOptions(clients);
-  }, [clients]);
+  const mergedClients = React.useMemo(() => {
+    const clientIds = new Set(clients.map(c => c.client_id));
+    return [...clients, ...localClients.filter(c => !clientIds.has(c.client_id))];
+  }, [clients, localClients]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -190,14 +192,14 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   };
 
   return (
+    <>
     <Dialog
       isOpen={true}
       onClose={() => {
         setHasAttemptedSubmit(false);
         setValidationErrors([]);
-      onClose();
-      setIsQuickAddContactOpen(false);
-    }}
+        onClose();
+      }}
       title="Add New Project"
       className="max-w-[600px]"
       disableFocusTrap
@@ -249,7 +251,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                 <label className="block text-sm font-medium text-gray-700 mb-1">Client *</label>
                 <ClientPicker
                   id='client-picker'
-                  clients={clientOptions}
+                  clients={mergedClients}
                   onSelect={setSelectedClientId}
                   selectedClientId={selectedClientId}
                   filterState={filterState}
@@ -273,42 +275,6 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                   onAddNew={selectedClientId ? () => setIsQuickAddContactOpen(true) : undefined}
                 />
               </div>
-              <QuickAddContact
-                isOpen={isQuickAddContactOpen}
-                onClose={() => setIsQuickAddContactOpen(false)}
-                onContactAdded={(newContact) => {
-                  setContacts((prevContacts) => {
-                    const existingIndex = prevContacts.findIndex((contact) => contact.contact_name_id === newContact.contact_name_id);
-                    if (existingIndex >= 0) {
-                      const nextContacts = [...prevContacts];
-                      nextContacts[existingIndex] = newContact;
-                      return nextContacts;
-                    }
-                    return [...prevContacts, newContact];
-                  });
-                  setSelectedContactId(newContact.contact_name_id);
-                  setIsQuickAddContactOpen(false);
-                }}
-                clients={clientOptions}
-                selectedClientId={selectedClientId || undefined}
-              />
-              <QuickAddClient
-                open={isQuickAddClientOpen}
-                onOpenChange={setIsQuickAddClientOpen}
-                onClientAdded={(newClient) => {
-                  setClientOptions((prevClients) => {
-                    const existingIndex = prevClients.findIndex((client) => client.client_id === newClient.client_id);
-                    if (existingIndex >= 0) {
-                      const nextClients = [...prevClients];
-                      nextClients[existingIndex] = newClient;
-                      return nextClients;
-                    }
-                    return [...prevClients, newClient];
-                  });
-                  setSelectedClientId(newClient.client_id);
-                  setSelectedContactId(null);
-                }}
-              />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Project Manager</label>
                 <UserPicker
@@ -425,6 +391,28 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
           </form>
         </DialogContent>
     </Dialog>
+
+      <QuickAddContact
+        isOpen={isQuickAddContactOpen}
+        onClose={() => setIsQuickAddContactOpen(false)}
+        onContactAdded={(newContact) => {
+          setContacts(prev => [...prev, newContact]);
+          setSelectedContactId(newContact.contact_name_id);
+        }}
+        clients={mergedClients}
+        selectedClientId={selectedClientId || null}
+      />
+
+      <QuickAddClient
+        open={isQuickAddClientOpen}
+        onOpenChange={setIsQuickAddClientOpen}
+        onClientAdded={(newClient) => {
+          setLocalClients(prev => [...prev, newClient]);
+          setSelectedClientId(newClient.client_id);
+        }}
+        skipSuccessDialog
+      />
+    </>
   );
 };
 

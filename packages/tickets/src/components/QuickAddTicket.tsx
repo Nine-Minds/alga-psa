@@ -1265,20 +1265,10 @@ export function QuickAddTicket({
         open={isQuickAddClientOpen}
         onOpenChange={setIsQuickAddClientOpen}
         onClientAdded={(newClient) => {
-          setClients((prevClients) => {
-            const existingIndex = prevClients.findIndex((client) => client.client_id === newClient.client_id);
-            if (existingIndex >= 0) {
-              const nextClients = [...prevClients];
-              nextClients[existingIndex] = newClient;
-              return nextClients;
-            }
-            return [...prevClients, newClient];
-          });
-          setClientId(newClient.client_id);
-          setContactId(null);
-          setSelectedClientType(newClient.client_type === 'company' || newClient.client_type === 'individual' ? newClient.client_type : null);
-          clearErrorIfSubmitted();
+          setClients(prev => [...prev, newClient]);
+          handleClientChange(newClient.client_id);
         }}
+        skipSuccessDialog
       />
       <QuickAddCategory
         isOpen={isQuickAddCategoryOpen}

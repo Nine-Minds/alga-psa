@@ -378,7 +378,7 @@ export const ContactPicker = ({
                     onClick={handleAddNew}
                   >
                     <Plus className="h-4 w-4" />
-                    <span>+ Add new contact</span>
+                    Add new contact
                   </button>
                 </>
               )}

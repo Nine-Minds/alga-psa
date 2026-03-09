@@ -237,20 +237,10 @@ export function ContractBasicsStep({
           open={isQuickAddClientOpen}
           onOpenChange={setIsQuickAddClientOpen}
           onClientAdded={(newClient) => {
-            setClients((prevClients) => {
-              const existingIndex = prevClients.findIndex((client) => client.client_id === newClient.client_id);
-              if (existingIndex >= 0) {
-                const nextClients = [...prevClients];
-                nextClients[existingIndex] = newClient;
-                return nextClients;
-              }
-              return [...prevClients, newClient];
-            });
-            updateData({
-              client_id: newClient.client_id,
-              currency_code: newClient.default_currency_code || data.currency_code,
-            });
+            setClients(prev => [...prev, newClient]);
+            updateData({ client_id: newClient.client_id });
           }}
+          skipSuccessDialog
         />
         {!data.client_id && (
           <p className="text-xs text-[rgb(var(--color-text-400))]">Choose the client this contract is for.</p>
