@@ -7,7 +7,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { toast } from 'react-hot-toast';
-import { CreditCard, User, Rocket, MinusCircle, Info, ChevronDown, ChevronUp, DollarSign, Calendar, CheckCircle, Shield, ArrowRightLeft } from 'lucide-react';
+import { CreditCard, User, Rocket, MinusCircle, Info, ChevronDown, ChevronUp, DollarSign, Calendar, CheckCircle, Shield, ArrowRightLeft, Clock } from 'lucide-react';
 import {
   getLicenseUsageAction,
   getLicensePricingAction,
@@ -22,6 +22,7 @@ import {
   getUpgradePreviewAction,
   switchBillingIntervalAction,
   getIntervalSwitchPreviewAction,
+  sendPremiumTrialRequestAction,
 } from 'ee/server/src/lib/actions/license-actions';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
 import { useRouter } from 'next/navigation';
@@ -51,7 +52,7 @@ export default function AccountManagement() {
   const [showReduceModal, setShowReduceModal] = useState(false);
   const [showCancellationFeedback, setShowCancellationFeedback] = useState(false);
   const [scheduledChanges, setScheduledChanges] = useState<IScheduledLicenseChange | null>(null);
-  const { tier, isMisconfigured, isPro, refreshTier } = useTier();
+  const { tier, isMisconfigured, isPro, refreshTier, isTrialing, trialDaysLeft, trialEndDate, isPaymentFailed, subscriptionStatus } = useTier();
   const upgradeFlowFlag = useFeatureFlag('tier-upgrade-flow');
   const showUpgradeFlow = isPro && (typeof upgradeFlowFlag === 'boolean' ? upgradeFlowFlag : upgradeFlowFlag?.enabled ?? false);
 
@@ -327,6 +328,35 @@ export default function AccountManagement() {
     }
   };
 
+  // Premium trial request state
+  const [trialRequestMessage, setTrialRequestMessage] = useState('');
+  const [sendingTrialRequest, setSendingTrialRequest] = useState(false);
+  const [trialRequestSent, setTrialRequestSent] = useState(false);
+
+  const handleSendTrialRequest = async () => {
+    if (!trialRequestMessage.trim()) {
+      toast.error('Please enter a message describing why you want to try Premium');
+      return;
+    }
+
+    setSendingTrialRequest(true);
+    try {
+      const result = await sendPremiumTrialRequestAction(trialRequestMessage.trim());
+      if (result.success) {
+        toast.success('Premium trial request sent! We\'ll get back to you shortly.');
+        setTrialRequestSent(true);
+        setTrialRequestMessage('');
+      } else {
+        toast.error(result.error || 'Failed to send request');
+      }
+    } catch (error) {
+      console.error('Error sending trial request:', error);
+      toast.error('Failed to send request');
+    } finally {
+      setSendingTrialRequest(false);
+    }
+  };
+
   const handleUpgradeClick = async () => {
     if (!canManageAccount) {
       toast.error('You do not have permission to manage the subscription');
@@ -438,6 +468,94 @@ export default function AccountManagement() {
         </Card>
       </div>
 
+      {/* Payment Failure Alert */}
+      {isPaymentFailed && (
+        <Alert variant="destructive">
+          <AlertDescription className="flex items-center justify-between">
+            <div>
+              <p className="font-semibold">Payment Failed</p>
+              <p className="text-sm">
+                Your last payment was unsuccessful. Please update your payment method to avoid service interruption.
+              </p>
+            </div>
+            <Button
+              id="update-payment-failure-btn"
+              variant="destructive"
+              size="sm"
+              onClick={handleUpdatePaymentMethod}
+            >
+              Update Payment Method
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Trial Status Card */}
+      {isTrialing && trialEndDate && (
+        <Card className="border-blue-200 dark:border-blue-800">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Clock className="h-5 w-5 text-blue-600" />
+                <CardTitle>Trial Status</CardTitle>
+              </div>
+              <Badge variant={trialDaysLeft <= 3 ? 'error' : 'default'}>
+                {trialDaysLeft} {trialDaysLeft === 1 ? 'day' : 'days'} remaining
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Progress bar */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Trial started</span>
+                <span>Trial ends {new Date(trialEndDate).toLocaleDateString()}</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all ${
+                    trialDaysLeft <= 3 ? 'bg-red-500' : 'bg-blue-500'
+                  }`}
+                  style={{ width: `${Math.max(5, 100 - (trialDaysLeft / 30) * 100)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Trial CTA */}
+            <div className="rounded-lg border p-3 bg-muted/50">
+              {tier === 'premium' ? (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Premium Trial</p>
+                    <p className="text-sm text-muted-foreground">
+                      Your card will be charged for Premium on {new Date(trialEndDate).toLocaleDateString()}.
+                      Cancel anytime before then to revert to your Pro plan.
+                    </p>
+                  </div>
+                  <Button
+                    id="cancel-premium-trial-btn"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancelSubscription}
+                    className="ml-4 shrink-0"
+                  >
+                    Cancel Trial
+                  </Button>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm font-medium">Pro Trial</p>
+                  <p className="text-sm text-muted-foreground">
+                    Your card will be charged on {new Date(trialEndDate).toLocaleDateString()}.
+                    Cancel anytime before then.
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Plan & Tier Information */}
       <Card>
         <CardHeader
@@ -518,6 +636,42 @@ export default function AccountManagement() {
                       {loadingPreview ? 'Loading...' : 'Upgrade'}
                     </Button>
                   </div>
+                </div>
+              )}
+
+              {/* Premium Trial Request */}
+              {isPro && !isTrialing && (
+                <div className="mt-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
+                  <h4 className="font-semibold mb-1">Try Premium Free for 30 Days</h4>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Request a 30-day Premium trial to explore advanced features like the Visual Invoice Designer.
+                    Your current Pro subscription continues — no interruption.
+                  </p>
+                  {trialRequestSent ? (
+                    <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Request sent! We&apos;ll review it shortly.</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <textarea
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        rows={3}
+                        placeholder="Tell us what you'd like to explore with Premium (optional but helps us prioritize)..."
+                        value={trialRequestMessage}
+                        onChange={(e) => setTrialRequestMessage(e.target.value)}
+                        disabled={sendingTrialRequest}
+                      />
+                      <Button
+                        id="send-trial-request-btn"
+                        size="sm"
+                        onClick={handleSendTrialRequest}
+                        disabled={sendingTrialRequest}
+                      >
+                        {sendingTrialRequest ? 'Sending...' : 'Request Premium Trial'}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

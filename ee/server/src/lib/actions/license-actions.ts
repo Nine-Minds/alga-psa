@@ -1179,3 +1179,84 @@ export async function getIntervalSwitchPreviewAction(
     };
   }
 }
+
+/**
+ * Start a 30-day Premium trial for a tenant.
+ * Called by Nine Minds admin via the extension.
+ * Requires master tenant session.
+ */
+export async function startPremiumTrialAction(
+  targetTenantId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getSession();
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    // Only the master tenant can start trials for other tenants
+    const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return { success: false, error: 'Stripe billing is not configured' };
+    }
+
+    const masterTenantId = process.env.STRIPE_MASTER_TENANT_ID || process.env.MASTER_TENANT_ID;
+    if (session.user.tenant !== masterTenantId) {
+      return { success: false, error: 'Only the master tenant can start Premium trials' };
+    }
+
+    return await stripeService.startPremiumTrial(targetTenantId);
+  } catch (error) {
+    logger.error('[startPremiumTrialAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to start Premium trial',
+    };
+  }
+}
+
+/**
+ * Send a Premium trial request email to Nine Minds.
+ * Called by tenants who want to try Premium.
+ */
+export async function sendPremiumTrialRequestAction(
+  message: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getSession();
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const knex = await getConnection(session.user.tenant);
+    const tenant = await knex('tenants')
+      .where('tenant', session.user.tenant)
+      .select('tenant', 'company_name', 'email', 'plan')
+      .first();
+
+    if (!tenant) {
+      return { success: false, error: 'Tenant not found' };
+    }
+
+    // Send email to Nine Minds support
+    const { sendPremiumTrialRequestEmail } = await import('@alga-psa/email');
+    await sendPremiumTrialRequestEmail({
+      tenantId: session.user.tenant,
+      tenantName: tenant.company_name || 'Unknown',
+      tenantEmail: tenant.email || session.user.email,
+      currentPlan: tenant.plan || 'unknown',
+      requestedByName: session.user.name || 'Unknown',
+      requestedByEmail: session.user.email || '',
+      message,
+    });
+
+    logger.info(`[sendPremiumTrialRequestAction] Premium trial request sent for tenant ${session.user.tenant}`);
+    return { success: true };
+  } catch (error) {
+    logger.error('[sendPremiumTrialRequestAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to send trial request',
+    };
+  }
+}

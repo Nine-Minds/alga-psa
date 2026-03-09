@@ -38,6 +38,8 @@ declare module "next-auth" {
             clientId?: string;
             contactId?: string;
             plan?: string;
+            trial_end?: string | null;
+            subscription_status?: string | null;
         };
     }
 
@@ -53,9 +55,13 @@ declare module "next-auth" {
         user_type: string;
         clientId?: string;
         contactId?: string;
+        plan?: string;
+        trial_end?: string | null;
+        subscription_status?: string | null;
         session_id?: string;
         login_method?: string;
         last_activity_check?: number;
         last_revocation_check?: number;
+        last_plan_check?: number;
     }
 }

@@ -65,14 +65,57 @@ const SESSION_COOKIE = getSessionCookieConfig();
  * Fetches the tenant's plan from the database.
  * Used for both initial sign-in and throttled refresh in JWT callbacks.
  */
+interface TenantSubscriptionInfo {
+    plan?: string;
+    trial_end?: string | null;
+    subscription_status?: string | null;
+}
+
 async function fetchTenantPlan(tenantId: string): Promise<string | undefined> {
+    const info = await fetchTenantSubscriptionInfo(tenantId);
+    return info.plan;
+}
+
+async function fetchTenantSubscriptionInfo(tenantId: string): Promise<TenantSubscriptionInfo> {
     const { getAdminConnection } = await import('@alga-psa/db/admin');
     const knex = await getAdminConnection();
+
+    // Fetch plan from tenants table
     const tenantRecord = await knex('tenants')
         .where('tenant', tenantId)
         .select('plan')
         .first();
-    return tenantRecord?.plan ?? undefined;
+
+    // Fetch active subscription status + trial info from stripe_subscriptions
+    // Use a single query to minimize DB load (this runs on every JWT refresh)
+    let trialEnd: string | null = null;
+    let subscriptionStatus: string | null = null;
+
+    try {
+        const subscription = await knex('stripe_subscriptions')
+            .where({ tenant: tenantId })
+            .whereIn('status', ['active', 'trialing', 'past_due', 'unpaid'])
+            .orderByRaw("CASE WHEN status = 'trialing' THEN 0 WHEN status = 'active' THEN 1 ELSE 2 END")
+            .select('status', 'current_period_end')
+            .first();
+
+        if (subscription) {
+            subscriptionStatus = subscription.status;
+
+            // For trialing subscriptions, current_period_end is the trial end date
+            if (subscription.status === 'trialing' && subscription.current_period_end) {
+                trialEnd = new Date(subscription.current_period_end).toISOString();
+            }
+        }
+    } catch {
+        // stripe_subscriptions table may not exist in CE or early setup — ignore
+    }
+
+    return {
+        plan: tenantRecord?.plan ?? undefined,
+        trial_end: trialEnd,
+        subscription_status: subscriptionStatus,
+    };
 }
 
 const NEXTAUTH_SECURE_COOKIES = process.env.NODE_ENV === 'production';
@@ -1547,13 +1590,16 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
 	                token.clientId = extendedUser.clientId;
 	                token.contactId = extendedUser.contactId;
 
-                // Fetch tenant plan on initial sign-in
+                // Fetch tenant plan + subscription info on initial sign-in
                 if (extendedUser.tenant) {
                     try {
-                        token.plan = await fetchTenantPlan(extendedUser.tenant);
+                        const subInfo = await fetchTenantSubscriptionInfo(extendedUser.tenant);
+                        token.plan = subInfo.plan;
+                        token.trial_end = subInfo.trial_end;
+                        token.subscription_status = subInfo.subscription_status;
                         token.last_plan_check = Date.now();
                     } catch (error) {
-                        console.error('[auth] Failed to fetch tenant plan:', error);
+                        console.error('[auth] Failed to fetch tenant subscription info:', error);
                     }
                 }
 	              }
@@ -1655,10 +1701,13 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
 
                 if (shouldRefreshPlan) {
                     try {
-                        token.plan = await fetchTenantPlan(token.tenant as string);
+                        const subInfo = await fetchTenantSubscriptionInfo(token.tenant as string);
+                        token.plan = subInfo.plan;
+                        token.trial_end = subInfo.trial_end;
+                        token.subscription_status = subInfo.subscription_status;
                         token.last_plan_check = now;
                     } catch (error) {
-                        console.error('[auth] Failed to refresh tenant plan:', error);
+                        console.error('[auth] Failed to refresh tenant subscription info:', error);
                         // Don't block on plan refresh errors
                     }
                 }
@@ -1717,6 +1766,8 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 user.clientId = token.clientId as string;
                 user.contactId = token.contactId as string;
                 user.plan = token.plan as string | undefined;
+                (user as any).trial_end = token.trial_end ?? null;
+                (user as any).subscription_status = token.subscription_status ?? null;
             }
             logger.trace("Session Object:", session);
             console.log('Session callback - final session.user:', {
@@ -2262,13 +2313,16 @@ export const options: NextAuthConfig = {
 	                token.clientId = extendedUser.clientId;
 	                token.contactId = extendedUser.contactId;
 
-                // Fetch tenant plan on initial sign-in
+                // Fetch tenant plan + subscription info on initial sign-in
                 if (extendedUser.tenant) {
                     try {
-                        token.plan = await fetchTenantPlan(extendedUser.tenant);
+                        const subInfo = await fetchTenantSubscriptionInfo(extendedUser.tenant);
+                        token.plan = subInfo.plan;
+                        token.trial_end = subInfo.trial_end;
+                        token.subscription_status = subInfo.subscription_status;
                         token.last_plan_check = Date.now();
                     } catch (error) {
-                        console.error('[auth] Failed to fetch tenant plan:', error);
+                        console.error('[auth] Failed to fetch tenant subscription info:', error);
                     }
                 }
 	              }
@@ -2370,10 +2424,13 @@ export const options: NextAuthConfig = {
 
                 if (shouldRefreshPlan) {
                     try {
-                        token.plan = await fetchTenantPlan(token.tenant as string);
+                        const subInfo = await fetchTenantSubscriptionInfo(token.tenant as string);
+                        token.plan = subInfo.plan;
+                        token.trial_end = subInfo.trial_end;
+                        token.subscription_status = subInfo.subscription_status;
                         token.last_plan_check = now;
                     } catch (error) {
-                        console.error('[auth] Failed to refresh tenant plan:', error);
+                        console.error('[auth] Failed to refresh tenant subscription info:', error);
                         // Don't block on plan refresh errors
                     }
                 }
@@ -2431,6 +2488,8 @@ export const options: NextAuthConfig = {
                 user.clientId = token.clientId as string;
                 user.contactId = token.contactId as string;
                 user.plan = token.plan as string | undefined;
+                (user as any).trial_end = token.trial_end ?? null;
+                (user as any).subscription_status = token.subscription_status ?? null;
             }
             logger.trace("Session Object:", session);
             console.log('Session callback - final session.user:', {

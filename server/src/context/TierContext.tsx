@@ -23,6 +23,20 @@ interface TierContextValue {
   refreshTier: () => Promise<void>;
   /** True while session is loading */
   isLoading: boolean;
+
+  // Trial state
+  /** True if the subscription is in a trialing state */
+  isTrialing: boolean;
+  /** Number of days remaining in trial (0 if not trialing) */
+  trialDaysLeft: number;
+  /** ISO date string of when trial ends (null if not trialing) */
+  trialEndDate: string | null;
+
+  // Subscription status
+  /** Raw subscription status from Stripe */
+  subscriptionStatus: string | null;
+  /** True if payment has failed (past_due or unpaid) */
+  isPaymentFailed: boolean;
 }
 
 const TierContext = createContext<TierContextValue | undefined>(undefined);
@@ -65,6 +79,20 @@ export function TierProvider({ children }: TierProviderProps) {
     await update();
   }, [update]);
 
+  // Trial state derived from session
+  const trialEndDate = session?.user?.trial_end ?? null;
+  const subscriptionStatus = session?.user?.subscription_status ?? null;
+  const isTrialing = subscriptionStatus === 'trialing';
+  const isPaymentFailed = subscriptionStatus === 'past_due' || subscriptionStatus === 'unpaid';
+
+  const trialDaysLeft = useMemo(() => {
+    if (!isTrialing || !trialEndDate) return 0;
+    const now = new Date();
+    const end = new Date(trialEndDate);
+    const diffMs = end.getTime() - now.getTime();
+    return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+  }, [isTrialing, trialEndDate]);
+
   const value = useMemo<TierContextValue>(
     () => ({
       tier,
@@ -74,8 +102,13 @@ export function TierProvider({ children }: TierProviderProps) {
       hasFeature,
       refreshTier,
       isLoading,
+      isTrialing,
+      trialDaysLeft,
+      trialEndDate,
+      subscriptionStatus,
+      isPaymentFailed,
     }),
-    [tier, isMisconfigured, isPro, isPremium, hasFeature, refreshTier, isLoading]
+    [tier, isMisconfigured, isPro, isPremium, hasFeature, refreshTier, isLoading, isTrialing, trialDaysLeft, trialEndDate, subscriptionStatus, isPaymentFailed]
   );
 
   return <TierContext.Provider value={value}>{children}</TierContext.Provider>;

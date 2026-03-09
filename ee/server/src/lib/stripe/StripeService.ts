@@ -785,9 +785,10 @@ export class StripeService {
   private async createLicenseCheckoutSession(
     tenantId: string,
     quantity: number,
-    interval: 'month' | 'year' = 'month'
+    interval: 'month' | 'year' = 'month',
+    trialDays?: number
   ): Promise<{ clientSecret: string; sessionId: string }> {
-    logger.info(`[StripeService] Creating checkout session for tenant ${tenantId}, quantity: ${quantity}, interval: ${interval}`);
+    logger.info(`[StripeService] Creating checkout session for tenant ${tenantId}, quantity: ${quantity}, interval: ${interval}${trialDays ? `, trial: ${trialDays}d` : ''}`);
 
     // Get or import customer
     const customer = await this.getOrImportCustomer(tenantId);
@@ -809,6 +810,7 @@ export class StripeService {
         },
       ],
       subscription_data: {
+        ...(trialDays ? { trial_period_days: trialDays } : {}),
         metadata: {
           tenant_id: tenantId,
           source: 'algapsa_license_purchase',
@@ -1088,8 +1090,8 @@ export class StripeService {
         updated_at: knex.fn.now(),
       });
 
-    // Update tenant licensed_user_count and plan if subscription is active
-    if (subscription.status === 'active') {
+    // Update tenant licensed_user_count and plan if subscription is active or trialing
+    if (subscription.status === 'active' || subscription.status === 'trialing') {
       // Resolve plan from product name
       let plan: TenantTier | undefined;
       try {
@@ -1116,7 +1118,16 @@ export class StripeService {
         .where({ tenant: tenantId })
         .update(updateData);
 
-      logger.info(`[StripeService] Updated tenant ${tenantId} licensed_user_count to ${quantity}${plan ? `, plan to ${plan}` : ''}`);
+      if (subscription.status === 'trialing') {
+        logger.info(`[StripeService] Tenant ${tenantId} is trialing${plan ? ` on ${plan}` : ''}, trial ends ${subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : 'unknown'}`);
+      } else {
+        logger.info(`[StripeService] Updated tenant ${tenantId} licensed_user_count to ${quantity}${plan ? `, plan to ${plan}` : ''}`);
+      }
+    }
+
+    // Log payment failure status for visibility
+    if (subscription.status === 'past_due' || subscription.status === 'unpaid') {
+      logger.warn(`[StripeService] Subscription ${subscription.id} for tenant ${tenantId} is ${subscription.status} — payment failure detected`);
     }
   }
 
@@ -1798,6 +1809,140 @@ export class StripeService {
     } catch (error: any) {
       logger.error(`[StripeService] Failed to get interval switch preview:`, error);
       return { success: false, error: error.message || 'Failed to get pricing preview' };
+    }
+  }
+
+  /**
+   * Start a 30-day Premium trial for an existing tenant.
+   *
+   * Handles two cases:
+   * 1. Paying Pro customer → upgrade subscription to Premium with 30-day trial
+   * 2. Pro trial customer → end Pro trial, charge first month of Pro, then upgrade to Premium trial
+   *
+   * Only callable by Nine Minds admin (master tenant).
+   */
+  async startPremiumTrial(
+    tenantId: string
+  ): Promise<{ success: boolean; error?: string }> {
+    await this.ensureInitialized();
+    logger.info(`[StripeService] Starting Premium trial for tenant ${tenantId}`);
+
+    const knex = await getConnection(tenantId);
+
+    // Validate tenant is on Pro
+    const tenantRecord = await knex('tenants').where('tenant', tenantId).select('plan').first();
+    if (!tenantRecord) {
+      return { success: false, error: 'Tenant not found' };
+    }
+    if (tenantRecord.plan === 'premium') {
+      return { success: false, error: 'Tenant is already on Premium' };
+    }
+
+    // Get Premium prices
+    const premiumPrices = this.getTierPriceIds('premium', 'month');
+    if (!premiumPrices) {
+      return { success: false, error: 'Premium pricing not configured' };
+    }
+
+    const customer = await this.getOrImportCustomer(tenantId);
+    const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
+      .where({
+        tenant: tenantId,
+        stripe_customer_id: customer.stripe_customer_id,
+      })
+      .whereIn('status', ['active', 'trialing'])
+      .first();
+
+    if (!existingSubscription) {
+      return { success: false, error: 'No active or trialing subscription found' };
+    }
+
+    try {
+      // If currently trialing Pro, end the trial immediately (charge for Pro)
+      if (existingSubscription.status === 'trialing') {
+        logger.info(`[StripeService] Ending Pro trial for tenant ${tenantId} before Premium trial`);
+        await this.stripe.subscriptions.update(
+          existingSubscription.stripe_subscription_external_id,
+          { trial_end: 'now' }
+        );
+        // Wait a moment for Stripe to process
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      // Now upgrade to Premium with a 30-day trial
+      const currentQuantity = existingSubscription.quantity;
+      const itemUpdates: Stripe.SubscriptionUpdateParams.Item[] = [];
+
+      if (existingSubscription.stripe_subscription_item_id) {
+        itemUpdates.push({ id: existingSubscription.stripe_subscription_item_id, deleted: true });
+      }
+      if (existingSubscription.stripe_base_item_id) {
+        itemUpdates.push({ id: existingSubscription.stripe_base_item_id, deleted: true });
+      }
+
+      itemUpdates.push(
+        { price: premiumPrices.basePriceId, quantity: 1 },
+        { price: premiumPrices.userPriceId, quantity: currentQuantity },
+      );
+
+      // Set trial_end to 30 days from now
+      const trialEnd = Math.floor(Date.now() / 1000) + (30 * 24 * 60 * 60);
+
+      const updatedSubscription = await this.stripe.subscriptions.update(
+        existingSubscription.stripe_subscription_external_id,
+        {
+          items: itemUpdates,
+          trial_end: trialEnd,
+          proration_behavior: 'none', // Don't charge during trial
+          payment_behavior: 'default_incomplete',
+          metadata: {
+            tenant_id: tenantId,
+            premium_trial: 'true',
+            premium_trial_started: new Date().toISOString(),
+          },
+        }
+      );
+
+      // Find the new items
+      const newUserItem = this.findUserItemFromStripe(updatedSubscription.items.data);
+      const newBaseItem = updatedSubscription.items.data.find(
+        item => item.price.id === premiumPrices.basePriceId
+      );
+
+      // Look up or create internal price records
+      let userPriceRecord = await knex<StripePrice>('stripe_prices')
+        .where({ tenant: tenantId, stripe_price_external_id: premiumPrices.userPriceId })
+        .first();
+      let basePriceRecord = await knex<StripePrice>('stripe_prices')
+        .where({ tenant: tenantId, stripe_price_external_id: premiumPrices.basePriceId })
+        .first();
+
+      // Update subscription record
+      await knex<StripeSubscription>('stripe_subscriptions')
+        .where({ stripe_subscription_id: existingSubscription.stripe_subscription_id })
+        .update({
+          status: 'trialing',
+          stripe_subscription_item_id: newUserItem?.id || null,
+          stripe_price_id: userPriceRecord?.stripe_price_id || existingSubscription.stripe_price_id,
+          stripe_base_item_id: newBaseItem?.id || null,
+          stripe_base_price_id: basePriceRecord?.stripe_price_id || null,
+          current_period_end: new Date(trialEnd * 1000),
+          updated_at: knex.fn.now(),
+        });
+
+      // Update tenant plan to premium
+      await knex('tenants')
+        .where({ tenant: tenantId })
+        .update({
+          plan: 'premium',
+          updated_at: knex.fn.now(),
+        });
+
+      logger.info(`[StripeService] Started 30-day Premium trial for tenant ${tenantId}`);
+      return { success: true };
+    } catch (error: any) {
+      logger.error(`[StripeService] Failed to start Premium trial for tenant ${tenantId}:`, error);
+      return { success: false, error: error.message || 'Failed to start Premium trial' };
     }
   }
 

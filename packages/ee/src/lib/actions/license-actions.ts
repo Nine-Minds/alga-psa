@@ -286,3 +286,29 @@ export async function getIntervalSwitchPreviewAction(
     error: 'Billing interval switching is only available in Enterprise Edition',
   };
 }
+
+/**
+ * CE Stub - Not available in Community Edition
+ */
+export async function startPremiumTrialAction(
+  _targetTenantId: string
+): Promise<{ success: boolean; error?: string }> {
+  logger.warn('[CE] startPremiumTrialAction called but Stripe integration is EE-only');
+  return {
+    success: false,
+    error: 'Premium trials are only available in Enterprise Edition',
+  };
+}
+
+/**
+ * CE Stub - Not available in Community Edition
+ */
+export async function sendPremiumTrialRequestAction(
+  _message: string
+): Promise<{ success: boolean; error?: string }> {
+  logger.warn('[CE] sendPremiumTrialRequestAction called but Stripe integration is EE-only');
+  return {
+    success: false,
+    error: 'Premium trials are only available in Enterprise Edition',
+  };
+}
