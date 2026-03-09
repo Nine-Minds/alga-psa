@@ -4,12 +4,11 @@ import { X } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Button } from "@alga-psa/ui/components/Button";
 import { Input } from "@alga-psa/ui/components/Input";
-import { PhoneInput } from "@alga-psa/ui/components/PhoneInput";
 import { Label } from "@alga-psa/ui/components/Label";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
-import { addContact } from '@alga-psa/clients/actions';
+import { addContact, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import type { IClient } from '@alga-psa/types';
+import type { ContactPhoneNumberInput, IClient } from '@alga-psa/types';
 import { IContact } from '@alga-psa/types';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -18,12 +17,15 @@ import { getAllCountries, ICountry } from '@alga-psa/clients/actions';
 import {
   validateContactName,
   validateEmailAddress,
-  validatePhoneNumber,
   validateNotes
 } from '@alga-psa/validation';
 import { QuickAddTagPicker } from '@alga-psa/tags/components';
 import type { PendingTag } from '@alga-psa/types';
 import { createTagsForEntity } from '@alga-psa/tags/actions';
+import ContactPhoneNumbersEditor, {
+  compactContactPhoneNumbers,
+  validateContactPhoneNumbers,
+} from './ContactPhoneNumbersEditor';
 
 interface QuickAddContactProps {
   isOpen: boolean;
@@ -62,7 +64,9 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   const { toast } = useToast();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumbers, setPhoneNumbers] = useState<ContactPhoneNumberInput[]>([]);
+  const [phoneValidationErrors, setPhoneValidationErrors] = useState<string[]>([]);
+  const [customPhoneTypeSuggestions, setCustomPhoneTypeSuggestions] = useState<string[]>([]);
   const [clientId, setClientId] = useState<string | null>(null);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
@@ -76,21 +80,6 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [countries, setCountries] = useState<ICountry[]>([]);
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
-  const [countryCode, setCountryCode] = useState(() => {
-    // Enterprise locale detection
-    try {
-      const locale = Intl.DateTimeFormat().resolvedOptions().locale;
-      const parts = locale.split('-');
-      const detectedCountry = parts[parts.length - 1]?.toUpperCase();
-
-      if (detectedCountry && detectedCountry.length === 2 && /^[A-Z]{2}$/.test(detectedCountry)) {
-        return detectedCountry;
-      }
-    } catch (e) {
-      // Fallback to US if detection fails
-    }
-    return 'US';
-  });
 
 
   // Set initial client ID when the component mounts or when selectedClientId changes
@@ -103,16 +92,19 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   // Load countries when dialog opens
   useEffect(() => {
     if (isOpen) {
-      const fetchCountries = async () => {
-        if (countries.length > 0) return; // Don't fetch if already loaded
+      const fetchFormMetadata = async () => {
         try {
-          const countriesData = await getAllCountries();
+          const [countriesData, suggestionLabels] = await Promise.all([
+            countries.length > 0 ? Promise.resolve(countries) : getAllCountries(),
+            listContactPhoneTypeSuggestions(),
+          ]);
           setCountries(countriesData);
+          setCustomPhoneTypeSuggestions(suggestionLabels);
         } catch (error: any) {
-          console.error("Error fetching countries:", error);
+          console.error('Error fetching contact form metadata:', error);
         }
       };
-      fetchCountries();
+      fetchFormMetadata();
     }
   }, [isOpen, countries.length]);
 
@@ -126,7 +118,8 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     } else {
       setFullName('');
       setEmail('');
-      setPhoneNumber('');
+      setPhoneNumbers([]);
+      setPhoneValidationErrors([]);
       if (!selectedClientId) {
         setClientId(null);
       }
@@ -146,11 +139,6 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     if (typeof clientId === 'string' || clientId === null) {
       setClientId(clientId);
     }
-  };
-
-  const handleCountryChange = (countryCode: string) => {
-    setCountryCode(countryCode);
-    // When country changes, the PhoneInput will auto-update with the new phone code
   };
 
   // Enterprise-grade field validation function (Microsoft/Meta/Salesforce style)
@@ -180,40 +168,6 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
           error = 'Email address cannot contain only spaces';
         } else {
           error = validateEmailAddress(trimmedValue);
-        }
-        break;
-
-      case 'contact_phone':
-        // Enterprise phone validation - Unicode international support
-        if (trimmedValue) {
-          // Check if this is just a country code (like "+1 " or "+44 ") with no actual phone number
-          const countryCodeOnlyPattern = /^\+\d{1,4}\s*$/;
-          if (countryCodeOnlyPattern.test(trimmedValue)) {
-            // Don't validate if it's just a country code - user hasn't started typing yet
-            break;
-          }
-
-          // Extract all Unicode digits (supports international number systems)
-          const unicodeDigits = trimmedValue.replace(/[\s\-\(\)\+\.\p{P}\p{S}]/gu, '').match(/\p{N}/gu) || [];
-          const digitCount = unicodeDigits.length;
-
-          // International phone number validation (ITU-T E.164)
-          if (digitCount > 0 && digitCount < 7) {
-            error = 'Please enter a complete phone number (at least 7 digits)';
-          } else if (digitCount > 15) {
-            error = 'Phone number cannot exceed 15 digits';
-          } else if (digitCount > 0) {
-            // Check for obviously fake patterns using Unicode digits
-            const unicodeDigitString = unicodeDigits.join('');
-            if (/^(.)\1+$/u.test(unicodeDigitString)) {
-              error = 'Please enter a valid phone number';
-            } else if (/^(123|111|000|999)/u.test(unicodeDigitString) && digitCount >= 7) {
-              error = 'Please enter a valid phone number';
-            } else {
-              // Use the existing validator for more complex validation
-              error = validatePhoneNumber(trimmedValue);
-            }
-          }
         }
         break;
 
@@ -280,11 +234,12 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       validationMessages.push(emailError);
     }
 
-    // Validate phone even if empty to catch invalid partial entries
-    const phoneError = validateField('contact_phone', phoneNumber, true);
-    if (phoneError) {
-      fieldValidationErrors.contact_phone = phoneError;
-      validationMessages.push(phoneError);
+    const sanitizedPhoneNumbers = compactContactPhoneNumbers(phoneNumbers);
+    const currentPhoneErrors = validateContactPhoneNumbers(sanitizedPhoneNumbers);
+    setPhoneValidationErrors(currentPhoneErrors);
+    if (currentPhoneErrors.length > 0) {
+      fieldValidationErrors.contact_phone = currentPhoneErrors[0];
+      validationMessages.push(...currentPhoneErrors);
     }
 
     // Validate optional fields if they have content
@@ -315,7 +270,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       const contactData = {
         full_name: fullName.trim(),
         email: email.trim(),
-        phone_number: phoneNumber.trim(),
+        phone_numbers: sanitizedPhoneNumbers,
         client_id: clientId || null, // Explicitly set to null if no client selected
         is_inactive: isInactive,
         role: role.trim(),
@@ -502,34 +457,20 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
               )}
             </div>
             <div>
-              <PhoneInput
+              <ContactPhoneNumbersEditor
                 id="quick-add-contact-phone"
-                label="Phone Number"
-                value={phoneNumber}
-                onChange={(value) => {
-                  setPhoneNumber(value);
-                  // Clear error when user starts typing, clears the field, or has only country code
-                  const trimmedValue = value.trim();
-                  const isCountryCodeOnly = /^\+\d{1,4}\s*$/.test(trimmedValue);
-
-                  if (fieldErrors.contact_phone && (trimmedValue === '' || isCountryCodeOnly)) {
+                value={phoneNumbers}
+                onChange={(rows) => {
+                  setPhoneNumbers(rows);
+                  if (fieldErrors.contact_phone) {
                     setFieldErrors(prev => ({ ...prev, contact_phone: '' }));
                   }
                 }}
-                onBlur={() => {
-                  validateField('contact_phone', phoneNumber, false);
-                }}
-                countryCode={countryCode}
-                phoneCode={countries.find(c => c.code === countryCode)?.phone_code}
                 countries={countries}
-                onCountryChange={handleCountryChange}
-                allowExtensions={true}
-                data-automation-id="quick-add-contact-phone"
-                className={fieldErrors.contact_phone ? 'error' : ''}
+                customTypeSuggestions={customPhoneTypeSuggestions}
+                errorMessages={hasAttemptedSubmit ? phoneValidationErrors : undefined}
+                onValidationChange={setPhoneValidationErrors}
               />
-              {fieldErrors.contact_phone && (
-                <p className="text-sm text-red-600 mt-1">{fieldErrors.contact_phone}</p>
-              )}
             </div>
             <div>
               <Label>Client (Optional)</Label>

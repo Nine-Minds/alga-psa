@@ -20,6 +20,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-09) `contact_phone_numbers.normalized_phone_number` is implemented as a generated stored column derived from `phone_number` instead of an app-populated plain text field. Rationale: it guarantees searchable normalized digits for every insert/update path, including direct SQL fixtures and future services that have not been cut over yet.
 - (2026-03-09) Phone-row write logic is centralized in `shared/models/contactModel.ts` instead of being duplicated across `ContactService`, client actions, CSV import, and later Entra sync. Rationale: one transactional helper surface keeps default enforcement, custom-type reuse, and read hydration consistent.
 - (2026-03-09) Contact read/query paths now expose `default_phone_number` and `default_phone_type` convenience fields in addition to the ordered `phone_numbers` array. Rationale: summary surfaces and sort/search code need a stable derived default without reimplementing that derivation everywhere.
+- (2026-03-09) The first UI slice uses a contact-domain-local `ContactPhoneNumbersEditor` rather than extracting a global multi-entity phone component. Rationale: the PRD scope is contact-only, and a local editor let the form behavior converge before broader reuse decisions.
 
 ## Discoveries / Constraints
 
@@ -42,6 +43,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-09) `shared/vitest.config.ts` only discovers tests under `services/**/*.test.ts` and `**/__tests__/**/*.test.ts`, so shared validation tests for this work need to live in `shared/**/__tests__/`.
 - (2026-03-09) The existing shared workflow builder tests import `buildWorkflowPayload` through a package re-export that resolves the published `@alga-psa/event-schemas` entry. In this worktree, the reliable local path is `packages/event-schemas/src/schemas/workflowEventPublishHelpers.ts`.
 - (2026-03-09) `F006` remains intentionally blocked behind `F024`: Migration B cannot land until all remaining app-level readers/writers of `contacts.phone_number` are removed, including UI/ticket/import/Entra/test-factory consumers.
+- (2026-03-09) `server/vitest.config.ts` needed local source aliases for `@alga-psa/clients` and `@alga-psa/user-composition` so server-side Vitest contract tests could import unbuilt package source files directly from the monorepo.
 
 ## Commands / Runbooks
 
@@ -68,6 +70,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `npx vitest run --config shared/vitest.config.ts shared/models/__tests__/contactModel.test.ts shared/workflow/streams/domainEventBuilders/__tests__/contactEventBuilders.test.ts`
   - `cd server && npx vitest run src/test/unit/validation/contactPhoneSchemas.test.ts --coverage=false`
   - `cd server && DB_PORT=55433 DB_PASSWORD_ADMIN=postpass123 DB_PASSWORD_SERVER=postpass123 DB_USER_ADMIN=postgres DB_USER_SERVER=app_user npx vitest run src/test/integration/contactModelPhoneNumbers.integration.test.ts --coverage=false`
+- (2026-03-09) Run the contact UI normalized-phone tests:
+  - `npx tsc -p packages/clients/tsconfig.json --noEmit`
+  - `cd server && npx vitest run src/test/unit/contacts/ContactPhoneNumbersEditor.test.tsx src/test/unit/contacts/ContactDetailsSave.contract.test.ts src/test/unit/contacts/ContactDetailsPhoneNumbers.contract.test.ts src/test/unit/contacts/QuickAddContact.phoneNumbers.test.tsx src/test/unit/contacts/QuickAddClient.phoneNumbers.test.tsx src/test/unit/contacts/ContactPhoneDisplay.contract.test.ts --coverage=false`
 
 ## Links / References
 
@@ -107,3 +112,13 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `server/src/test/unit/validation/contactPhoneSchemas.test.ts` verifies contact API schemas validate `phone_numbers` collections and response payloads with derived default fields.
   - `server/src/test/integration/contactModelPhoneNumbers.integration.test.ts` verifies DB-backed custom-type reuse, transactional create/update behavior, rollback on failed child writes, and ordered read hydration.
   - `shared/workflow/streams/domainEventBuilders/__tests__/contactEventBuilders.test.ts` now asserts `CONTACT_CREATED` and `CONTACT_UPDATED` payloads carry normalized phone data rather than scalar-only phone fields.
+- (2026-03-09) Completed `F010`, `F012`, `F013`, `F014`, `F015`, `F016`, and `F018` by wiring the contact-facing UI and display surfaces to normalized phone rows.
+  - `packages/clients/src/components/contacts/ContactPhoneNumbersEditor.tsx` provides the shared repeater UI for add/remove/reorder/default behavior, canonical vs. custom type selection, suggestion datalists, and normalized validation feedback.
+  - `packages/clients/src/components/contacts/ContactDetails.tsx`, `packages/clients/src/components/contacts/ContactDetailsEdit.tsx`, `packages/clients/src/components/contacts/QuickAddContact.tsx`, and `packages/clients/src/components/clients/QuickAddClient.tsx` now read and submit `phone_numbers` collections instead of a scalar phone field.
+  - `packages/clients/src/components/contacts/ContactDetailsView.tsx`, `packages/clients/src/components/contacts/Contacts.tsx`, `packages/clients/src/components/contacts/ClientContactsList.tsx`, and `packages/tickets/src/components/ticket/TicketProperties.tsx` now render the derived default contact phone from normalized rows.
+  - `packages/clients/src/actions/contact-actions/contactActions.tsx` now exposes `listContactPhoneTypeSuggestions`, and `server/vitest.config.ts` now resolves the package-source aliases needed for these UI contract tests.
+- (2026-03-09) Completed `T016` through `T023` and `T026`.
+  - `server/src/test/unit/contacts/ContactPhoneNumbersEditor.test.tsx` verifies multi-row editor behavior for custom types, explicit default selection, and invalid duplicate-default states.
+  - `server/src/test/unit/contacts/ContactDetailsSave.contract.test.ts` and `server/src/test/unit/contacts/ContactDetailsPhoneNumbers.contract.test.ts` verify the contact detail screens bind `phone_numbers` into the shared editor, validate before save, and render normalized rows instead of scalar `phone_number`.
+  - `server/src/test/unit/contacts/QuickAddContact.phoneNumbers.test.tsx` and `server/src/test/unit/contacts/QuickAddClient.phoneNumbers.test.tsx` verify the quick-add flows submit normalized phone collections with the expected default row.
+  - `server/src/test/unit/contacts/ContactPhoneDisplay.contract.test.ts` verifies contacts lists and ticket properties derive their displayed contact phone from `default_phone_number` or the default normalized child row.

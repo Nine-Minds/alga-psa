@@ -222,9 +222,12 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
     },
     {
       title: 'Phone Number',
-      dataIndex: 'phone_number',
+      dataIndex: 'default_phone_number',
       width: '30%',
-      render: (value, record): React.ReactNode => record.phone_number || 'N/A',
+      render: (value, record): React.ReactNode =>
+        record.default_phone_number
+        || record.phone_numbers?.find((phoneNumber: any) => phoneNumber.is_default)?.phone_number
+        || 'N/A',
     },
     {
       title: 'Actions',

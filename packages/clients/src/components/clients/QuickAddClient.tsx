@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import type { IClient, IClientLocation } from '@alga-psa/types';
+import type { ContactPhoneNumberInput, IClient, IClientLocation } from '@alga-psa/types';
 import { IContact } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -20,7 +20,7 @@ import {
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
-import { createClient, createClientLocation, getAllCountries, ICountry } from '@alga-psa/clients/actions';
+import { createClient, createClientLocation, getAllCountries, ICountry, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions';
 import { createClientContact } from '@alga-psa/clients/actions';
 import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -44,12 +44,18 @@ import {
   validateIndustry,
   validateNotes
 } from '@alga-psa/validation';
+import ContactPhoneNumbersEditor, {
+  compactContactPhoneNumbers,
+  validateContactPhoneNumbers,
+} from '../contacts/ContactPhoneNumbersEditor';
 
 type CreateClientData = Omit<IClient, "client_id" | "created_at" | "updated_at" | "notes_document_id" | "status" | "tenant" | "deleted_at">;
 
 type CreateLocationData = Omit<IClientLocation, "location_id" | "tenant" | "created_at" | "updated_at">;
 
-type CreateContactData = Omit<IContact, "contact_name_id" | "tenant" | "client_id" | "created_at" | "updated_at" | "is_inactive" | "avatarUrl">;
+type CreateContactData = Pick<IContact, 'full_name' | 'email' | 'role' | 'notes'> & {
+  phone_numbers: ContactPhoneNumberInput[];
+};
 
 interface QuickAddClientProps {
   open: boolean;
@@ -106,28 +112,17 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
 
   const initialContactData: CreateContactData = {
     full_name: '',
-    phone_number: '',
+    phone_numbers: [],
     email: '',
     role: '',
     notes: '',
   };
 
-  // Separate country code state for contact phone (independent from location)
-  const [contactCountryCode, setContactCountryCode] = useState(() => {
-    // Default to same locale detection as other forms
-    try {
-      const locale = Intl.DateTimeFormat().resolvedOptions().locale;
-      const parts = locale.split('-');
-      const detectedCountry = parts[parts.length - 1]?.toUpperCase();
-      return detectedCountry && detectedCountry.length === 2 && /^[A-Z]{2}$/.test(detectedCountry) ? detectedCountry : 'US';
-    } catch (e) {
-      return 'US';
-    }
-  });
-
   const [formData, setFormData] = useState<CreateClientData>(initialFormData);
   const [locationData, setLocationData] = useState<CreateLocationData>(initialLocationData);
   const [contactData, setContactData] = useState<CreateContactData>(initialContactData);
+  const [contactPhoneValidationErrors, setContactPhoneValidationErrors] = useState<string[]>([]);
+  const [customPhoneTypeSuggestions, setCustomPhoneTypeSuggestions] = useState<string[]>([]);
   const [internalUsers, setInternalUsers] = useState<IUser[]>([]);
   const [countries, setCountries] = useState<ICountry[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
@@ -141,6 +136,10 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
   const [createdClient, setCreatedClient] = useState<IClient | null>(null);
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
   const router = useRouter();
+
+  const getPrimaryContactPhone = (rows: ContactPhoneNumberInput[]): string => {
+    return compactContactPhoneNumbers(rows).find((row) => row.is_default)?.phone_number ?? '';
+  };
 
   useEffect(() => {
     if (open) {
@@ -170,24 +169,24 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
         }
       };
 
+      const fetchPhoneTypeSuggestions = async () => {
+        try {
+          const labels = await listContactPhoneTypeSuggestions();
+          setCustomPhoneTypeSuggestions(labels);
+        } catch (error: any) {
+          handleError(error, 'Failed to load contact phone type suggestions.');
+        }
+      };
+
 
       fetchUsers();
       fetchCountries();
+      fetchPhoneTypeSuggestions();
     } else {
       setFormData(initialFormData);
       setLocationData(initialLocationData);
       setContactData(initialContactData);
-      setContactCountryCode(() => {
-        // Reset to locale detection
-        try {
-          const locale = Intl.DateTimeFormat().resolvedOptions().locale;
-          const parts = locale.split('-');
-          const detectedCountry = parts[parts.length - 1]?.toUpperCase();
-          return detectedCountry && detectedCountry.length === 2 && /^[A-Z]{2}$/.test(detectedCountry) ? detectedCountry : 'US';
-        } catch (e) {
-          return 'US';
-        }
-      });
+      setContactPhoneValidationErrors([]);
       setIsSubmitting(false);
       setError(null);
       setHasAttemptedSubmit(false);
@@ -336,9 +335,6 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       case 'contact_email':
         error = validateEmailAddress(value);
         break;
-      case 'contact_phone':
-        error = validatePhoneNumber(value);
-        break;
       case 'notes':
         error = validateNotes(value);
         break;
@@ -371,10 +367,17 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       postalCode: locationData.postal_code,
       countryCode: locationData.country_code,
       contactName: contactData.full_name,
-      contactEmail: contactData.email,
-      contactPhone: contactData.phone_number,
+      contactEmail: contactData.email ?? '',
+      contactPhone: getPrimaryContactPhone(contactData.phone_numbers),
       notes: formData.notes
     });
+
+    const currentContactPhoneErrors = validateContactPhoneNumbers(contactData.phone_numbers);
+    setContactPhoneValidationErrors(currentContactPhoneErrors);
+    if (currentContactPhoneErrors.length > 0) {
+      validationResult.isValid = false;
+      validationResult.errors.contact_phone = currentContactPhoneErrors[0];
+    }
     
     // Early return if validation fails - prevent async operations
     if (!validationResult.isValid) {
@@ -421,14 +424,14 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       }
 
       // Create contact if contact data is provided
-      if (contactData.full_name.trim() || contactData.email.trim()) {
+      if (contactData.full_name.trim() || (contactData.email ?? '').trim()) {
         try {
           await createClientContact({
             clientId: newClient.client_id,
             fullName: contactData.full_name,
-            email: contactData.email,
-            phone: contactData.phone_number,
-            jobTitle: contactData.role,
+            email: contactData.email ?? '',
+            phoneNumbers: compactContactPhoneNumbers(contactData.phone_numbers),
+            jobTitle: contactData.role ?? undefined,
           });
         } catch (contactError) {
           handleError(contactError, "Client created but failed to add contact.");
@@ -524,7 +527,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     }
   };
 
-  const handleContactChange = (field: keyof CreateContactData, value: string) => {
+  const handleContactChange = (field: keyof CreateContactData, value: string | ContactPhoneNumberInput[]) => {
     setContactData(prev => ({
       ...prev,
       [field]: value
@@ -534,7 +537,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     const validationFieldMap: Record<string, string> = {
       'full_name': 'contact_name',
       'email': 'contact_email',
-      'phone_number': 'contact_phone'
+      'phone_numbers': 'contact_phone'
     };
     
     const validationField = validationFieldMap[field as string];
@@ -552,10 +555,6 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       country_code: countryCode,
       country_name: countryName
     }));
-  };
-
-  const handleContactCountryChange = (countryCode: string) => {
-    setContactCountryCode(countryCode);
   };
 
   // Comprehensive form validation check for submit button state
@@ -627,9 +626,9 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       if (contactEmailError) return false;
     }
 
-    if (contactData.phone_number && contactData.phone_number.trim()) {
-      const contactPhoneError = validateField('contact_phone', contactData.phone_number, undefined, false);
-      if (contactPhoneError) return false;
+    if (contactData.phone_numbers.length > 0) {
+      const contactPhoneErrors = validateContactPhoneNumbers(contactData.phone_numbers);
+      if (contactPhoneErrors.length > 0) return false;
     }
 
     if (contactData.notes && contactData.notes.trim()) {
@@ -994,16 +993,15 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                     id="client-contact-email"
                     data-automation-id="client-contact-email"
                     type="email"
-                    value={contactData.email}
+                    value={contactData.email ?? ''}
                     onChange={(e) => {
                       handleContactChange('email', e.target.value);
-                      // Immediately validate if user enters only spaces
                       if (/^\s+$/.test(e.target.value)) {
                         setFieldErrors(prev => ({ ...prev, contact_email: 'Email address cannot contain only spaces' }));
                       }
                     }}
                     onBlur={() => {
-                      validateField('contact_email', contactData.email);
+                      validateField('contact_email', contactData.email ?? '');
                     }}
                     disabled={isSubmitting}
                     className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.contact_email ? 'border-red-500' : 'border-gray-300'}`}
@@ -1013,35 +1011,22 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                   )}
                 </div>
 
-                <div>
-                  <PhoneInput
+                <div className="col-span-2">
+                  <ContactPhoneNumbersEditor
                     id="client-contact-phone"
-                    label="Phone"
-                    value={contactData.phone_number}
-                    onChange={(value) => {
-                      handleContactChange('phone_number', value);
-                      // Clear error when user starts typing, clears the field, or has only country code
-                      const trimmedValue = value.trim();
-                      const isCountryCodeOnly = /^\+\d{1,4}\s*$/.test(trimmedValue);
-
-                      if (fieldErrors.contact_phone && (trimmedValue === '' || isCountryCodeOnly)) {
+                    value={contactData.phone_numbers}
+                    onChange={(rows) => {
+                      handleContactChange('phone_numbers', rows);
+                      if (fieldErrors.contact_phone) {
                         setFieldErrors(prev => ({ ...prev, contact_phone: '' }));
                       }
                     }}
-                    onBlur={() => {
-                      validateField('contact_phone', contactData.phone_number);
-                    }}
-                    countryCode={contactCountryCode}
-                    phoneCode={countries.find(c => c.code === contactCountryCode)?.phone_code}
                     countries={countries}
-                    onCountryChange={handleContactCountryChange}
-                    allowExtensions={true}
+                    customTypeSuggestions={customPhoneTypeSuggestions}
                     disabled={isSubmitting}
-                    data-automation-id="client-contact-phone"
+                    errorMessages={hasAttemptedSubmit ? contactPhoneValidationErrors : undefined}
+                    onValidationChange={setContactPhoneValidationErrors}
                   />
-                  {fieldErrors.contact_phone && (
-                    <p className="text-sm text-red-600 mt-1">{fieldErrors.contact_phone}</p>
-                  )}
                 </div>
               </div>
             </div>

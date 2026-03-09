@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "Persist contact parent rows and child phone rows transactionally during create, update, import, and sync flows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["NFR-002", "FR-008", "FR-010"]
   },
   {
@@ -68,31 +68,31 @@
   {
     "id": "F012",
     "description": "Update `ContactDetails.tsx` to edit multiple phone numbers with canonical/custom type selection and explicit default selection.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-011", "UX / UI Notes"]
   },
   {
     "id": "F013",
     "description": "Update `ContactDetailsEdit.tsx` and `ContactDetailsView.tsx` to render and edit the normalized contact phone model instead of one scalar phone field.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-012", "UX / UI Notes"]
   },
   {
     "id": "F014",
     "description": "Update `QuickAddContact.tsx` to create contacts with the normalized phone collection.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-013", "UX / UI Notes"]
   },
   {
     "id": "F015",
     "description": "Update the inline contact section in `QuickAddClient.tsx` to create the new contact with the normalized phone collection.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-014", "UX / UI Notes"]
   },
   {
     "id": "F016",
     "description": "Update contacts list/table surfaces (`Contacts.tsx`, `ClientContactsList.tsx`) to display the default phone number derived from `phone_numbers`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-015", "UX / UI Notes"]
   },
   {
@@ -104,7 +104,7 @@
   {
     "id": "F018",
     "description": "Update ticket/contact dependent display surfaces such as `TicketProperties.tsx` to show the derived default contact phone.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-018", "UX / UI Notes"]
   },
   {

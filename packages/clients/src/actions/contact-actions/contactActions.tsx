@@ -38,6 +38,10 @@ function buildDefaultPhoneNumbers(phoneNumber?: string | null) {
   }];
 }
 
+type ContactActionInput = Omit<Partial<IContact>, 'phone_numbers'> & {
+  phone_numbers?: CreateContactInput['phone_numbers'];
+};
+
 function getDerivedDefaultPhone(contact: Pick<IContact, 'default_phone_number' | 'phone_numbers'>): string {
   return contact.default_phone_number
     || contact.phone_numbers.find((phoneNumber) => phoneNumber.is_default)?.phone_number
@@ -296,7 +300,7 @@ export const getContactsEligibleForInvitation = withAuth(async (
 export const addContact = withAuth(async (
   user,
   { tenant },
-  contactData: Partial<IContact>
+  contactData: ContactActionInput
 ): Promise<IContact> => {
   const { knex: db } = await createTenantKnex();
 
@@ -345,10 +349,32 @@ export const addContact = withAuth(async (
   return created;
 });
 
+export const listContactPhoneTypeSuggestions = withAuth(async (
+  user,
+  { tenant }
+): Promise<string[]> => {
+  const { knex: db } = await createTenantKnex();
+
+  if (!await hasPermissionAsync(user, 'contact', 'read')) {
+    return [];
+  }
+
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    const rows = await trx('contact_phone_type_definitions')
+      .where({ tenant })
+      .orderBy('label', 'asc')
+      .select('label');
+
+    return rows
+      .map((row: { label?: string | null }) => row.label?.trim() ?? '')
+      .filter((label): label is string => label.length > 0);
+  });
+});
+
 export const updateContact = withAuth(async (
   user,
   { tenant },
-  contactData: Partial<IContact>
+  contactData: ContactActionInput
 ): Promise<IContact> => {
   const { knex: db } = await createTenantKnex();
 
@@ -986,12 +1012,14 @@ export const createClientContact = withAuth(async (
     fullName,
     email,
     phone = '',
+    phoneNumbers,
     jobTitle = ''
   }: {
     clientId: string;
     fullName: string;
     email: string;
     phone?: string;
+    phoneNumbers?: CreateContactInput['phone_numbers'];
     jobTitle?: string;
   }
 ) => {
@@ -1012,7 +1040,7 @@ export const createClientContact = withAuth(async (
       return ContactModel.createContact({
         full_name: fullName,
         email: email.trim().toLowerCase(),
-        phone_numbers: buildDefaultPhoneNumbers(phone),
+        phone_numbers: phoneNumbers ?? buildDefaultPhoneNumbers(phone),
         client_id: clientId,
         role: jobTitle,
       }, tenant, trx);

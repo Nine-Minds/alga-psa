@@ -92,49 +92,49 @@
   {
     "id": "T016",
     "description": "UI integration: `ContactDetails.tsx` lets a user add a second phone row, assign a custom type, switch the default row, and save successfully.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
     "id": "T017",
     "description": "UI validation: `ContactDetails.tsx` prevents save when multiple phone rows are marked default.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
     "id": "T018",
     "description": "UI integration: `ContactDetailsEdit.tsx` renders existing multiple phone rows and preserves custom type labels on reopen.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {
     "id": "T019",
     "description": "UI regression: `ContactDetailsView.tsx` shows the derived default phone instead of expecting scalar `phone_number`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {
     "id": "T020",
     "description": "UI integration: `QuickAddContact.tsx` can create a contact with one default canonical phone and one additional phone row.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
     "id": "T021",
     "description": "UI integration: `QuickAddClient.tsx` creates the inline contact with the normalized phone collection and persists the chosen default phone.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {
     "id": "T022",
     "description": "UI regression: contacts list rows render the default phone number when a contact has multiple phone rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016"]
   },
   {
     "id": "T023",
     "description": "UI regression: client-scoped contacts list rows render the default phone number when a contact has multiple phone rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016"]
   },
   {
@@ -152,7 +152,7 @@
   {
     "id": "T026",
     "description": "UI regression: `TicketProperties.tsx` shows the default contact phone when the ticket has a contact with multiple phone rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {

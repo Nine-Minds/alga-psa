@@ -1,12 +1,12 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import type { IClient, IContact, ITag } from '@alga-psa/types';
+import type { ContactPhoneNumberInput, IClient, IContact, ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Flex, Text, Heading } from '@radix-ui/themes';
-import { updateContact, listInboundTicketDestinationOptions } from '@alga-psa/clients/actions';
+import { updateContact, listInboundTicketDestinationOptions, getAllCountries, type ICountry, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { TagManager } from '@alga-psa/tags/components';
@@ -20,6 +20,7 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
 import ContactAvatarUpload from './ContactAvatarUpload';
 import { getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
+import ContactPhoneNumbersEditor, { validateContactPhoneNumbers } from './ContactPhoneNumbersEditor';
 
 interface ContactDetailsEditProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -47,6 +48,9 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [inboundDestinationOptions, setInboundDestinationOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [isInboundDestinationOptionsLoading, setIsInboundDestinationOptionsLoading] = useState(false);
+  const [countries, setCountries] = useState<ICountry[]>([]);
+  const [customPhoneTypeSuggestions, setCustomPhoneTypeSuggestions] = useState<string[]>([]);
+  const [phoneValidationErrors, setPhoneValidationErrors] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -96,7 +100,32 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
     };
   }, []);
 
-  const handleInputChange = (field: keyof IContact, value: string | boolean) => {
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [countryRows, phoneTypeLabels] = await Promise.all([
+          getAllCountries(),
+          listContactPhoneTypeSuggestions(),
+        ]);
+        if (cancelled) return;
+        setCountries(countryRows);
+        setCustomPhoneTypeSuggestions(phoneTypeLabels);
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Error loading phone metadata:', err);
+          setCountries([]);
+          setCustomPhoneTypeSuggestions([]);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleInputChange = (field: keyof IContact, value: string | boolean | ContactPhoneNumberInput[]) => {
     setContact(prev => ({ ...prev, [field]: value }));
   };
 
@@ -122,6 +151,13 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(contact.email.trim())) {
         setError('Please enter a valid email address');
+        return;
+      }
+
+      const currentPhoneErrors = validateContactPhoneNumbers(contact.phone_numbers);
+      setPhoneValidationErrors(currentPhoneErrors);
+      if (currentPhoneErrors.length > 0) {
+        setError(currentPhoneErrors[0]);
         return;
       }
       
@@ -189,18 +225,26 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
               onChange={(value) => handleInputChange('email', value)} 
             />
             <TableRow 
-              id={`${id}-phone`}
-              label="Phone" 
-              value={contact.default_phone_number || contact.phone_numbers.find((phoneNumber) => phoneNumber.is_default)?.phone_number || ''} 
-              onChange={(value) => handleInputChange('default_phone_number', value)} 
-            />
-            <TableRow 
               id={`${id}-role`}
               label="Role" 
               value={contact.role || ''} 
               onChange={(value) => handleInputChange('role', value)} 
               placeholder="e.g., Manager, Developer, etc."
             />
+            <tr>
+              <td className="py-2 font-semibold align-top">Phone numbers:</td>
+              <td className="py-2">
+                <ContactPhoneNumbersEditor
+                  id={`${id}-phone`}
+                  value={contact.phone_numbers}
+                  onChange={(rows) => handleInputChange('phone_numbers', rows)}
+                  countries={countries}
+                  customTypeSuggestions={customPhoneTypeSuggestions}
+                  errorMessages={phoneValidationErrors}
+                  onValidationChange={setPhoneValidationErrors}
+                />
+              </td>
+            </tr>
             <tr>
               <td className="py-2 font-semibold">Inbound ticket destination override:</td>
               <td className="py-2">
