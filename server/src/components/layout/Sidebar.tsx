@@ -19,6 +19,7 @@ import {
 import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSubMenuItem from './SidebarSubMenuItem';
 import SidebarBottomMenuItem from './SidebarBottomMenuItem';
+import GitHubStarButton from './GitHubStarButton';
 import type { MenuItem } from '@/config/menuConfig';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
@@ -410,23 +411,26 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Version info */}
       <div className="px-4 py-3 border-t border-gray-700">
-        <a
-          id="app-version-link"
-          href="https://github.com/Nine-Minds/alga-psa/releases"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-gray-400 hover:text-gray-200 transition-colors flex items-center gap-1"
-          title={sidebarOpen ? undefined : `Version ${appVersion}`}
-        >
-          {sidebarOpen ? (
-            <>
-              <span>v{appVersion}</span>
-              <ExternalLink className="w-3 h-3" />
-            </>
-          ) : (
-            <span className="text-[10px]">v{appVersion.split('.')[0]}.{appVersion.split('.')[1]}</span>
-          )}
-        </a>
+        <div className="flex items-center justify-between">
+          <a
+            id="app-version-link"
+            href="https://github.com/Nine-Minds/alga-psa/releases"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-gray-400 hover:text-gray-200 transition-colors flex items-center gap-1"
+            title={sidebarOpen ? undefined : `Version ${appVersion}`}
+          >
+            {sidebarOpen ? (
+              <>
+                <span>v{appVersion}</span>
+                <ExternalLink className="w-3 h-3" />
+              </>
+            ) : (
+              <span className="text-[10px]">v{appVersion.split('.')[0]}.{appVersion.split('.')[1]}</span>
+            )}
+          </a>
+          {sidebarOpen && <GitHubStarButton />}
+        </div>
       </div>
 
       <Button

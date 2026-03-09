@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { DesignerWorkspaceSnapshot } from '../components/invoice-designer/state/designerStore';
+import {
+  createEmptyDesignerTransformWorkspace,
+  type DesignerWorkspaceSnapshot,
+} from '../components/invoice-designer/state/designerStore';
 import { runAuthoritativeInvoiceTemplatePreview } from './invoiceTemplatePreview';
 import { mapDbInvoiceToWasmViewModel } from '../lib/adapters/invoiceAdapters';
 
@@ -354,6 +357,7 @@ const workspace: DesignerWorkspaceSnapshot = {
   showGuides: true,
   showRulers: true,
   canvasScale: 1,
+  transforms: createEmptyDesignerTransformWorkspace(),
 };
 
 describe('invoiceTemplatePreview INV-005 runtime sanity', () => {

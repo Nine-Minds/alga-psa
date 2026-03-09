@@ -21,6 +21,7 @@ COPY package.json package-lock.json ./
 COPY server/package.json ./server/
 COPY shared/package.json ./shared/
 COPY ee/server/package.json ./ee/server/
+COPY ee/packages/workflows/package.json ./ee/packages/workflows/
 COPY services/workflow-worker/package.json ./services/workflow-worker/
 
 # Install only production dependencies.
@@ -51,6 +52,7 @@ COPY ./server/index.ts ./server/
 COPY ./server/migrations/ ./server/migrations/
 COPY ./server/seeds/ ./server/seeds/
 COPY ./server/src/ ./server/src/
+COPY ./ee/packages/workflows/ ./ee/packages/workflows/
 COPY ./scripts ./scripts
 COPY ./shared/workflow/ ./shared/workflow/
 

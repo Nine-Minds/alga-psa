@@ -31,28 +31,44 @@ const baseTimeEntrySchema = z.object({
   is_billable: z.boolean().optional().default(true)
 });
 
-// Create time entry schema
-export const createTimeEntrySchema = baseTimeEntrySchema.refine(data => {
-  // Validate that end_time is after start_time
-  if (data.start_time && data.end_time) {
-    return new Date(data.end_time) > new Date(data.start_time);
+function validateTimeEntryWrite(
+  data: { start_time?: string; end_time?: string; service_id?: string },
+  ctx: z.RefinementCtx,
+  options: { requireServiceId: boolean; rejectClearingServiceId?: boolean }
+): void {
+  if (options.requireServiceId && !data.service_id) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['service_id'],
+      message: 'service_id is required for time entries'
+    });
   }
-  return true;
-}, {
-  message: "End time must be after start time",
-  path: ["end_time"]
+
+  if (options.rejectClearingServiceId && Object.prototype.hasOwnProperty.call(data, 'service_id') && !data.service_id) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['service_id'],
+      message: 'service_id cannot be cleared from a time entry'
+    });
+  }
+
+  if (data.start_time && data.end_time && new Date(data.end_time) <= new Date(data.start_time)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['end_time'],
+      message: 'End time must be after start time'
+    });
+  }
+}
+
+// Create time entry schema
+export const createTimeEntrySchema = baseTimeEntrySchema.superRefine((data, ctx) => {
+  validateTimeEntryWrite(data, ctx, { requireServiceId: true });
 });
 
 // Update time entry schema (all fields optional except validation)
-export const updateTimeEntrySchema = createUpdateSchema(baseTimeEntrySchema).refine(data => {
-  // Validate that end_time is after start_time if both are provided
-  if (data.start_time && data.end_time) {
-    return new Date(data.end_time) > new Date(data.start_time);
-  }
-  return true;
-}, {
-  message: "End time must be after start time",
-  path: ["end_time"]
+export const updateTimeEntrySchema = createUpdateSchema(baseTimeEntrySchema).superRefine((data, ctx) => {
+  validateTimeEntryWrite(data, ctx, { requireServiceId: false, rejectClearingServiceId: true });
 });
 
 // Time entry filter schema
@@ -259,7 +275,7 @@ export const startTimeTrackingSchema = z.object({
   work_item_id: uuidSchema.optional(),
   work_item_type: workItemTypeSchema,
   notes: z.string().optional(),
-  service_id: uuidSchema.optional()
+  service_id: uuidSchema
 });
 
 export const activeTimeSessionResponseSchema = z.object({

@@ -49,7 +49,12 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
 
   const loadTimeSheets = async () => {
     const sheets = await fetchTimeSheetsForApproval(showApproved);
-    setTimeSheets(sheets);
+    const sortedSheets = [...sheets].sort((a, b) => {
+      const aStart = a.time_period?.start_date ? parseISO(a.time_period.start_date).getTime() : 0;
+      const bStart = b.time_period?.start_date ? parseISO(b.time_period.start_date).getTime() : 0;
+      return bStart - aStart;
+    });
+    setTimeSheets(sortedSheets);
   };
 
   const handleReverseApproval = (timeSheet: ITimeSheetApprovalView) => {

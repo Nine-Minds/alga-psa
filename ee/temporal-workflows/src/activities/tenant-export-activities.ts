@@ -97,9 +97,7 @@ const TENANT_TABLES_EXPORT_ORDER: string[] = [
   'tags',
   'tag_mappings',
 
-  // Workflows
-  'workflow_executions',
-  'workflow_events',
+  // Workflow tasks
   'workflow_tasks',
 ];
 

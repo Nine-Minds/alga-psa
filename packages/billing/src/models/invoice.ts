@@ -20,7 +20,7 @@ import type {
   IInvoiceAnnotation,
   InvoiceViewModel,
 } from '@alga-psa/types';
-import { getClientLogoUrlAsync } from '../lib/documentsHelpers';
+import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 
 /**
  * Invoice model with tenant-explicit methods.
@@ -254,7 +254,7 @@ const Invoice = {
         .select('full_name')
         .where({ client_id: invoice.client_id, tenant })
         .first(),
-      getClientLogoUrlAsync(invoice.client_id, tenant).catch(() => null),
+      getClientLogoUrl(invoice.client_id, tenant).catch(() => null),
       knexOrTrx('tenant_companies as tc')
         .join('clients as c', function () {
           this.on('tc.client_id', '=', 'c.client_id').andOn('tc.tenant', '=', 'c.tenant');
@@ -321,7 +321,7 @@ const Invoice = {
 
     let tenantClient: InvoiceViewModel['tenantClient'] = null;
     if (tenantClientDetails?.client_id) {
-      const tenantLogoUrl = await getClientLogoUrlAsync(tenantClientDetails.client_id, tenant).catch(() => null);
+      const tenantLogoUrl = await getClientLogoUrl(tenantClientDetails.client_id, tenant).catch(() => null);
       const tenantClientName = asTrimmedString(tenantClientDetails.client_name);
       const tenantClientAddress = asTrimmedString(tenantClientDetails.location_address);
 

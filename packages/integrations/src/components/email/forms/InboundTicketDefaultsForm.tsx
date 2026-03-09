@@ -14,21 +14,15 @@ import {
 } from '@alga-psa/integrations/actions';
 import { getTicketFieldOptions, getCategoriesByBoard } from '@alga-psa/integrations/actions';
 import type { InboundTicketDefaults, TicketFieldOptions } from '@alga-psa/types';
-// Dedicated pickers used elsewhere in the app
-import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
 import { PrioritySelect } from '@alga-psa/ui/components';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-// Loaders to hydrate pickers with full data
-import { getAllBoards } from '@alga-psa/tickets/actions';
-import { getAllClients } from '@alga-psa/clients/actions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import type { IBoard, IPriority } from '@alga-psa/types';
+import type { IPriority } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
-import type { ITicketCategory } from '@alga-psa/types';
 import type { IUser } from '@shared/interfaces/user.interfaces';
+import { getIntegrationClients } from '../../../actions/clientLookupActions';
 
 export interface InboundTicketDefaultsFormProps {
   defaults?: InboundTicketDefaults | null;
@@ -70,16 +64,11 @@ export function InboundTicketDefaultsForm({
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Data for dedicated pickers
-  const [boards, setBoards] = useState<IBoard[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
   const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [usersWithRoles, setUsersWithRoles] = useState<IUser[]>([]);
-  const [boardFilterState, setBoardFilterState] = useState<'active' | 'inactive' | 'all'>('all');
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
-
-  // Note: category/subcategory are now selected via CategoryPicker
 
   // Load field options on mount
   useEffect(() => {
@@ -132,14 +121,11 @@ export function InboundTicketDefaultsForm({
       setFieldOptions(data.options);
 
       // Hydrate dedicated pickers with richer datasets
-      // Boards with full metadata for BoardPicker
-      const [allBoards, allClients, allPriorities, allUsers] = await Promise.all([
-        getAllBoards(true),
-        getAllClients(true),
+      const [allClients, allPriorities, allUsers] = await Promise.all([
+        getIntegrationClients(true),
         getAllPriorities('ticket'),
         getAllUsersBasic(true, 'internal')
       ]);
-      setBoards(allBoards || []);
       setClients(allClients || []);
       setPriorities((allPriorities as IPriority[]) || []);
       setUsersWithRoles(allUsers || []);
@@ -241,6 +227,11 @@ export function InboundTicketDefaultsForm({
     );
   }
 
+  const categoryOptions = (fieldOptions.categories || []).map((category) => ({
+    value: category.id,
+    label: category.parent_id ? `  - ${category.name}` : category.name,
+  }));
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Error Alert */}
@@ -305,14 +296,15 @@ export function InboundTicketDefaultsForm({
         <div className="grid grid-cols-2 gap-4">
           {/* Required Fields */}
           <div>
-          <Label htmlFor="board_id">Board *</Label>
-            <BoardPicker
+            <Label htmlFor="board_id">Board *</Label>
+            <CustomSelect
               id="board_id"
-              boards={boards}
-              selectedBoardId={formData.board_id || null}
-              onSelect={(value) => handleDefaultChange('board_id', value)}
-              filterState={boardFilterState}
-              onFilterStateChange={setBoardFilterState}
+              value={formData.board_id}
+              onValueChange={(value) => handleDefaultChange('board_id', value)}
+              options={fieldOptions.boards.map((board) => ({
+                value: board.id,
+                label: board.name + (board.is_default ? ' (Default)' : ''),
+              }))}
               placeholder="Select Board"
             />
           </div>
@@ -367,24 +359,11 @@ export function InboundTicketDefaultsForm({
 
           <div>
             <Label htmlFor="category_id">Category</Label>
-            <CategoryPicker
+            <CustomSelect
               id="category_id"
-              categories={(fieldOptions.categories || []).map((c): ITicketCategory => ({
-                category_id: c.id,
-                category_name: c.name,
-                parent_category: c.parent_id,
-                board_id: c.board_id
-              }))}
-              selectedCategories={(() => {
-                // Represent current selection as either subcategory or parent
-                if (formData.subcategory_id) return [formData.subcategory_id];
-                if (formData.category_id) return [formData.category_id];
-                return [];
-              })()}
-              onSelect={(categoryIds) => {
-                const selectedId = categoryIds[0] || '';
-                // Treat both "Clear Selection" and "No Category" as no category
-                if (!selectedId || selectedId === 'no-category') {
+              value={formData.subcategory_id || formData.category_id}
+              onValueChange={(selectedId) => {
+                if (!selectedId) {
                   handleDefaultChange('category_id', '');
                   handleDefaultChange('subcategory_id', '');
                   return;
@@ -400,11 +379,10 @@ export function InboundTicketDefaultsForm({
                   handleDefaultChange('subcategory_id', '');
                 }
               }}
+              options={categoryOptions}
               placeholder={formData.board_id ? 'Select category' : 'Select board first'}
-              multiSelect={false}
               disabled={!formData.board_id}
-              showReset
-              allowEmpty
+              allowClear
             />
             {formData.board_id && (fieldOptions.categories || []).filter(c => !c.parent_id && String(c.board_id || '') === String(formData.board_id)).length === 0 && (
               <p className="text-xs text-muted-foreground mt-1">No categories found for the selected board.</p>

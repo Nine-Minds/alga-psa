@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { getEligibleContractLinesForUI, getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
-import { getClientById } from '@alga-psa/clients/actions';
+import { getSchedulingClientById } from '../../../../actions/clientInteractionLookupActions';
 import { formatISO, parseISO, addMinutes, setHours, setMinutes, setSeconds } from 'date-fns';
 import { IService } from '@alga-psa/types';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -10,6 +10,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { MinusCircle, XCircle, Info, AlertTriangle } from 'lucide-react';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
@@ -80,7 +81,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       value: service.id,
       label: service.name
     }))
-  }, []);
+  }, [services]);
 
   const selectedService = useMemo(() =>
     services.find(s => s.id === entry?.service_id),
@@ -176,7 +177,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       // 1. Fetch Client Details (if clientId exists) - Still needed for plan logic
       if (clientId) {
         try {
-          clientDetails = await getClientById(clientId);
+          clientDetails = await getSchedulingClientById(clientId);
           console.log('Fetched client details:', clientDetails);
         } catch (error) {
           console.error('Error fetching client details:', error);
@@ -332,7 +333,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
 
   const handleDurationChange = useCallback((type: 'hours' | 'minutes', value: number) => {
-    if (!entry) return;
+    if (!isEditable || !entry) return;
     const hours = type === 'hours' ? value : durationHours;
     const minutes = type === 'minutes' ? value : durationMinutes;
 
@@ -367,13 +368,13 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
     if (showErrors) {
       validateTimes();
     }
-  }, [entry, index, durationHours, durationMinutes, onUpdateEntry, onUpdateTimeInputs, validateTimes, showErrors]);
+  }, [durationHours, durationMinutes, entry, index, isEditable, onUpdateEntry, onUpdateTimeInputs, showErrors, validateTimes]);
 
   return (
-    <div className="border p-4 rounded">
+    <div className="space-y-5">
       {/* Only show delete button and status for existing entries that have been saved */}
-      {(entry?.entry_id && !isNewEntry) && (
-        <div className="flex justify-end items-center mb-4">
+      {(entry?.entry_id && !isNewEntry && isEditable) && (
+        <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
           <div className="flex items-center">
             {entry?.isDirty && (
               <span className="text-yellow-500 text-sm mr-2">Unsaved changes</span>
@@ -392,54 +393,46 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
         </div>
       )}
 
-      <div className="border p-4 rounded space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Service {entry?.billable_duration > 0 && <span className="text-red-500">*</span>}
-            </label>
-            <CustomSelect
-              value={entry?.service_id || ''}
-              onValueChange={(value) => {
-                if (entry) {
-                  // Track if a prefilled service is being changed
-                  const isServiceOverridden = entry._isServicePrefilled && value !== entry._originalServiceId;
-                  const updatedEntry = {
-                    ...entry,
-                    service_id: value,
-                    _serviceOverridden: isServiceOverridden
-                  };
-                  onUpdateEntry(index, updatedEntry);
-                }
-              }}
-              disabled={!isEditable}
-              className="mt-1 w-full"
-              options={serviceOptions}
-              placeholder="Select a service"
-            />
-            {showErrors && validationErrors.service && (
-              <span className="text-sm text-red-500">{validationErrors.service}</span>
-            )}
-          </div>
-
-
-
-        </div>
-
-        {/* Contract Info Banner - shows which contract will be used */}
-        {entry?.work_item_id && entry?.service_id && (
-          <ContractInfoBanner
-            workItemId={entry.work_item_id}
-            workItemType={entry.work_item_type}
-            serviceId={entry.service_id}
-            entryDate={entry.start_time ? parseISO(entry.start_time) : undefined}
-            clientId={clientId}
-          />
+      <div className="space-y-1.5">
+        <label className="block text-sm font-medium text-gray-700">
+          Service {entry?.billable_duration > 0 && <span className="text-red-500">*</span>}
+        </label>
+        <CustomSelect
+          value={entry?.service_id || ''}
+          onValueChange={(value) => {
+            if (entry) {
+              const isServiceOverridden = entry._isServicePrefilled && value !== entry._originalServiceId;
+              const updatedEntry = {
+                ...entry,
+                service_id: value,
+                _serviceOverridden: isServiceOverridden
+              };
+              onUpdateEntry(index, updatedEntry);
+            }
+          }}
+          disabled={!isEditable}
+          className="w-full"
+          options={serviceOptions}
+          placeholder="Select a service"
+        />
+        {showErrors && validationErrors.service && (
+          <span className="text-sm text-red-500">{validationErrors.service}</span>
         )}
       </div>
 
+      {/* Contract Info Banner - shows which contract will be used */}
+      {entry?.work_item_id && entry?.service_id && (
+        <ContractInfoBanner
+          workItemId={entry.work_item_id}
+          workItemType={entry.work_item_type}
+          serviceId={entry.service_id}
+          entryDate={entry.start_time ? parseISO(entry.start_time) : undefined}
+          clientId={clientId}
+        />
+      )}
+
       {isNewEntry && (
-        <div className="mb-4">
+        <div className="space-y-1.5">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Date <span className="text-red-500">*</span>
           </label>
@@ -483,8 +476,8 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1">
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-1.5">
           <label className="block text-sm font-medium text-gray-700">Start Time</label>
           <TimePicker
             id={`${id}-start-time-${index}`}
@@ -492,13 +485,13 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
             onChange={(value) => handleTimeChange('start', value)}
             allowManualInput
             disabled={!isEditable}
-            className="mt-1"
+            className="w-full"
           />
           {showErrors && validationErrors.startTime && (
             <span className="text-sm text-red-500">{validationErrors.startTime}</span>
           )}
         </div>
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <label className="block text-sm font-medium text-gray-700">End Time</label>
           <TimePicker
             id={`${id}-end-time-${index}`}
@@ -506,7 +499,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
             onChange={(value) => handleTimeChange('end', value)}
             allowManualInput
             disabled={!isEditable}
-            className="mt-1"
+            className="w-full"
           />
           {showErrors && validationErrors.endTime && (
             <span className="text-sm text-red-500">{validationErrors.endTime}</span>
@@ -514,10 +507,10 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
         </div>
       </div>
 
-      <div className="space-y-2 mt-2">
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-gray-700">Duration</label>
-          <div className="flex items-center space-x-2">
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">Duration</label>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2">
             <Input
               id='duration-hours'
               type="number"
@@ -525,9 +518,10 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               value={durationHours}
               onChange={(e) => handleDurationChange('hours', parseInt(e.target.value) || 0)}
               disabled={!isEditable}
-              className="w-20"
+              containerClassName="w-[5.5rem]"
+              className="text-center"
             />
-            <span>h</span>
+            <span className="text-sm font-medium text-gray-500">h</span>
             <Input
               id='duration-minutes'
               type="number"
@@ -536,17 +530,16 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               value={durationMinutes}
               onChange={(e) => handleDurationChange('minutes', Math.min(59, parseInt(e.target.value) || 0))}
               disabled={!isEditable}
-              className="w-20"
+              containerClassName="w-[4.5rem]"
+              className="text-center"
             />
-            <span>m</span>
+            <span className="text-sm font-medium text-gray-500">m</span>
           </div>
-        </div>
-
-        <div className="flex items-center justify-between mt-4">
-          <div className="flex items-center space-x-2">
+          <div className="inline-flex h-10 items-center gap-3 rounded-md border border-gray-200 bg-gray-50 px-3">
             <Switch
               id='billable-duration'
               checked={entry?.billable_duration > 0}
+              disabled={!isEditable}
               onCheckedChange={(checked) => {
                 if (entry?.start_time && entry?.end_time) {
                   const duration = calculateDuration(
@@ -571,11 +564,16 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
             </span>
           </div>
         </div>
+        {showErrors && validationErrors.duration && (
+          <span className="text-sm text-red-500">
+            {validationErrors.duration}
+          </span>
+        )}
       </div>
 
-      <div className="mt-4">
+      <div className="space-y-1.5">
         <label className="block text-sm font-medium text-gray-700">Notes</label>
-        <Input
+        <TextArea
           id='notes'
           value={entry?.notes || ''}
           onChange={(e) => {
@@ -584,22 +582,18 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               onUpdateEntry(index, updatedEntry);
             }
           }}
-          placeholder="Notes"
+          placeholder="Add notes"
           disabled={!isEditable}
           ref={lastNoteInputRef}
-          className="mt-1 w-full"
+          wrapperClassName="mb-0 px-0"
+          className="min-h-[7.5rem] text-sm"
         />
       </div>
 
       {/* Only show save button for multi-entry editing (when onSave is provided) */}
-      {onSave && (
-        <div className="flex justify-end mt-4">
+      {isEditable && onSave && (
+        <div className="flex justify-end border-t border-gray-200 pt-4">
           <div className="flex flex-col items-end gap-2">
-            {showErrors && validationErrors.duration && (
-              <span className="text-sm text-red-500">
-                {validationErrors.duration}
-              </span>
-            )}
             <Button
               id={`${id}-save-entry-${index}-btn`}
               onClick={handleSave}
@@ -610,15 +604,6 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               Save
             </Button>
           </div>
-        </div>
-      )}
-
-      {/* Show validation errors without button for single entry forms */}
-      {!onSave && showErrors && validationErrors.duration && (
-        <div className="flex justify-end mt-4">
-          <span className="text-sm text-red-500">
-            {validationErrors.duration}
-          </span>
         </div>
       )}
     </div>

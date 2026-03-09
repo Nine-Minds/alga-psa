@@ -1,5 +1,4 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { ActionRegistry, ActionExecutionContext } from '@shared/workflow/core/actionRegistry';
 import type { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import {
   MAX_ATTACHMENT_BYTES,
@@ -13,6 +12,22 @@ import {
 } from './emailAttachmentHelpers';
 
 const STALE_PROCESSING_MS = 30 * 60 * 1000; // 30 minutes
+
+type ActionExecutionContext = {
+  tenant: string;
+  executionId: string;
+  idempotencyKey: string;
+  knex?: unknown;
+};
+
+type LegacyActionRegistry = {
+  registerSimpleAction: (
+    name: string,
+    description: string,
+    parameters: Array<{ name: string; type: string; required: boolean; description?: string }>,
+    executeFn: (params: Record<string, any>, context: ActionExecutionContext) => Promise<any>
+  ) => void;
+};
 
 function isUniqueViolation(error: any): boolean {
   return error?.code === '23505' || String(error?.message || '').toLowerCase().includes('duplicate');
@@ -472,7 +487,7 @@ async function downloadOriginalMime(args: {
   return buildDeterministicRfc822Message(args.emailData || { id: args.emailId });
 }
 
-export function registerEmailAttachmentActions(actionRegistry: ActionRegistry): void {
+export function registerEmailAttachmentActions(actionRegistry: LegacyActionRegistry): void {
   actionRegistry.registerSimpleAction(
     'extract_embedded_email_attachments',
     'Extract HTML embedded image attachments from data URLs and referenced CID images',

@@ -27,8 +27,8 @@ import {
   updateTacticalRmmOrganizationMapping,
   type TacticalRmmAuthMode,
 } from '@alga-psa/integrations/actions';
-import { getAllClientsForAssets } from '@alga-psa/assets/actions/clientLookupActions';
 import type { IClient } from '@alga-psa/types';
+import { getIntegrationClients } from '../../../actions/clientLookupActions';
 
 export function TacticalRmmIntegrationSettings() {
   const { toast } = useToast();
@@ -131,7 +131,7 @@ export function TacticalRmmIntegrationSettings() {
     const run = async () => {
       setClientsLoading(true);
       try {
-        const data = await getAllClientsForAssets(true);
+        const data = await getIntegrationClients(true);
         setClients(data as any);
       } catch (e) {
         setClients([]);

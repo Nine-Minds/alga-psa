@@ -18,6 +18,7 @@ FROM base AS deps
 COPY package.json package-lock.json ./
 COPY server/package.json ./server/
 COPY shared/package.json ./shared/
+COPY ee/packages/workflows/package.json ./ee/packages/workflows/
 COPY tsconfig.base.json ./
 COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
 
@@ -32,8 +33,10 @@ WORKDIR /app
 
 COPY . .
 
-# Remove ee directory for CE build
-RUN rm -rf /app/ee
+# Remove only the EE server tree for CE builds.
+# The workflows workspace now lives under ee/packages/workflows and must remain
+# present because node_modules/@alga-psa/workflows is a workspace symlink.
+RUN rm -rf /app/ee/server
 
 # Copy CE stubs from server/src/empty to ee/server/src for @ee alias resolution
 # This ensures both TypeScript and webpack can resolve @ee imports during CE builds
@@ -112,6 +115,7 @@ COPY .env.example /app/server/.env
 
 # Copy built application and node_modules from earlier stages -- minimalist approach
 COPY --from=builder /app/shared ./shared
+COPY --from=builder /app/ee/packages/workflows ./ee/packages/workflows
 COPY --from=builder /app/server/.next ./server/.next
 COPY --from=builder /app/server/public ./server/public
 COPY --from=builder /app/server/next.config.mjs ./server/

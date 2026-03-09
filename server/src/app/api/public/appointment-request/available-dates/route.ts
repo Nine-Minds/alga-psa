@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTenantIdBySlug } from '@alga-psa/db';
-import { getAvailableDates } from '@/lib/services/availabilityService';
+import { getAvailableDates } from '@alga-psa/client-portal/services/availabilityService';
 import { runWithTenant } from '@/lib/db';
 import logger from '@alga-psa/core/logger';
 import { z } from 'zod';

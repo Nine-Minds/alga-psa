@@ -60,7 +60,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     return baseSections.map((section) => ({
       ...section,
       items: section.items.map((item) => {
-        if (item.name !== 'Automation Hub') {
+        if (item.name !== 'Workflows') {
           return item;
         }
 

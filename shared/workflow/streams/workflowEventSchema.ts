@@ -1,5 +1,17 @@
-import { IWorkflowEvent } from '../persistence/index';
 import type { WorkflowEventBase } from '@alga-psa/event-schemas';
+
+type LegacyWorkflowEventRecord = {
+  event_id: string;
+  execution_id: string;
+  event_name: string;
+  event_type: string;
+  tenant: string;
+  created_at: string;
+  from_state: string;
+  to_state: string;
+  user_id?: string;
+  payload?: Record<string, unknown>;
+};
 
 // Re-export workflow event schemas from @alga-psa/event-schemas for backwards compatibility
 export type {
@@ -21,9 +33,9 @@ export {
 
 /**
  * Convert a database workflow event to a stream event
- * This function remains local because it depends on IWorkflowEvent from persistence
+ * This function remains local for legacy event-stream compatibility.
  */
-export function toStreamEvent(event: IWorkflowEvent): WorkflowEventBase {
+export function toStreamEvent(event: LegacyWorkflowEventRecord): WorkflowEventBase {
   return {
     event_id: event.event_id,
     execution_id: event.execution_id,

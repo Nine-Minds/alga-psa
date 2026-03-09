@@ -6,7 +6,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = './src/empty/shims/empty.ts';
 
-const isEE = process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+// `ee/server` is the enterprise app, so default to EE wiring unless explicitly forced off.
+const isEE = process.env.EDITION !== 'ce' && process.env.NEXT_PUBLIC_EDITION !== 'community';
 
 const nextConfig = {
   // Transpile shared product packages used by EE server
@@ -26,31 +27,38 @@ const nextConfig = {
       '@enterprise': './src',
       // Feature swap: product pages and entries
       '@product/extensions/entry': isEE
-        ? '../packages/product-extensions/ee/entry'
-        : '../packages/product-extensions/oss/entry',
+        ? '../../packages/product-extensions/ee/entry'
+        : '../../packages/product-extensions/oss/entry',
       '@product/extensions/pages/list': isEE
-        ? '../packages/product-extensions-pages/ee/list'
-        : '../packages/product-extensions-pages/oss/list',
+        ? '../../packages/product-extensions-pages/ee/list'
+        : '../../packages/product-extensions-pages/oss/list',
       '@product/extensions/pages/details': isEE
-        ? '../packages/product-extensions-pages/ee/details'
-        : '../packages/product-extensions-pages/oss/details',
+        ? '../../packages/product-extensions-pages/ee/details'
+        : '../../packages/product-extensions-pages/oss/details',
       '@product/extensions/pages/settings': isEE
-        ? '../packages/product-extensions-pages/ee/settings'
-        : '../packages/product-extensions-pages/oss/settings',
+        ? '../../packages/product-extensions-pages/ee/settings'
+        : '../../packages/product-extensions-pages/oss/settings',
       '@product/ext-proxy/handler': isEE
-        ? '../packages/product-ext-proxy/ee/handler'
-        : '../packages/product-ext-proxy/oss/handler',
+        ? '../../packages/product-ext-proxy/ee/handler'
+        : '../../packages/product-ext-proxy/oss/handler',
       '@alga-psa/integrations/entra/components/entry': isEE
-        ? '../packages/integrations/src/entra/components/ee/entry'
-        : '../packages/integrations/src/entra/components/oss/entry',
+        ? '../../packages/integrations/src/entra/components/ee/entry'
+        : '../../packages/integrations/src/entra/components/oss/entry',
       '@alga-psa/integrations/entra/routes/entry': isEE
-        ? '../packages/integrations/src/entra/routes/ee/entry'
-        : '../packages/integrations/src/entra/routes/oss/entry',
+        ? '../../packages/integrations/src/entra/routes/ee/entry'
+        : '../../packages/integrations/src/entra/routes/oss/entry',
       // Event schemas package
-      '@alga-psa/event-schemas': '../packages/event-schemas/src',
-      '@alga-psa/event-schemas/': '../packages/event-schemas/src/',
+      '@alga-psa/event-schemas': '../../packages/event-schemas/src',
+      '@alga-psa/event-schemas/': '../../packages/event-schemas/src/',
       // SSO provider buttons - always use EE implementation in EE server
       '@alga-psa/auth/sso/entry': './src/components/auth/SsoProviderButtons.tsx',
+      '@alga-psa/workflows/entry': './src/workflows/entry.tsx',
+      '@alga-psa/product-extension-actions': '../../packages/product-extension-actions/ee/entry.ts',
+      '@alga-psa/product-extension-initialization': './src/lib/extensions/initialize.ts',
+      '@alga-psa/product-auth-ee': '../../packages/product-auth-ee/ee/entry.ts',
+      '@alga-psa/storage': '../../packages/storage/src',
+      '@alga-psa/storage/StorageService': '../../packages/storage/src/StorageService.ts',
+      '@/empty/workflows/entry': './src/empty/workflows/entry.tsx',
       // Native DB drivers not used
       'better-sqlite3': emptyShim,
       'sqlite3': emptyShim,
@@ -100,30 +108,37 @@ const nextConfig = {
         '@ee/components': path.join(__dirname, 'src/components'),
         // Feature swap aliases (Webpack)
         '@product/extensions/entry': isEE
-          ? path.join(__dirname, '../packages/product-extensions/ee/entry.tsx')
-          : path.join(__dirname, '../packages/product-extensions/oss/entry.tsx'),
+          ? path.join(__dirname, '../../packages/product-extensions/ee/entry.tsx')
+          : path.join(__dirname, '../../packages/product-extensions/oss/entry.tsx'),
         '@product/extensions/pages/list': isEE
-          ? path.join(__dirname, '../packages/product-extensions-pages/ee/list.tsx')
-          : path.join(__dirname, '../packages/product-extensions-pages/oss/list.tsx'),
+          ? path.join(__dirname, '../../packages/product-extensions-pages/ee/list.tsx')
+          : path.join(__dirname, '../../packages/product-extensions-pages/oss/list.tsx'),
         '@product/extensions/pages/details': isEE
-          ? path.join(__dirname, '../packages/product-extensions-pages/ee/details.tsx')
-          : path.join(__dirname, '../packages/product-extensions-pages/oss/details.tsx'),
+          ? path.join(__dirname, '../../packages/product-extensions-pages/ee/details.tsx')
+          : path.join(__dirname, '../../packages/product-extensions-pages/oss/details.tsx'),
         '@product/extensions/pages/settings': isEE
-          ? path.join(__dirname, '../packages/product-extensions-pages/ee/settings.tsx')
-          : path.join(__dirname, '../packages/product-extensions-pages/oss/settings.tsx'),
+          ? path.join(__dirname, '../../packages/product-extensions-pages/ee/settings.tsx')
+          : path.join(__dirname, '../../packages/product-extensions-pages/oss/settings.tsx'),
         '@product/ext-proxy/handler': isEE
-          ? path.join(__dirname, '../packages/product-ext-proxy/ee/handler.ts')
-          : path.join(__dirname, '../packages/product-ext-proxy/oss/handler.ts'),
+          ? path.join(__dirname, '../../packages/product-ext-proxy/ee/handler.ts')
+          : path.join(__dirname, '../../packages/product-ext-proxy/oss/handler.ts'),
         '@alga-psa/integrations/entra/components/entry': isEE
-          ? path.join(__dirname, '../packages/integrations/src/entra/components/ee/entry.tsx')
-          : path.join(__dirname, '../packages/integrations/src/entra/components/oss/entry.tsx'),
+          ? path.join(__dirname, '../../packages/integrations/src/entra/components/ee/entry.tsx')
+          : path.join(__dirname, '../../packages/integrations/src/entra/components/oss/entry.tsx'),
         '@alga-psa/integrations/entra/routes/entry': isEE
-          ? path.join(__dirname, '../packages/integrations/src/entra/routes/ee/entry.ts')
-          : path.join(__dirname, '../packages/integrations/src/entra/routes/oss/entry.ts'),
+          ? path.join(__dirname, '../../packages/integrations/src/entra/routes/ee/entry.ts')
+          : path.join(__dirname, '../../packages/integrations/src/entra/routes/oss/entry.ts'),
         // Event schemas package
-        '@alga-psa/event-schemas': path.join(__dirname, '../packages/event-schemas/src'),
+        '@alga-psa/event-schemas': path.join(__dirname, '../../packages/event-schemas/src'),
         // SSO provider buttons - always use EE implementation in EE server
         '@alga-psa/auth/sso/entry': path.join(__dirname, 'src/components/auth/SsoProviderButtons.tsx'),
+        '@alga-psa/workflows/entry': path.join(__dirname, 'src/workflows/entry.tsx'),
+        '@alga-psa/product-extension-actions': path.join(__dirname, '../../packages/product-extension-actions/ee/entry.ts'),
+        '@alga-psa/product-extension-initialization': path.join(__dirname, 'src/lib/extensions/initialize.ts'),
+        '@alga-psa/product-auth-ee': path.join(__dirname, '../../packages/product-auth-ee/ee/entry.ts'),
+        '@alga-psa/storage': path.join(__dirname, '../../packages/storage/src'),
+        '@alga-psa/storage/StorageService': path.join(__dirname, '../../packages/storage/src/StorageService.ts'),
+        '@/empty/workflows/entry': path.join(__dirname, 'src/empty/workflows/entry.tsx'),
         // Stub native sharp during local dev to avoid platform build issues
         sharp: path.join(__dirname, 'src/empty/sharp.ts'),
       },

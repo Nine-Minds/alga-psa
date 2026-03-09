@@ -97,6 +97,7 @@ export function TimeSheet({
     const [workItemsByType, setWorkItemsByType] = useState<Record<string, IExtendedWorkItem[]>>({});
     const [groupedTimeEntries, setGroupedTimeEntries] = useState<Record<string, ITimeEntryWithWorkItemString[]>>({});
     const [isAddWorkItemDialogOpen, setIsAddWorkItemDialogOpen] = useState(false);
+    const [addWorkItemDate, setAddWorkItemDate] = useState<string | null>(null);
     const [localWorkItems, setLocalWorkItems] = useState<IExtendedWorkItem[]>([]);
     const [comments, setComments] = useState<ITimeSheetComment[]>([]);
     const [isLoadingComments, setIsLoadingComments] = useState(false);
@@ -382,6 +383,11 @@ export function TimeSheet({
         }
     };
 
+  const openAddWorkItemDialog = useCallback((date?: string) => {
+    setAddWorkItemDate(date || null);
+    setIsAddWorkItemDialogOpen(true);
+  }, []);
+
   const handleAddWorkItem = async (workItem: IExtendedWorkItem) => {
     console.log('Selected work item for time entry:', workItem);
     
@@ -391,26 +397,41 @@ export function TimeSheet({
     // Set up for creating a new time entry
     let defaultStartTime: Date | undefined;
     let defaultEndTime: Date | undefined;
+    const selectedDate = addWorkItemDate ? parseLocalDate(addWorkItemDate) : undefined;
     let currentDate: Date;
     
     // For ad_hoc items, use their scheduled times as defaults
     if (workItem.type === 'ad_hoc' && workItem.scheduled_start && workItem.scheduled_end) {
-      defaultStartTime = new Date(workItem.scheduled_start);
-      defaultEndTime = new Date(workItem.scheduled_end);
-      
-      // If end time is before start time (crossed midnight), add a day to end time
-      if (defaultEndTime < defaultStartTime) {
-        defaultEndTime.setDate(defaultEndTime.getDate() + 1);
+      const scheduledStart = new Date(workItem.scheduled_start);
+      const scheduledEnd = new Date(workItem.scheduled_end);
+      const adjustedScheduledEnd = new Date(scheduledEnd);
+
+      if (adjustedScheduledEnd < scheduledStart) {
+        adjustedScheduledEnd.setDate(adjustedScheduledEnd.getDate() + 1);
       }
-      
-      currentDate = timeSheet.time_period ?
-        parseLocalDate(timeSheet.time_period.start_date) :
-        new Date();
+
+      if (selectedDate) {
+        defaultStartTime = new Date(selectedDate);
+        defaultStartTime.setHours(
+          scheduledStart.getHours(),
+          scheduledStart.getMinutes(),
+          scheduledStart.getSeconds(),
+          scheduledStart.getMilliseconds()
+        );
+        defaultEndTime = new Date(defaultStartTime.getTime() + (adjustedScheduledEnd.getTime() - scheduledStart.getTime()));
+        currentDate = selectedDate;
+      } else {
+        defaultStartTime = scheduledStart;
+        defaultEndTime = adjustedScheduledEnd;
+        currentDate = timeSheet.time_period ?
+          parseLocalDate(timeSheet.time_period.start_date) :
+          new Date();
+      }
     } else {
       // For other work items, set reasonable defaults
-      currentDate = timeSheet.time_period ?
+      currentDate = selectedDate || (timeSheet.time_period ?
         parseLocalDate(timeSheet.time_period.start_date) :
-        new Date();
+        new Date());
       defaultStartTime = new Date(currentDate);
       defaultStartTime.setHours(8, 0, 0, 0); // 8:00 AM
       defaultEndTime = new Date(defaultStartTime);
@@ -426,6 +447,7 @@ export function TimeSheet({
       defaultStartTime: defaultStartTime ? formatISO(defaultStartTime) : undefined,
       defaultEndTime: defaultEndTime ? formatISO(defaultEndTime) : undefined
     });
+    setAddWorkItemDate(null);
   };
 
     const handleAddComment = async (comment: string) => {
@@ -668,7 +690,7 @@ export function TimeSheet({
                     isEditable={effectiveIsEditable}
                     isLoading={isLoadingTimeSheetData || isViewModeLoading}
                     onCellClick={setSelectedCell}
-                    onAddWorkItem={() => setIsAddWorkItemDialogOpen(true)}
+                    onAddWorkItem={openAddWorkItemDialog}
                     onQuickAddTimeEntry={handleQuickAddTimeEntry}
                     onDateNavigatorChange={setDateNavigator}
                     onWorkItemClick={handleWorkItemClick}
@@ -682,13 +704,13 @@ export function TimeSheet({
                     isEditable={effectiveIsEditable}
                     isLoading={isLoadingTimeSheetData || isViewModeLoading}
                     onCellClick={setSelectedCell}
-                    onAddWorkItem={() => setIsAddWorkItemDialogOpen(true)}
+                    onAddWorkItem={openAddWorkItemDialog}
                     onWorkItemClick={handleWorkItemClick}
                     onDeleteWorkItem={handleDeleteWorkItem}
                 />
             )}
 
-            {selectedCell && effectiveIsEditable && timeSheet.time_period && (
+            {selectedCell && timeSheet.time_period && (
                 <TimeEntryDialog
                     id="time-entry-dialog"
                     isOpen={true}
@@ -700,7 +722,7 @@ export function TimeSheet({
                         ...entry,
                     }))}
                     timePeriod={timeSheet.time_period}
-                    isEditable={isEditable}
+                    isEditable={effectiveIsEditable}
                     defaultEndTime={selectedCell.defaultEndTime ? parseISO(selectedCell.defaultEndTime) : undefined}
                     defaultStartTime={selectedCell.defaultStartTime ? parseISO(selectedCell.defaultStartTime) : undefined}
                     timeSheetId={timeSheet.id}
@@ -734,7 +756,10 @@ export function TimeSheet({
             {timeSheet.time_period && (
                 <AddWorkItemDialog
                     isOpen={isAddWorkItemDialogOpen}
-                    onClose={() => setIsAddWorkItemDialogOpen(false)}
+                    onClose={() => {
+                        setIsAddWorkItemDialogOpen(false);
+                        setAddWorkItemDate(null);
+                    }}
                     onAdd={handleAddWorkItem}
                     availableWorkItems={Object.values(workItemsByType).flat()}
                     timePeriod={timeSheet.time_period}

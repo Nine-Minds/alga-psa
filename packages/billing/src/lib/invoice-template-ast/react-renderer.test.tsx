@@ -112,6 +112,69 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
     expect(rendered.html).toContain('300');
   });
 
+  it('renders grouped dynamic-table rows from a transformed output binding', async () => {
+    const ast: InvoiceTemplateAst = {
+      kind: 'invoice-template-ast',
+      version: INVOICE_TEMPLATE_AST_VERSION,
+      bindings: {
+        collections: {
+          lineItems: { id: 'lineItems', kind: 'collection', path: 'items' },
+        },
+      },
+      transforms: {
+        sourceBindingId: 'lineItems',
+        outputBindingId: 'lineItems.grouped',
+        operations: [
+          {
+            id: 'group-category',
+            type: 'group',
+            key: 'category',
+          },
+          {
+            id: 'aggregate-total',
+            type: 'aggregate',
+            aggregations: [{ id: 'sumTotal', op: 'sum', path: 'total' }],
+          },
+        ],
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'grouped-line-items',
+            type: 'dynamic-table',
+            repeat: {
+              sourceBinding: { bindingId: 'lineItems.grouped' },
+              itemBinding: 'item',
+            },
+            columns: [
+              { id: 'group', header: 'Group', value: { type: 'path', path: 'key' } },
+              { id: 'rolled-up-total', header: 'Rolled Up Total', value: { type: 'path', path: 'aggregates.sumTotal' } },
+            ],
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateInvoiceTemplateAst(ast, {
+      ...invoiceFixture,
+      items: [
+        { id: 'a', description: 'Consulting', category: 'Services', quantity: 2, unitPrice: 100, total: 200 },
+        { id: 'b', description: 'Support', category: 'Services', quantity: 1, unitPrice: 100, total: 100 },
+        { id: 'c', description: 'Equipment', category: 'Products', quantity: 1, unitPrice: 30, total: 30 },
+      ],
+    });
+    const rendered = await renderEvaluatedInvoiceTemplateAst(ast, evaluation);
+
+    expect(rendered.html).toContain('Group');
+    expect(rendered.html).toContain('Rolled Up Total');
+    expect(rendered.html).toContain('Services');
+    expect(rendered.html).toContain('Products');
+    expect(rendered.html).toContain('300');
+    expect(rendered.html).toContain('30');
+  });
+
   it('formats template path expressions using currency filter syntax', async () => {
     const ast: InvoiceTemplateAst = {
       kind: 'invoice-template-ast',
@@ -146,6 +209,72 @@ describe('renderEvaluatedInvoiceTemplateAst', () => {
 
     expect(rendered.html).toContain('Amount due $3.30');
     expect(rendered.html).not.toContain('Amount due 330');
+  });
+
+  it('renders grouped transform outputs through dynamic-table bindings using key and aggregate paths', async () => {
+    const groupedInvoiceFixture = {
+      ...invoiceFixture,
+      items: [
+        { id: 'a', description: 'Consulting', quantity: 2, unitPrice: 100, total: 200, category: 'Services' },
+        { id: 'b', description: 'Support', quantity: 1, unitPrice: 100, total: 100, category: 'Services' },
+        { id: 'c', description: 'Hardware', quantity: 1, unitPrice: 30, total: 30, category: 'Products' },
+      ],
+    };
+    const ast: InvoiceTemplateAst = {
+      kind: 'invoice-template-ast',
+      version: INVOICE_TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {},
+        collections: {
+          lineItems: { id: 'lineItems', kind: 'collection', path: 'items' },
+        },
+      },
+      transforms: {
+        sourceBindingId: 'lineItems',
+        outputBindingId: 'lineItems.grouped',
+        operations: [
+          {
+            id: 'group-category',
+            type: 'group',
+            key: 'category',
+          },
+          {
+            id: 'aggregate-total',
+            type: 'aggregate',
+            aggregations: [{ id: 'sumTotal', op: 'sum', path: 'total' }],
+          },
+        ],
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'grouped-line-items',
+            type: 'dynamic-table',
+            repeat: {
+              sourceBinding: { bindingId: 'lineItems.grouped' },
+              itemBinding: 'item',
+            },
+            columns: [
+              { id: 'group-key', header: 'Category', value: { type: 'path', path: 'key' } },
+              { id: 'group-total', header: 'Total', value: { type: 'path', path: 'aggregates.sumTotal' } },
+              { id: 'group-items', header: 'Items', value: { type: 'path', path: 'items.length' } },
+            ],
+          },
+        ],
+      },
+    };
+
+    const evaluation = evaluateInvoiceTemplateAst(ast, groupedInvoiceFixture);
+    const rendered = await renderEvaluatedInvoiceTemplateAst(ast, evaluation);
+
+    expect(rendered.html).toContain('Services');
+    expect(rendered.html).toContain('Products');
+    expect(rendered.html).toContain('300');
+    expect(rendered.html).toContain('30');
+    expect(rendered.html).toContain('2');
+    expect(rendered.html).toContain('1');
   });
 
   it('applies class tokens and style declarations consistently', async () => {

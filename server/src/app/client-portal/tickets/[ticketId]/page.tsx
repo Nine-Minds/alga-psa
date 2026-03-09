@@ -1,9 +1,13 @@
 import React from 'react';
+import { cache } from 'react';
 import { getClientTicketDetails } from '@alga-psa/client-portal/actions';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { TicketDetailsContainer } from '@alga-psa/client-portal/components';
 import logger from '@alga-psa/core/logger';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import type { Metadata } from 'next';
+
+const getCachedTicket = cache((id: string) => getClientTicketDetails(id));
 
 interface TicketPageProps {
   params: Promise<{
@@ -11,14 +15,27 @@ interface TicketPageProps {
   }>;
 }
 
+export async function generateMetadata({ params }: TicketPageProps): Promise<Metadata> {
+  try {
+    const { ticketId } = await params;
+    const ticket = await getCachedTicket(ticketId);
+    if (ticket) {
+      return { title: `Ticket #${ticket.ticket_number} - ${ticket.title}` };
+    }
+  } catch (error) {
+    console.error('[generateMetadata] Failed to fetch ticket title:', error);
+  }
+  return { title: 'Ticket Details' };
+}
+
 export default async function TicketPage({ params }: TicketPageProps) {
   const resolvedParams = await params;
   const { ticketId } = resolvedParams;
 
   try {
-    // Fetch ticket details and statuses server-side
+    // Fetch ticket details and statuses server-side (uses React.cache — deduped with generateMetadata)
     const [ticketData, statuses] = await Promise.all([
-      getClientTicketDetails(ticketId),
+      getCachedTicket(ticketId),
       getTicketStatuses()
     ]);
 

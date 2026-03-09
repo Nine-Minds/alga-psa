@@ -2,8 +2,10 @@ import React, { useCallback, useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { exportWorkspaceToInvoiceTemplateAst } from '../../ast/workspaceAst';
 import type { DesignerNode } from '../../state/designerStore';
-import { useInvoiceDesignerStore } from '../../state/designerStore';
+import { createEmptyDesignerTransformWorkspace, useInvoiceDesignerStore } from '../../state/designerStore';
+import { hasDesignerTransforms } from '../../transforms/transformWorkspace';
 import { getNodeMetadata } from '../../utils/nodeProps';
 
 const createLocalId = () =>
@@ -104,17 +106,130 @@ const sanitizeColumnsForPatch = (columns: ColumnModel[]): ColumnModel[] =>
         column !== null &&
         !Array.isArray(column) &&
         typeof (column as { id?: unknown }).id === 'string'
-    );
+      );
+
+const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
+
+const resolveTableSourceBindingId = (metadata: Record<string, unknown>): string =>
+  asTrimmedString(metadata.collectionBindingKey) ||
+  asTrimmedString(metadata.collectionPath) ||
+  asTrimmedString(metadata.bindingKey) ||
+  asTrimmedString(metadata.path) ||
+  'items';
+
+const getUniqueStrings = (values: Array<string | undefined | null>): string[] =>
+  Array.from(new Set(values.map((value) => asTrimmedString(value)).filter(Boolean)));
 
 export const TableEditorWidget: React.FC<Props> = ({ node }) => {
   const setNodeProp = useInvoiceDesignerStore((state) => state.setNodeProp);
+  const nodes = useInvoiceDesignerStore((state) => state.nodes);
+  const rootId = useInvoiceDesignerStore((state) => state.rootId);
+  const transforms = useInvoiceDesignerStore((state) => state.transforms);
+  const snapToGrid = useInvoiceDesignerStore((state) => state.snapToGrid);
+  const gridSize = useInvoiceDesignerStore((state) => state.gridSize);
+  const showGuides = useInvoiceDesignerStore((state) => state.showGuides);
+  const showRulers = useInvoiceDesignerStore((state) => state.showRulers);
+  const canvasScale = useInvoiceDesignerStore((state) => state.canvasScale);
 
   const metadata = useMemo(() => getNodeMetadata(node), [node]);
+  const sourceBindingId = useMemo(() => resolveTableSourceBindingId(metadata), [metadata]);
 
   const columns: ColumnModel[] = useMemo(() => {
     const raw = (metadata as { columns?: unknown }).columns;
     return Array.isArray(raw) ? (raw as ColumnModel[]).filter((col) => typeof col?.id === 'string') : [];
   }, [metadata]);
+
+  const collectionBindingOptions = useMemo(() => {
+    const workspaceWithoutTransforms = {
+      rootId,
+      nodesById: Object.fromEntries(
+        nodes.map((entry) => [
+          entry.id,
+          {
+            id: entry.id,
+            type: entry.type,
+            props: entry.props,
+            children: entry.children,
+          },
+        ])
+      ),
+      transforms: createEmptyDesignerTransformWorkspace(),
+      snapToGrid,
+      gridSize,
+      showGuides,
+      showRulers,
+      canvasScale,
+    };
+
+    const baseAst = exportWorkspaceToInvoiceTemplateAst(workspaceWithoutTransforms);
+    const options: Array<{ value: string; label: string }> = [];
+
+    if (hasDesignerTransforms(transforms)) {
+      options.push({
+        value: transforms.sourceBindingId,
+        label: `${transforms.sourceBindingId} (Transforms source)`,
+      });
+      options.push({
+        value: transforms.outputBindingId,
+        label: `${transforms.outputBindingId} (Transforms output)`,
+      });
+    }
+
+    options.push(
+      ...Object.entries(baseAst.bindings?.collections ?? {}).map(([bindingId, binding]) => ({
+        value: bindingId,
+        label: `${bindingId} (${binding.path})`,
+      }))
+    );
+
+    if (!options.some((option) => option.value === sourceBindingId)) {
+      options.unshift({
+        value: sourceBindingId,
+        label: `${sourceBindingId} (current)`,
+      });
+    }
+
+    return options
+      .filter((option, index, array) => array.findIndex((candidate) => candidate.value === option.value) === index)
+      .sort((left, right) => left.label.localeCompare(right.label));
+  }, [
+    canvasScale,
+    gridSize,
+    nodes,
+    rootId,
+    showGuides,
+    showRulers,
+    snapToGrid,
+    sourceBindingId,
+    transforms,
+  ]);
+
+  const bindingKeySuggestions = useMemo(() => {
+    const rawSuggestions = getUniqueStrings([
+      ...COLUMN_PRESETS.map((preset) => preset.key),
+      ...columns.map((column) => asTrimmedString(column.key)),
+    ]);
+
+    if (sourceBindingId !== transforms.outputBindingId || !hasDesignerTransforms(transforms)) {
+      return rawSuggestions;
+    }
+
+    const isGroupedOutput = transforms.operations.some((operation) => operation.type === 'group');
+    if (!isGroupedOutput) {
+      return rawSuggestions;
+    }
+
+    const aggregateSuggestions = transforms.operations
+      .filter((operation) => operation.type === 'aggregate')
+      .flatMap((operation) => operation.aggregations.map((aggregation) => `item.aggregates.${aggregation.id}`));
+
+    return getUniqueStrings([
+      'item.key',
+      'item.items',
+      ...aggregateSuggestions,
+      ...columns.map((column) => asTrimmedString(column.key)),
+    ]);
+  }, [columns, sourceBindingId, transforms]);
 
   const resolvedBorderPreset: BorderPreset = useMemo(() => {
     const preset = (metadata as { tableBorderPreset?: unknown }).tableBorderPreset;
@@ -273,6 +388,20 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
     <div className="space-y-3">
       {/* Header with quick-add */}
       <div className="space-y-2">
+        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 shadow-sm space-y-2">
+          <div>
+            <p className="text-xs font-semibold text-slate-700">Source Binding</p>
+            <p className="text-[11px] text-slate-500">Bind this table to a raw collection or the authored transforms output.</p>
+          </div>
+          <CustomSelect
+            id="designer-table-source-binding"
+            options={collectionBindingOptions}
+            value={sourceBindingId}
+            onValueChange={(value: string) => setNodeProp(node.id, 'metadata.collectionBindingKey', value, true)}
+            size="sm"
+          />
+        </div>
+
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-slate-800">Table Columns</p>
           <Button id="designer-add-column" variant="outline" size="xs" onClick={handleAddColumn}>
@@ -451,6 +580,20 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
                 placeholder="item.field"
                 className="text-xs font-mono"
               />
+              {bindingKeySuggestions.length > 0 && (
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {bindingKeySuggestions.slice(0, 8).map((suggestion) => (
+                    <button
+                      key={`${column.id}-${suggestion}`}
+                      type="button"
+                      className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-600 hover:border-slate-300 hover:bg-slate-100"
+                      onClick={() => updateColumn(column.id, { key: suggestion }, true)}
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-[minmax(0,1fr)_88px] gap-1.5">
               <div>
@@ -492,6 +635,23 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
           Field key reference
         </summary>
         <div className="mt-1 space-y-0.5">
+          {bindingKeySuggestions.map((suggestion) => (
+            <div
+              key={`binding-${suggestion}`}
+              className="flex items-center justify-between rounded px-2 py-0.5 bg-slate-50"
+            >
+              <code className="text-[11px] text-slate-600">{suggestion}</code>
+              <span className="text-[10px] text-slate-400">
+                {suggestion.startsWith('item.aggregates.')
+                  ? 'Transform aggregate'
+                  : suggestion === 'item.key'
+                    ? 'Grouped row key'
+                    : suggestion === 'item.items'
+                      ? 'Grouped row items'
+                      : 'Available binding'}
+              </span>
+            </div>
+          ))}
           {COLUMN_PRESETS.map((preset) => (
             <div key={`legend-${preset.id}`} className="flex items-center justify-between rounded px-2 py-0.5 bg-slate-50">
               <code className="text-[11px] text-slate-600">{preset.key}</code>

@@ -183,6 +183,9 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
     await waitFor(() =>
       expect(document.querySelector('[data-automation-id=\"invoice-template-editor-visual-tab\"]')).toBeTruthy()
     );
+    expect(screen.getByRole('tab', { name: 'Design' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Transforms' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Preview' })).toBeTruthy();
     fireEvent.click(screen.getByRole('tab', { name: 'Preview' }));
 
     await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
@@ -225,8 +228,8 @@ describe('InvoiceTemplateEditor authoritative preview flow', () => {
     await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
 
     fireEvent.click(screen.getByRole('button', { name: 'Existing' }));
-    const select = await screen.findByLabelText('Select Invoice');
-    fireEvent.change(select, { target: { value: 'inv-existing-1' } });
+    fireEvent.click(await screen.findByRole('combobox'));
+    fireEvent.click(await screen.findByText('INV-EX-001 · Acme Co.'));
 
     await waitFor(() => expect(getInvoiceForRenderingMock).toHaveBeenCalledWith('inv-existing-1'));
     await waitFor(() =>

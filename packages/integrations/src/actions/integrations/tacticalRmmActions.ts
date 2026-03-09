@@ -6,8 +6,8 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex } from '@alga-psa/db';
-import { createAsset } from '@alga-psa/assets/actions/assetActions';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import type { Knex } from 'knex';
 import { isAxiosUnauthorized, TacticalRmmClient, normalizeTacticalBaseUrl } from '../../lib/rmm/tacticalrmm/tacticalApiClient';
 import { computeTacticalAgentStatus } from '../../lib/rmm/tacticalrmm/agentStatus';
 import { getWebhookBaseUrl } from '../../utils/email/webhookHelpers';
@@ -732,6 +732,37 @@ function extractVitals(agent: any): {
   };
 }
 
+async function createTacticalAssetRecord(
+  trx: Knex | Knex.Transaction,
+  args: {
+    tenant: string;
+    clientId: string;
+    assetType: 'workstation' | 'server';
+    assetTag: string;
+    name: string;
+    serialNumber: string;
+    location: string;
+  }
+): Promise<{ asset_id: string }> {
+  const now = new Date().toISOString();
+  const [asset] = await trx('assets')
+    .insert({
+      tenant: args.tenant,
+      asset_type: args.assetType,
+      client_id: args.clientId,
+      asset_tag: args.assetTag,
+      name: args.name,
+      status: 'active',
+      location: args.location,
+      serial_number: args.serialNumber,
+      created_at: now,
+      updated_at: now,
+    })
+    .returning(['asset_id']);
+
+  return { asset_id: String(asset.asset_id) };
+}
+
 export const syncTacticalRmmDevices = withAuth(async (
   user,
   { tenant }
@@ -846,15 +877,15 @@ export const syncTacticalRmmDevices = withAuth(async (
 
           if (!mapping?.alga_entity_id) {
             const assetType = inferAssetTypeFromTacticalAgent(agent);
-            const asset = await createAsset({
-              asset_type: assetType,
-              client_id: algaClientId,
-              asset_tag: `tactical:${agentId}`,
+            const asset = await createTacticalAssetRecord(knex, {
+              tenant,
+              clientId: algaClientId,
+              assetType,
+              assetTag: `tactical:${agentId}`,
               name: deviceName,
-              status: 'active',
-              serial_number: String((agent as any).serial_number || (agent as any).serial || ''),
+              serialNumber: String((agent as any).serial_number || (agent as any).serial || ''),
               location: siteName || '',
-            } as any);
+            });
 
             await knex('assets')
               .where({ tenant })

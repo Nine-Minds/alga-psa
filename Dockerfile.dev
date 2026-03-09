@@ -27,6 +27,7 @@ COPY server/package.json ./server/
 COPY shared/package.json ./shared/
 COPY services/workflow-worker/package.json ./services/workflow-worker/
 COPY ee/server/package.json ./ee/server/
+COPY ee/packages/workflows/package.json ./ee/packages/workflows/
 COPY packages ./packages
 COPY sdk ./sdk
 

@@ -1,0 +1,71 @@
+{
+  "name": "Alga PSA - Add Comment then List Comments",
+  "nodes": [
+    {
+      "parameters": {
+        "resource": "ticket",
+        "ticketOperation": "addComment",
+        "ticketId": "00000000-0000-0000-0000-000000000200",
+        "commentText": "Automated triage note from n8n",
+        "commentAdditionalFields": {
+          "is_internal": true
+        }
+      },
+      "id": "d7ed1184-98ba-40ad-a637-1dc8f7413c5f",
+      "name": "Add Comment",
+      "type": "n8n-nodes-alga-psa.algaPsa",
+      "typeVersion": 1,
+      "position": [
+        320,
+        300
+      ],
+      "credentials": {
+        "algaPsaApi": {
+          "id": "1",
+          "name": "Alga PSA API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "ticket",
+        "ticketOperation": "listComments",
+        "ticketId": "00000000-0000-0000-0000-000000000200",
+        "commentListOptions": {
+          "order": "desc",
+          "limit": 10
+        }
+      },
+      "id": "1a4d4fd7-f7ef-4f22-baf6-dd1d75487317",
+      "name": "List Comments",
+      "type": "n8n-nodes-alga-psa.algaPsa",
+      "typeVersion": 1,
+      "position": [
+        640,
+        300
+      ],
+      "credentials": {
+        "algaPsaApi": {
+          "id": "1",
+          "name": "Alga PSA API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Add Comment": {
+      "main": [
+        [
+          {
+            "node": "List Comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "versionId": "647753e5-3af0-4791-9b70-3e2d251731a7"
+}

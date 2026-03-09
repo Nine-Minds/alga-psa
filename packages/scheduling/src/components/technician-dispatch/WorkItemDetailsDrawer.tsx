@@ -4,19 +4,19 @@ import React from 'react';
 import { IExtendedWorkItem } from '@alga-psa/types';
 import { IProjectTask } from '@alga-psa/types';
 import { IScheduleEntry } from '@alga-psa/types';
-import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
-import { getTaskWithDetails } from '@alga-psa/projects/actions/projectTaskActions';
 import { getWorkItemById } from '@alga-psa/scheduling/actions';
 import { getCurrentUser, getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import { getScheduleEntries } from '@alga-psa/scheduling/actions';
-import { getInteractionById } from '@alga-psa/clients/actions';
+import { getSchedulingInteractionById } from '../../actions/clientInteractionLookupActions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
-import TaskEdit from '@alga-psa/projects/components/TaskEdit';
 import EntryPopup from '@alga-psa/scheduling/components/schedule/EntryPopup';
-import { InteractionDetails } from '@alga-psa/clients/components';
+import { SchedulingInteractionDetails } from '../shared/SchedulingInteractionDetails';
+import { SchedulingTicketDetails } from '../shared/SchedulingTicketDetails';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
+import { getSchedulingTicketById } from '../../actions/ticketLookupActions';
+import { getSchedulingProjectTaskById } from '../../actions/projectTaskLookupActions';
+import { SchedulingProjectTaskDetails } from '../shared/SchedulingProjectTaskDetails';
 
 interface WorkItemDetailsDrawerProps {
     workItem: IExtendedWorkItem;
@@ -84,75 +84,27 @@ export function WorkItemDetailsDrawer({
 
             switch(workItem.type) {
                 case 'ticket': {
-                    const ticketData = await getConsolidatedTicketData(workItem.work_item_id);
+                    const ticketData = await getSchedulingTicketById(workItem.work_item_id);
+                    if (!ticketData) {
+                        toast.error('Failed to load ticket data');
+                        return null;
+                    }
                     return (
                         <div className="h-full">
-                            <TicketDetails
-                                isInDrawer={true}
-                                initialTicket={ticketData.ticket}
-                                initialComments={ticketData.comments}
-                                initialBoard={ticketData.board}
-                                initialClient={ticketData.client}
-                                initialContacts={ticketData.contacts}
-                                initialContactInfo={ticketData.contactInfo}
-                                initialCreatedByUser={ticketData.createdByUser}
-                                initialAdditionalAgents={ticketData.additionalAgents}
-                                statusOptions={ticketData.options.status}
-                                agentOptions={ticketData.options.agent}
-                                boardOptions={ticketData.options.board}
-                                priorityOptions={ticketData.options.priority}
-                                initialCategories={ticketData.categories}
-                                initialClients={ticketData.clients}
-                                initialLocations={ticketData.locations}
-                                initialAgentSchedules={ticketData.agentSchedules}
-                                initialUserMap={ticketData.userMap}
-                                initialAvailableAgents={ticketData.availableAgents}
-                                onClose={onClose}
-                            />
+                            <SchedulingTicketDetails ticket={ticketData} />
                         </div>
                     );
                 }
 
                 case 'project_task': {
-                    console.log('Loading project task with details:', {
-                        workItemId: workItem.work_item_id,
-                        isUsersLoading,
-                        usersCount: users.length
-                    });
-                    const taskData = await getTaskWithDetails(workItem.work_item_id);
-                    console.log('Task data loaded:', taskData);
+                    const taskData = await getSchedulingProjectTaskById(workItem.work_item_id);
+                    if (!taskData) {
+                        toast.error('Failed to load project task data');
+                        return null;
+                    }
                     return (
                         <div className="h-full">
-                            {users.length === 0 ? (
-                                <div className="flex items-center justify-center h-full text-gray-500">
-                                    No users available
-                                </div>
-                            ) : (
-                                <TaskEdit
-                                    inDrawer={true}
-                                    phase={{
-                                        phase_id: taskData.phase_id,
-                                        project_id: taskData.project_id || '',
-                                        phase_name: taskData.phase_name || '',
-                                        description: null,
-                                        start_date: null,
-                                        end_date: null,
-                                        status: taskData.status_id || '',
-                                        order_number: 0,
-                                        created_at: new Date(),
-                                        updated_at: new Date(),
-                                        wbs_code: taskData.wbs_code,
-                                        tenant: tenant
-                                    }}
-                                    task={{
-                                        ...taskData,
-                                        tenant: tenant
-                                    }}
-                                    users={users}
-                                    onClose={onClose}
-                                    onTaskUpdated={onTaskUpdate}
-                                />
-                            )}
+                            <SchedulingProjectTaskDetails task={taskData} />
                         </div>
                     );
                 }
@@ -207,7 +159,7 @@ export function WorkItemDetailsDrawer({
 
                 case 'interaction': {
                     console.log('Loading interaction with ID:', workItem.work_item_id);
-                    const interactionData = await getInteractionById(workItem.work_item_id);
+                    const interactionData = await getSchedulingInteractionById(workItem.work_item_id);
                     if (!interactionData) {
                         toast.error('Failed to load interaction data');
                         return null;
@@ -215,15 +167,7 @@ export function WorkItemDetailsDrawer({
 
                     return (
                         <div className="h-full">
-                            <InteractionDetails
-                                interaction={interactionData}
-                                isInDrawer={true}
-                                onInteractionDeleted={onClose}
-                                onInteractionUpdated={async () => {
-                                    // Optionally refresh the data in the parent
-                                    await onTaskUpdate(null);
-                                }}
-                            />
+                            <SchedulingInteractionDetails interaction={interactionData} />
                         </div>
                     );
                 }
