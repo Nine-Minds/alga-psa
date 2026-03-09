@@ -319,8 +319,8 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
         <table className="min-w-full">
           <tbody>
             <TableRow label="Full Name" value={contact.full_name} />
-            <TableRow label="Email" value={contact.email} />
-            <TableRow label="Phone" value={contact.phone_number || 'N/A'} />
+            <TableRow label="Email" value={contact.email ?? 'N/A'} />
+            <TableRow label="Phone" value={contact.default_phone_number || contact.phone_numbers.find((phoneNumber) => phoneNumber.is_default)?.phone_number || 'N/A'} />
             <tr>
               <td className="py-2 font-semibold">Client:</td>
               <td className="py-2">

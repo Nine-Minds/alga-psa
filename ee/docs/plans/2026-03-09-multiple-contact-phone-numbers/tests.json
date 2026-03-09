@@ -38,55 +38,55 @@
   {
     "id": "T007",
     "description": "Type/API: shared contact types reject legacy scalar-only contact payloads and accept `phone_numbers` collections.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
     "id": "T008",
     "description": "Validation: contact create rejects a phone collection with two rows both marked as default.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
     "id": "T009",
     "description": "Validation: contact create rejects a phone collection with numbers present but no default row selected.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
     "id": "T010",
     "description": "Validation: contact create accepts canonical phone rows and one custom-type row in the same payload.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
     "id": "T011",
     "description": "Validation: contact update reuses an existing tenant custom phone type definition when the same label is entered with different case or spacing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F011"]
   },
   {
     "id": "T012",
     "description": "DB-backed integration: creating a contact with multiple phone rows persists the parent contact and ordered child phone rows in one transaction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {
     "id": "T013",
     "description": "DB-backed integration: updating a contact can replace, reorder, and re-default child phone rows without leaving orphaned or duplicate rows behind.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {
     "id": "T014",
     "description": "DB-backed integration: a failed contact phone write rolls back both parent and child mutations.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {
     "id": "T015",
     "description": "Read-path integration: fetching a contact returns `phone_numbers` ordered by `display_order` and exposes the correct default row.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {
@@ -176,19 +176,19 @@
   {
     "id": "T030",
     "description": "API schema regression: contact create/update endpoints validate `phone_numbers` collections and no longer require scalar `phone_number`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {
     "id": "T031",
     "description": "Workflow event regression: `CONTACT_CREATED` payloads emit the new phone data shape rather than scalar `phoneNumber` only.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {
     "id": "T032",
     "description": "Workflow event regression: `CONTACT_UPDATED` change payloads capture additions, removals, and default changes in the normalized phone model.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {

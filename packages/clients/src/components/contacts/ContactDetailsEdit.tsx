@@ -185,14 +185,14 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
             <TableRow 
               id={`${id}-email`}
               label="Email" 
-              value={contact.email} 
+              value={contact.email ?? ''} 
               onChange={(value) => handleInputChange('email', value)} 
             />
             <TableRow 
               id={`${id}-phone`}
               label="Phone" 
-              value={contact.phone_number} 
-              onChange={(value) => handleInputChange('phone_number', value)} 
+              value={contact.default_phone_number || contact.phone_numbers.find((phoneNumber) => phoneNumber.is_default)?.phone_number || ''} 
+              onChange={(value) => handleInputChange('default_phone_number', value)} 
             />
             <TableRow 
               id={`${id}-role`}

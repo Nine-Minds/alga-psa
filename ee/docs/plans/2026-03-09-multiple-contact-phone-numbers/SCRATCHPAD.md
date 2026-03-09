@@ -18,6 +18,8 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-09) List/detail/ticket surfaces should display the derived default phone rather than attempt to render every phone row in summary views.
 - (2026-03-09) Migration A is implemented as one additive schema file that creates both normalized phone tables, backfills scalar contact phones, and intentionally leaves `contacts.phone_number` in place for deploy safety. Rationale: it satisfies the rollout sequencing requirement without coupling the later cutover/drop step to the initial schema release.
 - (2026-03-09) `contact_phone_numbers.normalized_phone_number` is implemented as a generated stored column derived from `phone_number` instead of an app-populated plain text field. Rationale: it guarantees searchable normalized digits for every insert/update path, including direct SQL fixtures and future services that have not been cut over yet.
+- (2026-03-09) Phone-row write logic is centralized in `shared/models/contactModel.ts` instead of being duplicated across `ContactService`, client actions, CSV import, and later Entra sync. Rationale: one transactional helper surface keeps default enforcement, custom-type reuse, and read hydration consistent.
+- (2026-03-09) Contact read/query paths now expose `default_phone_number` and `default_phone_type` convenience fields in addition to the ordered `phone_numbers` array. Rationale: summary surfaces and sort/search code need a stable derived default without reimplementing that derivation everywhere.
 
 ## Discoveries / Constraints
 
@@ -37,6 +39,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-09) Entra sync currently collapses `mobilePhone` and `businessPhones[0]` into one scalar `phone_number`; the new model should preserve more than one external number.
 - (2026-03-09) Existing repo migration tests commonly use file-content contract assertions rather than spinning up a database for every migration case; the first phone migration coverage follows that pattern in `server/src/test/unit/migrations/contactPhoneNumbersMigration.test.ts`.
 - (2026-03-09) This worktree’s `.env.localtest` points at `localhost:5438`, but the active local Postgres for integration tests is the Docker container exposed on `localhost:55433` with `postgres` / `app_user` passwords from `secrets/postgres_password` and `secrets/db_password_server` (`postpass123`).
+- (2026-03-09) `shared/vitest.config.ts` only discovers tests under `services/**/*.test.ts` and `**/__tests__/**/*.test.ts`, so shared validation tests for this work need to live in `shared/**/__tests__/`.
+- (2026-03-09) The existing shared workflow builder tests import `buildWorkflowPayload` through a package re-export that resolves the published `@alga-psa/event-schemas` entry. In this worktree, the reliable local path is `packages/event-schemas/src/schemas/workflowEventPublishHelpers.ts`.
+- (2026-03-09) `F006` remains intentionally blocked behind `F024`: Migration B cannot land until all remaining app-level readers/writers of `contacts.phone_number` are removed, including UI/ticket/import/Entra/test-factory consumers.
 
 ## Commands / Runbooks
 
@@ -52,6 +57,17 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `node -e "require('./server/migrations/20260309120000_create_contact_phone_numbers_schema.cjs'); console.log('migration-load-ok')"`
 - (2026-03-09) Run the DB-backed normalized phone storage test against the live local Postgres container:
   - `cd server && DB_PORT=55433 DB_PASSWORD_ADMIN=postpass123 DB_PASSWORD_SERVER=postpass123 DB_USER_ADMIN=postgres DB_USER_SERVER=app_user npx vitest run src/test/integration/contactPhoneNumbers.integration.test.ts --coverage=false`
+- (2026-03-09) Type-check the backend cutover slice:
+  - `npx tsc -p shared/tsconfig.json --noEmit`
+  - `npx tsc -p server/tsconfig.json --noEmit`
+  - `npx tsc -p packages/types/tsconfig.json --noEmit`
+  - `npx tsc -p packages/clients/tsconfig.json --noEmit`
+  - `npx tsc -p packages/event-schemas/tsconfig.json --noEmit`
+- (2026-03-09) Run the backend contract tests for normalized contact phones:
+  - `cd packages/types && npx vitest run src/contact-phone.typecheck.test.ts`
+  - `npx vitest run --config shared/vitest.config.ts shared/models/__tests__/contactModel.test.ts shared/workflow/streams/domainEventBuilders/__tests__/contactEventBuilders.test.ts`
+  - `cd server && npx vitest run src/test/unit/validation/contactPhoneSchemas.test.ts --coverage=false`
+  - `cd server && DB_PORT=55433 DB_PASSWORD_ADMIN=postpass123 DB_PASSWORD_SERVER=postpass123 DB_USER_ADMIN=postgres DB_USER_SERVER=app_user npx vitest run src/test/integration/contactModelPhoneNumbers.integration.test.ts --coverage=false`
 
 ## Links / References
 
@@ -80,3 +96,14 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Searchable normalized digits are now derived by the database from the display phone value, which avoids drift between formatted and normalized storage.
 - (2026-03-09) Completed `T006` with `server/src/test/integration/contactPhoneNumbers.integration.test.ts`.
   - The integration test inserts a formatted phone row and verifies the stored/generated normalized digits can be queried without punctuation.
+- (2026-03-09) Completed `F007`, `F008`, `F009`, `F011`, and `F021` by cutting the backend contracts over to normalized contact phones.
+  - `shared/interfaces/contact.interfaces.ts`, `packages/types/src/interfaces/contact.interfaces.ts`, and `server/src/interfaces/contact.interfaces.tsx` now expose `phone_numbers` plus derived default-phone convenience fields instead of a scalar `phone_number`.
+  - `shared/models/contactModel.ts` now validates canonical/custom phone rows, enforces exactly one default, auto-creates/reuses tenant-scoped custom type definitions, replaces child phone rows transactionally, and hydrates ordered phone rows on reads.
+  - `server/src/lib/api/services/ContactService.ts`, `packages/clients/src/actions/contact-actions/contactActions.tsx`, and `packages/clients/src/actions/queryActions.ts` now create/read/update contacts through the normalized phone model and derive default-phone search/sort/export behavior from child rows.
+  - `server/src/lib/api/schemas/contact.ts`, `shared/workflow/runtime/schemas/crmEventSchemas.ts`, `packages/event-schemas/src/schemas/domain/crmEventSchemas.ts`, and `shared/workflow/streams/domainEventBuilders/contactEventBuilders.ts` now validate and emit normalized phone payloads.
+- (2026-03-09) Completed `T007` through `T015`, `T030`, `T031`, and `T032`.
+  - `packages/types/src/contact-phone.typecheck.test.ts` verifies the exported contact create/read types accept `phone_numbers` collections and reject legacy scalar-only create payloads.
+  - `shared/models/__tests__/contactModel.test.ts` verifies create validation rejects duplicate defaults and missing defaults while accepting mixed canonical/custom rows.
+  - `server/src/test/unit/validation/contactPhoneSchemas.test.ts` verifies contact API schemas validate `phone_numbers` collections and response payloads with derived default fields.
+  - `server/src/test/integration/contactModelPhoneNumbers.integration.test.ts` verifies DB-backed custom-type reuse, transactional create/update behavior, rollback on failed child writes, and ordered read hydration.
+  - `shared/workflow/streams/domainEventBuilders/__tests__/contactEventBuilders.test.ts` now asserts `CONTACT_CREATED` and `CONTACT_UPDATED` payloads carry normalized phone data rather than scalar-only phone fields.

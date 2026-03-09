@@ -38,19 +38,19 @@
   {
     "id": "F007",
     "description": "Replace shared and server contact TypeScript interfaces so contacts expose `phone_numbers` instead of scalar `phone_number`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-008", "FR-009"]
   },
   {
     "id": "F008",
     "description": "Update contact create and update validation/contracts to accept the normalized phone collection with canonical/custom type rules and default enforcement.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-008", "FR-010"]
   },
   {
     "id": "F009",
     "description": "Update contact read paths so contact fetches hydrate ordered phone rows and expose default-phone data needed by list/detail callers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-009", "FR-015", "FR-018"]
   },
   {
@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "Auto-create or reuse tenant-scoped custom phone type definitions when users enter custom labels in contact write flows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-002", "FR-010"]
   },
   {
@@ -122,7 +122,7 @@
   {
     "id": "F021",
     "description": "Update contact API/service schemas and workflow/domain event payloads that currently validate or emit scalar `phone_number` values.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-020"]
   },
   {

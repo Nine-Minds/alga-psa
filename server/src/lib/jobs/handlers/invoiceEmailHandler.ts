@@ -93,7 +93,7 @@ export class InvoiceEmailHandler {
             const knex = await createTenantKnex();
             const contact = await ContactModel.get(knex.knex, client.billing_contact_id);
             if (contact) {
-              recipientEmail = contact.email;
+              recipientEmail = contact.email || recipientEmail;
               recipientName = contact.full_name;
             }
           } else if (client.billing_email) {

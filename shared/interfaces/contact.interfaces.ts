@@ -4,6 +4,32 @@
  * All references should use these definitions unless there's a specific reason not to.
  */
 
+export const CONTACT_PHONE_CANONICAL_TYPES = ['work', 'mobile', 'home', 'fax', 'other'] as const;
+
+export type ContactPhoneCanonicalType = typeof CONTACT_PHONE_CANONICAL_TYPES[number];
+
+export interface IContactPhoneNumber {
+  contact_phone_number_id: string;
+  phone_number: string;
+  normalized_phone_number: string;
+  canonical_type: ContactPhoneCanonicalType | null;
+  custom_phone_type_id?: string | null;
+  custom_type: string | null;
+  is_default: boolean;
+  display_order: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ContactPhoneNumberInput {
+  contact_phone_number_id?: string;
+  phone_number: string;
+  canonical_type?: ContactPhoneCanonicalType | null;
+  custom_type?: string | null;
+  is_default?: boolean;
+  display_order?: number;
+}
+
 /**
  * Core contact entity interface
  */
@@ -12,7 +38,9 @@ export interface IContact {
   tenant?: string;
   full_name: string;
   client_id: string | null;
-  phone_number: string | null;
+  phone_numbers: IContactPhoneNumber[];
+  default_phone_number?: string | null;
+  default_phone_type?: string | null;
   email: string | null;
   role: string | null;
   notes: string | null;
@@ -29,7 +57,7 @@ export interface IContact {
 export interface CreateContactInput {
   full_name: string;
   email?: string;
-  phone_number?: string;
+  phone_numbers?: ContactPhoneNumberInput[];
   client_id?: string;
   role?: string;
   notes?: string;
@@ -42,7 +70,7 @@ export interface CreateContactInput {
 export interface UpdateContactInput {
   full_name?: string;
   email?: string;
-  phone_number?: string;
+  phone_numbers?: ContactPhoneNumberInput[];
   client_id?: string;
   role?: string;
   notes?: string;

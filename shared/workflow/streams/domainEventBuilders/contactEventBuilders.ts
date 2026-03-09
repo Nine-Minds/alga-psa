@@ -1,3 +1,5 @@
+import type { IContactPhoneNumber } from '../../../interfaces/contact.interfaces';
+
 type ContactLike = Record<string, unknown> & {
   contact_name_id: string;
   client_id?: string | null;
@@ -31,7 +33,9 @@ export function buildContactCreatedPayload(params: {
   clientId: string;
   fullName: string;
   email?: string;
-  phoneNumber?: string;
+  phoneNumbers?: IContactPhoneNumber[];
+  defaultPhoneNumber?: string;
+  defaultPhoneType?: string;
   createdByUserId?: string;
   createdAt?: Date | string;
 }): Record<string, unknown> {
@@ -40,7 +44,9 @@ export function buildContactCreatedPayload(params: {
     clientId: params.clientId,
     fullName: params.fullName,
     ...(params.email ? { email: params.email } : {}),
-    ...(params.phoneNumber ? { phoneNumber: params.phoneNumber } : {}),
+    ...(params.phoneNumbers?.length ? { phoneNumbers: params.phoneNumbers } : {}),
+    ...(params.defaultPhoneNumber ? { defaultPhoneNumber: params.defaultPhoneNumber } : {}),
+    ...(params.defaultPhoneType ? { defaultPhoneType: params.defaultPhoneType } : {}),
     ...(params.createdByUserId ? { createdByUserId: params.createdByUserId } : {}),
     ...(params.createdAt ? { createdAt: normalizeChangeValue(params.createdAt) } : {}),
   };
@@ -133,4 +139,3 @@ export function buildContactMergedPayload(params: {
     ...(params.strategy ? { strategy: params.strategy } : {}),
   };
 }
-
