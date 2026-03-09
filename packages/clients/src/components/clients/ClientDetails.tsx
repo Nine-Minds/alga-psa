@@ -40,7 +40,7 @@ import {
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
-import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
+import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { ExternalLink, RefreshCw, Trash2 } from 'lucide-react';
@@ -71,11 +71,9 @@ import { handleError } from '@alga-psa/ui';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import QuickAddContact from '../contacts/QuickAddContact';
-import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { ClientLanguagePreference } from './ClientLanguagePreference';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import ClientSurveySummaryCard from '@alga-psa/surveys/components/ClientSurveySummaryCard';
 import type { SurveyClientSatisfactionSummary } from '@alga-psa/types';
 import {
   isTerminalEntraRunStatus,
@@ -208,6 +206,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   surveySummary = null
 }) => {
   const { t } = useTranslation('common');
+  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard } = useClientCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
@@ -1312,7 +1311,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   isEditing={false}
                 />
               </div>
-              <ClientSurveySummaryCard summary={surveySummary} />
+              {renderSurveySummaryCard({ summary: surveySummary })}
             </div>
           </div>
           
@@ -1664,16 +1663,16 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           onTabChange={handleTabChange}
         />
 
-        <QuickAddTicket
-          id={`${id}-quick-add-ticket`}
-          open={isQuickAddTicketOpen}
-          onOpenChange={setIsQuickAddTicketOpen}
-          onTicketAdded={handleTicketAdded}
-          prefilledClient={{
+        {renderQuickAddTicket({
+          id: `${id}-quick-add-ticket`,
+          open: isQuickAddTicketOpen,
+          onOpenChange: setIsQuickAddTicketOpen,
+          onTicketAdded: handleTicketAdded,
+          prefilledClient: {
             id: editedClient.client_id,
-            name: editedClient.client_name
-          }}
-        />
+            name: editedClient.client_name,
+          },
+        })}
 
         <Dialog
           isOpen={isLocationsDialogOpen}

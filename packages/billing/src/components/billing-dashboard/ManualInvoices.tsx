@@ -21,7 +21,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { PlusIcon, MinusCircleIcon } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { formatCurrency } from '@alga-psa/core';
-import { QuickAddClient } from '@alga-psa/clients/components';
+import { useQuickAddClient } from '@alga-psa/ui/context';
 
 // Use a constant for environment check since process.env is not available
 const IS_DEVELOPMENT = typeof window !== 'undefined' &&
@@ -138,6 +138,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   onGenerateSuccess,
   invoice, // This is the initial invoice prop
 }) => {
+  const { renderQuickAddClient } = useQuickAddClient();
   const [clientOptions, setClientOptions] = useState<IClient[]>(clients);
   const [selectedClient, setSelectedClient] = useState<string | null>(
     invoice?.client_id || null
@@ -706,15 +707,15 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                     onClientTypeFilterChange={setClientTypeFilter}
                     onAddNew={() => setIsQuickAddClientOpen(true)}
                   />
-                  <QuickAddClient
-                    open={isQuickAddClientOpen}
-                    onOpenChange={setIsQuickAddClientOpen}
-                    onClientAdded={(newClient) => {
+                  {renderQuickAddClient({
+                    open: isQuickAddClientOpen,
+                    onOpenChange: setIsQuickAddClientOpen,
+                    onClientAdded: (newClient) => {
                       setClientOptions(prev => [...prev, newClient]);
                       setSelectedClient(newClient.client_id);
-                    }}
-                    skipSuccessDialog
-                  />
+                    },
+                    skipSuccessDialog: true,
+                  })}
                 </div>
               )}
 

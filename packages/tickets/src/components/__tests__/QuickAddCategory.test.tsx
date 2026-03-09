@@ -68,8 +68,8 @@ const boards: IBoard[] = [
 ];
 
 const categories: ITicketCategory[] = [
-  { category_id: 'cat-1', category_name: 'Hardware', board_id: 'board-1', parent_category: null } as ITicketCategory,
-  { category_id: 'cat-2', category_name: 'Software', board_id: 'board-2', parent_category: null } as ITicketCategory,
+  { category_id: 'cat-1', category_name: 'Hardware', board_id: 'board-1', parent_category: undefined } as ITicketCategory,
+  { category_id: 'cat-2', category_name: 'Software', board_id: 'board-2', parent_category: undefined } as ITicketCategory,
   { category_id: 'cat-3', category_name: 'Laptop', board_id: 'board-1', parent_category: 'cat-1' } as ITicketCategory,
 ];
 
@@ -133,7 +133,7 @@ describe('QuickAddCategory', () => {
       category_id: 'cat-new',
       category_name: 'Networking',
       board_id: 'board-1',
-      parent_category: null,
+      parent_category: undefined,
     } as ITicketCategory;
     createCategoryMock.mockResolvedValue(createdCategory);
 

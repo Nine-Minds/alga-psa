@@ -11,7 +11,7 @@ import type { CreateAssetRequest, IClient } from '@alga-psa/types';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { getAllClientsForAssets } from '../actions/clientLookupActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import QuickAddClient from '@alga-psa/clients/components/clients/QuickAddClient';
+import { useQuickAddClient } from '@alga-psa/ui/context';
 
 interface QuickAddAssetProps {
   clientId?: string;
@@ -67,6 +67,7 @@ interface FormData {
 }
 
 export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = false }: QuickAddAssetProps) {
+  const { renderQuickAddClient } = useQuickAddClient();
   const [open, setOpen] = useState(defaultOpen);
   const [error, setError] = useState<string | null>(null);
   const [clients, setClients] = useState<IClient[]>([]);
@@ -572,15 +573,15 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         </DialogContent>
       </Dialog>
 
-      <QuickAddClient
-        open={isQuickAddClientOpen}
-        onOpenChange={setIsQuickAddClientOpen}
-        onClientAdded={(newClient) => {
+      {renderQuickAddClient({
+        open: isQuickAddClientOpen,
+        onOpenChange: setIsQuickAddClientOpen,
+        onClientAdded: (newClient) => {
           setClients(prev => [...prev, newClient]);
           setSelectedClientId(newClient.client_id);
-        }}
-        skipSuccessDialog
-      />
+        },
+        skipSuccessDialog: true,
+      })}
     </>
   );
 }
