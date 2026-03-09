@@ -73,6 +73,10 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-09) Run the contact UI normalized-phone tests:
   - `npx tsc -p packages/clients/tsconfig.json --noEmit`
   - `cd server && npx vitest run src/test/unit/contacts/ContactPhoneNumbersEditor.test.tsx src/test/unit/contacts/ContactDetailsSave.contract.test.ts src/test/unit/contacts/ContactDetailsPhoneNumbers.contract.test.ts src/test/unit/contacts/QuickAddContact.phoneNumbers.test.tsx src/test/unit/contacts/QuickAddClient.phoneNumbers.test.tsx src/test/unit/contacts/ContactPhoneDisplay.contract.test.ts --coverage=false`
+- (2026-03-09) Run the contact search/sort integration coverage:
+  - `cd server && DB_PORT=55433 DB_PASSWORD_ADMIN=postpass123 DB_PASSWORD_SERVER=postpass123 DB_USER_ADMIN=postgres DB_USER_SERVER=app_user npx vitest run src/test/integration/contactServicePhoneSearch.integration.test.ts --coverage=false`
+- (2026-03-09) Run the contact CSV normalized-phone integration coverage:
+  - `cd server && DB_PORT=55433 DB_PASSWORD_ADMIN=postpass123 DB_PASSWORD_SERVER=postpass123 DB_USER_ADMIN=postgres DB_USER_SERVER=app_user npx vitest run src/test/integration/contactCsvPhoneImportExport.integration.test.ts --coverage=false`
 
 ## Links / References
 
@@ -122,3 +126,16 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `server/src/test/unit/contacts/ContactDetailsSave.contract.test.ts` and `server/src/test/unit/contacts/ContactDetailsPhoneNumbers.contract.test.ts` verify the contact detail screens bind `phone_numbers` into the shared editor, validate before save, and render normalized rows instead of scalar `phone_number`.
   - `server/src/test/unit/contacts/QuickAddContact.phoneNumbers.test.tsx` and `server/src/test/unit/contacts/QuickAddClient.phoneNumbers.test.tsx` verify the quick-add flows submit normalized phone collections with the expected default row.
   - `server/src/test/unit/contacts/ContactPhoneDisplay.contract.test.ts` verifies contacts lists and ticket properties derive their displayed contact phone from `default_phone_number` or the default normalized child row.
+- (2026-03-09) Completed `F017` with DB-backed coverage in `server/src/test/integration/contactServicePhoneSearch.integration.test.ts`.
+  - `server/src/lib/api/services/ContactService.ts` now searches contact phone matches through any normalized child phone row, including non-default rows, and sorts `phone_number` list views by the derived default row.
+  - `packages/clients/src/actions/queryActions.ts` keeps client-side list sorting aligned with the same derived-default-phone rule after hydrated contacts are returned.
+- (2026-03-09) Completed `T024` and `T025` with `server/src/test/integration/contactServicePhoneSearch.integration.test.ts`.
+  - The integration suite verifies `ContactService.search()` returns a contact when only a secondary phone row matches the query digits.
+  - The integration suite verifies `ContactService.list()` sorts by `default_phone_number` rather than a non-default child phone row.
+- (2026-03-09) Completed `F019` and `F020` by finishing the CSV import/export cutover for the normalized phone model.
+  - `packages/clients/src/actions/contact-actions/contactActions.tsx` now maps CSV `phone_number` values into one default canonical `work` phone row on import, exports the derived default phone value, and normalizes optional CSV text fields so omitted `role`/`notes` values do not fail contact validation.
+  - `packages/clients/src/components/contacts/ContactsImportDialog.tsx` now labels the CSV phone column as the default phone number and explicitly tells users that v1 CSV import/export handles one default phone per contact.
+- (2026-03-09) Completed `T027`, `T028`, and `T029` with `server/src/test/integration/contactCsvPhoneImportExport.integration.test.ts`.
+  - The integration suite verifies importing one CSV phone column creates one default normalized `work` phone row.
+  - The integration suite verifies contact CSV export emits the derived default phone instead of depending on a legacy scalar field.
+  - The same suite contract-checks the import dialog copy for the single-default-phone CSV rule.

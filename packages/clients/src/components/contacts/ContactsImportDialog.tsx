@@ -26,7 +26,7 @@ interface ContactsImportDialogProps {
 const CONTACT_FIELDS = {
   full_name: 'Name *',
   email: 'Email *',
-  phone_number: 'Phone Number',
+  phone_number: 'Default Phone Number',
   client: 'Client',
   tags: 'Tags',
   role: 'Role',
@@ -524,9 +524,9 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
                 <p className="mt-2 text-sm text-gray-600">Upload a CSV file with contact data</p>
                 <p className="mt-1 text-xs text-gray-500">
                   <strong>Required:</strong> full_name, email<br />
-                  <strong>Contact fields:</strong> phone_number, role, notes, tags<br />
+                  <strong>Contact fields:</strong> phone_number (imports as the default work phone), role, notes, tags<br />
                   <strong>Client field:</strong> client (matches existing clients by name)<br />
-                  <strong>Note:</strong> Tags should be comma-separated values
+                  <strong>Note:</strong> CSV import/export in v1 handles one default phone number per contact. Tags should be comma-separated values.
                 </p>
                 <Input
                   type="file"

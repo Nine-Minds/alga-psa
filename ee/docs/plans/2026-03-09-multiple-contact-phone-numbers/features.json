@@ -98,7 +98,7 @@
   {
     "id": "F017",
     "description": "Update contact list/query behavior so phone search matches any stored contact phone row and phone sorting uses the default phone number.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-016", "FR-017"]
   },
   {
@@ -110,13 +110,13 @@
   {
     "id": "F019",
     "description": "Update contact CSV import/export behavior so a single imported/exported phone maps to the normalized model as the default phone number in v1.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-019", "Import/export shape"]
   },
   {
     "id": "F020",
     "description": "Update `ContactsImportDialog.tsx` copy, preview mapping, and import expectations to match the normalized contact phone model.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-019", "UX / UI Notes"]
   },
   {

@@ -48,6 +48,11 @@ function getDerivedDefaultPhone(contact: Pick<IContact, 'default_phone_number' |
     || '';
 }
 
+function normalizeOptionalText(value: string | null | undefined): string | undefined {
+  const trimmedValue = value?.trim();
+  return trimmedValue ? trimmedValue : undefined;
+}
+
 async function cleanupEntraReferencesBeforeContactDelete(
   trx: Knex.Transaction,
   tenantId: string,
@@ -792,8 +797,8 @@ export const importContactsFromCSV = withAuth(async (
                   : existingContact.phone_numbers),
               client_id: contactData.client_id || undefined,
               is_inactive: contactData.is_inactive ?? undefined,
-              role: contactData.role?.trim() ?? existingContact.role ?? undefined,
-              notes: contactData.notes?.trim() ?? existingContact.notes ?? undefined,
+              role: normalizeOptionalText(contactData.role) ?? existingContact.role ?? undefined,
+              notes: normalizeOptionalText(contactData.notes) ?? existingContact.notes ?? undefined,
             };
 
             savedContact = await ContactModel.updateContact(existingContact.contact_name_id, updateData, tenant, trx);
@@ -833,8 +838,8 @@ export const importContactsFromCSV = withAuth(async (
               phone_numbers: contactData.phone_numbers ?? buildDefaultPhoneNumbers(contactData.phone_number),
               client_id: contactData.client_id || undefined,
               is_inactive: contactData.is_inactive || false,
-              role: contactData.role?.trim() || '',
-              notes: contactData.notes?.trim() || '',
+              role: normalizeOptionalText(contactData.role),
+              notes: normalizeOptionalText(contactData.notes),
             };
 
             savedContact = await ContactModel.createContact(contactToCreate, tenant, trx);

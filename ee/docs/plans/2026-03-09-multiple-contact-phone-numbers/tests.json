@@ -140,13 +140,13 @@
   {
     "id": "T024",
     "description": "Search integration: contact search by a secondary non-default phone number returns the contact.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   },
   {
     "id": "T025",
     "description": "Sorting integration: contact list phone sorting uses the default phone number rather than an arbitrary child row.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   },
   {
@@ -158,19 +158,19 @@
   {
     "id": "T027",
     "description": "CSV import integration: importing one phone column creates one default normalized contact phone row.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019", "F020"]
   },
   {
     "id": "T028",
     "description": "CSV export integration: exporting contacts emits the derived default phone number rather than expecting `contacts.phone_number`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {
     "id": "T029",
     "description": "UI copy regression: `ContactsImportDialog.tsx` preview/help text reflects the normalized model and default-phone export/import rule.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {
