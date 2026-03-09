@@ -51,6 +51,16 @@ import { ColumnDefinition } from '@alga-psa/types';
 // Day names with Sunday = 0
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
+// Format 24h time string (e.g. "18:00" or "18:00:00") to 12h display (e.g. "6:00 PM")
+function formatTime(time: string): string {
+  const [hourStr, minuteStr] = time.split(':');
+  const hour = parseInt(hourStr, 10);
+  const minute = minuteStr?.padStart(2, '0') ?? '00';
+  const period = hour >= 12 ? 'PM' : 'AM';
+  const displayHour = hour % 12 || 12;
+  return `${displayHour}:${minute} ${period}`;
+}
+
 // Default schedule entry template
 const getDefaultEntries = (): IBusinessHoursEntryInput[] => [
   { day_of_week: 0, start_time: '08:00', end_time: '18:00', is_enabled: false }, // Sunday
@@ -412,7 +422,7 @@ export function BusinessHoursSettings() {
       dataIndex: 'schedule_name',
       render: (value: string, record: IBusinessHoursSchedule) => (
         <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 text-gray-400" />
+          <Clock className="h-4 w-4 text-muted-foreground" />
           <span className="font-medium">{value}</span>
           {record.is_default && (
             <Badge variant="info">Default</Badge>
@@ -427,7 +437,7 @@ export function BusinessHoursSettings() {
       title: 'Timezone',
       dataIndex: 'timezone',
       render: (value: string) => (
-        <span className="text-gray-600">{value}</span>
+        <span className="text-muted-foreground">{value}</span>
       ),
     },
     {
@@ -494,7 +504,7 @@ export function BusinessHoursSettings() {
       dataIndex: 'holiday_name',
       render: (value: string, record: IHoliday) => (
         <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-gray-400" />
+          <Calendar className="h-4 w-4 text-muted-foreground" />
           <span>{value}</span>
           {record.is_recurring && (
             <Badge variant="outline">Recurring</Badge>
@@ -506,7 +516,7 @@ export function BusinessHoursSettings() {
       title: 'Date',
       dataIndex: 'holiday_date',
       render: (value: string) => (
-        <span className="text-gray-600">
+        <span className="text-muted-foreground">
           {new Date(value).toLocaleDateString(undefined, {
             year: 'numeric',
             month: 'short',
@@ -542,7 +552,7 @@ export function BusinessHoursSettings() {
 
   if (loading && schedules.length === 0) {
     return (
-      <div className="bg-white p-6 rounded-lg shadow-sm">
+      <div className="bg-background p-6 rounded-lg shadow-sm">
         <div className="flex items-center justify-center py-8">
           <LoadingIndicator
             layout="stacked"
@@ -555,11 +565,11 @@ export function BusinessHoursSettings() {
   }
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-sm space-y-6" id="business-hours-settings">
+    <div className="bg-background p-6 rounded-lg shadow-sm space-y-6" id="business-hours-settings">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-gray-800">Business Hours Schedules</h3>
+          <h3 className="text-lg font-semibold text-foreground">Business Hours Schedules</h3>
           <p className="text-sm text-muted-foreground mt-1">
             Define when your support team is available for SLA calculations
           </p>
@@ -575,9 +585,9 @@ export function BusinessHoursSettings() {
       {/* Empty state */}
       {schedules.length === 0 && !loading && (
         <div className="text-center p-8 border border-dashed rounded-lg">
-          <Clock className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No Business Hours Schedules</h3>
-          <p className="text-sm text-gray-500 mb-4">
+          <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">No Business Hours Schedules</h3>
+          <p className="text-sm text-muted-foreground mb-4">
             Create your first business hours schedule to start calculating SLA times.
           </p>
           <div className="flex gap-2 justify-center">
@@ -633,13 +643,13 @@ export function BusinessHoursSettings() {
         <div className="border-t pt-6 mt-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h4 className="text-lg font-medium text-gray-800">
+              <h4 className="text-lg font-medium text-foreground">
                 {selectedSchedule.schedule_name}
                 {selectedSchedule.is_default && (
-                  <Badge variant="default" className="bg-blue-500 ml-2">Default</Badge>
+                  <Badge variant="info" className="ml-2">Default</Badge>
                 )}
               </h4>
-              <p className="text-sm text-gray-500">Timezone: {selectedSchedule.timezone}</p>
+              <p className="text-sm text-muted-foreground">Timezone: {selectedSchedule.timezone}</p>
             </div>
             <Button
               variant="outline"
@@ -654,22 +664,22 @@ export function BusinessHoursSettings() {
           {/* Daily hours */}
           {!selectedSchedule.is_24x7 && (
             <div className="mb-6">
-              <h5 className="text-sm font-medium text-gray-700 mb-3">Working Hours</h5>
+              <h5 className="text-sm font-medium text-foreground mb-3">Working Hours</h5>
               <div className="space-y-2">
                 {selectedSchedule.entries.sort((a, b) => a.day_of_week - b.day_of_week).map((entry) => (
                   <div
                     key={entry.entry_id}
                     className={`flex items-center gap-4 p-2 rounded ${
-                      entry.is_enabled ? 'bg-green-50' : 'bg-gray-50'
+                      entry.is_enabled ? '' : 'bg-muted'
                     }`}
                   >
                     <span className="w-24 font-medium">{DAY_NAMES[entry.day_of_week]}</span>
                     {entry.is_enabled ? (
-                      <span className="text-gray-700">
-                        {entry.start_time} - {entry.end_time}
+                      <span className="text-foreground">
+                        {formatTime(entry.start_time)} - {formatTime(entry.end_time)}
                       </span>
                     ) : (
-                      <span className="text-gray-400 italic">Closed</span>
+                      <span className="text-muted-foreground italic">Closed</span>
                     )}
                   </div>
                 ))}
@@ -678,15 +688,15 @@ export function BusinessHoursSettings() {
           )}
 
           {selectedSchedule.is_24x7 && (
-            <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-              <p className="text-blue-700 font-medium">This is a 24/7 schedule - available all day, every day.</p>
+            <div className="mb-6 p-4 bg-[rgb(var(--badge-info-bg))] rounded-lg">
+              <p className="text-[rgb(var(--badge-info-text))] font-medium">This is a 24/7 schedule - available all day, every day.</p>
             </div>
           )}
 
           {/* Holidays */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h5 className="text-sm font-medium text-gray-700">Holidays</h5>
+              <h5 className="text-sm font-medium text-foreground">Holidays</h5>
               <Button
                 variant="outline"
                 size="sm"
@@ -700,7 +710,7 @@ export function BusinessHoursSettings() {
 
             {(!selectedSchedule.holidays || selectedSchedule.holidays.length === 0) ? (
               <div className="text-center p-4 border border-dashed rounded-lg">
-                <p className="text-sm text-gray-500">No holidays defined for this schedule.</p>
+                <p className="text-sm text-muted-foreground">No holidays defined for this schedule.</p>
               </div>
             ) : (
               <DataTable
@@ -776,8 +786,8 @@ export function BusinessHoursSettings() {
           {!scheduleFormData.is_24x7 && (
             <div className="space-y-2">
               <Label>Daily Hours</Label>
-              <div className="border rounded-lg overflow-hidden">
-                <div className="bg-gray-50 px-3 py-2 grid gap-3 text-xs font-medium text-gray-600 border-b" style={{ gridTemplateColumns: '90px 60px 1fr 1fr' }}>
+              <div className="border border-border rounded-lg overflow-hidden">
+                <div className="bg-muted px-3 py-2 grid gap-2 text-xs font-medium text-muted-foreground border-b" style={{ gridTemplateColumns: '80px 50px 1fr 1fr' }}>
                   <span>Day</span>
                   <span>Enabled</span>
                   <span>Start Time</span>
@@ -786,10 +796,10 @@ export function BusinessHoursSettings() {
                 {scheduleFormData.entries.map((entry) => (
                   <div
                     key={entry.day_of_week}
-                    className={`px-3 py-2 grid gap-3 items-center border-b last:border-b-0 ${
-                      entry.is_enabled ? 'bg-white' : 'bg-gray-50'
+                    className={`px-3 py-2 grid gap-2 items-center border-b last:border-b-0 ${
+                      entry.is_enabled ? 'bg-background' : 'bg-muted'
                     }`}
-                    style={{ gridTemplateColumns: '90px 60px 1fr 1fr' }}
+                    style={{ gridTemplateColumns: '80px 50px 1fr 1fr' }}
                   >
                     <span className="text-sm font-medium">{DAY_NAMES[entry.day_of_week]}</span>
                     <div className="[&>div]:mb-0">
