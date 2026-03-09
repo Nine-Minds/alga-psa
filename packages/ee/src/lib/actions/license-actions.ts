@@ -212,7 +212,8 @@ export async function getScheduledLicenseChangesAction(): Promise<{
  * CE Stub - Not available in Community Edition
  */
 export async function upgradeTierAction(
-  _targetTier: 'pro' | 'premium'
+  _targetTier: 'pro' | 'premium',
+  _interval: 'month' | 'year' = 'month'
 ): Promise<{ success: boolean; error?: string }> {
   logger.warn('[CE] upgradeTierAction called but Stripe integration is EE-only');
   return {
@@ -225,7 +226,8 @@ export async function upgradeTierAction(
  * CE Stub - Not available in Community Edition
  */
 export async function getUpgradePreviewAction(
-  _targetTier: 'pro' | 'premium'
+  _targetTier: 'pro' | 'premium',
+  _interval: 'month' | 'year' = 'month'
 ): Promise<{
   success: boolean;
   error?: string;
@@ -236,10 +238,51 @@ export async function getUpgradePreviewAction(
   userCount?: number;
   currency?: string;
   prorationAmount?: number;
+  annualAvailable?: boolean;
+  annualBasePrice?: number;
+  annualUserPrice?: number;
+  annualTotal?: number;
 }> {
   logger.warn('[CE] getUpgradePreviewAction called but Stripe integration is EE-only');
   return {
     success: false,
     error: 'Plan upgrades are only available in Enterprise Edition',
+  };
+}
+
+/**
+ * CE Stub - Not available in Community Edition
+ */
+export async function switchBillingIntervalAction(
+  _newInterval: 'month' | 'year'
+): Promise<{ success: boolean; error?: string; effectiveDate?: string }> {
+  logger.warn('[CE] switchBillingIntervalAction called but Stripe integration is EE-only');
+  return {
+    success: false,
+    error: 'Billing interval switching is only available in Enterprise Edition',
+  };
+}
+
+/**
+ * CE Stub - Not available in Community Edition
+ */
+export async function getIntervalSwitchPreviewAction(
+  _newInterval: 'month' | 'year'
+): Promise<{
+  success: boolean;
+  error?: string;
+  currentInterval?: 'month' | 'year';
+  currentTotal?: number;
+  newTotal?: number;
+  newBasePrice?: number;
+  newUserPrice?: number;
+  userCount?: number;
+  effectiveDate?: string;
+  savingsPercent?: number;
+}> {
+  logger.warn('[CE] getIntervalSwitchPreviewAction called but Stripe integration is EE-only');
+  return {
+    success: false,
+    error: 'Billing interval switching is only available in Enterprise Edition',
   };
 }

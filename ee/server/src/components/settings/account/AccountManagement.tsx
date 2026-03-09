@@ -7,7 +7,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { toast } from 'react-hot-toast';
-import { CreditCard, User, Rocket, MinusCircle, Info, ChevronDown, ChevronUp, DollarSign, Calendar, CheckCircle, Shield } from 'lucide-react';
+import { CreditCard, User, Rocket, MinusCircle, Info, ChevronDown, ChevronUp, DollarSign, Calendar, CheckCircle, Shield, ArrowRightLeft } from 'lucide-react';
 import {
   getLicenseUsageAction,
   getLicensePricingAction,
@@ -20,6 +20,8 @@ import {
   sendCancellationFeedbackAction,
   upgradeTierAction,
   getUpgradePreviewAction,
+  switchBillingIntervalAction,
+  getIntervalSwitchPreviewAction,
 } from 'ee/server/src/lib/actions/license-actions';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
 import { useRouter } from 'next/navigation';
@@ -260,6 +262,71 @@ export default function AccountManagement() {
   } | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
 
+  // Billing interval switch state
+  const [showIntervalSwitch, setShowIntervalSwitch] = useState(false);
+  const [switchingInterval, setSwitchingInterval] = useState(false);
+  const [intervalPreview, setIntervalPreview] = useState<{
+    currentInterval?: 'month' | 'year';
+    currentTotal?: number;
+    newTotal?: number;
+    newBasePrice?: number;
+    newUserPrice?: number;
+    userCount?: number;
+    effectiveDate?: string;
+    savingsPercent?: number;
+  } | null>(null);
+  const [loadingIntervalPreview, setLoadingIntervalPreview] = useState(false);
+
+  const handleIntervalSwitchClick = async () => {
+    if (!canManageAccount || !subscriptionInfo) return;
+
+    const currentInterval = subscriptionInfo.billing_interval || 'month';
+    const targetInterval = currentInterval === 'month' ? 'year' : 'month';
+
+    setLoadingIntervalPreview(true);
+    try {
+      const preview = await getIntervalSwitchPreviewAction(targetInterval);
+      if (!preview.success) {
+        toast.error(preview.error || 'Failed to get pricing preview');
+        return;
+      }
+      setIntervalPreview(preview);
+      setShowIntervalSwitch(true);
+    } catch (error) {
+      console.error('Error fetching interval switch preview:', error);
+      toast.error('Failed to get pricing preview');
+    } finally {
+      setLoadingIntervalPreview(false);
+    }
+  };
+
+  const handleConfirmIntervalSwitch = async () => {
+    if (!subscriptionInfo) return;
+    const currentInterval = subscriptionInfo.billing_interval || 'month';
+    const targetInterval = currentInterval === 'month' ? 'year' : 'month';
+
+    setSwitchingInterval(true);
+    try {
+      const result = await switchBillingIntervalAction(targetInterval);
+      if (result.success) {
+        toast.success(`Billing will switch to ${targetInterval === 'year' ? 'annual' : 'monthly'} at the end of the current period.`);
+        setShowIntervalSwitch(false);
+        // Refresh subscription info
+        const subResult = await getSubscriptionInfoAction();
+        if (subResult.success && subResult.data) {
+          setSubscriptionInfo(subResult.data);
+        }
+      } else {
+        toast.error(result.error || 'Failed to switch billing interval');
+      }
+    } catch (error) {
+      console.error('Error switching billing interval:', error);
+      toast.error('Failed to switch billing interval');
+    } finally {
+      setSwitchingInterval(false);
+    }
+  };
+
   const handleUpgradeClick = async () => {
     if (!canManageAccount) {
       toast.error('You do not have permission to manage the subscription');
@@ -338,7 +405,9 @@ export default function AccountManagement() {
           </div>
           <div className="space-y-1">
             <p className="text-2xl font-bold">${monthlyTotal.toFixed(2)}</p>
-            <p className="text-sm text-muted-foreground">Per Month</p>
+            <p className="text-sm text-muted-foreground">
+              {subscriptionInfo?.billing_interval === 'year' ? 'Per Year' : 'Per Month'}
+            </p>
           </div>
         </Card>
 
@@ -665,6 +734,27 @@ export default function AccountManagement() {
 
             <div className="space-y-3">
               <div className="flex justify-between">
+                <Label className="text-muted-foreground">Billing Cycle</Label>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">
+                    {subscriptionInfo?.billing_interval === 'year' ? 'Annual' : 'Monthly'}
+                  </Badge>
+                  <Button
+                    id="switch-billing-interval-btn"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={handleIntervalSwitchClick}
+                    disabled={loadingIntervalPreview}
+                  >
+                    <ArrowRightLeft className="mr-1 h-3 w-3" />
+                    {loadingIntervalPreview
+                      ? 'Loading...'
+                      : `Switch to ${subscriptionInfo?.billing_interval === 'year' ? 'Monthly' : 'Annual'}`}
+                  </Button>
+                </div>
+              </div>
+              <div className="flex justify-between">
                 <Label className="text-muted-foreground">Current Period</Label>
                 <span className="text-sm font-medium">
                   {subscriptionInfo?.current_period_start && subscriptionInfo?.current_period_end
@@ -679,7 +769,9 @@ export default function AccountManagement() {
                 </span>
               </div>
               <div className="flex justify-between pt-2 border-t">
-                <Label className="font-semibold">Monthly Amount</Label>
+                <Label className="font-semibold">
+                  {subscriptionInfo?.billing_interval === 'year' ? 'Annual' : 'Monthly'} Amount
+                </Label>
                 <span className="text-lg font-bold">
                   {typeof subscriptionInfo?.monthly_amount === 'number'
                     ? `$${subscriptionInfo.monthly_amount.toFixed(2)}`
@@ -778,6 +870,70 @@ export default function AccountManagement() {
         onClose={() => setShowCancellationFeedback(false)}
         onConfirm={handleConfirmCancellation}
         onLogout={handleLogout}
+      />
+
+      {/* Billing Interval Switch Dialog */}
+      <ConfirmationDialog
+        id="switch-interval-confirm"
+        isOpen={showIntervalSwitch}
+        onClose={() => setShowIntervalSwitch(false)}
+        onConfirm={handleConfirmIntervalSwitch}
+        title={`Switch to ${intervalPreview?.currentInterval === 'month' ? 'Annual' : 'Monthly'} Billing`}
+        confirmLabel={switchingInterval ? 'Switching...' : 'Confirm Switch'}
+        isConfirming={switchingInterval}
+        message={
+          intervalPreview ? (
+            <div className="space-y-4">
+              {intervalPreview.currentInterval === 'month' ? (
+                <>
+                  <p>Switch to annual billing and save on your subscription.</p>
+                  <div className="rounded-lg border p-4 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Current monthly total</span>
+                      <span>${intervalPreview.currentTotal?.toFixed(2)}/mo</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Annual total</span>
+                      <span>${intervalPreview.newTotal?.toFixed(2)}/yr</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Equivalent monthly</span>
+                      <span>${((intervalPreview.newTotal || 0) / 12).toFixed(2)}/mo</span>
+                    </div>
+                    {intervalPreview.savingsPercent !== undefined && intervalPreview.savingsPercent > 0 && (
+                      <div className="flex justify-between font-semibold pt-2 border-t text-green-600">
+                        <span>You save</span>
+                        <span>~{intervalPreview.savingsPercent}%</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p>Switch back to monthly billing.</p>
+                  <div className="rounded-lg border p-4 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Current annual total</span>
+                      <span>${intervalPreview.currentTotal?.toFixed(2)}/yr</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">New monthly total</span>
+                      <span>${intervalPreview.newTotal?.toFixed(2)}/mo</span>
+                    </div>
+                  </div>
+                </>
+              )}
+              <p className="text-sm text-muted-foreground">
+                This change takes effect at the end of your current billing period
+                {intervalPreview.effectiveDate
+                  ? ` (${new Date(intervalPreview.effectiveDate).toLocaleDateString()})`
+                  : ''}.
+              </p>
+            </div>
+          ) : (
+            'Loading pricing details...'
+          )
+        }
       />
 
       <ConfirmationDialog

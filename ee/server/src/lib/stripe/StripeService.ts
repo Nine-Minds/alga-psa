@@ -53,6 +53,12 @@ async function getStripeConfig() {
   const premiumBasePriceId = process.env.STRIPE_PREMIUM_BASE_PRICE_ID || null;
   const premiumUserPriceId = process.env.STRIPE_PREMIUM_USER_PRICE_ID || null;
 
+  // Annual prices (pay for 10 months, get 12 — ~17% discount)
+  const proBaseAnnualPriceId = process.env.STRIPE_PRO_BASE_ANNUAL_PRICE_ID || null;
+  const proUserAnnualPriceId = process.env.STRIPE_PRO_USER_ANNUAL_PRICE_ID || null;
+  const premiumBaseAnnualPriceId = process.env.STRIPE_PREMIUM_BASE_ANNUAL_PRICE_ID || null;
+  const premiumUserAnnualPriceId = process.env.STRIPE_PREMIUM_USER_ANNUAL_PRICE_ID || null;
+
   if (!secretKey) {
     throw new Error('STRIPE_SECRET_KEY not found in secrets or environment');
   }
@@ -80,6 +86,10 @@ async function getStripeConfig() {
     proUserPriceId,
     premiumBasePriceId,
     premiumUserPriceId,
+    proBaseAnnualPriceId,
+    proUserAnnualPriceId,
+    premiumBaseAnnualPriceId,
+    premiumUserAnnualPriceId,
   };
 }
 
@@ -459,6 +469,10 @@ export class StripeService {
         }
       }
 
+      // Derive billing interval from the subscription item's price
+      const importedInterval = price.recurring?.interval;
+      const billingInterval: 'month' | 'year' = (importedInterval === 'year') ? 'year' : 'month';
+
       await db<StripeSubscription>('stripe_subscriptions').insert({
         tenant: tenantId,
         stripe_subscription_external_id: subscription.id,
@@ -469,6 +483,7 @@ export class StripeService {
         quantity: subscriptionItem.quantity || 1,
         stripe_base_item_id: baseItem?.id || null,
         stripe_base_price_id: dbBasePrice?.stripe_price_id || null,
+        billing_interval: billingInterval,
         current_period_start: new Date((subscription as any).current_period_start * 1000),
         current_period_end: new Date((subscription as any).current_period_end * 1000),
         cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000) : null,
@@ -769,9 +784,10 @@ export class StripeService {
    */
   private async createLicenseCheckoutSession(
     tenantId: string,
-    quantity: number
+    quantity: number,
+    interval: 'month' | 'year' = 'month'
   ): Promise<{ clientSecret: string; sessionId: string }> {
-    logger.info(`[StripeService] Creating checkout session for tenant ${tenantId}, quantity: ${quantity}`);
+    logger.info(`[StripeService] Creating checkout session for tenant ${tenantId}, quantity: ${quantity}, interval: ${interval}`);
 
     // Get or import customer
     const customer = await this.getOrImportCustomer(tenantId);
@@ -796,12 +812,14 @@ export class StripeService {
         metadata: {
           tenant_id: tenantId,
           source: 'algapsa_license_purchase',
+          billing_interval: interval,
         },
       },
       return_url: `${process.env.NEXT_PUBLIC_APP_URL}/msp/licenses/purchase/success?session_id={CHECKOUT_SESSION_ID}`,
       metadata: {
         tenant_id: tenantId,
         license_quantity: quantity.toString(),
+        billing_interval: interval,
       },
     });
 
@@ -1049,6 +1067,10 @@ export class StripeService {
       }
     }
 
+    // Derive billing interval from the subscription item's price
+    const updatedInterval = subscriptionItem?.price?.recurring?.interval;
+    const billingInterval: 'month' | 'year' = (updatedInterval === 'year') ? 'year' : 'month';
+
     await knex<StripeSubscription>('stripe_subscriptions')
       .where({
         tenant: tenantId,
@@ -1057,6 +1079,7 @@ export class StripeService {
       .update({
         status: subscription.status as 'active' | 'canceled' | 'past_due',
         quantity,
+        billing_interval: billingInterval,
         current_period_start: new Date((subscription as any).current_period_start * 1000),
         current_period_end: new Date((subscription as any).current_period_end * 1000),
         cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000) : null,
@@ -1259,10 +1282,22 @@ export class StripeService {
   }
 
   /**
-   * Get the per-user price IDs for a given tier.
+   * Get the price IDs for a given tier and billing interval.
    * Returns null if tier-specific pricing is not configured (legacy mode).
    */
-  private getTierPriceIds(tier: TenantTier): { basePriceId: string; userPriceId: string } | null {
+  private getTierPriceIds(
+    tier: TenantTier,
+    interval: 'month' | 'year' = 'month'
+  ): { basePriceId: string; userPriceId: string } | null {
+    if (interval === 'year') {
+      if (tier === 'premium' && this.config.premiumBaseAnnualPriceId && this.config.premiumUserAnnualPriceId) {
+        return { basePriceId: this.config.premiumBaseAnnualPriceId, userPriceId: this.config.premiumUserAnnualPriceId };
+      }
+      if (tier === 'pro' && this.config.proBaseAnnualPriceId && this.config.proUserAnnualPriceId) {
+        return { basePriceId: this.config.proBaseAnnualPriceId, userPriceId: this.config.proUserAnnualPriceId };
+      }
+      // Fall through to monthly if annual not configured
+    }
     if (tier === 'premium' && this.config.premiumBasePriceId && this.config.premiumUserPriceId) {
       return { basePriceId: this.config.premiumBasePriceId, userPriceId: this.config.premiumUserPriceId };
     }
@@ -1308,12 +1343,13 @@ export class StripeService {
    */
   async upgradeTier(
     tenantId: string,
-    targetTier: TenantTier
+    targetTier: TenantTier,
+    interval: 'month' | 'year' = 'month'
   ): Promise<{ success: boolean; error?: string }> {
     await this.ensureInitialized();
-    logger.info(`[StripeService] Upgrading tenant ${tenantId} to ${targetTier}`);
+    logger.info(`[StripeService] Upgrading tenant ${tenantId} to ${targetTier} (${interval})`);
 
-    const tierPrices = this.getTierPriceIds(targetTier);
+    const tierPrices = this.getTierPriceIds(targetTier, interval);
     if (!tierPrices) {
       return { success: false, error: `Pricing not configured for ${targetTier} tier` };
     }
@@ -1394,6 +1430,7 @@ export class StripeService {
           stripe_price_id: userPriceRecord?.stripe_price_id || existingSubscription.stripe_price_id,
           stripe_base_item_id: newBaseItem?.id || null,
           stripe_base_price_id: basePriceRecord?.stripe_price_id || null,
+          billing_interval: interval,
           updated_at: knex.fn.now(),
         });
 
@@ -1444,7 +1481,8 @@ export class StripeService {
    */
   async getUpgradePreview(
     tenantId: string,
-    targetTier: TenantTier
+    targetTier: TenantTier,
+    interval: 'month' | 'year' = 'month'
   ): Promise<{
     success: boolean;
     error?: string;
@@ -1455,12 +1493,16 @@ export class StripeService {
     userCount?: number;
     currency?: string;
     prorationAmount?: number;
+    annualAvailable?: boolean;
+    annualBasePrice?: number;
+    annualUserPrice?: number;
+    annualTotal?: number;
   }> {
     await this.ensureInitialized();
 
-    const tierPrices = this.getTierPriceIds(targetTier);
+    const tierPrices = this.getTierPriceIds(targetTier, interval);
     if (!tierPrices) {
-      return { success: false, error: `Pricing not configured for ${targetTier} tier` };
+      return { success: false, error: `Pricing not configured for ${targetTier} tier (${interval})` };
     }
 
     try {
@@ -1532,6 +1574,27 @@ export class StripeService {
         }
       }
 
+      // Fetch annual pricing if available (for showing both options)
+      let annualAvailable = false;
+      let annualBasePrice: number | undefined;
+      let annualUserPrice: number | undefined;
+      let annualTotal: number | undefined;
+      const annualPrices = this.getTierPriceIds(targetTier, 'year');
+      if (annualPrices && (interval !== 'year' || annualPrices.basePriceId !== tierPrices.basePriceId)) {
+        try {
+          const [annualBase, annualUser] = await Promise.all([
+            this.stripe.prices.retrieve(annualPrices.basePriceId),
+            this.stripe.prices.retrieve(annualPrices.userPriceId),
+          ]);
+          annualBasePrice = (annualBase.unit_amount || 0) / 100;
+          annualUserPrice = (annualUser.unit_amount || 0) / 100;
+          annualTotal = annualBasePrice + (annualUserPrice * userCount);
+          annualAvailable = true;
+        } catch (e) {
+          logger.warn('[StripeService] Could not fetch annual prices', { error: e });
+        }
+      }
+
       return {
         success: true,
         currentMonthly,
@@ -1541,10 +1604,200 @@ export class StripeService {
         userCount,
         currency: basePrice.currency,
         prorationAmount,
+        annualAvailable,
+        annualBasePrice,
+        annualUserPrice,
+        annualTotal,
       };
     } catch (error: any) {
       logger.error(`[StripeService] Failed to get upgrade preview for tenant ${tenantId}:`, error);
       return { success: false, error: error.message || 'Failed to get upgrade preview' };
+    }
+  }
+
+  /**
+   * Switch billing interval (monthly <-> annual) at end of current period.
+   * Uses Stripe subscription schedules so the change is deferred — no immediate proration.
+   */
+  async switchBillingInterval(
+    tenantId: string,
+    newInterval: 'month' | 'year'
+  ): Promise<{ success: boolean; error?: string; effectiveDate?: string }> {
+    await this.ensureInitialized();
+    logger.info(`[StripeService] Switching tenant ${tenantId} billing to ${newInterval}`);
+
+    const knex = await getConnection(tenantId);
+    const customer = await this.getOrImportCustomer(tenantId);
+
+    const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
+      .where({
+        tenant: tenantId,
+        stripe_customer_id: customer.stripe_customer_id,
+        status: 'active',
+      })
+      .first();
+
+    if (!existingSubscription) {
+      return { success: false, error: 'No active subscription found' };
+    }
+
+    if (existingSubscription.billing_interval === newInterval) {
+      return { success: false, error: `Subscription is already billed ${newInterval}ly` };
+    }
+
+    // Resolve the tenant's current tier to get the target interval's price IDs
+    const tenantRecord = await knex('tenants').where('tenant', tenantId).select('plan').first();
+    const currentTier: TenantTier = tenantRecord?.plan || 'pro';
+    const newPrices = this.getTierPriceIds(currentTier, newInterval);
+    if (!newPrices) {
+      return { success: false, error: `${newInterval === 'year' ? 'Annual' : 'Monthly'} pricing not configured for ${currentTier} tier` };
+    }
+
+    try {
+      // Create a subscription schedule that keeps the current phase and adds a new phase
+      // at the end of the current period with the new interval prices
+      const schedule = await this.stripe.subscriptionSchedules.create({
+        from_subscription: existingSubscription.stripe_subscription_external_id,
+      });
+
+      // The schedule now has one phase (current). Add a second phase with the new prices.
+      const currentPhase = schedule.phases[0];
+      const currentQuantity = existingSubscription.quantity;
+
+      await this.stripe.subscriptionSchedules.update(schedule.id, {
+        phases: [
+          {
+            start_date: currentPhase.start_date,
+            end_date: currentPhase.end_date,
+            items: currentPhase.items.map(item => ({
+              price: typeof item.price === 'string' ? item.price : item.price.id || (item.price as any),
+              quantity: item.quantity,
+            })),
+          },
+          {
+            items: [
+              { price: newPrices.basePriceId, quantity: 1 },
+              { price: newPrices.userPriceId, quantity: currentQuantity },
+            ],
+            iterations: 1,
+          },
+        ],
+        end_behavior: 'release',
+      });
+
+      const effectiveDate = new Date((currentPhase.end_date as number) * 1000).toISOString();
+
+      // Store the pending interval change in metadata
+      await knex<StripeSubscription>('stripe_subscriptions')
+        .where({ stripe_subscription_id: existingSubscription.stripe_subscription_id })
+        .update({
+          metadata: {
+            ...existingSubscription.metadata,
+            scheduled_interval: newInterval,
+            schedule_id: schedule.id,
+          },
+          updated_at: knex.fn.now(),
+        });
+
+      logger.info(`[StripeService] Scheduled billing interval switch to ${newInterval} for tenant ${tenantId}, effective ${effectiveDate}`);
+      return { success: true, effectiveDate };
+    } catch (error: any) {
+      logger.error(`[StripeService] Failed to switch billing interval for tenant ${tenantId}:`, error);
+      return { success: false, error: error.message || 'Failed to switch billing interval' };
+    }
+  }
+
+  /**
+   * Get a preview of what switching billing interval would cost.
+   */
+  async getIntervalSwitchPreview(
+    tenantId: string,
+    newInterval: 'month' | 'year'
+  ): Promise<{
+    success: boolean;
+    error?: string;
+    currentInterval?: 'month' | 'year';
+    currentTotal?: number;
+    newTotal?: number;
+    newBasePrice?: number;
+    newUserPrice?: number;
+    userCount?: number;
+    effectiveDate?: string;
+    savingsPercent?: number;
+  }> {
+    await this.ensureInitialized();
+
+    const knex = await getConnection(tenantId);
+    const customer = await this.getOrImportCustomer(tenantId);
+
+    const existingSubscription = await knex<StripeSubscription>('stripe_subscriptions')
+      .where({
+        tenant: tenantId,
+        stripe_customer_id: customer.stripe_customer_id,
+        status: 'active',
+      })
+      .first();
+
+    if (!existingSubscription) {
+      return { success: false, error: 'No active subscription found' };
+    }
+
+    const tenantRecord = await knex('tenants').where('tenant', tenantId).select('plan').first();
+    const currentTier: TenantTier = tenantRecord?.plan || 'pro';
+    const newPrices = this.getTierPriceIds(currentTier, newInterval);
+    if (!newPrices) {
+      return { success: false, error: `${newInterval === 'year' ? 'Annual' : 'Monthly'} pricing not configured for ${currentTier} tier` };
+    }
+
+    try {
+      const [newBase, newUser] = await Promise.all([
+        this.stripe.prices.retrieve(newPrices.basePriceId),
+        this.stripe.prices.retrieve(newPrices.userPriceId),
+      ]);
+
+      const userCount = existingSubscription.quantity;
+      const newBaseAmount = (newBase.unit_amount || 0) / 100;
+      const newUserAmount = (newUser.unit_amount || 0) / 100;
+      const newTotal = newBaseAmount + (newUserAmount * userCount);
+
+      // Calculate current total
+      let currentTotal = 0;
+      const currentUserPrice = await knex<StripePrice>('stripe_prices')
+        .where({ stripe_price_id: existingSubscription.stripe_price_id })
+        .first();
+      const currentUserAmount = (currentUserPrice?.unit_amount || 0) / 100;
+      if (existingSubscription.stripe_base_price_id) {
+        const currentBasePrice = await knex<StripePrice>('stripe_prices')
+          .where({ stripe_price_id: existingSubscription.stripe_base_price_id })
+          .first();
+        currentTotal = ((currentBasePrice?.unit_amount || 0) / 100) + (currentUserAmount * userCount);
+      } else {
+        currentTotal = currentUserAmount * userCount;
+      }
+
+      // Calculate savings: compare equivalent monthly costs
+      // If switching to annual, compare annual/12 vs current monthly
+      // If switching to monthly, no savings (just showing the new price)
+      let savingsPercent: number | undefined;
+      if (newInterval === 'year') {
+        const equivalentMonthly = newTotal / 12;
+        savingsPercent = Math.round(((currentTotal - equivalentMonthly) / currentTotal) * 100);
+      }
+
+      return {
+        success: true,
+        currentInterval: existingSubscription.billing_interval as 'month' | 'year' || 'month',
+        currentTotal,
+        newTotal,
+        newBasePrice: newBaseAmount,
+        newUserPrice: newUserAmount,
+        userCount,
+        effectiveDate: existingSubscription.current_period_end || undefined,
+        savingsPercent,
+      };
+    } catch (error: any) {
+      logger.error(`[StripeService] Failed to get interval switch preview:`, error);
+      return { success: false, error: error.message || 'Failed to get pricing preview' };
     }
   }
 

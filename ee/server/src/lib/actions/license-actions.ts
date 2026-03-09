@@ -363,6 +363,7 @@ export async function getSubscriptionInfoAction(): Promise<IGetSubscriptionInfoR
         next_billing_date: subscription.current_period_end || new Date().toISOString(),
         monthly_amount: monthlyAmount,
         quantity: subscription.quantity,
+        billing_interval: subscription.billing_interval || 'month',
         cancel_at: subscription.cancel_at,
         canceled_at: subscription.canceled_at,
       },
@@ -1035,7 +1036,8 @@ export async function getScheduledLicenseChangesAction(): Promise<{
  * Modifies the Stripe subscription items directly (no redirect to Stripe).
  */
 export async function upgradeTierAction(
-  targetTier: 'pro' | 'premium'
+  targetTier: 'pro' | 'premium',
+  interval: 'month' | 'year' = 'month'
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const session = await getSession();
@@ -1054,7 +1056,7 @@ export async function upgradeTierAction(
       return { success: false, error: 'Stripe billing is not configured' };
     }
 
-    const result = await stripeService.upgradeTier(session.user.tenant, targetTier);
+    const result = await stripeService.upgradeTier(session.user.tenant, targetTier, interval);
     return result;
   } catch (error) {
     logger.error('[upgradeTierAction] Error:', error);
@@ -1070,7 +1072,8 @@ export async function upgradeTierAction(
  * Used by the UI to show a confirmation dialog before charging.
  */
 export async function getUpgradePreviewAction(
-  targetTier: 'pro' | 'premium'
+  targetTier: 'pro' | 'premium',
+  interval: 'month' | 'year' = 'month'
 ): Promise<{
   success: boolean;
   error?: string;
@@ -1081,6 +1084,10 @@ export async function getUpgradePreviewAction(
   userCount?: number;
   currency?: string;
   prorationAmount?: number;
+  annualAvailable?: boolean;
+  annualBasePrice?: number;
+  annualUserPrice?: number;
+  annualTotal?: number;
 }> {
   try {
     const session = await getSession();
@@ -1093,12 +1100,82 @@ export async function getUpgradePreviewAction(
       return { success: false, error: 'Stripe billing is not configured' };
     }
 
-    return await stripeService.getUpgradePreview(session.user.tenant, targetTier);
+    return await stripeService.getUpgradePreview(session.user.tenant, targetTier, interval);
   } catch (error) {
     logger.error('[getUpgradePreviewAction] Error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to get upgrade preview',
+    };
+  }
+}
+
+/**
+ * Switch billing interval (monthly <-> annual) at end of current period
+ */
+export async function switchBillingIntervalAction(
+  newInterval: 'month' | 'year'
+): Promise<{ success: boolean; error?: string; effectiveDate?: string }> {
+  try {
+    const session = await getSession();
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const hasPermission = await checkAccountManagementPermission();
+    if (!hasPermission) {
+      return { success: false, error: 'You do not have permission to change the billing interval' };
+    }
+
+    const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return { success: false, error: 'Stripe billing is not configured' };
+    }
+
+    return await stripeService.switchBillingInterval(session.user.tenant, newInterval);
+  } catch (error) {
+    logger.error('[switchBillingIntervalAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to switch billing interval',
+    };
+  }
+}
+
+/**
+ * Get a preview of switching billing interval
+ */
+export async function getIntervalSwitchPreviewAction(
+  newInterval: 'month' | 'year'
+): Promise<{
+  success: boolean;
+  error?: string;
+  currentInterval?: 'month' | 'year';
+  currentTotal?: number;
+  newTotal?: number;
+  newBasePrice?: number;
+  newUserPrice?: number;
+  userCount?: number;
+  effectiveDate?: string;
+  savingsPercent?: number;
+}> {
+  try {
+    const session = await getSession();
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return { success: false, error: 'Stripe billing is not configured' };
+    }
+
+    return await stripeService.getIntervalSwitchPreview(session.user.tenant, newInterval);
+  } catch (error) {
+    logger.error('[getIntervalSwitchPreviewAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get interval switch preview',
     };
   }
 }
