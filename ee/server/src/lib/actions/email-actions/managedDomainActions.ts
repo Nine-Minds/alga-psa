@@ -19,6 +19,11 @@ type EmailDomainPermissionAction = 'read' | 'create' | 'update' | 'delete';
 
 type TenantColumnName = 'tenant_id' | 'tenant';
 let cachedTenantColumn: Promise<TenantColumnName> | null = null;
+let loggedManagedDomainConflictFallback = false;
+
+type PostgresErrorLike = {
+  code?: string;
+};
 
 async function getEmailDomainTenantColumn(knex: Knex): Promise<TenantColumnName> {
   if (!cachedTenantColumn) {
@@ -34,6 +39,57 @@ async function getEmailDomainTenantColumn(knex: Knex): Promise<TenantColumnName>
   }
 
   return cachedTenantColumn;
+}
+
+function isMissingEmailDomainConflictConstraintError(error: unknown): boolean {
+  return typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as PostgresErrorLike).code === '42P10';
+}
+
+function logManagedDomainConflictFallbackOnce(params: {
+  tenantId: string;
+  domain: string;
+  tenantColumn: TenantColumnName;
+}) {
+  if (loggedManagedDomainConflictFallback) {
+    return;
+  }
+
+  loggedManagedDomainConflictFallback = true;
+  observabilityLogger.warn('email_domains is missing the expected unique constraint; using manual upsert fallback', {
+    event_type: 'managed_email_domain_conflict_fallback',
+    tenant_id: params.tenantId,
+    domain: params.domain,
+    tenant_column: params.tenantColumn,
+  });
+}
+
+async function upsertManagedEmailDomainWithoutConflict(params: {
+  knex: Knex;
+  tenantColumn: TenantColumnName;
+  tenantId: string;
+  domainName: string;
+  record: Record<string, unknown>;
+  mergeFields: Record<string, unknown>;
+}): Promise<void> {
+  const { knex, tenantColumn, tenantId, domainName, record, mergeFields } = params;
+
+  await knex.transaction(async (trx) => {
+    const existing = await trx('email_domains')
+      .where({ [tenantColumn]: tenantId, domain_name: domainName })
+      .first();
+
+    if (existing) {
+      await trx('email_domains')
+        .where({ [tenantColumn]: tenantId, domain_name: domainName })
+        .update(mergeFields);
+      return;
+    }
+
+    await trx('email_domains').insert(record);
+  });
 }
 
 function logWorkflowEnqueueFailure(params: {
@@ -125,21 +181,43 @@ export const requestManagedEmailDomain = withAuth(async (user, { tenant }, domai
   }
 
   const now = new Date();
+  const record = {
+    [tenantColumn]: tenant,
+    domain_name: normalizedDomain,
+    status: 'pending',
+    created_at: now,
+    updated_at: now,
+  };
+  const mergeFields = {
+    status: 'pending',
+    failure_reason: null,
+    updated_at: now,
+  };
 
-  await knex('email_domains')
-    .insert({
-      [tenantColumn]: tenant,
-      domain_name: normalizedDomain,
-      status: 'pending',
-      created_at: now,
-      updated_at: now,
-    })
-    .onConflict([tenantColumn, 'domain_name'])
-    .merge({
-      status: 'pending',
-      failure_reason: null,
-      updated_at: now,
+  try {
+    await knex('email_domains')
+      .insert(record)
+      .onConflict([tenantColumn, 'domain_name'])
+      .merge(mergeFields);
+  } catch (error) {
+    if (!isMissingEmailDomainConflictConstraintError(error)) {
+      throw error;
+    }
+
+    logManagedDomainConflictFallbackOnce({
+      tenantId: tenant,
+      domain: normalizedDomain,
+      tenantColumn,
     });
+    await upsertManagedEmailDomainWithoutConflict({
+      knex,
+      tenantColumn,
+      tenantId: tenant,
+      domainName: normalizedDomain,
+      record,
+      mergeFields,
+    });
+  }
 
   let result: Awaited<ReturnType<typeof enqueueManagedEmailDomainWorkflow>>;
   try {

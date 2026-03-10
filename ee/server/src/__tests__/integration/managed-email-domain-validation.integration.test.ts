@@ -25,6 +25,7 @@ vi.mock('@/lib/email-domains/workflowClient', () => ({
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
+  getSecret: vi.fn(async (_key: string, _envVar?: string, fallback?: string) => fallback ?? 'test_password'),
   getSecretProviderInstance: vi.fn(async () => ({
     getAppSecret: async () => '',
   })),

@@ -9,11 +9,23 @@ import { withAuth } from '@alga-psa/auth';
 import type { TenantEmailSettings } from '@alga-psa/types';
 import { TenantEmailService } from '@alga-psa/email';
 
+type EmailSettingsUpdateInput = Partial<TenantEmailSettings> & {
+  defaultFromDomain?: string | null;
+  ticketingFromEmail?: string | null;
+};
+
 function extractDomain(address?: string | null): string | null {
   if (!address) return null;
   const parts = address.split('@');
   if (parts.length !== 2) return null;
   return parts[1]?.trim().toLowerCase() || null;
+}
+
+function hasOwnUpdate<K extends keyof EmailSettingsUpdateInput>(
+  updates: EmailSettingsUpdateInput,
+  key: K
+): boolean {
+  return Object.prototype.hasOwnProperty.call(updates, key);
 }
 
 export const getEmailSettings = withAuth(async (
@@ -79,7 +91,7 @@ export const getEmailSettings = withAuth(async (
 export const updateEmailSettings = withAuth(async (
   _user,
   { tenant },
-  updates: Partial<TenantEmailSettings>
+  updates: EmailSettingsUpdateInput
 ): Promise<TenantEmailSettings> => {
   const { knex } = await createTenantKnex();
 
@@ -88,11 +100,17 @@ export const updateEmailSettings = withAuth(async (
 
     // Load current settings so we can merge partial updates safely
     const existingSettings = await TenantEmailService.getTenantEmailSettings(tenant || '', knex);
+    const nextDefaultFromDomain = hasOwnUpdate(updates, 'defaultFromDomain')
+      ? updates.defaultFromDomain?.trim() || undefined
+      : existingSettings?.defaultFromDomain;
+    const nextTicketingFromEmail = hasOwnUpdate(updates, 'ticketingFromEmail')
+      ? updates.ticketingFromEmail?.trim() || null
+      : existingSettings?.ticketingFromEmail ?? null;
 
     const mergedSettings: TenantEmailSettings = {
       tenantId: tenant || '',
-      defaultFromDomain: updates.defaultFromDomain ?? existingSettings?.defaultFromDomain,
-      ticketingFromEmail: updates.ticketingFromEmail ?? existingSettings?.ticketingFromEmail ?? null,
+      defaultFromDomain: nextDefaultFromDomain,
+      ticketingFromEmail: nextTicketingFromEmail,
       customDomains: updates.customDomains ?? existingSettings?.customDomains ?? [],
       emailProvider: updates.emailProvider ?? existingSettings?.emailProvider ?? 'smtp',
       providerConfigs: updates.providerConfigs ?? existingSettings?.providerConfigs ?? [],

@@ -4,11 +4,10 @@
  */
 
 import '@testing-library/jest-dom';
-import path from 'node:path';
 import dotenv from 'dotenv';
 import { vi } from 'vitest';
 
-const envPath = path.resolve(process.cwd(), '.env.test');
+const envPath = `${process.cwd()}/.env.test`;
 dotenv.config({ path: envPath });
 
 // Mock Next.js router

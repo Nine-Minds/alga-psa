@@ -13,6 +13,11 @@ const TENANT_EMAIL_SETTINGS_TABLE = 'tenant_email_settings';
 const MANAGED_PROVIDER_ID = 'managed-resend';
 
 let schemaValidationPromise: Promise<void> | null = null;
+let loggedEmailDomainConflictFallback = false;
+
+type PostgresErrorLike = {
+  code?: string;
+};
 
 async function ensureEmailDomainSchema(knex: Knex): Promise<void> {
   if (!schemaValidationPromise) {
@@ -37,6 +42,49 @@ async function ensureEmailDomainSchema(knex: Knex): Promise<void> {
   }
 
   return schemaValidationPromise;
+}
+
+function isMissingEmailDomainConflictConstraintError(error: unknown): boolean {
+  return typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as PostgresErrorLike).code === '42P10';
+}
+
+function logEmailDomainConflictFallbackOnce(context: { tenantId: string; domain: string }): void {
+  if (loggedEmailDomainConflictFallback) {
+    return;
+  }
+
+  loggedEmailDomainConflictFallback = true;
+  logger.warn('[ManagedDomainService] email_domains is missing the expected unique constraint; using manual upsert fallback', context);
+}
+
+async function upsertEmailDomainWithoutConflict(
+  knex: Knex,
+  record: Record<string, unknown>,
+  mergeFields: Record<string, unknown>
+): Promise<void> {
+  await knex.transaction(async (trx) => {
+    const existing = await trx(EMAIL_DOMAINS_TABLE)
+      .where({
+        tenant: record.tenant,
+        domain_name: record.domain_name,
+      })
+      .first();
+
+    if (existing) {
+      await trx(EMAIL_DOMAINS_TABLE)
+        .where({
+          tenant: record.tenant,
+          domain_name: record.domain_name,
+        })
+        .update(mergeFields);
+      return;
+    }
+
+    await trx(EMAIL_DOMAINS_TABLE).insert(record);
+  });
 }
 
 function parseDnsRecords(raw: unknown, domainName: string): DnsRecord[] {
@@ -155,17 +203,31 @@ export class ManagedDomainService {
       metadata: JSON.stringify({ region: options.region ?? 'us-east-1', managed: true }),
     };
 
-    await this.knex(EMAIL_DOMAINS_TABLE)
-      .insert(record)
-      .onConflict(['tenant', 'domain_name'])
-      .merge({
-        status: record.status,
-        provider_id: record.provider_id,
-        provider_domain_id: record.provider_domain_id,
-        dns_records: record.dns_records,
-        metadata: record.metadata,
-        updated_at: now,
+    const mergeFields = {
+      status: record.status,
+      provider_id: record.provider_id,
+      provider_domain_id: record.provider_domain_id,
+      dns_records: record.dns_records,
+      metadata: record.metadata,
+      updated_at: now,
+    };
+
+    try {
+      await this.knex(EMAIL_DOMAINS_TABLE)
+        .insert(record)
+        .onConflict(['tenant', 'domain_name'])
+        .merge(mergeFields);
+    } catch (error) {
+      if (!isMissingEmailDomainConflictConstraintError(error)) {
+        throw error;
+      }
+
+      logEmailDomainConflictFallbackOnce({
+        tenantId: this.tenantId,
+        domain: options.domain,
       });
+      await upsertEmailDomainWithoutConflict(this.knex, record, mergeFields);
+    }
 
     return {
       providerDomainId: providerResult.domainId,
