@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '../../../../../packages/event-schemas/src/schemas/workflowEventPublishHelpers';
 import {
   contactArchivedEventPayloadSchema,
   contactCreatedEventPayloadSchema,
@@ -14,6 +13,34 @@ import {
   buildContactPrimarySetPayload,
   buildContactUpdatedPayload,
 } from '../contactEventBuilders';
+
+function buildWorkflowPayload<TPayload extends Record<string, unknown>>(
+  payload: TPayload,
+  ctx: {
+    tenantId: string;
+    occurredAt?: string | Date;
+    actor?: { actorType: 'USER'; actorUserId: string };
+    idempotencyKey?: string;
+  }
+): TPayload & {
+  tenantId: string;
+  occurredAt: string;
+  actorType?: 'USER';
+  actorUserId?: string;
+  idempotencyKey?: string;
+} {
+  const occurredAt = typeof ctx.occurredAt === 'string'
+    ? ctx.occurredAt
+    : ctx.occurredAt?.toISOString() ?? new Date().toISOString();
+
+  return {
+    ...payload,
+    tenantId: ctx.tenantId,
+    occurredAt,
+    ...(ctx.actor ? { actorType: 'USER' as const, actorUserId: ctx.actor.actorUserId } : {}),
+    ...(ctx.idempotencyKey ? { idempotencyKey: ctx.idempotencyKey } : {}),
+  };
+}
 
 describe('contactEventBuilders', () => {
   const tenantId = '7e8a6f60-7a47-4f20-b2ac-5b77a3b5c9fd';

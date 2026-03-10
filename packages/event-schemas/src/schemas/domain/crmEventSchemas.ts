@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { CONTACT_PHONE_CANONICAL_TYPES } from '@alga-psa/shared/interfaces/contact.interfaces';
 import { BaseDomainEventPayloadSchema, changesSchema, updatedFieldsSchema, uuidSchema } from './commonEventPayloadSchemas';
 
 const clientIdSchema = uuidSchema('Client ID');
@@ -8,6 +7,7 @@ const userIdSchema = uuidSchema('User ID');
 const interactionIdSchema = uuidSchema('Interaction ID');
 const noteIdSchema = uuidSchema('Note ID');
 const tagIdSchema = uuidSchema('Tag ID');
+const CONTACT_PHONE_CANONICAL_TYPES = ['work', 'mobile', 'home', 'fax', 'other'] as const;
 const contactPhoneCanonicalTypeSchema = z.enum(CONTACT_PHONE_CANONICAL_TYPES);
 const contactPhoneNumberSchema = z.object({
   contact_phone_number_id: z.string().uuid(),
