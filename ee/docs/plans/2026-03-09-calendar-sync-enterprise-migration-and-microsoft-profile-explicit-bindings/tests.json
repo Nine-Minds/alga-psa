@@ -2578,7 +2578,7 @@
   {
     "id": "T323",
     "description": "Happy path: Email integration resolution uses the explicit binding path wherever that consumer remains supported.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F162"
     ]
@@ -2586,7 +2586,7 @@
   {
     "id": "T324",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for email integration resolution uses the explicit binding path wherever that consumer remains supported.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F162"
     ]
@@ -2594,7 +2594,7 @@
   {
     "id": "T325",
     "description": "Happy path: Calendar integration resolution uses the explicit binding path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F163"
     ]
@@ -2602,7 +2602,7 @@
   {
     "id": "T326",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for calendar integration resolution uses the explicit binding path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F163"
     ]
@@ -2610,7 +2610,7 @@
   {
     "id": "T327",
     "description": "Happy path: Teams integration resolution continues to use the explicit binding path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F164"
     ]
@@ -2618,7 +2618,7 @@
   {
     "id": "T328",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for teams integration resolution continues to use the explicit binding path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F164"
     ]
@@ -2690,7 +2690,7 @@
   {
     "id": "T337",
     "description": "Happy path: The existing Microsoft consumer binding table remains shared infrastructure after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F169"
     ]
@@ -2698,7 +2698,7 @@
   {
     "id": "T338",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the existing Microsoft consumer binding table remains shared infrastructure after the migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F169"
     ]
@@ -2706,7 +2706,7 @@
   {
     "id": "T339",
     "description": "Happy path: The supported consumer constraint set continues to represent MSP SSO, Email, Calendar, and Teams unless a deliberate narrowing migration is chosen.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F170"
     ]
@@ -2714,7 +2714,7 @@
   {
     "id": "T340",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the supported consumer constraint set continues to represent MSP SSO, Email, Calendar, and Teams unless a deliberate narrowing migration is chosen.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F170"
     ]
@@ -2722,7 +2722,7 @@
   {
     "id": "T341",
     "description": "Happy path: Migration strategy backfills explicit MSP SSO bindings for existing tenants that rely on named Microsoft profiles.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F171"
     ]
@@ -2730,7 +2730,7 @@
   {
     "id": "T342",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for migration strategy backfills explicit MSP SSO bindings for existing tenants that rely on named Microsoft profiles.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F171"
     ]
@@ -2738,7 +2738,7 @@
   {
     "id": "T343",
     "description": "Happy path: Migration strategy defines how explicit Email bindings are created for any retained Outlook email behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F172"
     ]
@@ -2746,7 +2746,7 @@
   {
     "id": "T344",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for migration strategy defines how explicit Email bindings are created for any retained Outlook email behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F172"
     ]
@@ -2754,7 +2754,7 @@
   {
     "id": "T345",
     "description": "Happy path: Migration strategy backfills explicit Calendar bindings for existing EE tenants with connected calendar providers where needed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F173"
     ]
@@ -2762,7 +2762,7 @@
   {
     "id": "T346",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for migration strategy backfills explicit Calendar bindings for existing EE tenants with connected calendar providers where needed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F173"
     ]
@@ -2770,7 +2770,7 @@
   {
     "id": "T347",
     "description": "Happy path: Migration strategy preserves explicit Teams binding data.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F174"
     ]
@@ -2778,7 +2778,7 @@
   {
     "id": "T348",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for migration strategy preserves explicit Teams binding data.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F174"
     ]
@@ -2786,7 +2786,7 @@
   {
     "id": "T349",
     "description": "Happy path: No runtime consumer-resolution path depends on default-profile compatibility semantics after the cutover target state is reached.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F175"
     ]
@@ -2794,7 +2794,7 @@
   {
     "id": "T350",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for no runtime consumer-resolution path depends on default-profile compatibility semantics after the cutover target state is reached.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F175"
     ]

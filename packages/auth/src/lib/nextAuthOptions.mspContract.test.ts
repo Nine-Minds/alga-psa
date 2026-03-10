@@ -26,8 +26,9 @@ describe('NextAuth MSP SSO contract', () => {
     expect(source).toContain("getTenantSecret(resolution.tenantId, 'google_client_secret')");
 
     expect(source).toContain("if (resolution.provider === 'azure-ad') {");
-    expect(source).toContain("getTenantSecret(resolution.tenantId, 'microsoft_client_id')");
-    expect(source).toContain("getTenantSecret(resolution.tenantId, 'microsoft_client_secret')");
+    expect(source).toContain('resolveMicrosoftConsumerProfileConfig(');
+    expect(source).toContain("'msp_sso'");
+    expect(source).not.toContain("getTenantSecret(resolution.tenantId, 'microsoft_client_id')");
   });
 
   it('T050/T051: invalid or expired resolver cookie contexts are ignored and app fallback remains in use', () => {

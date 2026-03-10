@@ -345,3 +345,27 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
 - (2026-03-09) Remaining Microsoft runtime gap after this slice:
   - active MSP SSO, Outlook email, and Microsoft calendar runtime credential readers still consume mirrored tenant secrets in their own packages/routes,
   - the binding table now drives the shared Microsoft settings/action layer and migration materialization logic, but the next slice still has to cut those runtime credential lookups over to explicit binding resolution.
+- (2026-03-09) Cut the remaining Microsoft runtime consumer resolution paths over to explicit bindings for email, calendar, and Teams:
+  - added `packages/integrations/src/lib/microsoftConsumerProfileResolution.ts` as the shared binding-aware runtime resolver for `msp_sso`, `email`, `calendar`, and `teams`,
+  - the resolver now materializes migration-safe `msp_sso`, `email`, and `calendar` bindings only from concrete legacy usage signals (`msp_sso_tenant_login_domains`, `email_providers`, `calendar_providers`) while failing closed for unsupported/no-signal cases,
+  - `packages/integrations/src/actions/email-actions/oauthActions.ts`, `server/src/app/api/auth/microsoft/callback/route.ts`, and `server/src/services/email/providers/MicrosoftGraphAdapter.ts` now resolve Microsoft email credentials from the bound profile instead of tenant/env fallbacks,
+  - `packages/ee/src/lib/actions/integrations/calendarActions.ts`, `ee/server/src/app/api/auth/microsoft/calendar/callback/route.ts`, and `packages/ee/src/lib/services/calendar/providers/MicrosoftCalendarAdapter.ts` now resolve Microsoft calendar credentials from the bound profile instead of tenant/env fallbacks,
+  - replaced the leftover `packages/ee/src/lib/auth/teamsMicrosoftProviderResolution.ts` stub with the real binding-aware Teams resolver so the shared Teams runtime wrapper no longer collapses to `not_configured`.
+- (2026-03-09) Added focused runtime-resolution coverage for this slice:
+  - `packages/integrations/src/lib/microsoftConsumerProfileResolution.test.ts` covers email binding resolution, calendar migration backfill, and invalid-profile failure modes,
+  - `server/src/test/unit/microsoft/microsoftConsumerRuntimeResolution.contract.test.ts` asserts the active email/calendar OAuth and token-refresh callers import the shared resolver and no longer reach for direct Microsoft env/tenant secrets,
+  - `packages/auth/src/lib/sso/teamsMicrosoftProviderResolution.test.ts` now passes against the real `packages/ee` Teams resolver instead of the old stub.
+- (2026-03-09) Runtime-resolution validation commands:
+  - `cd server && pnpm vitest run --config vitest.config.ts ../packages/integrations/src/lib/microsoftConsumerProfileResolution.test.ts src/test/unit/microsoft/microsoftConsumerRuntimeResolution.contract.test.ts ../packages/auth/src/lib/sso/teamsMicrosoftProviderResolution.test.ts src/test/unit/lib/teams/teamsRuntimeOwnership.contract.test.ts ../packages/integrations/src/actions/integrations/microsoftConsumerBindings.test.ts`
+  - `cd server && pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-09) Cut the remaining MSP SSO Microsoft auth runtime off the legacy default-profile/tenant-secret path:
+  - `packages/auth/src/lib/sso/mspSsoResolution.ts` now checks Azure AD tenant readiness through `resolveMicrosoftConsumerProfileConfig(tenant, 'msp_sso')` instead of direct `microsoft_client_*` tenant secrets,
+  - `packages/auth/src/lib/nextAuthOptions.ts` now hydrates request-scoped Azure AD OAuth credentials from the bound `msp_sso` Microsoft profile when the resolver cookie selects a tenant source,
+  - this leaves Google on its existing tenant/app secret path, but removes the last active Microsoft runtime consumer-resolution path that still bypassed explicit bindings.
+- (2026-03-09) Added MSP SSO runtime regression coverage for the binding cutover:
+  - `packages/integrations/src/lib/microsoftConsumerProfileResolution.test.ts` now covers `msp_sso` binding backfill from active login domains plus the fail-closed path once no binding signal remains,
+  - `packages/auth/src/lib/sso/mspSsoResolution.test.ts` now exercises Azure AD tenant readiness through the shared binding resolver rather than direct Microsoft tenant secret reads,
+  - `packages/auth/src/lib/nextAuthOptions.mspContract.test.ts` and `server/src/test/unit/microsoft/microsoftConsumerRuntimeResolution.contract.test.ts` now assert the shared auth runtime imports the binding-aware Microsoft resolver instead of direct tenant-secret lookups.
+- (2026-03-09) MSP SSO binding-runtime validation commands:
+  - `cd server && pnpm vitest run --config vitest.config.ts ../packages/auth/src/lib/sso/mspSsoResolution.test.ts ../packages/auth/src/lib/nextAuthOptions.mspContract.test.ts ../packages/integrations/src/lib/microsoftConsumerProfileResolution.test.ts src/test/unit/microsoft/microsoftConsumerRuntimeResolution.contract.test.ts`
+  - `cd server && pnpm exec tsc -p tsconfig.json --noEmit --pretty false`

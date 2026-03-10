@@ -3,6 +3,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { CalendarProviderService } from '@enterprise/lib/services/calendar/CalendarProviderService';
 import { MicrosoftCalendarAdapter } from '@enterprise/lib/services/calendar/providers/MicrosoftCalendarAdapter';
+import { resolveMicrosoftConsumerProfileConfig } from '@alga-psa/integrations/lib/microsoftConsumerProfileResolution';
 import { consumeCalendarOAuthState } from '@/utils/calendar/oauthStateStore';
 import { decodeCalendarState } from '@/utils/calendar/oauthHelpers';
 import { CalendarProviderConfig } from '@/interfaces/calendar.interfaces';
@@ -216,24 +217,12 @@ export async function GET(request: NextRequest) {
     let clientId: string | null = null;
     let clientSecret: string | null = null;
     let tenantId: string | null = null;
-    
-    if (isHostedFlow) {
-      clientId = await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID') || null;
-      clientSecret = await secretProvider.getAppSecret('MICROSOFT_CLIENT_SECRET') || null;
-      tenantId = await secretProvider.getAppSecret('MICROSOFT_TENANT_ID') || null;
-    } else {
-      const envClientId = process.env.MICROSOFT_CLIENT_ID || null;
-      const envClientSecret = process.env.MICROSOFT_CLIENT_SECRET || null;
-      const envTenantId = process.env.MICROSOFT_TENANT_ID || null;
-      const tenantClientId = await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_id');
-      const tenantClientSecret = await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_secret');
-      const tenantTenantId = await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_tenant_id');
-      const appClientId = await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID');
-      const appClientSecret = await secretProvider.getAppSecret('MICROSOFT_CLIENT_SECRET');
-      const appTenantId = await secretProvider.getAppSecret('MICROSOFT_TENANT_ID');
-      clientId = envClientId || tenantClientId || appClientId || null;
-      clientSecret = envClientSecret || tenantClientSecret || appClientSecret || null;
-      tenantId = envTenantId || tenantTenantId || appTenantId || null;
+    const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(stateData.tenant, 'calendar');
+
+    if (microsoftProfile.status === 'ready') {
+      clientId = microsoftProfile.clientId || null;
+      clientSecret = microsoftProfile.clientSecret || null;
+      tenantId = microsoftProfile.microsoftTenantId || null;
     }
     
     const redirectUri = await resolveCalendarRedirectUri({
@@ -304,9 +293,9 @@ export async function GET(request: NextRequest) {
               active: true,
               sync_direction: 'bidirectional' as const,
               connection_status: 'configuring' as const,
-              provider_config: {
-                clientId,
-                clientSecret,
+                provider_config: {
+                  clientId,
+                  clientSecret,
                 tenantId: tenantId || 'common',
                 redirectUri,
                 accessToken: access_token,

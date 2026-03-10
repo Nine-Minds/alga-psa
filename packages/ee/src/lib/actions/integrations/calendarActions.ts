@@ -10,6 +10,7 @@ import {
 } from '@alga-psa/integrations/utils/calendar/oauthHelpers';
 import { resolveCalendarRedirectUri } from '@alga-psa/integrations/utils/calendar/redirectUri';
 import { storeCalendarOAuthState } from '@alga-psa/integrations/utils/calendar/oauthStateStore';
+import { resolveMicrosoftConsumerProfileConfig } from '@alga-psa/integrations/lib/microsoftConsumerProfileResolution';
 import type { CalendarProviderConfig, CalendarSyncStatus, CalendarConflictResolution } from '@alga-psa/types';
 import { CalendarProviderService } from '@enterprise/lib/services/calendar/CalendarProviderService';
 import { GoogleCalendarAdapter } from '@enterprise/lib/services/calendar/providers/GoogleCalendarAdapter';
@@ -114,15 +115,14 @@ export async function initiateCalendarOAuthImpl(
         (await secretProvider.getTenantSecret(tenant, 'google_client_id')) ||
         null;
     } else {
-      clientId =
-        process.env.MICROSOFT_CLIENT_ID ||
-        (await secretProvider.getTenantSecret(tenant, 'microsoft_client_id')) ||
-        (await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID')) ||
-        null;
-    }
-
-    if (!clientId && existingProviderConfig && provider === 'microsoft') {
-      clientId = existingProviderConfig.clientId || null;
+      const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(tenant, 'calendar');
+      if (microsoftProfile.status !== 'ready') {
+        return {
+          success: false,
+          error: microsoftProfile.message || 'Microsoft Calendar binding is not configured',
+        };
+      }
+      clientId = microsoftProfile.clientId || null;
     }
 
     if (!clientId) {

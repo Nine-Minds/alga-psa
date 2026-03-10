@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import { BaseCalendarAdapter } from './base/BaseCalendarAdapter';
 import { CalendarProviderConfig, ExternalCalendarEvent } from '@/interfaces/calendar.interfaces';
-import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { resolveMicrosoftConsumerProfileConfig } from '@alga-psa/integrations/lib/microsoftConsumerProfileResolution';
 import { getAdminConnection } from '@alga-psa/db';
 import { CalendarProviderService } from '../CalendarProviderService';
 import { getWebhookBaseUrl } from '@/utils/email/webhookHelpers';
@@ -117,18 +117,15 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
         throw new Error('No refresh token available');
       }
 
-      const vendorConfig = this.config.provider_config || {};
-
-      // Prefer env or provider_config, then fallback to tenant secrets
-      let clientId = vendorConfig.clientId || process.env.MICROSOFT_CLIENT_ID;
-      let clientSecret = vendorConfig.clientSecret || process.env.MICROSOFT_CLIENT_SECRET;
-
-      if (!clientId || !clientSecret) {
-        const secretProvider = await getSecretProviderInstance();
-        clientId = clientId || (await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_client_id'));
-        clientSecret = clientSecret || (await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_client_secret'));
+      const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(this.config.tenant, 'calendar');
+      if (microsoftProfile.status !== 'ready') {
+        throw new Error(
+          microsoftProfile.message || 'Microsoft Calendar binding is not configured'
+        );
       }
 
+      const clientId = microsoftProfile.clientId;
+      const clientSecret = microsoftProfile.clientSecret;
       if (!clientId || !clientSecret) {
         throw new Error('Microsoft OAuth credentials not configured');
       }

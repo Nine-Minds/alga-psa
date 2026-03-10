@@ -1612,7 +1612,7 @@
   {
     "id": "F162",
     "description": "Email integration resolution uses the explicit binding path wherever that consumer remains supported.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1622,7 +1622,7 @@
   {
     "id": "F163",
     "description": "Calendar integration resolution uses the explicit binding path.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1632,7 +1632,7 @@
   {
     "id": "F164",
     "description": "Teams integration resolution continues to use the explicit binding path.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1682,7 +1682,7 @@
   {
     "id": "F169",
     "description": "The existing Microsoft consumer binding table remains shared infrastructure after the migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Rollout / Migration",
@@ -1692,7 +1692,7 @@
   {
     "id": "F170",
     "description": "The supported consumer constraint set continues to represent MSP SSO, Email, Calendar, and Teams unless a deliberate narrowing migration is chosen.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Rollout / Migration",
@@ -1702,7 +1702,7 @@
   {
     "id": "F171",
     "description": "Migration strategy backfills explicit MSP SSO bindings for existing tenants that rely on named Microsoft profiles.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Rollout / Migration",
@@ -1712,7 +1712,7 @@
   {
     "id": "F172",
     "description": "Migration strategy defines how explicit Email bindings are created for any retained Outlook email behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Rollout / Migration",
@@ -1722,7 +1722,7 @@
   {
     "id": "F173",
     "description": "Migration strategy backfills explicit Calendar bindings for existing EE tenants with connected calendar providers where needed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Rollout / Migration",
@@ -1732,7 +1732,7 @@
   {
     "id": "F174",
     "description": "Migration strategy preserves explicit Teams binding data.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Rollout / Migration",
@@ -1742,7 +1742,7 @@
   {
     "id": "F175",
     "description": "No runtime consumer-resolution path depends on default-profile compatibility semantics after the cutover target state is reached.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Rollout / Migration",

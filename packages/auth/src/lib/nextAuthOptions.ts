@@ -43,6 +43,7 @@ import { generateDeviceFingerprint, getDeviceInfo } from "./deviceFingerprint";
 import { getLocationFromIp } from "./geolocation";
 import { getConnection } from "@alga-psa/db";
 import { getPortalDomain, getPortalDomainByHostname } from "./PortalDomainModel";
+import { resolveMicrosoftConsumerProfileConfig } from "@alga-psa/integrations/lib/microsoftConsumerProfileResolution";
 
 function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, protocol: string): void {
     if (!portCandidate || portCandidate.length === 0) {
@@ -982,16 +983,15 @@ async function getOAuthSecrets(context?: BuildAuthOptionsContext) {
         }
 
         if (resolution.provider === 'azure-ad') {
-            const [tenantMicrosoftClientId, tenantMicrosoftClientSecret, tenantMicrosoftTenantId] = await Promise.all([
-                secretProvider.getTenantSecret(resolution.tenantId, 'microsoft_client_id'),
-                secretProvider.getTenantSecret(resolution.tenantId, 'microsoft_client_secret'),
-                secretProvider.getTenantSecret(resolution.tenantId, 'microsoft_tenant_id'),
-            ]);
+            const tenantMicrosoft = await resolveMicrosoftConsumerProfileConfig(
+                resolution.tenantId,
+                'msp_sso'
+            );
 
-            if (tenantMicrosoftClientId && tenantMicrosoftClientSecret) {
-                resolved.microsoftClientId = tenantMicrosoftClientId;
-                resolved.microsoftClientSecret = tenantMicrosoftClientSecret;
-                resolved.microsoftTenantId = tenantMicrosoftTenantId || 'common';
+            if (tenantMicrosoft.status === 'ready') {
+                resolved.microsoftClientId = tenantMicrosoft.clientId || '';
+                resolved.microsoftClientSecret = tenantMicrosoft.clientSecret || '';
+                resolved.microsoftTenantId = tenantMicrosoft.microsoftTenantId || 'common';
             }
         }
     } catch (error) {
