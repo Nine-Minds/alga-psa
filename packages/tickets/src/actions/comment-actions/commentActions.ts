@@ -489,6 +489,11 @@ export const deleteComment = withAuth(async (_user, _ctx, id: string) => {
       if (existingComment?.is_system_generated) {
         throw new Error('This comment is system-generated and cannot be deleted.');
       }
+
+      await trx('email_reply_tokens')
+        .where({ tenant, comment_id: id })
+        .update({ comment_id: null });
+
       await Comment.delete(trx, tenant, id);
     });
   } catch (error) {
