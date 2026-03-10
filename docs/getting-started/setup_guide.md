@@ -13,23 +13,30 @@ This guide provides step-by-step instructions for setting up the PSA system usin
 
 ## Choose a Release
 
-1. Visit the [GitHub releases](https://github.com/nine-minds/alga-psa/releases) page.
-2. Decide which release tag you want to deploy (the rest of this guide uses `release/0.11.0` as the example).
-
-## Initial Setup
-
-1. Clone the repository (or pull the latest changes) and check out the release you selected above:
+1. Clone the repository if you have not already:
    ```bash
    git clone https://github.com/nine-minds/alga-psa.git
    cd alga-psa
-   git checkout release/0.11.0
    ```
-2. Pin the prebuilt container image to the same release:
+2. Fetch the latest remote refs and list release branches sorted by version:
+   ```bash
+   git fetch origin --prune
+   git branch -r --list 'origin/release/*' --sort='version:refname'
+   ```
+3. Release branches follow the `release/<version>` pattern, including release candidates such as `release/1.0-rc3`. If you want the newest release branch, use the last entry from the command output above.
+4. Check out the release branch you want to deploy:
+   ```bash
+   git checkout <release-branch>
+   ```
+
+## Initial Setup
+
+1. Pin the prebuilt container image to the same release:
    ```bash
    ./scripts/set-image-tag.sh
    ```
    This writes `.env.image` alongside `server/.env` with `ALGA_IMAGE_TAG=<your-tag>`, ensuring Docker Compose pulls the matching prebuilt image. Re-run the script whenever you upgrade or switch commits.
-3. Create required directories:
+2. Create required directories:
    ```bash
    mkdir -p secrets
    ```
@@ -373,7 +380,12 @@ When upgrading from a previous version:
      pg_dump -U postgres server > backup.sql
    ```
 
-2. Update your checkout to the target release (e.g., `git fetch && git checkout release/0.11.0`).
+2. Fetch the latest release branches, choose the target `release/*` branch, and check it out:
+   ```bash
+   git fetch origin --prune
+   git branch -r --list 'origin/release/*' --sort='version:refname'
+   git checkout <release-branch>
+   ```
 
 3. Run `./scripts/set-image-tag.sh` again so `.env.image` updates to the new release tag or short commit.
 
