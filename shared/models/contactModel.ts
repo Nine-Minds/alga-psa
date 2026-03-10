@@ -792,6 +792,44 @@ export class ContactModel {
   }
 
   /**
+   * Find custom phone types used by a contact that are not used by any other contact.
+   * These types would become orphaned if the contact is deleted.
+   */
+  static async findLastUsagePhoneTypes(
+    contactId: string,
+    tenant: string,
+    trx: Knex.Transaction
+  ): Promise<Array<{ contact_phone_type_id: string; label: string }>> {
+    // Get custom type IDs used by this contact
+    const contactTypeIds = await trx('contact_phone_numbers')
+      .where({ tenant, contact_name_id: contactId })
+      .whereNotNull('custom_phone_type_id')
+      .distinct('custom_phone_type_id')
+      .pluck('custom_phone_type_id');
+
+    if (contactTypeIds.length === 0) return [];
+
+    // Find which of those are used ONLY by this contact
+    const usageCounts = await trx('contact_phone_numbers')
+      .where('tenant', tenant)
+      .whereIn('custom_phone_type_id', contactTypeIds)
+      .groupBy('custom_phone_type_id')
+      .select('custom_phone_type_id')
+      .count<Array<{ custom_phone_type_id: string; count: string }>>('* as count');
+
+    const singleUseIds = usageCounts
+      .filter(row => Number(row.count) === 1)
+      .map(row => row.custom_phone_type_id);
+
+    if (singleUseIds.length === 0) return [];
+
+    return trx('contact_phone_type_definitions')
+      .where({ tenant })
+      .whereIn('contact_phone_type_id', singleUseIds)
+      .select('contact_phone_type_id', 'label');
+  }
+
+  /**
    * Find orphaned custom phone type definitions that are no longer referenced
    * by any contact_phone_numbers row in the tenant.
    */

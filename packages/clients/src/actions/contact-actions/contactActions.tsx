@@ -394,6 +394,22 @@ export const getCustomPhoneTypeUsageCount = withAuth(async (
   });
 });
 
+export const getContactLastUsagePhoneTypes = withAuth(async (
+  user,
+  { tenant },
+  contactId: string
+): Promise<Array<{ contact_phone_type_id: string; label: string }>> => {
+  const { knex: db } = await createTenantKnex();
+
+  if (!await hasPermissionAsync(user, 'contact', 'read')) {
+    return [];
+  }
+
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    return ContactModel.findLastUsagePhoneTypes(contactId, tenant, trx);
+  });
+});
+
 export const deleteOrphanedPhoneTypes = withAuth(async (
   user,
   { tenant },
