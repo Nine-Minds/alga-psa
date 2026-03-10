@@ -186,6 +186,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'workflow_task_definitions',
 
   // === LEVEL 3: Mid-level entities ===
+  // Document-related leaf tables (must come before documents)
+  'document_share_access_log', 'document_share_links',
+  'kb_article_relations', 'kb_article_reviewers', 'kb_article_templates', 'kb_articles',
+  'document_default_folders',
   // Document associations must come before documents
   'document_associations',
 
