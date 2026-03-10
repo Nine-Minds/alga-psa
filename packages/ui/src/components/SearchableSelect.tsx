@@ -55,6 +55,14 @@ interface SearchableSelectProps {
   portalContainer?: Element | null;
   /** Size variant for the select trigger */
   size?: SelectSize;
+  /** Allow selecting a typed value that does not already exist in the options list */
+  allowCustomValue?: boolean;
+  /** Customize the label shown for the create/use-typed-value option */
+  customValueLabel?: (value: string) => string;
+}
+
+function normalizeOptionText(value: string): string {
+  return value.trim().toLowerCase();
 }
 
 export function SearchableSelect({
@@ -74,6 +82,8 @@ export function SearchableSelect({
   maxListHeight = '15rem',
   portalContainer,
   size = 'md',
+  allowCustomValue = false,
+  customValueLabel,
 }: SearchableSelectProps & AutomationProps): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -121,6 +131,21 @@ export function SearchableSelect({
       option.label.toString().toLowerCase().includes(searchLower)
     );
   }, [options, search]);
+
+  const normalizedSearch = search.trim();
+  const hasExactOptionMatch = useMemo(() => {
+    if (!normalizedSearch) {
+      return false;
+    }
+
+    const normalized = normalizeOptionText(normalizedSearch);
+    return options.some((option: SelectOption) => (
+      normalizeOptionText(option.label) === normalized ||
+      normalizeOptionText(option.value) === normalized
+    ));
+  }, [normalizedSearch, options]);
+
+  const showCustomValueOption = allowCustomValue && Boolean(normalizedSearch) && !hasExactOptionMatch;
 
   // Find the selected option label
   const selectedOption = options.find((option: SelectOption) => option.value === value);
@@ -272,13 +297,32 @@ export function SearchableSelect({
               {emptyMessage}
             </div>
           )}
+          {showCustomValueOption && (
+            <Command.Item
+              key={`custom-${normalizedSearch}`}
+              value={`custom-${normalizedSearch}`}
+              onSelect={() => {
+                onChange(normalizedSearch);
+                setOpen(false);
+              }}
+              className={cn(
+                'mt-1 flex items-center px-2 py-1.5 text-sm rounded-sm cursor-pointer border-t border-border',
+                'hover:bg-muted',
+                'aria-selected:bg-muted'
+              )}
+            >
+              <span className="flex-1">
+                {customValueLabel ? customValueLabel(normalizedSearch) : `Use "${normalizedSearch}"`}
+              </span>
+            </Command.Item>
+          )}
         </Command.List>
       </Command>
     </div>
   );
 
   return (
-    <div className={label ? 'mb-4' : ''} id={id} data-automation-type="searchable-select">
+    <div className={label ? 'mb-4' : ''} data-automation-type="searchable-select">
       {label && (
         <label id={labelId} className="block text-sm font-medium text-foreground mb-1">
           {label}
@@ -322,7 +366,7 @@ export function SearchableSelect({
           {...automationIdProps}
         >
           <span className={cn("truncate", !selectedOption && "text-muted-foreground")}>
-            {selectedOption ? selectedOption.label : placeholder}
+            {selectedOption ? selectedOption.label : value || placeholder}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>

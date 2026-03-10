@@ -44,7 +44,7 @@ import { getAllCountries, ICountry } from '@alga-psa/clients/actions';
 import ClientDetails from '../clients/ClientDetails';
 import { ContactPortalTab } from './ContactPortalTab';
 import { ContactNotesPanel } from './panels/ContactNotesPanel';
-import ContactPhoneNumbersEditor, { validateContactPhoneNumbers } from './ContactPhoneNumbersEditor';
+import ContactPhoneNumbersEditor, { compactContactPhoneNumbers, validateContactPhoneNumbers } from './ContactPhoneNumbersEditor';
 
 const SwitchDetailItem: React.FC<{
   value: boolean;
@@ -561,6 +561,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       // Make sure contact_name_id is included in the data being sent
       const dataToUpdate = {
         ...editedContact,
+        phone_numbers: compactContactPhoneNumbers(editedContact.phone_numbers),
         contact_name_id: editedContact.contact_name_id
       };
 

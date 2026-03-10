@@ -37,8 +37,8 @@ export const contactFormSchema = z.object({
   email: z.union([z.string().trim().email('Invalid email address'), z.literal(''), z.null()]).optional(),
   phone_numbers: z.array(phoneRowInputSchema).optional(),
   client_id: z.string().uuid('Client ID must be a valid UUID').optional().nullable(),
-  role: z.string().optional(),
-  notes: z.string().optional(),
+  role: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
   is_inactive: z.boolean().optional(),
 });
 

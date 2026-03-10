@@ -1,18 +1,20 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   ContactPhoneCanonicalType,
   ContactPhoneNumberInput,
   IContactPhoneNumber,
 } from '@alga-psa/types';
 import { CONTACT_PHONE_CANONICAL_TYPES } from '@alga-psa/types';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Input } from '@alga-psa/ui/components/Input';
+import { Card } from '@alga-psa/ui/components/Card';
 import { Label } from '@alga-psa/ui/components/Label';
 import { PhoneInput } from '@alga-psa/ui/components/PhoneInput';
+import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
+import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { cn } from '@alga-psa/ui/lib/utils';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { validatePhoneNumber } from '@alga-psa/validation';
 import type { ICountry } from '@alga-psa/clients/actions';
@@ -20,6 +22,8 @@ import type { ICountry } from '@alga-psa/clients/actions';
 type EditablePhoneRow = ContactPhoneNumberInput & {
   _localId?: string;
 };
+
+type ContactPhoneRowInput = ContactPhoneNumberInput | IContactPhoneNumber;
 
 const CANONICAL_PHONE_TYPE_OPTIONS = CONTACT_PHONE_CANONICAL_TYPES.map((value) => ({
   value,
@@ -37,107 +41,133 @@ function normalizeCustomTypeLabel(label: string | null | undefined): string {
   return (label ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
-export function compactContactPhoneNumbers(
-  rows: Array<ContactPhoneNumberInput | IContactPhoneNumber>
-): ContactPhoneNumberInput[] {
-  const compacted = getMeaningfulPhoneRows(rows);
+function createRowLocalId(index: number): string {
+  return `phone-row-${index}-${Math.random().toString(36).slice(2, 9)}`;
+}
 
-  if (compacted.length === 0) {
+function normalizePhoneRowForDraft(
+  row: ContactPhoneRowInput,
+  index: number,
+  localId?: string
+): EditablePhoneRow {
+  const isCustomType = row.canonical_type === null;
+  const customType = isCustomType ? (row.custom_type ?? '') : null;
+
+  return {
+    contact_phone_number_id: row.contact_phone_number_id,
+    phone_number: row.phone_number ?? '',
+    canonical_type: isCustomType ? null : row.canonical_type ?? 'work',
+    custom_type: customType,
+    is_default: Boolean(row.is_default),
+    display_order: row.display_order ?? index,
+    _localId: localId ?? row.contact_phone_number_id ?? createRowLocalId(index),
+  };
+}
+
+export function normalizeDraftContactPhoneNumbers(
+  rows: Array<ContactPhoneRowInput | EditablePhoneRow>
+): ContactPhoneNumberInput[] {
+  if (rows.length === 0) {
     return [];
   }
 
-  const defaultIndex = compacted.findIndex((row) => row.is_default);
+  const defaultIndex = rows.findIndex((row) => row.is_default);
   const normalizedDefaultIndex = defaultIndex >= 0 ? defaultIndex : 0;
 
-  return compacted.map((row, index) => ({
-    ...row,
-    is_default: index === normalizedDefaultIndex,
-    display_order: index,
-  }));
+  return rows.map((row, index) => {
+    const phone_number = row.phone_number?.trim() ?? '';
+    const isCustomType = row.canonical_type === null;
+    const canonical_type = isCustomType ? null : row.canonical_type ?? 'work';
+    const custom_type = isCustomType ? (row.custom_type ?? '') : null;
+
+    return {
+      contact_phone_number_id: row.contact_phone_number_id,
+      phone_number,
+      canonical_type,
+      custom_type,
+      is_default: index === normalizedDefaultIndex,
+      display_order: index,
+    };
+  });
 }
 
-function getMeaningfulPhoneRows(
-  rows: Array<ContactPhoneNumberInput | IContactPhoneNumber>
+export function compactContactPhoneNumbers(
+  rows: Array<ContactPhoneRowInput | EditablePhoneRow>
 ): ContactPhoneNumberInput[] {
-  const compacted: ContactPhoneNumberInput[] = [];
-
-  rows.forEach((row, index) => {
+  const filteredRows = normalizeDraftContactPhoneNumbers(rows).filter((row) => {
     const phone_number = row.phone_number?.trim() ?? '';
     const custom_type = row.custom_type?.trim() ?? '';
     const canonical_type = row.canonical_type ?? null;
 
-    if (!phone_number && !custom_type && !canonical_type) {
-      return;
-    }
-
-    compacted.push({
-      contact_phone_number_id: row.contact_phone_number_id,
-      phone_number,
-      canonical_type: canonical_type === null ? null : (custom_type ? null : canonical_type || 'work'),
-      custom_type: custom_type || (canonical_type === null ? '' : null),
-      is_default: Boolean(row.is_default),
-      display_order: index,
-    });
+    return Boolean(phone_number || custom_type || canonical_type);
   });
 
-  return compacted;
+  return normalizeDraftContactPhoneNumbers(filteredRows);
 }
 
 export function validateContactPhoneNumbers(
   rows: Array<ContactPhoneNumberInput | IContactPhoneNumber>
 ): string[] {
   const errors: string[] = [];
-  const compacted = getMeaningfulPhoneRows(rows);
+  const normalizedRows = normalizeDraftContactPhoneNumbers(rows);
 
-  const defaultCount = compacted.filter((row) => row.is_default).length;
-  if (compacted.length > 0 && defaultCount !== 1) {
+  if (normalizedRows.length === 0) {
+    return [];
+  }
+
+  const defaultCount = normalizedRows.filter((row) => row.is_default).length;
+  if (defaultCount !== 1) {
     errors.push('Select exactly one default phone number.');
   }
 
   const seenCustomTypes = new Set<string>();
 
-  compacted.forEach((row, index) => {
+  normalizedRows.forEach((row, index) => {
     const rowLabel = `Phone ${index + 1}`;
 
     if (!row.phone_number || COUNTRY_CODE_ONLY_PATTERN.test(row.phone_number)) {
       errors.push(`${rowLabel}: Enter a complete phone number.`);
-      return;
-    }
-
-    const phoneError = validatePhoneNumber(row.phone_number);
-    if (phoneError) {
-      errors.push(`${rowLabel}: ${phoneError}`);
+    } else {
+      const phoneError = validatePhoneNumber(row.phone_number);
+      if (phoneError) {
+        errors.push(`${rowLabel}: ${phoneError}`);
+      }
     }
 
     const customType = row.custom_type?.trim() ?? '';
-    const canonicalType = row.canonical_type ?? null;
-    if (customType) {
+    if (row.canonical_type === null) {
+      if (!customType) {
+        errors.push(`${rowLabel}: Enter a custom phone type.`);
+        return;
+      }
+
       const normalizedCustomType = normalizeCustomTypeLabel(customType);
       if (seenCustomTypes.has(normalizedCustomType)) {
         errors.push(`${rowLabel}: Custom phone type labels must be unique.`);
       } else {
         seenCustomTypes.add(normalizedCustomType);
       }
-    } else if (!canonicalType) {
-      errors.push(`${rowLabel}: Choose a phone type.`);
     }
   });
 
   return Array.from(new Set(errors));
 }
 
-function toEditablePhoneRows(
-  rows: Array<ContactPhoneNumberInput | IContactPhoneNumber>
+function buildEditablePhoneRows(
+  rows: Array<ContactPhoneNumberInput | IContactPhoneNumber>,
+  previousRows: EditablePhoneRow[] = []
 ): EditablePhoneRow[] {
-  return rows.map((row, index) => ({
-    contact_phone_number_id: row.contact_phone_number_id,
-    phone_number: row.phone_number ?? '',
-    canonical_type: row.canonical_type === null ? null : row.custom_type ? null : row.canonical_type ?? 'work',
-    custom_type: row.canonical_type === null ? (row.custom_type ?? '') : row.custom_type ?? null,
-    is_default: Boolean(row.is_default),
-    display_order: row.display_order ?? index,
-    _localId: row.contact_phone_number_id ?? `phone-row-${index}`,
-  }));
+  return rows.map((row, index) => {
+    const previousRow = previousRows.find((candidate) => {
+      if (row.contact_phone_number_id && candidate.contact_phone_number_id) {
+        return candidate.contact_phone_number_id === row.contact_phone_number_id;
+      }
+
+      return candidate.display_order === (row.display_order ?? index);
+    });
+
+    return normalizePhoneRowForDraft(row, index, previousRow?._localId);
+  });
 }
 
 function createEmptyPhoneRow(isDefault: boolean): EditablePhoneRow {
@@ -147,8 +177,31 @@ function createEmptyPhoneRow(isDefault: boolean): EditablePhoneRow {
     custom_type: null,
     is_default: isDefault,
     display_order: 0,
-    _localId: `phone-row-${Math.random().toString(36).slice(2, 9)}`,
+    _localId: createRowLocalId(0),
   };
+}
+
+function buildPhoneRowsSignature(rows: ContactPhoneNumberInput[]): string {
+  return JSON.stringify(rows);
+}
+
+export function moveContactPhoneRows(
+  rows: EditablePhoneRow[],
+  index: number,
+  direction: -1 | 1
+): EditablePhoneRow[] {
+  const targetIndex = index + direction;
+  if (targetIndex < 0 || targetIndex >= rows.length) {
+    return rows;
+  }
+
+  const nextRows = [...rows];
+  const [row] = nextRows.splice(index, 1);
+  nextRows.splice(targetIndex, 0, row);
+  return nextRows.map((entry, rowIndex) => ({
+    ...entry,
+    display_order: rowIndex,
+  }));
 }
 
 function inferCountryCode(phoneNumber: string, countries: ICountry[]): string {
@@ -201,6 +254,20 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
   const [countryCode, setCountryCode] = useState(() => inferCountryCode(row.phone_number ?? '', countries));
   const phoneCode = countries.find((country) => country.code === countryCode)?.phone_code;
   const typeValue = row.canonical_type === null ? 'custom' : row.canonical_type ?? 'work';
+  const customTypeOptions = useMemo(
+    () => Array.from(
+      new Map(
+        customTypeSuggestions
+          .map((suggestion) => suggestion.trim())
+          .filter(Boolean)
+          .map((suggestion) => [normalizeCustomTypeLabel(suggestion), suggestion] as const)
+      ).values()
+    ).map((suggestion) => ({
+      value: suggestion,
+      label: suggestion,
+    })),
+    [customTypeSuggestions]
+  );
 
   useEffect(() => {
     setCountryCode((current) => {
@@ -213,26 +280,33 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
   }, [countries, row.phone_number, rowKey]);
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4" data-testid={`${id}-row-${index}`}>
-      <div className="mb-3 flex items-center justify-between gap-3">
+    <Card
+      className="p-4"
+      data-testid={`${id}-row-${index}`}
+    >
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
         <div>
-          <div className="text-sm font-medium text-gray-900">Phone {index + 1}</div>
-          <div className="text-xs text-gray-500">
+          <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">Phone {index + 1}</div>
+          <div className="text-xs text-muted-foreground">
             {row.is_default ? 'Default phone number' : 'Secondary phone number'}
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="radio"
-              name={`${id}-default-phone`}
-              checked={row.is_default}
-              onChange={onSetDefault}
-              disabled={disabled}
-              data-testid={`${id}-default-${index}`}
-            />
-            Default
-          </label>
+        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+          <RadioGroup
+            id={`${id}-default-${index}`}
+            name={`${id}-default-phone`}
+            value={row.is_default ? `phone-${index}` : undefined}
+            onChange={() => onSetDefault()}
+            options={[
+              {
+                value: `phone-${index}`,
+                label: 'Default',
+              },
+            ]}
+            orientation="horizontal"
+            className="gap-2"
+            disabled={disabled}
+          />
           <Button
             id={`${id}-move-up-${index}`}
             type="button"
@@ -269,7 +343,7 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(240px,0.9fr)] xl:items-start">
         <PhoneInput
           id={`${id}-phone-${index}`}
           label="Phone Number"
@@ -281,10 +355,16 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
           onCountryChange={setCountryCode}
           allowExtensions={true}
           disabled={disabled}
+          className="w-full"
           data-automation-id={`${id}-phone-${index}`}
         />
-        <div className="space-y-2">
-          <Label htmlFor={`${id}-type-${index}`}>Phone Type</Label>
+        <div className="space-y-1">
+          <Label
+            htmlFor={`${id}-type-${index}`}
+            className="block text-gray-700"
+          >
+            Phone Type
+          </Label>
           <CustomSelect
             id={`${id}-type-${index}`}
             value={typeValue}
@@ -301,31 +381,39 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
             }}
             options={PHONE_TYPE_OPTIONS}
             disabled={disabled}
+            className="h-[42px] rounded-md"
           />
           {typeValue === 'custom' && (
-            <div className="space-y-2">
-              <Input
+            <div className="space-y-1">
+              <Label
+                htmlFor={`${id}-custom-type-${index}`}
+                className="block text-[rgb(var(--color-text-700))]"
+              >
+                Custom Phone Type
+              </Label>
+              <SearchableSelect
                 id={`${id}-custom-type-${index}`}
                 value={row.custom_type ?? ''}
-                onChange={(event) => onChange({
+                onChange={(value) => onChange({
                   canonical_type: null,
-                  custom_type: event.target.value,
+                  custom_type: value,
                 })}
-                list={`${id}-custom-type-suggestions`}
-                placeholder="Enter a custom phone type"
+                options={customTypeOptions}
+                placeholder="Select or enter a custom phone type"
+                searchPlaceholder="Search or enter a custom phone type..."
+                emptyMessage="No matching custom phone types."
+                allowCustomValue={true}
+                customValueLabel={(value) => `Use "${value}"`}
                 disabled={disabled}
+                className="h-[42px] rounded-md"
+                dropdownMode="overlay"
                 data-automation-id={`${id}-custom-type-${index}`}
               />
-              <datalist id={`${id}-custom-type-suggestions`}>
-                {customTypeSuggestions.map((suggestion) => (
-                  <option key={suggestion} value={suggestion} />
-                ))}
-              </datalist>
             </div>
           )}
         </div>
       </div>
-    </div>
+    </Card>
   );
 };
 
@@ -352,15 +440,43 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
   onValidationChange,
   allowEmpty = true,
 }) => {
-  const rows = useMemo(() => {
-    const existingRows = toEditablePhoneRows(value);
+  const createDraftRowsFromValue = useCallback((incomingValue: Array<ContactPhoneNumberInput | IContactPhoneNumber>) => {
+    const existingRows = buildEditablePhoneRows(incomingValue);
     if (existingRows.length > 0 || allowEmpty) {
       return existingRows;
     }
     return [createEmptyPhoneRow(true)];
-  }, [allowEmpty, value]);
+  }, [allowEmpty]);
 
-  const validationErrors = useMemo(() => validateContactPhoneNumbers(rows), [rows]);
+  const [draftRows, setDraftRows] = useState<EditablePhoneRow[]>(() => createDraftRowsFromValue(value));
+  const lastEmittedSignatureRef = useRef<string | null>(null);
+  const externalSignature = useMemo(
+    () => buildPhoneRowsSignature(normalizeDraftContactPhoneNumbers(value)),
+    [value]
+  );
+  const draftSignature = useMemo(
+    () => buildPhoneRowsSignature(normalizeDraftContactPhoneNumbers(draftRows)),
+    [draftRows]
+  );
+
+  useEffect(() => {
+    if (
+      externalSignature === lastEmittedSignatureRef.current ||
+      externalSignature === draftSignature
+    ) {
+      return;
+    }
+
+    setDraftRows((previousRows) => {
+      const syncedRows = buildEditablePhoneRows(value, previousRows);
+      if (syncedRows.length > 0 || allowEmpty) {
+        return syncedRows;
+      }
+      return [createEmptyPhoneRow(true)];
+    });
+  }, [allowEmpty, draftSignature, externalSignature, value]);
+
+  const validationErrors = useMemo(() => validateContactPhoneNumbers(draftRows), [draftRows]);
 
   useEffect(() => {
     if (onValidationChange) {
@@ -370,19 +486,22 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
 
   const displayedErrors = errorMessages ?? validationErrors;
 
-  const updateRows = (nextRows: EditablePhoneRow[]) => {
-    onChange(compactContactPhoneNumbers(nextRows));
-  };
+  const commitRows = useCallback((nextRows: EditablePhoneRow[]) => {
+    const normalizedRows = normalizeDraftContactPhoneNumbers(nextRows);
+    lastEmittedSignatureRef.current = buildPhoneRowsSignature(normalizedRows);
+    setDraftRows(nextRows);
+    onChange(normalizedRows);
+  }, [onChange]);
 
   const handleRowChange = (index: number, updates: Partial<EditablePhoneRow>) => {
-    updateRows(
-      rows.map((row, rowIndex) => rowIndex === index ? { ...row, ...updates } : row)
+    commitRows(
+      draftRows.map((row, rowIndex) => rowIndex === index ? { ...row, ...updates } : row)
     );
   };
 
   const handleSetDefault = (index: number) => {
-    updateRows(
-      rows.map((row, rowIndex) => ({
+    commitRows(
+      draftRows.map((row, rowIndex) => ({
         ...row,
         is_default: rowIndex === index,
       }))
@@ -390,37 +509,30 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
   };
 
   const handleMove = (index: number, direction: -1 | 1) => {
-    const targetIndex = index + direction;
-    if (targetIndex < 0 || targetIndex >= rows.length) {
-      return;
-    }
-
-    const nextRows = [...rows];
-    const [row] = nextRows.splice(index, 1);
-    nextRows.splice(targetIndex, 0, row);
-    updateRows(nextRows);
+    commitRows(moveContactPhoneRows(draftRows, index, direction));
   };
 
   const handleRemove = (index: number) => {
-    const nextRows = rows.filter((_, rowIndex) => rowIndex !== index);
+    const nextRows = draftRows.filter((_, rowIndex) => rowIndex !== index);
     if (nextRows.length === 0) {
-      updateRows([]);
+      commitRows([]);
       return;
     }
 
     const hasDefault = nextRows.some((row) => row.is_default);
-    updateRows(
+    commitRows(
       nextRows.map((row, rowIndex) => ({
         ...row,
         is_default: hasDefault ? row.is_default : rowIndex === 0,
+        display_order: rowIndex,
       }))
     );
   };
 
   const handleAddPhone = () => {
-    updateRows([
-      ...rows,
-      createEmptyPhoneRow(rows.length === 0),
+    commitRows([
+      ...draftRows,
+      createEmptyPhoneRow(draftRows.length === 0),
     ]);
   };
 
@@ -446,13 +558,13 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
         </Button>
       </div>
 
-      {rows.length === 0 ? (
+      {draftRows.length === 0 ? (
         <div className="rounded-lg border border-dashed border-gray-300 bg-white p-4 text-sm text-gray-500">
           No phone numbers yet.
         </div>
       ) : (
         <div className="space-y-3">
-          {rows.map((row, index) => (
+          {draftRows.map((row, index) => (
             <ContactPhoneRow
               key={row.contact_phone_number_id ?? row._localId ?? `${index}`}
               id={id}
@@ -462,8 +574,8 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
               customTypeSuggestions={customTypeSuggestions}
               disabled={disabled}
               canMoveUp={index > 0}
-              canMoveDown={index < rows.length - 1}
-              canRemove={rows.length > 0}
+              canMoveDown={index < draftRows.length - 1}
+              canRemove={draftRows.length > 0}
               onChange={(updates) => handleRowChange(index, updates)}
               onSetDefault={() => handleSetDefault(index)}
               onMoveUp={() => handleMove(index, -1)}
@@ -475,13 +587,15 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
       )}
 
       {displayedErrors.length > 0 && (
-        <div className={cn('rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700')}>
-          <ul className="list-disc space-y-1 pl-5">
-            {displayedErrors.map((error) => (
-              <li key={error}>{error}</li>
-            ))}
-          </ul>
-        </div>
+        <Alert variant="destructive" className="py-3">
+          <AlertDescription>
+            <ul className="list-disc space-y-1 pl-5">
+              {displayedErrors.map((error) => (
+                <li key={error}>{error}</li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
       )}
     </div>
   );

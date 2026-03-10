@@ -20,7 +20,7 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
 import ContactAvatarUpload from './ContactAvatarUpload';
 import { getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
-import ContactPhoneNumbersEditor, { validateContactPhoneNumbers } from './ContactPhoneNumbersEditor';
+import ContactPhoneNumbersEditor, { compactContactPhoneNumbers, validateContactPhoneNumbers } from './ContactPhoneNumbersEditor';
 
 interface ContactDetailsEditProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -160,8 +160,11 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
         setError(currentPhoneErrors[0]);
         return;
       }
-      
-      const updatedContact = await updateContact(contact);
+
+      const updatedContact = await updateContact({
+        ...contact,
+        phone_numbers: compactContactPhoneNumbers(contact.phone_numbers),
+      });
       onSave(updatedContact);
     } catch (err) {
       console.error('Error updating contact:', err);

@@ -234,8 +234,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       validationMessages.push(emailError);
     }
 
-    const sanitizedPhoneNumbers = compactContactPhoneNumbers(phoneNumbers);
-    const currentPhoneErrors = validateContactPhoneNumbers(sanitizedPhoneNumbers);
+    const currentPhoneErrors = validateContactPhoneNumbers(phoneNumbers);
     setPhoneValidationErrors(currentPhoneErrors);
     if (currentPhoneErrors.length > 0) {
       fieldValidationErrors.contact_phone = currentPhoneErrors[0];
@@ -267,6 +266,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
 
     try {
       setError(null); // Clear any existing errors
+      const sanitizedPhoneNumbers = compactContactPhoneNumbers(phoneNumbers);
       const contactData = {
         full_name: fullName.trim(),
         email: email.trim(),
