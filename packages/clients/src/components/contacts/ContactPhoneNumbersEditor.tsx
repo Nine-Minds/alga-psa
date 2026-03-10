@@ -10,6 +10,7 @@ import { CONTACT_PHONE_CANONICAL_TYPES } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Label } from '@alga-psa/ui/components/Label';
 import { PhoneInput } from '@alga-psa/ui/components/PhoneInput';
 import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
@@ -467,6 +468,8 @@ interface ContactPhoneNumbersEditorProps {
   errorMessages?: string[];
   onValidationChange?: (errors: string[]) => void;
   allowEmpty?: boolean;
+  onCheckCustomTypeUsage?: (label: string) => Promise<{ label: string; usageCount: number }>;
+  onDeleteOrphanedPhoneTypes?: (labels: string[]) => Promise<void>;
 }
 
 const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
@@ -479,6 +482,8 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
   errorMessages,
   onValidationChange,
   allowEmpty = true,
+  onCheckCustomTypeUsage,
+  onDeleteOrphanedPhoneTypes,
 }) => {
   const createDraftRowsFromValue = useCallback((incomingValue: Array<ContactPhoneNumberInput | IContactPhoneNumber>) => {
     const existingRows = buildEditablePhoneRows(incomingValue);
@@ -592,7 +597,11 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
     commitRows(moveContactPhoneRows(draftRows, index, direction));
   };
 
-  const handleRemove = (index: number) => {
+  const [pendingRemoveIndex, setPendingRemoveIndex] = useState<number | null>(null);
+  const [pendingRemoveTypeLabel, setPendingRemoveTypeLabel] = useState('');
+  const [showLastUsageDialog, setShowLastUsageDialog] = useState(false);
+
+  const executeRemove = useCallback((index: number) => {
     const nextRows = draftRows.filter((_, rowIndex) => rowIndex !== index);
     if (nextRows.length === 0) {
       commitRows([]);
@@ -607,6 +616,50 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
         display_order: rowIndex,
       }))
     );
+  }, [draftRows, commitRows]);
+
+  const handleRemove = async (index: number) => {
+    const row = draftRows[index];
+    const customType = row.custom_type?.trim();
+
+    // If row has a custom type and we have a usage check callback, check last usage
+    if (customType && row.canonical_type === null && onCheckCustomTypeUsage) {
+      try {
+        const usage = await onCheckCustomTypeUsage(customType);
+        if (usage.usageCount === 1) {
+          setPendingRemoveIndex(index);
+          setPendingRemoveTypeLabel(customType);
+          setShowLastUsageDialog(true);
+          return;
+        }
+      } catch {
+        // If check fails, proceed with removal without dialog
+      }
+    }
+
+    executeRemove(index);
+  };
+
+  const handleConfirmRemoveAndDeleteType = async () => {
+    if (pendingRemoveIndex === null) return;
+    try {
+      executeRemove(pendingRemoveIndex);
+      if (onDeleteOrphanedPhoneTypes) {
+        await onDeleteOrphanedPhoneTypes([pendingRemoveTypeLabel]);
+      }
+    } finally {
+      setShowLastUsageDialog(false);
+      setPendingRemoveIndex(null);
+      setPendingRemoveTypeLabel('');
+    }
+  };
+
+  const handleRemoveAndKeepType = () => {
+    if (pendingRemoveIndex === null) return;
+    executeRemove(pendingRemoveIndex);
+    setShowLastUsageDialog(false);
+    setPendingRemoveIndex(null);
+    setPendingRemoveTypeLabel('');
   };
 
   const handleAddPhone = () => {
@@ -661,7 +714,7 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
               onSetDefault={() => handleSetDefault(index)}
               onMoveUp={() => handleMove(index, -1)}
               onMoveDown={() => handleMove(index, 1)}
-              onRemove={() => handleRemove(index)}
+              onRemove={() => void handleRemove(index)}
             />
           ))}
         </div>
@@ -678,6 +731,23 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
           </AlertDescription>
         </Alert>
       )}
+
+      <ConfirmationDialog
+        id={`${id}-last-phone-type-usage-dialog`}
+        isOpen={showLastUsageDialog}
+        onClose={() => {
+          setShowLastUsageDialog(false);
+          setPendingRemoveIndex(null);
+          setPendingRemoveTypeLabel('');
+        }}
+        onConfirm={handleConfirmRemoveAndDeleteType}
+        onCancel={handleRemoveAndKeepType}
+        title="Last Phone Type Usage"
+        message={`This is the last use of custom phone type "${pendingRemoveTypeLabel}". Delete the type definition, or keep it for future use?`}
+        confirmLabel="Remove & Delete Type"
+        thirdButtonLabel="Remove & Keep Type"
+        cancelLabel="Cancel"
+      />
     </div>
   );
 };
