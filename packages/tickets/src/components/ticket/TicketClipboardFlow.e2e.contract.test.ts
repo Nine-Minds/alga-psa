@@ -3,22 +3,27 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 describe('ticket clipboard image flow end-to-end contract', () => {
-  it('T032: paste -> upload -> save/render pipeline uses attachment-serving URLs', () => {
+  it('routes description and comment editors through the shared ticket rich-text helpers', () => {
     const conversationPath = path.resolve(__dirname, './TicketConversation.tsx');
+    const ticketInfoPath = path.resolve(__dirname, './TicketInfo.tsx');
     const ticketDetailsPath = path.resolve(__dirname, './TicketDetails.tsx');
     const commentItemPath = path.resolve(__dirname, './CommentItem.tsx');
     const conversationSource = fs.readFileSync(conversationPath, 'utf-8');
+    const ticketInfoSource = fs.readFileSync(ticketInfoPath, 'utf-8');
     const ticketDetailsSource = fs.readFileSync(ticketDetailsPath, 'utf-8');
     const commentItemSource = fs.readFileSync(commentItemPath, 'utf-8');
 
-    expect(conversationSource).toContain('uploadFile={handleClipboardImageUpload}');
-    expect(conversationSource).toContain('if (onClipboardImageUploaded) {');
-    expect(conversationSource).toContain('const uploadResult = await uploadDocument(formData, {');
-    expect(conversationSource).toContain('`/api/documents/view/${uploadedDocument.file_id}`');
+    expect(conversationSource).toContain('useTicketRichTextUploadSession');
+    expect(conversationSource).toContain('uploadFile={composeUploadSession.uploadFile}');
+    expect(ticketInfoSource).toContain('useTicketRichTextUploadSession');
+    expect(ticketInfoSource).toContain('uploadFile={descriptionUploadSession.uploadFile}');
+    expect(ticketInfoSource).toContain('searchMentions={searchUsersForMentions}');
     expect(ticketDetailsSource).toContain('const refreshTicketDocuments = useCallback(async () => {');
     expect(ticketDetailsSource).toContain('const docs = await getDocumentByTicketId(ticket.ticket_id);');
     expect(ticketDetailsSource).toContain('onClipboardImageUploaded={refreshTicketDocuments}');
-    expect(commentItemSource).toContain('const result = JSON.parse(noteContent)');
+    expect(ticketDetailsSource).toContain('onClipboardImageUploaded={refreshTicketDocuments}');
+    expect(commentItemSource).toContain("import { parseTicketRichTextContent } from '../../lib/ticketRichText';");
+    expect(commentItemSource).toContain('parseCommentNoteContent');
     expect(commentItemSource).toContain('<RichTextViewer');
   });
 
@@ -26,12 +31,12 @@ describe('ticket clipboard image flow end-to-end contract', () => {
     const conversationPath = path.resolve(__dirname, './TicketConversation.tsx');
     const source = fs.readFileSync(conversationPath, 'utf-8');
 
-    expect(source).toContain('const handleDeleteDraftClipboardImages = async () => {');
-    expect(source).toContain('const result = await deleteDraftClipboardImages({');
-    expect(source).toContain('documentIds: draftClipboardImages.map((image) => image.documentId)');
-    expect(source).toContain('if (onClipboardImageUploaded) {');
-    expect(source).toContain('await Promise.resolve(onClipboardImageUploaded());');
-    expect(source).toContain('setDraftClipboardImages([])');
+    expect(source).toContain('const composeUploadSession = useTicketRichTextUploadSession({');
+    expect(source).toContain('trackDraftUploads: true');
+    expect(source).toContain('composeUploadSession.requestDiscard()');
+    expect(source).toContain('onConfirm={composeUploadSession.deleteTrackedDraftClipboardImages}');
+    expect(source).toContain('onCancel={composeUploadSession.keepDraftClipboardImages}');
+    expect(source).toContain('composeUploadSession.resetDraftTracking()');
     expect(source).toContain('setShowEditor(false)');
   });
 
@@ -49,7 +54,6 @@ describe('ticket clipboard image flow end-to-end contract', () => {
     expect(ticketDetailsSource).toContain('const result = await deleteDraftClipboardImages({');
     expect(commentItemSource).toContain('onClick={() => onDelete(conversation)}');
   });
-
   it('T034: edit-mode content changes do not mutate TicketDetails currentComment state on every keystroke', () => {
     const ticketDetailsPath = path.resolve(__dirname, './TicketDetails.tsx');
     const source = fs.readFileSync(ticketDetailsPath, 'utf-8');

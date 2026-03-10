@@ -14,7 +14,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { PrioritySelect } from '@alga-psa/ui/components';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { getUserAvatarUrlsBatchAction, searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { CategoryPicker } from '../CategoryPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
@@ -39,6 +39,9 @@ import { SlaStatusBadge } from '@alga-psa/sla/components';
 import type { SlaTimerStatus } from '@alga-psa/sla/types';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import type { ITeam } from '@alga-psa/types';
+import { useSession } from 'next-auth/react';
+import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../lib/ticketRichText';
+import { useTicketRichTextUploadSession } from './useTicketRichTextUploadSession';
 
 
 interface TicketInfoProps {
@@ -72,6 +75,7 @@ interface TicketInfoProps {
   responseStateTrackingEnabled?: boolean;
   teams?: ITeam[];
   onAssignTeam?: (teamId: string) => Promise<void>;
+  onClipboardImageUploaded?: () => Promise<void> | void;
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
@@ -102,7 +106,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   responseStateTrackingEnabled = true,
   teams = [],
   onAssignTeam,
+  onClipboardImageUploaded,
 }) => {
+  const { data: session } = useSession();
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   // Use initialCategories from server to avoid timing issues on first render
   const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
@@ -365,51 +371,40 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   // NOTE: ITIL category selection is now handled by the unified CategoryPicker
   // Categories are managed through the regular onCategoryChange handler
 
-  const [descriptionContent, setDescriptionContent] = useState<PartialBlock[]>([{
-    type: "paragraph",
-    props: {
-      textAlignment: "left",
-      backgroundColor: "default",
-      textColor: "default"
-    },
-    content: [{
-      type: "text",
-      text: "",
-      styles: {}
-    }]
-  }]);
+  const [descriptionContent, setDescriptionContent] = useState<PartialBlock[]>(() =>
+    parseTicketRichTextContent(ticket.attributes?.description as string | undefined)
+  );
+
+  const discardDescriptionEdit = useCallback(() => {
+    const originalDescription =
+      originalDescriptionRef.current ??
+      parseTicketRichTextContent(ticket.attributes?.description as string | undefined);
+    setDescriptionContent(originalDescription);
+    setHasDescriptionContentChanged(false);
+    setIsEditingDescription(false);
+  }, [ticket.attributes?.description]);
+
+  const descriptionUploadSession = useTicketRichTextUploadSession({
+    componentLabel: 'TicketInfo',
+    ticketId: ticket.ticket_id,
+    userId: session?.user?.id,
+    trackDraftUploads: true,
+    onDocumentsChanged: onClipboardImageUploaded,
+    onDiscard: discardDescriptionEdit,
+  });
 
   useEffect(() => {
-    // Initialize description content from the ticket attributes
-    const descriptionText = (ticket.attributes?.description as string) || '';
-
-    if (descriptionText) {
-      try {
-        const parsedContent = JSON.parse(descriptionText);
-        if (Array.isArray(parsedContent) && parsedContent.length > 0) {
-          setDescriptionContent(parsedContent);
-          return;
-        }
-      } catch (e) {
-        // If parsing fails, continue to the fallback
-      }
-
-      // Fallback: create a default block with the text
-      setDescriptionContent([{
-        type: "paragraph",
-        props: {
-          textAlignment: "left",
-          backgroundColor: "default",
-          textColor: "default"
-        },
-        content: [{
-          type: "text",
-          text: descriptionText,
-          styles: {}
-        }]
-      }]);
+    if (isEditingDescription) {
+      return;
     }
-  }, [ticket, conversations]);
+
+    const parsedDescription = parseTicketRichTextContent(
+      ticket.attributes?.description as string | undefined
+    );
+    setDescriptionContent(parsedDescription);
+    originalDescriptionRef.current = parsedDescription;
+    setHasDescriptionContentChanged(false);
+  }, [ticket.attributes?.description, isEditingDescription]);
 
   // Sync categories with initialCategories when they change
   useEffect(() => {
@@ -528,6 +523,21 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     });
   }, [itilImpact, itilUrgency]);
 
+  const finalizeSavedDescription = useCallback(() => {
+    originalDescriptionRef.current = descriptionContent;
+    descriptionUploadSession.resetDraftTracking();
+    setHasDescriptionContentChanged(false);
+    setIsEditingDescription(false);
+  }, [descriptionContent, descriptionUploadSession]);
+
+  const persistDescriptionChanges = useCallback(async () => {
+    if (!isEditingDescription || !onUpdateDescription) {
+      return true;
+    }
+
+    return onUpdateDescription(serializeTicketRichTextContent(descriptionContent));
+  }, [descriptionContent, isEditingDescription, onUpdateDescription]);
+
   // Handler for saving all pending changes
   const handleSaveChanges = useCallback(async () => {
     if (!hasUnsavedChanges) return;
@@ -549,8 +559,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         }
       }
 
-      if (isEditingDescription && onUpdateDescription) {
-        const descriptionSaved = await onUpdateDescription(JSON.stringify(descriptionContent));
+      if (isEditingDescription) {
+        const descriptionSaved = await persistDescriptionChanges();
         if (!descriptionSaved) {
           return;
         }
@@ -575,11 +585,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           setPendingBoardConfig(null);
           setPendingCategories(null);
           if (isEditingDescription) {
-            originalDescriptionRef.current = descriptionContent;
+            finalizeSavedDescription();
           }
-          setHasDescriptionContentChanged(false);
           setIsEditingTitle(false);
-          setIsEditingDescription(false);
           setSaveSuccess(true);
           if (saveSuccessTimeoutRef.current) {
             clearTimeout(saveSuccessTimeoutRef.current);
@@ -606,11 +614,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         setPendingBoardConfig(null);
         setPendingCategories(null);
         if (isEditingDescription) {
-          originalDescriptionRef.current = descriptionContent;
+          finalizeSavedDescription();
         }
-        setHasDescriptionContentChanged(false);
         setIsEditingTitle(false);
-        setIsEditingDescription(false);
         setSaveSuccess(true);
         if (saveSuccessTimeoutRef.current) {
           clearTimeout(saveSuccessTimeoutRef.current);
@@ -622,23 +628,25 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [hasUnsavedChanges, pendingChanges, pendingItilChanges, titleValue, ticket.title, onSaveChanges, onSelectChange, onItilFieldChange, isEditingDescription, onUpdateDescription, descriptionContent, pendingTeamId, onAssignTeam]);
+  }, [hasUnsavedChanges, pendingChanges, pendingItilChanges, titleValue, ticket.title, isEditingDescription, pendingTeamId, onAssignTeam, onSaveChanges, onSelectChange, onItilFieldChange, finalizeSavedDescription, persistDescriptionChanges]);
 
   // Handler for discarding all pending changes
-  const handleDiscardChanges = useCallback(() => {
+  const discardNonDescriptionChanges = useCallback(() => {
     setTitleValue(ticket.title);
     setPendingChanges({});
     setPendingItilChanges({});
     setPendingBoardConfig(null);
     setPendingCategories(null);
     setPendingTeamId(null);
-    if (originalDescriptionRef.current) {
-      setDescriptionContent(originalDescriptionRef.current);
-    }
-    setHasDescriptionContentChanged(false);
     setIsEditingTitle(false);
-    setIsEditingDescription(false);
   }, [ticket.title]);
+
+  const handleDiscardChanges = useCallback(() => {
+    discardNonDescriptionChanges();
+    if (isEditingDescription) {
+      descriptionUploadSession.requestDiscard();
+    }
+  }, [descriptionUploadSession, discardNonDescriptionChanges, isEditingDescription]);
 
   // Handler for Cancel button click
   const handleCancelClick = useCallback(() => {
@@ -1323,12 +1331,14 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   <TextEditor
                     id={`${id}-description-editor`}
                     initialContent={descriptionContent}
+                    searchMentions={searchUsersForMentions}
+                    uploadFile={descriptionUploadSession.uploadFile}
                     onContentChange={(content) => {
                       setDescriptionContent(content);
                       // Track if content has changed from original
                       if (originalDescriptionRef.current) {
-                        const originalStr = JSON.stringify(originalDescriptionRef.current);
-                        const currentStr = JSON.stringify(content);
+                        const originalStr = serializeTicketRichTextContent(originalDescriptionRef.current);
+                        const currentStr = serializeTicketRichTextContent(content);
                         setHasDescriptionContentChanged(originalStr !== currentStr);
                       }
                     }}
@@ -1338,17 +1348,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   <Button
                     id={`${id}-save-description-btn`}
                     onClick={async () => {
-                      if (onUpdateDescription) {
-                        try {
-                          const result = await onUpdateDescription(JSON.stringify(descriptionContent));
-                          if (result === true) {
-                            originalDescriptionRef.current = descriptionContent;
-                            setHasDescriptionContentChanged(false);
-                            setIsEditingDescription(false);
-                          }
-                        } catch (error) {
-                          console.error('Failed to save description:', error);
+                      try {
+                        const result = await persistDescriptionChanges();
+                        if (result === true) {
+                          finalizeSavedDescription();
                         }
+                      } catch (error) {
+                        console.error('Failed to save description:', error);
                       }
                     }}
                     disabled={isSubmitting}
@@ -1359,14 +1365,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                     id={`${id}-cancel-description-btn`}
                     disabled={isSubmitting}
                     variant="outline"
-                    onClick={() => {
-                      // Reset to original content and cancel editing
-                      if (originalDescriptionRef.current) {
-                        setDescriptionContent(originalDescriptionRef.current);
-                      }
-                      setHasDescriptionContentChanged(false);
-                      setIsEditingDescription(false);
-                    }}
+                    onClick={descriptionUploadSession.requestDiscard}
                   >
                     Cancel
                   </Button>
@@ -1422,6 +1421,19 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             message="You have unsaved changes. Are you sure you want to discard them?"
             confirmLabel="Discard"
             cancelLabel="Keep Editing"
+          />
+          <ConfirmationDialog
+            id={`${id}-description-clipboard-draft-cancel-dialog`}
+            isOpen={descriptionUploadSession.showDraftCancelDialog}
+            onClose={() => descriptionUploadSession.setShowDraftCancelDialog(false)}
+            onConfirm={descriptionUploadSession.deleteTrackedDraftClipboardImages}
+            onCancel={descriptionUploadSession.keepDraftClipboardImages}
+            title="Pasted Images Detected"
+            message="This description includes pasted images that were already uploaded as ticket documents. Keep them, or delete them permanently?"
+            confirmLabel="Delete Images"
+            thirdButtonLabel="Keep Images"
+            cancelLabel="Continue Editing"
+            isConfirming={descriptionUploadSession.isDeletingDraftImages}
           />
         </div>
       </div>

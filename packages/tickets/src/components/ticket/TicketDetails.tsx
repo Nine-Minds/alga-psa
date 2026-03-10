@@ -2022,6 +2022,7 @@ const handleClose = () => {
                                     renderProjectTaskActions={renderCreateProjectTask}
                                     teams={teams}
                                     onAssignTeam={handleAssignTeam}
+                                    onClipboardImageUploaded={refreshTicketDocuments}
                                     additionalAgents={additionalAgents.map(a => ({
                                         user_id: a.additional_user_id || a.assigned_to,
                                         name: availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))
