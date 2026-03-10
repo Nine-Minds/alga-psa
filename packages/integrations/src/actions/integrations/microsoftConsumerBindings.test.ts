@@ -598,6 +598,67 @@ describe('Microsoft consumer binding actions', () => {
     expect(created.success).toBe(true);
   });
 
+  it('T367-T374: migration binding materialization handles no-profile, sole-profile, calendar-alignment, and archived-profile tenant states', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+
+    const emptyTenant = await listMicrosoftConsumerBindings();
+    expect(emptyTenant.success).toBe(true);
+    expect(emptyTenant.bindings).toEqual([
+      expect.objectContaining({ consumerType: 'msp_sso', profileId: null }),
+      expect.objectContaining({ consumerType: 'email', profileId: null }),
+      expect.objectContaining({ consumerType: 'calendar', profileId: null }),
+      expect.objectContaining({ consumerType: 'teams', profileId: null }),
+    ]);
+    expect(microsoftProfiles).toHaveLength(0);
+    expect(microsoftConsumerBindings).toHaveLength(0);
+
+    const created = await createMicrosoftProfile({
+      displayName: 'Primary Profile',
+      clientId: 'primary-client-id',
+      clientSecret: 'primary-secret',
+      tenantId: 'tenant-guid-1',
+    });
+    calendarProviders.push({
+      id: 'calendar-provider-1',
+      tenant: 'tenant-1',
+      provider_type: 'microsoft',
+    });
+
+    const aligned = await listMicrosoftConsumerBindings();
+    expect(aligned.success).toBe(true);
+    expect(aligned.bindings?.find((binding) => binding.consumerType === 'calendar')).toEqual({
+      consumerType: 'calendar',
+      consumerLabel: 'Calendar',
+      profileId: created.profile!.profileId,
+      profileDisplayName: 'Primary Profile',
+      isArchived: false,
+    });
+    expect(microsoftConsumerBindings.filter((binding) => binding.consumer_type === 'calendar')).toEqual([
+      expect.objectContaining({
+        tenant: 'tenant-1',
+        consumer_type: 'calendar',
+        profile_id: created.profile!.profileId,
+      }),
+    ]);
+
+    const profileRow = microsoftProfiles.find((profile) => profile.profile_id === created.profile!.profileId);
+    expect(profileRow).toBeTruthy();
+    profileRow!.is_archived = true;
+    profileRow!.archived_at = new Date('2026-03-09T12:00:00.000Z').toISOString();
+    microsoftConsumerBindings.length = 0;
+
+    const archivedOnly = await listMicrosoftConsumerBindings();
+    expect(archivedOnly.success).toBe(true);
+    expect(archivedOnly.bindings?.find((binding) => binding.consumerType === 'calendar')).toEqual({
+      consumerType: 'calendar',
+      consumerLabel: 'Calendar',
+      profileId: null,
+      profileDisplayName: undefined,
+      isArchived: false,
+    });
+    expect(microsoftConsumerBindings).toHaveLength(0);
+  });
+
   it('requires an explicit Teams binding instead of falling back to a default Microsoft profile', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
 

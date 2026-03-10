@@ -194,7 +194,7 @@
   {
     "id": "T025",
     "description": "Happy path: Shared modules are required to consume edition-safe calendar entrypoints instead of concrete shared calendar implementations.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
@@ -202,7 +202,7 @@
   {
     "id": "T026",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for shared modules are required to consume edition-safe calendar entrypoints instead of concrete shared calendar implementations.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
@@ -210,7 +210,7 @@
   {
     "id": "T027",
     "description": "Happy path: Shared modules are required to consume edition-safe Microsoft consumer helpers instead of compatibility default resolution.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
@@ -218,7 +218,7 @@
   {
     "id": "T028",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for shared modules are required to consume edition-safe Microsoft consumer helpers instead of compatibility default resolution.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
@@ -226,7 +226,7 @@
   {
     "id": "T029",
     "description": "Happy path: One source of truth exists for deciding whether a calendar surface is active, stubbed, or unavailable by edition.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
@@ -234,7 +234,7 @@
   {
     "id": "T030",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for one source of truth exists for deciding whether a calendar surface is active, stubbed, or unavailable by edition.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
@@ -242,7 +242,7 @@
   {
     "id": "T031",
     "description": "Happy path: One source of truth exists for deciding which Microsoft consumer options are visible by edition.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
@@ -250,7 +250,7 @@
   {
     "id": "T032",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for one source of truth exists for deciding which Microsoft consumer options are visible by edition.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
@@ -258,7 +258,7 @@
   {
     "id": "T033",
     "description": "Happy path: The migration inventory identifies every settings, profile, route, action, service, and subscriber file touched by the calendar EE move.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
@@ -266,7 +266,7 @@
   {
     "id": "T034",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the migration inventory identifies every settings, profile, route, action, service, and subscriber file touched by the calendar EE move.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
@@ -274,7 +274,7 @@
   {
     "id": "T035",
     "description": "Happy path: The migration inventory identifies every settings, action, and compatibility surface touched by the Microsoft binding cleanup.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
@@ -282,7 +282,7 @@
   {
     "id": "T036",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the migration inventory identifies every settings, action, and compatibility surface touched by the Microsoft binding cleanup.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
@@ -290,7 +290,7 @@
   {
     "id": "T037",
     "description": "Happy path: The PRD documents which compatibility behaviors are intentionally deleted rather than preserved.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
@@ -298,7 +298,7 @@
   {
     "id": "T038",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the PRD documents which compatibility behaviors are intentionally deleted rather than preserved.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
@@ -306,7 +306,7 @@
   {
     "id": "T039",
     "description": "Happy path: The PRD documents which routes must stay stable even though ownership moves to EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
@@ -314,7 +314,7 @@
   {
     "id": "T040",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the PRD documents which routes must stay stable even though ownership moves to EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
@@ -322,7 +322,7 @@
   {
     "id": "T041",
     "description": "Happy path: The plan documents the CE stub response shape for calendar settings and callback surfaces.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
@@ -330,7 +330,7 @@
   {
     "id": "T042",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the plan documents the CE stub response shape for calendar settings and callback surfaces.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
@@ -338,7 +338,7 @@
   {
     "id": "T043",
     "description": "Happy path: The plan documents the EE delegation pattern for calendar settings and callback surfaces.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
@@ -346,7 +346,7 @@
   {
     "id": "T044",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the plan documents the EE delegation pattern for calendar settings and callback surfaces.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
@@ -354,7 +354,7 @@
   {
     "id": "T045",
     "description": "Happy path: The plan documents the CE-versus-EE Microsoft profile surface matrix.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
@@ -362,7 +362,7 @@
   {
     "id": "T046",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the plan documents the CE-versus-EE Microsoft profile surface matrix.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
@@ -370,7 +370,7 @@
   {
     "id": "T047",
     "description": "Happy path: The plan documents the final acceptance matrix for edition ownership, bindings, and regression coverage.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
@@ -378,7 +378,7 @@
   {
     "id": "T048",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the plan documents the final acceptance matrix for edition ownership, bindings, and regression coverage.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
@@ -386,7 +386,7 @@
   {
     "id": "T049",
     "description": "Happy path: The Integrations settings page no longer shows a Calendar category in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
@@ -394,7 +394,7 @@
   {
     "id": "T050",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the Integrations settings page no longer shows a Calendar category in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
@@ -402,7 +402,7 @@
   {
     "id": "T051",
     "description": "Happy path: The Integrations settings page continues to show a Calendar category in EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
@@ -410,7 +410,7 @@
   {
     "id": "T052",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the Integrations settings page continues to show a Calendar category in EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
@@ -418,7 +418,7 @@
   {
     "id": "T053",
     "description": "Happy path: The shared Integrations settings composition stops rendering a live calendar configuration component in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]
@@ -426,7 +426,7 @@
   {
     "id": "T054",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the shared Integrations settings composition stops rendering a live calendar configuration component in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]
@@ -434,7 +434,7 @@
   {
     "id": "T055",
     "description": "Happy path: The shared Integrations settings composition renders calendar through an EE entrypoint or stubbed wrapper pattern.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
@@ -442,7 +442,7 @@
   {
     "id": "T056",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the shared Integrations settings composition renders calendar through an EE entrypoint or stubbed wrapper pattern.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
@@ -450,7 +450,7 @@
   {
     "id": "T057",
     "description": "Happy path: The Calendar category description and copy are updated to match the EE-only ownership model.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
@@ -458,7 +458,7 @@
   {
     "id": "T058",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the Calendar category description and copy are updated to match the EE-only ownership model.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
@@ -466,7 +466,7 @@
   {
     "id": "T059",
     "description": "Happy path: The Calendar settings component is re-homed behind an enterprise entry component rather than a shared direct import.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
@@ -474,7 +474,7 @@
   {
     "id": "T060",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the Calendar settings component is re-homed behind an enterprise entry component rather than a shared direct import.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
@@ -482,7 +482,7 @@
   {
     "id": "T061",
     "description": "Happy path: The Calendar settings component follows the same lazy-load or modular entry pattern used by other EE settings surfaces where appropriate.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
@@ -490,7 +490,7 @@
   {
     "id": "T062",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the Calendar settings component follows the same lazy-load or modular entry pattern used by other EE settings surfaces where appropriate.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
@@ -498,7 +498,7 @@
   {
     "id": "T063",
     "description": "Happy path: CE requests that specify the Calendar category fall back safely to an available category instead of leaving a broken tab state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
@@ -506,7 +506,7 @@
   {
     "id": "T064",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for cE requests that specify the Calendar category fall back safely to an available category instead of leaving a broken tab state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
@@ -514,7 +514,7 @@
   {
     "id": "T065",
     "description": "Happy path: The selected-category URL handling tolerates the absence of Calendar in CE without client-side errors.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
@@ -522,7 +522,7 @@
   {
     "id": "T066",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the selected-category URL handling tolerates the absence of Calendar in CE without client-side errors.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
@@ -530,7 +530,7 @@
   {
     "id": "T067",
     "description": "Happy path: No duplicate Calendar entry remains under Communication, Providers, or other shared settings categories.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
@@ -538,7 +538,7 @@
   {
     "id": "T068",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for no duplicate Calendar entry remains under Communication, Providers, or other shared settings categories.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
@@ -546,7 +546,7 @@
   {
     "id": "T069",
     "description": "Happy path: Shared provider settings no longer link CE users toward Calendar setup flows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
@@ -554,7 +554,7 @@
   {
     "id": "T070",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for shared provider settings no longer link CE users toward Calendar setup flows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ]
@@ -562,7 +562,7 @@
   {
     "id": "T071",
     "description": "Happy path: EE settings can still deep-link into Calendar setup from consumer-owned surfaces where needed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
@@ -570,7 +570,7 @@
   {
     "id": "T072",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for eE settings can still deep-link into Calendar setup from consumer-owned surfaces where needed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
@@ -578,7 +578,7 @@
   {
     "id": "T073",
     "description": "Happy path: The user profile page no longer renders a Calendar tab in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037"
     ]
@@ -586,7 +586,7 @@
   {
     "id": "T074",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the user profile page no longer renders a Calendar tab in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037"
     ]
@@ -594,7 +594,7 @@
   {
     "id": "T075",
     "description": "Happy path: The user profile page continues to render a Calendar tab in EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038"
     ]
@@ -602,7 +602,7 @@
   {
     "id": "T076",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the user profile page continues to render a Calendar tab in EE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038"
     ]
@@ -610,7 +610,7 @@
   {
     "id": "T077",
     "description": "Happy path: CE profile tab routing ignores a Calendar tab query parameter safely and falls back to a valid tab.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039"
     ]
@@ -618,7 +618,7 @@
   {
     "id": "T078",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for cE profile tab routing ignores a Calendar tab query parameter safely and falls back to a valid tab.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039"
     ]
@@ -626,7 +626,7 @@
   {
     "id": "T079",
     "description": "Happy path: EE profile tab routing preserves and restores the Calendar tab state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040"
     ]
@@ -634,7 +634,7 @@
   {
     "id": "T080",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for eE profile tab routing preserves and restores the Calendar tab state.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040"
     ]
@@ -642,7 +642,7 @@
   {
     "id": "T081",
     "description": "Happy path: Calendar settings unavailable states use explicit EE-style messaging only when a route or wrapper must remain addressable in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041"
     ]
@@ -650,7 +650,7 @@
   {
     "id": "T082",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for calendar settings unavailable states use explicit EE-style messaging only when a route or wrapper must remain addressable in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041"
     ]
@@ -658,7 +658,7 @@
   {
     "id": "T083",
     "description": "Happy path: Calendar settings do not remain discoverable in CE through hidden cards, disabled shells, or stale navigation items.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042"
     ]
@@ -666,7 +666,7 @@
   {
     "id": "T084",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for calendar settings do not remain discoverable in CE through hidden cards, disabled shells, or stale navigation items.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042"
     ]
@@ -674,7 +674,7 @@
   {
     "id": "T085",
     "description": "Happy path: Calendar settings continue to present the real configuration UX in EE rather than a placeholder shell.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043"
     ]
@@ -682,7 +682,7 @@
   {
     "id": "T086",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for calendar settings continue to present the real configuration UX in EE rather than a placeholder shell.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043"
     ]
@@ -690,7 +690,7 @@
   {
     "id": "T087",
     "description": "Happy path: The profile page does not expose a dead-end or nonfunctional Calendar tab in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ]
@@ -698,7 +698,7 @@
   {
     "id": "T088",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the profile page does not expose a dead-end or nonfunctional Calendar tab in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ]
@@ -706,7 +706,7 @@
   {
     "id": "T089",
     "description": "Happy path: Settings and profile tests cover edition-specific visibility for calendar entrypoints.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045"
     ]
@@ -714,7 +714,7 @@
   {
     "id": "T090",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for settings and profile tests cover edition-specific visibility for calendar entrypoints.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045"
     ]
@@ -722,7 +722,7 @@
   {
     "id": "T091",
     "description": "Happy path: Documentation and screenshots stop describing Calendar as a shared integration surface.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046"
     ]
@@ -730,7 +730,7 @@
   {
     "id": "T092",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for documentation and screenshots stop describing Calendar as a shared integration surface.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046"
     ]
@@ -738,7 +738,7 @@
   {
     "id": "T093",
     "description": "Happy path: Runbooks and references for Calendar settings are updated to point to EE-owned entrypoints.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047"
     ]
@@ -746,7 +746,7 @@
   {
     "id": "T094",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for runbooks and references for Calendar settings are updated to point to EE-owned entrypoints.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047"
     ]
@@ -754,7 +754,7 @@
   {
     "id": "T095",
     "description": "Happy path: The overall settings information architecture remains internally consistent after the Calendar category becomes EE-only.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F048"
     ]
@@ -762,7 +762,7 @@
   {
     "id": "T096",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the overall settings information architecture remains internally consistent after the Calendar category becomes EE-only.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F048"
     ]
@@ -770,7 +770,7 @@
   {
     "id": "T097",
     "description": "Happy path: The Google calendar OAuth callback route becomes a CE stub or EE delegator rather than a shared active implementation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F049"
     ]
@@ -778,7 +778,7 @@
   {
     "id": "T098",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the Google calendar OAuth callback route becomes a CE stub or EE delegator rather than a shared active implementation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F049"
     ]
@@ -786,7 +786,7 @@
   {
     "id": "T099",
     "description": "Happy path: The Microsoft calendar OAuth callback route becomes a CE stub or EE delegator rather than a shared active implementation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ]
@@ -794,7 +794,7 @@
   {
     "id": "T100",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the Microsoft calendar OAuth callback route becomes a CE stub or EE delegator rather than a shared active implementation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ]
@@ -802,7 +802,7 @@
   {
     "id": "T101",
     "description": "Happy path: CE requests to the Google calendar callback route return an EE-unavailable response and do not exchange tokens.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ]
@@ -810,7 +810,7 @@
   {
     "id": "T102",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for cE requests to the Google calendar callback route return an EE-unavailable response and do not exchange tokens.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ]
@@ -818,7 +818,7 @@
   {
     "id": "T103",
     "description": "Happy path: CE requests to the Microsoft calendar callback route return an EE-unavailable response and do not exchange tokens.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052"
     ]
@@ -826,7 +826,7 @@
   {
     "id": "T104",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for cE requests to the Microsoft calendar callback route return an EE-unavailable response and do not exchange tokens.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052"
     ]
@@ -834,7 +834,7 @@
   {
     "id": "T105",
     "description": "Happy path: EE requests to the Google calendar callback route delegate to an EE-owned implementation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053"
     ]
@@ -842,7 +842,7 @@
   {
     "id": "T106",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for eE requests to the Google calendar callback route delegate to an EE-owned implementation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053"
     ]
@@ -850,7 +850,7 @@
   {
     "id": "T107",
     "description": "Happy path: EE requests to the Microsoft calendar callback route delegate to an EE-owned implementation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054"
     ]
@@ -858,7 +858,7 @@
   {
     "id": "T108",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for eE requests to the Microsoft calendar callback route delegate to an EE-owned implementation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054"
     ]
@@ -866,7 +866,7 @@
   {
     "id": "T109",
     "description": "Happy path: Shared callback wrapper files stop importing concrete calendar provider services and adapters directly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055"
     ]
@@ -874,7 +874,7 @@
   {
     "id": "T110",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for shared callback wrapper files stop importing concrete calendar provider services and adapters directly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055"
     ]
@@ -882,7 +882,7 @@
   {
     "id": "T111",
     "description": "Happy path: EE callback implementations own provider creation, token exchange, and persistence side effects.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056"
     ]
@@ -890,7 +890,7 @@
   {
     "id": "T112",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for eE callback implementations own provider creation, token exchange, and persistence side effects.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056"
     ]
@@ -898,7 +898,7 @@
   {
     "id": "T113",
     "description": "Happy path: Calendar-specific OAuth state validation remains intact after the callback routes move behind EE wrappers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057"
     ]
@@ -906,7 +906,7 @@
   {
     "id": "T114",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for calendar-specific OAuth state validation remains intact after the callback routes move behind EE wrappers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057"
     ]
@@ -914,7 +914,7 @@
   {
     "id": "T115",
     "description": "Happy path: The existing calendar callback success contract remains stable for EE tenants after the refactor.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ]
@@ -922,7 +922,7 @@
   {
     "id": "T116",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the existing calendar callback success contract remains stable for EE tenants after the refactor.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ]
@@ -930,7 +930,7 @@
   {
     "id": "T117",
     "description": "Happy path: The existing calendar callback error contract remains stable for EE tenants after the refactor.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F059"
     ]
@@ -938,7 +938,7 @@
   {
     "id": "T118",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the existing calendar callback error contract remains stable for EE tenants after the refactor.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F059"
     ]
@@ -946,7 +946,7 @@
   {
     "id": "T119",
     "description": "Happy path: Direct CE access to calendar callback routes cannot create calendar providers, provider tokens, or sync mappings.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060"
     ]
@@ -954,7 +954,7 @@
   {
     "id": "T120",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for direct CE access to calendar callback routes cannot create calendar providers, provider tokens, or sync mappings.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060"
     ]
@@ -962,7 +962,7 @@
   {
     "id": "T121",
     "description": "Happy path: Edition-aware callback tests verify gating before any provider write occurs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061"
     ]
@@ -970,7 +970,7 @@
   {
     "id": "T122",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for edition-aware callback tests verify gating before any provider write occurs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061"
     ]
@@ -978,7 +978,7 @@
   {
     "id": "T123",
     "description": "Happy path: Calendar callback wrappers preserve request-method handling and expected route semantics during EE delegation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F062"
     ]
@@ -986,7 +986,7 @@
   {
     "id": "T124",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for calendar callback wrappers preserve request-method handling and expected route semantics during EE delegation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F062"
     ]
@@ -994,7 +994,7 @@
   {
     "id": "T125",
     "description": "Happy path: Calendar callback wrappers preserve query parsing and state extraction semantics during EE delegation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063"
     ]
@@ -1002,7 +1002,7 @@
   {
     "id": "T126",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for calendar callback wrappers preserve query parsing and state extraction semantics during EE delegation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063"
     ]
@@ -1010,7 +1010,7 @@
   {
     "id": "T127",
     "description": "Happy path: Contract tests assert that active calendar callback logic no longer lives in shared CE runtime modules.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ]
@@ -1018,7 +1018,7 @@
   {
     "id": "T128",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for contract tests assert that active calendar callback logic no longer lives in shared CE runtime modules.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ]
@@ -1026,7 +1026,7 @@
   {
     "id": "T129",
     "description": "Happy path: Any calendar webhook or subscription-maintenance entry routes become CE stubs or EE delegators.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F065"
     ]
@@ -1034,7 +1034,7 @@
   {
     "id": "T130",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for any calendar webhook or subscription-maintenance entry routes become CE stubs or EE delegators.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F065"
     ]
@@ -1042,7 +1042,7 @@
   {
     "id": "T131",
     "description": "Happy path: CE webhook or maintenance entry routes reject or no-op cleanly without running calendar logic.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066"
     ]
@@ -1050,7 +1050,7 @@
   {
     "id": "T132",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for cE webhook or maintenance entry routes reject or no-op cleanly without running calendar logic.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066"
     ]
@@ -1058,7 +1058,7 @@
   {
     "id": "T133",
     "description": "Happy path: EE webhook or maintenance entry routes delegate to EE-owned implementations.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F067"
     ]
@@ -1066,7 +1066,7 @@
   {
     "id": "T134",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for eE webhook or maintenance entry routes delegate to EE-owned implementations.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F067"
     ]
@@ -1074,7 +1074,7 @@
   {
     "id": "T135",
     "description": "Happy path: Shared route registries stop advertising live calendar endpoints as shared CE capabilities.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F068"
     ]
@@ -1082,7 +1082,7 @@
   {
     "id": "T136",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for shared route registries stop advertising live calendar endpoints as shared CE capabilities.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F068"
     ]
@@ -1090,7 +1090,7 @@
   {
     "id": "T137",
     "description": "Happy path: Middleware and auth handling no longer treat calendar callback routes as a shared CE feature surface.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F069"
     ]
@@ -1098,7 +1098,7 @@
   {
     "id": "T138",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for middleware and auth handling no longer treat calendar callback routes as a shared CE feature surface.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F069"
     ]
@@ -1106,7 +1106,7 @@
   {
     "id": "T139",
     "description": "Happy path: Route-level tests cover CE unavailable behavior, EE active behavior, and malformed calendar callback input.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F070"
     ]
@@ -1114,7 +1114,7 @@
   {
     "id": "T140",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for route-level tests cover CE unavailable behavior, EE active behavior, and malformed calendar callback input.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F070"
     ]
@@ -1122,7 +1122,7 @@
   {
     "id": "T141",
     "description": "Happy path: Route runbooks are updated to document EE ownership for calendar callbacks and maintenance entrypoints.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071"
     ]
@@ -1130,7 +1130,7 @@
   {
     "id": "T142",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for route runbooks are updated to document EE ownership for calendar callbacks and maintenance entrypoints.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071"
     ]
@@ -1138,7 +1138,7 @@
   {
     "id": "T143",
     "description": "Happy path: The public callback URLs remain stable for EE tenants even though the implementation ownership changes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F072"
     ]
@@ -1146,7 +1146,7 @@
   {
     "id": "T144",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the public callback URLs remain stable for EE tenants even though the implementation ownership changes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F072"
     ]
@@ -1154,7 +1154,7 @@
   {
     "id": "T145",
     "description": "Happy path: The shared Calendar integrations UI module is replaced by an EE-owned concrete implementation behind a stable entry boundary.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F073"
     ]
@@ -1162,7 +1162,7 @@
   {
     "id": "T146",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the shared Calendar integrations UI module is replaced by an EE-owned concrete implementation behind a stable entry boundary.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F073"
     ]
@@ -1170,7 +1170,7 @@
   {
     "id": "T147",
     "description": "Happy path: The shared Calendar provider service no longer owns live calendar provider CRUD behavior in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F074"
     ]
@@ -1178,7 +1178,7 @@
   {
     "id": "T148",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the shared Calendar provider service no longer owns live calendar provider CRUD behavior in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F074"
     ]
@@ -1186,7 +1186,7 @@
   {
     "id": "T149",
     "description": "Happy path: The shared Calendar sync service no longer owns live calendar synchronization behavior in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F075"
     ]
@@ -1194,7 +1194,7 @@
   {
     "id": "T150",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the shared Calendar sync service no longer owns live calendar synchronization behavior in CE.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F075"
     ]
@@ -1202,7 +1202,7 @@
   {
     "id": "T151",
     "description": "Happy path: The shared Google Calendar adapter no longer provides live CE runtime behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F076"
     ]
@@ -1210,7 +1210,7 @@
   {
     "id": "T152",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the shared Google Calendar adapter no longer provides live CE runtime behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F076"
     ]
@@ -1218,7 +1218,7 @@
   {
     "id": "T153",
     "description": "Happy path: The shared Microsoft Calendar adapter no longer provides live CE runtime behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F077"
     ]
@@ -1226,7 +1226,7 @@
   {
     "id": "T154",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the shared Microsoft Calendar adapter no longer provides live CE runtime behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F077"
     ]
@@ -1234,7 +1234,7 @@
   {
     "id": "T155",
     "description": "Happy path: The shared calendar webhook maintenance service no longer provides live CE runtime behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F078"
     ]
@@ -1242,7 +1242,7 @@
   {
     "id": "T156",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the shared calendar webhook maintenance service no longer provides live CE runtime behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F078"
     ]
@@ -1250,7 +1250,7 @@
   {
     "id": "T157",
     "description": "Happy path: Calendar provider configuration create, update, and delete behavior executes only in EE-owned runtime code.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F079"
     ]
@@ -1258,7 +1258,7 @@
   {
     "id": "T158",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for calendar provider configuration create, update, and delete behavior executes only in EE-owned runtime code.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F079"
     ]
@@ -1266,7 +1266,7 @@
   {
     "id": "T159",
     "description": "Happy path: Calendar connect and disconnect behavior executes only in EE-owned runtime code.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080"
     ]
@@ -1274,7 +1274,7 @@
   {
     "id": "T160",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for calendar connect and disconnect behavior executes only in EE-owned runtime code.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080"
     ]
@@ -1282,7 +1282,7 @@
   {
     "id": "T161",
     "description": "Happy path: Calendar sync conflict publication and handling execute only in EE-owned runtime code.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F081"
     ]
@@ -1290,7 +1290,7 @@
   {
     "id": "T162",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for calendar sync conflict publication and handling execute only in EE-owned runtime code.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F081"
     ]
@@ -1298,7 +1298,7 @@
   {
     "id": "T163",
     "description": "Happy path: Calendar external-event import and merge logic execute only in EE-owned runtime code.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F082"
     ]
@@ -1306,7 +1306,7 @@
   {
     "id": "T164",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for calendar external-event import and merge logic execute only in EE-owned runtime code.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F082"
     ]
@@ -1314,7 +1314,7 @@
   {
     "id": "T165",
     "description": "Happy path: Calendar provider status updates and error-state transitions execute only in EE-owned runtime code.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F083"
     ]
@@ -1322,7 +1322,7 @@
   {
     "id": "T166",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for calendar provider status updates and error-state transitions execute only in EE-owned runtime code.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F083"
     ]
@@ -1330,7 +1330,7 @@
   {
     "id": "T167",
     "description": "Happy path: Calendar mapping persistence and repair logic remain reachable only through EE-owned runtime code.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084"
     ]
@@ -1338,7 +1338,7 @@
   {
     "id": "T168",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for calendar mapping persistence and repair logic remain reachable only through EE-owned runtime code.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084"
     ]
@@ -1346,7 +1346,7 @@
   {
     "id": "T169",
     "description": "Happy path: CE startup no longer registers calendar subscribers or background sync handlers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F085"
     ]
@@ -1354,7 +1354,7 @@
   {
     "id": "T170",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for cE startup no longer registers calendar subscribers or background sync handlers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F085"
     ]
@@ -1362,7 +1362,7 @@
   {
     "id": "T171",
     "description": "Happy path: EE startup continues to register calendar subscribers or background sync handlers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F086"
     ]
@@ -1370,7 +1370,7 @@
   {
     "id": "T172",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for eE startup continues to register calendar subscribers or background sync handlers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F086"
     ]
@@ -1378,7 +1378,7 @@
   {
     "id": "T173",
     "description": "Happy path: Schedule entry events in CE no longer trigger calendar synchronization side effects.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F087"
     ]
@@ -1386,7 +1386,7 @@
   {
     "id": "T174",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for schedule entry events in CE no longer trigger calendar synchronization side effects.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F087"
     ]
@@ -1394,7 +1394,7 @@
   {
     "id": "T175",
     "description": "Happy path: Schedule entry events in EE continue to trigger calendar synchronization side effects.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F088"
     ]
@@ -1402,7 +1402,7 @@
   {
     "id": "T176",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for schedule entry events in EE continue to trigger calendar synchronization side effects.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F088"
     ]
@@ -1410,7 +1410,7 @@
   {
     "id": "T177",
     "description": "Happy path: Shared packages expose only abstract, stubbed, or delegated calendar entrypoints after the extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F089"
     ]
@@ -1418,7 +1418,7 @@
   {
     "id": "T178",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for shared packages expose only abstract, stubbed, or delegated calendar entrypoints after the extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F089"
     ]
@@ -1426,7 +1426,7 @@
   {
     "id": "T179",
     "description": "Happy path: Enterprise packages expose the concrete calendar runtime modules after the extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F090"
     ]
@@ -1434,7 +1434,7 @@
   {
     "id": "T180",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for enterprise packages expose the concrete calendar runtime modules after the extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F090"
     ]
@@ -1442,7 +1442,7 @@
   {
     "id": "T181",
     "description": "Happy path: Ownership tests assert that shared packages do not reach into EE calendar code through raw filesystem-relative imports.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F091"
     ]
@@ -1450,7 +1450,7 @@
   {
     "id": "T182",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for ownership tests assert that shared packages do not reach into EE calendar code through raw filesystem-relative imports.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F091"
     ]
@@ -1458,7 +1458,7 @@
   {
     "id": "T183",
     "description": "Happy path: Ownership tests assert that CE builds can import calendar wrappers without loading active calendar logic.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F092"
     ]
@@ -1466,7 +1466,7 @@
   {
     "id": "T184",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for ownership tests assert that CE builds can import calendar wrappers without loading active calendar logic.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F092"
     ]
@@ -1474,7 +1474,7 @@
   {
     "id": "T185",
     "description": "Happy path: The calendar EE ownership contract explicitly includes webhook-renewal job paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F093"
     ]
@@ -1482,7 +1482,7 @@
   {
     "id": "T186",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the calendar EE ownership contract explicitly includes webhook-renewal job paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F093"
     ]
@@ -1490,7 +1490,7 @@
   {
     "id": "T187",
     "description": "Happy path: The calendar EE ownership contract explicitly includes provider secret handling paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F094"
     ]
@@ -1498,7 +1498,7 @@
   {
     "id": "T188",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the calendar EE ownership contract explicitly includes provider secret handling paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F094"
     ]
@@ -1506,7 +1506,7 @@
   {
     "id": "T189",
     "description": "Happy path: The calendar EE ownership contract explicitly includes adapter-selection and provider-type branching paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F095"
     ]
@@ -1514,7 +1514,7 @@
   {
     "id": "T190",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the calendar EE ownership contract explicitly includes adapter-selection and provider-type branching paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F095"
     ]
@@ -1522,7 +1522,7 @@
   {
     "id": "T191",
     "description": "Happy path: The calendar EE ownership contract explicitly includes any remaining background maintenance and subscription-renewal paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F096"
     ]
@@ -1530,7 +1530,7 @@
   {
     "id": "T192",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the calendar EE ownership contract explicitly includes any remaining background maintenance and subscription-renewal paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F096"
     ]
@@ -2850,7 +2850,7 @@
   {
     "id": "T357",
     "description": "Happy path: Calendar schema and runtime ownership are documented as enterprise-owned in the migration plan.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F179"
     ]
@@ -2858,7 +2858,7 @@
   {
     "id": "T358",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for calendar schema and runtime ownership are documented as enterprise-owned in the migration plan.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F179"
     ]
@@ -3010,7 +3010,7 @@
   {
     "id": "T377",
     "description": "Happy path: Migration runbooks document any unsupported edge states that require manual cleanup instead of silent compatibility behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F189"
     ]
@@ -3018,7 +3018,7 @@
   {
     "id": "T378",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for migration runbooks document any unsupported edge states that require manual cleanup instead of silent compatibility behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F189"
     ]
@@ -3026,7 +3026,7 @@
   {
     "id": "T379",
     "description": "Happy path: Schema documentation reflects shared binding infrastructure plus EE calendar ownership.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F190"
     ]
@@ -3034,7 +3034,7 @@
   {
     "id": "T380",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for schema documentation reflects shared binding infrastructure plus EE calendar ownership.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F190"
     ]
@@ -3042,7 +3042,7 @@
   {
     "id": "T381",
     "description": "Happy path: Scratchpad notes record the migration files and ownership boundaries that implement the cutover.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F191"
     ]
@@ -3050,7 +3050,7 @@
   {
     "id": "T382",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for scratchpad notes record the migration files and ownership boundaries that implement the cutover.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F191"
     ]
@@ -3138,7 +3138,7 @@
   {
     "id": "T393",
     "description": "Happy path: This plan cross-references the prior Teams EE-boundary migration plan.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F197"
     ]
@@ -3146,7 +3146,7 @@
   {
     "id": "T394",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for this plan cross-references the prior Teams EE-boundary migration plan.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F197"
     ]
@@ -3154,7 +3154,7 @@
   {
     "id": "T395",
     "description": "Happy path: This plan cross-references the prior named Microsoft profile and consumer-binding work.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F198"
     ]
@@ -3162,7 +3162,7 @@
   {
     "id": "T396",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for this plan cross-references the prior named Microsoft profile and consumer-binding work.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F198"
     ]
@@ -3170,7 +3170,7 @@
   {
     "id": "T397",
     "description": "Happy path: The scratchpad records the key files affected by the calendar settings, profile, route, service, and subscriber refactor.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F199"
     ]
@@ -3178,7 +3178,7 @@
   {
     "id": "T398",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the scratchpad records the key files affected by the calendar settings, profile, route, service, and subscriber refactor.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F199"
     ]
@@ -3186,7 +3186,7 @@
   {
     "id": "T399",
     "description": "Happy path: The scratchpad records the key files affected by Microsoft profile UI, action, and binding cleanup.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F200"
     ]
@@ -3194,7 +3194,7 @@
   {
     "id": "T400",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the scratchpad records the key files affected by Microsoft profile UI, action, and binding cleanup.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F200"
     ]
@@ -3202,7 +3202,7 @@
   {
     "id": "T401",
     "description": "Happy path: The runbook includes the plan-validator command for this plan folder.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F201"
     ]
@@ -3210,7 +3210,7 @@
   {
     "id": "T402",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the runbook includes the plan-validator command for this plan folder.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F201"
     ]
@@ -3218,7 +3218,7 @@
   {
     "id": "T403",
     "description": "Happy path: The runbook includes the focused unit and integration suite list expected to validate this migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F202"
     ]
@@ -3226,7 +3226,7 @@
   {
     "id": "T404",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the runbook includes the focused unit and integration suite list expected to validate this migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F202"
     ]
@@ -3234,7 +3234,7 @@
   {
     "id": "T405",
     "description": "Happy path: A CE review checklist confirms no calendar UI or runtime remains in shared surfaces.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F203"
     ]
@@ -3242,7 +3242,7 @@
   {
     "id": "T406",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for a CE review checklist confirms no calendar UI or runtime remains in shared surfaces.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F203"
     ]
@@ -3250,7 +3250,7 @@
   {
     "id": "T407",
     "description": "Happy path: An EE review checklist confirms the calendar flow remains complete after extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F204"
     ]
@@ -3258,7 +3258,7 @@
   {
     "id": "T408",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for an EE review checklist confirms the calendar flow remains complete after extraction.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F204"
     ]
@@ -3266,7 +3266,7 @@
   {
     "id": "T409",
     "description": "Happy path: A CE review checklist confirms the Microsoft profile page shows only MSP SSO-oriented content.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F205"
     ]
@@ -3274,7 +3274,7 @@
   {
     "id": "T410",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for a CE review checklist confirms the Microsoft profile page shows only MSP SSO-oriented content.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F205"
     ]
@@ -3282,7 +3282,7 @@
   {
     "id": "T411",
     "description": "Happy path: An EE review checklist confirms the Microsoft profile page shows the additional supported consumers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F206"
     ]
@@ -3290,7 +3290,7 @@
   {
     "id": "T412",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for an EE review checklist confirms the Microsoft profile page shows the additional supported consumers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F206"
     ]
@@ -3298,7 +3298,7 @@
   {
     "id": "T413",
     "description": "Happy path: A regression checklist confirms the earlier Teams EE cleanup remains intact.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F207"
     ]
@@ -3306,7 +3306,7 @@
   {
     "id": "T414",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for a regression checklist confirms the earlier Teams EE cleanup remains intact.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F207"
     ]
@@ -3314,7 +3314,7 @@
   {
     "id": "T415",
     "description": "Happy path: A regression checklist confirms MSP SSO discovery and login-domain flows remain intact.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F208"
     ]
@@ -3322,7 +3322,7 @@
   {
     "id": "T416",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for a regression checklist confirms MSP SSO discovery and login-domain flows remain intact.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F208"
     ]
@@ -3330,7 +3330,7 @@
   {
     "id": "T417",
     "description": "Happy path: A regression checklist confirms the chosen Email consumer strategy is intentionally covered rather than left to compatibility defaults.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F209"
     ]
@@ -3338,7 +3338,7 @@
   {
     "id": "T418",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for a regression checklist confirms the chosen Email consumer strategy is intentionally covered rather than left to compatibility defaults.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F209"
     ]
@@ -3346,7 +3346,7 @@
   {
     "id": "T419",
     "description": "Happy path: A regression checklist confirms binding changes do not regress profile archive or delete guards.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F210"
     ]
@@ -3354,7 +3354,7 @@
   {
     "id": "T420",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for a regression checklist confirms binding changes do not regress profile archive or delete guards.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F210"
     ]
@@ -3362,7 +3362,7 @@
   {
     "id": "T421",
     "description": "Happy path: A regression checklist confirms CE stubs fail clearly instead of partially executing calendar logic.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F211"
     ]
@@ -3370,7 +3370,7 @@
   {
     "id": "T422",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for a regression checklist confirms CE stubs fail clearly instead of partially executing calendar logic.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F211"
     ]
@@ -3378,7 +3378,7 @@
   {
     "id": "T423",
     "description": "Happy path: A regression checklist confirms EE wrappers delegate to enterprise implementations instead of stale shared code.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F212"
     ]
@@ -3386,7 +3386,7 @@
   {
     "id": "T424",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for a regression checklist confirms EE wrappers delegate to enterprise implementations instead of stale shared code.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F212"
     ]
@@ -3394,7 +3394,7 @@
   {
     "id": "T425",
     "description": "Happy path: The final acceptance checklist ties together the calendar EE move and explicit-binding cleanup as one cohesive migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F213"
     ]
@@ -3402,7 +3402,7 @@
   {
     "id": "T426",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the final acceptance checklist ties together the calendar EE move and explicit-binding cleanup as one cohesive migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F213"
     ]
@@ -3410,7 +3410,7 @@
   {
     "id": "T427",
     "description": "Happy path: The implementation plan stays self-contained under one dated plan folder with synchronized PRD, features, tests, and scratchpad artifacts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F214"
     ]
@@ -3418,7 +3418,7 @@
   {
     "id": "T428",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the implementation plan stays self-contained under one dated plan folder with synchronized PRD, features, tests, and scratchpad artifacts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F214"
     ]
@@ -3426,7 +3426,7 @@
   {
     "id": "T429",
     "description": "Happy path: Plan validation passes for artifact schema, feature/test shape, and cross-reference integrity.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F215"
     ]
@@ -3434,7 +3434,7 @@
   {
     "id": "T430",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for plan validation passes for artifact schema, feature/test shape, and cross-reference integrity.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F215"
     ]
@@ -3442,7 +3442,7 @@
   {
     "id": "T431",
     "description": "Happy path: The plan inventory remains comprehensive enough to drive a multi-commit migration without reopening scope discovery.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F216"
     ]
@@ -3450,7 +3450,7 @@
   {
     "id": "T432",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for the plan inventory remains comprehensive enough to drive a multi-commit migration without reopening scope discovery.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F216"
     ]
