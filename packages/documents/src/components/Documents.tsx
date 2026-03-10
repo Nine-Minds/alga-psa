@@ -31,6 +31,7 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { getCurrentUser, searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import {
@@ -157,6 +158,7 @@ const Documents = ({
   const [visibilityUpdatingIds, setVisibilityUpdatingIds] = useState<Set<string>>(new Set());
   const [isClientUserContext, setIsClientUserContext] = useState(false);
   const [shareDialogDocument, setShareDialogDocument] = useState<IDocument | null>(null);
+  const { enabled: documentFeaturesEnabled } = useFeatureFlag('document-folder-templates', { defaultValue: false });
 
   // Determine if we're in folder mode (no entity specified) early
   // This affects whether we need user preferences
@@ -1154,7 +1156,7 @@ const Documents = ({
             showVisibilityControls={showVisibilityControls}
             onToggleVisibility={handleToggleDocumentVisibility}
             isVisibilityUpdating={visibilityUpdatingIds.has(document.document_id)}
-            onShare={handleShareDocument}
+            onShare={documentFeaturesEnabled ? handleShareDocument : undefined}
             forceRefresh={editedDocumentId === document.document_id ? refreshTimestamp : undefined}
             onClick={getOrCreateClickHandler(document)}
             isContentDocument={!document.file_id}
@@ -1553,8 +1555,8 @@ const Documents = ({
                       showVisibilityControls={showVisibilityControls}
                       onToggleVisibility={handleToggleDocumentVisibility}
                       visibilityUpdatingIds={visibilityUpdatingIds}
-                      showShareControls
-                      onShare={handleShareDocument}
+                      showShareControls={documentFeaturesEnabled}
+                      onShare={documentFeaturesEnabled ? handleShareDocument : undefined}
                     />
                   ) : (
                     documentsToDisplay.length > 0 ? (
