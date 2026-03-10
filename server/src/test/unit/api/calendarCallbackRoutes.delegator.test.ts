@@ -1,11 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { NextRequest } from 'next/server';
 
 const EE_ONLY_ERROR = {
   success: false,
   error: 'Calendar sync is only available in Enterprise Edition.',
 } as const;
+
+function decodeEmbeddedPopupPayload(html: string): Record<string, unknown> {
+  const match = html.match(/atob\('([^']+)'\)/);
+  if (!match) {
+    throw new Error('Expected popup payload to be embedded in the callback HTML response');
+  }
+
+  return JSON.parse(Buffer.from(match[1], 'base64').toString('utf8'));
+}
 
 describe('Calendar callback route delegators', () => {
   const originalEdition = process.env.EDITION;
@@ -116,5 +126,31 @@ describe('Calendar callback route delegators', () => {
     expect(microsoftEeSource).toContain('CalendarProviderService');
     expect(microsoftEeSource).toContain('MicrosoftCalendarAdapter');
     expect(microsoftEeSource).toContain('consumeCalendarOAuthState');
+  });
+
+  it('preserves malformed-input handling in the EE callback implementations', async () => {
+    const googleEeRoute = await import('../../../../../ee/server/src/app/api/auth/google/calendar/callback/route');
+    const microsoftEeRoute = await import('../../../../../ee/server/src/app/api/auth/microsoft/calendar/callback/route');
+
+    const googleResponse = await googleEeRoute.GET(
+      new NextRequest('http://localhost/api/auth/google/calendar/callback?state=nonce-only', { method: 'GET' }) as never
+    );
+    const microsoftResponse = await microsoftEeRoute.GET(
+      new NextRequest('http://localhost/api/auth/microsoft/calendar/callback?popup=true&code=abc', { method: 'GET' }) as never
+    );
+
+    expect(googleResponse.status).toBe(200);
+    const googlePayload = decodeEmbeddedPopupPayload(await googleResponse.text());
+    expect(googlePayload).toMatchObject({
+      success: false,
+      error: 'missing_parameters',
+    });
+
+    expect(microsoftResponse.status).toBe(200);
+    const microsoftPayload = decodeEmbeddedPopupPayload(await microsoftResponse.text());
+    expect(microsoftPayload).toMatchObject({
+      success: false,
+      error: 'missing_parameters',
+    });
   });
 });

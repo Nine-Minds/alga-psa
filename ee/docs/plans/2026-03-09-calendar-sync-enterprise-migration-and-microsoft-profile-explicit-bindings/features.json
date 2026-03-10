@@ -455,7 +455,7 @@
   {
     "id": "F046",
     "description": "Documentation and screenshots stop describing Calendar as a shared integration surface.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -464,7 +464,7 @@
   {
     "id": "F047",
     "description": "Runbooks and references for Calendar settings are updated to point to EE-owned entrypoints.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -473,7 +473,7 @@
   {
     "id": "F048",
     "description": "The overall settings information architecture remains internally consistent after the Calendar category becomes EE-only.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -642,7 +642,7 @@
   {
     "id": "F065",
     "description": "Any calendar webhook or subscription-maintenance entry routes become CE stubs or EE delegators.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -652,7 +652,7 @@
   {
     "id": "F066",
     "description": "CE webhook or maintenance entry routes reject or no-op cleanly without running calendar logic.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -662,7 +662,7 @@
   {
     "id": "F067",
     "description": "EE webhook or maintenance entry routes delegate to EE-owned implementations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -672,7 +672,7 @@
   {
     "id": "F068",
     "description": "Shared route registries stop advertising live calendar endpoints as shared CE capabilities.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -682,7 +682,7 @@
   {
     "id": "F069",
     "description": "Middleware and auth handling no longer treat calendar callback routes as a shared CE feature surface.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -692,7 +692,7 @@
   {
     "id": "F070",
     "description": "Route-level tests cover CE unavailable behavior, EE active behavior, and malformed calendar callback input.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -702,7 +702,7 @@
   {
     "id": "F071",
     "description": "Route runbooks are updated to document EE ownership for calendar callbacks and maintenance entrypoints.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -722,7 +722,7 @@
   {
     "id": "F073",
     "description": "The shared Calendar integrations UI module is replaced by an EE-owned concrete implementation behind a stable entry boundary.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",

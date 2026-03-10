@@ -28,6 +28,7 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
 - (2026-03-09) `packages/integrations/src/actions/integrations/microsoftActions.ts` still contains legacy compatibility semantics such as `LEGACY_MICROSOFT_PROFILE_CONSUMERS`, compatibility backfill logic, default-profile copy, and fallback-based consumer resolution.
 - (2026-03-09) `MicrosoftIntegrationSettings.tsx` still contains the legacy Microsoft consumers pane and default-compatibility copy even though the binding table and binding actions already exist.
 - (2026-03-09) The current binding table is shared at `server/migrations/20260307143000_create_microsoft_profile_consumer_bindings.cjs`, and Teams already depends on `selected_profile_id` plus binding-aware resolution.
+- (2026-03-09) There are no screenshots checked into `ee/docs` for this plan folder or nearby migration docs, so the documentation cleanup for Calendar ownership is entirely text and runbook based.
 - (2026-03-09) Calendar public entry routes also include `server/src/app/api/calendar/webhooks/google/route.ts` and `server/src/app/api/calendar/webhooks/microsoft/route.ts`, so webhook maintenance has to follow the same CE stub or EE delegator rule as OAuth callbacks.
 - (2026-03-09) Shared auth/runtime precedent already exists for Microsoft consumers:
   - `packages/auth/src/lib/sso/mspSsoResolution.ts`
@@ -61,6 +62,12 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
 - (2026-03-09) Focused implementation checks for the calendar callback delegator slice:
   - `pnpm vitest run --coverage.enabled=false src/test/unit/api/calendarCallbackRoutes.delegator.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-09) Focused implementation checks for the calendar webhook delegator slice:
+  - `pnpm vitest run --coverage.enabled=false src/test/unit/api/calendarWebhookRoutes.delegator.test.ts src/test/unit/api/calendarCallbackRoutes.delegator.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-09) Focused implementation checks for the calendar maintenance delegator slice:
+  - `pnpm vitest run --coverage.enabled=false src/test/unit/api/calendarCallbackRoutes.delegator.test.ts src/test/unit/api/calendarWebhookRoutes.delegator.test.ts src/test/unit/jobs/calendarWebhookMaintenanceHandler.delegator.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
 
 ## Links / References
 
@@ -79,6 +86,11 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
 - Current shared calendar callback routes:
   - `server/src/app/api/auth/google/calendar/callback/route.ts`
   - `server/src/app/api/auth/microsoft/calendar/callback/route.ts`
+- Current EE-owned calendar entrypoints after the first two migration slices:
+  - `packages/integrations/src/components/settings/integrations/CalendarEnterpriseIntegrationSettings.tsx`
+  - `@enterprise/components/settings/profile/CalendarProfileSettings`
+  - `ee/server/src/app/api/auth/google/calendar/callback/route.ts`
+  - `ee/server/src/app/api/auth/microsoft/calendar/callback/route.ts`
 - Current shared calendar webhook routes:
   - `server/src/app/api/calendar/webhooks/google/route.ts`
   - `server/src/app/api/calendar/webhooks/microsoft/route.ts`
@@ -113,6 +125,16 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
   - `packages/ee/src/app/api/auth/microsoft/calendar/callback/route.ts`
   - `ee/server/src/app/api/auth/google/calendar/callback/route.ts`
   - `ee/server/src/app/api/auth/microsoft/calendar/callback/route.ts`
+- Calendar webhook delegator helpers and EE-owned route files added for the third migration slice:
+  - `server/src/app/api/calendar/_ceStub.ts`
+  - `server/src/app/api/calendar/_eeDelegator.ts`
+  - `packages/ee/src/app/api/calendar/webhooks/google/route.ts`
+  - `packages/ee/src/app/api/calendar/webhooks/microsoft/route.ts`
+  - `ee/server/src/app/api/calendar/webhooks/google/route.ts`
+  - `ee/server/src/app/api/calendar/webhooks/microsoft/route.ts`
+- Calendar maintenance handler boundary added for the fourth migration slice:
+  - `server/src/lib/jobs/handlers/calendarWebhookMaintenanceHandler.ts`
+  - `packages/ee/src/lib/jobs/handlers/calendarWebhookMaintenanceHandler.ts`
 - Calendar UI visibility and EE-entry helpers added for the first migration slice:
   - `packages/integrations/src/lib/calendarAvailability.ts`
   - `packages/integrations/src/components/settings/integrations/CalendarEnterpriseIntegrationSettings.tsx`
@@ -144,6 +166,8 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
   - `server/src/test/integration/calendar/webhookProcessing.integration.test.ts`
   - `server/src/test/unit/calendar/calendarActions.sync.test.ts`
   - `server/src/test/unit/api/calendarCallbackRoutes.delegator.test.ts`
+  - `server/src/test/unit/api/calendarWebhookRoutes.delegator.test.ts`
+  - `server/src/test/unit/jobs/calendarWebhookMaintenanceHandler.delegator.test.ts`
 
 ## Microsoft Binding Cleanup Inventory
 
@@ -218,3 +242,32 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
   - CE returns enterprise-only payloads,
   - EE delegates the original `Request` object to the EE route handlers,
   - shared callback wrappers no longer import `CalendarProviderService`, adapters, or OAuth-state logic directly.
+- (2026-03-09) Updated the written migration artifacts to treat Calendar as an EE-owned surface consistently:
+  - no checked-in screenshots needed refresh,
+  - the PRD/checklists describe Calendar as EE-only,
+  - the runbook references now point to the EE-owned settings/profile/callback entrypoints instead of a shared Calendar surface.
+- (2026-03-09) Implemented the calendar webhook route ownership slice:
+  - moved the live Google and Microsoft webhook handlers to `ee/server/src/app/api/calendar/webhooks/.../route.ts`,
+  - replaced the shared webhook route files with CE stubs plus EE delegators,
+  - added `packages/ee` webhook stubs so CE builds remain import-safe,
+  - kept the public webhook URLs stable while removing shared re-exports of live webhook handlers.
+- (2026-03-09) Extended the route-contract tests to verify:
+  - CE webhook routes fail clearly with enterprise-only responses,
+  - EE webhook routes delegate GET/POST/OPTIONS to EE handlers,
+  - callback tests still cover CE unavailable behavior, EE delegation, and malformed callback input through the EE implementations.
+- (2026-03-09) Confirmed middleware/auth handling has no calendar-callback-specific CE feature wiring:
+  - callback URLs still flow through the generic `/api/auth/*` boundary,
+  - webhook URLs remain explicitly unauthenticated for stable external delivery,
+  - the shared route files no longer advertise live calendar webhook codepaths as CE-owned behavior.
+- (2026-03-09) Moved the calendar webhook maintenance job entrypoint behind an edition-safe wrapper:
+  - shared `server/src/lib/jobs/handlers/calendarWebhookMaintenanceHandler.ts` now no-ops in CE and lazy-loads the EE implementation,
+  - live maintenance logic now resides in `packages/ee/src/lib/jobs/handlers/calendarWebhookMaintenanceHandler.ts`,
+  - focused tests verify CE no-op behavior, EE delegation, and removal of direct maintenance-service imports from the shared handler wrapper.
+- (2026-03-09) The route runbook references now cover the full current EE ownership chain for calendar network entrypoints:
+  - callback wrappers delegate to `ee/server/src/app/api/auth/.../calendar/callback/route.ts`,
+  - webhook wrappers delegate to `ee/server/src/app/api/calendar/webhooks/.../route.ts`,
+  - maintenance job entrypoints delegate through `server/src/lib/jobs/handlers/calendarWebhookMaintenanceHandler.ts` into `packages/ee/src/lib/jobs/handlers/calendarWebhookMaintenanceHandler.ts`.
+- (2026-03-09) Confirmed the Calendar settings UI boundary remains stable:
+  - `IntegrationsSettingsPage.tsx` renders `CalendarEnterpriseIntegrationSettings`,
+  - `CalendarEnterpriseIntegrationSettings.tsx` dynamically imports `@enterprise/components/settings/integrations/CalendarIntegrationsSettings`,
+  - the shared settings composition no longer imports the concrete Calendar UI directly.
