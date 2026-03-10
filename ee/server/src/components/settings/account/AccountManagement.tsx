@@ -38,7 +38,6 @@ import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 // Feature display names for the tier features list
 const FEATURE_DISPLAY_NAMES: Record<TIER_FEATURES, string> = {
-  [TIER_FEATURES.INVOICE_DESIGNER]: 'Visual Invoice Designer — drag-and-drop custom invoice templates',
   [TIER_FEATURES.ENTRA_SYNC]: 'Microsoft Entra Sync — auto-discover tenants and sync contacts from Entra ID',
   [TIER_FEATURES.CIPP]: 'CIPP Integration — connect your CIPP instance for multi-tenant Entra management',
 };

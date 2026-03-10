@@ -12,7 +12,6 @@ import { TenantTier } from './tenantTiers';
  * Add new features here as they become tier-gated.
  */
 export enum TIER_FEATURES {
-  INVOICE_DESIGNER = 'INVOICE_DESIGNER',
   ENTRA_SYNC = 'ENTRA_SYNC',
   CIPP = 'CIPP',
 }
@@ -30,7 +29,6 @@ export type TierFeature = TIER_FEATURES;
 export const TIER_FEATURE_MAP: Record<TenantTier, readonly TIER_FEATURES[]> = {
   pro: [],
   premium: [
-    TIER_FEATURES.INVOICE_DESIGNER,
     TIER_FEATURES.ENTRA_SYNC,
     TIER_FEATURES.CIPP,
   ],
@@ -40,7 +38,6 @@ export const TIER_FEATURE_MAP: Record<TenantTier, readonly TIER_FEATURES[]> = {
  * Reverse mapping: minimum tier required for each feature.
  */
 export const FEATURE_MINIMUM_TIER: Record<TIER_FEATURES, TenantTier> = {
-  [TIER_FEATURES.INVOICE_DESIGNER]: 'premium',
   [TIER_FEATURES.ENTRA_SYNC]: 'premium',
   [TIER_FEATURES.CIPP]: 'premium',
 } as const;

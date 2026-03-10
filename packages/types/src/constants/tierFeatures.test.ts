@@ -8,10 +8,6 @@ import {
 
 describe('tierFeatures', () => {
   describe('TIER_FEATURES enum', () => {
-    it('contains INVOICE_DESIGNER', () => {
-      expect(TIER_FEATURES.INVOICE_DESIGNER).toBe('INVOICE_DESIGNER');
-    });
-
     it('contains ENTRA_SYNC', () => {
       expect(TIER_FEATURES.ENTRA_SYNC).toBe('ENTRA_SYNC');
     });
@@ -26,10 +22,6 @@ describe('tierFeatures', () => {
       expect(TIER_FEATURE_MAP.pro).toEqual([]);
     });
 
-    it('premium tier includes INVOICE_DESIGNER', () => {
-      expect(TIER_FEATURE_MAP.premium).toContain(TIER_FEATURES.INVOICE_DESIGNER);
-    });
-
     it('premium tier includes ENTRA_SYNC', () => {
       expect(TIER_FEATURE_MAP.premium).toContain(TIER_FEATURES.ENTRA_SYNC);
     });
@@ -40,14 +32,6 @@ describe('tierFeatures', () => {
   });
 
   describe('tierHasFeature', () => {
-    it('tierHasFeature(premium, INVOICE_DESIGNER) returns true', () => {
-      expect(tierHasFeature('premium', TIER_FEATURES.INVOICE_DESIGNER)).toBe(true);
-    });
-
-    it('tierHasFeature(pro, INVOICE_DESIGNER) returns false', () => {
-      expect(tierHasFeature('pro', TIER_FEATURES.INVOICE_DESIGNER)).toBe(false);
-    });
-
     it('tierHasFeature(premium, ENTRA_SYNC) returns true', () => {
       expect(tierHasFeature('premium', TIER_FEATURES.ENTRA_SYNC)).toBe(true);
     });
@@ -66,10 +50,6 @@ describe('tierFeatures', () => {
   });
 
   describe('FEATURE_MINIMUM_TIER', () => {
-    it('maps INVOICE_DESIGNER→premium', () => {
-      expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.INVOICE_DESIGNER]).toBe('premium');
-    });
-
     it('maps ENTRA_SYNC→premium', () => {
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.ENTRA_SYNC]).toBe('premium');
     });

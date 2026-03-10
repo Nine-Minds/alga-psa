@@ -24,7 +24,6 @@
  */
 export enum ADD_ONS {
   // Future examples:
-  // INVOICE_DESIGNER = 'invoice_designer',
   // AI_ASSISTANT = 'ai_assistant',
 }
 

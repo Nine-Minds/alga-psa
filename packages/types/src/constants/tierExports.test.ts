@@ -29,8 +29,8 @@ describe('tier exports from @alga-psa/types', () => {
     const tier: TenantTier = 'pro';
     expect(tier).toBe('pro');
 
-    const feature: TierFeature = TIER_FEATURES.INVOICE_DESIGNER;
-    expect(feature).toBe('INVOICE_DESIGNER');
+    const feature: TierFeature = TIER_FEATURES.ENTRA_SYNC;
+    expect(feature).toBe('ENTRA_SYNC');
   });
 
   it('add-on types and functions are exported', () => {

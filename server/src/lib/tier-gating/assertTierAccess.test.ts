@@ -21,9 +21,9 @@ describe('assertTierAccess', () => {
 
   describe('TierAccessError', () => {
     it('creates error with correct properties', () => {
-      const error = new TierAccessError(TIER_FEATURES.INVOICE_DESIGNER, 'premium', 'pro');
+      const error = new TierAccessError(TIER_FEATURES.ENTRA_SYNC, 'premium', 'pro');
       expect(error.name).toBe('TierAccessError');
-      expect(error.feature).toBe(TIER_FEATURES.INVOICE_DESIGNER);
+      expect(error.feature).toBe(TIER_FEATURES.ENTRA_SYNC);
       expect(error.requiredTier).toBe('premium');
       expect(error.currentTier).toBe('pro');
       expect(error.message).toContain('Premium');
@@ -31,34 +31,34 @@ describe('assertTierAccess', () => {
   });
 
   describe('assertTierAccess function', () => {
-    it('throws TierAccessError for pro tenant accessing INVOICE_DESIGNER', async () => {
+    it('throws TierAccessError for pro tenant accessing ENTRA_SYNC', async () => {
       vi.mocked(getSession).mockResolvedValue({
         user: { plan: 'pro' },
       } as any);
 
-      await expect(assertTierAccess(TIER_FEATURES.INVOICE_DESIGNER)).rejects.toThrow(TierAccessError);
-      await expect(assertTierAccess(TIER_FEATURES.INVOICE_DESIGNER)).rejects.toMatchObject({
-        feature: TIER_FEATURES.INVOICE_DESIGNER,
+      await expect(assertTierAccess(TIER_FEATURES.ENTRA_SYNC)).rejects.toThrow(TierAccessError);
+      await expect(assertTierAccess(TIER_FEATURES.ENTRA_SYNC)).rejects.toMatchObject({
+        feature: TIER_FEATURES.ENTRA_SYNC,
         requiredTier: 'premium',
         currentTier: 'pro',
       });
     });
 
-    it('does not throw for premium tenant accessing INVOICE_DESIGNER', async () => {
+    it('does not throw for premium tenant accessing ENTRA_SYNC', async () => {
       vi.mocked(getSession).mockResolvedValue({
         user: { plan: 'premium' },
       } as any);
 
-      await expect(assertTierAccess(TIER_FEATURES.INVOICE_DESIGNER)).resolves.toBeUndefined();
+      await expect(assertTierAccess(TIER_FEATURES.ENTRA_SYNC)).resolves.toBeUndefined();
     });
 
-    it('throws for NULL plan tenant (misconfigured → pro, but still no INVOICE_DESIGNER)', async () => {
+    it('throws for NULL plan tenant (misconfigured → pro)', async () => {
       vi.mocked(getSession).mockResolvedValue({
         user: { plan: null },
       } as any);
 
-      await expect(assertTierAccess(TIER_FEATURES.INVOICE_DESIGNER)).rejects.toThrow(TierAccessError);
-      await expect(assertTierAccess(TIER_FEATURES.INVOICE_DESIGNER)).rejects.toMatchObject({
+      await expect(assertTierAccess(TIER_FEATURES.ENTRA_SYNC)).rejects.toThrow(TierAccessError);
+      await expect(assertTierAccess(TIER_FEATURES.ENTRA_SYNC)).rejects.toMatchObject({
         currentTier: 'pro',
       });
     });

@@ -30,9 +30,9 @@ export class TierAccessError extends Error {
  * Use this in server actions to gate functionality by tier.
  *
  * @example
- * async function saveInvoiceTemplate(data: TemplateData) {
+ * async function syncEntraTenants() {
  *   'use server';
- *   await assertTierAccess(TIER_FEATURES.INVOICE_DESIGNER);
+ *   await assertTierAccess(TIER_FEATURES.ENTRA_SYNC);
  *   // ... rest of the action
  * }
  */
