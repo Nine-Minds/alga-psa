@@ -58,6 +58,9 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
   - `pnpm vitest run --coverage.enabled=false src/test/unit/components/integrations/IntegrationsSettingsPage.calendar.test.tsx src/test/unit/components/profile/UserProfile.calendar.contract.test.ts ../packages/integrations/src/lib/calendarAvailability.test.ts`
   - `pnpm vitest run --coverage.enabled=false src/test/unit/components/integrations/IntegrationsSettingsPage.teams.test.tsx`
   - `pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-09) Focused implementation checks for the calendar callback delegator slice:
+  - `pnpm vitest run --coverage.enabled=false src/test/unit/api/calendarCallbackRoutes.delegator.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
 
 ## Links / References
 
@@ -103,6 +106,13 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
   - `server/src/app/api/auth/microsoft/calendar/callback/route.ts`
   - `server/src/app/api/calendar/webhooks/google/route.ts`
   - `server/src/app/api/calendar/webhooks/microsoft/route.ts`
+- Calendar callback delegator helpers and EE-owned route files added for the second migration slice:
+  - `server/src/app/api/auth/calendar/_ceStub.ts`
+  - `server/src/app/api/auth/calendar/_eeDelegator.ts`
+  - `packages/ee/src/app/api/auth/google/calendar/callback/route.ts`
+  - `packages/ee/src/app/api/auth/microsoft/calendar/callback/route.ts`
+  - `ee/server/src/app/api/auth/google/calendar/callback/route.ts`
+  - `ee/server/src/app/api/auth/microsoft/calendar/callback/route.ts`
 - Calendar UI visibility and EE-entry helpers added for the first migration slice:
   - `packages/integrations/src/lib/calendarAvailability.ts`
   - `packages/integrations/src/components/settings/integrations/CalendarEnterpriseIntegrationSettings.tsx`
@@ -133,6 +143,7 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
   - `server/src/test/integration/calendar/scheduleAutoSync.integration.test.ts`
   - `server/src/test/integration/calendar/webhookProcessing.integration.test.ts`
   - `server/src/test/unit/calendar/calendarActions.sync.test.ts`
+  - `server/src/test/unit/api/calendarCallbackRoutes.delegator.test.ts`
 
 ## Microsoft Binding Cleanup Inventory
 
@@ -193,7 +204,17 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
   - moved settings Calendar rendering behind `CalendarEnterpriseIntegrationSettings`,
   - moved profile Calendar rendering behind `@enterprise/components/settings/profile/CalendarProfileSettings`,
   - removed CE Calendar discovery from settings navigation and profile tabs while preserving EE deep-link behavior.
+- (2026-03-09) Updated the CE `packages/ee` Calendar settings/profile stubs to return explicit enterprise-only messaging when those wrappers are imported directly, while keeping the normal CE navigation surfaces hidden.
 - (2026-03-09) Added focused tests for CE/EE Calendar visibility:
   - helper tests for category/tab resolution,
   - `IntegrationsSettingsPage.calendar.test.tsx` for CE hiding and EE visibility/provider copy,
   - `UserProfile.calendar.contract.test.ts` for the profile EE wrapper boundary.
+- (2026-03-09) Implemented the calendar OAuth callback ownership slice:
+  - moved the live Google and Microsoft calendar callback handlers to `ee/server/src/app/api/auth/.../calendar/callback/route.ts`,
+  - replaced the shared callback files with CE stubs plus EE delegators,
+  - added `packages/ee` callback stubs so CE builds remain import-safe,
+  - kept the public callback URLs stable while removing live callback imports from shared route wrappers.
+- (2026-03-09) Added `calendarCallbackRoutes.delegator.test.ts` to verify:
+  - CE returns enterprise-only payloads,
+  - EE delegates the original `Request` object to the EE route handlers,
+  - shared callback wrappers no longer import `CalendarProviderService`, adapters, or OAuth-state logic directly.

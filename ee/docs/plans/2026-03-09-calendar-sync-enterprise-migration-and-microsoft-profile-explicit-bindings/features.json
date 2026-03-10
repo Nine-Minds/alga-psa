@@ -410,7 +410,7 @@
   {
     "id": "F041",
     "description": "Calendar settings unavailable states use explicit EE-style messaging only when a route or wrapper must remain addressable in CE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -482,7 +482,7 @@
   {
     "id": "F049",
     "description": "The Google calendar OAuth callback route becomes a CE stub or EE delegator rather than a shared active implementation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -492,7 +492,7 @@
   {
     "id": "F050",
     "description": "The Microsoft calendar OAuth callback route becomes a CE stub or EE delegator rather than a shared active implementation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -502,7 +502,7 @@
   {
     "id": "F051",
     "description": "CE requests to the Google calendar callback route return an EE-unavailable response and do not exchange tokens.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -512,7 +512,7 @@
   {
     "id": "F052",
     "description": "CE requests to the Microsoft calendar callback route return an EE-unavailable response and do not exchange tokens.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -522,7 +522,7 @@
   {
     "id": "F053",
     "description": "EE requests to the Google calendar callback route delegate to an EE-owned implementation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -532,7 +532,7 @@
   {
     "id": "F054",
     "description": "EE requests to the Microsoft calendar callback route delegate to an EE-owned implementation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -542,7 +542,7 @@
   {
     "id": "F055",
     "description": "Shared callback wrapper files stop importing concrete calendar provider services and adapters directly.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -552,7 +552,7 @@
   {
     "id": "F056",
     "description": "EE callback implementations own provider creation, token exchange, and persistence side effects.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -562,7 +562,7 @@
   {
     "id": "F057",
     "description": "Calendar-specific OAuth state validation remains intact after the callback routes move behind EE wrappers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -572,7 +572,7 @@
   {
     "id": "F058",
     "description": "The existing calendar callback success contract remains stable for EE tenants after the refactor.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -582,7 +582,7 @@
   {
     "id": "F059",
     "description": "The existing calendar callback error contract remains stable for EE tenants after the refactor.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -592,7 +592,7 @@
   {
     "id": "F060",
     "description": "Direct CE access to calendar callback routes cannot create calendar providers, provider tokens, or sync mappings.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -602,7 +602,7 @@
   {
     "id": "F061",
     "description": "Edition-aware callback tests verify gating before any provider write occurs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -612,7 +612,7 @@
   {
     "id": "F062",
     "description": "Calendar callback wrappers preserve request-method handling and expected route semantics during EE delegation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -622,7 +622,7 @@
   {
     "id": "F063",
     "description": "Calendar callback wrappers preserve query parsing and state extraction semantics during EE delegation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -632,7 +632,7 @@
   {
     "id": "F064",
     "description": "Contract tests assert that active calendar callback logic no longer lives in shared CE runtime modules.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -712,7 +712,7 @@
   {
     "id": "F072",
     "description": "The public callback URLs remain stable for EE tenants even though the implementation ownership changes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
