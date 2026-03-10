@@ -43,6 +43,10 @@ import { getContactAvatarUrlAction, getUserContactId, searchUsersForMentions } f
 import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTicketRichTextUploadSession } from './useTicketRichTextUploadSession';
+import {
+  getStoredTicketConversationNewestFirst,
+  setStoredTicketConversationNewestFirst,
+} from './ticketConversationOrderPreference';
 
 interface TicketConversationProps {
   id?: string;
@@ -187,7 +191,11 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   };
 
   const toggleCommentOrder = () => {
-    setReverseOrder(!reverseOrder);
+    setReverseOrder((previousValue) => {
+      const nextValue = !previousValue;
+      setStoredTicketConversationNewestFirst(nextValue);
+      return nextValue;
+    });
   };
   // Removed renderButtonBar function as it's no longer needed
   const handleAddNewComment = async () => {
@@ -214,6 +222,10 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       setResolutionCloseStatusId(NO_STATUS_CHANGE);
     }
   }, [showEditor, isResolutionToggle]);
+
+  useEffect(() => {
+    setReverseOrder(getStoredTicketConversationNewestFirst(defaultNewestFirst));
+  }, [defaultNewestFirst]);
 
   // Fetch contact avatar URLs for client users
   useEffect(() => {

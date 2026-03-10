@@ -337,7 +337,9 @@ function DocumentStorageCardComponent({
         }
 
         // LEGACY: Fall back to old preview generation system for documents without thumbnails
-        const identifierForPreview = document.file_id || document.document_id;
+        // Keep legacy preview requests document-scoped so deleted files do not outlive
+        // their document records in queued/in-flight preview fetches.
+        const identifierForPreview = document.document_id || document.file_id;
 
         if (!identifierForPreview) {
             console.warn('DocumentStorageCard: No identifier available for preview (document_id or file_id). Document:', document);
