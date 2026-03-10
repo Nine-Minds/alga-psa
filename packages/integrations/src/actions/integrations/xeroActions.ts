@@ -9,7 +9,11 @@ import {
   XeroClientService,
   getXeroConnectionSummaries,
   type XeroConnectionSummary,
-  XERO_CREDENTIALS_SECRET_NAME
+  XERO_CREDENTIALS_SECRET_NAME,
+  XERO_CLIENT_ID_SECRET_NAME,
+  XERO_CLIENT_SECRET_SECRET_NAME,
+  getXeroRedirectUri,
+  getXeroOAuthScopes
 } from '../../lib/xero/xeroClientService';
 import type { IUserWithRoles } from '@alga-psa/types';
 
@@ -25,6 +29,39 @@ async function checkBillingUpdateAccess(user: IUserWithRoles): Promise<void> {
   if (!allowed) {
     throw new Error('Forbidden');
   }
+}
+
+function isEnterpriseEdition(): boolean {
+  return (
+    (process.env.EDITION ?? '').toLowerCase() === 'ee' ||
+    (process.env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise'
+  );
+}
+
+function assertEnterpriseEdition(): void {
+  if (!isEnterpriseEdition()) {
+    throw new Error('Xero integration is only available in Enterprise Edition.');
+  }
+}
+
+function maskSecret(value: string): string {
+  if (!value) return '';
+  if (value.length <= 4) return '•'.repeat(value.length);
+  return `${'•'.repeat(Math.max(0, value.length - 4))}${value.slice(-4)}`;
+}
+
+function formatXeroStatusError(error: unknown): string {
+  const message = error instanceof Error ? error.message : 'Failed to connect to Xero.';
+
+  if (message.includes('XERO_REFRESH_EXPIRED')) {
+    return 'Your default Xero connection has expired. Disconnect and reconnect Xero to continue.';
+  }
+
+  if (message.includes('re-authentication required')) {
+    return 'Your default Xero connection has expired. Disconnect and reconnect Xero to continue.';
+  }
+
+  return message;
 }
 
 export interface XeroAccountOption {
@@ -61,21 +98,74 @@ export interface XeroConnectionStatus {
   connections: XeroConnectionSummary[];
   connected: boolean;
   defaultConnectionId?: string;
+  defaultConnection?: XeroConnectionSummary;
+  redirectUri: string;
+  scopes: string[];
+  credentials: {
+    clientIdConfigured: boolean;
+    clientSecretConfigured: boolean;
+    ready: boolean;
+    clientIdMasked?: string;
+    clientSecretMasked?: string;
+  };
   error?: string;
 }
+
+export const saveXeroCredentials = withAuth(async (
+  user,
+  { tenant },
+  input: { clientId: string; clientSecret: string }
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    assertEnterpriseEdition();
+    await checkBillingUpdateAccess(user);
+
+    const clientId = input.clientId?.trim();
+    if (!clientId) {
+      return { success: false, error: 'Xero client ID is required.' };
+    }
+
+    const clientSecret = input.clientSecret?.trim();
+    if (!clientSecret) {
+      return { success: false, error: 'Xero client secret is required.' };
+    }
+
+    const secretProvider = await getSecretProviderInstance();
+    await secretProvider.setTenantSecret(tenant, XERO_CLIENT_ID_SECRET_NAME, clientId);
+    await secretProvider.setTenantSecret(tenant, XERO_CLIENT_SECRET_SECRET_NAME, clientSecret);
+
+    logger.info('[xeroActions] Saved tenant-owned Xero OAuth credentials', {
+      tenantId: tenant,
+      clientIdConfigured: true,
+      clientSecretConfigured: true
+    });
+
+    revalidatePath('/msp/settings');
+    return { success: true };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'An unexpected error occurred while saving Xero credentials.';
+    logger.error('[xeroActions] Failed to save tenant-owned Xero OAuth credentials', {
+      tenantId: tenant,
+      error
+    });
+    return { success: false, error: message };
+  }
+});
 
 export const disconnectXero = withAuth(async (
   user,
   { tenant }
 ): Promise<{ success: boolean; error?: string }> => {
   try {
+    assertEnterpriseEdition();
     await checkBillingUpdateAccess(user);
     const secretProvider = await getSecretProviderInstance();
 
     logger.info('[xeroActions] Disconnecting Xero integration', { tenantId: tenant });
     await secretProvider.deleteTenantSecret(tenant, XERO_CREDENTIALS_SECRET_NAME);
 
-    revalidatePath('/settings/integrations/xero');
+    revalidatePath('/msp/settings');
 
     return { success: true };
   } catch (error) {
@@ -89,38 +179,50 @@ export const getXeroConnectionStatus = withAuth(async (
   user,
   { tenant }
 ): Promise<XeroConnectionStatus> => {
+  assertEnterpriseEdition();
   await checkBillingReadAccess(user);
+  const secretProvider = await getSecretProviderInstance();
+  const [storedClientId, storedClientSecret, redirectUri] = await Promise.all([
+    secretProvider.getTenantSecret(tenant, XERO_CLIENT_ID_SECRET_NAME),
+    secretProvider.getTenantSecret(tenant, XERO_CLIENT_SECRET_SECRET_NAME),
+    getXeroRedirectUri(secretProvider)
+  ]);
+  const clientId = typeof storedClientId === 'string' ? storedClientId.trim() : '';
+  const clientSecret = typeof storedClientSecret === 'string' ? storedClientSecret.trim() : '';
   const summaries = await getXeroConnectionSummaries(tenant);
-
-  if (summaries.length === 0) {
-    return {
-      connections: [],
-      connected: false,
-      error: 'No Xero connections configured.'
-    };
-  }
+  const defaultConnection = summaries[0];
+  const credentials = {
+    clientIdConfigured: Boolean(clientId),
+    clientSecretConfigured: Boolean(clientSecret),
+    ready: Boolean(clientId && clientSecret),
+    clientIdMasked: clientId ? maskSecret(clientId) : undefined,
+    clientSecretMasked: clientSecret ? maskSecret(clientSecret) : undefined
+  };
 
   let connected = false;
   let error: string | undefined;
 
-  for (const summary of summaries) {
+  if (!credentials.ready) {
+    error = 'Add a Xero client ID and client secret before connecting live Xero.';
+  } else if (!defaultConnection) {
+    error = 'No live Xero organisation is connected yet. Save credentials, then click Connect Xero.';
+  } else {
     try {
-      await XeroClientService.create(tenant, summary.connectionId);
+      await XeroClientService.create(tenant, defaultConnection.connectionId);
       connected = true;
-      error = undefined;
-      break;
     } catch (err) {
-      if (!error) {
-        error = err instanceof Error ? err.message : 'Failed to connect to Xero.';
-      }
-      continue;
+      error = formatXeroStatusError(err);
     }
   }
 
   return {
     connections: summaries,
     connected,
-    defaultConnectionId: summaries[0]?.connectionId,
+    defaultConnectionId: defaultConnection?.connectionId,
+    defaultConnection,
+    redirectUri,
+    scopes: getXeroOAuthScopes(),
+    credentials,
     error
   };
 });
