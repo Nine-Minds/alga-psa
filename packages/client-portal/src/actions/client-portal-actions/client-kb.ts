@@ -120,7 +120,7 @@ export const getClientKBArticles = withAuth(
             })
             .where('tm.tagged_type', 'knowledge_base_article')
             .andWhere('tm.tenant', tenant)
-            .whereIn('td.tag_text', filters.tags);
+            .whereIn('td.tag_text', filters.tags as readonly string[]);
         });
       }
 

@@ -161,7 +161,7 @@ export const createShareLink = withAuth(
       .where({ tenant, share_id: shareIdValue })
       .first();
 
-    return shareLink as IDocumentShareLink;
+    return shareLink as unknown as IDocumentShareLink;
   }
 );
 
@@ -194,7 +194,7 @@ export const getShareLinksForDocument = withAuth(
       })
       .orderBy('created_at', 'desc');
 
-    return shareLinks as IDocumentShareLink[];
+    return shareLinks as unknown as IDocumentShareLink[];
   }
 );
 

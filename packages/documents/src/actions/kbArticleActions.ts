@@ -240,7 +240,7 @@ async function _createArticleInternal(
     ...article,
     document,
     document_name: document.document_name,
-  } as IKBArticleWithDocument;
+  } as unknown as IKBArticleWithDocument;
 }
 
 /**
@@ -354,7 +354,7 @@ export const updateArticle = withAuth(
         .where({ tenant, article_id: articleId })
         .first();
 
-      return article as IKBArticle;
+      return article as unknown as IKBArticle;
     });
   }
 );
@@ -414,7 +414,7 @@ export const publishArticle = withAuth(
         .where({ tenant, article_id: articleId })
         .first();
 
-      return article as IKBArticle;
+      return article as unknown as IKBArticle;
     });
   }
 );
@@ -470,7 +470,7 @@ export const archiveArticle = withAuth(
         .where({ tenant, article_id: articleId })
         .first();
 
-      return article as IKBArticle;
+      return article as unknown as IKBArticle;
     });
   }
 );
