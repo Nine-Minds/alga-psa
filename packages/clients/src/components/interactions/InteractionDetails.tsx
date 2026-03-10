@@ -8,7 +8,7 @@ import { Clock, FileText, ArrowLeft, Plus, Pen, Trash2 } from 'lucide-react';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ButtonComponent, ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
-import { useDrawer } from "@alga-psa/ui";
+import { useDrawer, useClientDrawer } from "@alga-psa/ui";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import ContactDetailsView from '@alga-psa/clients/components/contacts/ContactDetailsView';
 import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
@@ -49,6 +49,7 @@ const formatDuration = (totalMinutes: number): string => {
 const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: initialInteraction, onInteractionDeleted, onInteractionUpdated, isInDrawer = false }) => {
   const [interaction, setInteraction] = useState<IInteraction>(initialInteraction);
   const { openDrawer, goBack, closeDrawer } = useDrawer();
+  const clientDrawer = useClientDrawer();
   const { launchTimeEntry, renderAgentSchedule } = useSchedulingCallbacks();
   const { renderQuickAddTicket } = useClientCrossFeature();
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
@@ -152,6 +153,10 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
 
   const handleClientClick = async () => {
     if (interaction.client_id) {
+      if (clientDrawer) {
+        clientDrawer.openClientDrawer(interaction.client_id);
+        return;
+      }
       try {
         const client = await getClientById(interaction.client_id);
         if (client) {

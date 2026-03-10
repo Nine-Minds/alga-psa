@@ -8,7 +8,7 @@ import { QuickAddInteraction } from '../interactions/QuickAddInteraction';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Pen, Plus, ArrowLeft, ExternalLink } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { useDrawer } from '@alga-psa/ui';
+import { useDrawer, useClientDrawer } from '@alga-psa/ui';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import { ITag } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
@@ -92,6 +92,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const { openDrawer, goBack } = useDrawer();
+  const clientDrawer = useClientDrawer();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -185,6 +186,10 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
 
   const handleClientClick = async () => {
     if (contact.client_id) {
+      if (clientDrawer) {
+        clientDrawer.openClientDrawer(contact.client_id);
+        return;
+      }
       try {
         setError(null);
         const client = await getClientById(contact.client_id);

@@ -30,6 +30,7 @@ import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
 import { getClientById } from '@alga-psa/clients/actions';
 import { TagFilter } from '@alga-psa/ui/components';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import { MspClientCrossFeatureProvider } from './MspClientCrossFeatureProvider';
 
 interface ContactTicketsProps {
   contactId: string;
@@ -249,13 +250,15 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
       const client = await getClientById(clickedClientId);
       if (client) {
         openDrawer(
-          <ClientDetails
-            client={client}
-            documents={[]}
-            contacts={[]}
-            isInDrawer={true}
-            quickView={true}
-          />
+          <MspClientCrossFeatureProvider>
+            <ClientDetails
+              client={client}
+              documents={[]}
+              contacts={[]}
+              isInDrawer={true}
+              quickView={true}
+            />
+          </MspClientCrossFeatureProvider>
         );
       } else {
         toast.error('Client not found');

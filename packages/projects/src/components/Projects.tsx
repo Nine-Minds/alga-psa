@@ -21,7 +21,7 @@ import { DeleteEntityDialog } from '@alga-psa/ui';
 import { toast } from 'react-hot-toast';
 import { Search, MoreVertical, Pen, Trash2, XCircle, ExternalLink, FileText } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { useDrawer } from "@alga-psa/ui";
+import { useDrawer, useClientDrawer } from "@alga-psa/ui";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
 import { Input } from '@alga-psa/ui/components/Input';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
@@ -65,6 +65,7 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
   const [isDeleteValidating, setIsDeleteValidating] = useState(false);
   const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   const { openDrawer, closeDrawer } = useDrawer();
+  const clientDrawer = useClientDrawer();
   
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -323,6 +324,10 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
   };
 
   const onQuickViewClient = (clientId: string) => {
+    if (clientDrawer) {
+      clientDrawer.openClientDrawer(clientId);
+      return;
+    }
     const client = clients.find(c => c.client_id === clientId);
     if (client) {
       setQuickViewClient(client);

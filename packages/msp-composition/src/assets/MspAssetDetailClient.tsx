@@ -1,13 +1,13 @@
 'use client';
 
 import React from 'react';
-import AssetDashboard from '@alga-psa/assets/components/AssetDashboard';
+import { AssetDetailView } from '@alga-psa/assets/components/AssetDetailView';
 import { MspAssetCrossFeatureProvider } from './MspAssetCrossFeatureProvider';
 
-export default function MspAssetDashboardClient(props: React.ComponentProps<typeof AssetDashboard>) {
+export default function MspAssetDetailClient({ assetId }: { assetId: string }) {
   return (
     <MspAssetCrossFeatureProvider>
-      <AssetDashboard {...props} />
+      <AssetDetailView assetId={assetId} />
     </MspAssetCrossFeatureProvider>
   );
 }

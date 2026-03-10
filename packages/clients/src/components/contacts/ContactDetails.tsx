@@ -18,7 +18,7 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import InteractionsFeed from '../interactions/InteractionsFeed';
-import { useDrawer } from "@alga-psa/ui";
+import { useDrawer, useClientDrawer } from "@alga-psa/ui";
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Card } from '@alga-psa/ui/components/Card';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -234,6 +234,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const drawer = useDrawer();
+  const clientDrawer = useClientDrawer();
   const { getTicketFormOptions, renderContactTickets } = useClientCrossFeature();
 
   // Implement refreshContactData function
@@ -600,6 +601,10 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
 
   const handleClientClick = async () => {
     if (editedContact.client_id) {
+      if (clientDrawer) {
+        clientDrawer.openClientDrawer(editedContact.client_id);
+        return;
+      }
       try {
         const client = await getClientById(editedContact.client_id);
         if (client) {

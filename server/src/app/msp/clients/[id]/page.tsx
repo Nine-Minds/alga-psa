@@ -8,7 +8,7 @@ import { ClientDetails } from '@alga-psa/clients';
 import { getSurveyClientSummary } from '@alga-psa/surveys/actions/survey-actions/surveyDashboardActions';
 import { AIChatContextBoundary } from '@product/chat/context';
 import type { Metadata } from 'next';
-import { MspClientCrossFeatureProvider } from '@alga-psa/msp-composition/clients';
+
 
 const getCachedClient = cache((id: string) => getClientById(id));
 
@@ -62,15 +62,13 @@ const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {
         }}
       >
         <div className="w-full px-4">
-          <MspClientCrossFeatureProvider>
-            <ClientDetails
-              client={client}
-              documents={documents}
-              contacts={contacts}
-              isInDrawer={false}
-              surveySummary={surveySummary}
-            />
-          </MspClientCrossFeatureProvider>
+          <ClientDetails
+            client={client}
+            documents={documents}
+            contacts={contacts}
+            isInDrawer={false}
+            surveySummary={surveySummary}
+          />
         </div>
       </AIChatContextBoundary>
     );

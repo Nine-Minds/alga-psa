@@ -8,13 +8,7 @@ import { Ticket } from 'lucide-react';
 import { getAssetLinkedTickets } from '../../actions/assetActions';
 import { formatDateTime } from '@alga-psa/core';
 import type { Asset } from '@alga-psa/types';
-import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
-import { cn } from '@alga-psa/ui';
-import { useDrawer } from '@alga-psa/ui';
-import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
-import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
-import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { useAssetCrossFeature } from '../../context/AssetCrossFeatureContext';
 
 interface ServiceHistoryTabProps {
   asset: Asset;
@@ -23,7 +17,7 @@ interface ServiceHistoryTabProps {
 export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) => {
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
   const { mutate } = useSWRConfig();
-  const { openDrawer } = useDrawer();
+  const { renderQuickAddTicket, openTicketDetailsDrawer } = useAssetCrossFeature();
   
   const { data: tickets, isLoading } = useSWR(
     asset.asset_id ? ['asset', asset.asset_id, 'tickets'] : null,
@@ -35,42 +29,8 @@ export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) =
   };
 
   const handleTicketClick = useCallback(async (ticketId: string) => {
-    try {
-      const ticketData = await getConsolidatedTicketData(ticketId);
-      
-      if (!ticketData) {
-        toast.error('Failed to load ticket');
-        return;
-      }
-
-      openDrawer(
-        <TicketDetails
-          isInDrawer={true}
-          initialTicket={ticketData.ticket}
-          initialComments={ticketData.comments}
-          initialBoard={ticketData.board}
-          initialClient={ticketData.client}
-          initialContactInfo={ticketData.contactInfo}
-          initialCreatedByUser={ticketData.createdByUser}
-          initialAdditionalAgents={ticketData.additionalAgents}
-          initialAvailableAgents={ticketData.availableAgents}
-          initialUserMap={ticketData.userMap}
-          statusOptions={ticketData.options.status}
-          agentOptions={ticketData.options.agent}
-          boardOptions={ticketData.options.board}
-          priorityOptions={ticketData.options.priority}
-          initialCategories={ticketData.categories}
-          initialClients={ticketData.clients}
-          initialLocations={ticketData.locations}
-        />,
-        undefined,
-        undefined,
-        '50vw'
-      );
-    } catch (error) {
-      handleError(error, 'Failed to open ticket');
-    }
-  }, [openDrawer]);
+    await openTicketDetailsDrawer({ ticketId });
+  }, [openTicketDetailsDrawer]);
 
   if (isLoading) {
     return <Card className="h-64 animate-pulse bg-[rgb(var(--color-border-50))]" />;
@@ -145,16 +105,16 @@ export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) =
         </CardContent>
       </Card>
 
-      <QuickAddTicket
-        open={isTicketDialogOpen}
-        onOpenChange={setIsTicketDialogOpen}
-        onTicketAdded={handleTicketAdded}
-        prefilledClient={asset.client_id ? {
+      {renderQuickAddTicket({
+        open: isTicketDialogOpen,
+        onOpenChange: setIsTicketDialogOpen,
+        onTicketAdded: handleTicketAdded,
+        prefilledClient: asset.client_id ? {
           id: asset.client_id,
           name: asset.client?.client_name || 'Unknown Client'
-        } : undefined}
-        assetId={asset.asset_id}
-      />
+        } : undefined,
+        assetId: asset.asset_id,
+      })}
     </>
   );
 };

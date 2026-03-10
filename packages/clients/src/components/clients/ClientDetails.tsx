@@ -3,8 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import type { DeletionValidationResult, IDocument } from '@alga-psa/types';
 import { IContact } from '@alga-psa/types';
-import type { IClient } from '@alga-psa/types';
-import { ITag } from '@alga-psa/types';
+import type { IClient, ITag } from '@alga-psa/types';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { TagManager } from '@alga-psa/tags/components';
@@ -78,6 +77,9 @@ import {
   resolveEntraClientSyncStartState,
   shouldShowEntraSyncAction,
 } from './clientDetailsEntraSyncAction';
+
+const EMPTY_CONTACTS: IContact[] = [];
+const EMPTY_DOCUMENTS: IDocument[] = [];
 
 
 const SwitchDetailItem: React.FC<{
@@ -197,8 +199,8 @@ interface ClientDetailsProps {
 const ClientDetails: React.FC<ClientDetailsProps> = ({
   id = 'client-details',
   client,
-  documents = [],
-  contacts = [],
+  documents = EMPTY_DOCUMENTS,
+  contacts = EMPTY_CONTACTS,
   isInDrawer = false,
   quickView = false,
   surveySummary = null
@@ -771,13 +773,18 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     });
   };
 
-  const handleSave = async () => {
-    if (isSaving) return;
+  const editedClientRef = useRef(editedClient);
+  editedClientRef.current = editedClient;
+  const isSavingRef = useRef(isSaving);
+  isSavingRef.current = isSaving;
+
+  const handleSave = useCallback(async () => {
+    if (isSavingRef.current) return;
     setHasAttemptedSubmit(true);
 
     // Professional PSA validation pattern: Check required fields
     const requiredFields = {
-      client_name: editedClient.client_name?.trim() || ''
+      client_name: editedClientRef.current.client_name?.trim() || ''
     };
 
     // Clear previous errors and validate required fields
@@ -806,12 +813,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       // Prepare data for update, removing computed fields
       const {
         account_manager_full_name,
-        ...restOfEditedClient 
-      } = editedClient;
+        ...restOfEditedClient
+      } = editedClientRef.current;
       const dataToUpdate: Partial<Omit<IClient, 'account_manager_full_name'>> = {
         ...restOfEditedClient,
         properties: restOfEditedClient.properties ? { ...restOfEditedClient.properties } : {},
-        account_manager_id: editedClient.account_manager_id === '' ? null : editedClient.account_manager_id,
+        account_manager_id: editedClientRef.current.account_manager_id === '' ? null : editedClientRef.current.account_manager_id,
       };
       const updatedClientResult = await updateClient(client.client_id, dataToUpdate);
       // Assuming updateClient returns the full updated client object matching IClient
@@ -826,7 +833,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [client.client_id]);
 
   const handleSyncEntraNow = async () => {
     if (isSyncingEntra) return;
@@ -864,7 +871,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     }
   };
 
-  const handleBillingConfigSave = async (updatedBillingConfig: Partial<IClient>) => {
+  const handleBillingConfigSave = useCallback(async (updatedBillingConfig: Partial<IClient>) => {
     try {
       const updatedClient = await updateClient(client.client_id, updatedBillingConfig);
       setEditedClient(prevClient => {
@@ -877,7 +884,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     } catch (error) {
       console.error('Error updating client:', error);
     }
-  };
+  }, [client.client_id]);
 
   const handleTicketAdded = (ticket: ITicket) => {
     setIsQuickAddTicketOpen(false);
@@ -892,9 +899,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     });
   };
 
-  const handleTagsChange = (updatedTags: ITag[]) => {
+  const handleTagsChange = useCallback((updatedTags: ITag[]) => {
     setTags(updatedTags);
-  };
+  }, []);
 
   const handleTabChange = useCallback(async (tabValue: string) => {
     const params = new URLSearchParams(searchParams?.toString() || '');
