@@ -54,4 +54,78 @@ describe('buildContactFieldSyncPatch', () => {
       entra_user_principal_name: 'updated.upn@example.com',
     });
   });
+
+  it('T033: phone overwrite maps Entra business and mobile phones into normalized contact phone rows', () => {
+    const patch = buildContactFieldSyncPatch(
+      buildUser({
+        mobilePhone: '+1-555-0100',
+        businessPhones: ['+1-555-0101', '+1-555-0102'],
+      }),
+      {
+        phone: true,
+      }
+    );
+
+    expect(patch).toMatchObject({
+      phone_numbers: [
+        {
+          phone_number: '+1-555-0101',
+          canonical_type: 'work',
+          is_default: true,
+          display_order: 0,
+        },
+        {
+          phone_number: '+1-555-0102',
+          canonical_type: 'work',
+          is_default: false,
+          display_order: 1,
+        },
+        {
+          phone_number: '+1-555-0100',
+          canonical_type: 'mobile',
+          is_default: false,
+          display_order: 2,
+        },
+      ],
+    });
+  });
+
+  it('T034: phone overwrite default precedence prefers the first business phone, otherwise the mobile phone', () => {
+    const businessPreferredPatch = buildContactFieldSyncPatch(
+      buildUser({
+        mobilePhone: '+1-555-0200',
+        businessPhones: ['+1-555-0201'],
+      }),
+      {
+        phone: true,
+      }
+    );
+
+    expect((businessPreferredPatch.phone_numbers as Array<{ phone_number: string; is_default: boolean }>))
+      .toEqual([
+        expect.objectContaining({ phone_number: '+1-555-0201', is_default: true }),
+        expect.objectContaining({ phone_number: '+1-555-0200', is_default: false }),
+      ]);
+
+    const mobileOnlyPatch = buildContactFieldSyncPatch(
+      buildUser({
+        mobilePhone: '+1-555-0300',
+        businessPhones: [],
+      }),
+      {
+        phone: true,
+      }
+    );
+
+    expect(mobileOnlyPatch).toMatchObject({
+      phone_numbers: [
+        {
+          phone_number: '+1-555-0300',
+          canonical_type: 'mobile',
+          is_default: true,
+          display_order: 0,
+        },
+      ],
+    });
+  });
 });

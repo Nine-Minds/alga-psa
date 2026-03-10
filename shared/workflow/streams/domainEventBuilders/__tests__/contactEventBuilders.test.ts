@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '../../workflowEventPublishHelpers';
 import {
   contactArchivedEventPayloadSchema,
   contactCreatedEventPayloadSchema,
@@ -14,6 +13,34 @@ import {
   buildContactPrimarySetPayload,
   buildContactUpdatedPayload,
 } from '../contactEventBuilders';
+
+function buildWorkflowPayload<TPayload extends Record<string, unknown>>(
+  payload: TPayload,
+  ctx: {
+    tenantId: string;
+    occurredAt?: string | Date;
+    actor?: { actorType: 'USER'; actorUserId: string };
+    idempotencyKey?: string;
+  }
+): TPayload & {
+  tenantId: string;
+  occurredAt: string;
+  actorType?: 'USER';
+  actorUserId?: string;
+  idempotencyKey?: string;
+} {
+  const occurredAt = typeof ctx.occurredAt === 'string'
+    ? ctx.occurredAt
+    : ctx.occurredAt?.toISOString() ?? new Date().toISOString();
+
+  return {
+    ...payload,
+    tenantId: ctx.tenantId,
+    occurredAt,
+    ...(ctx.actor ? { actorType: 'USER' as const, actorUserId: ctx.actor.actorUserId } : {}),
+    ...(ctx.idempotencyKey ? { idempotencyKey: ctx.idempotencyKey } : {}),
+  };
+}
 
 describe('contactEventBuilders', () => {
   const tenantId = '7e8a6f60-7a47-4f20-b2ac-5b77a3b5c9fd';
@@ -35,7 +62,17 @@ describe('contactEventBuilders', () => {
         clientId,
         fullName: 'Jane Doe',
         email: 'jane@example.com',
-        phoneNumber: '555-0100',
+        phoneNumbers: [{
+          contact_phone_number_id: '6e2d2752-4be9-4313-971f-e1576fdd0119',
+          phone_number: '555-0100',
+          normalized_phone_number: '5550100',
+          canonical_type: 'work',
+          custom_type: null,
+          is_default: true,
+          display_order: 0,
+        }],
+        defaultPhoneNumber: '555-0100',
+        defaultPhoneType: 'work',
         createdByUserId: actorUserId,
         createdAt: occurredAt,
       }),
@@ -51,7 +88,15 @@ describe('contactEventBuilders', () => {
       client_id: clientId,
       full_name: 'Jane Doe',
       email: 'jane@example.com',
-      phone_number: '555-0100',
+      phone_numbers: [{
+        contact_phone_number_id: '6e2d2752-4be9-4313-971f-e1576fdd0119',
+        phone_number: '555-0100',
+        normalized_phone_number: '5550100',
+        canonical_type: 'work',
+        custom_type: null,
+        is_default: true,
+        display_order: 0,
+      }],
       role: 'billing',
       is_inactive: false,
     };
@@ -60,7 +105,15 @@ describe('contactEventBuilders', () => {
       client_id: clientId,
       full_name: 'Jane Q. Doe',
       email: 'jane@example.com',
-      phone_number: '555-0101',
+      phone_numbers: [{
+        contact_phone_number_id: '6e2d2752-4be9-4313-971f-e1576fdd0119',
+        phone_number: '555-0101',
+        normalized_phone_number: '5550101',
+        canonical_type: 'work',
+        custom_type: null,
+        is_default: true,
+        display_order: 0,
+      }],
       role: 'billing',
       is_inactive: false,
     };
@@ -71,7 +124,7 @@ describe('contactEventBuilders', () => {
         clientId,
         before,
         after,
-        updatedFieldKeys: ['full_name', 'phone_number'],
+        updatedFieldKeys: ['full_name', 'phone_numbers'],
         updatedByUserId: actorUserId,
         updatedAt: occurredAt,
       }),
@@ -79,10 +132,13 @@ describe('contactEventBuilders', () => {
     );
 
     expect(contactUpdatedEventPayloadSchema.safeParse(payload).success).toBe(true);
-    expect(payload.updatedFields).toEqual(expect.arrayContaining(['fullName', 'phoneNumber']));
+    expect(payload.updatedFields).toEqual(expect.arrayContaining(['fullName', 'phoneNumbers']));
     expect(payload.changes).toMatchObject({
       fullName: { previous: 'Jane Doe', new: 'Jane Q. Doe' },
-      phoneNumber: { previous: '555-0100', new: '555-0101' },
+      phoneNumbers: {
+        previous: before.phone_numbers,
+        new: after.phone_numbers,
+      },
     });
   });
 
@@ -131,4 +187,3 @@ describe('contactEventBuilders', () => {
     expect(contactMergedEventPayloadSchema.safeParse(payload).success).toBe(true);
   });
 });
-

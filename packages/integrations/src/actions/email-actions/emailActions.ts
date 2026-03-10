@@ -100,6 +100,14 @@ export interface SaveEmailClientAssociationOutput {
   client_id: string;
 }
 
+function getDefaultPhoneNumber(contact: {
+  default_phone_number?: string | null;
+  phone_numbers: Array<{ is_default: boolean; phone_number: string }>;
+}): string | undefined {
+  return contact.default_phone_number
+    || contact.phone_numbers.find((phoneNumber) => phoneNumber.is_default)?.phone_number;
+}
+
 // =============================================================================
 // EMAIL CONTACT ACTIONS (Thin wrappers around contact domain functions)
 // =============================================================================
@@ -119,11 +127,11 @@ export async function findContactByEmail(email: string): Promise<FindContactByEm
   return {
     contact_id: contact.contact_name_id,
     name: contact.full_name,
-    email: contact.email,
+    email: contact.email || '',
     client_id: contact.client_id || '',
     client_name: (contact as any).client_name || '',
-    phone: contact.phone_number,
-    title: contact.role
+    phone: getDefaultPhoneNumber(contact),
+    title: contact.role || undefined
   };
 }
 
@@ -144,10 +152,10 @@ export async function createOrFindContact(input: CreateOrFindContactInput): Prom
   return {
     id: result.contact.contact_name_id,
     name: result.contact.full_name,
-    email: result.contact.email,
+    email: result.contact.email || '',
     client_id: result.contact.client_id || '',
-    phone: result.contact.phone_number,
-    title: result.contact.role,
+    phone: getDefaultPhoneNumber(result.contact),
+    title: result.contact.role || undefined,
     created_at: result.contact.created_at ? new Date(result.contact.created_at).toISOString() : new Date().toISOString(),
     is_new: result.isNew
   };

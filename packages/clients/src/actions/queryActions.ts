@@ -4,6 +4,7 @@ import type { IClient, IClientWithLocation, IContact, IInteraction } from '@alga
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
+import { ContactModel } from '@alga-psa/shared/models/contactModel';
 import {
   getClientLogoUrl,
   getClientLogoUrlsBatch,
@@ -97,15 +98,34 @@ const CONTACT_SORT_COLUMNS = {
   full_name: 'contacts.full_name',
   created_at: 'contacts.created_at',
   email: 'contacts.email',
-  phone_number: 'contacts.phone_number'
+  phone_number: 'contacts.created_at'
 } as const;
 
 const CONTACT_SORT_COLUMNS_ALIASED = {
   full_name: 'full_name',
   created_at: 'created_at',
   email: 'email',
-  phone_number: 'phone_number'
+  phone_number: 'created_at'
 } as const;
+
+function getDefaultPhoneNumber(contact: Pick<IContact, 'default_phone_number' | 'phone_numbers'>): string {
+  return contact.default_phone_number
+    || contact.phone_numbers.find((phoneNumber) => phoneNumber.is_default)?.phone_number
+    || '';
+}
+
+function sortContacts(contacts: IContact[], sortBy: string, sortDirection: 'asc' | 'desc'): IContact[] {
+  const direction = sortDirection === 'desc' ? -1 : 1;
+  return [...contacts].sort((left, right) => {
+    const leftValue = sortBy === 'phone_number'
+      ? getDefaultPhoneNumber(left)
+      : String((left as any)[sortBy] ?? '');
+    const rightValue = sortBy === 'phone_number'
+      ? getDefaultPhoneNumber(right)
+      : String((right as any)[sortBy] ?? '');
+    return leftValue.localeCompare(rightValue) * direction;
+  });
+}
 
 export type ContactFilterStatus = 'active' | 'inactive' | 'all';
 
@@ -139,7 +159,7 @@ export const getContactsByClient = withAuth(async (
     }
 
     const contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('contacts')
+      const rows = await trx('contacts')
         .select('contacts.*', 'clients.client_name')
         .leftJoin('clients', function (this: Knex.JoinClause) {
           this.on('contacts.client_id', 'clients.client_id')
@@ -153,6 +173,9 @@ export const getContactsByClient = withAuth(async (
           }
         })
         .orderBy(CONTACT_SORT_COLUMNS[safeSortBy as keyof typeof CONTACT_SORT_COLUMNS] || 'contacts.full_name', safeSortDirection);
+
+      const hydratedRows = await ContactModel.hydrateContactsWithPhoneNumbers(rows as any[], tenant, trx);
+      return sortContacts(hydratedRows as IContact[], safeSortBy, safeSortDirection);
     });
 
     const contactIds = contacts.map((c: IContact) => c.contact_name_id);
@@ -226,17 +249,20 @@ export const getAllContacts = withAuth(async (
                 .where('tenant', tenant);
 
               const clientMap = new Map(clients.map((c: { client_id: string; client_name: string }) => [c.client_id, c.client_name]));
-              return fetchedContacts.map((contact: IContact) => ({
+              const contactsWithClientNames = fetchedContacts.map((contact: IContact) => ({
                 ...contact,
                 client_name: contact.client_id ? clientMap.get(contact.client_id) || null : null
               }));
+              const hydratedContacts = await ContactModel.hydrateContactsWithPhoneNumbers(contactsWithClientNames as any[], tenant, trx);
+              return sortContacts(hydratedContacts as IContact[], safeSortBy, safeSortDirection);
             }
           } catch (clientErr) {
             console.warn('[getAllContacts] Failed to fetch client names, proceeding without them:', clientErr);
           }
         }
 
-        return fetchedContacts;
+        const hydratedContacts = await ContactModel.hydrateContactsWithPhoneNumbers(fetchedContacts as any[], tenant, trx);
+        return sortContacts(hydratedContacts as IContact[], safeSortBy, safeSortDirection);
       });
     } catch (dbErr: any) {
       console.error('[getAllContacts] Database error:', dbErr);
@@ -291,17 +317,19 @@ export const findContactByEmailAddress = withAuth(async (
     const { knex } = await createTenantKnex();
 
     const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('contacts')
-        .select('contacts.*', 'clients.client_name')
-        .leftJoin('clients', function (this: Knex.JoinClause) {
-          this.on('contacts.client_id', 'clients.client_id')
-            .andOn('clients.tenant', 'contacts.tenant')
-        })
+      const existingContact = await trx('contacts')
+        .select('contacts.contact_name_id')
         .where({
           'contacts.email': email.toLowerCase(),
           'contacts.tenant': tenant
         })
-        .first();
+        .first<{ contact_name_id: string }>();
+
+      if (!existingContact) {
+        return null;
+      }
+
+      return ContactModel.getContactById(existingContact.contact_name_id, tenant, trx);
     });
 
     return contact || null;
@@ -332,48 +360,39 @@ export const createOrFindContactByEmail = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const existingContactInTenant = await trx('contacts')
-        .select('contacts.*', 'clients.client_name')
-        .leftJoin('clients', function (this: Knex.JoinClause) {
-          this.on('contacts.client_id', 'clients.client_id')
-            .andOn('clients.tenant', 'contacts.tenant')
-        })
-        .where({
-          'contacts.email': email.toLowerCase(),
-          'contacts.tenant': tenant
-        })
-        .first();
+      const existingContactInTenant = await ContactModel.getContactByEmail(email.toLowerCase(), tenant, trx);
 
       if (existingContactInTenant) {
         if (existingContactInTenant.client_id !== clientId) {
           if (!existingContactInTenant.client_id) {
             throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system without a client assignment');
           }
-          throw new Error(`EMAIL_EXISTS: This email is already associated with ${existingContactInTenant.client_name || 'another client'}`);
+          const existingClient = await trx('clients')
+            .select('client_name')
+            .where({ client_id: existingContactInTenant.client_id, tenant })
+            .first<{ client_name: string }>();
+          throw new Error(`EMAIL_EXISTS: This email is already associated with ${existingClient?.client_name || 'another client'}`);
         }
         const contactWithClientName = {
           ...existingContactInTenant,
-          client_name: existingContactInTenant.client_name || ''
+          client_name: (existingContactInTenant as any).client_name || ''
         };
         return { contact: contactWithClientName, isNew: false };
       }
 
-      const contactName = name || extractNameFromEmail(email);
-      const now = new Date();
-
-      const [newContact] = await trx('contacts')
-        .insert({
-          tenant,
-          client_id: clientId,
-          full_name: contactName,
-          email: email.toLowerCase(),
+      const newContact = await ContactModel.createContact({
+        full_name: name || extractNameFromEmail(email),
+        email: email.toLowerCase(),
+        client_id: clientId,
+        phone_numbers: phone ? [{
           phone_number: phone,
-          role: title,
-          is_inactive: false,
-          created_at: now,
-          updated_at: now
-        })
-        .returning('*');
+          canonical_type: 'work',
+          is_default: true,
+          display_order: 0,
+        }] : [],
+        role: title,
+        is_inactive: false,
+      }, tenant, trx);
 
       const client = await trx('clients')
         .select('client_name')

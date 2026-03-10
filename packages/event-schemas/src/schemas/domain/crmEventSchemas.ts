@@ -7,6 +7,18 @@ const userIdSchema = uuidSchema('User ID');
 const interactionIdSchema = uuidSchema('Interaction ID');
 const noteIdSchema = uuidSchema('Note ID');
 const tagIdSchema = uuidSchema('Tag ID');
+const CONTACT_PHONE_CANONICAL_TYPES = ['work', 'mobile', 'home', 'fax', 'other'] as const;
+const contactPhoneCanonicalTypeSchema = z.enum(CONTACT_PHONE_CANONICAL_TYPES);
+const contactPhoneNumberSchema = z.object({
+  contact_phone_number_id: z.string().uuid(),
+  phone_number: z.string().min(1),
+  normalized_phone_number: z.string(),
+  canonical_type: contactPhoneCanonicalTypeSchema.nullable(),
+  custom_phone_type_id: z.string().uuid().nullable().optional(),
+  custom_type: z.string().nullable(),
+  is_default: z.boolean(),
+  display_order: z.number().int().min(0),
+});
 
 export const clientCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   clientId: clientIdSchema,
@@ -71,7 +83,9 @@ export const contactCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.ext
   clientId: clientIdSchema,
   fullName: z.string().min(1),
   email: z.string().email().optional(),
-  phoneNumber: z.string().optional(),
+  phoneNumbers: z.array(contactPhoneNumberSchema).optional(),
+  defaultPhoneNumber: z.string().optional(),
+  defaultPhoneType: z.string().optional(),
   createdByUserId: userIdSchema.optional(),
   createdAt: z.string().datetime().optional(),
 }).describe('Payload for CONTACT_CREATED');

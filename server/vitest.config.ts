@@ -104,6 +104,10 @@ export default defineConfig({
       { find: /^@alga-psa\/workflows\/(.*)$/, replacement: path.resolve(__dirname, '../ee/packages/workflows/src/$1') },
       { find: /^@alga-psa\/documents$/, replacement: path.resolve(__dirname, '../packages/documents/src/index.ts') },
       { find: /^@alga-psa\/documents\/(.*)$/, replacement: path.resolve(__dirname, '../packages/documents/src/$1') },
+      { find: /^@alga-psa\/clients$/, replacement: path.resolve(__dirname, '../packages/clients/src/index.ts') },
+      { find: /^@alga-psa\/clients\/actions$/, replacement: path.resolve(__dirname, '../packages/clients/src/actions/index.ts') },
+      { find: /^@alga-psa\/clients\/components\/(.*)$/, replacement: path.resolve(__dirname, '../packages/clients/src/components/$1') },
+      { find: /^@alga-psa\/clients\/(.*)$/, replacement: path.resolve(__dirname, '../packages/clients/src/$1') },
       { find: /^@alga-psa\/assets$/, replacement: path.resolve(__dirname, '../packages/assets/src/index.ts') },
       { find: /^@alga-psa\/assets\/(.*)$/, replacement: path.resolve(__dirname, '../packages/assets/src/$1') },
       { find: /^@alga-psa\/surveys$/, replacement: path.resolve(__dirname, '../packages/surveys/src/index.ts') },
@@ -125,6 +129,9 @@ export default defineConfig({
 
       { find: /^@alga-psa\/users$/, replacement: path.resolve(__dirname, '../packages/users/src/index.ts') },
       { find: /^@alga-psa\/users\/actions$/, replacement: path.resolve(__dirname, '../packages/users/src/actions/index.ts') },
+      { find: /^@alga-psa\/user-composition$/, replacement: path.resolve(__dirname, '../packages/user-composition/src/index.ts') },
+      { find: /^@alga-psa\/user-composition\/actions$/, replacement: path.resolve(__dirname, '../packages/user-composition/src/actions/index.ts') },
+      { find: /^@alga-psa\/user-composition\/(.*)$/, replacement: path.resolve(__dirname, '../packages/user-composition/src/$1') },
 
       { find: /^@alga-psa\/event-bus\/publishers$/, replacement: path.resolve(__dirname, '../packages/event-bus/src/publishers/index.ts') },
       { find: /^@alga-psa\/event-bus$/, replacement: path.resolve(__dirname, '../packages/event-bus/src/index.ts') },

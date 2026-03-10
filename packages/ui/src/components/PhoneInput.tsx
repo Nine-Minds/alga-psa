@@ -269,7 +269,7 @@ export const PhoneInput = ({
   const showPlaceholderCode = !phoneCode && !currentCountry?.phone_code;
 
   return (
-    <div className={className}>
+    <div className={`w-full ${className}`.trim()}>
       {label && (
         <Label
           htmlFor={id || dataAutomationId}
@@ -280,13 +280,12 @@ export const PhoneInput = ({
         </Label>
       )}
       <div className="relative">
-        <div className="inline-flex border border-[rgb(var(--color-border-400))] rounded-md shadow-sm focus-within:outline-none focus-within:ring-2 focus-within:ring-[rgb(var(--color-primary-500))] focus-within:border-transparent bg-white">
+        <div className="flex w-full items-stretch overflow-hidden rounded-md border border-[rgb(var(--color-border-400))] bg-white shadow-sm focus-within:border-transparent focus-within:outline-none focus-within:ring-2 focus-within:ring-[rgb(var(--color-primary-500))]">
           {/* Country Code Dropdown - integrated within phone field */}
-          {true && (
-            <div className="relative" ref={dropdownRef}>
+          <div className="relative" ref={dropdownRef}>
               <button
                 type="button"
-                className="flex items-center justify-between px-2 py-2 bg-white text-sm hover:bg-gray-50 focus:outline-none h-[42px] w-[80px] border-r border-gray-300 rounded-l-md"
+                className="flex h-[42px] w-[84px] items-center justify-between border-r border-gray-300 bg-white px-2 py-2 text-sm hover:bg-gray-50 focus:outline-none"
                 onClick={() => {
                   setIsDropdownOpen(!isDropdownOpen);
                   // Focus search input when dropdown opens
@@ -346,8 +345,7 @@ export const PhoneInput = ({
                   </div>
                 </div>
               )}
-            </div>
-          )}
+          </div>
 
           {/* Phone Number Input */}
           <Input
@@ -360,7 +358,7 @@ export const PhoneInput = ({
             placeholder={getPlaceholderText()}
             disabled={disabled}
             required={required}
-            className={`w-80 border-0 focus:ring-0 focus:border-0 ${allowExtensions ? 'rounded-none' : 'rounded-r-md'} h-[42px] bg-white px-3`}
+            className={`min-w-0 flex-1 border-0 bg-white px-3 h-[42px] focus:border-0 focus:ring-0 ${allowExtensions ? 'rounded-none' : 'rounded-r-md'}`}
           />
 
           {/* Extension Input */}
@@ -368,15 +366,15 @@ export const PhoneInput = ({
             <>
               <div className="w-px bg-gray-300 h-6 self-center"></div>
               <Input
-              id={`${id || dataAutomationId}-ext`}
-              data-automation-id={`${dataAutomationId}-ext`}
-              type="text"
-              value={extensionValue}
-              onChange={handleExtensionChange}
-              placeholder={extensionPlaceholder || "optional ext."}
-              disabled={disabled}
-              className="w-20 border-none focus:ring-0 focus:outline-none rounded-r-md h-[42px] text-center text-xs bg-white px-1"
-            />
+                id={`${id || dataAutomationId}-ext`}
+                data-automation-id={`${dataAutomationId}-ext`}
+                type="text"
+                value={extensionValue}
+                onChange={handleExtensionChange}
+                placeholder={extensionPlaceholder || "optional ext."}
+                disabled={disabled}
+                className="h-[42px] w-24 shrink-0 rounded-r-md border-none bg-white px-2 text-center text-xs focus:outline-none focus:ring-0"
+              />
             </>
           )}
         </div>

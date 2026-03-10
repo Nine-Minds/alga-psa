@@ -734,7 +734,10 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           <div>
             <h5 className="font-bold">{contactInfo ? 'Contact Phone' : 'Client Phone'}</h5>
             <p className="text-sm">
-              {contactInfo?.phone_number || client?.phone_no || 'N/A'}
+              {contactInfo?.default_phone_number
+                || contactInfo?.phone_numbers?.find((phoneNumber: { is_default?: boolean; phone_number?: string }) => phoneNumber.is_default)?.phone_number
+                || client?.phone_no
+                || 'N/A'}
             </p>
           </div>
           <div>

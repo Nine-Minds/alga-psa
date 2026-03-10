@@ -142,6 +142,18 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
     return date.toLocaleDateString();
   };
 
+  const getPhoneTypeLabel = (phone: IContact['phone_numbers'][number]): string => {
+    if (phone.custom_type) {
+      return phone.custom_type;
+    }
+
+    if (phone.canonical_type) {
+      return phone.canonical_type.charAt(0).toUpperCase() + phone.canonical_type.slice(1);
+    }
+
+    return 'Other';
+  };
+
   const handleEditContact = () => {
     openDrawer(
       <ContactDetailsEdit
@@ -324,8 +336,27 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
         <table className="min-w-full">
           <tbody>
             <TableRow label="Full Name" value={contact.full_name} />
-            <TableRow label="Email" value={contact.email} />
-            <TableRow label="Phone" value={contact.phone_number || 'N/A'} />
+            <TableRow label="Email" value={contact.email ?? 'N/A'} />
+            <tr>
+              <td className="py-2 font-semibold align-top">Phone:</td>
+              <td className="py-2">
+                {contact.phone_numbers.length === 0 ? (
+                  'N/A'
+                ) : (
+                  <div className="space-y-2">
+                    {contact.phone_numbers.map((phone) => (
+                      <div key={phone.contact_phone_number_id} className="rounded-md border border-gray-200 px-3 py-2">
+                        <div className="text-sm font-medium text-gray-900">{phone.phone_number}</div>
+                        <div className="text-xs text-gray-500">
+                          {getPhoneTypeLabel(phone)}
+                          {phone.is_default ? ' • Default' : ''}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </td>
+            </tr>
             <tr>
               <td className="py-2 font-semibold">Client:</td>
               <td className="py-2">
