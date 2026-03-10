@@ -33,7 +33,7 @@ import Drawer from '@alga-psa/ui/components/Drawer';
 import ClientDetails from './ClientDetails';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui';
+import { handleError, useClientDrawer } from '@alga-psa/ui';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
@@ -527,7 +527,13 @@ const Clients: React.FC = () => {
     router.push(`/msp/clients/${clientId}`);
   };
 
+  const clientDrawer = useClientDrawer();
+
   const handleQuickView = (client: IClient) => {
+    if (clientDrawer) {
+      clientDrawer.openClientDrawer(client.client_id);
+      return;
+    }
     setQuickViewClient(client);
     setIsQuickViewOpen(true);
   };

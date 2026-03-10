@@ -38,6 +38,7 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { createTicketColumns } from '@alga-psa/tickets/lib';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import QuickAddCategory from './QuickAddCategory';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
@@ -151,7 +152,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const [boards] = useState<IBoard[]>(initialBoards);
   const [clients] = useState<IClient[]>(initialClients);
-  const [categories] = useState<ITicketCategory[]>(initialCategories);
+  const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
   const [statusOptions] = useState<SelectOption[]>(initialStatuses);
   const [priorityOptions] = useState<SelectOption[]>(initialPriorities);
   
@@ -163,6 +164,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     initialFilterValues.categoryId ? [initialFilterValues.categoryId] : []
   );
   const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
+  const [isQuickAddCategoryOpen, setIsQuickAddCategoryOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>(initialFilterValues.searchQuery ?? '');
   const [boardFilterState, setBoardFilterState] = useState<'active' | 'inactive' | 'all'>(initialFilterValues.boardFilterState ?? 'active');
 
@@ -1462,6 +1464,28 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   showReset={true}
                   allowEmpty={true}
                   className="text-sm min-w-[200px]"
+                  onAddNew={() => setIsQuickAddCategoryOpen(true)}
+                />
+                <QuickAddCategory
+                  isOpen={isQuickAddCategoryOpen}
+                  onClose={() => setIsQuickAddCategoryOpen(false)}
+                  onCategoryCreated={(newCategory) => {
+                    setCategories((prevCategories) => {
+                      const existingIndex = prevCategories.findIndex((category) => category.category_id === newCategory.category_id);
+                      if (existingIndex >= 0) {
+                        const nextCategories = [...prevCategories];
+                        nextCategories[existingIndex] = newCategory;
+                        return nextCategories;
+                      }
+                      return [...prevCategories, newCategory];
+                    });
+                    setSelectedCategories([newCategory.category_id]);
+                    setExcludedCategories((prevExcluded) => prevExcluded.filter((categoryId) => categoryId !== newCategory.category_id));
+                    setIsQuickAddCategoryOpen(false);
+                  }}
+                  preselectedBoardId={selectedBoard || undefined}
+                  categories={categories}
+                  boards={boards}
                 />
                 <Input
                   id={`${id}-search-tickets-input`}

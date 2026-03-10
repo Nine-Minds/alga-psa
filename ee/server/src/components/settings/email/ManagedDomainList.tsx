@@ -91,7 +91,6 @@ export default function ManagedDomainList({
       {domains.map((domain) => {
         const normalizedStatus = domain.status?.toLowerCase();
         const showRetry = normalizedStatus === 'pending' || normalizedStatus === 'failed';
-        const showDelete = normalizedStatus !== 'verified' || Boolean(domain.failureReason);
         const dnsRecords = domain.dnsRecords ?? [];
         const dnsLookupResults = domain.dnsLookupResults ?? [];
         const hasRecords = dnsRecords.length > 0;
@@ -135,20 +134,18 @@ export default function ManagedDomainList({
                     Re-check DNS
                   </Button>
                 ) : null}
-                {showDelete ? (
-                  <Button
-                    id={`managed-domain-${domain.domain}-remove-button`}
-                    size="sm"
-                    variant="ghost"
-                    disabled={busyDomain === domain.domain}
-                    onClick={() => onDelete(domain.domain)}
-                    data-automation-id="managed-domain-remove"
-                    data-domain={domain.domain}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Remove
-                  </Button>
-                ) : null}
+                <Button
+                  id={`managed-domain-${domain.domain}-remove-button`}
+                  size="sm"
+                  variant="ghost"
+                  disabled={busyDomain === domain.domain}
+                  onClick={() => onDelete(domain.domain)}
+                  data-automation-id="managed-domain-remove"
+                  data-domain={domain.domain}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Remove Domain
+                </Button>
               </div>
 
               <div>

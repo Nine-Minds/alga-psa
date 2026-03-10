@@ -2,7 +2,7 @@ import { cache } from 'react';
 import { getAssetDetailBundle } from '@alga-psa/assets/actions/assetActions';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
-import { AssetDetailView } from '@alga-psa/assets/components/AssetDetailView';
+import { MspAssetDetailClient } from '@alga-psa/msp-composition/assets';
 import { getSession } from '@alga-psa/auth';
 import { AIChatContextBoundary } from '@product/chat/context';
 import type { Metadata } from 'next';
@@ -63,7 +63,7 @@ export default async function AssetPage({ params }: Props) {
           },
         }}
       >
-        <AssetDetailView assetId={resolvedParams.asset_id} />
+        <MspAssetDetailClient assetId={resolvedParams.asset_id} />
       </AIChatContextBoundary>
     );
   } catch (error) {

@@ -62,13 +62,15 @@ interface QuickAddClientProps {
   onOpenChange: (open: boolean) => void;
   onClientAdded: (client: IClient) => void;
   trigger?: React.ReactNode;
+  skipSuccessDialog?: boolean;
 }
 
 const QuickAddClient: React.FC<QuickAddClientProps> = ({
   open,
   onOpenChange,
   onClientAdded,
-  trigger
+  trigger,
+  skipSuccessDialog = false,
 }) => {
   const initialFormData: CreateClientData = {
     client_name: '',
@@ -453,10 +455,12 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
 
       // Pass client with tags to callback
       const clientWithTags = { ...newClient, tags: createdTags };
-      setCreatedClient(clientWithTags);
-      setShowSuccess(true);
       onClientAdded(clientWithTags);
       onOpenChange(false);
+      if (!skipSuccessDialog) {
+        setCreatedClient(clientWithTags);
+        setShowSuccess(true);
+      }
       } catch (error: any) {
       console.error("Error creating client:", error);
       const errorMessage = error.message || "Failed to create client. Please try again.";

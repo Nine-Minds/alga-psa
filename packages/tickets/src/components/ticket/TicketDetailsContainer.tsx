@@ -12,6 +12,7 @@ import {
 import TicketDetails from './TicketDetails';
 import { TicketDetailsSkeleton } from './TicketDetailsSkeleton';
 import { UnsavedChangesProvider } from '@alga-psa/ui/context';
+import { persistTicketDescriptionUpdate } from './ticketDescriptionUpdate';
 
 interface TicketDetailsContainerProps {
   ticketData: {
@@ -192,32 +193,16 @@ export default function TicketDetailsContainer({
   };
 
   const handleUpdateDescription = async (content: string) => {
-    if (!session?.user) {
-      toast.error('You must be logged in to update the description');
-      return false;
-    }
-
-    try {
-      setIsSubmitting(true);
-
-      const currentAttributes = ticketData.ticket.attributes || {};
-      const updatedAttributes = {
-        ...currentAttributes,
-        description: content,
-      };
-      await updateTicketWithCacheForCurrentUser(ticketData.ticket.ticket_id, {
-        attributes: updatedAttributes,
-        updated_at: new Date().toISOString(),
-      });
-
-      toast.success('Description updated successfully');
-      return true;
-    } catch (error) {
-      handleError(error, 'Failed to update description');
-      return false;
-    } finally {
-      setIsSubmitting(false);
-    }
+    return persistTicketDescriptionUpdate({
+      sessionUser: session?.user,
+      ticketId: ticketData.ticket.ticket_id,
+      currentAttributes: ticketData.ticket.attributes,
+      content,
+      setSubmitting: setIsSubmitting,
+      updateTicket: updateTicketWithCacheForCurrentUser,
+      toastApi: toast,
+      handleError,
+    });
   };
 
   return (

@@ -7,10 +7,9 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
-import { createTicketFromAsset } from '@alga-psa/tickets/actions/ticketActions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
-import { getAllBoards } from '@alga-psa/tickets/actions';
+import { useAssetCrossFeature } from '../context/AssetCrossFeatureContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
@@ -25,6 +24,7 @@ interface CreateTicketFromAssetButtonProps {
 }
 
 export default function CreateTicketFromAssetButton({ asset, defaultBoardId, variant = 'default', size = 'sm' }: CreateTicketFromAssetButtonProps) {
+    const { createTicketFromAsset, getAllBoards } = useAssetCrossFeature();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [title, setTitle] = useState(`Issue with ${asset.name}`);
     const [description, setDescription] = useState('');

@@ -29,6 +29,7 @@ import { format as formatDateFns, parse as parseDateFns } from 'date-fns';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { IClient } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useQuickAddClient } from '@alga-psa/ui/context';
 
 type TemplateOption = {
   contract_id: string;
@@ -64,6 +65,7 @@ export function ContractBasicsStep({
   isTemplateLoading,
   templateError,
 }: ContractBasicsStepProps) {
+  const { renderQuickAddClient } = useQuickAddClient();
   const [clients, setClients] = useState<IClient[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(true);
   const [poAmountInput, setPoAmountInput] = useState<string>('');
@@ -74,6 +76,7 @@ export function ContractBasicsStep({
   const [disabledClientIds, setDisabledClientIds] = useState<Set<string>>(new Set());
   const [startDate, setStartDate] = useState<Date | undefined>(parseLocalYMD(data.start_date));
   const [endDate, setEndDate] = useState<Date | undefined>(parseLocalYMD(data.end_date));
+  const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
 
   const currencyMeta = useMemo(() => {
     const currencyCode = data.currency_code || 'USD';
@@ -81,6 +84,7 @@ export function ContractBasicsStep({
     const fractionDigits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
     return { currencyCode, fractionDigits, minorUnitFactor: Math.pow(10, fractionDigits) };
   }, [data.currency_code]);
+  const currencySymbol = getCurrencySymbol(data.currency_code);
 
   useEffect(() => {
     const loadClients = async () => {
@@ -229,7 +233,17 @@ export function ContractBasicsStep({
           disabledClientIds={disabledClientIds}
           placeholder={isLoadingClients ? 'Loading clients…' : 'Select a client'}
           className="w-full"
+          onAddNew={() => setIsQuickAddClientOpen(true)}
         />
+        {renderQuickAddClient({
+          open: isQuickAddClientOpen,
+          onOpenChange: setIsQuickAddClientOpen,
+          onClientAdded: (newClient) => {
+            setClients(prev => [...prev, newClient]);
+            updateData({ client_id: newClient.client_id });
+          },
+          skipSuccessDialog: true,
+        })}
         {!data.client_id && (
           <p className="text-xs text-[rgb(var(--color-text-400))]">Choose the client this contract is for.</p>
         )}
@@ -610,9 +624,9 @@ export function ContractBasicsStep({
 
             <div className="space-y-2">
               <Label htmlFor="po_amount">PO Amount</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--color-text-400))]">
-                  {getCurrencySymbol(data.currency_code)}
+              <div className="flex h-10 items-center rounded-md border border-[rgb(var(--color-border-400))] shadow-sm focus-within:border-transparent focus-within:ring-2 focus-within:ring-[rgb(var(--color-primary-500))]">
+                <span className="shrink-0 pl-3 pr-1 text-[rgb(var(--color-text-400))]">
+                  {currencySymbol}
                 </span>
                 <Input
                   id="po_amount"
@@ -640,7 +654,7 @@ export function ContractBasicsStep({
                   placeholder={
                     currencyMeta.fractionDigits === 0 ? '0' : `0.${'0'.repeat(currencyMeta.fractionDigits)}`
                   }
-                  className="pl-7"
+                  className="h-full rounded-none border-0 py-0 pl-1 pr-3 shadow-none focus:border-transparent focus:ring-0"
                 />
               </div>
               <p className="text-xs text-[rgb(var(--color-text-400))]">

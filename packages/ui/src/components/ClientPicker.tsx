@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Plus } from 'lucide-react';
 import type { VariantProps } from 'class-variance-authority';
 import type { IClient } from '@alga-psa/types';
 
@@ -39,6 +39,7 @@ interface ClientPickerProps {
   triggerVariant?: ButtonVariant;
   triggerSize?: ButtonSize;
   triggerButtonClassName?: string;
+  onAddNew?: () => void;
 }
 
 interface OptionButtonProps {
@@ -82,6 +83,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   triggerVariant = 'outline',
   triggerSize,
   triggerButtonClassName = '',
+  onAddNew,
   'data-automation-type': dataAutomationType = 'picker',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -202,6 +204,14 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
       onSelect(clientId);
     }
     setIsOpen(false);
+  };
+
+  const handleAddNew = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSearchTerm('');
+    setIsOpen(false);
+    onAddNew?.();
   };
 
   const opts = useMemo(
@@ -339,6 +349,19 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
           })
         )}
       </div>
+      {onAddNew && (
+        <>
+          <div className="border-t border-gray-200" />
+          <button
+            type="button"
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-gray-100 cursor-pointer"
+            onClick={handleAddNew}
+          >
+            <Plus className="h-4 w-4" />
+            Add new client
+          </button>
+        </>
+      )}
     </div>
   );
 

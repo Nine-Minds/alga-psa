@@ -352,6 +352,9 @@ function formatAssetForOutput(asset: any): Asset {
         ...(asset.workstation && {
             workstation: {
                 ...asset.workstation,
+                cpu_cores: Number(asset.workstation.cpu_cores) || 0,
+                ram_gb: Number(asset.workstation.ram_gb) || 0,
+                storage_capacity_gb: Number(asset.workstation.storage_capacity_gb) || 0,
                 gpu_model: asset.workstation.gpu_model || undefined,
                 last_login: asset.workstation.last_login
                     ? new Date(asset.workstation.last_login).toISOString()
@@ -365,6 +368,8 @@ function formatAssetForOutput(asset: any): Asset {
         ...(asset.network_device && {
             network_device: {
                 ...asset.network_device,
+                port_count: Number(asset.network_device.port_count) || 0,
+                power_draw_watts: Number(asset.network_device.power_draw_watts) || 0,
                 vlan_config: asset.network_device.vlan_config || {},
                 port_config: asset.network_device.port_config || {}
             }
@@ -373,6 +378,8 @@ function formatAssetForOutput(asset: any): Asset {
         ...(asset.server && {
             server: {
                 ...asset.server,
+                cpu_cores: Number(asset.server.cpu_cores) || 0,
+                ram_gb: Number(asset.server.ram_gb) || 0,
                 storage_config: Array.isArray(asset.server.storage_config)
                     ? asset.server.storage_config
                     : [],
@@ -407,8 +414,8 @@ function formatAssetForOutput(asset: any): Asset {
             printer: {
                 ...asset.printer,
                 ip_address: asset.printer.ip_address || undefined,
-                max_paper_size: asset.printer.max_paper_size || undefined,
-                monthly_duty_cycle: asset.printer.monthly_duty_cycle || undefined,
+                max_paper_size: asset.printer.max_paper_size != null ? Number(asset.printer.max_paper_size) : undefined,
+                monthly_duty_cycle: asset.printer.monthly_duty_cycle != null ? Number(asset.printer.monthly_duty_cycle) : undefined,
                 supported_paper_types: Array.isArray(asset.printer.supported_paper_types)
                     ? asset.printer.supported_paper_types
                     : [],

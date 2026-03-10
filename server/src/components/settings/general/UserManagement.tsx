@@ -31,6 +31,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import OrgChart from './org-chart/OrgChart';
+import { QuickAddContact } from '@alga-psa/clients/components';
 
 const UserManagement = (): React.JSX.Element => {
   const [users, setUsers] = useState<IUser[]>([]);
@@ -49,6 +50,7 @@ const UserManagement = (): React.JSX.Element => {
   const [portalType, setPortalType] = useState<'msp' | 'client'>('msp');
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const [newUser, setNewUser] = useState({ 
     firstName: '',
     lastName: '',
@@ -696,6 +698,35 @@ const fetchContacts = async (): Promise<void> => {
                   clientId={newUser.clientId || undefined}
                   label={newUser.password ? 'Select existing contact (optional)' : 'Select existing contact'}
                   placeholder={newUser.password ? 'Select existing contact' : 'Select contact to invite'}
+                  onAddNew={() => setIsQuickAddContactOpen(true)}
+                />
+                <QuickAddContact
+                  isOpen={isQuickAddContactOpen}
+                  onClose={() => setIsQuickAddContactOpen(false)}
+                  onContactAdded={(newContact) => {
+                    setContacts((prevContacts) => {
+                      const existingIndex = prevContacts.findIndex((contact) => contact.contact_name_id === newContact.contact_name_id);
+                      if (existingIndex >= 0) {
+                        const nextContacts = [...prevContacts];
+                        nextContacts[existingIndex] = newContact;
+                        return nextContacts;
+                      }
+                      return [...prevContacts, newContact];
+                    });
+                    setSelectedContactId(newContact.contact_name_id);
+                    const parts = (newContact.full_name || '').trim().split(' ');
+                    setNewUser((prevUser) => ({
+                      ...prevUser,
+                      firstName: parts[0] || newContact.full_name || '',
+                      lastName: parts.slice(1).join(' '),
+                      email: newContact.email || '',
+                      clientId: newContact.client_id || prevUser.clientId,
+                    }));
+                    setContactValidationError(null);
+                    setIsQuickAddContactOpen(false);
+                  }}
+                  clients={clients}
+                  selectedClientId={newUser.clientId || undefined}
                 />
               </div>
             )}

@@ -7,6 +7,7 @@ import { TicketDetailsSkeleton } from '@alga-psa/tickets/components/ticket/Ticke
 import { getSurveyTicketSummary } from '@alga-psa/surveys/actions/survey-actions/surveyDashboardActions';
 import AssociatedAssets from '@alga-psa/assets/components/AssociatedAssets';
 import { MspTicketDetailsContainerClient } from '@alga-psa/msp-composition/tickets';
+
 import { getTicketById } from '@alga-psa/tickets/actions/ticketActions';
 import { AIChatContextBoundary } from '@product/chat/context';
 import type { Metadata } from 'next';

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo, useId } from 'react';
+import React, { useEffect, useState, useMemo, useId, useRef } from 'react';
 import { ChevronDown } from 'lucide-react';
 import * as RadixSelect from '@radix-ui/react-select';
 import { useModality } from './ModalityContext';
@@ -56,6 +56,24 @@ interface CustomSelectProps {
 
 const PLACEHOLDER_VALUE = '__SELECT_PLACEHOLDER__';
 const EMPTY_SELECTION_VALUE = '__SELECT_EMPTY__';
+
+function areMappedOptionsEqual(
+  current: Array<{ value: string; label: string }>,
+  next: Array<{ value: string; label: string }>
+) {
+  if (current.length !== next.length) {
+    return false;
+  }
+  for (let i = 0; i < current.length; i++) {
+    if (
+      current[i].value !== next[i].value ||
+      current[i].label !== next[i].label
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
 
 const CustomSelect = ({
   options,
@@ -130,18 +148,48 @@ const CustomSelect = ({
 	  const { id: _selectPropsId, ...selectPropsWithoutId } = selectProps as any;
 	  const { id: _propsId, ...propsWithoutId } = props as any;
 	  const finalAutomationProps = { ...selectPropsWithoutId, ...propsWithoutId, id: selectId };
+  const metadataSnapshotRef = useRef<{
+    value: string;
+    label?: string;
+    disabled: boolean;
+    required: boolean;
+    options: { value: string; label: string }[];
+  } | null>(null);
 
   // Update metadata when field props change - intentionally omitting updateMetadata from deps
   useEffect(() => {
-    if (updateMetadata) {
-      updateMetadata({
-        value: value || '',
-        label,
-        disabled,
-        required,
-        options: mappedOptions
-      });
+    if (!updateMetadata) {
+      metadataSnapshotRef.current = null;
+      return;
     }
+
+    const normalizedValue = value || '';
+    const nextMetadata = {
+      value: normalizedValue,
+      label,
+      disabled,
+      required,
+      options: mappedOptions
+    };
+    const previousMetadata = metadataSnapshotRef.current;
+
+    const primitivesChanged =
+      !previousMetadata ||
+      previousMetadata.value !== nextMetadata.value ||
+      previousMetadata.label !== nextMetadata.label ||
+      previousMetadata.disabled !== nextMetadata.disabled ||
+      previousMetadata.required !== nextMetadata.required;
+
+    const optionsChanged =
+      !previousMetadata ||
+      !areMappedOptionsEqual(previousMetadata.options, nextMetadata.options);
+
+    if (!primitivesChanged && !optionsChanged) {
+      return;
+    }
+
+    metadataSnapshotRef.current = nextMetadata;
+    updateMetadata(nextMetadata);
   }, [value, disabled, label, required, mappedOptions]); // updateMetadata intentionally omitted
 
   const radixValue =

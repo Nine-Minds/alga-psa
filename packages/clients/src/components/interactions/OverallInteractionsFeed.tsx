@@ -26,6 +26,7 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ButtonComponent, FormFieldComponent, ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
+import QuickAddContact from '../contacts/QuickAddContact';
 
 interface OverallInteractionsFeedProps {
   users: IUser[];
@@ -58,6 +59,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [allContacts, setAllContacts] = useState<IContact[]>(contacts);
+  const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const { openDrawer } = useDrawer();
 
   // UI Reflection System Integration
@@ -402,7 +404,26 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
               onValueChange={handleContactChange}
               placeholder={selectedClient === 'all' ? "All Contacts" : "Contacts from selected client"}
               buttonWidth="full"
-              disabled={selectedClient !== 'all' && filteredContacts.length === 0}
+              onAddNew={() => setIsQuickAddContactOpen(true)}
+            />
+            <QuickAddContact
+              isOpen={isQuickAddContactOpen}
+              onClose={() => setIsQuickAddContactOpen(false)}
+              onContactAdded={(newContact) => {
+                setAllContacts((prevContacts) => {
+                  const existingIndex = prevContacts.findIndex((contact) => contact.contact_name_id === newContact.contact_name_id);
+                  if (existingIndex >= 0) {
+                    const nextContacts = [...prevContacts];
+                    nextContacts[existingIndex] = newContact;
+                    return nextContacts;
+                  }
+                  return [...prevContacts, newContact];
+                });
+                setSelectedContact(newContact.contact_name_id);
+                setIsQuickAddContactOpen(false);
+              }}
+              clients={clients}
+              selectedClientId={selectedClientValue ?? undefined}
             />
             <CustomSelect
               options={[
