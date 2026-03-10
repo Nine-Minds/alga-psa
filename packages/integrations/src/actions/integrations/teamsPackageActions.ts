@@ -15,7 +15,7 @@ let eeTeamsPackageActionsPromise:
 
 async function loadEeTeamsPackageActions() {
   if (!eeTeamsPackageActionsPromise) {
-    eeTeamsPackageActionsPromise = import('@enterprise/lib/actions/integrations/teamsPackageActions');
+    eeTeamsPackageActionsPromise = import('@alga-psa/ee-microsoft-teams/actions');
   }
 
   return eeTeamsPackageActionsPromise;

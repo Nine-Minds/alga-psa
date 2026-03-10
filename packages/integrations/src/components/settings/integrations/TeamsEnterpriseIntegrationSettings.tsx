@@ -7,7 +7,7 @@ import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { resolveTeamsAvailability } from '../../../lib/teamsAvailability';
 
 const EnterpriseTeamsIntegrationSettings = dynamic(
-  () => import('@enterprise/components/settings/integrations/TeamsIntegrationSettings'),
+  () => import('@alga-psa/ee-microsoft-teams/components').then((mod) => mod.TeamsIntegrationSettings),
   {
     loading: () => (
       <Card>

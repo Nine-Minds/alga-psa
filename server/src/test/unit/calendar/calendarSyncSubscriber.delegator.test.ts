@@ -34,7 +34,7 @@ describe('calendarSyncSubscriber delegator', () => {
     const eeRegister = vi.fn();
     const eeUnregister = vi.fn();
 
-    vi.doMock('@enterprise/lib/eventBus/subscribers/calendarSyncSubscriber', () => ({
+    vi.doMock('@alga-psa/ee-calendar/event-bus', () => ({
       registerCalendarSyncSubscriber: eeRegister,
       unregisterCalendarSyncSubscriber: eeUnregister,
     }));
@@ -55,7 +55,7 @@ describe('calendarSyncSubscriber delegator', () => {
     const eeRegister = vi.fn(async () => undefined);
     const eeUnregister = vi.fn(async () => undefined);
 
-    vi.doMock('@enterprise/lib/eventBus/subscribers/calendarSyncSubscriber', () => ({
+    vi.doMock('@alga-psa/ee-calendar/event-bus', () => ({
       registerCalendarSyncSubscriber: eeRegister,
       unregisterCalendarSyncSubscriber: eeUnregister,
     }));
@@ -76,11 +76,11 @@ describe('calendarSyncSubscriber delegator', () => {
       'utf8'
     );
     const eeSource = fs.readFileSync(
-      path.join(serverRoot, '../packages/ee/src/lib/eventBus/subscribers/calendarSyncSubscriber.ts'),
+      path.join(serverRoot, '../ee/packages/calendar/src/lib/eventBus/subscribers/calendarSyncSubscriber.ts'),
       'utf8'
     );
 
-    expect(sharedSource).toContain("@enterprise/lib/eventBus/subscribers/calendarSyncSubscriber");
+    expect(sharedSource).toContain("@alga-psa/ee-calendar/event-bus");
     expect(sharedSource).not.toContain('CalendarSyncService');
     expect(sharedSource).not.toContain('CalendarProviderService');
 

@@ -53,7 +53,7 @@ const ConnectSsoWrapper = dynamic(
 );
 
 const CalendarProfileSettings = dynamic(
-  () => import('@enterprise/components/settings/profile/CalendarProfileSettings'),
+  () => import('@alga-psa/ee-calendar/components').then((mod) => mod.CalendarProfileSettings),
   {
     loading: () => (
       <SettingsTabSkeleton

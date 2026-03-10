@@ -13,11 +13,15 @@ describe('calendar actions EE ownership', () => {
       'utf8'
     );
     const eeSource = fs.readFileSync(
+      repoPath('ee/packages/calendar/src/lib/actions/integrations/calendarActions.ts'),
+      'utf8'
+    );
+    const eeForwarderSource = fs.readFileSync(
       repoPath('packages/ee/src/lib/actions/integrations/calendarActions.ts'),
       'utf8'
     );
 
-    expect(sharedSource).toContain("import('@enterprise/lib/actions/integrations/calendarActions')");
+    expect(sharedSource).toContain("import('@alga-psa/ee-calendar/actions')");
     expect(sharedSource).toContain('isCalendarEnterpriseEdition');
     expect(sharedSource).not.toContain('CalendarProviderService');
     expect(sharedSource).not.toContain('CalendarSyncService');
@@ -30,5 +34,6 @@ describe('calendar actions EE ownership', () => {
     expect(eeSource).toContain('CalendarWebhookMaintenanceService');
     expect(eeSource).toContain('GoogleCalendarAdapter');
     expect(eeSource).toContain('MicrosoftCalendarAdapter');
+    expect(eeForwarderSource).toContain("@alga-psa/ee-calendar/actions");
   });
 });

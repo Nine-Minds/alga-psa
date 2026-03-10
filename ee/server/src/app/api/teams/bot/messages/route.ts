@@ -1,8 +1,3 @@
-import { handleTeamsBotActivityRequest } from '../../../../../lib/teams/bot/teamsBotHandler';
-
-export const dynamic = 'force-dynamic';
+export { teamsBotMessagesDynamic as dynamic } from '@alga-psa/ee-microsoft-teams/routes';
 export const runtime = 'nodejs';
-
-export async function POST(request: Request): Promise<Response> {
-  return handleTeamsBotActivityRequest(request);
-}
+export { handleTeamsBotMessagesPost as POST } from '@alga-psa/ee-microsoft-teams/routes';

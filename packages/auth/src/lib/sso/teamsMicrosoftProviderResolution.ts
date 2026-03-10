@@ -20,7 +20,7 @@ let eeTeamsMicrosoftProviderResolutionPromise:
 
 async function loadEeTeamsMicrosoftProviderResolution() {
   if (!eeTeamsMicrosoftProviderResolutionPromise) {
-    eeTeamsMicrosoftProviderResolutionPromise = import('@enterprise/lib/auth/teamsMicrosoftProviderResolution').catch((error) => {
+    eeTeamsMicrosoftProviderResolutionPromise = import('@alga-psa/ee-microsoft-teams/lib/auth/teamsMicrosoftProviderResolution').catch((error) => {
       logger.warn('[TeamsMicrosoftProviderResolution] Failed to load EE Teams Microsoft provider resolver', {
         error: error instanceof Error ? error.message : String(error),
       });

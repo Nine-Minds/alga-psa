@@ -110,7 +110,7 @@ function calendarUnavailable<T extends object = {}>(extra?: T): { success: false
 
 async function loadEeCalendarActions(): Promise<EeCalendarActionsModule> {
   if (!eeCalendarActionsPromise) {
-    eeCalendarActionsPromise = import('@enterprise/lib/actions/integrations/calendarActions')
+    eeCalendarActionsPromise = import('@alga-psa/ee-calendar/actions')
       .then((mod) => mod as EeCalendarActionsModule)
       .catch((error) => {
         logger.warn('[CalendarActions] Failed to load EE calendar action implementation', {

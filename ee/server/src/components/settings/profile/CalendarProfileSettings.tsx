@@ -1,7 +1,3 @@
-'use client';
-
-import { CalendarIntegrationsSettings } from '@alga-psa/integrations/components';
-
-export default function CalendarProfileSettings() {
-  return <CalendarIntegrationsSettings />;
-}
+export {
+  CalendarProfileSettings as default,
+} from '@alga-psa/ee-calendar/components';

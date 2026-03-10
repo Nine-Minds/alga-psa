@@ -112,11 +112,11 @@ describe('Calendar webhook route delegators', () => {
     const googleSharedSource = fs.readFileSync(path.join(serverRoot, 'src/app/api/calendar/webhooks/google/route.ts'), 'utf8');
     const microsoftSharedSource = fs.readFileSync(path.join(serverRoot, 'src/app/api/calendar/webhooks/microsoft/route.ts'), 'utf8');
     const googleEeSource = fs.readFileSync(
-      path.join(serverRoot, '../ee/server/src/app/api/calendar/webhooks/google/route.ts'),
+      path.join(serverRoot, '../ee/packages/calendar/src/app/api/calendar/webhooks/google/route.ts'),
       'utf8'
     );
     const microsoftEeSource = fs.readFileSync(
-      path.join(serverRoot, '../ee/server/src/app/api/calendar/webhooks/microsoft/route.ts'),
+      path.join(serverRoot, '../ee/packages/calendar/src/app/api/calendar/webhooks/microsoft/route.ts'),
       'utf8'
     );
 

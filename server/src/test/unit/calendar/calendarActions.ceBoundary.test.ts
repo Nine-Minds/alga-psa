@@ -36,7 +36,7 @@ describe('calendar action CE boundary', () => {
 
     const eeGetProviders = vi.fn(async () => ({ success: true, providers: [] }));
 
-    vi.doMock('@enterprise/lib/actions/integrations/calendarActions', () => ({
+    vi.doMock('@alga-psa/ee-calendar/actions', () => ({
       getCalendarProvidersImpl: eeGetProviders,
     }));
 
@@ -55,7 +55,7 @@ describe('calendar action CE boundary', () => {
 
     const eeSyncProvider = vi.fn(async () => ({ success: true, started: true }));
 
-    vi.doMock('@enterprise/lib/actions/integrations/calendarActions', () => ({
+    vi.doMock('@alga-psa/ee-calendar/actions', () => ({
       syncCalendarProviderImpl: eeSyncProvider,
     }));
 

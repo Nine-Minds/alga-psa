@@ -10,7 +10,7 @@ let eeCalendarSyncSubscriberPromise: Promise<CalendarSyncSubscriberModule> | nul
 
 async function loadEeCalendarSyncSubscriber(): Promise<CalendarSyncSubscriberModule> {
   if (!eeCalendarSyncSubscriberPromise) {
-    eeCalendarSyncSubscriberPromise = import('@enterprise/lib/eventBus/subscribers/calendarSyncSubscriber')
+    eeCalendarSyncSubscriberPromise = import('@alga-psa/ee-calendar/event-bus')
       .then((mod) => mod as CalendarSyncSubscriberModule)
       .catch((error) => {
         logger.warn('[CalendarSyncSubscriber] Failed to load EE calendar subscriber implementation', {

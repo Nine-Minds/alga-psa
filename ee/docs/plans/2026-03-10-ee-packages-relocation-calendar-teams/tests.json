@@ -1,0 +1,1111 @@
+[
+  {
+    "id": "T001",
+    "description": "Workspace: `ee/packages/calendar` exists with valid package metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F012",
+      "F016"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Workspace: `ee/packages/microsoft-teams` exists with valid package metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F013",
+      "F017"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Workspace: new EE package names do not collide with existing `packages/teams` or other workspace packages.",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Exports: enterprise calendar root index resolves without deep path imports.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F010"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Exports: enterprise Microsoft Teams root index resolves without deep path imports.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F011"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Exports: enterprise calendar actions entrypoint resolves for shared callers.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Exports: enterprise Microsoft Teams actions entrypoint resolves for shared callers.",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Exports: enterprise calendar components entrypoint resolves for settings or profile wrappers.",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Exports: enterprise Microsoft Teams components entrypoint resolves for settings wrappers.",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "TypeScript: enterprise calendar package tsconfig builds local source without unresolved imports.",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F018"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "TypeScript: enterprise Microsoft Teams package tsconfig builds local source without unresolved imports.",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F019"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Dependencies: React or peer dependency declarations are valid for both new EE packages.",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Ownership: enterprise calendar actions are imported from the calendar package rather than `packages/ee`.",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Ownership: enterprise calendar integrations settings UI is imported from the calendar package rather than `packages/ee`.",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Ownership: enterprise calendar profile settings UI is imported from the calendar package rather than `packages/ee`.",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Ownership: enterprise calendar provider services resolve from the calendar package.",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Ownership: enterprise calendar sync service resolves from the calendar package.",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Ownership: enterprise calendar webhook processor resolves from the calendar package.",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Ownership: enterprise calendar webhook maintenance service resolves from the calendar package.",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Ownership: enterprise calendar provider adapters resolve from the calendar package.",
+    "implemented": true,
+    "featureIds": [
+      "F028",
+      "F029"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Ownership: enterprise calendar event subscriber resolves from the calendar package.",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Ownership: enterprise calendar job-handler logic resolves from the calendar package.",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Route export: Google calendar OAuth callback handler is exported by the calendar package.",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Route export: Microsoft calendar OAuth callback handler is exported by the calendar package.",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Route export: Google calendar webhook handler is exported by the calendar package.",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Route export: Microsoft calendar webhook handler is exported by the calendar package.",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Server handler API: calendar package exposes server-consumable route handler entrypoints with the expected exports.",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "UI API: calendar package exposes UI entrypoints consumable by EE and shared wrappers.",
+    "implemented": true,
+    "featureIds": [
+      "F037"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Deduplication: there is no remaining duplicate live calendar implementation split between `packages/ee` and `ee/server`.",
+    "implemented": true,
+    "featureIds": [
+      "F038",
+      "F040"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Imports: enterprise calendar code does not deep-import `ee/server` implementation files.",
+    "implemented": true,
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Ownership: enterprise Teams actions are imported from the enterprise Microsoft Teams package rather than `packages/ee`.",
+    "implemented": true,
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Ownership: enterprise Teams package actions are imported from the enterprise Microsoft Teams package rather than `packages/ee`.",
+    "implemented": true,
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Ownership: enterprise Teams settings UI is imported from the enterprise Microsoft Teams package.",
+    "implemented": true,
+    "featureIds": [
+      "F043"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Ownership: enterprise Teams notification delivery resolves from the enterprise Microsoft Teams package.",
+    "implemented": true,
+    "featureIds": [
+      "F044"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Ownership: enterprise Teams auth and provider-resolution helpers resolve from the enterprise Microsoft Teams package.",
+    "implemented": true,
+    "featureIds": [
+      "F045"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Ownership: enterprise Teams bot handler resolves from the enterprise Microsoft Teams package.",
+    "implemented": true,
+    "featureIds": [
+      "F046"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Ownership: enterprise Teams message-extension handler resolves from the enterprise Microsoft Teams package.",
+    "implemented": true,
+    "featureIds": [
+      "F047"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Ownership: enterprise Teams quick-action handler resolves from the enterprise Microsoft Teams package.",
+    "implemented": true,
+    "featureIds": [
+      "F048"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Ownership: enterprise Teams tab auth and access state logic resolves from the enterprise Microsoft Teams package.",
+    "implemented": true,
+    "featureIds": [
+      "F049"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Ownership: enterprise Teams tenant and linked-user resolution resolves from the enterprise Microsoft Teams package.",
+    "implemented": true,
+    "featureIds": [
+      "F050"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Ownership: enterprise Teams deep-link helpers resolve from the enterprise Microsoft Teams package.",
+    "implemented": true,
+    "featureIds": [
+      "F051"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "Ownership: enterprise Teams action registry resolves from the enterprise Microsoft Teams package.",
+    "implemented": true,
+    "featureIds": [
+      "F052"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "Route export: Teams bot handlers are exported by the enterprise Microsoft Teams package.",
+    "implemented": true,
+    "featureIds": [
+      "F053"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "Route export: Teams message-extension handlers are exported by the enterprise Microsoft Teams package.",
+    "implemented": true,
+    "featureIds": [
+      "F054"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "Route export: Teams auth-callback handlers are exported by the enterprise Microsoft Teams package.",
+    "implemented": true,
+    "featureIds": [
+      "F055"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "Route export: Teams package-management handlers are exported by the enterprise Microsoft Teams package.",
+    "implemented": true,
+    "featureIds": [
+      "F056"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "Route export: Teams quick-action handlers are exported by the enterprise Microsoft Teams package.",
+    "implemented": true,
+    "featureIds": [
+      "F057"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "Page or server export: Teams tab handling entrypoints are exported by the enterprise Microsoft Teams package.",
+    "implemented": true,
+    "featureIds": [
+      "F058",
+      "F059",
+      "F060"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "EE route wiring: `ee/server` Google calendar OAuth route delegates to the calendar package implementation.",
+    "implemented": true,
+    "featureIds": [
+      "F061"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "EE route wiring: `ee/server` Microsoft calendar OAuth route delegates to the calendar package implementation.",
+    "implemented": true,
+    "featureIds": [
+      "F062"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "EE route wiring: `ee/server` Google calendar webhook route delegates to the calendar package implementation.",
+    "implemented": true,
+    "featureIds": [
+      "F063"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "EE route wiring: `ee/server` Microsoft calendar webhook route delegates to the calendar package implementation.",
+    "implemented": true,
+    "featureIds": [
+      "F064"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "EE UI wiring: `ee/server` calendar settings wrapper delegates to the calendar package implementation.",
+    "implemented": true,
+    "featureIds": [
+      "F065"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "EE UI wiring: `ee/server` calendar profile wrapper delegates to the calendar package implementation.",
+    "implemented": true,
+    "featureIds": [
+      "F066"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "EE route wiring: `ee/server` Teams bot route delegates to the enterprise Microsoft Teams package implementation.",
+    "implemented": true,
+    "featureIds": [
+      "F067"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "EE route wiring: `ee/server` Teams message-extension route delegates to the enterprise Microsoft Teams package implementation.",
+    "implemented": true,
+    "featureIds": [
+      "F068"
+    ]
+  },
+  {
+    "id": "T057",
+    "description": "EE route wiring: `ee/server` Teams auth callback routes delegate to the enterprise Microsoft Teams package implementation.",
+    "implemented": true,
+    "featureIds": [
+      "F069"
+    ]
+  },
+  {
+    "id": "T058",
+    "description": "EE route wiring: `ee/server` Teams package-management routes delegate to the enterprise Microsoft Teams package implementation.",
+    "implemented": true,
+    "featureIds": [
+      "F070"
+    ]
+  },
+  {
+    "id": "T059",
+    "description": "EE route wiring: `ee/server` Teams quick-actions route delegates to the enterprise Microsoft Teams package implementation.",
+    "implemented": true,
+    "featureIds": [
+      "F071"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "EE page wiring: `ee/server` Teams tab page delegates to the enterprise Microsoft Teams package implementation.",
+    "implemented": true,
+    "featureIds": [
+      "F072"
+    ]
+  },
+  {
+    "id": "T061",
+    "description": "EE helper wiring: remaining EE calendar helpers delegate into the calendar package rather than owning duplicated logic.",
+    "implemented": true,
+    "featureIds": [
+      "F073",
+      "F075"
+    ]
+  },
+  {
+    "id": "T062",
+    "description": "EE helper wiring: remaining EE Teams helpers delegate into the enterprise Microsoft Teams package rather than owning duplicated logic.",
+    "implemented": true,
+    "featureIds": [
+      "F074",
+      "F076"
+    ]
+  },
+  {
+    "id": "T063",
+    "description": "Shared wiring: shared calendar actions resolve through the new enterprise calendar package entrypoint.",
+    "implemented": true,
+    "featureIds": [
+      "F077"
+    ]
+  },
+  {
+    "id": "T064",
+    "description": "Shared wiring: shared calendar settings wrapper resolves through the new enterprise calendar package entrypoint.",
+    "implemented": true,
+    "featureIds": [
+      "F078"
+    ]
+  },
+  {
+    "id": "T065",
+    "description": "Shared wiring: shared calendar profile wrapper resolves through the new enterprise calendar package entrypoint.",
+    "implemented": true,
+    "featureIds": [
+      "F079"
+    ]
+  },
+  {
+    "id": "T066",
+    "description": "Shared wiring: shared Teams actions resolve through the new enterprise Microsoft Teams package entrypoint.",
+    "implemented": true,
+    "featureIds": [
+      "F080"
+    ]
+  },
+  {
+    "id": "T067",
+    "description": "Shared wiring: shared Teams package actions resolve through the new enterprise Microsoft Teams package entrypoint.",
+    "implemented": true,
+    "featureIds": [
+      "F081"
+    ]
+  },
+  {
+    "id": "T068",
+    "description": "Shared wiring: shared Teams settings wrapper resolves through the new enterprise Microsoft Teams package entrypoint.",
+    "implemented": true,
+    "featureIds": [
+      "F082"
+    ]
+  },
+  {
+    "id": "T069",
+    "description": "Shared wiring: shared Teams notification wrapper resolves through the new enterprise Microsoft Teams package entrypoint.",
+    "implemented": true,
+    "featureIds": [
+      "F083"
+    ]
+  },
+  {
+    "id": "T070",
+    "description": "Shared wiring: shared Teams auth and provider-resolution wrapper resolves through the new enterprise Microsoft Teams package entrypoint.",
+    "implemented": true,
+    "featureIds": [
+      "F084"
+    ]
+  },
+  {
+    "id": "T071",
+    "description": "CE stubs: `packages/ee` calendar route files do not contain live implementation logic after the move.",
+    "implemented": true,
+    "featureIds": [
+      "F085"
+    ]
+  },
+  {
+    "id": "T072",
+    "description": "CE stubs: `packages/ee` Teams route files do not contain live implementation logic after the move.",
+    "implemented": true,
+    "featureIds": [
+      "F086"
+    ]
+  },
+  {
+    "id": "T073",
+    "description": "CE stubs: `packages/ee` calendar UI files do not contain live implementation logic after the move.",
+    "implemented": true,
+    "featureIds": [
+      "F087"
+    ]
+  },
+  {
+    "id": "T074",
+    "description": "CE stubs: `packages/ee` Teams UI files do not contain live implementation logic after the move.",
+    "implemented": true,
+    "featureIds": [
+      "F088"
+    ]
+  },
+  {
+    "id": "T075",
+    "description": "CE stubs: `packages/ee` calendar lib or action files are reduced to stubs or forwarders only.",
+    "implemented": true,
+    "featureIds": [
+      "F089"
+    ]
+  },
+  {
+    "id": "T076",
+    "description": "CE stubs: `packages/ee` Teams lib or action files are reduced to stubs or forwarders only.",
+    "implemented": true,
+    "featureIds": [
+      "F090"
+    ]
+  },
+  {
+    "id": "T077",
+    "description": "Imports: shared calendar code no longer deep-imports `ee/server` implementation files.",
+    "implemented": true,
+    "featureIds": [
+      "F091"
+    ]
+  },
+  {
+    "id": "T078",
+    "description": "Imports: shared Teams code no longer deep-imports `ee/server` implementation files.",
+    "implemented": true,
+    "featureIds": [
+      "F092"
+    ]
+  },
+  {
+    "id": "T079",
+    "description": "TypeScript pathing: base config no longer treats `packages/ee` as the live calendar or Teams source of truth.",
+    "implemented": true,
+    "featureIds": [
+      "F093"
+    ]
+  },
+  {
+    "id": "T080",
+    "description": "TypeScript pathing: server config resolves the enterprise calendar package correctly.",
+    "implemented": true,
+    "featureIds": [
+      "F094"
+    ]
+  },
+  {
+    "id": "T081",
+    "description": "TypeScript pathing: server config resolves the enterprise Microsoft Teams package correctly.",
+    "implemented": true,
+    "featureIds": [
+      "F095"
+    ]
+  },
+  {
+    "id": "T082",
+    "description": "Next.js aliasing: EE builds resolve calendar imports to the enterprise calendar package.",
+    "implemented": true,
+    "featureIds": [
+      "F096"
+    ]
+  },
+  {
+    "id": "T083",
+    "description": "Next.js aliasing: EE builds resolve Teams imports to the enterprise Microsoft Teams package.",
+    "implemented": true,
+    "featureIds": [
+      "F097"
+    ]
+  },
+  {
+    "id": "T084",
+    "description": "Next.js aliasing: CE builds still fail closed for calendar after the package relocation.",
+    "implemented": true,
+    "featureIds": [
+      "F098"
+    ]
+  },
+  {
+    "id": "T085",
+    "description": "Next.js aliasing: CE builds still fail closed for Teams after the package relocation.",
+    "implemented": true,
+    "featureIds": [
+      "F099"
+    ]
+  },
+  {
+    "id": "T086",
+    "description": "Vitest aliasing: calendar-focused tests resolve the intended live or stub source tree consistently.",
+    "implemented": true,
+    "featureIds": [
+      "F100"
+    ]
+  },
+  {
+    "id": "T087",
+    "description": "Vitest aliasing: Teams-focused tests resolve the intended live or stub source tree consistently.",
+    "implemented": true,
+    "featureIds": [
+      "F101"
+    ]
+  },
+  {
+    "id": "T088",
+    "description": "Workspace targets: build, lint, and typecheck commands include the enterprise calendar package.",
+    "implemented": true,
+    "featureIds": [
+      "F102"
+    ]
+  },
+  {
+    "id": "T089",
+    "description": "Workspace targets: build, lint, and typecheck commands include the enterprise Microsoft Teams package.",
+    "implemented": true,
+    "featureIds": [
+      "F103"
+    ]
+  },
+  {
+    "id": "T090",
+    "description": "CI graph: enterprise calendar package tasks are recognized with correct dependencies.",
+    "implemented": true,
+    "featureIds": [
+      "F104"
+    ]
+  },
+  {
+    "id": "T091",
+    "description": "CI graph: enterprise Microsoft Teams package tasks are recognized with correct dependencies.",
+    "implemented": true,
+    "featureIds": [
+      "F105"
+    ]
+  },
+  {
+    "id": "T092",
+    "description": "Dependency graph: no new circular dependency is introduced between shared packages, `ee/server`, and the new EE packages.",
+    "implemented": true,
+    "featureIds": [
+      "F106"
+    ]
+  },
+  {
+    "id": "T093",
+    "description": "Cleanup: obsolete duplicate calendar files are removed or reduced after the migration.",
+    "implemented": true,
+    "featureIds": [
+      "F107"
+    ]
+  },
+  {
+    "id": "T094",
+    "description": "Cleanup: obsolete duplicate Teams files are removed or reduced after the migration.",
+    "implemented": true,
+    "featureIds": [
+      "F108"
+    ]
+  },
+  {
+    "id": "T095",
+    "description": "Docs: source comments no longer claim `packages/ee` is the live calendar implementation root.",
+    "implemented": true,
+    "featureIds": [
+      "F109"
+    ]
+  },
+  {
+    "id": "T096",
+    "description": "Docs: source comments no longer claim `packages/ee` is the live Teams implementation root.",
+    "implemented": true,
+    "featureIds": [
+      "F110"
+    ]
+  },
+  {
+    "id": "T097",
+    "description": "Docs: developer-facing notes identify `ee/packages/calendar` as the live enterprise calendar home.",
+    "implemented": true,
+    "featureIds": [
+      "F111"
+    ]
+  },
+  {
+    "id": "T098",
+    "description": "Docs: developer-facing notes identify `ee/packages/microsoft-teams` as the live enterprise Teams home.",
+    "implemented": true,
+    "featureIds": [
+      "F112"
+    ]
+  },
+  {
+    "id": "T099",
+    "description": "Typecheck: the enterprise calendar package typecheck target passes.",
+    "implemented": true,
+    "featureIds": [
+      "F113"
+    ]
+  },
+  {
+    "id": "T100",
+    "description": "Typecheck: the enterprise Microsoft Teams package typecheck target passes.",
+    "implemented": true,
+    "featureIds": [
+      "F114"
+    ]
+  },
+  {
+    "id": "T101",
+    "description": "Typecheck: server typecheck passes with the new package graph in place.",
+    "implemented": true,
+    "featureIds": [
+      "F115"
+    ]
+  },
+  {
+    "id": "T102",
+    "description": "Regression: targeted enterprise calendar route tests pass after the package relocation.",
+    "implemented": true,
+    "featureIds": [
+      "F116"
+    ]
+  },
+  {
+    "id": "T103",
+    "description": "Regression: targeted enterprise calendar component tests pass after the package relocation.",
+    "implemented": true,
+    "featureIds": [
+      "F116"
+    ]
+  },
+  {
+    "id": "T104",
+    "description": "Regression: targeted enterprise Teams route tests pass after the package relocation.",
+    "implemented": true,
+    "featureIds": [
+      "F117"
+    ]
+  },
+  {
+    "id": "T105",
+    "description": "Regression: targeted enterprise Teams action tests pass after the package relocation.",
+    "implemented": true,
+    "featureIds": [
+      "F117"
+    ]
+  },
+  {
+    "id": "T106",
+    "description": "Regression: targeted enterprise Teams notification tests pass after the package relocation.",
+    "implemented": true,
+    "featureIds": [
+      "F117"
+    ]
+  },
+  {
+    "id": "T107",
+    "description": "CE guard: calendar CE stub contract tests still return unavailable behavior after the relocation.",
+    "implemented": true,
+    "featureIds": [
+      "F118"
+    ]
+  },
+  {
+    "id": "T108",
+    "description": "CE guard: Teams CE stub contract tests still return unavailable behavior after the relocation.",
+    "implemented": true,
+    "featureIds": [
+      "F119"
+    ]
+  },
+  {
+    "id": "T109",
+    "description": "Import audit: no live calendar import path still depends on `packages/ee` as the primary implementation root.",
+    "implemented": true,
+    "featureIds": [
+      "F120"
+    ]
+  },
+  {
+    "id": "T110",
+    "description": "Import audit: no live Teams import path still depends on `packages/ee` as the primary implementation root.",
+    "implemented": true,
+    "featureIds": [
+      "F121"
+    ]
+  },
+  {
+    "id": "T111",
+    "description": "Scope guard: unrelated enterprise domains outside calendar and Teams are not relocated by this plan unless required by dependencies.",
+    "implemented": true,
+    "featureIds": [
+      "F122"
+    ]
+  },
+  {
+    "id": "T112",
+    "description": "Calendar EE happy path: Google OAuth callback reaches live calendar package logic in enterprise mode.",
+    "implemented": true,
+    "featureIds": [
+      "F032",
+      "F061",
+      "F096"
+    ]
+  },
+  {
+    "id": "T113",
+    "description": "Calendar EE happy path: Microsoft OAuth callback reaches live calendar package logic in enterprise mode.",
+    "implemented": true,
+    "featureIds": [
+      "F033",
+      "F062",
+      "F096"
+    ]
+  },
+  {
+    "id": "T114",
+    "description": "Calendar EE happy path: Google webhook POST reaches live calendar package logic in enterprise mode.",
+    "implemented": true,
+    "featureIds": [
+      "F034",
+      "F063",
+      "F096"
+    ]
+  },
+  {
+    "id": "T115",
+    "description": "Calendar EE happy path: Microsoft webhook POST reaches live calendar package logic in enterprise mode.",
+    "implemented": true,
+    "featureIds": [
+      "F035",
+      "F064",
+      "F096"
+    ]
+  },
+  {
+    "id": "T116",
+    "description": "Calendar CE guard path: Google OAuth callback still returns unavailable or stub behavior in CE mode.",
+    "implemented": true,
+    "featureIds": [
+      "F085",
+      "F098",
+      "F118"
+    ]
+  },
+  {
+    "id": "T117",
+    "description": "Calendar CE guard path: Microsoft webhook route still returns unavailable or stub behavior in CE mode.",
+    "implemented": true,
+    "featureIds": [
+      "F085",
+      "F098",
+      "F118"
+    ]
+  },
+  {
+    "id": "T118",
+    "description": "Calendar UI EE path: enterprise settings wrapper renders the live calendar settings component from the calendar package.",
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F065",
+      "F078"
+    ]
+  },
+  {
+    "id": "T119",
+    "description": "Calendar UI EE path: enterprise profile wrapper renders the live calendar profile component from the calendar package.",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F066",
+      "F079"
+    ]
+  },
+  {
+    "id": "T120",
+    "description": "Calendar UI CE path: CE wrappers still resolve to unavailable or hidden behavior without loading the live calendar package.",
+    "implemented": true,
+    "featureIds": [
+      "F087",
+      "F098",
+      "F118"
+    ]
+  },
+  {
+    "id": "T121",
+    "description": "Teams EE happy path: bot messages route reaches live Teams package logic in enterprise mode.",
+    "implemented": true,
+    "featureIds": [
+      "F053",
+      "F067",
+      "F097"
+    ]
+  },
+  {
+    "id": "T122",
+    "description": "Teams EE happy path: message-extension route reaches live Teams package logic in enterprise mode.",
+    "implemented": true,
+    "featureIds": [
+      "F054",
+      "F068",
+      "F097"
+    ]
+  },
+  {
+    "id": "T123",
+    "description": "Teams EE happy path: auth callback route reaches live Teams package logic in enterprise mode.",
+    "implemented": true,
+    "featureIds": [
+      "F055",
+      "F069",
+      "F097"
+    ]
+  },
+  {
+    "id": "T124",
+    "description": "Teams EE happy path: package-management route reaches live Teams package logic in enterprise mode.",
+    "implemented": true,
+    "featureIds": [
+      "F056",
+      "F070",
+      "F097"
+    ]
+  },
+  {
+    "id": "T125",
+    "description": "Teams EE happy path: quick-actions route reaches live Teams package logic in enterprise mode.",
+    "implemented": true,
+    "featureIds": [
+      "F057",
+      "F071",
+      "F097"
+    ]
+  },
+  {
+    "id": "T126",
+    "description": "Teams EE happy path: Teams tab page reaches live Teams package logic in enterprise mode.",
+    "implemented": true,
+    "featureIds": [
+      "F058",
+      "F072",
+      "F097"
+    ]
+  },
+  {
+    "id": "T127",
+    "description": "Teams CE guard path: bot route still returns unavailable or stub behavior in CE mode.",
+    "implemented": true,
+    "featureIds": [
+      "F086",
+      "F099",
+      "F119"
+    ]
+  },
+  {
+    "id": "T128",
+    "description": "Teams CE guard path: Teams tab page still returns unavailable or stub behavior in CE mode.",
+    "implemented": true,
+    "featureIds": [
+      "F088",
+      "F099",
+      "F119"
+    ]
+  },
+  {
+    "id": "T129",
+    "description": "Teams settings UI EE path: settings wrapper renders the live Teams settings component from the enterprise package.",
+    "implemented": true,
+    "featureIds": [
+      "F043",
+      "F082"
+    ]
+  },
+  {
+    "id": "T130",
+    "description": "Teams settings UI CE path: CE wrapper stays stubbed or hidden without loading live Teams implementation code.",
+    "implemented": true,
+    "featureIds": [
+      "F088",
+      "F099",
+      "F119"
+    ]
+  },
+  {
+    "id": "T131",
+    "description": "Teams notification wrapper loads enterprise notification delivery from the enterprise package rather than `packages/ee`.",
+    "implemented": true,
+    "featureIds": [
+      "F044",
+      "F083"
+    ]
+  },
+  {
+    "id": "T132",
+    "description": "Teams auth/provider wrapper loads enterprise provider-resolution logic from the enterprise package rather than `packages/ee`.",
+    "implemented": true,
+    "featureIds": [
+      "F045",
+      "F084"
+    ]
+  }
+]

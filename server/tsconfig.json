@@ -18,6 +18,9 @@
       "@/lib/*": [
         "src/lib/*"
       ],
+      "@/utils/*": [
+        "src/utils/*"
+      ],
       "@/middleware/*": [
         "src/middleware/*"
       ],
@@ -161,6 +164,18 @@
       ],
       "@alga-psa/scheduling/*": [
         "../packages/scheduling/src/*"
+      ],
+      "@alga-psa/ee-calendar": [
+        "../ee/packages/calendar/src/index.ts"
+      ],
+      "@alga-psa/ee-calendar/*": [
+        "../ee/packages/calendar/src/*"
+      ],
+      "@alga-psa/ee-microsoft-teams": [
+        "../ee/packages/microsoft-teams/src/index.ts"
+      ],
+      "@alga-psa/ee-microsoft-teams/*": [
+        "../ee/packages/microsoft-teams/src/*"
       ],
       "@alga-psa/workflows": [
         "../ee/packages/workflows/src"

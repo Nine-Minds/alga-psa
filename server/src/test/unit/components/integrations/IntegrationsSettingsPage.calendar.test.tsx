@@ -77,14 +77,14 @@ vi.mock('@alga-psa/integrations/entra/components/entry', () => ({
   EntraIntegrationSettings: () => <div data-testid="entra-integration-settings-shell">Entra Settings Shell</div>,
 }));
 
-vi.mock('@enterprise/components/settings/integrations/TeamsIntegrationSettings', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/components', () => ({
   __esModule: true,
-  default: () => <div data-testid="teams-integration-settings-shell">Teams Integration Settings</div>,
+  TeamsIntegrationSettings: () => <div data-testid="teams-integration-settings-shell">Teams Integration Settings</div>,
 }));
 
-vi.mock('@enterprise/components/settings/integrations/CalendarIntegrationsSettings', () => ({
+vi.mock('@alga-psa/ee-calendar/components', () => ({
   __esModule: true,
-  default: () => <div data-testid="calendar-enterprise-settings-shell">Calendar Enterprise Settings</div>,
+  CalendarIntegrationsSettings: () => <div data-testid="calendar-enterprise-settings-shell">Calendar Enterprise Settings</div>,
 }));
 
 vi.mock('@product/billing/entry', () => ({

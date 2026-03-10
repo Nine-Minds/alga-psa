@@ -13,7 +13,7 @@ describe('UserProfile calendar edition contract', () => {
     );
     expect(source).not.toContain("import { CalendarIntegrationsSettings } from '@alga-psa/integrations/components';");
     expect(source).toContain("const CalendarProfileSettings = dynamic(");
-    expect(source).toContain("() => import('@enterprise/components/settings/profile/CalendarProfileSettings')");
+    expect(source).toContain("() => import('@alga-psa/ee-calendar/components').then((mod) => mod.CalendarProfileSettings)");
     expect(source).toContain('const isCalendarTabAvailable = isCalendarEnterpriseEdition();');
     expect(source).toContain('resolveUserProfileTab(tabParam, isCalendarTabAvailable)');
     expect(source).toContain('...(isCalendarTabAvailable ? [{');

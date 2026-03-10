@@ -24,7 +24,7 @@ describe('calendar migration ownership contracts', () => {
     expect(ceMigrationFiles.has('20260307143000_create_microsoft_profile_consumer_bindings.cjs')).toBe(true);
     expect(calendarEeMigrationFiles.every((file) => !ceMigrationFiles.has(file))).toBe(true);
     expect(sharedActionSource).toContain('calendarUnavailable');
-    expect(sharedActionSource).toContain("import('@enterprise/lib/actions/integrations/calendarActions')");
+    expect(sharedActionSource).toContain("import('@alga-psa/ee-calendar/actions')");
   });
 
   it('T361/T362: keeps fresh EE installs on the shared Microsoft binding schema while adding the EE calendar migrations and runtime entrypoints', () => {
@@ -35,8 +35,6 @@ describe('calendar migration ownership contracts', () => {
     );
 
     expect(calendarEeMigrationFiles.every((file) => eeMigrationFiles.has(file))).toBe(true);
-    expect(eeActionSource).toContain('CalendarProviderService');
-    expect(eeActionSource).toContain('CalendarSyncService');
-    expect(eeActionSource).toContain('CalendarWebhookMaintenanceService');
+    expect(eeActionSource).toContain("@alga-psa/ee-calendar/actions");
   });
 });

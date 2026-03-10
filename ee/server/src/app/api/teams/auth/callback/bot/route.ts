@@ -1,8 +1,3 @@
-import { handleTeamsAuthCallback } from '../../../../../../lib/teams/handleTeamsAuthCallback';
-
-export const dynamic = 'force-dynamic';
+export { teamsBotAuthCallbackDynamic as dynamic } from '@alga-psa/ee-microsoft-teams/routes';
 export const runtime = 'nodejs';
-
-export async function GET(request: Request): Promise<Response> {
-  return handleTeamsAuthCallback(request, 'bot');
-}
+export { handleTeamsBotAuthCallbackGet as GET } from '@alga-psa/ee-microsoft-teams/routes';

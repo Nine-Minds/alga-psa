@@ -100,6 +100,7 @@ export {
 } from './integrations/googleActions';
 export {
   getMicrosoftIntegrationStatus,
+  getMicrosoftConsumerSetupStatus,
   listMicrosoftProfiles,
   listMicrosoftConsumerBindings,
   createMicrosoftProfile,

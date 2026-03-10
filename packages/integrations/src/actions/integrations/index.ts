@@ -1,6 +1,7 @@
 export { getGoogleIntegrationStatus, saveGoogleIntegrationSettings, resetGoogleProvidersToDisconnected } from './googleActions';
 export {
   getMicrosoftIntegrationStatus,
+  getMicrosoftConsumerSetupStatus,
   listMicrosoftProfiles,
   listMicrosoftConsumerBindings,
   createMicrosoftProfile,

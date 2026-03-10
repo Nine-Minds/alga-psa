@@ -6,7 +6,7 @@ import Spinner from '@alga-psa/ui/components/Spinner';
 import { isCalendarEnterpriseEdition } from '../../../lib/calendarAvailability';
 
 const EnterpriseCalendarIntegrationsSettings = dynamic(
-  () => import('@enterprise/components/settings/integrations/CalendarIntegrationsSettings'),
+  () => import('@alga-psa/ee-calendar/components').then((mod) => mod.CalendarIntegrationsSettings),
   {
     loading: () => (
       <Card>

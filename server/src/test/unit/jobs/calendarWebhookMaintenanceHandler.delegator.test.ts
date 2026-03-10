@@ -34,7 +34,7 @@ describe('calendarWebhookMaintenanceHandler delegator', () => {
     const eeRenew = vi.fn();
     const eeVerify = vi.fn();
 
-    vi.doMock('@enterprise/lib/jobs/handlers/calendarWebhookMaintenanceHandler', () => ({
+    vi.doMock('@alga-psa/ee-calendar/jobs', () => ({
       renewMicrosoftCalendarWebhooks: eeRenew,
       verifyGoogleCalendarProvisioning: eeVerify,
     }));
@@ -55,7 +55,7 @@ describe('calendarWebhookMaintenanceHandler delegator', () => {
     const eeRenew = vi.fn(async () => undefined);
     const eeVerify = vi.fn(async () => undefined);
 
-    vi.doMock('@enterprise/lib/jobs/handlers/calendarWebhookMaintenanceHandler', () => ({
+    vi.doMock('@alga-psa/ee-calendar/jobs', () => ({
       renewMicrosoftCalendarWebhooks: eeRenew,
       verifyGoogleCalendarProvisioning: eeVerify,
     }));
@@ -79,11 +79,11 @@ describe('calendarWebhookMaintenanceHandler delegator', () => {
       'utf8'
     );
     const eeSource = fs.readFileSync(
-      path.join(serverRoot, '../packages/ee/src/lib/jobs/handlers/calendarWebhookMaintenanceHandler.ts'),
+      path.join(serverRoot, '../ee/packages/calendar/src/lib/jobs/handlers/calendarWebhookMaintenanceHandler.ts'),
       'utf8'
     );
 
-    expect(sharedSource).toContain("@enterprise/lib/jobs/handlers/calendarWebhookMaintenanceHandler");
+    expect(sharedSource).toContain("@alga-psa/ee-calendar/jobs");
     expect(sharedSource).not.toContain('CalendarWebhookMaintenanceService');
     expect(sharedSource).not.toContain('GoogleCalendarAdapter');
     expect(sharedSource).not.toContain('CalendarProviderService');

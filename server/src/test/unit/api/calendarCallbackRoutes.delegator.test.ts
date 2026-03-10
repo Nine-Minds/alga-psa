@@ -99,11 +99,11 @@ describe('Calendar callback route delegators', () => {
     const googleSharedSource = fs.readFileSync(path.join(serverRoot, 'src/app/api/auth/google/calendar/callback/route.ts'), 'utf8');
     const microsoftSharedSource = fs.readFileSync(path.join(serverRoot, 'src/app/api/auth/microsoft/calendar/callback/route.ts'), 'utf8');
     const googleEeSource = fs.readFileSync(
-      path.join(serverRoot, '../ee/server/src/app/api/auth/google/calendar/callback/route.ts'),
+      path.join(serverRoot, '../ee/packages/calendar/src/app/api/auth/google/calendar/callback/route.ts'),
       'utf8'
     );
     const microsoftEeSource = fs.readFileSync(
-      path.join(serverRoot, '../ee/server/src/app/api/auth/microsoft/calendar/callback/route.ts'),
+      path.join(serverRoot, '../ee/packages/calendar/src/app/api/auth/microsoft/calendar/callback/route.ts'),
       'utf8'
     );
 
@@ -129,8 +129,8 @@ describe('Calendar callback route delegators', () => {
   });
 
   it('preserves malformed-input handling in the EE callback implementations', async () => {
-    const googleEeRoute = await import('../../../../../ee/server/src/app/api/auth/google/calendar/callback/route');
-    const microsoftEeRoute = await import('../../../../../ee/server/src/app/api/auth/microsoft/calendar/callback/route');
+    const googleEeRoute = await import('../../../../../ee/packages/calendar/src/app/api/auth/google/calendar/callback/route');
+    const microsoftEeRoute = await import('../../../../../ee/packages/calendar/src/app/api/auth/microsoft/calendar/callback/route');
 
     const googleResponse = await googleEeRoute.GET(
       new NextRequest('http://localhost/api/auth/google/calendar/callback?state=nonce-only', { method: 'GET' }) as never

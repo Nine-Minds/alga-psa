@@ -1,8 +1,3 @@
-import { handleTeamsQuickActionRequest } from '../../../../lib/teams/quickActions/teamsQuickActionHandler';
-
-export const dynamic = 'force-dynamic';
+export { teamsQuickActionsDynamic as dynamic } from '@alga-psa/ee-microsoft-teams/routes';
 export const runtime = 'nodejs';
-
-export async function POST(request: Request): Promise<Response> {
-  return handleTeamsQuickActionRequest(request);
-}
+export { handleTeamsQuickActionsPost as POST } from '@alga-psa/ee-microsoft-teams/routes';

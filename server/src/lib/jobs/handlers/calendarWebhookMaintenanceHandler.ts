@@ -29,9 +29,7 @@ async function loadEeCalendarWebhookMaintenanceModule(): Promise<EeCalendarWebho
   }
 
   if (!eeCalendarWebhookMaintenanceModulePromise) {
-    eeCalendarWebhookMaintenanceModulePromise = import(
-      '@enterprise/lib/jobs/handlers/calendarWebhookMaintenanceHandler'
-    )
+    eeCalendarWebhookMaintenanceModulePromise = import('@alga-psa/ee-calendar/jobs')
       .then((mod) => {
         if (
           typeof mod?.renewMicrosoftCalendarWebhooks !== 'function' ||
