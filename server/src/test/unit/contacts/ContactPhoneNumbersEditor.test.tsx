@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ContactPhoneNumberInput } from '@alga-psa/types';
@@ -21,10 +21,16 @@ vi.mock('@alga-psa/ui/components/Label', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/PhoneInput', () => ({
-  PhoneInput: ({ id, label, value, onChange }: any) => (
+  PhoneInput: ({ id, label, value, onChange, onBlur }: any) => (
     <label htmlFor={id}>
       {label}
-      <input id={id} aria-label={label} value={value} onChange={(event) => onChange(event.target.value)} />
+      <input
+        id={id}
+        aria-label={label}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onBlur={onBlur}
+      />
     </label>
   ),
 }));
@@ -40,6 +46,21 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
           </option>
         ))}
       </select>
+    </label>
+  ),
+}));
+
+vi.mock('@alga-psa/ui/components/SearchableSelect', () => ({
+  default: ({ id, value, onChange, placeholder }: any) => (
+    <label htmlFor={id}>
+      {id}
+      <input
+        id={id}
+        aria-label={id}
+        placeholder={placeholder}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
     </label>
   ),
 }));
@@ -90,22 +111,23 @@ describe('ContactPhoneNumbersEditor', () => {
 
     await user.selectOptions(screen.getByLabelText('contact-phone-editor-type-1'), 'custom');
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('Enter a custom phone type')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Select or enter a custom phone type')).toBeTruthy();
     });
-    await user.type(screen.getByPlaceholderText('Enter a custom phone type'), 'Desk Line');
-    await user.click(screen.getByTestId('contact-phone-editor-default-1'));
+    await user.type(screen.getByPlaceholderText('Select or enter a custom phone type'), 'Desk Line');
+    await user.click(screen.getAllByRole('radio', { name: 'Default' })[1]!);
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('Enter a custom phone type')).toHaveValue('DeskLine');
-      expect(screen.getByTestId('contact-phone-editor-default-1')).toBeChecked();
-      expect(screen.getByTestId('contact-phone-editor-default-0')).not.toBeChecked();
+      expect((screen.getByPlaceholderText('Select or enter a custom phone type') as HTMLInputElement).value).toBe('Desk Line');
+      expect(screen.getAllByRole('radio', { name: 'Default' })[1]!).toBeChecked();
+      expect(screen.getAllByRole('radio', { name: 'Default' })[0]!).not.toBeChecked();
     });
   });
 
-  it('T017: surfaces a validation error when multiple phone rows are marked as default', async () => {
+  it('T017: renders submit-time phone validation errors passed in from the parent form', async () => {
     render(
-      <EditorHarness
-        initialRows={[
+      <ContactPhoneNumbersEditor
+        id="contact-phone-editor"
+        value={[
           {
             phone_number: '+1 555 111 2222',
             canonical_type: 'work',
@@ -119,9 +141,34 @@ describe('ContactPhoneNumbersEditor', () => {
             display_order: 1,
           },
         ]}
+        onChange={vi.fn()}
+        countries={countries}
+        customTypeSuggestions={['Desk Line', 'After Hours']}
+        errorMessages={['Select exactly one default phone number.']}
       />
     );
 
     expect(await screen.findByText('Select exactly one default phone number.')).toBeInTheDocument();
+  });
+
+  it('T018: defers incomplete phone validation until the user blurs the phone input', async () => {
+    render(
+      <EditorHarness
+        initialRows={[
+          {
+            phone_number: '+1',
+            canonical_type: 'work',
+            is_default: true,
+            display_order: 0,
+          },
+        ]}
+      />
+    );
+
+    expect(screen.queryByText('Phone 1: Enter a complete phone number.')).not.toBeInTheDocument();
+
+    fireEvent.blur(screen.getByLabelText('Phone Number'));
+
+    expect(await screen.findByText('Phone 1: Enter a complete phone number.')).toBeInTheDocument();
   });
 });

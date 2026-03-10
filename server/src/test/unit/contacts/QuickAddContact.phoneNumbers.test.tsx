@@ -127,7 +127,10 @@ describe('QuickAddContact normalized phone numbers', () => {
     await user.type(document.getElementById('quick-add-contact-name') as HTMLInputElement, 'Alex Contact');
     await user.type(document.getElementById('quick-add-contact-email') as HTMLInputElement, 'alex@acme.com');
 
-    await user.click(document.getElementById('quick-add-contact-phone-add-phone') as HTMLButtonElement);
+    await waitFor(() => {
+      expect(screen.getAllByLabelText('Phone Number')).toHaveLength(1);
+    });
+
     await user.click(document.getElementById('quick-add-contact-phone-add-phone') as HTMLButtonElement);
 
     await waitFor(() => {

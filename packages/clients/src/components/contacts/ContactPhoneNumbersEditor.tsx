@@ -36,6 +36,7 @@ const PHONE_TYPE_OPTIONS = [
 ];
 
 const COUNTRY_CODE_ONLY_PATTERN = /^\+\d{1,4}\s*$/;
+const PHONE_ROW_ERROR_PATTERN = /^Phone (\d+):/;
 
 function normalizeCustomTypeLabel(label: string | null | undefined): string {
   return (label ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
@@ -211,10 +212,46 @@ function inferCountryCode(phoneNumber: string, countries: ICountry[]): string {
   }
 
   const matches = countries
-    .filter((country) => country.phone_code && trimmedPhoneNumber.startsWith(country.phone_code))
-    .sort((a, b) => (b.phone_code?.length ?? 0) - (a.phone_code?.length ?? 0));
+    .map((country) => ({
+      ...country,
+      normalized_phone_code: country.phone_code?.startsWith('+')
+        ? country.phone_code
+        : country.phone_code
+          ? `+${country.phone_code}`
+          : undefined,
+    }))
+    .filter((country) => country.normalized_phone_code && trimmedPhoneNumber.startsWith(country.normalized_phone_code))
+    .sort((a, b) => (b.normalized_phone_code?.length ?? 0) - (a.normalized_phone_code?.length ?? 0));
 
   return matches[0]?.code ?? 'US';
+}
+
+function getRowKey(row: EditablePhoneRow, index: number): string {
+  return row.contact_phone_number_id ?? row._localId ?? `${index}`;
+}
+
+function getVisibleValidationErrors(
+  errors: string[],
+  rows: EditablePhoneRow[],
+  touchedRowKeys: Set<string>
+): string[] {
+  if (touchedRowKeys.size === 0) {
+    return [];
+  }
+
+  return errors.filter((error) => {
+    const match = PHONE_ROW_ERROR_PATTERN.exec(error);
+    if (!match) {
+      return false;
+    }
+
+    const rowIndex = Number.parseInt(match[1] ?? '', 10) - 1;
+    if (rowIndex < 0 || rowIndex >= rows.length) {
+      return false;
+    }
+
+    return touchedRowKeys.has(getRowKey(rows[rowIndex]!, rowIndex));
+  });
 }
 
 interface ContactPhoneRowProps {
@@ -228,6 +265,7 @@ interface ContactPhoneRowProps {
   canMoveDown: boolean;
   canRemove: boolean;
   onChange: (updates: Partial<EditablePhoneRow>) => void;
+  onBlur: () => void;
   onSetDefault: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -245,6 +283,7 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
   canMoveDown,
   canRemove,
   onChange,
+  onBlur,
   onSetDefault,
   onMoveUp,
   onMoveDown,
@@ -349,6 +388,7 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
           label="Phone Number"
           value={row.phone_number ?? ''}
           onChange={(value) => onChange({ phone_number: value })}
+          onBlur={onBlur}
           countryCode={countryCode}
           phoneCode={phoneCode}
           countries={countries}
@@ -449,6 +489,7 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
   }, [allowEmpty]);
 
   const [draftRows, setDraftRows] = useState<EditablePhoneRow[]>(() => createDraftRowsFromValue(value));
+  const [touchedRowKeys, setTouchedRowKeys] = useState<Set<string>>(new Set());
   const lastEmittedSignatureRef = useRef<string | null>(null);
   const externalSignature = useMemo(
     () => buildPhoneRowsSignature(normalizeDraftContactPhoneNumbers(value)),
@@ -477,14 +518,35 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
   }, [allowEmpty, draftSignature, externalSignature, value]);
 
   const validationErrors = useMemo(() => validateContactPhoneNumbers(draftRows), [draftRows]);
+  const visibleValidationErrors = useMemo(
+    () => getVisibleValidationErrors(validationErrors, draftRows, touchedRowKeys),
+    [draftRows, touchedRowKeys, validationErrors]
+  );
 
   useEffect(() => {
     if (onValidationChange) {
-      onValidationChange(validationErrors);
+      onValidationChange(visibleValidationErrors);
     }
-  }, [onValidationChange, validationErrors]);
+  }, [onValidationChange, visibleValidationErrors]);
 
-  const displayedErrors = errorMessages ?? validationErrors;
+  useEffect(() => {
+    setTouchedRowKeys((previousTouchedRowKeys) => {
+      if (previousTouchedRowKeys.size === 0) {
+        return previousTouchedRowKeys;
+      }
+
+      const validRowKeys = new Set(draftRows.map((row, index) => getRowKey(row, index)));
+      const nextTouchedRowKeys = new Set(
+        Array.from(previousTouchedRowKeys).filter((rowKey) => validRowKeys.has(rowKey))
+      );
+
+      return nextTouchedRowKeys.size === previousTouchedRowKeys.size
+        ? previousTouchedRowKeys
+        : nextTouchedRowKeys;
+    });
+  }, [draftRows]);
+
+  const displayedErrors = errorMessages ?? visibleValidationErrors;
 
   const commitRows = useCallback((nextRows: EditablePhoneRow[]) => {
     const normalizedRows = normalizeDraftContactPhoneNumbers(nextRows);
@@ -506,6 +568,24 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
         is_default: rowIndex === index,
       }))
     );
+  };
+
+  const handleRowBlur = (index: number) => {
+    const row = draftRows[index];
+    if (!row) {
+      return;
+    }
+
+    const rowKey = getRowKey(row, index);
+    setTouchedRowKeys((previousTouchedRowKeys) => {
+      if (previousTouchedRowKeys.has(rowKey)) {
+        return previousTouchedRowKeys;
+      }
+
+      const nextTouchedRowKeys = new Set(previousTouchedRowKeys);
+      nextTouchedRowKeys.add(rowKey);
+      return nextTouchedRowKeys;
+    });
   };
 
   const handleMove = (index: number, direction: -1 | 1) => {
@@ -577,6 +657,7 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
               canMoveDown={index < draftRows.length - 1}
               canRemove={draftRows.length > 0}
               onChange={(updates) => handleRowChange(index, updates)}
+              onBlur={() => handleRowBlur(index)}
               onSetDefault={() => handleSetDefault(index)}
               onMoveUp={() => handleMove(index, -1)}
               onMoveDown={() => handleMove(index, 1)}
