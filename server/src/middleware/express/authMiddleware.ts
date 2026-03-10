@@ -180,6 +180,16 @@ export async function apiKeyAuthMiddleware(
     return next();
   }
 
+  // Xero OAuth connect/callback are driven from the MSP settings UI and use session auth.
+  if (
+    req.path === '/api/integrations/xero/connect' ||
+    req.path === '/api/integrations/xero/connect/' ||
+    req.path === '/api/integrations/xero/callback' ||
+    req.path === '/api/integrations/xero/callback/'
+  ) {
+    return next();
+  }
+
   const apiKey = req.headers['x-api-key'] as string;
   const canary = (req.headers['x-canary'] as string) || undefined;
 

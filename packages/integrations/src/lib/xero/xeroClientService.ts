@@ -16,6 +16,12 @@ const XERO_CREDENTIALS_SECRET = 'xero_credentials';
 const XERO_CLIENT_ID_SECRET = 'xero_client_id';
 const XERO_CLIENT_SECRET_SECRET = 'xero_client_secret';
 const ACCESS_TOKEN_BUFFER_SECONDS = 300;
+const DEFAULT_XERO_SCOPES = [
+  'offline_access',
+  'accounting.settings',
+  'accounting.transactions',
+  'accounting.contacts'
+];
 
 export const XERO_TOKEN_URL = XERO_TOKEN_ENDPOINT;
 export const XERO_CREDENTIALS_SECRET_NAME = XERO_CREDENTIALS_SECRET;
@@ -65,6 +71,81 @@ export async function getXeroClientId(secretProvider?: ISecretProvider): Promise
 export async function getXeroClientSecret(secretProvider?: ISecretProvider): Promise<string | undefined> {
   const provider = secretProvider ?? await getSecretProviderInstance();
   return resolveAppSecret(provider, XERO_CLIENT_SECRET_SECRET, XERO_CLIENT_SECRET_ENV_FALLBACKS);
+}
+
+function readTrimmedSecret(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+export async function getTenantOwnedXeroClientId(
+  tenantId: string,
+  secretProvider?: ISecretProvider
+): Promise<string | undefined> {
+  const provider = secretProvider ?? await getSecretProviderInstance();
+  return readTrimmedSecret(await provider.getTenantSecret(tenantId, XERO_CLIENT_ID_SECRET));
+}
+
+export async function getTenantOwnedXeroClientSecret(
+  tenantId: string,
+  secretProvider?: ISecretProvider
+): Promise<string | undefined> {
+  const provider = secretProvider ?? await getSecretProviderInstance();
+  return readTrimmedSecret(await provider.getTenantSecret(tenantId, XERO_CLIENT_SECRET_SECRET));
+}
+
+export type XeroCredentialSource = 'tenant' | 'app';
+
+export interface ResolvedXeroOAuthCredentials {
+  clientId: string;
+  clientSecret: string;
+  source: XeroCredentialSource;
+}
+
+function computeBaseUrl(envValue?: string | null): string {
+  const raw = (envValue || '').trim();
+  if (!raw) {
+    return 'http://localhost:3000';
+  }
+
+  try {
+    const parsed = new URL(raw.startsWith('http') ? raw : `https://${raw}`);
+    const pathname = parsed.pathname.replace(/\/+$/, '');
+    return `${parsed.protocol}//${parsed.host}${pathname}`;
+  } catch {
+    return 'http://localhost:3000';
+  }
+}
+
+export async function getXeroDeploymentBaseUrl(secretProvider?: ISecretProvider): Promise<string> {
+  const provider = secretProvider ?? await getSecretProviderInstance();
+  const base =
+    process.env.NEXT_PUBLIC_BASE_URL ||
+    (await provider.getAppSecret('NEXT_PUBLIC_BASE_URL')) ||
+    process.env.NEXTAUTH_URL ||
+    (await provider.getAppSecret('NEXTAUTH_URL')) ||
+    'http://localhost:3000';
+
+  return computeBaseUrl(base);
+}
+
+export function getXeroOAuthScopes(): string[] {
+  const configured = readTrimmedSecret(process.env.XERO_OAUTH_SCOPES);
+  if (!configured) {
+    return DEFAULT_XERO_SCOPES;
+  }
+
+  return configured
+    .split(/\s+/)
+    .map((scope) => scope.trim())
+    .filter(Boolean);
+}
+
+export function getXeroOAuthScopesString(): string {
+  return getXeroOAuthScopes().join(' ');
+}
+
+export async function getXeroRedirectUri(secretProvider?: ISecretProvider): Promise<string> {
+  return `${await getXeroDeploymentBaseUrl(secretProvider)}/api/integrations/xero/callback`;
 }
 
 export interface XeroTrackingCategoryOption {
@@ -165,6 +246,7 @@ export interface XeroTrackingCategory {
 export interface XeroConnectionSummary {
   connectionId: string;
   xeroTenantId: string;
+  tenantName?: string;
   status?: 'connected' | 'expired';
 }
 
@@ -219,6 +301,7 @@ export interface XeroInvoiceDetails {
 export interface XeroStoredConnection {
   connectionId: string;
   xeroTenantId: string;
+  tenantName?: string;
   accessToken: string;
   refreshToken: string;
   accessTokenExpiresAt: string;
@@ -242,7 +325,7 @@ export class XeroClientService {
   static async create(tenantId: string, connectionId?: string | null): Promise<XeroClientService> {
     const [connections, appSecrets] = await Promise.all([
       getTenantConnections(tenantId),
-      getAppSecrets()
+      getAppSecrets(tenantId)
     ]);
 
     if (!connections || Object.keys(connections).length === 0) {
@@ -744,6 +827,7 @@ export async function getXeroConnectionSummaries(tenantId: string): Promise<Xero
     summaries.push({
       connectionId: connection.connectionId,
       xeroTenantId: connection.xeroTenantId,
+      tenantName: connection.tenantName,
       status: Date.now() < expiresAt ? 'connected' : 'expired'
     });
   }
@@ -806,20 +890,55 @@ export async function upsertStoredXeroConnections(
   return merged;
 }
 
-async function getAppSecrets(secretProvider?: ISecretProvider): Promise<XeroAppSecrets> {
+export async function resolveXeroOAuthCredentials(
+  tenantId: string,
+  secretProvider?: ISecretProvider
+): Promise<ResolvedXeroOAuthCredentials> {
   const provider = secretProvider ?? await getSecretProviderInstance();
-  const [clientId, clientSecret] = await Promise.all([
+  const [tenantClientId, tenantClientSecret] = await Promise.all([
+    getTenantOwnedXeroClientId(tenantId, provider),
+    getTenantOwnedXeroClientSecret(tenantId, provider)
+  ]);
+
+  if (tenantClientId && tenantClientSecret) {
+    return {
+      clientId: tenantClientId,
+      clientSecret: tenantClientSecret,
+      source: 'tenant'
+    };
+  }
+
+  if (tenantClientId || tenantClientSecret) {
+    throw new AppError(
+      'XERO_CONFIG_MISSING',
+      'Xero client ID and client secret must both be configured for this tenant before connecting.'
+    );
+  }
+
+  const [appClientId, appClientSecret] = await Promise.all([
     getXeroClientId(provider),
     getXeroClientSecret(provider)
   ]);
 
-  if (!clientId || !clientSecret) {
-    throw new AppError('XERO_CONFIG_MISSING', 'Xero client credentials not configured');
+  if (!appClientId || !appClientSecret) {
+    throw new AppError(
+      'XERO_CONFIG_MISSING',
+      'Xero client credentials are not configured for this tenant or the application fallback.'
+    );
   }
 
   return {
-    clientId,
-    clientSecret
+    clientId: appClientId,
+    clientSecret: appClientSecret,
+    source: 'app'
+  };
+}
+
+async function getAppSecrets(tenantId: string, secretProvider?: ISecretProvider): Promise<XeroAppSecrets> {
+  const resolved = await resolveXeroOAuthCredentials(tenantId, secretProvider);
+  return {
+    clientId: resolved.clientId,
+    clientSecret: resolved.clientSecret
   };
 }
 

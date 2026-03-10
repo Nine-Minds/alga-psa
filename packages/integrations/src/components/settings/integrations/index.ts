@@ -7,3 +7,4 @@ export { default as NinjaOneComplianceDashboard } from './NinjaOneComplianceDash
 export { default as RmmIntegrationsSetup } from './RmmIntegrationsSetup';
 export { default as XeroCsvClientSyncPanel } from './XeroCsvClientSyncPanel';
 export { default as XeroCsvIntegrationSettings } from './XeroCsvIntegrationSettings';
+export { default as XeroIntegrationSettings } from './XeroIntegrationSettings';

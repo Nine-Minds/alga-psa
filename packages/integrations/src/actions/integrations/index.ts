@@ -8,7 +8,12 @@ export {
   listMspSsoLoginDomains,
   saveMspSsoLoginDomains,
 } from './mspSsoDomainActions';
-export { getXeroConnectionStatus, getXeroIntegrationStatus, disconnectXero } from './xeroActions';
+export {
+  getXeroConnectionStatus,
+  getXeroIntegrationStatus,
+  saveXeroCredentials,
+  disconnectXero
+} from './xeroActions';
 export { getXeroCsvSettings, saveXeroCsvSettings } from './xeroCsvActions';
 export {
   initiateEntraDirectOAuth,

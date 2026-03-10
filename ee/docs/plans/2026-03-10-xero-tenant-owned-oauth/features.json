@@ -1,0 +1,158 @@
+[
+  {
+    "id": "F001",
+    "description": "Enterprise Accounting integrations renders an active `Xero` option beside the existing `Xero CSV` option instead of a disabled `Coming Soon` card.",
+    "implemented": true,
+    "prdRefs": ["Summary", "UX / UI Notes", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F002",
+    "description": "Selecting `Xero` in Accounting integrations opens a dedicated `XeroIntegrationSettings` screen under the Accounting area rather than sending users to the Providers tab.",
+    "implemented": true,
+    "prdRefs": ["Goals", "UX / UI Notes"]
+  },
+  {
+    "id": "F003",
+    "description": "The Xero settings screen shows tenant-owned client ID/client secret inputs plus the required redirect URI and scopes for customer-managed Xero app setup.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F004",
+    "description": "The Xero settings screen loads a masked status/readiness model that shows whether credentials exist, whether a default connection exists, and whether the connection is connected or expired.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F005",
+    "description": "Add a server action to save/update tenant-owned Xero client ID and client secret with validation for non-empty values.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F006",
+    "description": "Persist tenant-owned Xero OAuth app credentials in tenant secrets `xero_client_id` and `xero_client_secret` and never return raw secret values to the browser.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Security / Permissions"]
+  },
+  {
+    "id": "F007",
+    "description": "Add or extend a Xero status action so the settings screen receives masked credential state, redirect URI, scopes, connection summaries, default connection id, and actionable error text.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F008",
+    "description": "The Xero settings screen disables or blocks the Connect action until tenant-owned Xero credentials are configured.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "UX / UI Notes"]
+  },
+  {
+    "id": "F009",
+    "description": "The Xero connect route resolves tenant-owned credentials first and returns a clear configuration error when no usable credentials are available.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F010",
+    "description": "The Xero callback route resolves tenant-owned credentials first, completes the existing PKCE token exchange, and stores returned Xero connection tokens in the existing `xero_credentials` tenant secret.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F011",
+    "description": "Credential resolution remains tenant-first but keeps current app-level Xero secret fallback during rollout compatibility.",
+    "implemented": true,
+    "prdRefs": ["Non-functional Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F012",
+    "description": "Disconnecting Xero clears only `xero_credentials` connection tokens and preserves saved tenant-owned Xero client credentials.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F013",
+    "description": "Existing Xero status/catalog server actions continue to work after tenant-owned credential resolution and use the stored default connection automatically.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Data / API / Integrations"]
+  },
+  {
+    "id": "F014",
+    "description": "Existing live Xero invoice export flow via `XeroAdapter` continues to work using tenant-owned credentials and the stored default connection.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F015",
+    "description": "Existing live Xero company/contact sync flow continues to work using tenant-owned credentials and the stored default connection.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F016",
+    "description": "Implement live Xero mapping modules for the shared accounting mapping manager using the default Xero connection as realm context for accounts, items, tax rates, and tracking categories.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F017",
+    "description": "Render a live Xero mapping/configuration area inside the Xero settings screen using the default connected Xero organization context.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F018",
+    "description": "The Xero settings screen includes in-context guidance that `Xero CSV` remains available as the manual alternative and links operators back to the accounting export workflow where needed.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Goals"]
+  },
+  {
+    "id": "F019",
+    "description": "The existing `Xero CSV` settings screen and CSV billing workflows remain available and behaviorally unchanged alongside the live Xero path.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Non-goals", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F020",
+    "description": "The live Xero card and settings screen are visible only in Enterprise builds.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Security / Permissions", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F021",
+    "description": "Server-side live Xero settings/connect/disconnect entry points reject non-Enterprise contexts even if shared Xero support code remains importable.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Security / Permissions"]
+  },
+  {
+    "id": "F022",
+    "description": "The first/prioritized stored Xero connection is treated as the default live Xero organization in v1, with no org-selection UI added.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Non-goals", "Rollout / Migration"]
+  },
+  {
+    "id": "F023",
+    "description": "The Xero settings screen surfaces actionable error states for missing credentials, OAuth callback failure, no returned Xero connections, and expired default connection state.",
+    "implemented": true,
+    "prdRefs": ["Non-functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F024",
+    "description": "Server-side Xero settings and connect/disconnect reads and writes remain tenant-scoped and reuse existing billing/integration permissions for read and update operations.",
+    "implemented": true,
+    "prdRefs": ["Security / Permissions"]
+  },
+  {
+    "id": "F025",
+    "description": "Browser-facing Xero settings reads never expose raw client secrets or raw `xero_credentials` token payloads, only masked or derived status information.",
+    "implemented": true,
+    "prdRefs": ["Security / Permissions", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F026",
+    "description": "Add lightweight server logging around Xero settings save/connect flows that identifies tenant context and credential source selection without logging secret values.",
+    "implemented": true,
+    "prdRefs": ["Observability", "Non-functional Requirements"]
+  }
+]

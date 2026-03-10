@@ -166,6 +166,7 @@ export {
 export {
   getXeroConnectionStatus,
   getXeroIntegrationStatus,
+  saveXeroCredentials,
   disconnectXero,
   getXeroAccounts,
   getXeroItems,

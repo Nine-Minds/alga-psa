@@ -2,19 +2,28 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+import logger from '@alga-psa/core/logger';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getSession } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 
 import { createTenantKnex } from '@alga-psa/db';
-import { getXeroClientId } from '../../../../lib/xero/xeroClientService';
+import {
+  getXeroOAuthScopesString,
+  getXeroRedirectUri,
+  resolveXeroOAuthCredentials
+} from '../../../../lib/xero/xeroClientService';
 
 const XERO_AUTHORIZE_URL =
   process.env.XERO_OAUTH_AUTHORIZE_URL ?? 'https://login.xero.com/identity/connect/authorize';
-const XERO_REDIRECT_URI = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/integrations/xero/callback`;
-const XERO_SCOPES =
-  process.env.XERO_OAUTH_SCOPES ??
-  'offline_access accounting.settings accounting.transactions accounting.contacts';
+
+function isEnterpriseEdition(): boolean {
+  return (
+    (process.env.EDITION ?? '').toLowerCase() === 'ee' ||
+    (process.env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise'
+  );
+}
 
 function toBase64Url(buffer: Buffer): string {
   return buffer
@@ -31,11 +40,27 @@ function createPkcePair(): { verifier: string; challenge: string } {
 }
 
 export async function GET(): Promise<NextResponse> {
+  if (!isEnterpriseEdition()) {
+    return NextResponse.json(
+      { error: 'Xero integration is only available in Enterprise Edition.' },
+      { status: 501 }
+    );
+  }
+
   const secretProvider = await getSecretProviderInstance();
   const session = await getSession();
-  const sessionTenant = (session?.user as any)?.tenant;
+  const sessionUser = session?.user as any;
+  const permissionUser =
+    sessionUser && !sessionUser.user_id && sessionUser.id
+      ? { ...sessionUser, user_id: sessionUser.id }
+      : sessionUser;
+  const sessionTenant = sessionUser?.tenant;
   if (!sessionTenant) {
     return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
+  }
+  const canManageBilling = await hasPermission(permissionUser, 'billing_settings', 'update');
+  if (!canManageBilling) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
   const { tenant } = await createTenantKnex(sessionTenant);
 
@@ -43,30 +68,45 @@ export async function GET(): Promise<NextResponse> {
     return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
   }
 
-  const clientId = await getXeroClientId(secretProvider);
-  if (!clientId) {
-    return NextResponse.json({ error: 'Xero integration not configured.' }, { status: 500 });
+  const redirectUri = await getXeroRedirectUri(secretProvider);
+
+  try {
+    const credentials = await resolveXeroOAuthCredentials(tenant, secretProvider);
+    const csrfToken = toBase64Url(crypto.randomBytes(24));
+    const { verifier, challenge } = createPkcePair();
+    const statePayload = {
+      tenantId: tenant,
+      csrf: csrfToken,
+      codeVerifier: verifier
+    };
+    const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
+
+    logger.info('[xeroOAuth] Starting Xero OAuth connect flow', {
+      tenantId: tenant,
+      credentialSource: credentials.source
+    });
+
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: String(credentials.clientId),
+      redirect_uri: redirectUri,
+      scope: getXeroOAuthScopesString(),
+      state,
+      code_challenge: challenge,
+      code_challenge_method: 'S256'
+    });
+
+    const authorizeUrl = `${XERO_AUTHORIZE_URL}?${params.toString()}`;
+    return NextResponse.redirect(authorizeUrl);
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Xero client credentials are not configured for this tenant.';
+    logger.warn('[xeroOAuth] Unable to start Xero OAuth connect flow', {
+      tenantId: tenant,
+      error: message
+    });
+    return NextResponse.json({ error: message }, { status: 400 });
   }
-
-  const csrfToken = toBase64Url(crypto.randomBytes(24));
-  const { verifier, challenge } = createPkcePair();
-  const statePayload = {
-    tenantId: tenant,
-    csrf: csrfToken,
-    codeVerifier: verifier
-  };
-  const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
-
-  const params = new URLSearchParams({
-    response_type: 'code',
-    client_id: String(clientId),
-    redirect_uri: XERO_REDIRECT_URI,
-    scope: XERO_SCOPES,
-    state,
-    code_challenge: challenge,
-    code_challenge_method: 'S256'
-  });
-
-  const authorizeUrl = `${XERO_AUTHORIZE_URL}?${params.toString()}`;
-  return NextResponse.redirect(authorizeUrl);
 }
