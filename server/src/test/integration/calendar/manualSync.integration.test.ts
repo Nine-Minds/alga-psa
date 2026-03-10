@@ -72,7 +72,7 @@ vi.mock(modulePaths.rootDbModulePathNoExt, () => buildDbExports());
 
 const providerTenantMap = vi.hoisted(() => new Map<string, string>());
 
-vi.mock('@/services/calendar/CalendarProviderService', () => ({
+vi.mock('@enterprise/lib/services/calendar/CalendarProviderService', () => ({
   CalendarProviderService: class {
     async getProvider(providerId: string, tenant: string) {
       if (!context.db) {
@@ -121,7 +121,7 @@ vi.mock('@/services/calendar/CalendarProviderService', () => ({
   },
 }));
 
-vi.mock('@/services/calendar/CalendarSyncService', () => ({
+vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
   CalendarSyncService: class {
     async syncScheduleEntryToExternal(entryId: string, providerId: string) {
       if (!context.db) {

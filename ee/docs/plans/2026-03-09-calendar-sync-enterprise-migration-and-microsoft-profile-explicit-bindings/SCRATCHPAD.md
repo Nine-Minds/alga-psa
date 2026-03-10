@@ -38,7 +38,16 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
 - (2026-03-09) `packages/integrations/src/actions/calendarActions.ts` was converted into an edition-gated EE delegator layer. Shared action entrypoints no longer import `CalendarProviderService`, `CalendarSyncService`, `CalendarWebhookMaintenanceService`, or calendar adapters directly.
 - (2026-03-09) The new EE action implementation currently lives at `packages/ee/src/lib/actions/integrations/calendarActions.ts`. It centralizes provider CRUD, manual sync, conflict resolution, sync status reads, and manual Microsoft webhook renewal behind the `@enterprise` alias boundary.
 - (2026-03-09) `server/src/lib/actions/calendarActions.ts` now exists as a stable server-side re-export of `@alga-psa/integrations/actions/calendarActions`, which keeps existing server imports/tests working while the shared package owns only the delegator boundary.
-- (2026-03-09) This slice completes the CE CRUD-entrypoint cutover (`F074`) but does not yet complete deeper runtime-ownership features such as `F075`-`F090`; EE actions still call shared `server/src/services/calendar/*` implementations, and CE subscriber/service extraction is still pending.
+- (2026-03-09) The initial action-delegator slice completed the CE CRUD-entrypoint cutover (`F074`); later slices then moved subscriber registration and the concrete EE runtime service tree so the live calendar runtime no longer depends on shared `server/src/services/calendar/*`.
+- (2026-03-09) `server/src/lib/eventBus/subscribers/calendarSyncSubscriber.ts` is now a CE no-op plus EE delegator. The concrete schedule-entry subscriber moved to `packages/ee/src/lib/eventBus/subscribers/calendarSyncSubscriber.ts`, so CE startup no longer loads `CalendarSyncService` or `CalendarProviderService` through subscriber registration.
+- (2026-03-09) Because callbacks, webhooks, maintenance jobs, action entrypoints, subscriber registration, and the concrete EE service tree now all terminate under EE-owned modules, shared calendar sync services/adapters no longer have a live CE runtime entrypoint and EE no longer executes through shared `server/src/services/calendar/*` entrypoints.
+- (2026-03-09) `server/src/test/integration/calendar/scheduleAutoSync.integration.test.ts` still depends on a local PostgreSQL test instance at port `5438`; targeted validation for the subscriber slice therefore uses deterministic unit tests (`calendarSyncSubscriber.delegator.test.ts` and `calendarSyncSubscriber.ee.test.ts`) instead of the DB-backed integration suite in this environment.
+- (2026-03-09) The concrete EE calendar runtime now lives under `packages/ee/src/lib/services/calendar/*`. EE callbacks, webhook routes, maintenance jobs, subscriber registration, and action entrypoints all import that package-owned service tree through `@enterprise/lib/services/calendar/*`.
+- (2026-03-09) The EE runtime ownership contract now explicitly covers:
+  - webhook renewal and maintenance jobs through `packages/ee/src/lib/jobs/handlers/calendarWebhookMaintenanceHandler.ts` and `packages/ee/src/lib/services/calendar/CalendarWebhookMaintenanceService.ts`
+  - provider secret handling through `packages/ee/src/lib/services/calendar/CalendarProviderService.ts`
+  - adapter selection and provider-type branching through `packages/ee/src/lib/services/calendar/CalendarSyncService.ts` and `packages/ee/src/lib/services/calendar/CalendarWebhookProcessor.ts`
+  - background schedule-entry subscriber execution through `packages/ee/src/lib/eventBus/subscribers/calendarSyncSubscriber.ts`
 
 ## Commands / Runbooks
 
@@ -74,6 +83,12 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
   - `pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
 - (2026-03-09) Focused implementation checks for the calendar action delegator slice:
   - `pnpm vitest run --coverage.enabled=false src/test/unit/calendar/calendarActions.ee.contract.test.ts src/test/unit/calendar/calendarActions.sync.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-09) Focused implementation checks for the calendar subscriber delegator slice:
+  - `pnpm vitest run --coverage.enabled=false src/test/unit/calendar/calendarSyncSubscriber.delegator.test.ts src/test/unit/calendar/calendarSyncSubscriber.ee.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-09) Focused implementation checks for the EE runtime ownership slice:
+  - `pnpm vitest run --coverage.enabled=false src/test/unit/calendar/calendarActions.ceBoundary.test.ts src/test/unit/calendar/calendarActions.ee.contract.test.ts src/test/unit/calendar/calendarActions.sync.test.ts src/test/unit/calendar/calendarSyncSubscriber.delegator.test.ts src/test/unit/calendar/calendarSyncSubscriber.ee.test.ts src/test/unit/calendar/calendarRuntimeOwnership.contract.test.ts src/test/unit/api/calendarCallbackRoutes.delegator.test.ts src/test/unit/api/calendarWebhookRoutes.delegator.test.ts src/test/unit/jobs/calendarWebhookMaintenanceHandler.delegator.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
 
 ## Links / References
@@ -161,6 +176,19 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
   - `packages/integrations/src/actions/calendarActions.ts`
   - `packages/ee/src/lib/actions/integrations/calendarActions.ts`
   - `server/src/lib/actions/calendarActions.ts`
+- Shared subscriber boundary files added for the sixth migration slice:
+  - `server/src/lib/eventBus/subscribers/calendarSyncSubscriber.ts`
+  - `packages/ee/src/lib/eventBus/subscribers/calendarSyncSubscriber.ts`
+- EE-owned concrete runtime modules added for the seventh migration slice:
+  - `packages/ee/src/lib/services/calendar/CalendarProviderService.ts`
+  - `packages/ee/src/lib/services/calendar/CalendarSyncService.ts`
+  - `packages/ee/src/lib/services/calendar/CalendarWebhookMaintenanceService.ts`
+  - `packages/ee/src/lib/services/calendar/CalendarWebhookProcessor.ts`
+  - `packages/ee/src/lib/services/calendar/providers/GoogleCalendarAdapter.ts`
+  - `packages/ee/src/lib/services/calendar/providers/MicrosoftCalendarAdapter.ts`
+  - `packages/ee/src/lib/services/calendar/providers/base/BaseCalendarAdapter.ts`
+  - `packages/ee/src/lib/services/CalendarProviderService.ts`
+  - `packages/ee/src/lib/services/CalendarSyncService.ts`
 - Server runtime ownership hotspots that must stop executing in CE:
   - `server/src/lib/eventBus/subscribers/calendarSyncSubscriber.ts`
   - `server/src/lib/jobs/handlers/calendarWebhookMaintenanceHandler.ts`

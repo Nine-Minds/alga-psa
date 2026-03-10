@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
-import { CalendarProviderService } from '@/services/calendar/CalendarProviderService';
-import { MicrosoftCalendarAdapter } from '@/services/calendar/providers/MicrosoftCalendarAdapter';
+import { CalendarProviderService } from '@enterprise/lib/services/calendar/CalendarProviderService';
+import { MicrosoftCalendarAdapter } from '@enterprise/lib/services/calendar/providers/MicrosoftCalendarAdapter';
 import { consumeCalendarOAuthState } from '@/utils/calendar/oauthStateStore';
 import { decodeCalendarState } from '@/utils/calendar/oauthHelpers';
 import { CalendarProviderConfig } from '@/interfaces/calendar.interfaces';

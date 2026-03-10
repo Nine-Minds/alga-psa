@@ -742,7 +742,7 @@
   {
     "id": "F075",
     "description": "The shared Calendar sync service no longer owns live calendar synchronization behavior in CE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -752,7 +752,7 @@
   {
     "id": "F076",
     "description": "The shared Google Calendar adapter no longer provides live CE runtime behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -762,7 +762,7 @@
   {
     "id": "F077",
     "description": "The shared Microsoft Calendar adapter no longer provides live CE runtime behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -772,7 +772,7 @@
   {
     "id": "F078",
     "description": "The shared calendar webhook maintenance service no longer provides live CE runtime behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -782,7 +782,7 @@
   {
     "id": "F079",
     "description": "Calendar provider configuration create, update, and delete behavior executes only in EE-owned runtime code.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -792,7 +792,7 @@
   {
     "id": "F080",
     "description": "Calendar connect and disconnect behavior executes only in EE-owned runtime code.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -802,7 +802,7 @@
   {
     "id": "F081",
     "description": "Calendar sync conflict publication and handling execute only in EE-owned runtime code.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -812,7 +812,7 @@
   {
     "id": "F082",
     "description": "Calendar external-event import and merge logic execute only in EE-owned runtime code.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -822,7 +822,7 @@
   {
     "id": "F083",
     "description": "Calendar provider status updates and error-state transitions execute only in EE-owned runtime code.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -832,7 +832,7 @@
   {
     "id": "F084",
     "description": "Calendar mapping persistence and repair logic remain reachable only through EE-owned runtime code.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -842,7 +842,7 @@
   {
     "id": "F085",
     "description": "CE startup no longer registers calendar subscribers or background sync handlers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -852,7 +852,7 @@
   {
     "id": "F086",
     "description": "EE startup continues to register calendar subscribers or background sync handlers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -862,7 +862,7 @@
   {
     "id": "F087",
     "description": "Schedule entry events in CE no longer trigger calendar synchronization side effects.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -872,7 +872,7 @@
   {
     "id": "F088",
     "description": "Schedule entry events in EE continue to trigger calendar synchronization side effects.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -882,7 +882,7 @@
   {
     "id": "F089",
     "description": "Shared packages expose only abstract, stubbed, or delegated calendar entrypoints after the extraction.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -892,7 +892,7 @@
   {
     "id": "F090",
     "description": "Enterprise packages expose the concrete calendar runtime modules after the extraction.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -902,7 +902,7 @@
   {
     "id": "F091",
     "description": "Ownership tests assert that shared packages do not reach into EE calendar code through raw filesystem-relative imports.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -912,7 +912,7 @@
   {
     "id": "F092",
     "description": "Ownership tests assert that CE builds can import calendar wrappers without loading active calendar logic.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -922,7 +922,7 @@
   {
     "id": "F093",
     "description": "The calendar EE ownership contract explicitly includes webhook-renewal job paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -932,7 +932,7 @@
   {
     "id": "F094",
     "description": "The calendar EE ownership contract explicitly includes provider secret handling paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -942,7 +942,7 @@
   {
     "id": "F095",
     "description": "The calendar EE ownership contract explicitly includes adapter-selection and provider-type branching paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -952,7 +952,7 @@
   {
     "id": "F096",
     "description": "The calendar EE ownership contract explicitly includes any remaining background maintenance and subscription-renewal paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",

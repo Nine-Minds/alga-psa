@@ -23,7 +23,7 @@ vi.mock('@alga-psa/db', async () => ({
 
 const mockGetProvider = vi.fn();
 const mockUpdateProviderStatus = vi.fn();
-vi.mock('@/services/calendar/CalendarProviderService', () => ({
+vi.mock('@enterprise/lib/services/calendar/CalendarProviderService', () => ({
   CalendarProviderService: vi.fn().mockImplementation(() => ({
     getProvider: mockGetProvider,
     updateProviderStatus: mockUpdateProviderStatus,
@@ -32,7 +32,7 @@ vi.mock('@/services/calendar/CalendarProviderService', () => ({
 
 const mockSyncScheduleEntryToExternal = vi.fn();
 const mockSyncExternalEventToSchedule = vi.fn();
-vi.mock('@/services/calendar/CalendarSyncService', () => ({
+vi.mock('@enterprise/lib/services/calendar/CalendarSyncService', () => ({
   CalendarSyncService: vi.fn().mockImplementation(() => ({
     syncScheduleEntryToExternal: mockSyncScheduleEntryToExternal,
     syncExternalEventToSchedule: mockSyncExternalEventToSchedule,

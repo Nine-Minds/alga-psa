@@ -11,11 +11,11 @@ import {
 import { resolveCalendarRedirectUri } from '@alga-psa/integrations/utils/calendar/redirectUri';
 import { storeCalendarOAuthState } from '@alga-psa/integrations/utils/calendar/oauthStateStore';
 import type { CalendarProviderConfig, CalendarSyncStatus, CalendarConflictResolution } from '@alga-psa/types';
-import { CalendarProviderService } from '@/services/calendar/CalendarProviderService';
-import { GoogleCalendarAdapter } from '@/services/calendar/providers/GoogleCalendarAdapter';
-import { MicrosoftCalendarAdapter } from '@/services/calendar/providers/MicrosoftCalendarAdapter';
-import { CalendarSyncService } from '@/services/calendar/CalendarSyncService';
-import { CalendarWebhookMaintenanceService } from '@/services/calendar/CalendarWebhookMaintenanceService';
+import { CalendarProviderService } from '@enterprise/lib/services/calendar/CalendarProviderService';
+import { GoogleCalendarAdapter } from '@enterprise/lib/services/calendar/providers/GoogleCalendarAdapter';
+import { MicrosoftCalendarAdapter } from '@enterprise/lib/services/calendar/providers/MicrosoftCalendarAdapter';
+import { CalendarSyncService } from '@enterprise/lib/services/calendar/CalendarSyncService';
+import { CalendarWebhookMaintenanceService } from '@enterprise/lib/services/calendar/CalendarWebhookMaintenanceService';
 
 type CalendarActionContext = {
   tenant: string;

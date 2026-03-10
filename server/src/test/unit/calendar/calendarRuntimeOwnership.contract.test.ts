@@ -1,0 +1,66 @@
+import { describe, expect, it } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+
+describe('calendar runtime ownership contracts', () => {
+  it('retargets EE entrypoints to the EE-owned calendar service tree', () => {
+    const serverRoot = process.cwd();
+
+    const eeActionSource = fs.readFileSync(
+      path.join(serverRoot, '../packages/ee/src/lib/actions/integrations/calendarActions.ts'),
+      'utf8'
+    );
+    const eeSubscriberSource = fs.readFileSync(
+      path.join(serverRoot, '../packages/ee/src/lib/eventBus/subscribers/calendarSyncSubscriber.ts'),
+      'utf8'
+    );
+    const eeMaintenanceSource = fs.readFileSync(
+      path.join(serverRoot, '../packages/ee/src/lib/jobs/handlers/calendarWebhookMaintenanceHandler.ts'),
+      'utf8'
+    );
+    const googleCallbackSource = fs.readFileSync(
+      path.join(serverRoot, '../ee/server/src/app/api/auth/google/calendar/callback/route.ts'),
+      'utf8'
+    );
+    const microsoftCallbackSource = fs.readFileSync(
+      path.join(serverRoot, '../ee/server/src/app/api/auth/microsoft/calendar/callback/route.ts'),
+      'utf8'
+    );
+    const googleWebhookSource = fs.readFileSync(
+      path.join(serverRoot, '../ee/server/src/app/api/calendar/webhooks/google/route.ts'),
+      'utf8'
+    );
+    const microsoftWebhookSource = fs.readFileSync(
+      path.join(serverRoot, '../ee/server/src/app/api/calendar/webhooks/microsoft/route.ts'),
+      'utf8'
+    );
+
+    expect(eeActionSource).toContain('@enterprise/lib/services/calendar/CalendarProviderService');
+    expect(eeActionSource).toContain('@enterprise/lib/services/calendar/CalendarSyncService');
+    expect(eeActionSource).toContain('@enterprise/lib/services/calendar/CalendarWebhookMaintenanceService');
+    expect(eeActionSource).not.toContain("from '@/services/calendar/");
+
+    expect(eeSubscriberSource).toContain('@enterprise/lib/services/calendar/CalendarSyncService');
+    expect(eeSubscriberSource).toContain('@enterprise/lib/services/calendar/CalendarProviderService');
+    expect(eeSubscriberSource).not.toContain("from '@/services/calendar/");
+
+    expect(eeMaintenanceSource).toContain('@enterprise/lib/services/calendar/CalendarWebhookMaintenanceService');
+    expect(eeMaintenanceSource).toContain('@enterprise/lib/services/calendar/providers/GoogleCalendarAdapter');
+    expect(eeMaintenanceSource).toContain('@enterprise/lib/services/calendar/CalendarProviderService');
+    expect(eeMaintenanceSource).not.toContain("from 'server/src/services/calendar/");
+
+    expect(googleCallbackSource).toContain("@enterprise/lib/services/calendar/CalendarProviderService");
+    expect(googleCallbackSource).toContain("@enterprise/lib/services/calendar/providers/GoogleCalendarAdapter");
+    expect(googleCallbackSource).not.toContain("from '@/services/calendar/");
+
+    expect(microsoftCallbackSource).toContain("@enterprise/lib/services/calendar/CalendarProviderService");
+    expect(microsoftCallbackSource).toContain("@enterprise/lib/services/calendar/providers/MicrosoftCalendarAdapter");
+    expect(microsoftCallbackSource).not.toContain("from '@/services/calendar/");
+
+    expect(googleWebhookSource).toContain("@enterprise/lib/services/calendar/CalendarWebhookProcessor");
+    expect(googleWebhookSource).not.toContain("from '@/services/calendar/");
+
+    expect(microsoftWebhookSource).toContain("@enterprise/lib/services/calendar/CalendarWebhookProcessor");
+    expect(microsoftWebhookSource).not.toContain("from '@/services/calendar/");
+  });
+});

@@ -1,8 +1,8 @@
 import logger from '@alga-psa/core/logger';
 import { runWithTenant } from 'server/src/lib/db';
-import { CalendarWebhookMaintenanceService } from 'server/src/services/calendar/CalendarWebhookMaintenanceService';
-import { GoogleCalendarAdapter } from 'server/src/services/calendar/providers/GoogleCalendarAdapter';
-import { CalendarProviderService } from 'server/src/services/calendar/CalendarProviderService';
+import { CalendarWebhookMaintenanceService } from '@enterprise/lib/services/calendar/CalendarWebhookMaintenanceService';
+import { GoogleCalendarAdapter } from '@enterprise/lib/services/calendar/providers/GoogleCalendarAdapter';
+import { CalendarProviderService } from '@enterprise/lib/services/calendar/CalendarProviderService';
 
 export interface MicrosoftWebhookRenewalJobData extends Record<string, unknown> {
   tenantId: string;
