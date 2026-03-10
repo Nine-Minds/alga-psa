@@ -64,6 +64,10 @@ function normalizeEnumArray<T extends string>(values: unknown, supported: readon
   return supported.filter((value) => requested.has(value));
 }
 
+function toJsonbValue<T>(value: T): string {
+  return JSON.stringify(value);
+}
+
 function defaultTeamsIntegrationState() {
   return {
     selectedProfileId: null,
@@ -237,12 +241,14 @@ export async function saveTeamsIntegrationSettingsImpl(
       tenant,
       selected_profile_id: selectedProfileId ?? null,
       install_status: installStatus,
-      enabled_capabilities: enabledCapabilities,
-      notification_categories: notificationCategories,
-      allowed_actions: allowedActions,
+      enabled_capabilities: toJsonbValue(enabledCapabilities),
+      notification_categories: toJsonbValue(notificationCategories),
+      allowed_actions: toJsonbValue(allowedActions),
       app_id: selectedProfileChanged ? null : next.appId,
       bot_id: selectedProfileChanged ? null : next.botId,
-      package_metadata: selectedProfileChanged ? null : next.packageMetadata,
+      package_metadata: selectedProfileChanged || !next.packageMetadata
+        ? null
+        : toJsonbValue(next.packageMetadata),
       last_error: lastError || null,
       created_by: existing?.created_by || (user as any)?.user_id || null,
       updated_by: (user as any)?.user_id || null,

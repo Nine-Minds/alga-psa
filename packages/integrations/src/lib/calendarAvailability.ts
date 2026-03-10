@@ -1,3 +1,5 @@
+import { isEnterprise } from '@alga-psa/core';
+
 export const CALENDAR_SETTINGS_CATEGORY = 'calendar';
 export const CALENDAR_PROFILE_TAB = 'Calendar';
 
@@ -13,6 +15,10 @@ const BASE_INTEGRATION_CATEGORY_IDS = [
 const BASE_PROFILE_TABS = ['Profile', 'Security', 'Single Sign-On', 'API Keys', 'Notifications'] as const;
 
 export function isCalendarEnterpriseEdition(env: NodeJS.ProcessEnv = process.env): boolean {
+  if (env === process.env) {
+    return isEnterprise;
+  }
+
   const edition = (env.EDITION ?? '').toLowerCase();
   const publicEdition = (env.NEXT_PUBLIC_EDITION ?? '').toLowerCase();
 

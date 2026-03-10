@@ -369,7 +369,7 @@ export async function getTeamsAppPackageStatusImpl(
       .update({
         app_id: profile.client_id,
         bot_id: profile.client_id,
-        package_metadata: packageMetadata,
+        package_metadata: JSON.stringify(packageMetadata),
         updated_by: (user as any)?.user_id || null,
         updated_at: new Date(),
       });

@@ -5,6 +5,17 @@ export const isEnterprise =
   (process.env.EDITION ?? '').toLowerCase() === 'enterprise' ||
   (process.env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise';
 
+const FEATURE_FLAG_DISABLE_VALUES = new Set(['true', '1', 'yes', 'on']);
+
+function featureFlagsAreDisabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  const raw = env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS ?? env.DISABLE_FEATURE_FLAGS;
+  if (typeof raw !== 'string') {
+    return false;
+  }
+
+  return FEATURE_FLAG_DISABLE_VALUES.has(raw.toLowerCase());
+}
+
 export function getFeatureImplementation<T>(ceModule: T, eeModule?: T): T {
   if (isEnterprise && eeModule) {
     return eeModule;
@@ -41,7 +52,10 @@ export async function isFeatureFlagEnabled(
   flagKey: string,
   context: FeatureFlagContext = {},
 ): Promise<boolean> {
+  if (featureFlagsAreDisabled()) {
+    return true;
+  }
+
   if (!_checker) return false;
   return _checker(flagKey, context);
 }
-
