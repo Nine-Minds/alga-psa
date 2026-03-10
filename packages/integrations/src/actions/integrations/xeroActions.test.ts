@@ -25,6 +25,11 @@ const getXeroOAuthScopesMock = vi.hoisted(() => vi.fn(() => [
   'accounting.transactions',
   'accounting.contacts'
 ]));
+const resolveXeroOAuthCredentialsMock = vi.hoisted(() => vi.fn(async () => ({
+  clientId: 'tenant-client-id',
+  clientSecret: 'tenant-client-secret',
+  source: 'tenant'
+})));
 const xeroCreateMock = vi.hoisted(() => vi.fn(async () => ({})));
 const revalidatePathMock = vi.hoisted(() => vi.fn());
 const loggerInfoMock = vi.hoisted(() => vi.fn());
@@ -69,6 +74,7 @@ vi.mock('../../lib/xero/xeroClientService', () => ({
   getXeroConnectionSummaries: getXeroConnectionSummariesMock,
   getXeroRedirectUri: getXeroRedirectUriMock,
   getXeroOAuthScopes: getXeroOAuthScopesMock,
+  resolveXeroOAuthCredentials: resolveXeroOAuthCredentialsMock,
   XeroClientService: {
     create: xeroCreateMock
   }
@@ -102,6 +108,11 @@ describe('Xero integration actions', () => {
       'accounting.transactions',
       'accounting.contacts'
     ]);
+    resolveXeroOAuthCredentialsMock.mockResolvedValue({
+      clientId: 'tenant-client-id',
+      clientSecret: 'tenant-client-secret',
+      source: 'tenant'
+    });
     xeroCreateMock.mockResolvedValue({});
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     process.env.EDITION = 'ee';
@@ -175,6 +186,25 @@ describe('Xero integration actions', () => {
     const status = await getXeroConnectionStatus();
     expect(status.credentials.ready).toBe(true);
     expect(status.credentials.clientSecretMasked).not.toContain('client-secret');
+    expect(status.error).toBe('No live Xero organisation is connected yet. Save credentials, then click Connect Xero.');
+  });
+
+  it('status treats application fallback credentials as ready when tenant-owned credentials are not yet stored', async () => {
+    resolveXeroOAuthCredentialsMock.mockResolvedValue({
+      clientId: 'app-client-id',
+      clientSecret: 'app-client-secret',
+      source: 'app'
+    });
+
+    const status = await getXeroConnectionStatus();
+
+    expect(status.credentials).toEqual({
+      clientIdConfigured: false,
+      clientSecretConfigured: false,
+      ready: true,
+      clientIdMasked: undefined,
+      clientSecretMasked: undefined
+    });
     expect(status.error).toBe('No live Xero organisation is connected yet. Save credentials, then click Connect Xero.');
   });
 

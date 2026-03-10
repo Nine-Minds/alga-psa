@@ -13,7 +13,8 @@ import {
   XERO_CLIENT_ID_SECRET_NAME,
   XERO_CLIENT_SECRET_SECRET_NAME,
   getXeroRedirectUri,
-  getXeroOAuthScopes
+  getXeroOAuthScopes,
+  resolveXeroOAuthCredentials
 } from '../../lib/xero/xeroClientService';
 import type { IUserWithRoles } from '@alga-psa/types';
 
@@ -182,10 +183,11 @@ export const getXeroConnectionStatus = withAuth(async (
   assertEnterpriseEdition();
   await checkBillingReadAccess(user);
   const secretProvider = await getSecretProviderInstance();
-  const [storedClientId, storedClientSecret, redirectUri] = await Promise.all([
+  const [storedClientId, storedClientSecret, redirectUri, resolvedCredentials] = await Promise.all([
     secretProvider.getTenantSecret(tenant, XERO_CLIENT_ID_SECRET_NAME),
     secretProvider.getTenantSecret(tenant, XERO_CLIENT_SECRET_SECRET_NAME),
-    getXeroRedirectUri(secretProvider)
+    getXeroRedirectUri(secretProvider),
+    resolveXeroOAuthCredentials(tenant, secretProvider).catch(() => null)
   ]);
   const clientId = typeof storedClientId === 'string' ? storedClientId.trim() : '';
   const clientSecret = typeof storedClientSecret === 'string' ? storedClientSecret.trim() : '';
@@ -194,7 +196,7 @@ export const getXeroConnectionStatus = withAuth(async (
   const credentials = {
     clientIdConfigured: Boolean(clientId),
     clientSecretConfigured: Boolean(clientSecret),
-    ready: Boolean(clientId && clientSecret),
+    ready: Boolean(resolvedCredentials),
     clientIdMasked: clientId ? maskSecret(clientId) : undefined,
     clientSecretMasked: clientSecret ? maskSecret(clientSecret) : undefined
   };

@@ -63,6 +63,7 @@ describe('Xero OAuth routes', () => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     getSessionMock.mockResolvedValue({
       user: {
+        id: 'user-1',
         tenant: 'tenant-1',
         user_type: 'internal',
         roles: ['admin']
@@ -151,6 +152,14 @@ describe('Xero OAuth routes', () => {
 
     const response = await GET();
 
+    expect(hasPermissionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'user-1',
+        user_id: 'user-1'
+      }),
+      'billing_settings',
+      'update'
+    );
     expect(resolveXeroOAuthCredentialsMock).toHaveBeenCalledWith('tenant-1', {});
     expect(response.status).toBe(307);
 

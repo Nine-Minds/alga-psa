@@ -50,11 +50,15 @@ export async function GET(): Promise<NextResponse> {
   const secretProvider = await getSecretProviderInstance();
   const session = await getSession();
   const sessionUser = session?.user as any;
+  const permissionUser =
+    sessionUser && !sessionUser.user_id && sessionUser.id
+      ? { ...sessionUser, user_id: sessionUser.id }
+      : sessionUser;
   const sessionTenant = sessionUser?.tenant;
   if (!sessionTenant) {
     return NextResponse.json({ error: 'Authentication required.' }, { status: 401 });
   }
-  const canManageBilling = await hasPermission(sessionUser, 'billing_settings', 'update');
+  const canManageBilling = await hasPermission(permissionUser, 'billing_settings', 'update');
   if (!canManageBilling) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }

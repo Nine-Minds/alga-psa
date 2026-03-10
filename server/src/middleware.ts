@@ -110,6 +110,8 @@ const _middleware = auth((request) => {
       // Mobile auth endpoints use OTT/refresh tokens (no x-api-key)
       '/api/v1/mobile/auth/',
       '/api/integrations/ninjaone/callback',
+      '/api/integrations/xero/connect',
+      '/api/integrations/xero/callback',
       // AI chat endpoints are session-authenticated (MSP UI)
       '/api/chat/',
       // Workflow bundle import/export is session-authenticated (developer + future UI tooling)
