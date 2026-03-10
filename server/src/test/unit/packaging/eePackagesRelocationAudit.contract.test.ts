@@ -42,7 +42,14 @@ describe('EE package relocation audits', () => {
     const sharedCalendarSettings = readSource(
       'packages/integrations/src/components/settings/integrations/CalendarEnterpriseIntegrationSettings.tsx'
     );
+    const sharedIntegrationsComponents = readSource('packages/integrations/src/components/index.ts');
     const sharedCalendarProfile = readSource('server/src/components/settings/profile/UserProfile.tsx');
+    const enterpriseCalendarSettings = readSource(
+      'ee/packages/calendar/src/components/settings/integrations/CalendarIntegrationsSettings.tsx'
+    );
+    const enterpriseCalendarProfile = readSource(
+      'ee/packages/calendar/src/components/settings/profile/CalendarProfileSettings.tsx'
+    );
     const sharedTeamsActions = readSource('packages/integrations/src/actions/integrations/teamsActions.ts');
     const sharedTeamsPackageActions = readSource(
       'packages/integrations/src/actions/integrations/teamsPackageActions.ts'
@@ -57,10 +64,15 @@ describe('EE package relocation audits', () => {
     expect(sharedCalendarActions).not.toContain('@enterprise/');
     expect(sharedCalendarSettings).toContain("import('@alga-psa/ee-calendar/components')");
     expect(sharedCalendarSettings).toContain('CalendarIntegrationsSettings');
+    expect(sharedIntegrationsComponents).not.toContain("export * from './calendar';");
     expect(sharedCalendarProfile).toContain(
       "import('@alga-psa/ee-calendar/components').then((mod) => mod.CalendarProfileSettings)"
     );
     expect(sharedCalendarProfile).not.toContain('packages/ee/src/components/settings/profile/CalendarProfileSettings');
+    expect(enterpriseCalendarSettings).toContain("../../calendar/CalendarIntegrationsSettings");
+    expect(enterpriseCalendarSettings).not.toContain("@alga-psa/integrations/components");
+    expect(enterpriseCalendarProfile).toContain("../../calendar/CalendarIntegrationsSettings");
+    expect(enterpriseCalendarProfile).not.toContain("@alga-psa/integrations/components");
 
     expect(sharedTeamsActions).toContain("import('@alga-psa/ee-microsoft-teams/actions')");
     expect(sharedTeamsActions).not.toContain('ee/server/src/lib/actions/integrations/teamsActions');

@@ -90,6 +90,18 @@ export interface MicrosoftConsumerBindingSummary {
   isArchived: boolean;
 }
 
+export interface MicrosoftConsumerSetupStatusResponse {
+  success: boolean;
+  error?: string;
+  consumerType?: MicrosoftProfileConsumer;
+  consumerLabel?: string;
+  visible?: boolean;
+  ready?: boolean;
+  profileId?: string | null;
+  profileDisplayName?: string;
+  message?: string;
+}
+
 export interface MicrosoftProfileStatusResponse {
   success: boolean;
   error?: string;
@@ -277,11 +289,15 @@ async function listBlockingMicrosoftProfileConsumers(
   profileId: string
 ): Promise<string[]> {
   const labels = new Set<string>();
+  const visibleConsumers = new Set(getVisibleMicrosoftConsumerTypes());
   const bindings = await knex('microsoft_profile_consumer_bindings')
     .where({ tenant, profile_id: profileId })
     .select('*');
 
   for (const binding of bindings as MicrosoftConsumerBindingRow[]) {
+    if (!visibleConsumers.has(binding.consumer_type)) {
+      continue;
+    }
     labels.add(getMicrosoftConsumerLabel(binding.consumer_type));
   }
 
@@ -469,9 +485,12 @@ async function ensureMicrosoftConsumerBindingMigration(
 
   const existingBindings = await getTenantMicrosoftConsumerBindings(knex, tenant);
   const now = new Date();
+  const visibleConsumers = new Set(getVisibleMicrosoftConsumerTypes());
   const missingConsumers = new Set(
     MICROSOFT_PROFILE_CONSUMERS.filter(
-      (consumerType) => !existingBindings.some((row) => row.consumer_type === consumerType)
+      (consumerType) =>
+        visibleConsumers.has(consumerType) &&
+        !existingBindings.some((row) => row.consumer_type === consumerType)
     )
   );
 
@@ -1163,6 +1182,60 @@ export const resolveMicrosoftProfileForConsumer = async (
 
   return null;
 };
+
+export const getMicrosoftConsumerSetupStatus = withAuth(async (
+  user,
+  { tenant },
+  consumerType: MicrosoftProfileConsumer
+): Promise<MicrosoftConsumerSetupStatusResponse> => {
+  try {
+    if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
+
+    if (!isSupportedMicrosoftProfileConsumer(consumerType)) {
+      return { success: false, error: 'Unsupported Microsoft consumer type' };
+    }
+
+    const consumerLabel = getMicrosoftConsumerLabel(consumerType);
+    if (!isVisibleMicrosoftConsumerType(consumerType)) {
+      return {
+        success: true,
+        consumerType,
+        consumerLabel,
+        visible: false,
+        ready: false,
+        message: `${consumerLabel} is only available in Enterprise Edition.`,
+      };
+    }
+
+    const profile = await resolveMicrosoftProfileForConsumer(tenant, consumerType);
+    if (!profile) {
+      return {
+        success: true,
+        consumerType,
+        consumerLabel,
+        visible: true,
+        ready: false,
+        message: `No Microsoft profile is currently bound to ${consumerLabel}.`,
+      };
+    }
+
+    const ready = profile.readiness.ready;
+    return {
+      success: true,
+      consumerType,
+      consumerLabel,
+      visible: true,
+      ready,
+      profileId: profile.profileId,
+      profileDisplayName: profile.displayName,
+      message: ready
+        ? undefined
+        : `${consumerLabel} is bound to ${profile.displayName}, but that profile still needs configuration.`,
+    };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to load Microsoft consumer setup status' };
+  }
+});
 
 export const getMicrosoftIntegrationStatus = withAuth(async (
   user,

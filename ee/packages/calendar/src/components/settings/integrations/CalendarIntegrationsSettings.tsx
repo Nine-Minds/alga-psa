@@ -1,7 +1,7 @@
 'use client';
 
-import { CalendarIntegrationsSettings as SharedCalendarIntegrationsSettings } from '@alga-psa/integrations/components';
+import { CalendarIntegrationsSettings as EnterpriseCalendarIntegrationsSettings } from '../../calendar/CalendarIntegrationsSettings';
 
 export default function CalendarIntegrationsSettings() {
-  return <SharedCalendarIntegrationsSettings />;
+  return <EnterpriseCalendarIntegrationsSettings />;
 }
