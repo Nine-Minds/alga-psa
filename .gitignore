@@ -198,6 +198,10 @@ shared/core/*.js
 # Package build artifacts (compiled TypeScript)
 packages/*/src/**/*.js
 packages/*/src/**/*.d.ts
+
+# Re-include Expo mobile assets for EAS cloud builds.
+!ee/mobile/assets/
+!ee/mobile/assets/**
 packages/**/dist/
 
 # Rust build output

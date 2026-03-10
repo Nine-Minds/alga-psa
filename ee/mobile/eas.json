@@ -17,7 +17,7 @@
   "submit": {
     "testflight": {
       "ios": {
-        "ascAppId": "REPLACE_ME_ASC_APP_ID"
+        "ascAppId": "6760356281"
       }
     },
     "playInternal": {
@@ -27,4 +27,3 @@
     }
   }
 }
-
