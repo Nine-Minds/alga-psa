@@ -962,7 +962,7 @@
   {
     "id": "F097",
     "description": "The Microsoft profile page in CE describes Microsoft profile reuse only in MSP SSO terms.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -972,7 +972,7 @@
   {
     "id": "F098",
     "description": "The Microsoft profile page in EE describes Microsoft profile reuse for MSP SSO plus additional supported consumers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -982,7 +982,7 @@
   {
     "id": "F099",
     "description": "CE Microsoft profile UI omits Email consumer guidance.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -992,7 +992,7 @@
   {
     "id": "F100",
     "description": "CE Microsoft profile UI omits Calendar consumer guidance.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -1002,7 +1002,7 @@
   {
     "id": "F101",
     "description": "CE Microsoft profile UI omits Teams consumer guidance.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -1012,7 +1012,7 @@
   {
     "id": "F102",
     "description": "CE Microsoft profile UI continues to show MSP SSO guidance and login-domain-related support copy.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -1022,7 +1022,7 @@
   {
     "id": "F103",
     "description": "EE Microsoft profile UI shows MSP SSO consumer guidance.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -1032,7 +1032,7 @@
   {
     "id": "F104",
     "description": "EE Microsoft profile UI shows Email consumer guidance.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -1042,7 +1042,7 @@
   {
     "id": "F105",
     "description": "EE Microsoft profile UI shows Calendar consumer guidance.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -1052,7 +1052,7 @@
   {
     "id": "F106",
     "description": "EE Microsoft profile UI shows Teams consumer guidance.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -1062,7 +1062,7 @@
   {
     "id": "F107",
     "description": "CE Microsoft profile UI omits non-SSO redirect URI guidance blocks.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -1072,7 +1072,7 @@
   {
     "id": "F108",
     "description": "EE Microsoft profile UI renders redirect URI guidance for supported non-SSO consumers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -1082,7 +1082,7 @@
   {
     "id": "F109",
     "description": "CE Microsoft profile UI omits Teams Application ID URI guidance.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -1092,7 +1092,7 @@
   {
     "id": "F110",
     "description": "EE Microsoft profile UI renders Teams Application ID URI guidance when relevant metadata is available.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -1102,7 +1102,7 @@
   {
     "id": "F111",
     "description": "Create and edit profile dialogs stop referring to a default compatibility profile in CE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -1112,7 +1112,7 @@
   {
     "id": "F112",
     "description": "Create and edit profile dialogs stop referring to a default compatibility profile in EE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -1122,7 +1122,7 @@
   {
     "id": "F113",
     "description": "CE profile cards show only MSP SSO-related binding state and readiness context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -1132,7 +1132,7 @@
   {
     "id": "F114",
     "description": "EE profile cards show binding state and readiness context for MSP SSO plus the supported EE consumers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -1142,7 +1142,7 @@
   {
     "id": "F115",
     "description": "CE readiness copy references only MSP SSO-related prerequisites and usage.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -1152,7 +1152,7 @@
   {
     "id": "F116",
     "description": "EE readiness copy references the broader set of supported Microsoft consumers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -1162,7 +1162,7 @@
   {
     "id": "F117",
     "description": "CE empty-state copy refers only to MSP SSO-oriented profile creation and reuse.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -1172,7 +1172,7 @@
   {
     "id": "F118",
     "description": "EE empty-state copy refers to broader Microsoft profile reuse across supported consumers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -1182,7 +1182,7 @@
   {
     "id": "F119",
     "description": "Success toasts and helper copy stop describing Microsoft profiles as a compatibility source for legacy consumers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -1192,7 +1192,7 @@
   {
     "id": "F120",
     "description": "The legacy Microsoft consumers pane is removed from the Microsoft profile page in all editions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements",
@@ -1202,7 +1202,7 @@
   {
     "id": "F121",
     "description": "An explicit binding control exists for the MSP SSO consumer.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1212,7 +1212,7 @@
   {
     "id": "F122",
     "description": "An explicit binding control exists for the Email consumer in EE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1222,7 +1222,7 @@
   {
     "id": "F123",
     "description": "An explicit binding control exists for the Calendar consumer in EE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1232,7 +1232,7 @@
   {
     "id": "F124",
     "description": "An explicit binding control exists for the Teams consumer in EE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1242,7 +1242,7 @@
   {
     "id": "F125",
     "description": "Binding UX is presented as one explicit row or control per consumer instead of a legacy consumers summary pane.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1252,7 +1252,7 @@
   {
     "id": "F126",
     "description": "Binding UX shows the currently selected Microsoft profile for each visible consumer.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1262,7 +1262,7 @@
   {
     "id": "F127",
     "description": "Archived Microsoft profiles are excluded from binding selection choices.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1272,7 +1272,7 @@
   {
     "id": "F128",
     "description": "Binding UX surfaces archived-profile or readiness warnings when a currently bound profile is no longer healthy.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1282,7 +1282,7 @@
   {
     "id": "F129",
     "description": "Changing one consumer binding does not modify unrelated consumer bindings.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1292,7 +1292,7 @@
   {
     "id": "F130",
     "description": "Consumer binding changes are always tenant-scoped.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1302,7 +1302,7 @@
   {
     "id": "F131",
     "description": "Consumer binding changes require the same system settings update permission used for Microsoft profile management.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1312,7 +1312,7 @@
   {
     "id": "F132",
     "description": "Client-portal users cannot manage Microsoft consumer bindings.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1322,7 +1322,7 @@
   {
     "id": "F133",
     "description": "CE exposes only the MSP SSO binding control.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1332,7 +1332,7 @@
   {
     "id": "F134",
     "description": "CE does not render an Email binding control.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1342,7 +1342,7 @@
   {
     "id": "F135",
     "description": "CE does not render a Calendar binding control.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1352,7 +1352,7 @@
   {
     "id": "F136",
     "description": "CE does not render a Teams binding control.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1362,7 +1362,7 @@
   {
     "id": "F137",
     "description": "EE renders all supported consumer binding controls consistently in the Microsoft profile management experience or its EE-owned extensions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1372,7 +1372,7 @@
   {
     "id": "F138",
     "description": "Binding UX supports clearing or reassigning a consumer only where the product rules explicitly allow it.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1382,7 +1382,7 @@
   {
     "id": "F139",
     "description": "Teams rebinding continues to invalidate stale Teams install state without mutating unrelated bindings.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1392,7 +1392,7 @@
   {
     "id": "F140",
     "description": "Calendar rebinding invalidates stale calendar provider configuration or prompts reconnection where required by the implementation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1402,7 +1402,7 @@
   {
     "id": "F141",
     "description": "Email rebinding invalidates or warns about stale Outlook provider connections where required by the implementation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1412,7 +1412,7 @@
   {
     "id": "F142",
     "description": "Binding UX copy explains that bindings are the source of truth for consumer selection.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1422,7 +1422,7 @@
   {
     "id": "F143",
     "description": "Binding UX no longer relies on the old Current consumers badge block to communicate compatibility ownership.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1432,7 +1432,7 @@
   {
     "id": "F144",
     "description": "Binding tests cover create, reassign, archived guard, permission guard, and edition visibility.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "UX / UI Notes",
@@ -1442,7 +1442,7 @@
   {
     "id": "F145",
     "description": "The consumer binding table becomes the only active source of consumer selection for migrated Microsoft consumers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1452,7 +1452,7 @@
   {
     "id": "F146",
     "description": "Legacy default fallback for MSP SSO is removed after explicit binding rollout is complete.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1462,7 +1462,7 @@
   {
     "id": "F147",
     "description": "Legacy default fallback for Calendar is removed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1472,7 +1472,7 @@
   {
     "id": "F148",
     "description": "Teams remains an explicit-binding-only consumer.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1482,7 +1482,7 @@
   {
     "id": "F149",
     "description": "Any retained Email fallback behavior is isolated as a temporary migration concern rather than the target design.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1492,7 +1492,7 @@
   {
     "id": "F150",
     "description": "Legacy compatibility backfill routines are deleted or reduced to one-time migration-only responsibilities rather than steady-state runtime behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1502,7 +1502,7 @@
   {
     "id": "F151",
     "description": "The binding list action returns an edition-aware set of visible consumers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1512,7 +1512,7 @@
   {
     "id": "F152",
     "description": "CE binding-list responses include only MSP SSO.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1522,7 +1522,7 @@
   {
     "id": "F153",
     "description": "EE binding-list responses include MSP SSO plus supported EE consumers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1532,7 +1532,7 @@
   {
     "id": "F154",
     "description": "The binding write action enforces edition-aware allowed consumer types.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1542,7 +1542,7 @@
   {
     "id": "F155",
     "description": "CE binding-write requests for Email are rejected.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1552,7 +1552,7 @@
   {
     "id": "F156",
     "description": "CE binding-write requests for Calendar are rejected.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1562,7 +1562,7 @@
   {
     "id": "F157",
     "description": "CE binding-write requests for Teams are rejected.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1572,7 +1572,7 @@
   {
     "id": "F158",
     "description": "EE binding-write requests for supported consumers succeed when inputs are valid.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1582,7 +1582,7 @@
   {
     "id": "F159",
     "description": "Consumer resolution prefers explicit binding rows before any legacy fallback logic is considered.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1592,7 +1592,7 @@
   {
     "id": "F160",
     "description": "Consumer resolution returns no profile for migrated consumers when no explicit binding exists and fallback has been removed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1602,7 +1602,7 @@
   {
     "id": "F161",
     "description": "MSP SSO resolution uses the explicit binding path.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1642,7 +1642,7 @@
   {
     "id": "F165",
     "description": "Microsoft integration status payloads return edition-appropriate redirect URI and scope metadata.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1652,7 +1652,7 @@
   {
     "id": "F166",
     "description": "CE Microsoft status payloads omit non-SSO consumer details that should not appear in CE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1662,7 +1662,7 @@
   {
     "id": "F167",
     "description": "EE Microsoft status payloads include the non-SSO consumer details needed by EE profile management.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1672,7 +1672,7 @@
   {
     "id": "F168",
     "description": "Action-layer tests cover the edition matrix, missing-binding behavior, archive guards, and removal of compatibility-default assumptions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",
@@ -1922,7 +1922,7 @@
   {
     "id": "F193",
     "description": "The old legacy Microsoft consumers pane codepath is removed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Acceptance Criteria (Definition of Done)",
@@ -1932,7 +1932,7 @@
   {
     "id": "F194",
     "description": "The old default-compatibility-profile copy is removed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Acceptance Criteria (Definition of Done)",
@@ -1942,7 +1942,7 @@
   {
     "id": "F195",
     "description": "Old tests that asserted the legacy Microsoft consumers pane are removed or replaced.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Acceptance Criteria (Definition of Done)",

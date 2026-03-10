@@ -9,14 +9,20 @@ import {
   getMicrosoftProfileReadiness,
   type ProviderReadinessResult,
 } from './providerReadiness';
-import type { MicrosoftProfileConsumer } from './microsoftShared';
+import {
+  getVisibleMicrosoftConsumerTypes,
+  isMicrosoftConsumerEnterpriseEdition,
+  isVisibleMicrosoftConsumerType,
+} from '../../lib/microsoftConsumerVisibility';
+import {
+  MICROSOFT_PROFILE_CONSUMERS,
+  type MicrosoftProfileConsumer,
+} from './microsoftShared';
 
 const MICROSOFT_CLIENT_ID_SECRET = 'microsoft_client_id';
 const MICROSOFT_CLIENT_SECRET_SECRET = 'microsoft_client_secret';
 const MICROSOFT_TENANT_ID_SECRET = 'microsoft_tenant_id';
 const DEFAULT_MICROSOFT_PROFILE_NAME = 'Default Microsoft Profile';
-const MICROSOFT_PROFILE_CONSUMERS = ['msp_sso', 'email', 'calendar', 'teams'] as const;
-const LEGACY_MICROSOFT_PROFILE_CONSUMERS = ['email', 'calendar', 'msp_sso'] as const;
 
 interface MicrosoftProfileRow {
   tenant: string;
@@ -78,7 +84,7 @@ export interface MicrosoftProfileSummary {
 export interface MicrosoftConsumerBindingSummary {
   consumerType: MicrosoftProfileConsumer;
   consumerLabel: string;
-  profileId: string;
+  profileId?: string | null;
   profileDisplayName?: string;
   isArchived: boolean;
   isDefault: boolean;
@@ -89,14 +95,14 @@ export interface MicrosoftProfileStatusResponse {
   error?: string;
   baseUrl?: string;
   redirectUris?: {
-    email: string;
-    calendar: string;
     sso: string;
-    teamsTab: string;
-    teamsBot: string;
-    teamsMessageExtension: string;
+    email?: string;
+    calendar?: string;
+    teamsTab?: string;
+    teamsBot?: string;
+    teamsMessageExtension?: string;
   };
-  scopes?: { email: string[]; calendar: string[]; sso: string[]; teams: string[] };
+  scopes?: { sso: string[]; email?: string[]; calendar?: string[]; teams?: string[] };
   config?: {
     clientId?: string;
     clientSecretMasked?: string;
@@ -158,14 +164,6 @@ function normalizeDisplayName(value: string): string {
 
 function normalizeDisplayNameKey(value: string): string {
   return normalizeDisplayName(value).toLocaleLowerCase();
-}
-
-function getMicrosoftCompatibilityConsumers(row: MicrosoftProfileRow): string[] {
-  if (row.is_archived || !row.is_default) {
-    return [];
-  }
-
-  return ['Email', 'Calendar', 'MSP SSO'];
 }
 
 function isSupportedMicrosoftProfileConsumer(value: string): value is MicrosoftProfileConsumer {
@@ -319,6 +317,42 @@ async function clearInactiveTeamsProfileSelection(
     });
 }
 
+async function syncTeamsIntegrationBinding(
+  knex: any,
+  tenant: string,
+  profileId: string,
+  userId?: string | null
+): Promise<void> {
+  const existing = await knex('teams_integrations').where({ tenant }).first();
+  if (!existing) {
+    return;
+  }
+
+  const currentSelection = existing.selected_profile_id || null;
+  if (currentSelection === profileId) {
+    return;
+  }
+
+  const selectedProfileChanged = Boolean(currentSelection) && currentSelection !== profileId;
+  const nextInstallStatus =
+    selectedProfileChanged && existing.install_status !== 'not_configured'
+      ? 'install_pending'
+      : existing.install_status;
+
+  await knex('teams_integrations')
+    .where({ tenant })
+    .update({
+      selected_profile_id: profileId,
+      install_status: nextInstallStatus,
+      app_id: selectedProfileChanged ? null : existing.app_id ?? null,
+      bot_id: selectedProfileChanged ? null : existing.bot_id ?? null,
+      package_metadata: selectedProfileChanged ? null : existing.package_metadata ?? null,
+      last_error: selectedProfileChanged ? null : existing.last_error ?? null,
+      updated_by: userId || null,
+      updated_at: new Date(),
+    });
+}
+
 function hasLegacyMicrosoftConfig(values: {
   clientId?: string | null;
   clientSecret?: string | null;
@@ -396,7 +430,31 @@ async function ensureLegacyMicrosoftProfileBackfill(
   await mirrorLegacyMicrosoftSecrets(tenant, row, secretProvider);
 }
 
-async function ensureMicrosoftConsumerBindingsBackfill(
+async function tenantHasLegacyMspSsoUsage(knex: any, tenant: string): Promise<boolean> {
+  const activeDomain = await knex('msp_sso_tenant_login_domains')
+    .where({ tenant, is_active: true })
+    .first();
+
+  return Boolean(activeDomain);
+}
+
+async function tenantHasLegacyMicrosoftEmailUsage(knex: any, tenant: string): Promise<boolean> {
+  const provider = await knex('email_providers')
+    .where({ tenant, provider_type: 'microsoft' })
+    .first();
+
+  return Boolean(provider);
+}
+
+async function tenantHasLegacyMicrosoftCalendarUsage(knex: any, tenant: string): Promise<boolean> {
+  const provider = await knex('calendar_providers')
+    .where({ tenant, provider_type: 'microsoft' })
+    .first();
+
+  return Boolean(provider);
+}
+
+async function ensureMicrosoftConsumerBindingMigration(
   knex: any,
   tenant: string,
   secretProvider: Awaited<ReturnType<typeof getSecretProviderInstance>>,
@@ -415,13 +473,35 @@ async function ensureMicrosoftConsumerBindingsBackfill(
 
   const existingBindings = await getTenantMicrosoftConsumerBindings(knex, tenant);
   const now = new Date();
+  const missingConsumers = new Set(
+    MICROSOFT_PROFILE_CONSUMERS.filter(
+      (consumerType) => !existingBindings.some((row) => row.consumer_type === consumerType)
+    )
+  );
 
-  for (const consumerType of LEGACY_MICROSOFT_PROFILE_CONSUMERS) {
-    const hasBinding = existingBindings.some((row) => row.consumer_type === consumerType);
-    if (hasBinding) {
-      continue;
-    }
+  if (missingConsumers.size === 0) {
+    return existingBindings;
+  }
 
+  const [shouldBackfillMspSso, shouldBackfillEmail, shouldBackfillCalendar] = await Promise.all([
+    missingConsumers.has('msp_sso') ? tenantHasLegacyMspSsoUsage(knex, tenant) : false,
+    missingConsumers.has('email') ? tenantHasLegacyMicrosoftEmailUsage(knex, tenant) : false,
+    missingConsumers.has('calendar') ? tenantHasLegacyMicrosoftCalendarUsage(knex, tenant) : false,
+  ]);
+
+  const consumersToBackfill: MicrosoftProfileConsumer[] = [];
+
+  if (shouldBackfillMspSso) {
+    consumersToBackfill.push('msp_sso');
+  }
+  if (shouldBackfillEmail) {
+    consumersToBackfill.push('email');
+  }
+  if (shouldBackfillCalendar) {
+    consumersToBackfill.push('calendar');
+  }
+
+  for (const consumerType of consumersToBackfill) {
     const binding: MicrosoftConsumerBindingRow = {
       tenant,
       consumer_type: consumerType,
@@ -437,6 +517,30 @@ async function ensureMicrosoftConsumerBindingsBackfill(
   }
 
   return existingBindings;
+}
+
+function getVisibleConsumerLabels(
+  consumerLabels: string[],
+  isEnterpriseEdition = isMicrosoftConsumerEnterpriseEdition()
+): string[] {
+  const visibleConsumers = new Set(getVisibleMicrosoftConsumerTypes(isEnterpriseEdition));
+
+  return consumerLabels.filter((label) => {
+    if (label === 'MSP SSO') {
+      return visibleConsumers.has('msp_sso');
+    }
+    if (label === 'Email') {
+      return visibleConsumers.has('email');
+    }
+    if (label === 'Calendar') {
+      return visibleConsumers.has('calendar');
+    }
+    if (label === 'Teams') {
+      return visibleConsumers.has('teams');
+    }
+
+    return false;
+  });
 }
 
 function getDuplicateProfileName(
@@ -485,11 +589,42 @@ function getMicrosoftIntegrationMetadata(baseUrl: string): NonNullable<
   };
 }
 
+function getVisibleMicrosoftIntegrationMetadata(
+  baseUrl: string,
+  isEnterpriseEdition = isMicrosoftConsumerEnterpriseEdition()
+): NonNullable<Pick<MicrosoftProfileStatusResponse, 'redirectUris' | 'scopes'>> {
+  const metadata = getMicrosoftIntegrationMetadata(baseUrl);
+  const redirectUris = metadata.redirectUris!;
+  const scopes = metadata.scopes!;
+  const visibleConsumers = new Set(getVisibleMicrosoftConsumerTypes(isEnterpriseEdition));
+
+  return {
+    redirectUris: {
+      sso: redirectUris.sso,
+      ...(visibleConsumers.has('email') ? { email: redirectUris.email } : {}),
+      ...(visibleConsumers.has('calendar') ? { calendar: redirectUris.calendar } : {}),
+      ...(visibleConsumers.has('teams')
+        ? {
+            teamsTab: redirectUris.teamsTab,
+            teamsBot: redirectUris.teamsBot,
+            teamsMessageExtension: redirectUris.teamsMessageExtension,
+          }
+        : {}),
+    },
+    scopes: {
+      sso: scopes.sso,
+      ...(visibleConsumers.has('email') ? { email: scopes.email } : {}),
+      ...(visibleConsumers.has('calendar') ? { calendar: scopes.calendar } : {}),
+      ...(visibleConsumers.has('teams') ? { teams: scopes.teams } : {}),
+    },
+  };
+}
+
 async function buildMicrosoftProfileSummary(
   tenant: string,
   row: MicrosoftProfileRow,
   secretProvider: Awaited<ReturnType<typeof getSecretProviderInstance>>,
-  consumerLabels: string[] = getMicrosoftCompatibilityConsumers(row)
+  consumerLabels: string[] = []
 ): Promise<MicrosoftProfileSummary> {
   const [clientSecret, readiness] = await Promise.all([
     secretProvider.getTenantSecret(tenant, row.client_secret_ref),
@@ -528,19 +663,14 @@ async function listMicrosoftProfilesForTenant(
   await ensureLegacyMicrosoftProfileBackfill(knex, tenant, secretProvider, userId);
 
   const rows = await getTenantMicrosoftProfiles(knex, tenant);
-  const bindings = await ensureMicrosoftConsumerBindingsBackfill(knex, tenant, secretProvider, userId);
+  const bindings = await ensureMicrosoftConsumerBindingMigration(knex, tenant, secretProvider, userId);
 
   return Promise.all(rows.map((row) => {
     const consumerLabels = bindings
       .filter((binding) => binding.profile_id === row.profile_id)
       .map((binding) => getMicrosoftConsumerLabel(binding.consumer_type));
 
-    return buildMicrosoftProfileSummary(
-      tenant,
-      row,
-      secretProvider,
-      consumerLabels.length > 0 ? consumerLabels : getMicrosoftCompatibilityConsumers(row)
-    );
+    return buildMicrosoftProfileSummary(tenant, row, secretProvider, consumerLabels);
   }));
 }
 
@@ -732,6 +862,7 @@ async function archiveMicrosoftProfileInternal(
     const secretProvider = await getSecretProviderInstance();
 
     await ensureLegacyMicrosoftProfileBackfill(knex, tenant, secretProvider, user?.user_id);
+    await ensureMicrosoftConsumerBindingMigration(knex, tenant, secretProvider, user?.user_id);
 
     const existing = await getMicrosoftProfileRow(knex, tenant, profileId);
     if (!existing) return { success: false, error: 'Microsoft profile not found' };
@@ -775,6 +906,7 @@ async function deleteMicrosoftProfileInternal(
     const secretProvider = await getSecretProviderInstance();
 
     await ensureLegacyMicrosoftProfileBackfill(knex, tenant, secretProvider, user?.user_id);
+    await ensureMicrosoftConsumerBindingMigration(knex, tenant, secretProvider, user?.user_id);
 
     const existing = await getMicrosoftProfileRow(knex, tenant, profileId);
     if (!existing) return { success: false, error: 'Microsoft profile not found' };
@@ -896,18 +1028,6 @@ export const setDefaultMicrosoftProfile = withAuth(async (user, { tenant }, prof
   setDefaultMicrosoftProfileInternal(user, tenant, profileId)
 );
 
-export const resolveMicrosoftProfileForCompatibility = async (
-  tenant: string
-): Promise<MicrosoftProfileSummary | null> => {
-  const row = await resolveDefaultMicrosoftProfileRow(tenant);
-  if (!row || row.is_archived) {
-    return null;
-  }
-
-  const secretProvider = await getSecretProviderInstance();
-  return buildMicrosoftProfileSummary(tenant, row, secretProvider);
-};
-
 export const listMicrosoftConsumerBindings = withAuth(async (
   user,
   { tenant }
@@ -918,18 +1038,22 @@ export const listMicrosoftConsumerBindings = withAuth(async (
 
     const { knex } = await createTenantKnex();
     const secretProvider = await getSecretProviderInstance();
+    const visibleConsumers = getVisibleMicrosoftConsumerTypes();
 
-    const bindings = await ensureMicrosoftConsumerBindingsBackfill(knex, tenant, secretProvider, (user as any)?.user_id);
+    await ensureLegacyMicrosoftProfileBackfill(knex, tenant, secretProvider, (user as any)?.user_id);
+    const bindings = await ensureMicrosoftConsumerBindingMigration(knex, tenant, secretProvider, (user as any)?.user_id);
     const profiles = await getTenantMicrosoftProfiles(knex, tenant);
+    const bindingByConsumer = new Map(bindings.map((binding) => [binding.consumer_type, binding]));
 
     return {
       success: true,
-      bindings: bindings.map((binding) => {
-        const profile = profiles.find((row) => row.profile_id === binding.profile_id);
+      bindings: visibleConsumers.map((consumerType) => {
+        const binding = bindingByConsumer.get(consumerType);
+        const profile = binding ? profiles.find((row) => row.profile_id === binding.profile_id) : undefined;
         return {
-          consumerType: binding.consumer_type,
-          consumerLabel: getMicrosoftConsumerLabel(binding.consumer_type),
-          profileId: binding.profile_id,
+          consumerType,
+          consumerLabel: getMicrosoftConsumerLabel(consumerType),
+          profileId: binding?.profile_id ?? null,
           profileDisplayName: profile?.display_name,
           isArchived: Boolean(profile?.is_archived),
           isDefault: Boolean(profile?.is_default),
@@ -956,6 +1080,9 @@ export const setMicrosoftConsumerBinding = withAuth(async (
     if (!isSupportedMicrosoftProfileConsumer(input.consumerType)) {
       return { success: false, error: 'Unsupported Microsoft consumer type' };
     }
+    if (!isVisibleMicrosoftConsumerType(input.consumerType)) {
+      return { success: false, error: 'Microsoft consumer type is unavailable in this edition' };
+    }
     if (!input.profileId) {
       return { success: false, error: 'Microsoft profile ID is required' };
     }
@@ -963,7 +1090,7 @@ export const setMicrosoftConsumerBinding = withAuth(async (
     const { knex } = await createTenantKnex();
     const secretProvider = await getSecretProviderInstance();
 
-    await ensureMicrosoftConsumerBindingsBackfill(knex, tenant, secretProvider, (user as any)?.user_id);
+    await ensureLegacyMicrosoftProfileBackfill(knex, tenant, secretProvider, (user as any)?.user_id);
 
     const profile = await getMicrosoftProfileRow(knex, tenant, input.profileId);
     if (!profile) {
@@ -998,6 +1125,10 @@ export const setMicrosoftConsumerBinding = withAuth(async (
       await knex('microsoft_profile_consumer_bindings').insert(binding);
     }
 
+    if (input.consumerType === 'teams') {
+      await syncTeamsIntegrationBinding(knex, tenant, input.profileId, (user as any)?.user_id);
+    }
+
     return {
       success: true,
       binding: {
@@ -1016,10 +1147,7 @@ export const setMicrosoftConsumerBinding = withAuth(async (
 
 export const resolveMicrosoftProfileForConsumer = async (
   tenant: string,
-  consumerType: string,
-  options?: {
-    allowDefaultFallback?: boolean;
-  }
+  consumerType: string
 ): Promise<MicrosoftProfileSummary | null> => {
   if (!isSupportedMicrosoftProfileConsumer(consumerType)) {
     return null;
@@ -1028,7 +1156,8 @@ export const resolveMicrosoftProfileForConsumer = async (
   const { knex } = await createTenantKnex();
   const secretProvider = await getSecretProviderInstance();
 
-  const bindings = await ensureMicrosoftConsumerBindingsBackfill(knex, tenant, secretProvider);
+  await ensureLegacyMicrosoftProfileBackfill(knex, tenant, secretProvider);
+  const bindings = await ensureMicrosoftConsumerBindingMigration(knex, tenant, secretProvider);
   const binding = bindings.find((row) => row.consumer_type === consumerType);
 
   if (binding) {
@@ -1038,17 +1167,7 @@ export const resolveMicrosoftProfileForConsumer = async (
     }
   }
 
-  const allowDefaultFallback = options?.allowDefaultFallback ?? consumerType !== 'teams';
-  if (!allowDefaultFallback) {
-    return null;
-  }
-
-  const fallback = await resolveDefaultMicrosoftProfileRow(tenant);
-  if (!fallback || fallback.is_archived) {
-    return null;
-  }
-
-  return buildMicrosoftProfileSummary(tenant, fallback, secretProvider, [getMicrosoftConsumerLabel(consumerType)]);
+  return null;
 };
 
 export const getMicrosoftIntegrationStatus = withAuth(async (
@@ -1059,9 +1178,13 @@ export const getMicrosoftIntegrationStatus = withAuth(async (
     if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
 
     const profiles = await listMicrosoftProfilesForTenant(tenant, (user as any)?.user_id);
-    const compatibilityProfile = profiles.find((profile) => profile.isDefault && !profile.isArchived) || profiles.find((profile) => !profile.isArchived);
     const baseUrl = await getDeploymentBaseUrl();
-    const metadata = getMicrosoftIntegrationMetadata(baseUrl);
+    const metadata = getVisibleMicrosoftIntegrationMetadata(baseUrl);
+    const mspSsoProfile = await resolveMicrosoftProfileForConsumer(tenant, 'msp_sso');
+    const visibleProfiles = profiles.map((profile) => ({
+      ...profile,
+      consumers: getVisibleConsumerLabels(profile.consumers),
+    }));
 
     return {
       success: true,
@@ -1069,12 +1192,12 @@ export const getMicrosoftIntegrationStatus = withAuth(async (
       redirectUris: metadata.redirectUris,
       scopes: metadata.scopes,
       config: {
-        clientId: compatibilityProfile?.clientId,
-        clientSecretMasked: compatibilityProfile?.clientSecretMasked,
-        tenantId: compatibilityProfile?.tenantId || 'common',
-        ready: compatibilityProfile?.readiness.ready || false,
+        clientId: mspSsoProfile?.clientId,
+        clientSecretMasked: mspSsoProfile?.clientSecretMasked,
+        tenantId: mspSsoProfile?.tenantId || 'common',
+        ready: mspSsoProfile?.readiness.ready || false,
       },
-      profiles,
+      profiles: visibleProfiles,
     };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Failed to load Microsoft integration status' };

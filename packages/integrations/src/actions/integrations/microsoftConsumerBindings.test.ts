@@ -1,5 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { MICROSOFT_PROFILE_CONSUMERS } from './microsoftShared';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
   type MicrosoftProfileRecord = {
@@ -29,6 +28,41 @@ const hoisted = vi.hoisted(() => {
     updated_at: string | Date;
   };
 
+  type TeamsIntegrationRecord = {
+    tenant: string;
+    selected_profile_id: string | null;
+    install_status: 'not_configured' | 'install_pending' | 'active' | 'error';
+    enabled_capabilities: string[];
+    notification_categories: string[];
+    allowed_actions: string[];
+    app_id?: string | null;
+    bot_id?: string | null;
+    package_metadata?: Record<string, unknown> | null;
+    last_error: string | null;
+    created_by: string | null;
+    updated_by: string | null;
+    created_at: string | Date;
+    updated_at: string | Date;
+  };
+
+  type EmailProviderRecord = {
+    id: string;
+    tenant: string;
+    provider_type: string;
+  };
+
+  type CalendarProviderRecord = {
+    id: string;
+    tenant: string;
+    provider_type: string;
+  };
+
+  type MspSsoLoginDomainRecord = {
+    tenant: string;
+    domain: string;
+    is_active: boolean;
+  };
+
   const state = {
     mockUser: { user_id: 'user-1', user_type: 'internal' } as any,
     mockCtx: { tenant: 'tenant-1' } as any,
@@ -36,6 +70,10 @@ const hoisted = vi.hoisted(() => {
     appSecrets: new Map<string, string>(),
     microsoftProfiles: [] as MicrosoftProfileRecord[],
     microsoftConsumerBindings: [] as MicrosoftConsumerBindingRecord[],
+    teamsIntegrations: [] as TeamsIntegrationRecord[],
+    emailProviders: [] as EmailProviderRecord[],
+    calendarProviders: [] as CalendarProviderRecord[],
+    mspSsoLoginDomains: [] as MspSsoLoginDomainRecord[],
   };
 
   const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -51,6 +89,18 @@ const hoisted = vi.hoisted(() => {
       }
       if (table === 'microsoft_profile_consumer_bindings') {
         return state.microsoftConsumerBindings;
+      }
+      if (table === 'teams_integrations') {
+        return state.teamsIntegrations;
+      }
+      if (table === 'email_providers') {
+        return state.emailProviders;
+      }
+      if (table === 'calendar_providers') {
+        return state.calendarProviders;
+      }
+      if (table === 'msp_sso_tenant_login_domains') {
+        return state.mspSsoLoginDomains;
       }
 
       return [] as Array<Record<string, unknown>>;
@@ -78,6 +128,18 @@ const hoisted = vi.hoisted(() => {
         }
         if (table === 'microsoft_profile_consumer_bindings') {
           rows.forEach((row) => state.microsoftConsumerBindings.push(clone(row) as MicrosoftConsumerBindingRecord));
+        }
+        if (table === 'teams_integrations') {
+          rows.forEach((row) => state.teamsIntegrations.push(clone(row) as TeamsIntegrationRecord));
+        }
+        if (table === 'email_providers') {
+          rows.forEach((row) => state.emailProviders.push(clone(row) as EmailProviderRecord));
+        }
+        if (table === 'calendar_providers') {
+          rows.forEach((row) => state.calendarProviders.push(clone(row) as CalendarProviderRecord));
+        }
+        if (table === 'msp_sso_tenant_login_domains') {
+          rows.forEach((row) => state.mspSsoLoginDomains.push(clone(row) as MspSsoLoginDomainRecord));
         }
 
         return rows.length;
@@ -120,6 +182,10 @@ const {
   appSecrets,
   microsoftProfiles,
   microsoftConsumerBindings,
+  teamsIntegrations,
+  emailProviders,
+  calendarProviders,
+  mspSsoLoginDomains,
 } = hoisted.state;
 const {
   getTenantSecretMock,
@@ -160,45 +226,72 @@ import {
 } from './microsoftActions';
 
 describe('Microsoft consumer binding actions', () => {
+  const originalEdition = process.env.NEXT_PUBLIC_EDITION;
+
   beforeEach(() => {
     hoisted.state.mockUser = { user_id: 'user-1', user_type: 'internal' };
     hoisted.state.mockCtx = { tenant: 'tenant-1' };
+    delete process.env.NEXT_PUBLIC_EDITION;
     tenantSecrets.clear();
     appSecrets.clear();
     microsoftProfiles.length = 0;
     microsoftConsumerBindings.length = 0;
+    teamsIntegrations.length = 0;
+    emailProviders.length = 0;
+    calendarProviders.length = 0;
+    mspSsoLoginDomains.length = 0;
     hasPermissionMock.mockResolvedValue(true);
     getTenantSecretMock.mockClear();
     setTenantSecretMock.mockClear();
     getAppSecretMock.mockClear();
   });
 
-  it('T079/T080: creates tenant-scoped compatibility bindings for migrated legacy Microsoft consumers', async () => {
+  afterEach(() => {
+    if (originalEdition === undefined) {
+      delete process.env.NEXT_PUBLIC_EDITION;
+    } else {
+      process.env.NEXT_PUBLIC_EDITION = originalEdition;
+    }
+  });
+
+  it('returns only the CE-visible MSP SSO binding and materializes only migration-needed rows', async () => {
     hoisted.state.mockCtx = { tenant: 'tenant-2' };
     tenantSecrets.set('tenant-2:microsoft_client_id', 'tenant-two-client');
     tenantSecrets.set('tenant-2:microsoft_client_secret', 'tenant-two-secret');
     tenantSecrets.set('tenant-2:microsoft_tenant_id', 'tenant-two-guid');
+    mspSsoLoginDomains.push({
+      tenant: 'tenant-2',
+      domain: 'tenant-two.example.com',
+      is_active: true,
+    });
     await listMicrosoftConsumerBindings();
 
     hoisted.state.mockCtx = { tenant: 'tenant-1' };
     tenantSecrets.set('tenant-1:microsoft_client_id', 'tenant-one-client');
     tenantSecrets.set('tenant-1:microsoft_client_secret', 'tenant-one-secret');
     tenantSecrets.set('tenant-1:microsoft_tenant_id', 'tenant-one-guid');
+    mspSsoLoginDomains.push({
+      tenant: 'tenant-1',
+      domain: 'tenant-one.example.com',
+      is_active: true,
+    });
 
     const result = await listMicrosoftConsumerBindings();
 
     expect(result.success).toBe(true);
-    expect(result.bindings?.map((binding) => binding.consumerType).sort()).toEqual([
-      'calendar',
-      'email',
-      'msp_sso',
-    ]);
+    expect(result.bindings?.map((binding) => binding.consumerType)).toEqual(['msp_sso']);
     expect(result.bindings?.every((binding) => binding.profileDisplayName === 'Default Microsoft Profile')).toBe(true);
-    expect(microsoftConsumerBindings.filter((binding) => binding.tenant === 'tenant-1')).toHaveLength(3);
-    expect(microsoftConsumerBindings.filter((binding) => binding.tenant === 'tenant-2')).toHaveLength(3);
+    expect(microsoftConsumerBindings.filter((binding) => binding.tenant === 'tenant-1')).toEqual([
+      expect.objectContaining({ consumer_type: 'msp_sso' }),
+    ]);
+    expect(microsoftConsumerBindings.filter((binding) => binding.tenant === 'tenant-2')).toEqual([
+      expect.objectContaining({ consumer_type: 'msp_sso' }),
+    ]);
   });
 
-  it('T075/T076/T077/T078/T245/T246/T379/T380/T411/T412: supports MSP SSO, email, calendar, and Teams bindings with one selected profile per consumer through the shared binding model', async () => {
+  it('returns all supported EE bindings and allows per-consumer reassignment in enterprise edition', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+
     const primary = await createMicrosoftProfile({
       displayName: 'Primary Profile',
       clientId: 'primary-client-id',
@@ -217,6 +310,60 @@ describe('Microsoft consumer binding actions', () => {
     expect(primaryProfileId).toBeTruthy();
     expect(secondaryProfileId).toBeTruthy();
 
+    teamsIntegrations.push({
+      tenant: 'tenant-1',
+      selected_profile_id: primaryProfileId!,
+      install_status: 'active',
+      enabled_capabilities: ['personal_tab'],
+      notification_categories: ['assignment'],
+      allowed_actions: ['assign_ticket'],
+      app_id: 'teams-app-id',
+      bot_id: 'teams-bot-id',
+      package_metadata: { fileName: 'teams.zip' },
+      last_error: 'old error',
+      created_by: 'user-1',
+      updated_by: 'user-1',
+      created_at: new Date('2026-03-07T10:00:00.000Z'),
+      updated_at: new Date('2026-03-07T10:00:00.000Z'),
+    });
+    emailProviders.push({
+      id: 'email-provider-1',
+      tenant: 'tenant-1',
+      provider_type: 'microsoft',
+    });
+    calendarProviders.push({
+      id: 'calendar-provider-1',
+      tenant: 'tenant-1',
+      provider_type: 'microsoft',
+    });
+    mspSsoLoginDomains.push({
+      tenant: 'tenant-1',
+      domain: 'acme.example.com',
+      is_active: true,
+    });
+
+    const initialEeBindings = await listMicrosoftConsumerBindings();
+    expect(initialEeBindings.success).toBe(true);
+    expect(initialEeBindings.bindings?.map((binding) => binding.consumerType)).toEqual([
+      'msp_sso',
+      'email',
+      'calendar',
+      'teams',
+    ]);
+    expect(initialEeBindings.bindings?.find((binding) => binding.consumerType === 'teams')).toMatchObject({
+      consumerType: 'teams',
+      profileId: null,
+    });
+    expect(initialEeBindings.bindings?.find((binding) => binding.consumerType === 'msp_sso')).toMatchObject({
+      profileId: primaryProfileId,
+    });
+    expect(initialEeBindings.bindings?.find((binding) => binding.consumerType === 'email')).toMatchObject({
+      profileId: primaryProfileId,
+    });
+    expect(initialEeBindings.bindings?.find((binding) => binding.consumerType === 'calendar')).toMatchObject({
+      profileId: primaryProfileId,
+    });
+
     const initialBinding = await setMicrosoftConsumerBinding({
       consumerType: 'teams',
       profileId: primaryProfileId!,
@@ -229,18 +376,36 @@ describe('Microsoft consumer binding actions', () => {
     });
     expect(updatedBinding.success).toBe(true);
 
-    const supportedConsumers = new Set(
-      MICROSOFT_PROFILE_CONSUMERS.filter((consumer) =>
-        ['msp_sso', 'email', 'calendar', 'teams'].includes(consumer)
-      )
+    const eeBindings = await listMicrosoftConsumerBindings();
+    expect(eeBindings.success).toBe(true);
+    expect(new Set(eeBindings.bindings?.map((binding) => binding.consumerType))).toEqual(
+      new Set(['msp_sso', 'email', 'calendar', 'teams'])
     );
-    expect(supportedConsumers).toEqual(new Set(['msp_sso', 'email', 'calendar', 'teams']));
 
     const teamsBindings = microsoftConsumerBindings.filter(
       (binding) => binding.tenant === 'tenant-1' && binding.consumer_type === 'teams'
     );
     expect(teamsBindings).toHaveLength(1);
     expect(teamsBindings[0].profile_id).toBe(secondaryProfileId);
+    expect(updatedBinding.binding?.profileDisplayName).toBe('Secondary Profile');
+    expect(teamsIntegrations[0]).toMatchObject({
+      selected_profile_id: secondaryProfileId,
+      install_status: 'install_pending',
+      app_id: null,
+      bot_id: null,
+      package_metadata: null,
+      last_error: null,
+    });
+    expect(
+      microsoftConsumerBindings
+        .filter((binding) => binding.tenant === 'tenant-1' && binding.consumer_type !== 'teams')
+        .map((binding) => `${binding.consumer_type}:${binding.profile_id}`)
+        .sort()
+    ).toEqual([
+      `msp_sso:${primaryProfileId}`,
+      `email:${primaryProfileId}`,
+      `calendar:${primaryProfileId}`,
+    ].sort());
 
     const invalidConsumer = await setMicrosoftConsumerBinding({
       consumerType: 'unsupported' as any,
@@ -270,7 +435,86 @@ describe('Microsoft consumer binding actions', () => {
     });
   });
 
-  it('T081/T082: requires an explicit Teams binding instead of falling back to a default Microsoft profile', async () => {
+  it('rejects EE-only binding writes in CE while keeping MSP SSO available', async () => {
+    const created = await createMicrosoftProfile({
+      displayName: 'Primary Profile',
+      clientId: 'primary-client-id',
+      clientSecret: 'primary-secret',
+      tenantId: 'tenant-guid-1',
+    });
+
+    expect(
+      await setMicrosoftConsumerBinding({
+        consumerType: 'msp_sso',
+        profileId: created.profile!.profileId,
+      })
+    ).toMatchObject({
+      success: true,
+      binding: {
+        consumerType: 'msp_sso',
+        profileDisplayName: 'Primary Profile',
+      },
+    });
+
+    await expect(
+      setMicrosoftConsumerBinding({
+        consumerType: 'email',
+        profileId: created.profile!.profileId,
+      })
+    ).resolves.toEqual({
+      success: false,
+      error: 'Microsoft consumer type is unavailable in this edition',
+    });
+
+    await expect(
+      setMicrosoftConsumerBinding({
+        consumerType: 'calendar',
+        profileId: created.profile!.profileId,
+      })
+    ).resolves.toEqual({
+      success: false,
+      error: 'Microsoft consumer type is unavailable in this edition',
+    });
+
+    await expect(
+      setMicrosoftConsumerBinding({
+        consumerType: 'teams',
+        profileId: created.profile!.profileId,
+      })
+    ).resolves.toEqual({
+      success: false,
+      error: 'Microsoft consumer type is unavailable in this edition',
+    });
+  });
+
+  it('returns no migrated consumer profile when there is no explicit binding or legacy usage to migrate', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+
+    const created = await createMicrosoftProfile({
+      displayName: 'Primary Profile',
+      clientId: 'primary-client-id',
+      clientSecret: 'primary-secret',
+      tenantId: 'tenant-guid-1',
+    });
+
+    const bindings = await listMicrosoftConsumerBindings();
+    expect(bindings.success).toBe(true);
+    expect(bindings.bindings).toEqual([
+      expect.objectContaining({ consumerType: 'msp_sso', profileId: null }),
+      expect.objectContaining({ consumerType: 'email', profileId: null }),
+      expect.objectContaining({ consumerType: 'calendar', profileId: null }),
+      expect.objectContaining({ consumerType: 'teams', profileId: null }),
+    ]);
+
+    expect(await resolveMicrosoftProfileForConsumer('tenant-1', 'msp_sso')).toBeNull();
+    expect(await resolveMicrosoftProfileForConsumer('tenant-1', 'email')).toBeNull();
+    expect(await resolveMicrosoftProfileForConsumer('tenant-1', 'calendar')).toBeNull();
+    expect(created.success).toBe(true);
+  });
+
+  it('requires an explicit Teams binding instead of falling back to a default Microsoft profile', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+
     const created = await createMicrosoftProfile({
       displayName: 'Primary Profile',
       clientId: 'primary-client-id',
@@ -289,5 +533,48 @@ describe('Microsoft consumer binding actions', () => {
     const resolvedTeams = await resolveMicrosoftProfileForConsumer('tenant-1', 'teams');
     expect(resolvedTeams?.profileId).toBe(created.profile!.profileId);
     expect(resolvedTeams?.consumers).toEqual(['Teams']);
+  });
+
+  it('rejects archived profiles and permission failures when saving bindings', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+
+    const active = await createMicrosoftProfile({
+      displayName: 'Active Profile',
+      clientId: 'active-client-id',
+      clientSecret: 'active-secret',
+      tenantId: 'tenant-guid-1',
+    });
+    const archived = await createMicrosoftProfile({
+      displayName: 'Archived Profile',
+      clientId: 'archived-client-id',
+      clientSecret: 'archived-secret',
+      tenantId: 'tenant-guid-2',
+    });
+
+    const archivedRow = microsoftProfiles.find((profile) => profile.profile_id === archived.profile!.profileId);
+    expect(archivedRow).toBeTruthy();
+    archivedRow!.is_archived = true;
+
+    await expect(
+      setMicrosoftConsumerBinding({
+        consumerType: 'email',
+        profileId: archived.profile!.profileId,
+      })
+    ).resolves.toEqual({
+      success: false,
+      error: 'Archived Microsoft profiles cannot be bound to consumers',
+    });
+
+    hasPermissionMock.mockResolvedValue(false);
+
+    await expect(
+      setMicrosoftConsumerBinding({
+        consumerType: 'email',
+        profileId: active.profile!.profileId,
+      })
+    ).resolves.toEqual({
+      success: false,
+      error: 'Forbidden',
+    });
   });
 });

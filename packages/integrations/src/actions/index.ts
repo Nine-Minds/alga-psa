@@ -109,7 +109,6 @@ export {
   deleteMicrosoftProfile,
   setDefaultMicrosoftProfile,
   resolveMicrosoftProfileForConsumer,
-  resolveMicrosoftProfileForCompatibility,
   saveMicrosoftIntegrationSettings,
   resetMicrosoftProvidersToDisconnected
 } from './integrations/microsoftActions';

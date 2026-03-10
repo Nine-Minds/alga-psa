@@ -47,6 +47,24 @@ const hoisted = vi.hoisted(() => {
     updated_at: string | Date;
   };
 
+  type EmailProviderRecord = {
+    id: string;
+    tenant: string;
+    provider_type: string;
+  };
+
+  type CalendarProviderRecord = {
+    id: string;
+    tenant: string;
+    provider_type: string;
+  };
+
+  type MspSsoLoginDomainRecord = {
+    tenant: string;
+    domain: string;
+    is_active: boolean;
+  };
+
   const state = {
     mockUser: { user_id: 'user-1', user_type: 'internal' } as any,
     mockCtx: { tenant: 'tenant-1' } as any,
@@ -55,6 +73,9 @@ const hoisted = vi.hoisted(() => {
     microsoftProfiles: [] as MicrosoftProfileRecord[],
     microsoftConsumerBindings: [] as MicrosoftConsumerBindingRecord[],
     teamsIntegrations: [] as TeamsIntegrationRecord[],
+    emailProviders: [] as EmailProviderRecord[],
+    calendarProviders: [] as CalendarProviderRecord[],
+    mspSsoLoginDomains: [] as MspSsoLoginDomainRecord[],
     resetUpdates: [] as Array<{ table: string; where: Record<string, unknown>; values: Record<string, unknown> }>,
   };
 
@@ -74,6 +95,15 @@ const hoisted = vi.hoisted(() => {
       }
       if (table === 'teams_integrations') {
         return state.teamsIntegrations;
+      }
+      if (table === 'email_providers') {
+        return state.emailProviders;
+      }
+      if (table === 'calendar_providers') {
+        return state.calendarProviders;
+      }
+      if (table === 'msp_sso_tenant_login_domains') {
+        return state.mspSsoLoginDomains;
       }
 
       return [] as Array<Record<string, unknown>>;
@@ -109,6 +139,21 @@ const hoisted = vi.hoisted(() => {
         if (table === 'teams_integrations') {
           rows.forEach((row) => {
             state.teamsIntegrations.push(clone(row) as TeamsIntegrationRecord);
+          });
+        }
+        if (table === 'email_providers') {
+          rows.forEach((row) => {
+            state.emailProviders.push(clone(row) as EmailProviderRecord);
+          });
+        }
+        if (table === 'calendar_providers') {
+          rows.forEach((row) => {
+            state.calendarProviders.push(clone(row) as CalendarProviderRecord);
+          });
+        }
+        if (table === 'msp_sso_tenant_login_domains') {
+          rows.forEach((row) => {
+            state.mspSsoLoginDomains.push(clone(row) as MspSsoLoginDomainRecord);
           });
         }
 
@@ -193,7 +238,17 @@ type MicrosoftProfileRecord = {
   updated_at: string | Date;
 };
 
-const { tenantSecrets, appSecrets, microsoftProfiles, resetUpdates, microsoftConsumerBindings, teamsIntegrations } = hoisted.state;
+const {
+  tenantSecrets,
+  appSecrets,
+  microsoftProfiles,
+  resetUpdates,
+  microsoftConsumerBindings,
+  teamsIntegrations,
+  emailProviders,
+  calendarProviders,
+  mspSsoLoginDomains,
+} = hoisted.state;
 const { getTenantSecretMock, setTenantSecretMock, getAppSecretMock, hasPermissionMock, knexMock } = hoisted;
 
 vi.mock('@alga-psa/auth', () => ({
@@ -233,7 +288,6 @@ import {
   getMicrosoftIntegrationStatus,
   listMicrosoftProfiles,
   resetMicrosoftProvidersToDisconnected,
-  resolveMicrosoftProfileForCompatibility,
   saveMicrosoftIntegrationSettings,
   setDefaultMicrosoftProfile,
   updateMicrosoftProfile,
@@ -248,6 +302,9 @@ describe('Microsoft integration actions', () => {
     microsoftProfiles.length = 0;
     microsoftConsumerBindings.length = 0;
     teamsIntegrations.length = 0;
+    emailProviders.length = 0;
+    calendarProviders.length = 0;
+    mspSsoLoginDomains.length = 0;
     resetUpdates.length = 0;
     hasPermissionMock.mockResolvedValue(true);
     getTenantSecretMock.mockClear();
@@ -280,7 +337,13 @@ describe('Microsoft integration actions', () => {
     expect(listResult.profiles?.[0]?.tenantId).toBe('tenant-guid');
   });
 
-  it('T003/T004/T017/T018/T019/T020/T031/T032: profile persistence stores metadata, secret refs, masked state, and readiness from secret provider', async () => {
+  it('profile persistence stores metadata, secret refs, masked state, and CE-visible MSP SSO status from the secret provider', async () => {
+    mspSsoLoginDomains.push({
+      tenant: 'tenant-1',
+      domain: 'ops.example.com',
+      is_active: true,
+    });
+
     const result = await createMicrosoftProfile({
       displayName: 'Ops Profile',
       clientId: 'ops-client-id',
@@ -311,7 +374,7 @@ describe('Microsoft integration actions', () => {
       tenantId: 'ops-tenant-guid',
       clientSecretConfigured: true,
       status: 'ready',
-      consumers: ['Email', 'Calendar', 'MSP SSO'],
+      consumers: ['MSP SSO'],
     });
     expect(status.profiles?.[0]?.clientSecretMasked).not.toContain('ops-secret-value');
     expect(status.profiles?.[0]?.readiness).toMatchObject({
@@ -354,7 +417,7 @@ describe('Microsoft integration actions', () => {
     expect(otherTenant.success).toBe(true);
   });
 
-  it('T007/T008/T035/T036/T377/T378: exactly one profile is default and compatibility resolution returns that default profile', async () => {
+  it('T007/T008/T035/T036/T377/T378: exactly one profile is default and legacy secret mirroring follows the default profile', async () => {
     const first = await createMicrosoftProfile({
       displayName: 'First Profile',
       clientId: 'client-id-1',
@@ -377,9 +440,6 @@ describe('Microsoft integration actions', () => {
     const profiles = await listMicrosoftProfiles();
     expect(profiles.profiles?.filter((profile) => profile.isDefault)).toHaveLength(1);
     expect(profiles.profiles?.find((profile) => profile.isDefault)?.displayName).toBe('Second Profile');
-
-    const compatibility = await resolveMicrosoftProfileForCompatibility('tenant-1');
-    expect(compatibility?.displayName).toBe('Second Profile');
     expect(tenantSecrets.get('tenant-1:microsoft_client_id')).toBe('client-id-2');
     expect(tenantSecrets.get('tenant-1:microsoft_client_secret')).toBe('secret-2');
     expect(tenantSecrets.get('tenant-1:microsoft_tenant_id')).toBe('tenant-guid-2');
@@ -506,8 +566,13 @@ describe('Microsoft integration actions', () => {
     });
   });
 
-  it('T037/T038/T041/T042/T043/T044/T045/T046/T047/T048/T049/T050/T051/T052/T053/T054/T055/T056/T057/T058/T059/T060/T061/T062/T063/T064/T065/T066/T067/T068/T071/T072: legacy status endpoint remains compatible and exposes masked profile-driven metadata', async () => {
+  it('returns CE status metadata with only MSP SSO guidance and masked profile data', async () => {
     appSecrets.set('NEXT_PUBLIC_BASE_URL', 'https://example.com');
+    mspSsoLoginDomains.push({
+      tenant: 'tenant-1',
+      domain: 'ce.example.com',
+      is_active: true,
+    });
 
     await saveMicrosoftIntegrationSettings({
       clientId: 'client-id-123',
@@ -521,18 +586,71 @@ describe('Microsoft integration actions', () => {
     expect(result.config?.clientId).toBe('client-id-123');
     expect(result.config?.clientSecretMasked?.endsWith('alue')).toBe(true);
     expect(result.config?.clientSecretMasked).not.toContain('super-secret-value');
-    expect(result.redirectUris?.email).toBe('https://example.com/api/auth/microsoft/callback');
-    expect(result.redirectUris?.calendar).toBe('https://example.com/api/auth/microsoft/calendar/callback');
     expect(result.redirectUris?.sso).toBe('https://example.com/api/auth/callback/azure-ad');
-    expect(result.redirectUris?.teamsTab).toBe('https://example.com/api/teams/auth/callback/tab');
-    expect(result.redirectUris?.teamsBot).toBe('https://example.com/api/teams/auth/callback/bot');
-    expect(result.redirectUris?.teamsMessageExtension).toBe('https://example.com/api/teams/auth/callback/message-extension');
-    expect(result.scopes?.email?.length).toBeGreaterThan(0);
-    expect(result.scopes?.calendar?.length).toBeGreaterThan(0);
+    expect(result.redirectUris?.email).toBeUndefined();
+    expect(result.redirectUris?.calendar).toBeUndefined();
+    expect(result.redirectUris?.teamsTab).toBeUndefined();
     expect(result.scopes?.sso).toContain('openid');
-    expect(result.scopes?.teams).toEqual(['openid', 'profile', 'email', 'offline_access']);
+    expect(result.scopes?.email).toBeUndefined();
+    expect(result.scopes?.calendar).toBeUndefined();
+    expect(result.scopes?.teams).toBeUndefined();
     expect(result.profiles?.[0]?.displayName).toBe('Default Microsoft Profile');
-    expect(result.profiles?.[0]?.consumers).toEqual(['Email', 'Calendar', 'MSP SSO']);
+    expect(result.profiles?.[0]?.consumers).toEqual(['MSP SSO']);
+  });
+
+  it('returns EE status metadata with email, calendar, and Teams guidance when enterprise edition is enabled', async () => {
+    const originalEdition = process.env.NEXT_PUBLIC_EDITION;
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+
+    try {
+      appSecrets.set('NEXT_PUBLIC_BASE_URL', 'https://example.com');
+      mspSsoLoginDomains.push({
+        tenant: 'tenant-1',
+        domain: 'ee.example.com',
+        is_active: true,
+      });
+      emailProviders.push({
+        id: 'email-provider-1',
+        tenant: 'tenant-1',
+        provider_type: 'microsoft',
+      });
+      calendarProviders.push({
+        id: 'calendar-provider-1',
+        tenant: 'tenant-1',
+        provider_type: 'microsoft',
+      });
+
+      await saveMicrosoftIntegrationSettings({
+        clientId: 'client-id-123',
+        clientSecret: 'super-secret-value',
+        tenantId: 'tenant-guid',
+      });
+
+      const result = await getMicrosoftIntegrationStatus();
+
+      expect(result.success).toBe(true);
+      expect(result.redirectUris?.email).toBe('https://example.com/api/auth/microsoft/callback');
+      expect(result.redirectUris?.calendar).toBe('https://example.com/api/auth/microsoft/calendar/callback');
+      expect(result.redirectUris?.teamsTab).toBe('https://example.com/api/teams/auth/callback/tab');
+      expect(result.redirectUris?.teamsBot).toBe('https://example.com/api/teams/auth/callback/bot');
+      expect(result.redirectUris?.teamsMessageExtension).toBe(
+        'https://example.com/api/teams/auth/callback/message-extension'
+      );
+      expect(result.scopes?.email?.length).toBeGreaterThan(0);
+      expect(result.scopes?.calendar?.length).toBeGreaterThan(0);
+      expect(result.scopes?.teams).toEqual(['openid', 'profile', 'email', 'offline_access']);
+      expect([...(result.profiles?.[0]?.consumers || [])].sort()).toEqual([
+        'Calendar',
+        'Email',
+        'MSP SSO',
+      ]);
+    } finally {
+      if (originalEdition === undefined) {
+        delete process.env.NEXT_PUBLIC_EDITION;
+      } else {
+        process.env.NEXT_PUBLIC_EDITION = originalEdition;
+      }
+    }
   });
 
   it('T011/T012: reset action disconnects Microsoft email and calendar providers', async () => {
@@ -559,8 +677,8 @@ describe('Microsoft integration actions', () => {
     ).toBe(true);
   });
 
-  it('T013: Microsoft actions are exported from integrations action indexes', () => {
-    const repoRoot = path.resolve(process.cwd(), '../..');
+  it('T013: Microsoft actions export the binding-driven API surface from integrations action indexes', () => {
+    const repoRoot = path.resolve(process.cwd(), '..');
     const integrationsIndex = fs.readFileSync(
       path.resolve(repoRoot, 'packages/integrations/src/actions/integrations/index.ts'),
       'utf8'
@@ -573,10 +691,12 @@ describe('Microsoft integration actions', () => {
     expect(integrationsIndex).toContain("from './microsoftActions';");
     expect(integrationsIndex).toContain('listMicrosoftProfiles');
     expect(integrationsIndex).toContain('createMicrosoftProfile');
-    expect(integrationsIndex).toContain('resolveMicrosoftProfileForCompatibility');
+    expect(integrationsIndex).toContain('resolveMicrosoftProfileForConsumer');
+    expect(integrationsIndex).not.toContain('resolveMicrosoftProfileForCompatibility');
     expect(rootActionsIndex).toContain('listMicrosoftProfiles');
     expect(rootActionsIndex).toContain('createMicrosoftProfile');
-    expect(rootActionsIndex).toContain('resolveMicrosoftProfileForCompatibility');
+    expect(rootActionsIndex).toContain('resolveMicrosoftProfileForConsumer');
+    expect(rootActionsIndex).not.toContain('resolveMicrosoftProfileForCompatibility');
   });
 
   it('T014/T381/T382: non-admin user receives permission error on create/update/archive/default/save', async () => {

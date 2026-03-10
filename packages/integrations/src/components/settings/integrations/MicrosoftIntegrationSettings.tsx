@@ -6,6 +6,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
   Dialog,
   DialogContent,
@@ -24,13 +25,20 @@ import {
   archiveMicrosoftProfile,
   createMicrosoftProfile,
   getMicrosoftIntegrationStatus,
+  listMicrosoftConsumerBindings,
   resetMicrosoftProvidersToDisconnected,
   setDefaultMicrosoftProfile,
+  setMicrosoftConsumerBinding,
   updateMicrosoftProfile,
 } from '@alga-psa/integrations/actions';
+import {
+  getVisibleMicrosoftConsumerTypes,
+  isMicrosoftConsumerEnterpriseEdition,
+} from '../../../lib/microsoftConsumerVisibility';
 import { resolveTeamsAvailability } from '../../../lib/teamsAvailability';
 import {
   AlertTriangle,
+  Archive,
   CheckCircle2,
   ExternalLink,
   Pencil,
@@ -38,11 +46,13 @@ import {
   RefreshCw,
   ShieldCheck,
   Star,
-  Archive,
 } from 'lucide-react';
 
 type MicrosoftIntegrationStatus = Awaited<ReturnType<typeof getMicrosoftIntegrationStatus>>;
+type MicrosoftConsumerBindingsResult = Awaited<ReturnType<typeof listMicrosoftConsumerBindings>>;
 type MicrosoftProfile = NonNullable<MicrosoftIntegrationStatus['profiles']>[number];
+type MicrosoftConsumerBinding = NonNullable<MicrosoftConsumerBindingsResult['bindings']>[number];
+type MicrosoftConsumerType = MicrosoftConsumerBinding['consumerType'];
 type ProfileDialogMode = 'create' | 'edit';
 
 interface ProfileFormState {
@@ -51,6 +61,13 @@ interface ProfileFormState {
   clientSecret: string;
   tenantId: string;
   setAsDefault: boolean;
+}
+
+interface MicrosoftConsumerDescriptor {
+  consumerType: MicrosoftConsumerType;
+  consumerLabel: string;
+  description: string;
+  reconnectMessage?: string;
 }
 
 const DEFAULT_FORM_STATE: ProfileFormState = {
@@ -65,7 +82,7 @@ function getReadinessMessages(profile: MicrosoftProfile): string[] {
   const messages: string[] = [];
 
   if (profile.isArchived) {
-    messages.push('Archived profiles cannot be used for new Microsoft integrations.');
+    messages.push('Archived profiles cannot be used for new Microsoft bindings.');
   }
   if (!profile.readiness.clientIdConfigured) {
     messages.push('Client ID is missing.');
@@ -80,7 +97,10 @@ function getReadinessMessages(profile: MicrosoftProfile): string[] {
   return messages;
 }
 
-function getProfileStatusBadge(profile: MicrosoftProfile): { label: string; variant: 'success' | 'warning' | 'secondary' } {
+function getProfileStatusBadge(profile: MicrosoftProfile): {
+  label: string;
+  variant: 'success' | 'warning' | 'secondary';
+} {
   if (profile.isArchived) {
     return { label: 'Archived', variant: 'secondary' };
   }
@@ -127,6 +147,157 @@ function GuidanceBlock({
   );
 }
 
+function getConsumerDescriptors(showTeamsUi: boolean): MicrosoftConsumerDescriptor[] {
+  const visibleConsumers = getVisibleMicrosoftConsumerTypes(isMicrosoftConsumerEnterpriseEdition()).filter(
+    (consumerType) => showTeamsUi || consumerType !== 'teams'
+  );
+
+  return visibleConsumers.map((consumerType) => {
+    switch (consumerType) {
+      case 'msp_sso':
+        return {
+          consumerType,
+          consumerLabel: 'MSP SSO',
+          description:
+            'Choose which Microsoft profile backs MSP SSO login domains, Microsoft sign-in, and tenant discovery.',
+        };
+      case 'email':
+        return {
+          consumerType,
+          consumerLabel: 'Email',
+          description: 'Choose which Microsoft profile Outlook inbound email should use.',
+          reconnectMessage:
+            'Existing Outlook email connections may need re-authorization after changing the bound profile.',
+        };
+      case 'calendar':
+        return {
+          consumerType,
+          consumerLabel: 'Calendar',
+          description: 'Choose which Microsoft profile Outlook calendar sync should use.',
+          reconnectMessage:
+            'Existing Microsoft calendar connections may need re-authorization after changing the bound profile.',
+        };
+      case 'teams':
+        return {
+          consumerType,
+          consumerLabel: 'Teams',
+          description: 'Choose which Microsoft profile Microsoft Teams installation and auth flows should use.',
+        };
+    }
+  });
+}
+
+function getVisibleProfileConsumers(profile: MicrosoftProfile, showTeamsUi: boolean): string[] {
+  return showTeamsUi
+    ? profile.consumers
+    : profile.consumers.filter((consumer) => consumer !== 'Teams');
+}
+
+function getBindingWarning(
+  consumerLabel: string,
+  binding: MicrosoftConsumerBinding | undefined,
+  profile: MicrosoftProfile | undefined
+): string | null {
+  if (!binding || !binding.profileId) {
+    return `No ${consumerLabel} binding is configured yet.`;
+  }
+
+  if (!profile) {
+    return `${consumerLabel} is bound to a profile that is no longer available. Rebind it to an active profile.`;
+  }
+
+  if (profile.isArchived) {
+    return `${consumerLabel} is still bound to an archived profile. Rebind it to an active profile.`;
+  }
+
+  if (!profile.readiness.ready) {
+    return `${consumerLabel} is bound to ${profile.displayName}, but that profile still needs configuration.`;
+  }
+
+  return null;
+}
+
+function getBindingSummary(
+  consumerLabel: string,
+  binding: MicrosoftConsumerBinding | undefined,
+  profile: MicrosoftProfile | undefined
+): string {
+  if (!binding || !binding.profileId) {
+    return `No Microsoft profile is currently bound to ${consumerLabel}.`;
+  }
+
+  if (!profile) {
+    return `${consumerLabel} is bound to an unavailable profile.`;
+  }
+
+  return `${consumerLabel} is bound to ${profile.displayName}${binding.isDefault ? ' (default profile)' : ''}.`;
+}
+
+function getGuidanceBlocks(
+  status: MicrosoftIntegrationStatus | null,
+  profile: MicrosoftProfile,
+  showTeamsUi: boolean
+) {
+  const teamsApplicationIdUri = showTeamsUi
+    ? getTeamsApplicationIdUri(status?.baseUrl, profile.clientId)
+    : null;
+
+  const blocks: Array<{ title: string; items: Array<{ label: string; value: string }> }> = [
+    {
+      title: 'MSP SSO Guidance',
+      items: [
+        { label: 'Redirect URI', value: status?.redirectUris?.sso || 'Unavailable' },
+        { label: 'Scopes', value: (status?.scopes?.sso || []).join(', ') || 'Unavailable' },
+      ],
+    },
+  ];
+
+  if (isMicrosoftConsumerEnterpriseEdition()) {
+    blocks.push(
+      {
+        title: 'Email Guidance',
+        items: [
+          { label: 'Inbound email redirect URI', value: status?.redirectUris?.email || 'Unavailable' },
+          { label: 'Scopes', value: (status?.scopes?.email || []).join(', ') || 'Unavailable' },
+        ],
+      },
+      {
+        title: 'Calendar Guidance',
+        items: [
+          { label: 'Calendar sync redirect URI', value: status?.redirectUris?.calendar || 'Unavailable' },
+          { label: 'Scopes', value: (status?.scopes?.calendar || []).join(', ') || 'Unavailable' },
+        ],
+      }
+    );
+  }
+
+  if (showTeamsUi) {
+    blocks.push({
+      title: 'Teams Guidance',
+      items: [
+        { label: 'Personal tab redirect URI', value: status?.redirectUris?.teamsTab || 'Unavailable' },
+        { label: 'Personal bot redirect URI', value: status?.redirectUris?.teamsBot || 'Unavailable' },
+        {
+          label: 'Message extension redirect URI',
+          value: status?.redirectUris?.teamsMessageExtension || 'Unavailable',
+        },
+        { label: 'Teams scopes', value: (status?.scopes?.teams || []).join(', ') || 'Unavailable' },
+        { label: 'Application ID URI', value: teamsApplicationIdUri || 'Requires base URL and client ID' },
+      ],
+    });
+  }
+
+  blocks.push({
+    title: 'Current Profile Values',
+    items: [
+      { label: 'Client ID', value: profile.clientId || 'Not configured' },
+      { label: 'Tenant ID', value: profile.tenantId },
+    ],
+  });
+
+  return blocks;
+}
+
 export function MicrosoftIntegrationSettings() {
   const { toast } = useToast();
   const teamsUiFlag = useFeatureFlag('teams-integration-ui', { defaultValue: false });
@@ -134,8 +305,10 @@ export function MicrosoftIntegrationSettings() {
   const [saving, setSaving] = React.useState(false);
   const [resetting, setResetting] = React.useState(false);
   const [settingDefaultId, setSettingDefaultId] = React.useState<string | null>(null);
+  const [savingBindingConsumer, setSavingBindingConsumer] = React.useState<MicrosoftConsumerType | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [status, setStatus] = React.useState<MicrosoftIntegrationStatus | null>(null);
+  const [bindings, setBindings] = React.useState<MicrosoftConsumerBinding[]>([]);
   const [dialogMode, setDialogMode] = React.useState<ProfileDialogMode | null>(null);
   const [editingProfile, setEditingProfile] = React.useState<MicrosoftProfile | null>(null);
   const [archiveTarget, setArchiveTarget] = React.useState<MicrosoftProfile | null>(null);
@@ -143,31 +316,60 @@ export function MicrosoftIntegrationSettings() {
   const [formState, setFormState] = React.useState<ProfileFormState>(DEFAULT_FORM_STATE);
   const [formError, setFormError] = React.useState<string | null>(null);
 
+  const isEnterpriseEdition = isMicrosoftConsumerEnterpriseEdition();
   const profiles = status?.success ? status.profiles ?? [] : [];
   const hasProfiles = profiles.length > 0;
+  const activeProfiles = profiles.filter((profile) => !profile.isArchived);
+  const profileById = React.useMemo(
+    () => new Map(profiles.map((profile) => [profile.profileId, profile])),
+    [profiles]
+  );
+  const bindingByConsumer = React.useMemo(
+    () => new Map(bindings.map((binding) => [binding.consumerType, binding])),
+    [bindings]
+  );
   const teamsAvailability = resolveTeamsAvailability({
     flagEnabled: teamsUiFlag.enabled,
-    isEnterpriseEdition: process.env.NEXT_PUBLIC_EDITION === 'enterprise',
+    isEnterpriseEdition,
     requireTenantContext: false,
   });
   const showTeamsUi = teamsAvailability.enabled;
+  const consumerDescriptors = React.useMemo(
+    () => getConsumerDescriptors(showTeamsUi),
+    [showTeamsUi]
+  );
 
   const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
 
-    const result = await getMicrosoftIntegrationStatus();
-    setStatus(result);
+    const [statusResult, bindingsResult] = await Promise.all([
+      getMicrosoftIntegrationStatus(),
+      listMicrosoftConsumerBindings(),
+    ]);
 
-    if (!result.success) {
-      setError(result.error || 'Failed to load Microsoft settings');
+    setStatus(statusResult);
+
+    if (!statusResult.success) {
+      setBindings([]);
+      setError(statusResult.error || 'Failed to load Microsoft settings');
+      setLoading(false);
+      return;
     }
 
+    if (!bindingsResult.success) {
+      setBindings([]);
+      setError(bindingsResult.error || 'Failed to load Microsoft bindings');
+      setLoading(false);
+      return;
+    }
+
+    setBindings(bindingsResult.bindings ?? []);
     setLoading(false);
   }, []);
 
   React.useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   const closeDialog = React.useCallback(() => {
@@ -237,15 +439,16 @@ export function MicrosoftIntegrationSettings() {
         tenantId: formState.tenantId,
       };
 
-      const result = dialogMode === 'create'
-        ? await createMicrosoftProfile({
-            ...payload,
-            setAsDefault: formState.setAsDefault,
-          })
-        : await updateMicrosoftProfile({
-            profileId: editingProfile?.profileId || '',
-            ...payload,
-          });
+      const result =
+        dialogMode === 'create'
+          ? await createMicrosoftProfile({
+              ...payload,
+              setAsDefault: formState.setAsDefault,
+            })
+          : await updateMicrosoftProfile({
+              profileId: editingProfile?.profileId || '',
+              ...payload,
+            });
 
       if (!result.success) {
         const message = result.error || 'Failed to save Microsoft profile';
@@ -260,11 +463,10 @@ export function MicrosoftIntegrationSettings() {
 
       toast({
         title: dialogMode === 'create' ? 'Microsoft profile created' : 'Microsoft profile updated',
-        description: dialogMode === 'create'
-          ? showTeamsUi
-            ? 'The Microsoft profile is ready for provider and Teams setup.'
-            : 'The Microsoft profile is ready for provider setup.'
-          : 'The Microsoft profile changes were saved successfully.',
+        description:
+          dialogMode === 'create'
+            ? 'The Microsoft profile is ready to be bound to visible Microsoft consumers.'
+            : 'The Microsoft profile changes were saved successfully.',
       });
       closeDialog();
       await load();
@@ -304,30 +506,33 @@ export function MicrosoftIntegrationSettings() {
     }
   }, [archiveTarget, load, toast]);
 
-  const handleSetDefault = React.useCallback(async (profile: MicrosoftProfile) => {
-    try {
-      setSettingDefaultId(profile.profileId);
-      const result = await setDefaultMicrosoftProfile(profile.profileId);
-      if (!result.success) {
-        const message = result.error || 'Failed to set default Microsoft profile';
-        setError(message);
-        toast({
-          title: 'Unable to set default profile',
-          description: message,
-          variant: 'destructive',
-        });
-        return;
-      }
+  const handleSetDefault = React.useCallback(
+    async (profile: MicrosoftProfile) => {
+      try {
+        setSettingDefaultId(profile.profileId);
+        const result = await setDefaultMicrosoftProfile(profile.profileId);
+        if (!result.success) {
+          const message = result.error || 'Failed to set default Microsoft profile';
+          setError(message);
+          toast({
+            title: 'Unable to set default profile',
+            description: message,
+            variant: 'destructive',
+          });
+          return;
+        }
 
-      toast({
-        title: 'Default Microsoft profile updated',
-        description: `${profile.displayName} is now the default profile for existing Microsoft consumers.`,
-      });
-      await load();
-    } finally {
-      setSettingDefaultId(null);
-    }
-  }, [load, toast]);
+        toast({
+          title: 'Default Microsoft profile updated',
+          description: `${profile.displayName} is now the default Microsoft profile record.`,
+        });
+        await load();
+      } finally {
+        setSettingDefaultId(null);
+      }
+    },
+    [load, toast]
+  );
 
   const handleResetProviders = React.useCallback(async () => {
     try {
@@ -346,13 +551,57 @@ export function MicrosoftIntegrationSettings() {
 
       toast({
         title: 'Microsoft providers reset',
-        description: 'Existing email and calendar connections now require re-authorization.',
+        description: 'Existing Outlook email and calendar connections now require re-authorization.',
       });
       await load();
     } finally {
       setResetting(false);
     }
   }, [load, toast]);
+
+  const handleBindingChange = React.useCallback(
+    async (consumer: MicrosoftConsumerDescriptor, profileId: string) => {
+      if (!profileId) {
+        return;
+      }
+
+      const currentBinding = bindingByConsumer.get(consumer.consumerType);
+      if (currentBinding?.profileId === profileId) {
+        return;
+      }
+
+      try {
+        setSavingBindingConsumer(consumer.consumerType);
+        const result = await setMicrosoftConsumerBinding({
+          consumerType: consumer.consumerType,
+          profileId,
+        });
+
+        if (!result.success) {
+          const message = result.error || 'Failed to update Microsoft binding';
+          setError(message);
+          toast({
+            title: `Unable to update ${consumer.consumerLabel} binding`,
+            description: message,
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        const reconnectMessage = consumer.reconnectMessage
+          ? ` ${consumer.reconnectMessage}`
+          : '';
+        toast({
+          title: `${consumer.consumerLabel} binding updated`,
+          description: `${consumer.consumerLabel} now uses ${result.binding?.profileDisplayName || 'the selected profile'}.${reconnectMessage}`,
+        });
+        await load();
+      } finally {
+        setSavingBindingConsumer(null);
+      }
+    },
+    [bindingByConsumer, load, toast]
+  );
 
   const dialogTitle = dialogMode === 'create' ? 'Create Microsoft Profile' : 'Edit Microsoft Profile';
   const currentSecretMasked = editingProfile?.clientSecretMasked;
@@ -365,9 +614,9 @@ export function MicrosoftIntegrationSettings() {
             <div className="space-y-2">
               <CardTitle>Microsoft</CardTitle>
               <CardDescription>
-                {showTeamsUi
-                  ? 'Manage tenant-owned Microsoft profiles for Outlook inbound email, Outlook calendar, MSP SSO, and Microsoft Teams.'
-                  : 'Manage tenant-owned Microsoft profiles for Outlook inbound email, Outlook calendar, and MSP SSO.'}
+                {isEnterpriseEdition
+                  ? 'Manage tenant-owned Microsoft profiles for MSP SSO, Outlook email, calendar sync, and Microsoft Teams.'
+                  : 'Manage tenant-owned Microsoft profiles for MSP SSO, Microsoft sign-in, and login-domain discovery.'}
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -392,7 +641,13 @@ export function MicrosoftIntegrationSettings() {
                   Open Teams Setup
                 </Button>
               )}
-              <Button id="microsoft-settings-refresh" type="button" variant="outline" onClick={load} disabled={loading}>
+              <Button
+                id="microsoft-settings-refresh"
+                type="button"
+                variant="outline"
+                onClick={() => void load()}
+                disabled={loading}
+              >
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Refresh
               </Button>
@@ -410,23 +665,112 @@ export function MicrosoftIntegrationSettings() {
             </Alert>
           )}
 
-          <div className="rounded-lg border bg-muted/20 p-4">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <div className="text-sm font-medium">Legacy Microsoft consumers</div>
-                <div className="text-sm text-muted-foreground">
-                  The default active profile remains the compatibility source for existing email, calendar, and MSP SSO flows until explicit consumer bindings ship.
+          <Alert>
+            <CheckCircle2 className="h-4 w-4" />
+            <AlertDescription>
+              {isEnterpriseEdition
+                ? 'Explicit bindings are the source of truth for MSP SSO, email, calendar, and Teams profile selection.'
+                : 'Explicit bindings are the source of truth for MSP SSO profile selection. Configure login domains separately after choosing the bound profile.'}
+            </AlertDescription>
+          </Alert>
+
+          {isEnterpriseEdition && (
+            <div className="rounded-lg border bg-muted/20 p-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <div className="text-sm font-medium">Provider reconnection</div>
+                  <div className="text-sm text-muted-foreground">
+                    Use this if you rotate credentials or intentionally rebind Outlook email or calendar to a different Microsoft profile.
+                  </div>
                 </div>
+                <Button
+                  id="microsoft-settings-reset-providers"
+                  type="button"
+                  variant="destructive"
+                  onClick={handleResetProviders}
+                  disabled={resetting}
+                >
+                  {resetting ? 'Resetting…' : 'Reset Microsoft Providers'}
+                </Button>
               </div>
-              <Button
-                id="microsoft-settings-reset-providers"
-                type="button"
-                variant="destructive"
-                onClick={handleResetProviders}
-                disabled={resetting}
-              >
-                {resetting ? 'Resetting…' : 'Reset Microsoft Providers'}
-              </Button>
+            </div>
+          )}
+
+          <div className="rounded-lg border bg-muted/10 p-4">
+            <div className="space-y-1">
+              <div className="text-sm font-medium">Explicit consumer bindings</div>
+              <div className="text-sm text-muted-foreground">
+                {isEnterpriseEdition
+                  ? 'Bind one Microsoft profile per supported consumer. Reassigning one consumer does not change the others.'
+                  : 'Bind one Microsoft profile to MSP SSO for sign-in and login-domain usage.'}
+              </div>
+            </div>
+            <div className="mt-4 space-y-4">
+              {consumerDescriptors.map((consumer) => {
+                const binding = bindingByConsumer.get(consumer.consumerType);
+                const boundProfile = binding?.profileId ? profileById.get(binding.profileId) : undefined;
+                const activeBoundProfile =
+                  boundProfile && !boundProfile.isArchived ? boundProfile : undefined;
+                const warning = getBindingWarning(consumer.consumerLabel, binding, boundProfile);
+                const options = activeProfiles.map((profile) => ({
+                  value: profile.profileId,
+                  label: profile.displayName,
+                }));
+
+                return (
+                  <div
+                    key={consumer.consumerType}
+                    id={`microsoft-consumer-binding-${consumer.consumerType}`}
+                    className="rounded-lg border bg-background p-4"
+                  >
+                      <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="text-sm font-medium">{consumer.consumerLabel}</div>
+                        {binding?.profileId && binding.isDefault && <Badge variant="outline">Default profile</Badge>}
+                      </div>
+                      <div className="text-sm text-muted-foreground">{consumer.description}</div>
+                    </div>
+
+                    <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                      <CustomSelect
+                        id={`microsoft-binding-select-${consumer.consumerType}`}
+                        label="Bound profile"
+                        options={options}
+                        value={activeBoundProfile?.profileId ?? ''}
+                        onValueChange={(profileId) => void handleBindingChange(consumer, profileId)}
+                        placeholder={activeProfiles.length > 0 ? 'Select a profile' : 'Create a profile first'}
+                        disabled={savingBindingConsumer === consumer.consumerType || activeProfiles.length === 0}
+                      />
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant={
+                            warning ? 'warning' : binding?.profileId ? 'success' : 'secondary'
+                          }
+                        >
+                          {savingBindingConsumer === consumer.consumerType
+                            ? 'Saving…'
+                            : warning
+                              ? 'Needs attention'
+                              : binding?.profileId
+                                ? 'Bound'
+                                : 'Unbound'}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      {getBindingSummary(consumer.consumerLabel, binding, boundProfile)}
+                    </div>
+
+                    {warning && (
+                      <Alert className="mt-3" variant="destructive">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertDescription>{warning}</AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -439,9 +783,9 @@ export function MicrosoftIntegrationSettings() {
             <div className="rounded-xl border border-dashed p-8 text-center">
               <div className="text-lg font-semibold">No Microsoft profiles yet</div>
               <div className="mt-2 text-sm text-muted-foreground">
-                {showTeamsUi
-                  ? 'Create a named profile first, then reuse it across Outlook, calendar, MSP SSO, and Teams.'
-                  : 'Create a named profile first, then reuse it across Outlook, calendar, and MSP SSO.'}
+                {isEnterpriseEdition
+                  ? 'Create a named profile first, then bind it explicitly to MSP SSO, Outlook email, calendar sync, and Teams.'
+                  : 'Create a named profile first, then bind it explicitly to MSP SSO and login-domain sign-in flows.'}
               </div>
               <Button className="mt-4" id="microsoft-empty-state-create" type="button" onClick={openCreateDialog}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -453,12 +797,7 @@ export function MicrosoftIntegrationSettings() {
               {profiles.map((profile) => {
                 const statusBadge = getProfileStatusBadge(profile);
                 const readinessMessages = getReadinessMessages(profile);
-                const visibleConsumers = showTeamsUi
-                  ? profile.consumers
-                  : profile.consumers.filter((consumer) => consumer !== 'Teams');
-                const teamsApplicationIdUri = showTeamsUi
-                  ? getTeamsApplicationIdUri(status?.baseUrl, profile.clientId)
-                  : null;
+                const visibleConsumers = getVisibleProfileConsumers(profile, showTeamsUi);
 
                 return (
                   <Card key={profile.profileId} id={`microsoft-profile-${profile.profileId}`}>
@@ -494,7 +833,7 @@ export function MicrosoftIntegrationSettings() {
                               id={`microsoft-profile-default-${profile.profileId}`}
                               type="button"
                               variant="outline"
-                              onClick={() => handleSetDefault(profile)}
+                              onClick={() => void handleSetDefault(profile)}
                               disabled={settingDefaultId === profile.profileId}
                             >
                               <ShieldCheck className="mr-2 h-4 w-4" />
@@ -516,17 +855,29 @@ export function MicrosoftIntegrationSettings() {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className={`grid gap-4 md:grid-cols-2 ${showTeamsUi ? 'xl:grid-cols-4' : 'xl:grid-cols-3'}`}>
+                      <div
+                        className={`grid gap-4 md:grid-cols-2 ${showTeamsUi ? 'xl:grid-cols-4' : 'xl:grid-cols-3'}`}
+                      >
                         <div className="rounded-lg border bg-muted/10 p-3">
-                          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Client ID</div>
-                          <div className="mt-2 break-all font-mono text-xs">{profile.clientId || 'Not configured'}</div>
+                          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Client ID
+                          </div>
+                          <div className="mt-2 break-all font-mono text-xs">
+                            {profile.clientId || 'Not configured'}
+                          </div>
                         </div>
                         <div className="rounded-lg border bg-muted/10 p-3">
-                          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Stored secret</div>
-                          <div className="mt-2 font-mono text-xs">{profile.clientSecretMasked || 'Not configured'}</div>
+                          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Stored secret
+                          </div>
+                          <div className="mt-2 font-mono text-xs">
+                            {profile.clientSecretMasked || 'Not configured'}
+                          </div>
                         </div>
                         <div className="rounded-lg border bg-muted/10 p-3">
-                          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Current consumers</div>
+                          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Active bindings
+                          </div>
                           <div className="mt-2 flex flex-wrap gap-2">
                             {visibleConsumers.length > 0 ? (
                               visibleConsumers.map((consumer) => (
@@ -535,15 +886,18 @@ export function MicrosoftIntegrationSettings() {
                                 </Badge>
                               ))
                             ) : (
-                              <span className="text-xs text-muted-foreground">No current bindings</span>
+                              <span className="text-xs text-muted-foreground">No visible consumer bindings</span>
                             )}
                           </div>
                         </div>
                         {showTeamsUi && (
                           <div className="rounded-lg border bg-muted/10 p-3">
-                            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Teams application ID URI</div>
+                            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                              Teams application ID URI
+                            </div>
                             <div className="mt-2 break-all font-mono text-xs">
-                              {teamsApplicationIdUri || 'Requires base URL and client ID'}
+                              {getTeamsApplicationIdUri(status?.baseUrl, profile.clientId) ||
+                                'Requires base URL and client ID'}
                             </div>
                           </div>
                         )}
@@ -565,9 +919,11 @@ export function MicrosoftIntegrationSettings() {
                         <Alert>
                           <CheckCircle2 className="h-4 w-4" />
                           <AlertDescription>
-                            {showTeamsUi
-                              ? 'This profile is ready for Outlook email, calendar, MSP SSO, and Teams app registration work.'
-                              : 'This profile is ready for Outlook email, calendar, and MSP SSO setup.'}
+                            {isEnterpriseEdition
+                              ? showTeamsUi
+                                ? 'This profile is ready for MSP SSO, Outlook email, calendar sync, and Teams bindings.'
+                                : 'This profile is ready for MSP SSO, Outlook email, and calendar bindings.'
+                              : 'This profile is ready for MSP SSO binding and login-domain sign-in flows.'}
                           </AlertDescription>
                         </Alert>
                       )}
@@ -577,50 +933,9 @@ export function MicrosoftIntegrationSettings() {
                           Microsoft app registration guidance
                         </summary>
                         <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                          {showTeamsUi && (
-                            <GuidanceBlock
-                              title="Teams Redirect URIs"
-                              items={[
-                                { label: 'Personal tab', value: status?.redirectUris?.teamsTab || 'Unavailable' },
-                                { label: 'Personal bot', value: status?.redirectUris?.teamsBot || 'Unavailable' },
-                                { label: 'Message extension', value: status?.redirectUris?.teamsMessageExtension || 'Unavailable' },
-                              ]}
-                            />
-                          )}
-                          <GuidanceBlock
-                            title="Existing Redirect URIs"
-                            items={[
-                              { label: 'Inbound email', value: status?.redirectUris?.email || 'Unavailable' },
-                              { label: 'Calendar sync', value: status?.redirectUris?.calendar || 'Unavailable' },
-                              { label: 'MSP SSO', value: status?.redirectUris?.sso || 'Unavailable' },
-                            ]}
-                          />
-                          {showTeamsUi && (
-                            <GuidanceBlock
-                              title="Teams Scope Guidance"
-                              items={[
-                                { label: 'Teams SSO scopes', value: (status?.scopes?.teams || []).join(', ') || 'Unavailable' },
-                              ]}
-                            />
-                          )}
-                          <GuidanceBlock
-                            title="Current Profile Values"
-                            items={[
-                              { label: 'Client ID', value: profile.clientId || 'Not configured' },
-                              { label: 'Tenant ID', value: profile.tenantId },
-                              {
-                                label: 'Email / Calendar / MSP SSO scopes',
-                                value: [
-                                  `Email: ${(status?.scopes?.email || []).join(', ') || 'Unavailable'}`,
-                                  `Calendar: ${(status?.scopes?.calendar || []).join(', ') || 'Unavailable'}`,
-                                  `MSP SSO: ${(status?.scopes?.sso || []).join(', ') || 'Unavailable'}`,
-                                ].join(' | '),
-                              },
-                              ...(showTeamsUi
-                                ? [{ label: 'Application ID URI', value: teamsApplicationIdUri || 'Requires base URL and client ID' }]
-                                : []),
-                            ]}
-                          />
+                          {getGuidanceBlocks(status, profile, showTeamsUi).map((block) => (
+                            <GuidanceBlock key={`${profile.profileId}-${block.title}`} title={block.title} items={block.items} />
+                          ))}
                         </div>
                       </details>
                     </CardContent>
@@ -643,7 +958,7 @@ export function MicrosoftIntegrationSettings() {
             <DialogTitle>{dialogTitle}</DialogTitle>
             <DialogDescription>
               {dialogMode === 'create'
-                ? 'Create a tenant-owned Microsoft profile and reuse it across Microsoft integrations.'
+                ? 'Create a tenant-owned Microsoft profile, then bind it explicitly to the Microsoft consumers you want to use.'
                 : 'Update the selected Microsoft profile. Leave the secret blank to keep the existing value.'}
             </DialogDescription>
           </DialogHeader>
@@ -686,7 +1001,9 @@ export function MicrosoftIntegrationSettings() {
                 type="password"
                 value={formState.clientSecret}
                 onChange={(event) => setFormValue('clientSecret', event.target.value)}
-                placeholder={dialogMode === 'edit' ? 'Leave blank to keep the current secret' : 'Enter client secret'}
+                placeholder={
+                  dialogMode === 'edit' ? 'Leave blank to keep the current secret' : 'Enter client secret'
+                }
               />
               {dialogMode === 'edit' && currentSecretMasked && (
                 <p className="text-xs text-muted-foreground">
@@ -701,10 +1018,10 @@ export function MicrosoftIntegrationSettings() {
                   id="microsoft-profile-set-default"
                   checked={formState.setAsDefault}
                   onCheckedChange={(checked) => setFormValue('setAsDefault', checked)}
-                  label="Set this profile as the default compatibility profile"
+                  label="Set this profile as the default Microsoft profile"
                 />
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Default profiles back existing email, calendar, and MSP SSO consumers until explicit profile bindings are configured.
+                  Default profiles stay available for profile-management workflows and migration-safe metadata, not consumer routing.
                 </p>
               </div>
             )}
@@ -717,10 +1034,16 @@ export function MicrosoftIntegrationSettings() {
           )}
 
           <DialogFooter className="mt-4 flex items-center justify-end gap-2">
-            <Button id="microsoft-profile-cancel" type="button" variant="outline" onClick={closeDialog} disabled={saving}>
+            <Button
+              id="microsoft-profile-cancel"
+              type="button"
+              variant="outline"
+              onClick={closeDialog}
+              disabled={saving}
+            >
               Cancel
             </Button>
-            <Button id="microsoft-profile-save" type="button" onClick={handleSave} disabled={saving}>
+            <Button id="microsoft-profile-save" type="button" onClick={() => void handleSave()} disabled={saving}>
               {saving ? 'Saving…' : dialogMode === 'create' ? 'Create Profile' : 'Save Changes'}
             </Button>
           </DialogFooter>

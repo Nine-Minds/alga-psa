@@ -10,7 +10,6 @@ export {
   deleteMicrosoftProfile,
   setDefaultMicrosoftProfile,
   resolveMicrosoftProfileForConsumer,
-  resolveMicrosoftProfileForCompatibility,
   saveMicrosoftIntegrationSettings,
   resetMicrosoftProvidersToDisconnected
 } from './microsoftActions';

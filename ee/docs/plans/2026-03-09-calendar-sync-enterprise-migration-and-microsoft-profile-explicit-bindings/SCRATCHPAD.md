@@ -309,3 +309,39 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
   - `IntegrationsSettingsPage.tsx` renders `CalendarEnterpriseIntegrationSettings`,
   - `CalendarEnterpriseIntegrationSettings.tsx` dynamically imports `@enterprise/components/settings/integrations/CalendarIntegrationsSettings`,
   - the shared settings composition no longer imports the concrete Calendar UI directly.
+- (2026-03-09) Implemented the Microsoft explicit-binding UI and action cleanup slice:
+  - added `packages/integrations/src/lib/microsoftConsumerVisibility.ts` as the edition-aware source of truth for which Microsoft consumers are visible in CE vs EE,
+  - rewrote `packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.tsx` to remove the legacy consumers pane, render one explicit binding row per visible consumer, and make CE copy MSP-SSO-only while EE copy covers MSP SSO, email, calendar, and Teams,
+  - updated `packages/integrations/src/actions/integrations/microsoftActions.ts` so CE rejects EE-only consumer binding writes, status payloads expose edition-appropriate redirect/scope metadata, and `resolveMicrosoftProfileForConsumer()` no longer falls back to the default profile when no explicit binding exists,
+  - kept the legacy binding backfill helper in place for migration-safe rows, so the remaining fallback/backfill cleanup items stay open even though active resolution now uses binding rows.
+- (2026-03-09) Added focused Microsoft validation coverage:
+  - `packages/integrations/src/lib/microsoftConsumerVisibility.test.ts` covers CE/EE consumer visibility contracts,
+  - `packages/integrations/src/actions/integrations/microsoftConsumerBindings.test.ts` covers CE write rejection, EE reassignment, archive/permission guards, and Teams explicit-binding resolution,
+  - `packages/integrations/src/actions/integrations/microsoftActions.test.ts` covers CE vs EE Microsoft status metadata shaping,
+  - `packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.contract.test.tsx` covers the new explicit-binding UI, CE/EE copy differences, archived-profile filtering, and removal of the legacy compatibility pane/codepath.
+- (2026-03-09) Microsoft slice validation commands:
+  - `cd server && pnpm vitest run --config vitest.config.ts ../packages/integrations/src/lib/microsoftConsumerVisibility.test.ts ../packages/integrations/src/actions/integrations/microsoftConsumerBindings.test.ts ../packages/integrations/src/actions/integrations/microsoftActions.test.ts ../packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.contract.test.tsx ../src/test/unit/components/integrations/TeamsIntegrationSettings.contract.test.tsx`
+  - `cd server && pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-09) Tightened the binding UX contract so the placeholder option remains a no-op rather than an implicit clear:
+  - `MicrosoftIntegrationSettings.contract.test.tsx` now asserts that selecting the empty option does not issue a binding write,
+  - this keeps the current product rule explicit: bindings can be reassigned from this surface, but not silently cleared.
+- (2026-03-09) Teams rebinding now invalidates stale Teams install state from the Microsoft binding action itself:
+  - `setMicrosoftConsumerBinding()` updates `teams_integrations.selected_profile_id` when the Teams consumer is rebound,
+  - active/installing Teams records are pushed back to `install_pending` and their package metadata, bot/app IDs, and last error are cleared,
+  - the focused binding test also asserts unrelated Microsoft consumer bindings remain unchanged during that rebinding.
+- (2026-03-09) Email and calendar rebinding remain on the “prompt reconnection” path in the Microsoft settings UI:
+  - the consumer descriptors now carry explicit reconnect warnings for Outlook email and Microsoft calendar,
+  - `MicrosoftIntegrationSettings.contract.test.tsx` asserts those rebind toasts mention re-authorization so the operator-facing reconnection contract stays covered.
+- (2026-03-09) Replaced the blanket Microsoft compatibility binding backfill with migration-scoped explicit binding materialization:
+  - `packages/integrations/src/actions/integrations/microsoftActions.ts` no longer exports `resolveMicrosoftProfileForCompatibility` and no longer invents `email/calendar/msp_sso` bindings from the default profile on every read,
+  - the action layer now materializes explicit binding rows only when legacy state proves a tenant needs them:
+    - `msp_sso` from active `msp_sso_tenant_login_domains`,
+    - `email` from existing `email_providers` rows with `provider_type = 'microsoft'`,
+    - `calendar` from existing `calendar_providers` rows with `provider_type = 'microsoft'`,
+  - `listMicrosoftConsumerBindings()` now returns visible consumers with `profileId: null` when no explicit binding or migration signal exists, and `resolveMicrosoftProfileForConsumer()` returns `null` in the same case instead of falling back to the default profile.
+- (2026-03-09) Updated the focused Microsoft action tests to lock in the new migration-scoped binding behavior:
+  - `microsoftConsumerBindings.test.ts` now covers migration-triggered MSP SSO/email/calendar backfill signals plus the no-legacy-signal path where all migrated consumers remain explicitly unbound,
+  - `microsoftActions.test.ts` now seeds login-domain/email/calendar legacy state only when asserting migrated consumer visibility, and verifies the public integrations action indexes expose the binding-driven API surface without the removed compatibility export.
+- (2026-03-09) Remaining Microsoft runtime gap after this slice:
+  - active MSP SSO, Outlook email, and Microsoft calendar runtime credential readers still consume mirrored tenant secrets in their own packages/routes,
+  - the binding table now drives the shared Microsoft settings/action layer and migration materialization logic, but the next slice still has to cut those runtime credential lookups over to explicit binding resolution.
