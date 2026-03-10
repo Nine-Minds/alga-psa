@@ -732,7 +732,7 @@
   {
     "id": "F074",
     "description": "The shared Calendar provider service no longer owns live calendar provider CRUD behavior in CE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements",
       "Data / API / Integrations",

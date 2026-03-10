@@ -35,6 +35,10 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
   - `packages/auth/src/lib/sso/teamsMicrosoftProviderResolution.ts`
   - `ee/server/src/lib/auth/teamsMicrosoftProviderResolution.ts`
 - (2026-03-09) Existing doc-contract precedent lives at `server/src/test/unit/docs/teamsEnterpriseOnlyMigrationPlan.contract.test.ts`, which is the right pattern for validating this plan folder as it evolves.
+- (2026-03-09) `packages/integrations/src/actions/calendarActions.ts` was converted into an edition-gated EE delegator layer. Shared action entrypoints no longer import `CalendarProviderService`, `CalendarSyncService`, `CalendarWebhookMaintenanceService`, or calendar adapters directly.
+- (2026-03-09) The new EE action implementation currently lives at `packages/ee/src/lib/actions/integrations/calendarActions.ts`. It centralizes provider CRUD, manual sync, conflict resolution, sync status reads, and manual Microsoft webhook renewal behind the `@enterprise` alias boundary.
+- (2026-03-09) `server/src/lib/actions/calendarActions.ts` now exists as a stable server-side re-export of `@alga-psa/integrations/actions/calendarActions`, which keeps existing server imports/tests working while the shared package owns only the delegator boundary.
+- (2026-03-09) This slice completes the CE CRUD-entrypoint cutover (`F074`) but does not yet complete deeper runtime-ownership features such as `F075`-`F090`; EE actions still call shared `server/src/services/calendar/*` implementations, and CE subscriber/service extraction is still pending.
 
 ## Commands / Runbooks
 
@@ -67,6 +71,9 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
   - `pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
 - (2026-03-09) Focused implementation checks for the calendar maintenance delegator slice:
   - `pnpm vitest run --coverage.enabled=false src/test/unit/api/calendarCallbackRoutes.delegator.test.ts src/test/unit/api/calendarWebhookRoutes.delegator.test.ts src/test/unit/jobs/calendarWebhookMaintenanceHandler.delegator.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-09) Focused implementation checks for the calendar action delegator slice:
+  - `pnpm vitest run --coverage.enabled=false src/test/unit/calendar/calendarActions.ee.contract.test.ts src/test/unit/calendar/calendarActions.sync.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
 
 ## Links / References
@@ -142,8 +149,7 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
   - `ee/server/src/components/settings/integrations/CalendarIntegrationsSettings.tsx`
   - `packages/ee/src/components/settings/profile/CalendarProfileSettings.tsx`
   - `ee/server/src/components/settings/profile/CalendarProfileSettings.tsx`
-- Shared actions and runtime code that currently own live behavior:
-  - `packages/integrations/src/actions/calendarActions.ts`
+- Shared runtime code that still owns live calendar behavior after the action delegator slice:
   - `packages/integrations/src/services/calendar/CalendarProviderService.ts`
   - `packages/integrations/src/services/calendar/CalendarSyncService.ts`
   - `packages/integrations/src/services/calendar/CalendarWebhookProcessor.ts`
@@ -151,6 +157,10 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
   - `packages/integrations/src/services/calendar/providers/GoogleCalendarAdapter.ts`
   - `packages/integrations/src/services/calendar/providers/MicrosoftCalendarAdapter.ts`
   - `packages/integrations/src/services/calendar/providers/base/BaseCalendarAdapter.ts`
+- Shared action boundary files added for the fifth migration slice:
+  - `packages/integrations/src/actions/calendarActions.ts`
+  - `packages/ee/src/lib/actions/integrations/calendarActions.ts`
+  - `server/src/lib/actions/calendarActions.ts`
 - Server runtime ownership hotspots that must stop executing in CE:
   - `server/src/lib/eventBus/subscribers/calendarSyncSubscriber.ts`
   - `server/src/lib/jobs/handlers/calendarWebhookMaintenanceHandler.ts`
