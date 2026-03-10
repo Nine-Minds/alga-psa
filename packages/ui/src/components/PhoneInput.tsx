@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Input } from './Input';
 import { Label } from './Label';
+import { Popover, PopoverContent, PopoverTrigger } from './Popover';
 
 interface Country {
   code: string;
@@ -40,6 +41,44 @@ const getDefaultCountryFromLocale = (): string => {
   }
 
   return 'US'; // Enterprise default
+};
+
+const normalizePhoneCode = (value?: string): string | undefined => {
+  const trimmed = value?.trim();
+  if (!trimmed) return undefined;
+  return trimmed.startsWith('+') ? trimmed : `+${trimmed}`;
+};
+
+const stripLeadingPhoneCode = (phone: string, phoneCode?: string): string => {
+  const normalizedCode = normalizePhoneCode(phoneCode);
+  if (!normalizedCode) {
+    return phone.trim();
+  }
+
+  const trimmedPhone = phone.trim();
+  if (!trimmedPhone.startsWith(normalizedCode)) {
+    return trimmedPhone;
+  }
+
+  return trimmedPhone.slice(normalizedCode.length).trimStart();
+};
+
+const detectPhoneCodeFromValue = (phone: string, countries?: Country[]): string | undefined => {
+  const trimmedPhone = phone.trim();
+  if (!trimmedPhone.startsWith('+') || !countries?.length) {
+    return undefined;
+  }
+
+  return countries
+    .map((country) => normalizePhoneCode(country.phone_code))
+    .filter((phoneCode): phoneCode is string => {
+      if (!phoneCode) {
+        return false;
+      }
+
+      return trimmedPhone.startsWith(phoneCode);
+    })
+    .sort((left, right) => right.length - left.length)[0];
 };
 
 interface PhoneInputProps {
@@ -84,12 +123,13 @@ export const PhoneInput = ({
 }: PhoneInputProps) => {
   const [displayValue, setDisplayValue] = useState('');
   const [extensionValue, setExtensionValue] = useState('');
-  const [previousPhoneCode, setPreviousPhoneCode] = useState<string | undefined>();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isExternalUpdate, setIsExternalUpdate] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const resolvedCountryCode = countryCode || getDefaultCountryFromLocale();
+  const currentCountry = countries?.find(c => c.code === resolvedCountryCode);
+  const resolvedPhoneCode = normalizePhoneCode(phoneCode || currentCountry?.phone_code);
 
   // Parse phone number and extension from value
   const parsePhoneAndExtension = (fullValue: string): { phone: string; extension: string } => {
@@ -124,32 +164,17 @@ export const PhoneInput = ({
   // Clean phone number display - remove country code from input and parse extensions
   useEffect(() => {
     const { phone, extension } = parsePhoneAndExtension(value);
+    const detectedPhoneCode = detectPhoneCodeFromValue(phone, countries);
+    const cleanedPhone = stripLeadingPhoneCode(
+      phone,
+      resolvedPhoneCode && phone.startsWith(resolvedPhoneCode)
+        ? resolvedPhoneCode
+        : detectedPhoneCode
+    );
 
-    // If phone code has changed, we need to update the phone number
-    if (phoneCode !== previousPhoneCode && previousPhoneCode && phoneCode) {
-      // Remove the old phone code and add the new one
-      let cleanedPhone = phone;
-      if (previousPhoneCode && phone.startsWith(previousPhoneCode)) {
-        cleanedPhone = phone.substring(previousPhoneCode.length).trim();
-      }
-
-      // Update with new phone code
-      const newPhone = phoneCode ? `${phoneCode} ${cleanedPhone}`.trim() : cleanedPhone;
-      const newFullValue = combinePhoneAndExtension(newPhone, extension);
-      onChange(newFullValue);
-      setDisplayValue(cleanedPhone);
-    } else {
-      // Normal processing - remove phone code from display value if it exists
-      let cleanedPhone = phone;
-      if (phoneCode && phone.startsWith(phoneCode)) {
-        cleanedPhone = phone.substring(phoneCode.length).trim();
-      }
-      setDisplayValue(cleanedPhone);
-    }
-
+    setDisplayValue(cleanedPhone);
     setExtensionValue(extension);
-    setPreviousPhoneCode(phoneCode);
-  }, [phoneCode, value, previousPhoneCode, onChange]);
+  }, [countries, resolvedPhoneCode, value]);
 
   // Handle external country code sync (one-way from address country to phone)
   useEffect(() => {
@@ -169,7 +194,7 @@ export const PhoneInput = ({
     setDisplayValue(phoneNumber);
 
     // Combine phone code with the number for the full value
-    const basePhone = phoneCode ? `${phoneCode} ${phoneNumber}`.trim() : phoneNumber;
+    const basePhone = resolvedPhoneCode ? `${resolvedPhoneCode} ${phoneNumber}`.trim() : phoneNumber;
     const fullValue = combinePhoneAndExtension(basePhone, extensionValue);
     onChange(fullValue);
   };
@@ -181,14 +206,14 @@ export const PhoneInput = ({
     setExtensionValue(extension);
 
     // Combine phone code with the number and extension for the full value
-    const basePhone = phoneCode ? `${phoneCode} ${displayValue}`.trim() : displayValue;
+    const basePhone = resolvedPhoneCode ? `${resolvedPhoneCode} ${displayValue}`.trim() : displayValue;
     const fullValue = combinePhoneAndExtension(basePhone, extension);
     onChange(fullValue);
   };
 
   const getPlaceholderText = (): string => {
     if (placeholder) return placeholder;
-    if (phoneCode) {
+    if (resolvedPhoneCode) {
       // Provide country-specific format examples WITHOUT phone code
       const formatExamples: Record<string, string> = {
         '+1': `(555) 123-4567`,
@@ -200,26 +225,33 @@ export const PhoneInput = ({
         '+86': `138 0013 8000`,
         '+91': `98765 43210`,
       };
-      return formatExamples[phoneCode] || `123456789`;
+      return formatExamples[resolvedPhoneCode] || `123456789`;
     }
     return 'Phone number';
   };
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   const handleCountrySelect = (selectedCountry: Country) => {
     setIsDropdownOpen(false);
     setSearchQuery('');
+
+    const selectedPhoneCode = normalizePhoneCode(selectedCountry.phone_code);
+    const { phone, extension } = parsePhoneAndExtension(value);
+    const strippedPhone = stripLeadingPhoneCode(
+      phone,
+      resolvedPhoneCode && phone.startsWith(resolvedPhoneCode)
+        ? resolvedPhoneCode
+        : detectPhoneCodeFromValue(phone, countries)
+    );
+
+    if (onChange) {
+      const updatedPhone = strippedPhone
+        ? combinePhoneAndExtension(
+            selectedPhoneCode ? `${selectedPhoneCode} ${strippedPhone}`.trim() : strippedPhone,
+            extension
+          )
+        : '';
+      onChange(updatedPhone);
+    }
 
     // Always trigger onCountryChange to update the phone code display
     // This is needed for the phone input to show the correct country code
@@ -261,12 +293,25 @@ export const PhoneInput = ({
 
     return getSortedCountries(filtered);
   };
+  const filteredCountries = useMemo(
+    () => getFilteredCountries(countries || [], searchQuery),
+    [countries, searchQuery]
+  );
 
-  const currentCountry = countries?.find(c => c.code === countryCode);
-  const displayPhoneCode = phoneCode || currentCountry?.phone_code || '+1';
+  useEffect(() => {
+    if (!isDropdownOpen) {
+      setSearchQuery('');
+      return;
+    }
 
-  // If a country doesn't have a phone code, show a placeholder
-  const showPlaceholderCode = !phoneCode && !currentCountry?.phone_code;
+    const timer = window.setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 10);
+
+    return () => window.clearTimeout(timer);
+  }, [isDropdownOpen]);
+
+  const displayPhoneCode = resolvedPhoneCode || '+1';
 
   return (
     <div className={`w-full ${className}`.trim()}>
@@ -282,70 +327,72 @@ export const PhoneInput = ({
       <div className="relative">
         <div className="flex w-full items-stretch overflow-hidden rounded-md border border-[rgb(var(--color-border-400))] bg-white shadow-sm focus-within:border-transparent focus-within:outline-none focus-within:ring-2 focus-within:ring-[rgb(var(--color-primary-500))]">
           {/* Country Code Dropdown - integrated within phone field */}
-          <div className="relative" ref={dropdownRef}>
+          <Popover open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+            <PopoverTrigger asChild>
               <button
                 type="button"
                 className="flex h-[42px] w-[84px] items-center justify-between border-r border-gray-300 bg-white px-2 py-2 text-sm hover:bg-gray-50 focus:outline-none"
-                onClick={() => {
-                  setIsDropdownOpen(!isDropdownOpen);
-                  // Focus search input when dropdown opens
-                  if (!isDropdownOpen) {
-                    setTimeout(() => searchInputRef.current?.focus(), 100);
-                  }
-                }}
                 disabled={disabled}
+                aria-haspopup="listbox"
+                aria-expanded={isDropdownOpen}
               >
-                <span className={`font-medium text-xs ${showPlaceholderCode ? 'text-gray-400' : 'text-gray-700'} truncate`}>
-                  {showPlaceholderCode ? '+1' : displayPhoneCode}
+                <span className="truncate text-xs font-medium text-gray-700">
+                  {displayPhoneCode}
                 </span>
                 <ChevronDown className="ml-1 h-3 w-3 text-gray-400 flex-shrink-0" />
               </button>
-
-              {isDropdownOpen && countries && countries.length > 0 && (
-                <div className="absolute top-full left-0 z-50 w-64 mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
-                  <div className="p-2 border-b border-gray-200">
-                    <input
-                      ref={searchInputRef}
-                      type="text"
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
-                      placeholder="Search countries..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      autoComplete="off"
-                    />
-                  </div>
-                  <div className="max-h-48 overflow-y-auto p-1">
-                    {getFilteredCountries(countries || [], searchQuery).map((country, index) => {
-                      const isCommon = COMMON_COUNTRIES.includes(country.code);
-                      const isFirstOther = !isCommon && index > 0 && COMMON_COUNTRIES.includes(getFilteredCountries(countries || [], searchQuery)[index - 1]?.code);
-
-                      return (
-                        <div key={country.code}>
-                          {isFirstOther && (
-                            <div className="px-3 py-1 text-xs font-medium text-gray-500 bg-gray-50 border-t border-gray-200">
-                              Other Countries
-                            </div>
-                          )}
-                          <button
-                            type="button"
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none flex items-center justify-between rounded"
-                            onClick={() => handleCountrySelect(country)}
-                          >
-                            <span className="flex-1 truncate text-gray-800">{country.name}</span>
-                            <span className="text-gray-600 font-mono text-sm ml-2">{country.phone_code}</span>
-                          </button>
-                        </div>
-                      );
-                    })}
-                    {getFilteredCountries(countries || [], searchQuery).length === 0 && (
-                      <div className="px-3 py-4 text-sm text-gray-500 text-center">
-                        No countries found
-                      </div>
-                    )}
-                  </div>
+            </PopoverTrigger>
+            {countries && countries.length > 0 && (
+              <PopoverContent
+                side="bottom"
+                align="start"
+                sideOffset={6}
+                className="w-64 p-0"
+              >
+                <div className="border-b border-gray-200 p-2">
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))]"
+                    placeholder="Search countries..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    autoComplete="off"
+                  />
                 </div>
-              )}
-          </div>
+                <div className="max-h-48 overflow-y-auto p-1">
+                  {filteredCountries.map((country, index) => {
+                    const isCommon = COMMON_COUNTRIES.includes(country.code);
+                    const previousCountry = filteredCountries[index - 1];
+                    const isFirstOther = !isCommon && index > 0 && previousCountry && COMMON_COUNTRIES.includes(previousCountry.code);
+
+                    return (
+                      <div key={country.code}>
+                        {isFirstOther && (
+                          <div className="border-t border-gray-200 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-500">
+                            Other Countries
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          className="flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                          onClick={() => handleCountrySelect(country)}
+                        >
+                          <span className="flex-1 truncate text-gray-800">{country.name}</span>
+                          <span className="ml-2 font-mono text-sm text-gray-600">{country.phone_code}</span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                  {filteredCountries.length === 0 && (
+                    <div className="px-3 py-4 text-center text-sm text-gray-500">
+                      No countries found
+                    </div>
+                  )}
+                </div>
+              </PopoverContent>
+            )}
+          </Popover>
 
           {/* Phone Number Input */}
           <Input

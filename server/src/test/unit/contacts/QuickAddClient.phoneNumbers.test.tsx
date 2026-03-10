@@ -140,7 +140,10 @@ describe('QuickAddClient normalized contact phone numbers', () => {
     await user.type(document.getElementById('contact-name') as HTMLInputElement, 'Alex Contact');
     await user.type(document.getElementById('client-contact-email') as HTMLInputElement, 'alex@acme.com');
 
-    await user.click(document.getElementById('client-contact-phone-add-phone') as HTMLButtonElement);
+    await waitFor(() => {
+      expect(screen.getAllByLabelText('Phone Number')).toHaveLength(1);
+    });
+
     await user.click(document.getElementById('client-contact-phone-add-phone') as HTMLButtonElement);
 
     await waitFor(() => {

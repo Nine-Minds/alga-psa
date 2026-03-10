@@ -479,6 +479,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
                 }}
                 countries={countries}
                 customTypeSuggestions={customPhoneTypeSuggestions}
+                allowEmpty={false}
                 errorMessages={hasAttemptedSubmit ? phoneValidationErrors : undefined}
                 onValidationChange={setPhoneValidationErrors}
               />

@@ -1028,6 +1028,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
                     countries={countries}
                     customTypeSuggestions={customPhoneTypeSuggestions}
                     disabled={isSubmitting}
+                    allowEmpty={false}
                     errorMessages={hasAttemptedSubmit ? contactPhoneValidationErrors : undefined}
                     onValidationChange={setContactPhoneValidationErrors}
                   />
