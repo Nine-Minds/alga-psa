@@ -27,6 +27,9 @@ const getXeroOAuthScopesMock = vi.hoisted(() => vi.fn(() => [
 ]));
 const xeroCreateMock = vi.hoisted(() => vi.fn(async () => ({})));
 const revalidatePathMock = vi.hoisted(() => vi.fn());
+const loggerInfoMock = vi.hoisted(() => vi.fn());
+const loggerWarnMock = vi.hoisted(() => vi.fn());
+const loggerErrorMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth:
@@ -37,6 +40,14 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: hasPermissionMock
+}));
+
+vi.mock('@alga-psa/core/logger', () => ({
+  default: {
+    info: loggerInfoMock,
+    warn: loggerWarnMock,
+    error: loggerErrorMock
+  }
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
@@ -65,7 +76,11 @@ vi.mock('../../lib/xero/xeroClientService', () => ({
 
 import {
   disconnectXero,
+  getXeroAccounts,
+  getXeroItems,
   getXeroConnectionStatus,
+  getXeroTaxRates,
+  getXeroTrackingCategories,
   saveXeroCredentials
 } from './xeroActions';
 
@@ -176,6 +191,93 @@ describe('Xero integration actions', () => {
     expect(tenantSecrets.get('tenant-1:xero_client_secret')).toBe('client-secret');
   });
 
+  it('T016: status and catalog actions use the stored default Xero connection after tenant-owned credentials are configured', async () => {
+    tenantSecrets.set('tenant-1:xero_client_id', 'client-id');
+    tenantSecrets.set('tenant-1:xero_client_secret', 'client-secret');
+    getXeroConnectionSummariesMock.mockResolvedValue([
+      {
+        connectionId: 'connection-1',
+        xeroTenantId: 'tenant-guid-1',
+        tenantName: 'Acme Holdings',
+        status: 'connected'
+      },
+      {
+        connectionId: 'connection-2',
+        xeroTenantId: 'tenant-guid-2',
+        tenantName: 'Backup Org',
+        status: 'connected'
+      }
+    ] as any);
+
+    xeroCreateMock.mockResolvedValue({
+      listAccounts: vi.fn(async () => [
+        { accountId: 'account-1', name: 'Sales', code: '200', type: 'REVENUE' }
+      ]),
+      listItems: vi.fn(async () => [
+        { itemId: 'item-1', name: 'Managed Backup', code: 'MB-1', status: 'ACTIVE' }
+      ]),
+      listTaxRates: vi.fn(async () => [
+        {
+          taxRateId: 'tax-1',
+          name: 'GST',
+          taxType: 'OUTPUT',
+          effectiveRate: 15,
+          components: [{ name: 'GST', rate: 15 }],
+          status: 'ACTIVE'
+        }
+      ]),
+      listTrackingCategories: vi.fn(async () => [
+        {
+          trackingCategoryId: 'tracking-1',
+          name: 'Region',
+          status: 'ACTIVE',
+          options: [{ trackingOptionId: 'north', name: 'North', status: 'ACTIVE' }]
+        }
+      ])
+    });
+
+    const status = await getXeroConnectionStatus();
+    const accounts = await getXeroAccounts();
+    const items = await getXeroItems();
+    const taxRates = await getXeroTaxRates();
+    const trackingCategories = await getXeroTrackingCategories();
+
+    expect(status.connected).toBe(true);
+    expect(status.defaultConnectionId).toBe('connection-1');
+    expect(status.defaultConnection?.tenantName).toBe('Acme Holdings');
+
+    expect(accounts).toEqual([
+      { id: 'account-1', name: 'Sales', code: '200', type: 'REVENUE' }
+    ]);
+    expect(items).toEqual([
+      { id: 'item-1', name: 'Managed Backup', code: 'MB-1', status: 'ACTIVE' }
+    ]);
+    expect(taxRates).toEqual([
+      {
+        id: 'tax-1',
+        name: 'GST',
+        taxType: 'OUTPUT',
+        effectiveRate: 15,
+        components: [{ name: 'GST', rate: 15 }],
+        status: 'ACTIVE'
+      }
+    ]);
+    expect(trackingCategories).toEqual([
+      {
+        id: 'tracking-1',
+        name: 'Region',
+        status: 'ACTIVE',
+        options: [{ id: 'north', name: 'North', status: 'ACTIVE' }]
+      }
+    ]);
+
+    expect(xeroCreateMock).toHaveBeenNthCalledWith(1, 'tenant-1', 'connection-1');
+    expect(xeroCreateMock).toHaveBeenNthCalledWith(2, 'tenant-1', null);
+    expect(xeroCreateMock).toHaveBeenNthCalledWith(3, 'tenant-1', null);
+    expect(xeroCreateMock).toHaveBeenNthCalledWith(4, 'tenant-1', null);
+    expect(xeroCreateMock).toHaveBeenNthCalledWith(5, 'tenant-1', null);
+  });
+
   it('T024/T030: non-enterprise save attempts are rejected before writing secrets', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'community';
     process.env.EDITION = 'ce';
@@ -190,6 +292,46 @@ describe('Xero integration actions', () => {
       error: 'Xero integration is only available in Enterprise Edition.'
     });
     expect(setTenantSecretMock).not.toHaveBeenCalled();
+  });
+
+  it('T025: non-enterprise disconnect attempts are rejected server-side', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'community';
+    process.env.EDITION = 'ce';
+
+    const result = await disconnectXero();
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Xero integration is only available in Enterprise Edition.'
+    });
+    expect(deleteTenantSecretMock).not.toHaveBeenCalled();
+  });
+
+  it('T031/T032/T033: tenant-scoped saves stay isolated and save logs include tenant context without secret values', async () => {
+    tenantSecrets.set('tenant-1:xero_client_id', 'tenant-1-client');
+    tenantSecrets.set('tenant-1:xero_client_secret', 'tenant-1-secret');
+    mockCtx = { tenant: 'tenant-2' };
+
+    const result = await saveXeroCredentials({
+      clientId: 'tenant-2-client',
+      clientSecret: 'tenant-2-secret'
+    });
+
+    expect(result).toEqual({ success: true });
+    expect(tenantSecrets.get('tenant-1:xero_client_id')).toBe('tenant-1-client');
+    expect(tenantSecrets.get('tenant-1:xero_client_secret')).toBe('tenant-1-secret');
+    expect(tenantSecrets.get('tenant-2:xero_client_id')).toBe('tenant-2-client');
+    expect(tenantSecrets.get('tenant-2:xero_client_secret')).toBe('tenant-2-secret');
+    expect(loggerInfoMock).toHaveBeenCalledWith(
+      '[xeroActions] Saved tenant-owned Xero OAuth credentials',
+      {
+        tenantId: 'tenant-2',
+        clientIdConfigured: true,
+        clientSecretConfigured: true
+      }
+    );
+    expect(JSON.stringify(loggerInfoMock.mock.calls)).not.toContain('tenant-2-secret');
+    expect(JSON.stringify(loggerInfoMock.mock.calls)).not.toContain('tenant-1-secret');
   });
 
   it('T029/T030: billing permission is required for status and save/disconnect writes', async () => {

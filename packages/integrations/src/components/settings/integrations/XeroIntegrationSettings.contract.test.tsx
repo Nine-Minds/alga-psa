@@ -15,6 +15,12 @@ vi.mock('next/navigation', () => ({
   useSearchParams: useSearchParamsMock
 }));
 
+vi.mock('../../xero/XeroLiveMappingManager', () => ({
+  XeroLiveMappingManager: ({ defaultConnection }: { defaultConnection: { connectionId: string } }) => (
+    <div data-testid="xero-live-mapping-manager">{defaultConnection.connectionId}</div>
+  )
+}));
+
 vi.mock('@alga-psa/integrations/actions', () => ({
   getXeroConnectionStatus: (...args: unknown[]) => getXeroConnectionStatusMock(...args),
   saveXeroCredentials: (...args: unknown[]) => saveXeroCredentialsMock(...args),
@@ -84,5 +90,163 @@ describe('XeroIntegrationSettings contracts', () => {
 
     expect((await screen.findAllByText('Xero CSV remains available')).length).toBeGreaterThan(0);
     expect(screen.getByText(/Billing → Accounting Exports/)).toBeInTheDocument();
+  });
+
+  it('T021: renders the live Xero mapping area only when a default connected organisation exists', async () => {
+    getXeroConnectionStatusMock.mockResolvedValueOnce({
+      connections: [
+        {
+          connectionId: 'connection-1',
+          xeroTenantId: 'xero-tenant-1',
+          tenantName: 'Acme Holdings',
+          status: 'connected'
+        }
+      ],
+      connected: true,
+      defaultConnectionId: 'connection-1',
+      defaultConnection: {
+        connectionId: 'connection-1',
+        xeroTenantId: 'xero-tenant-1',
+        tenantName: 'Acme Holdings',
+        status: 'connected'
+      },
+      redirectUri: 'https://example.com/api/integrations/xero/callback',
+      scopes: [
+        'offline_access',
+        'accounting.settings',
+        'accounting.transactions',
+        'accounting.contacts'
+      ],
+      credentials: {
+        clientIdConfigured: true,
+        clientSecretConfigured: true,
+        ready: true
+      }
+    });
+
+    const { default: XeroIntegrationSettings } = await import('./XeroIntegrationSettings');
+
+    render(<XeroIntegrationSettings />);
+
+    expect(await screen.findByTestId('xero-live-mapping-manager')).toHaveTextContent('connection-1');
+    expect(screen.getByText('Live Xero Mapping & Configuration')).toBeInTheDocument();
+
+    cleanup();
+
+    getXeroConnectionStatusMock.mockResolvedValueOnce({
+      connections: [],
+      connected: false,
+      defaultConnectionId: undefined,
+      defaultConnection: undefined,
+      redirectUri: 'https://example.com/api/integrations/xero/callback',
+      scopes: [
+        'offline_access',
+        'accounting.settings',
+        'accounting.transactions',
+        'accounting.contacts'
+      ],
+      credentials: {
+        clientIdConfigured: true,
+        clientSecretConfigured: true,
+        ready: true
+      }
+    });
+
+    render(<XeroIntegrationSettings />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('xero-live-mapping-manager')).not.toBeInTheDocument();
+    });
+    expect(screen.getByText(/Connect a live Xero organisation before configuring live Xero item and tax mappings/)).toBeInTheDocument();
+  });
+
+  it('T026: uses the first default Xero connection for the mapping context without rendering an org picker', async () => {
+    getXeroConnectionStatusMock.mockResolvedValueOnce({
+      connections: [
+        {
+          connectionId: 'connection-1',
+          xeroTenantId: 'xero-tenant-1',
+          tenantName: 'Acme Holdings',
+          status: 'connected'
+        },
+        {
+          connectionId: 'connection-2',
+          xeroTenantId: 'xero-tenant-2',
+          tenantName: 'Backup Org',
+          status: 'connected'
+        }
+      ],
+      connected: true,
+      defaultConnectionId: 'connection-1',
+      defaultConnection: {
+        connectionId: 'connection-1',
+        xeroTenantId: 'xero-tenant-1',
+        tenantName: 'Acme Holdings',
+        status: 'connected'
+      },
+      redirectUri: 'https://example.com/api/integrations/xero/callback',
+      scopes: [
+        'offline_access',
+        'accounting.settings',
+        'accounting.transactions',
+        'accounting.contacts'
+      ],
+      credentials: {
+        clientIdConfigured: true,
+        clientSecretConfigured: true,
+        ready: true
+      }
+    });
+
+    const { default: XeroIntegrationSettings } = await import('./XeroIntegrationSettings');
+
+    render(<XeroIntegrationSettings />);
+
+    expect(await screen.findByTestId('xero-live-mapping-manager')).toHaveTextContent('connection-1');
+    expect(screen.getAllByText('Acme Holdings').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Select organisation')).not.toBeInTheDocument();
+  });
+
+  it('T028: surfaces the expired default-connection error state when the stored Xero connection cannot authenticate', async () => {
+    getXeroConnectionStatusMock.mockResolvedValueOnce({
+      connections: [
+        {
+          connectionId: 'connection-1',
+          xeroTenantId: 'xero-tenant-1',
+          tenantName: 'Acme Holdings',
+          status: 'expired'
+        }
+      ],
+      connected: false,
+      defaultConnectionId: 'connection-1',
+      defaultConnection: {
+        connectionId: 'connection-1',
+        xeroTenantId: 'xero-tenant-1',
+        tenantName: 'Acme Holdings',
+        status: 'expired'
+      },
+      redirectUri: 'https://example.com/api/integrations/xero/callback',
+      scopes: [
+        'offline_access',
+        'accounting.settings',
+        'accounting.transactions',
+        'accounting.contacts'
+      ],
+      credentials: {
+        clientIdConfigured: true,
+        clientSecretConfigured: true,
+        ready: true
+      },
+      error: 'Your default Xero connection has expired. Disconnect and reconnect Xero to continue.'
+    });
+
+    const { default: XeroIntegrationSettings } = await import('./XeroIntegrationSettings');
+
+    render(<XeroIntegrationSettings />);
+
+    expect(
+      await screen.findByText('Your default Xero connection has expired. Disconnect and reconnect Xero to continue.')
+    ).toBeInTheDocument();
+    expect(screen.getAllByText('Connection Expired').length).toBeGreaterThan(0);
   });
 });

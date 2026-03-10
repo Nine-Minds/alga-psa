@@ -74,31 +74,31 @@
   {
     "id": "F013",
     "description": "Existing Xero status/catalog server actions continue to work after tenant-owned credential resolution and use the stored default connection automatically.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Data / API / Integrations"]
   },
   {
     "id": "F014",
     "description": "Existing live Xero invoice export flow via `XeroAdapter` continues to work using tenant-owned credentials and the stored default connection.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F015",
     "description": "Existing live Xero company/contact sync flow continues to work using tenant-owned credentials and the stored default connection.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F016",
     "description": "Implement live Xero mapping modules for the shared accounting mapping manager using the default Xero connection as realm context for accounts, items, tax rates, and tracking categories.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F017",
     "description": "Render a live Xero mapping/configuration area inside the Xero settings screen using the default connected Xero organization context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Acceptance Criteria (Definition of Done)"]
   },
   {
@@ -110,7 +110,7 @@
   {
     "id": "F019",
     "description": "The existing `Xero CSV` settings screen and CSV billing workflows remain available and behaviorally unchanged alongside the live Xero path.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Non-goals", "Acceptance Criteria (Definition of Done)"]
   },
   {

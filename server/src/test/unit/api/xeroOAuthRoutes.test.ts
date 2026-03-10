@@ -10,6 +10,9 @@ const upsertStoredXeroConnectionsMock = vi.hoisted(() => vi.fn());
 const getSecretProviderInstanceMock = vi.hoisted(() => vi.fn());
 const axiosPostMock = vi.hoisted(() => vi.fn());
 const axiosGetMock = vi.hoisted(() => vi.fn());
+const loggerInfoMock = vi.hoisted(() => vi.fn());
+const loggerWarnMock = vi.hoisted(() => vi.fn());
+const loggerErrorMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@alga-psa/auth', () => ({
   getSession: getSessionMock
@@ -25,6 +28,14 @@ vi.mock('@alga-psa/db', () => ({
 
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: getSecretProviderInstanceMock
+}));
+
+vi.mock('@alga-psa/core/logger', () => ({
+  default: {
+    info: loggerInfoMock,
+    warn: loggerWarnMock,
+    error: loggerErrorMock
+  }
 }));
 
 vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
@@ -106,7 +117,22 @@ describe('Xero OAuth routes', () => {
     }
   });
 
-  it('T010/T025: connect route rejects non-enterprise requests before starting OAuth', async () => {
+  it('T010: connect route returns a configuration error when neither tenant-owned nor fallback credentials are available', async () => {
+    resolveXeroOAuthCredentialsMock.mockRejectedValueOnce(
+      new Error('Xero client credentials are not configured for this tenant or the application fallback.')
+    );
+
+    const { GET } = await import('@/app/api/integrations/xero/connect/route');
+
+    const response = await GET();
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: 'Xero client credentials are not configured for this tenant or the application fallback.'
+    });
+  });
+
+  it('T025: connect route rejects non-enterprise requests before starting OAuth', async () => {
     process.env.EDITION = 'ce';
     process.env.NEXT_PUBLIC_EDITION = 'community';
 
@@ -120,7 +146,7 @@ describe('Xero OAuth routes', () => {
     });
   });
 
-  it('T011: connect route uses tenant-owned Xero credentials when tenant and app credentials both exist', async () => {
+  it('T011/T032/T033: connect route uses tenant-owned credentials and logs tenant context plus credential source without secret values', async () => {
     const { GET } = await import('@/app/api/integrations/xero/connect/route');
 
     const response = await GET();
@@ -134,6 +160,11 @@ describe('Xero OAuth routes', () => {
     expect(location).toContain(
       encodeURIComponent('https://example.com/api/integrations/xero/callback')
     );
+    expect(loggerInfoMock).toHaveBeenCalledWith('[xeroOAuth] Starting Xero OAuth connect flow', {
+      tenantId: 'tenant-1',
+      credentialSource: 'tenant'
+    });
+    expect(JSON.stringify(loggerInfoMock.mock.calls)).not.toContain('tenant-client-secret');
   });
 
   it('T012: callback exchanges the code with tenant-owned credentials and persists returned Xero connections', async () => {

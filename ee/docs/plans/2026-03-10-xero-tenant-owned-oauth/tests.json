@@ -56,7 +56,7 @@
   {
     "id": "T010",
     "description": "The Xero connect route returns a configuration error when neither tenant-owned nor fallback app-level credentials are available.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009", "F023"]
   },
   {
@@ -92,37 +92,37 @@
   {
     "id": "T016",
     "description": "Existing Xero connection status/catalog actions still return data after tenant-owned credentials are configured and a default connection exists.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013", "F022"]
   },
   {
     "id": "T017",
     "description": "DB-backed integration: a live Xero accounting export batch succeeds using tenant-owned credentials and the stored default connection context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014", "F022"]
   },
   {
     "id": "T018",
     "description": "DB-backed integration: a live Xero accounting export batch fails with a clear guard error when no stored default Xero connection exists.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014", "F023"]
   },
   {
     "id": "T019",
     "description": "DB-backed integration: live Xero company/contact sync resolves the default connection and uses tenant-owned credentials successfully.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015", "F022"]
   },
   {
     "id": "T020",
     "description": "Live Xero mapping modules load accounts, items, tax rates, and tracking categories using the default Xero connection as realm context.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F022"]
   },
   {
     "id": "T021",
     "description": "The Xero settings screen renders the live Xero mapping/configuration area only when a default connected Xero organization is available.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017", "F023"]
   },
   {
@@ -134,7 +134,7 @@
   {
     "id": "T023",
     "description": "Existing `Xero CSV` settings and billing export flows still render and behave as before after live Xero is re-enabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {
@@ -146,13 +146,13 @@
   {
     "id": "T025",
     "description": "Non-Enterprise attempts to hit Xero connect/disconnect entry points are rejected server-side.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {
     "id": "T026",
     "description": "When multiple Xero connections are stored, the first/prioritized connection is surfaced as default and used for status and mapping context without showing an org picker.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
@@ -164,7 +164,7 @@
   {
     "id": "T028",
     "description": "The Xero settings screen surfaces a clear expired/default-connection-invalid error state when the stored default connection cannot authenticate.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   },
   {
@@ -182,19 +182,19 @@
   {
     "id": "T031",
     "description": "Tenant-scoped Xero settings reads and writes do not leak or overwrite another tenant’s Xero secrets or token payloads.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024", "F025"]
   },
   {
     "id": "T032",
     "description": "Server/browser responses and logs never include raw Xero client secrets or raw `xero_credentials` token payloads.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025", "F026"]
   },
   {
     "id": "T033",
     "description": "Server logs for Xero settings save/connect flows include tenant context and credential source selection without logging secret values.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F026"]
   }
 ]

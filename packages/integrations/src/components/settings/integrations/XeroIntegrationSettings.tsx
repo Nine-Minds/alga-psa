@@ -15,6 +15,7 @@ import {
   getXeroConnectionStatus,
   saveXeroCredentials
 } from '@alga-psa/integrations/actions';
+import { XeroLiveMappingManager } from '../../xero/XeroLiveMappingManager';
 
 type XeroStatus = Awaited<ReturnType<typeof getXeroConnectionStatus>>;
 
@@ -366,6 +367,42 @@ export default function XeroIntegrationSettings() {
           </div>
         </CardFooter>
       </Card>
+
+      {defaultConnection ? (
+        <Card id="xero-integration-mapping-card">
+          <CardHeader>
+            <CardTitle>Live Xero Mapping &amp; Configuration</CardTitle>
+            <CardDescription>
+              Configure live Xero mappings for the default connected organisation. These mappings are scoped to{' '}
+              <strong>{defaultConnection.tenantName || defaultConnection.xeroTenantId}</strong>.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert variant="info">
+              <AlertDescription>
+                Xero items, revenue accounts, tax rates, and tracking categories are loaded from the default connected organisation so live exports can keep using the first stored Xero connection in v1.
+              </AlertDescription>
+            </Alert>
+            <XeroLiveMappingManager defaultConnection={defaultConnection} />
+          </CardContent>
+        </Card>
+      ) : (
+        <Card id="xero-integration-mapping-placeholder-card">
+          <CardHeader>
+            <CardTitle>Live Xero Mapping &amp; Configuration</CardTitle>
+            <CardDescription>
+              Connect a live Xero organisation before configuring live Xero item and tax mappings.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Alert variant="info">
+              <AlertDescription>
+                The mapping manager becomes available after the first Xero organisation is connected and set as the default live Xero context.
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
