@@ -54,6 +54,10 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
 - (2026-03-09) Latest validator result:
   - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-03-09-calendar-sync-enterprise-migration-and-microsoft-profile-explicit-bindings`
   - Result: valid (`216` features, `432` tests)
+- (2026-03-09) Focused implementation checks for the calendar visibility slice:
+  - `pnpm vitest run --coverage.enabled=false src/test/unit/components/integrations/IntegrationsSettingsPage.calendar.test.tsx src/test/unit/components/profile/UserProfile.calendar.contract.test.ts ../packages/integrations/src/lib/calendarAvailability.test.ts`
+  - `pnpm vitest run --coverage.enabled=false src/test/unit/components/integrations/IntegrationsSettingsPage.teams.test.tsx`
+  - `pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
 
 ## Links / References
 
@@ -99,6 +103,13 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
   - `server/src/app/api/auth/microsoft/calendar/callback/route.ts`
   - `server/src/app/api/calendar/webhooks/google/route.ts`
   - `server/src/app/api/calendar/webhooks/microsoft/route.ts`
+- Calendar UI visibility and EE-entry helpers added for the first migration slice:
+  - `packages/integrations/src/lib/calendarAvailability.ts`
+  - `packages/integrations/src/components/settings/integrations/CalendarEnterpriseIntegrationSettings.tsx`
+  - `packages/ee/src/components/settings/integrations/CalendarIntegrationsSettings.tsx`
+  - `ee/server/src/components/settings/integrations/CalendarIntegrationsSettings.tsx`
+  - `packages/ee/src/components/settings/profile/CalendarProfileSettings.tsx`
+  - `ee/server/src/components/settings/profile/CalendarProfileSettings.tsx`
 - Shared actions and runtime code that currently own live behavior:
   - `packages/integrations/src/actions/calendarActions.ts`
   - `packages/integrations/src/services/calendar/CalendarProviderService.ts`
@@ -177,3 +188,12 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
 - (2026-03-09) Strengthened the PRD with explicit continuation references to the 2026-03-07 Microsoft/Teams plan and the 2026-03-08 Teams EE-only migration plan.
 - (2026-03-09) Added calendar and Microsoft edition-contract matrices, CE stub/EE delegation rules, stable route commitments, intentional deletions, and a final acceptance matrix.
 - (2026-03-09) Expanded the scratchpad with file inventories, focused validation suites, unsupported-edge-state notes, and CE/EE/regression review checklists so the migration can proceed without reopening scope discovery.
+- (2026-03-09) Implemented the first calendar UI ownership slice:
+  - added `calendarAvailability.ts` as the shared edition-aware source for Calendar category/tab visibility and fallback resolution,
+  - moved settings Calendar rendering behind `CalendarEnterpriseIntegrationSettings`,
+  - moved profile Calendar rendering behind `@enterprise/components/settings/profile/CalendarProfileSettings`,
+  - removed CE Calendar discovery from settings navigation and profile tabs while preserving EE deep-link behavior.
+- (2026-03-09) Added focused tests for CE/EE Calendar visibility:
+  - helper tests for category/tab resolution,
+  - `IntegrationsSettingsPage.calendar.test.tsx` for CE hiding and EE visibility/provider copy,
+  - `UserProfile.calendar.contract.test.ts` for the profile EE wrapper boundary.

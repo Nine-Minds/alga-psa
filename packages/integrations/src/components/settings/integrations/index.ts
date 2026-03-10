@@ -1,4 +1,5 @@
 export { default as AccountingIntegrationsSetup } from './AccountingIntegrationsSetup';
+export { CalendarEnterpriseIntegrationSettings } from './CalendarEnterpriseIntegrationSettings';
 export { default as CSVIntegrationSettings } from './CSVIntegrationSettings';
 export { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
 export { default as IntegrationsSettingsPage } from './IntegrationsSettingsPage';

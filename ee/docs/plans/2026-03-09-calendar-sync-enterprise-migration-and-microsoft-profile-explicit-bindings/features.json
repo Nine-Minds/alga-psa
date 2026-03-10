@@ -266,7 +266,7 @@
   {
     "id": "F025",
     "description": "The Integrations settings page no longer shows a Calendar category in CE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -275,7 +275,7 @@
   {
     "id": "F026",
     "description": "The Integrations settings page continues to show a Calendar category in EE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -284,7 +284,7 @@
   {
     "id": "F027",
     "description": "The shared Integrations settings composition stops rendering a live calendar configuration component in CE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -293,7 +293,7 @@
   {
     "id": "F028",
     "description": "The shared Integrations settings composition renders calendar through an EE entrypoint or stubbed wrapper pattern.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -302,7 +302,7 @@
   {
     "id": "F029",
     "description": "The Calendar category description and copy are updated to match the EE-only ownership model.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -311,7 +311,7 @@
   {
     "id": "F030",
     "description": "The Calendar settings component is re-homed behind an enterprise entry component rather than a shared direct import.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -320,7 +320,7 @@
   {
     "id": "F031",
     "description": "The Calendar settings component follows the same lazy-load or modular entry pattern used by other EE settings surfaces where appropriate.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -329,7 +329,7 @@
   {
     "id": "F032",
     "description": "CE requests that specify the Calendar category fall back safely to an available category instead of leaving a broken tab state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -338,7 +338,7 @@
   {
     "id": "F033",
     "description": "The selected-category URL handling tolerates the absence of Calendar in CE without client-side errors.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -347,7 +347,7 @@
   {
     "id": "F034",
     "description": "No duplicate Calendar entry remains under Communication, Providers, or other shared settings categories.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -356,7 +356,7 @@
   {
     "id": "F035",
     "description": "Shared provider settings no longer link CE users toward Calendar setup flows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -365,7 +365,7 @@
   {
     "id": "F036",
     "description": "EE settings can still deep-link into Calendar setup from consumer-owned surfaces where needed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -374,7 +374,7 @@
   {
     "id": "F037",
     "description": "The user profile page no longer renders a Calendar tab in CE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -383,7 +383,7 @@
   {
     "id": "F038",
     "description": "The user profile page continues to render a Calendar tab in EE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -392,7 +392,7 @@
   {
     "id": "F039",
     "description": "CE profile tab routing ignores a Calendar tab query parameter safely and falls back to a valid tab.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -401,7 +401,7 @@
   {
     "id": "F040",
     "description": "EE profile tab routing preserves and restores the Calendar tab state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -419,7 +419,7 @@
   {
     "id": "F042",
     "description": "Calendar settings do not remain discoverable in CE through hidden cards, disabled shells, or stale navigation items.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -428,7 +428,7 @@
   {
     "id": "F043",
     "description": "Calendar settings continue to present the real configuration UX in EE rather than a placeholder shell.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -437,7 +437,7 @@
   {
     "id": "F044",
     "description": "The profile page does not expose a dead-end or nonfunctional Calendar tab in CE.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
@@ -446,7 +446,7 @@
   {
     "id": "F045",
     "description": "Settings and profile tests cover edition-specific visibility for calendar entrypoints.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements > Functional Requirements"
