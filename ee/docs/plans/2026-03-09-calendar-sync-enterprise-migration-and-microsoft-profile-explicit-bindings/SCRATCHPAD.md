@@ -385,3 +385,14 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
   - `server/src/test/unit/microsoft/microsoftConsumerSchema.contract.test.ts` locks in that wording so future migration edits do not reintroduce default-profile routing language.
 - (2026-03-09) Default-profile cleanup follow-up:
   - `packages/integrations/src/actions/integrations/microsoftActions.test.ts` now pins the CE status contract to `NEXT_PUBLIC_EDITION=community` so the MSP SSO-only assertions remain deterministic regardless of the outer test environment.
+- (2026-03-09) Added the remaining migration-regression coverage for fresh installs, existing calendar rows, and explicit-binding edge cases:
+  - `server/src/test/unit/calendar/calendarActions.ceBoundary.test.ts` now proves fresh/community installs still fail closed for both provider listing and direct sync attempts even when a calendar provider id is supplied,
+  - `server/src/test/unit/calendar/calendarActions.ee.contract.test.ts` and `server/src/test/unit/calendar/calendarActions.sync.test.ts` now lock in that fresh enterprise installs and existing provider rows continue through the EE-owned action/service path,
+  - `packages/integrations/src/actions/integrations/microsoftConsumerBindings.test.ts` now covers tenants with no Microsoft profiles, a single default profile plus legacy calendar usage, archived-profile binding guards, and invalid cross-tenant binding attempts,
+  - `packages/integrations/src/lib/microsoftConsumerProfileResolution.test.ts` keeps the archived/missing-credential runtime failure path explicit.
+- (2026-03-09) Added cleanup contracts for the last remaining unchecked migration items:
+  - `server/src/test/unit/calendar/calendarRuntimeOwnership.contract.test.ts` now ties the shared Microsoft binding-schema wording to the EE-owned calendar runtime tree,
+  - `server/src/test/unit/components/integrations/IntegrationsSettingsPage.calendar.test.tsx` now carries the explicit replacement coverage for the old CE-calendar-visible expectations.
+- (2026-03-09) Migration-regression validation commands for the final unchecked calendar/binding items:
+  - `cd server && pnpm vitest run --config vitest.config.ts ../packages/integrations/src/actions/integrations/microsoftConsumerBindings.test.ts ../packages/integrations/src/lib/microsoftConsumerProfileResolution.test.ts src/test/unit/calendar/calendarActions.ceBoundary.test.ts src/test/unit/calendar/calendarActions.ee.contract.test.ts src/test/unit/calendar/calendarActions.sync.test.ts src/test/unit/calendar/calendarRuntimeOwnership.contract.test.ts src/test/unit/components/integrations/IntegrationsSettingsPage.calendar.test.tsx`
+  - `cd server && pnpm exec tsc -p tsconfig.json --noEmit --pretty false`

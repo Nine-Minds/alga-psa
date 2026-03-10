@@ -94,7 +94,7 @@ describe('syncCalendarProvider manual flows', () => {
     mockRunWithTenant.mockImplementation((_tenant: string, cb: () => Promise<any>) => cb());
   });
 
-  it('pushes schedule entries to external provider and pulls external changes', async () => {
+  it('T363/T364: EE-owned sync flows continue to operate against existing calendar provider rows after the ownership move', async () => {
     setupKnex([{ schedule_entry_id: 'entry-1', external_event_id: 'ext-1' }]);
 
     mockGetProvider.mockResolvedValue({

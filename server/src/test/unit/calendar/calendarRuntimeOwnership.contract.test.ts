@@ -3,8 +3,16 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 describe('calendar runtime ownership contracts', () => {
-  it('retargets EE entrypoints to the EE-owned calendar service tree', () => {
+  it('T383/T384: retargets calendar runtime entrypoints to the EE-owned service tree while Microsoft binding schema stays shared', () => {
     const serverRoot = process.cwd();
+    const profilesMigrationSource = fs.readFileSync(
+      path.join(serverRoot, 'migrations/20260307120000_create_microsoft_profiles.cjs'),
+      'utf8'
+    );
+    const bindingsMigrationSource = fs.readFileSync(
+      path.join(serverRoot, 'migrations/20260307143000_create_microsoft_profile_consumer_bindings.cjs'),
+      'utf8'
+    );
 
     const eeActionSource = fs.readFileSync(
       path.join(serverRoot, '../packages/ee/src/lib/actions/integrations/calendarActions.ts'),
@@ -34,6 +42,9 @@ describe('calendar runtime ownership contracts', () => {
       path.join(serverRoot, '../ee/server/src/app/api/calendar/webhooks/microsoft/route.ts'),
       'utf8'
     );
+
+    expect(profilesMigrationSource).toContain('microsoft_profile_consumer_bindings');
+    expect(bindingsMigrationSource).toContain('explicit binding row');
 
     expect(eeActionSource).toContain('@enterprise/lib/services/calendar/CalendarProviderService');
     expect(eeActionSource).toContain('@enterprise/lib/services/calendar/CalendarSyncService');

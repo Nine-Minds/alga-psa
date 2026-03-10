@@ -31,7 +31,7 @@ describe('calendar action CE boundary', () => {
     }
   });
 
-  it('returns enterprise-only availability without invoking the EE action module in CE', async () => {
+  it('T359/T360: fresh CE calendar action wrappers stay unavailable without invoking EE modules', async () => {
     process.env.EDITION = 'ce';
 
     const eeGetProviders = vi.fn(async () => ({ success: true, providers: [] }));
@@ -48,5 +48,24 @@ describe('calendar action CE boundary', () => {
       error: 'Calendar sync is only available in Enterprise Edition.',
     });
     expect(eeGetProviders).not.toHaveBeenCalled();
+  });
+
+  it('T365/T366: CE sync requests for existing calendar provider ids fail closed before loading EE sync logic', async () => {
+    process.env.EDITION = 'ce';
+
+    const eeSyncProvider = vi.fn(async () => ({ success: true, started: true }));
+
+    vi.doMock('@enterprise/lib/actions/integrations/calendarActions', () => ({
+      syncCalendarProviderImpl: eeSyncProvider,
+    }));
+
+    const actionsModule = await import('@/lib/actions/calendarActions');
+    const result = await actionsModule.syncCalendarProvider('provider-1');
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Calendar sync is only available in Enterprise Edition.',
+    });
+    expect(eeSyncProvider).not.toHaveBeenCalled();
   });
 });

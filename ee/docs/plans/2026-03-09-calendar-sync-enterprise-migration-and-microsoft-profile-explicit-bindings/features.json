@@ -1792,7 +1792,7 @@
   {
     "id": "F180",
     "description": "A fresh CE install exposes no executable calendar feature surface even when shared schema objects exist.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Rollout / Migration",
@@ -1802,7 +1802,7 @@
   {
     "id": "F181",
     "description": "A fresh EE install exposes the calendar feature surface through EE-owned codepaths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Rollout / Migration",
@@ -1812,7 +1812,7 @@
   {
     "id": "F182",
     "description": "Existing calendar provider rows remain usable by EE after ownership moves behind EE boundaries.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Rollout / Migration",
@@ -1822,7 +1822,7 @@
   {
     "id": "F183",
     "description": "CE access to existing calendar provider rows cannot execute calendar synchronization behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Rollout / Migration",
@@ -1832,7 +1832,7 @@
   {
     "id": "F184",
     "description": "Migration tests cover tenants with no Microsoft profiles.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Rollout / Migration",
@@ -1842,7 +1842,7 @@
   {
     "id": "F185",
     "description": "Migration tests cover tenants with one default Microsoft profile and no binding rows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Rollout / Migration",
@@ -1852,7 +1852,7 @@
   {
     "id": "F186",
     "description": "Migration tests cover tenants with existing calendar providers that need explicit binding alignment.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Rollout / Migration",
@@ -1862,7 +1862,7 @@
   {
     "id": "F187",
     "description": "Migration tests cover tenants with archived Microsoft profiles.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Rollout / Migration",
@@ -1872,7 +1872,7 @@
   {
     "id": "F188",
     "description": "Migration tests cover invalid cross-tenant binding attempts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Rollout / Migration",
@@ -1912,7 +1912,7 @@
   {
     "id": "F192",
     "description": "Contract tests assert both the Microsoft binding schema contract and the EE ownership of calendar runtime paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Rollout / Migration",
@@ -1952,7 +1952,7 @@
   {
     "id": "F196",
     "description": "Old tests that asserted CE calendar presence are removed or replaced.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Acceptance Criteria (Definition of Done)",

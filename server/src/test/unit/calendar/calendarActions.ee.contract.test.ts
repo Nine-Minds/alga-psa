@@ -7,7 +7,7 @@ function repoPath(relativePath: string): string {
 }
 
 describe('calendar actions EE ownership', () => {
-  it('keeps shared calendar actions as availability-gated wrappers while EE owns the concrete provider and sync logic', () => {
+  it('T361/T362: shared calendar actions stay as EE-gated wrappers while fresh EE installs resolve concrete provider and sync logic through enterprise codepaths', () => {
     const sharedSource = fs.readFileSync(
       repoPath('packages/integrations/src/actions/calendarActions.ts'),
       'utf8'

@@ -115,7 +115,7 @@ describe('IntegrationsSettingsPage Calendar placement', () => {
     }
   });
 
-  it('hides the Calendar category in CE and falls calendar deep links back to Accounting', async () => {
+  it('T391/T392: replaces old CE calendar-visibility assertions with CE-hidden regression coverage', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'community';
     useSearchParamsMock.mockReturnValue({
       get: (key: string) => (key === 'category' ? 'calendar' : null),

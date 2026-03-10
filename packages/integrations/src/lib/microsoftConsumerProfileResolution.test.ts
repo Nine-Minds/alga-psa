@@ -252,7 +252,7 @@ describe('resolveMicrosoftConsumerProfileConfig', () => {
     });
   });
 
-  it('returns invalid_profile when the bound profile is archived or missing required credentials', async () => {
+  it('T373/T374: returns invalid_profile when the bound profile is archived or missing required credentials', async () => {
     hoisted.state.microsoftProfiles.push({
       tenant: 'tenant-3',
       profile_id: 'archived-profile',

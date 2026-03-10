@@ -2866,7 +2866,7 @@
   {
     "id": "T359",
     "description": "Happy path: A fresh CE install exposes no executable calendar feature surface even when shared schema objects exist.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F180"
     ]
@@ -2874,7 +2874,7 @@
   {
     "id": "T360",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for a fresh CE install exposes no executable calendar feature surface even when shared schema objects exist.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F180"
     ]
@@ -2882,7 +2882,7 @@
   {
     "id": "T361",
     "description": "Happy path: A fresh EE install exposes the calendar feature surface through EE-owned codepaths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F181"
     ]
@@ -2890,7 +2890,7 @@
   {
     "id": "T362",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for a fresh EE install exposes the calendar feature surface through EE-owned codepaths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F181"
     ]
@@ -2898,7 +2898,7 @@
   {
     "id": "T363",
     "description": "Happy path: Existing calendar provider rows remain usable by EE after ownership moves behind EE boundaries.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F182"
     ]
@@ -2906,7 +2906,7 @@
   {
     "id": "T364",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for existing calendar provider rows remain usable by EE after ownership moves behind EE boundaries.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F182"
     ]
@@ -2914,7 +2914,7 @@
   {
     "id": "T365",
     "description": "Happy path: CE access to existing calendar provider rows cannot execute calendar synchronization behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F183"
     ]
@@ -2922,7 +2922,7 @@
   {
     "id": "T366",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for cE access to existing calendar provider rows cannot execute calendar synchronization behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F183"
     ]
@@ -2930,7 +2930,7 @@
   {
     "id": "T367",
     "description": "Happy path: Migration tests cover tenants with no Microsoft profiles.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F184"
     ]
@@ -2938,7 +2938,7 @@
   {
     "id": "T368",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for migration tests cover tenants with no Microsoft profiles.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F184"
     ]
@@ -2946,7 +2946,7 @@
   {
     "id": "T369",
     "description": "Happy path: Migration tests cover tenants with one default Microsoft profile and no binding rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F185"
     ]
@@ -2954,7 +2954,7 @@
   {
     "id": "T370",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for migration tests cover tenants with one default Microsoft profile and no binding rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F185"
     ]
@@ -2962,7 +2962,7 @@
   {
     "id": "T371",
     "description": "Happy path: Migration tests cover tenants with existing calendar providers that need explicit binding alignment.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F186"
     ]
@@ -2970,7 +2970,7 @@
   {
     "id": "T372",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for migration tests cover tenants with existing calendar providers that need explicit binding alignment.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F186"
     ]
@@ -2978,7 +2978,7 @@
   {
     "id": "T373",
     "description": "Happy path: Migration tests cover tenants with archived Microsoft profiles.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F187"
     ]
@@ -2986,7 +2986,7 @@
   {
     "id": "T374",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for migration tests cover tenants with archived Microsoft profiles.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F187"
     ]
@@ -2994,7 +2994,7 @@
   {
     "id": "T375",
     "description": "Happy path: Migration tests cover invalid cross-tenant binding attempts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F188"
     ]
@@ -3002,7 +3002,7 @@
   {
     "id": "T376",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for migration tests cover invalid cross-tenant binding attempts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F188"
     ]
@@ -3058,7 +3058,7 @@
   {
     "id": "T383",
     "description": "Happy path: Contract tests assert both the Microsoft binding schema contract and the EE ownership of calendar runtime paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F192"
     ]
@@ -3066,7 +3066,7 @@
   {
     "id": "T384",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for contract tests assert both the Microsoft binding schema contract and the EE ownership of calendar runtime paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F192"
     ]
@@ -3122,7 +3122,7 @@
   {
     "id": "T391",
     "description": "Happy path: Old tests that asserted CE calendar presence are removed or replaced.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F196"
     ]
@@ -3130,7 +3130,7 @@
   {
     "id": "T392",
     "description": "Guard: tenant isolation, invalid configuration, permission checks, and edition boundaries are enforced for old tests that asserted CE calendar presence are removed or replaced.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F196"
     ]

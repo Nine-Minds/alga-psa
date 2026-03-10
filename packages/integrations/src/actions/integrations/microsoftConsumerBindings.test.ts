@@ -207,6 +207,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
+  getSecret: vi.fn(async () => null),
   getSecretProviderInstance: async () => ({
     getTenantSecret: hoisted.getTenantSecretMock,
     setTenantSecret: hoisted.setTenantSecretMock,
@@ -435,6 +436,91 @@ describe('Microsoft consumer binding actions', () => {
     });
   });
 
+  it('T367/T368: enterprise migration leaves tenants with no Microsoft profiles or legacy usage fully unbound and tenant-scoped', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+
+    hoisted.state.mockCtx = { tenant: 'tenant-2' };
+    await createMicrosoftProfile({
+      displayName: 'Other Tenant Profile',
+      clientId: 'tenant-two-client-id',
+      clientSecret: 'tenant-two-secret',
+      tenantId: 'tenant-two-guid',
+    });
+    calendarProviders.push({
+      id: 'calendar-provider-2',
+      tenant: 'tenant-2',
+      provider_type: 'microsoft',
+    });
+
+    hoisted.state.mockCtx = { tenant: 'tenant-1' };
+
+    const result = await listMicrosoftConsumerBindings();
+
+    expect(result.success).toBe(true);
+    expect(result.bindings).toEqual([
+      expect.objectContaining({ consumerType: 'msp_sso', profileId: null }),
+      expect.objectContaining({ consumerType: 'email', profileId: null }),
+      expect.objectContaining({ consumerType: 'calendar', profileId: null }),
+      expect.objectContaining({ consumerType: 'teams', profileId: null }),
+    ]);
+    expect(microsoftProfiles.filter((profile) => profile.tenant === 'tenant-1')).toEqual([]);
+    expect(microsoftConsumerBindings.filter((binding) => binding.tenant === 'tenant-1')).toEqual([]);
+    expect(microsoftConsumerBindings.filter((binding) => binding.tenant === 'tenant-2')).toEqual([]);
+  });
+
+  it('T369/T370/T371/T372: migration binds an existing default profile to legacy calendar usage without touching other consumers or tenants', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+
+    const primary = await createMicrosoftProfile({
+      displayName: 'Primary Profile',
+      clientId: 'primary-client-id',
+      clientSecret: 'primary-secret',
+      tenantId: 'tenant-guid-1',
+    });
+
+    hoisted.state.mockCtx = { tenant: 'tenant-2' };
+    await createMicrosoftProfile({
+      displayName: 'Other Tenant Profile',
+      clientId: 'tenant-two-client-id',
+      clientSecret: 'tenant-two-secret',
+      tenantId: 'tenant-two-guid',
+    });
+    calendarProviders.push({
+      id: 'calendar-provider-2',
+      tenant: 'tenant-2',
+      provider_type: 'microsoft',
+    });
+
+    hoisted.state.mockCtx = { tenant: 'tenant-1' };
+    calendarProviders.push({
+      id: 'calendar-provider-1',
+      tenant: 'tenant-1',
+      provider_type: 'microsoft',
+    });
+
+    const result = await listMicrosoftConsumerBindings();
+
+    expect(result.success).toBe(true);
+    expect(result.bindings).toEqual([
+      expect.objectContaining({ consumerType: 'msp_sso', profileId: null }),
+      expect.objectContaining({ consumerType: 'email', profileId: null }),
+      expect.objectContaining({
+        consumerType: 'calendar',
+        profileId: primary.profile!.profileId,
+        profileDisplayName: 'Primary Profile',
+      }),
+      expect.objectContaining({ consumerType: 'teams', profileId: null }),
+    ]);
+    expect(microsoftProfiles.filter((profile) => profile.tenant === 'tenant-1')).toHaveLength(1);
+    expect(microsoftConsumerBindings.filter((binding) => binding.tenant === 'tenant-1')).toEqual([
+      expect.objectContaining({
+        consumer_type: 'calendar',
+        profile_id: primary.profile!.profileId,
+      }),
+    ]);
+    expect(microsoftConsumerBindings.filter((binding) => binding.tenant === 'tenant-2')).toEqual([]);
+  });
+
   it('rejects EE-only binding writes in CE while keeping MSP SSO available', async () => {
     const created = await createMicrosoftProfile({
       displayName: 'Primary Profile',
@@ -535,7 +621,7 @@ describe('Microsoft consumer binding actions', () => {
     expect(resolvedTeams?.consumers).toEqual(['Teams']);
   });
 
-  it('rejects archived profiles and permission failures when saving bindings', async () => {
+  it('T373/T374: rejects archived profiles and permission failures when saving bindings', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
 
     const active = await createMicrosoftProfile({
@@ -575,6 +661,46 @@ describe('Microsoft consumer binding actions', () => {
     ).resolves.toEqual({
       success: false,
       error: 'Forbidden',
+    });
+  });
+
+  it('T375/T376: rejects cross-tenant binding writes during migration cleanup', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+
+    const tenantOne = await createMicrosoftProfile({
+      displayName: 'Tenant One Profile',
+      clientId: 'tenant-one-client-id',
+      clientSecret: 'tenant-one-secret',
+      tenantId: 'tenant-one-guid',
+    });
+
+    hoisted.state.mockCtx = { tenant: 'tenant-2' };
+    const tenantTwo = await createMicrosoftProfile({
+      displayName: 'Tenant Two Profile',
+      clientId: 'tenant-two-client-id',
+      clientSecret: 'tenant-two-secret',
+      tenantId: 'tenant-two-guid',
+    });
+
+    hoisted.state.mockCtx = { tenant: 'tenant-1' };
+    const result = await setMicrosoftConsumerBinding({
+      consumerType: 'calendar',
+      profileId: tenantTwo.profile!.profileId,
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Microsoft profile not found',
+    });
+    expect(await setMicrosoftConsumerBinding({
+      consumerType: 'calendar',
+      profileId: tenantOne.profile!.profileId,
+    })).toMatchObject({
+      success: true,
+      binding: {
+        consumerType: 'calendar',
+        profileDisplayName: 'Tenant One Profile',
+      },
     });
   });
 });
