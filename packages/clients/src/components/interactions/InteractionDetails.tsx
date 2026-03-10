@@ -12,9 +12,8 @@ import { useDrawer } from "@alga-psa/ui";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import ContactDetailsView from '@alga-psa/clients/components/contacts/ContactDetailsView';
 import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
-import AgentScheduleDrawer from '@alga-psa/tickets/components/ticket/AgentScheduleDrawer';
 import { Button } from '@alga-psa/ui/components/Button';
-import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
+import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import { QuickAddInteraction } from '@alga-psa/clients/components/interactions/QuickAddInteraction';
 import { getClientById, getAllClients } from '@alga-psa/clients/actions';
 import { getContactByContactNameId } from '@alga-psa/clients/actions';
@@ -50,7 +49,8 @@ const formatDuration = (totalMinutes: number): string => {
 const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: initialInteraction, onInteractionDeleted, onInteractionUpdated, isInDrawer = false }) => {
   const [interaction, setInteraction] = useState<IInteraction>(initialInteraction);
   const { openDrawer, goBack, closeDrawer } = useDrawer();
-  const { launchTimeEntry } = useSchedulingCallbacks();
+  const { launchTimeEntry, renderAgentSchedule } = useSchedulingCallbacks();
+  const { renderQuickAddTicket } = useClientCrossFeature();
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
   const [isEditInteractionOpen, setIsEditInteractionOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -205,9 +205,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
   const handleUserClick = () => {
     if (interaction.user_id) {
       openDrawer(
-        <AgentScheduleDrawer
-          agentId={interaction.user_id}
-        />
+        <>{renderAgentSchedule(interaction.user_id)}</>
       );
     }
   };
@@ -403,20 +401,20 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
         </Button>
       </Flex>
 
-      <QuickAddTicket
-        id='quick-add-ticket'
-        open={isQuickAddTicketOpen}
-        onOpenChange={setIsQuickAddTicketOpen}
-        onTicketAdded={handleTicketAdded}
-        prefilledClient={interaction.client_id ? {
+      {renderQuickAddTicket({
+        id: 'quick-add-ticket',
+        open: isQuickAddTicketOpen,
+        onOpenChange: setIsQuickAddTicketOpen,
+        onTicketAdded: handleTicketAdded,
+        prefilledClient: interaction.client_id ? {
           id: interaction.client_id,
           name: interaction.client_name || ''
-        } : undefined}
-        prefilledContact={interaction.contact_name_id ? {
+        } : undefined,
+        prefilledContact: interaction.contact_name_id ? {
           id: interaction.contact_name_id,
           name: interaction.contact_name || ''
-        } : undefined}
-        prefilledDescription={(() => {
+        } : undefined,
+        prefilledDescription: (() => {
           try {
             const content = JSON.parse(interaction.notes || '[]');
             // Simple extraction of text from paragraph nodes
@@ -430,8 +428,8 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
             // If parsing fails, return the raw text
             return interaction.notes || '';
           }
-        })()}
-      />
+        })(),
+      })}
 
       <QuickAddInteraction
         id="edit-interaction"

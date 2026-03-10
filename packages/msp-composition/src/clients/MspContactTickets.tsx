@@ -6,7 +6,7 @@ import { IBoard, IUser } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
-import { getCurrentUserAsync } from '../../lib/usersHelpers';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -26,7 +26,7 @@ import { getTicketingDisplaySettings, type TicketingDisplaySettings } from '@alg
 import { ITag } from '@alga-psa/types';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
-import ClientDetails from '../clients/ClientDetails';
+import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
 import { getClientById } from '@alga-psa/clients/actions';
 import { TagFilter } from '@alga-psa/ui/components';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
@@ -57,7 +57,7 @@ const useDebounce = <T,>(value: T, delay: number): T => {
   return debouncedValue;
 };
 
-const ContactTickets: React.FC<ContactTicketsProps> = ({
+const MspContactTickets: React.FC<ContactTicketsProps> = ({
   contactId,
   contactName = '',
   clientId = '',
@@ -119,7 +119,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
     const fetchUserAndSettings = async () => {
       try {
         const [user, settings] = await Promise.all([
-          getCurrentUserAsync(),
+          getCurrentUser(),
           getTicketingDisplaySettings()
         ]);
         setCurrentUser(user);
@@ -137,7 +137,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
 
     try {
       setIsLoading(true);
-      
+
       const filters: ITicketListFilters = {
         contactId: contactId, // Filter by contact instead of client
         boardId: selectedBoard || undefined,
@@ -206,7 +206,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
 
     try {
       const ticketData = await getConsolidatedTicketData(ticketId);
-      
+
       if (!ticketData) {
         toast.error('Failed to load ticket');
         return;
@@ -244,9 +244,9 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
     ticketTagsRef.current[ticketId] = tags;
   }, []);
 
-  const handleClientClick = useCallback(async (clientId: string) => {
+  const handleClientClick = useCallback(async (clickedClientId: string) => {
     try {
-      const client = await getClientById(clientId);
+      const client = await getClientById(clickedClientId);
       if (client) {
         openDrawer(
           <ClientDetails
@@ -278,11 +278,11 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
   useEffect(() => {
     const fetchTags = async () => {
       if (tickets.length === 0) return;
-      
+
       try {
         const ticketIds = tickets.map(t => t.ticket_id).filter(Boolean) as string[];
         const tags = await findTagsByEntityIds(ticketIds, 'ticket');
-        
+
         const newTicketTags: Record<string, ITag[]> = {};
         tags.forEach(tag => {
           if (!newTicketTags[tag.tagged_id]) {
@@ -290,7 +290,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
           }
           newTicketTags[tag.tagged_id].push(tag);
         });
-        
+
         ticketTagsRef.current = newTicketTags;
       } catch (error) {
         console.error('Error fetching tags:', error);
@@ -547,8 +547,8 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
           onConfirm={confirmDeleteTicket}
           title="Delete Ticket"
           message={
-            deleteError 
-              ? deleteError 
+            deleteError
+              ? deleteError
               : `Are you sure you want to delete ticket "${ticketToDeleteName}"? This action cannot be undone.`
           }
           confirmLabel={deleteError ? undefined : "Delete"}
@@ -574,4 +574,4 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
   );
 };
 
-export default ContactTickets;
+export default MspContactTickets;

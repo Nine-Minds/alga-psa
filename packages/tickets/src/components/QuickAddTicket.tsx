@@ -42,7 +42,7 @@ import { assignTeamToTicket } from '@alga-psa/tickets/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import type { ITeam } from '@alga-psa/types';
 import { useRouter } from 'next/navigation';
-import { QuickAddClient, QuickAddContact } from '@alga-psa/clients/components';
+import { useQuickAddClient } from '@alga-psa/ui/context';
 import QuickAddCategory from './QuickAddCategory';
 
 /** Renders a <form> normally, or a plain <div> when embedded to avoid nested form tags. */
@@ -175,6 +175,7 @@ export function QuickAddTicket({
   renderBeforeFooter
 }: QuickAddTicketProps) {
   const router = useRouter();
+  const { renderQuickAddClient, renderQuickAddContact } = useQuickAddClient();
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1242,10 +1243,10 @@ export function QuickAddTicket({
           )}
         </DialogContent>
       </Dialog>
-      <QuickAddContact
-        isOpen={isQuickAddContactOpen}
-        onClose={() => setIsQuickAddContactOpen(false)}
-        onContactAdded={(newContact) => {
+      {renderQuickAddContact({
+        isOpen: isQuickAddContactOpen,
+        onClose: () => setIsQuickAddContactOpen(false),
+        onContactAdded: (newContact) => {
           setContacts((prevContacts) => {
             const existingIndex = prevContacts.findIndex((contact) => contact.contact_name_id === newContact.contact_name_id);
             if (existingIndex >= 0) {
@@ -1257,19 +1258,19 @@ export function QuickAddTicket({
           });
           setContactId(newContact.contact_name_id);
           setIsQuickAddContactOpen(false);
-        }}
-        clients={clients}
-        selectedClientId={clientId}
-      />
-      <QuickAddClient
-        open={isQuickAddClientOpen}
-        onOpenChange={setIsQuickAddClientOpen}
-        onClientAdded={(newClient) => {
+        },
+        clients,
+        selectedClientId: clientId,
+      })}
+      {renderQuickAddClient({
+        open: isQuickAddClientOpen,
+        onOpenChange: setIsQuickAddClientOpen,
+        onClientAdded: (newClient) => {
           setClients(prev => [...prev, newClient]);
           handleClientChange(newClient.client_id);
-        }}
-        skipSuccessDialog
-      />
+        },
+        skipSuccessDialog: true,
+      })}
       <QuickAddCategory
         isOpen={isQuickAddCategoryOpen}
         onClose={() => setIsQuickAddCategoryOpen(false)}

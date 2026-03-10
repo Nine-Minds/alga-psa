@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, type ReactNode } from 'react';
-import type { ITicket, SurveyClientSatisfactionSummary } from '@alga-psa/types';
+import type { ITicket, ITicketCategory, IBoard, IUser, ITag, SurveyClientSatisfactionSummary } from '@alga-psa/types';
 
 export interface QuickAddTicketRenderProps {
   id?: string;
@@ -9,6 +9,8 @@ export interface QuickAddTicketRenderProps {
   onOpenChange: (open: boolean) => void;
   onTicketAdded: (ticket: ITicket) => void;
   prefilledClient?: { id: string; name: string };
+  prefilledContact?: { id: string; name: string };
+  prefilledDescription?: string;
 }
 
 export interface TicketFormOptions {
@@ -24,10 +26,41 @@ export interface SurveySummaryRenderProps {
   summary: SurveyClientSatisfactionSummary | null;
 }
 
+export interface ClientAssetsRenderProps {
+  clientId: string;
+}
+
+export interface ClientTicketsRenderProps {
+  clientId: string;
+  clientName?: string;
+  initialBoards?: IBoard[];
+  initialStatuses?: any[];
+  initialPriorities?: any[];
+  initialCategories?: ITicketCategory[];
+  initialTags?: ITag[];
+  initialUsers?: IUser[];
+}
+
+export interface ContactTicketsRenderProps {
+  contactId: string;
+  contactName?: string;
+  clientId?: string;
+  clientName?: string;
+  initialBoards?: IBoard[];
+  initialStatuses?: any[];
+  initialPriorities?: any[];
+  initialCategories?: ITicketCategory[];
+  initialTags?: ITag[];
+  initialUsers?: IUser[];
+}
+
 export interface ClientCrossFeatureCallbacks {
   renderQuickAddTicket: (props: QuickAddTicketRenderProps) => ReactNode;
   getTicketFormOptions: () => Promise<TicketFormOptions>;
   renderSurveySummaryCard: (props: SurveySummaryRenderProps) => ReactNode;
+  renderClientAssets: (props: ClientAssetsRenderProps) => ReactNode;
+  renderClientTickets: (props: ClientTicketsRenderProps) => ReactNode;
+  renderContactTickets: (props: ContactTicketsRenderProps) => ReactNode;
 }
 
 const ClientCrossFeatureContext = createContext<ClientCrossFeatureCallbacks | null>(null);

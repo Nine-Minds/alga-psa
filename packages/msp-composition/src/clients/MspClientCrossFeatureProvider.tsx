@@ -2,10 +2,13 @@
 
 import React, { useMemo, useCallback, type ReactNode } from 'react';
 import { ClientCrossFeatureProvider } from '@alga-psa/clients/context/ClientCrossFeatureContext';
-import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps } from '@alga-psa/clients/context/ClientCrossFeatureContext';
+import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, ClientTicketsRenderProps, ContactTicketsRenderProps } from '@alga-psa/clients/context/ClientCrossFeatureContext';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import ClientSurveySummaryCard from '@alga-psa/surveys/components/ClientSurveySummaryCard';
+import ClientAssets from './MspClientAssets';
+import MspClientTickets from './MspClientTickets';
+import MspContactTickets from './MspContactTickets';
 
 export function MspClientCrossFeatureProvider({ children }: { children: ReactNode }) {
   const renderQuickAddTicket = useCallback(
@@ -16,6 +19,8 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
         onOpenChange={props.onOpenChange}
         onTicketAdded={props.onTicketAdded}
         prefilledClient={props.prefilledClient}
+        prefilledContact={props.prefilledContact}
+        prefilledDescription={props.prefilledDescription}
       />
     ),
     []
@@ -28,13 +33,57 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
     []
   );
 
+  const renderClientAssets = useCallback(
+    (props: ClientAssetsRenderProps) => (
+      <ClientAssets clientId={props.clientId} />
+    ),
+    []
+  );
+
+  const renderClientTickets = useCallback(
+    (props: ClientTicketsRenderProps) => (
+      <MspClientTickets
+        clientId={props.clientId}
+        clientName={props.clientName}
+        initialBoards={props.initialBoards}
+        initialStatuses={props.initialStatuses}
+        initialPriorities={props.initialPriorities}
+        initialCategories={props.initialCategories}
+        initialTags={props.initialTags}
+        initialUsers={props.initialUsers}
+      />
+    ),
+    []
+  );
+
+  const renderContactTickets = useCallback(
+    (props: ContactTicketsRenderProps) => (
+      <MspContactTickets
+        contactId={props.contactId}
+        contactName={props.contactName}
+        clientId={props.clientId}
+        clientName={props.clientName}
+        initialBoards={props.initialBoards}
+        initialStatuses={props.initialStatuses}
+        initialPriorities={props.initialPriorities}
+        initialCategories={props.initialCategories}
+        initialTags={props.initialTags}
+        initialUsers={props.initialUsers}
+      />
+    ),
+    []
+  );
+
   const value = useMemo<ClientCrossFeatureCallbacks>(
     () => ({
       renderQuickAddTicket,
       getTicketFormOptions,
       renderSurveySummaryCard,
+      renderClientAssets,
+      renderClientTickets,
+      renderContactTickets,
     }),
-    [renderQuickAddTicket, renderSurveySummaryCard]
+    [renderQuickAddTicket, renderSurveySummaryCard, renderClientAssets, renderClientTickets, renderContactTickets]
   );
 
   return (

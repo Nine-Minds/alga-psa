@@ -6,7 +6,7 @@ import { IBoard, IUser } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
-import { getCurrentUserAsync } from '../../lib/usersHelpers';
+import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -52,7 +52,7 @@ const useDebounce = <T,>(value: T, delay: number): T => {
   return debouncedValue;
 };
 
-const ClientTickets: React.FC<ClientTicketsProps> = ({
+const MspClientTickets: React.FC<ClientTicketsProps> = ({
   clientId,
   clientName = '',
   initialBoards = [],
@@ -72,7 +72,7 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
   const [ticketToDeleteName, setTicketToDeleteName] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
-  
+
   const { openDrawer } = useDrawer();
 
   // Filter states
@@ -113,7 +113,7 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
     const fetchUserAndSettings = async () => {
       try {
         const [user, settings] = await Promise.all([
-          getCurrentUserAsync(),
+          getCurrentUser(),
           getTicketingDisplaySettings()
         ]);
         setCurrentUser(user);
@@ -131,7 +131,7 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
 
     try {
       setIsLoading(true);
-      
+
       const filters: ITicketListFilters = {
         clientId: clientId,
         boardId: selectedBoard || undefined,
@@ -200,7 +200,7 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
 
     try {
       const ticketData = await getConsolidatedTicketData(ticketId);
-      
+
       if (!ticketData) {
         toast.error('Failed to load ticket');
         return;
@@ -251,11 +251,11 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
   useEffect(() => {
     const fetchTags = async () => {
       if (tickets.length === 0) return;
-      
+
       try {
         const ticketIds = tickets.map(t => t.ticket_id).filter(Boolean) as string[];
         const tags = await findTagsByEntityIds(ticketIds, 'ticket');
-        
+
         const newTicketTags: Record<string, ITag[]> = {};
         tags.forEach(tag => {
           if (!newTicketTags[tag.tagged_id]) {
@@ -263,7 +263,7 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
           }
           newTicketTags[tag.tagged_id].push(tag);
         });
-        
+
         ticketTagsRef.current = newTicketTags;
       } catch (error) {
         console.error('Error fetching tags:', error);
@@ -288,12 +288,12 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
   // Filter tickets by selected tags
   const filteredTickets = useMemo(() => {
     if (selectedTags.length === 0) return tickets;
-    
+
     return tickets.filter(ticket => {
       if (!ticket.ticket_id) return false;
       const ticketTags = ticketTagsRef.current[ticket.ticket_id] || [];
       const ticketTagTexts = ticketTags.map(tag => tag.tag_text);
-      
+
       // Check if ticket has any of the selected tags
       return selectedTags.some(selectedTag => ticketTagTexts.includes(selectedTag));
     });
@@ -302,7 +302,7 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
   const ticketsWithIds = useMemo(() =>
     filteredTickets.map((ticket): any => ({
       ...ticket,
-      id: ticket.ticket_id 
+      id: ticket.ticket_id
     })), [filteredTickets]);
 
   const isFiltered = useMemo(() => {
@@ -537,4 +537,4 @@ const ClientTickets: React.FC<ClientTicketsProps> = ({
   );
 };
 
-export default ClientTickets;
+export default MspClientTickets;

@@ -38,7 +38,7 @@ import { useDrawer } from '@alga-psa/ui';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
-import { QuickAddContact } from '@alga-psa/clients/components';
+import { useQuickAddClient } from '@alga-psa/ui/context';
 
 interface TicketPropertiesProps {
   id?: string;
@@ -175,6 +175,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   onAssignTeam,
 }) => {
   const { openDrawer } = useDrawer();
+  const { renderQuickAddContact } = useQuickAddClient();
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [showClientPicker, setShowClientPicker] = useState(false);
@@ -537,10 +538,10 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               )}
             </div>
           </div>
-          <QuickAddContact
-            isOpen={isQuickAddContactOpen}
-            onClose={() => setIsQuickAddContactOpen(false)}
-            onContactAdded={(newContact) => {
+          {renderQuickAddContact({
+            isOpen: isQuickAddContactOpen,
+            onClose: () => setIsQuickAddContactOpen(false),
+            onContactAdded: (newContact) => {
               setPickerContacts((prevContacts) => {
                 const existingIndex = prevContacts.findIndex((contact) => contact.contact_name_id === newContact.contact_name_id);
                 if (existingIndex >= 0) {
@@ -553,10 +554,10 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               setSelectedContactId(newContact.contact_name_id);
               setIsQuickAddContactOpen(false);
               setShowContactPicker(true);
-            }}
-            clients={clients}
-            selectedClientId={ticket.client_id || client?.client_id}
-          />
+            },
+            clients,
+            selectedClientId: ticket.client_id || client?.client_id,
+          })}
           <div>
             <h5 className="font-bold">Created By</h5>
             <p className="text-sm">

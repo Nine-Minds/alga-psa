@@ -29,8 +29,7 @@ import { validateEmailAddress, validatePhoneNumber, validateContactName, validat
 import Documents from '@alga-psa/documents/components/Documents';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import { useToast } from '@alga-psa/ui';
-import ContactTickets from './ContactTickets';
-import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
+import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import { ITicketCategory } from '@alga-psa/types';
 import { IBoard } from '@alga-psa/types';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -235,6 +234,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const drawer = useDrawer();
+  const { getTicketFormOptions, renderContactTickets } = useClientCrossFeature();
 
   // Implement refreshContactData function
   const refreshContactData = useCallback(async () => {
@@ -825,18 +825,18 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           {ticketFormOptions ? (
-            <ContactTickets
-              contactId={editedContact.contact_name_id}
-              contactName={editedContact.full_name}
-              clientId={editedContact.client_id || ''}
-              clientName={getClientName(editedContact.client_id || '')}
-              initialBoards={ticketFormOptions.boardOptions}
-              initialStatuses={ticketFormOptions.statusOptions}
-              initialPriorities={ticketFormOptions.priorityOptions}
-              initialCategories={ticketFormOptions.categories}
-              initialTags={ticketFormOptions.tags || []}
-              initialUsers={ticketFormOptions.users || []}
-            />
+            renderContactTickets({
+              contactId: editedContact.contact_name_id,
+              contactName: editedContact.full_name,
+              clientId: editedContact.client_id || '',
+              clientName: getClientName(editedContact.client_id || ''),
+              initialBoards: ticketFormOptions.boardOptions,
+              initialStatuses: ticketFormOptions.statusOptions,
+              initialPriorities: ticketFormOptions.priorityOptions,
+              initialCategories: ticketFormOptions.categories,
+              initialTags: ticketFormOptions.tags || [],
+              initialUsers: ticketFormOptions.users || [],
+            })
           ) : (
             <div className="flex justify-center items-center h-32">
               <span>Loading ticket filters...</span>

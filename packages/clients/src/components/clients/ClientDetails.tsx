@@ -51,8 +51,6 @@ import { useDrawer } from "@alga-psa/ui";
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import ClientAssets from './ClientAssets';
-import ClientTickets from './ClientTickets';
 import ClientLocations from './ClientLocations';
 import TaxSettingsForm from './TaxSettingsForm';
 import { IBoard, ITicket, ITicketCategory } from '@alga-psa/types';
@@ -206,7 +204,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   surveySummary = null
 }) => {
   const { t } = useTranslation('common');
-  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard } = useClientCrossFeature();
+  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderClientTickets } = useClientCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
@@ -1345,16 +1343,16 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           {ticketFormOptions ? (
-            <ClientTickets
-              clientId={client.client_id}
-              clientName={client.client_name}
-              initialBoards={ticketFormOptions.boardOptions}
-              initialStatuses={ticketFormOptions.statusOptions}
-              initialPriorities={ticketFormOptions.priorityOptions}
-              initialCategories={ticketFormOptions.categories}
-              initialTags={ticketFormOptions.tags || []}
-              initialUsers={ticketFormOptions.users || []}
-            />
+            renderClientTickets({
+              clientId: client.client_id,
+              clientName: client.client_name,
+              initialBoards: ticketFormOptions.boardOptions,
+              initialStatuses: ticketFormOptions.statusOptions,
+              initialPriorities: ticketFormOptions.priorityOptions,
+              initialCategories: ticketFormOptions.categories,
+              initialTags: ticketFormOptions.tags || [],
+              initialUsers: ticketFormOptions.users || [],
+            })
           ) : (
             <div className="flex justify-center items-center h-32">
               <span>Loading ticket filters...</span>
@@ -1365,9 +1363,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     },
     {
       label: "Assets",
-      content: (
-        <ClientAssets clientId={client.client_id} />
-      )
+      content: renderClientAssets({ clientId: client.client_id }),
     },
     {
       label: "Billing",
