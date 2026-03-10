@@ -31,6 +31,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
+import QuickAddCategory from '../QuickAddCategory';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
@@ -185,6 +186,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   // Local state for board config based on selected (pending) board
   const [pendingBoardConfig, setPendingBoardConfig] = useState<BoardCategoryData['boardConfig'] | null>(null);
   const [pendingCategories, setPendingCategories] = useState<ITicketCategory[] | null>(null);
+  const [isQuickAddCategoryOpen, setIsQuickAddCategoryOpen] = useState(false);
 
   // Get the effective board ID (pending or saved)
   const effectiveBoardId = pendingChanges.board_id ?? originalTicketValues.board_id;
@@ -1000,11 +1002,45 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                       selectedCategories={[getSelectedCategoryId()]}
                       onSelect={handleCategoryChange}
                       placeholder={effectiveBoardConfig.category_type === 'custom' ? "Select category..." : "Select ITIL category..."}
+                      onAddNew={() => setIsQuickAddCategoryOpen(true)}
                     />
                   )}
                 </div>
               </div>
             )}
+            <QuickAddCategory
+              isOpen={isQuickAddCategoryOpen}
+              onClose={() => setIsQuickAddCategoryOpen(false)}
+              onCategoryCreated={(newCategory) => {
+                const mergeCategories = (existingCategories: ITicketCategory[]) => {
+                  const existingIndex = existingCategories.findIndex((category) => category.category_id === newCategory.category_id);
+                  if (existingIndex >= 0) {
+                    const nextCategories = [...existingCategories];
+                    nextCategories[existingIndex] = newCategory;
+                    return nextCategories;
+                  }
+                  return [...existingCategories, newCategory];
+                };
+
+                if (pendingChanges.board_id) {
+                  setPendingCategories((currentCategories) => mergeCategories(currentCategories || []));
+                } else {
+                  setCategories((currentCategories) => mergeCategories(currentCategories));
+                }
+
+                if (newCategory.parent_category) {
+                  handlePendingChange('category_id', newCategory.parent_category);
+                  handlePendingChange('subcategory_id', newCategory.category_id);
+                } else {
+                  handlePendingChange('category_id', newCategory.category_id);
+                  handlePendingChange('subcategory_id', null);
+                }
+
+                setIsQuickAddCategoryOpen(false);
+              }}
+              preselectedBoardId={effectiveBoardId || undefined}
+              categories={effectiveCategories}
+            />
 
             {/* Row 3: Priority area (animated based on board type) */}
             <div className="col-span-2 transition-all duration-200 ease-in-out">

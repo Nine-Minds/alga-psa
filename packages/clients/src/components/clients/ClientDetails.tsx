@@ -3,8 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, Suspense } from 'react';
 import type { DeletionValidationResult, IDocument } from '@alga-psa/types';
 import { IContact } from '@alga-psa/types';
-import type { IClient } from '@alga-psa/types';
-import { ITag } from '@alga-psa/types';
+import type { IClient, ITag } from '@alga-psa/types';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { TagManager } from '@alga-psa/tags/components';
@@ -40,7 +39,7 @@ import {
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
-import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
+import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { ExternalLink, RefreshCw, Trash2 } from 'lucide-react';
@@ -51,8 +50,6 @@ import { useDrawer } from "@alga-psa/ui";
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import ClientAssets from './ClientAssets';
-import ClientTickets from './ClientTickets';
 import ClientLocations from './ClientLocations';
 import TaxSettingsForm from './TaxSettingsForm';
 import { IBoard, ITicket, ITicketCategory } from '@alga-psa/types';
@@ -70,17 +67,19 @@ import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
-import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
+import QuickAddContact from '../contacts/QuickAddContact';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { ClientLanguagePreference } from './ClientLanguagePreference';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import ClientSurveySummaryCard from '@alga-psa/surveys/components/ClientSurveySummaryCard';
 import type { SurveyClientSatisfactionSummary } from '@alga-psa/types';
 import {
   isTerminalEntraRunStatus,
   resolveEntraClientSyncStartState,
   shouldShowEntraSyncAction,
 } from './clientDetailsEntraSyncAction';
+
+const EMPTY_CONTACTS: IContact[] = [];
+const EMPTY_DOCUMENTS: IDocument[] = [];
 
 
 const SwitchDetailItem: React.FC<{
@@ -200,13 +199,14 @@ interface ClientDetailsProps {
 const ClientDetails: React.FC<ClientDetailsProps> = ({
   id = 'client-details',
   client,
-  documents = [],
-  contacts = [],
+  documents = EMPTY_DOCUMENTS,
+  contacts = EMPTY_CONTACTS,
   isInDrawer = false,
   quickView = false,
   surveySummary = null
 }) => {
   const { t } = useTranslation('common');
+  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderClientTickets } = useClientCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
@@ -241,6 +241,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
   const [locationsRefreshKey, setLocationsRefreshKey] = useState(0);
   const [tags, setTags] = useState<ITag[]>([]);
+  const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
+  const [defaultContactOptions, setDefaultContactOptions] = useState<IContact[]>(contacts);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [slaPolicies, setSlaPolicies] = useState<ISlaPolicy[]>([]);
@@ -771,13 +773,18 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     });
   };
 
-  const handleSave = async () => {
-    if (isSaving) return;
+  const editedClientRef = useRef(editedClient);
+  editedClientRef.current = editedClient;
+  const isSavingRef = useRef(isSaving);
+  isSavingRef.current = isSaving;
+
+  const handleSave = useCallback(async () => {
+    if (isSavingRef.current) return;
     setHasAttemptedSubmit(true);
 
     // Professional PSA validation pattern: Check required fields
     const requiredFields = {
-      client_name: editedClient.client_name?.trim() || ''
+      client_name: editedClientRef.current.client_name?.trim() || ''
     };
 
     // Clear previous errors and validate required fields
@@ -806,12 +813,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       // Prepare data for update, removing computed fields
       const {
         account_manager_full_name,
-        ...restOfEditedClient 
-      } = editedClient;
+        ...restOfEditedClient
+      } = editedClientRef.current;
       const dataToUpdate: Partial<Omit<IClient, 'account_manager_full_name'>> = {
         ...restOfEditedClient,
         properties: restOfEditedClient.properties ? { ...restOfEditedClient.properties } : {},
-        account_manager_id: editedClient.account_manager_id === '' ? null : editedClient.account_manager_id,
+        account_manager_id: editedClientRef.current.account_manager_id === '' ? null : editedClientRef.current.account_manager_id,
       };
       const updatedClientResult = await updateClient(client.client_id, dataToUpdate);
       // Assuming updateClient returns the full updated client object matching IClient
@@ -826,7 +833,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [client.client_id]);
 
   const handleSyncEntraNow = async () => {
     if (isSyncingEntra) return;
@@ -864,7 +871,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     }
   };
 
-  const handleBillingConfigSave = async (updatedBillingConfig: Partial<IClient>) => {
+  const handleBillingConfigSave = useCallback(async (updatedBillingConfig: Partial<IClient>) => {
     try {
       const updatedClient = await updateClient(client.client_id, updatedBillingConfig);
       setEditedClient(prevClient => {
@@ -877,7 +884,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     } catch (error) {
       console.error('Error updating client:', error);
     }
-  };
+  }, [client.client_id]);
 
   const handleTicketAdded = (ticket: ITicket) => {
     setIsQuickAddTicketOpen(false);
@@ -892,9 +899,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     });
   };
 
-  const handleTagsChange = (updatedTags: ITag[]) => {
+  const handleTagsChange = useCallback((updatedTags: ITag[]) => {
     setTags(updatedTags);
-  };
+  }, []);
 
   const handleTabChange = useCallback(async (tabValue: string) => {
     const params = new URLSearchParams(searchParams?.toString() || '');
@@ -903,7 +910,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   }, [pathname, memoizedRouter, searchParams]);
 
   const clientActiveContacts = useMemo(() => {
-    return (contacts ?? []).filter((c) => !c?.is_inactive);
+    return (defaultContactOptions ?? []).filter((c) => !c?.is_inactive);
+  }, [defaultContactOptions]);
+
+  useEffect(() => {
+    setDefaultContactOptions(contacts);
   }, [contacts]);
 
   const handleDefaultContactChange = useCallback((contactId: string) => {
@@ -1075,6 +1086,26 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   clientId={editedClient.client_id}
                   label="Default contact"
                   placeholder={clientActiveContacts.length ? "Select default contact" : "No active contacts"}
+                  onAddNew={() => setIsQuickAddContactOpen(true)}
+                />
+                <QuickAddContact
+                  isOpen={isQuickAddContactOpen}
+                  onClose={() => setIsQuickAddContactOpen(false)}
+                  onContactAdded={(newContact) => {
+                    setDefaultContactOptions((prevContacts) => {
+                      const existingIndex = prevContacts.findIndex((contact) => contact.contact_name_id === newContact.contact_name_id);
+                      if (existingIndex >= 0) {
+                        const nextContacts = [...prevContacts];
+                        nextContacts[existingIndex] = newContact;
+                        return nextContacts;
+                      }
+                      return [...prevContacts, newContact];
+                    });
+                    handleDefaultContactChange(newContact.contact_name_id);
+                    setIsQuickAddContactOpen(false);
+                  }}
+                  clients={[editedClient]}
+                  selectedClientId={editedClient.client_id}
                 />
               </FieldContainer>
 
@@ -1285,7 +1316,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   isEditing={false}
                 />
               </div>
-              <ClientSurveySummaryCard summary={surveySummary} />
+              {renderSurveySummaryCard({ summary: surveySummary })}
             </div>
           </div>
           
@@ -1319,16 +1350,16 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           {ticketFormOptions ? (
-            <ClientTickets
-              clientId={client.client_id}
-              clientName={client.client_name}
-              initialBoards={ticketFormOptions.boardOptions}
-              initialStatuses={ticketFormOptions.statusOptions}
-              initialPriorities={ticketFormOptions.priorityOptions}
-              initialCategories={ticketFormOptions.categories}
-              initialTags={ticketFormOptions.tags || []}
-              initialUsers={ticketFormOptions.users || []}
-            />
+            renderClientTickets({
+              clientId: client.client_id,
+              clientName: client.client_name,
+              initialBoards: ticketFormOptions.boardOptions,
+              initialStatuses: ticketFormOptions.statusOptions,
+              initialPriorities: ticketFormOptions.priorityOptions,
+              initialCategories: ticketFormOptions.categories,
+              initialTags: ticketFormOptions.tags || [],
+              initialUsers: ticketFormOptions.users || [],
+            })
           ) : (
             <div className="flex justify-center items-center h-32">
               <span>Loading ticket filters...</span>
@@ -1339,9 +1370,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     },
     {
       label: "Assets",
-      content: (
-        <ClientAssets clientId={client.client_id} />
-      )
+      content: renderClientAssets({ clientId: client.client_id }),
     },
     {
       label: "Billing",
@@ -1637,16 +1666,16 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           onTabChange={handleTabChange}
         />
 
-        <QuickAddTicket
-          id={`${id}-quick-add-ticket`}
-          open={isQuickAddTicketOpen}
-          onOpenChange={setIsQuickAddTicketOpen}
-          onTicketAdded={handleTicketAdded}
-          prefilledClient={{
+        {renderQuickAddTicket({
+          id: `${id}-quick-add-ticket`,
+          open: isQuickAddTicketOpen,
+          onOpenChange: setIsQuickAddTicketOpen,
+          onTicketAdded: handleTicketAdded,
+          prefilledClient: {
             id: editedClient.client_id,
-            name: editedClient.client_name
-          }}
-        />
+            name: editedClient.client_name,
+          },
+        })}
 
         <Dialog
           isOpen={isLocationsDialogOpen}

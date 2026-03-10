@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { X } from 'lucide-react';
@@ -9,6 +11,7 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
 import { addContact } from '@alga-psa/clients/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import QuickAddClient from '../clients/QuickAddClient';
 import type { IClient } from '@alga-psa/types';
 import { IContact } from '@alga-psa/types';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -76,6 +79,8 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [countries, setCountries] = useState<ICountry[]>([]);
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
+  const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
+  const [localClients, setLocalClients] = useState<IClient[]>([]);
   const [countryCode, setCountryCode] = useState(() => {
     // Enterprise locale detection
     try {
@@ -140,6 +145,11 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       setPendingTags([]);
     }
   }, [isOpen, selectedClientId]);
+
+  const mergedClients = React.useMemo(() => {
+    const clientIds = new Set(clients.map(c => c.client_id));
+    return [...clients, ...localClients.filter(c => !clientIds.has(c.client_id))];
+  }, [clients, localClients]);
 
   const handleClientSelect = (clientId: string | null) => {
     // Prevent unintended client selection
@@ -397,6 +407,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   };
 
   return (
+    <>
     <Dialog
       id="quick-add-contact-dialog"
       isOpen={isOpen}
@@ -535,13 +546,14 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
               <Label>Client (Optional)</Label>
               <ClientPicker
                 id="quick-add-contact-client"
-                clients={clients}
+                clients={mergedClients}
                 onSelect={handleClientSelect}
                 selectedClientId={clientId}
                 filterState={filterState}
                 onFilterStateChange={setFilterState}
                 clientTypeFilter={clientTypeFilter}
                 onClientTypeFilterChange={setClientTypeFilter}
+                onAddNew={() => setIsQuickAddClientOpen(true)}
               />
             </div>
             <div>
@@ -637,6 +649,17 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
         </form>
       </DialogContent>
     </Dialog>
+
+      <QuickAddClient
+        open={isQuickAddClientOpen}
+        onOpenChange={setIsQuickAddClientOpen}
+        onClientAdded={(newClient) => {
+          setLocalClients(prev => [...prev, newClient]);
+          setClientId(newClient.client_id);
+        }}
+        skipSuccessDialog
+      />
+    </>
   );
 };
 

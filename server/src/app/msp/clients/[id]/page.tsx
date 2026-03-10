@@ -9,6 +9,7 @@ import { getSurveyClientSummary } from '@alga-psa/surveys/actions/survey-actions
 import { AIChatContextBoundary } from '@product/chat/context';
 import type { Metadata } from 'next';
 
+
 const getCachedClient = cache((id: string) => getClientById(id));
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {

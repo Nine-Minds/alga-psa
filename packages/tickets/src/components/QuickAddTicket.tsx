@@ -42,6 +42,8 @@ import { assignTeamToTicket } from '@alga-psa/tickets/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import type { ITeam } from '@alga-psa/types';
 import { useRouter } from 'next/navigation';
+import { useQuickAddClient } from '@alga-psa/ui/context';
+import QuickAddCategory from './QuickAddCategory';
 
 /** Renders a <form> normally, or a plain <div> when embedded to avoid nested form tags. */
 function FormOrDiv({ isEmbedded, onSubmit, children }: { isEmbedded: boolean; onSubmit: (e: React.FormEvent) => void; children: React.ReactNode }) {
@@ -173,6 +175,7 @@ export function QuickAddTicket({
   renderBeforeFooter
 }: QuickAddTicketProps) {
   const router = useRouter();
+  const { renderQuickAddClient, renderQuickAddContact } = useQuickAddClient();
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -208,6 +211,9 @@ export function QuickAddTicket({
   const [locations, setLocations] = useState<IClientLocation[]>([]);
   const [locationId, setLocationId] = useState<string | null>(null);
   const [isPrefilledClient, setIsPrefilledClient] = useState(false);
+  const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
+  const [isQuickAddCategoryOpen, setIsQuickAddCategoryOpen] = useState(false);
+  const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const [quickAddBoardFilterState, setQuickAddBoardFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [pendingTags, setPendingTags] = useState<PendingTag[]>([]);
   const [dueDateDate, setDueDateDate] = useState<Date | undefined>(() => {
@@ -572,6 +578,7 @@ export function QuickAddTicket({
     setItilUrgency(undefined);
     setShowPriorityMatrix(false);
     setPendingTags([]);
+    setIsQuickAddContactOpen(false);
     if (prefilledDueDate) {
       const parsed = typeof prefilledDueDate === 'string' ? new Date(prefilledDueDate) : prefilledDueDate;
       setDueDateDate(Number.isNaN(parsed.getTime()) ? undefined : parsed);
@@ -857,6 +864,7 @@ export function QuickAddTicket({
                       clientTypeFilter={clientTypeFilter}
                       onClientTypeFilterChange={setClientTypeFilter}
                       placeholder="Select Client *"
+                      onAddNew={() => setIsQuickAddClientOpen(true)}
                     />
                   </div>
 
@@ -875,8 +883,8 @@ export function QuickAddTicket({
                           ? "No contacts for selected client"
                           : "Select contact"
                       }
-                      disabled={contacts.length === 0}
                       buttonWidth="full"
+                      onAddNew={() => setIsQuickAddContactOpen(true)}
                     />
                   )}
                   {clientId && (
@@ -967,6 +975,7 @@ export function QuickAddTicket({
                       placeholder={boardConfig.category_type === 'custom' ? "Select category" : "Select ITIL category"}
                       multiSelect={false}
                       className="w-full"
+                      onAddNew={() => setIsQuickAddCategoryOpen(true)}
                     />
                   )}
 
@@ -1234,6 +1243,54 @@ export function QuickAddTicket({
           )}
         </DialogContent>
       </Dialog>
+      {renderQuickAddContact({
+        isOpen: isQuickAddContactOpen,
+        onClose: () => setIsQuickAddContactOpen(false),
+        onContactAdded: (newContact) => {
+          setContacts((prevContacts) => {
+            const existingIndex = prevContacts.findIndex((contact) => contact.contact_name_id === newContact.contact_name_id);
+            if (existingIndex >= 0) {
+              const nextContacts = [...prevContacts];
+              nextContacts[existingIndex] = newContact;
+              return nextContacts;
+            }
+            return [...prevContacts, newContact];
+          });
+          setContactId(newContact.contact_name_id);
+          setIsQuickAddContactOpen(false);
+        },
+        clients,
+        selectedClientId: clientId,
+      })}
+      {renderQuickAddClient({
+        open: isQuickAddClientOpen,
+        onOpenChange: setIsQuickAddClientOpen,
+        onClientAdded: (newClient) => {
+          setClients(prev => [...prev, newClient]);
+          handleClientChange(newClient.client_id);
+        },
+        skipSuccessDialog: true,
+      })}
+      <QuickAddCategory
+        isOpen={isQuickAddCategoryOpen}
+        onClose={() => setIsQuickAddCategoryOpen(false)}
+        onCategoryCreated={(newCategory) => {
+          setCategories((prevCategories) => {
+            const existingIndex = prevCategories.findIndex((category) => category.category_id === newCategory.category_id);
+            if (existingIndex >= 0) {
+              const nextCategories = [...prevCategories];
+              nextCategories[existingIndex] = newCategory;
+              return nextCategories;
+            }
+            return [...prevCategories, newCategory];
+          });
+          setSelectedCategories([newCategory.category_id]);
+          clearErrorIfSubmitted();
+          setIsQuickAddCategoryOpen(false);
+        }}
+        preselectedBoardId={boardId}
+        categories={categories}
+      />
     </div>
   );
 }

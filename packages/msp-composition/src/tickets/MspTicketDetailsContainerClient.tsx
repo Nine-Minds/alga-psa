@@ -11,6 +11,7 @@ import { IntervalManagement } from '@alga-psa/scheduling/components/time-managem
 import { TicketIntegrationProvider } from '@alga-psa/projects/context/TicketIntegrationContext';
 import { useTicketIntegrationValue } from '../projects/useTicketIntegrationValue';
 import TicketSurveySummaryCard from '@alga-psa/surveys/components/TicketSurveySummaryCard';
+import { MspClientCrossFeatureProvider } from '../clients/MspClientCrossFeatureProvider';
 
 type MspTicketDetailsContainerClientProps = Omit<
   React.ComponentProps<typeof TicketDetailsContainer>,
@@ -53,7 +54,11 @@ export default function MspTicketDetailsContainerClient({ surveySummary, ...prop
 
   const renderClientDetails = useCallback(
     ({ id, client }: { id: string; client: IClient }) => {
-      return <ClientDetails id={id} client={client} isInDrawer={true} quickView={true} />;
+      return (
+        <MspClientCrossFeatureProvider>
+          <ClientDetails id={id} client={client} isInDrawer={true} quickView={true} />
+        </MspClientCrossFeatureProvider>
+      );
     },
     []
   );

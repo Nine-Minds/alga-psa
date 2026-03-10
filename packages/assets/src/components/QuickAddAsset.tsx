@@ -11,6 +11,7 @@ import type { CreateAssetRequest, IClient } from '@alga-psa/types';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { getAllClientsForAssets } from '../actions/clientLookupActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useQuickAddClient } from '@alga-psa/ui/context';
 
 interface QuickAddAssetProps {
   clientId?: string;
@@ -66,6 +67,7 @@ interface FormData {
 }
 
 export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = false }: QuickAddAssetProps) {
+  const { renderQuickAddClient } = useQuickAddClient();
   const [open, setOpen] = useState(defaultOpen);
   const [error, setError] = useState<string | null>(null);
   const [clients, setClients] = useState<IClient[]>([]);
@@ -74,6 +76,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
 
   const handleClose = () => {
     setOpen(false);
@@ -471,6 +474,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                     onFilterStateChange={setClientFilterState}
                     clientTypeFilter={clientTypeFilter}
                     onClientTypeFilterChange={setClientTypeFilter}
+                    onAddNew={() => setIsQuickAddClientOpen(true)}
                   />
                 </div>
               </div>
@@ -568,6 +572,16 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
           </form>
         </DialogContent>
       </Dialog>
+
+      {renderQuickAddClient({
+        open: isQuickAddClientOpen,
+        onOpenChange: setIsQuickAddClientOpen,
+        onClientAdded: (newClient) => {
+          setClients(prev => [...prev, newClient]);
+          setSelectedClientId(newClient.client_id);
+        },
+        skipSuccessDialog: true,
+      })}
     </>
   );
 }

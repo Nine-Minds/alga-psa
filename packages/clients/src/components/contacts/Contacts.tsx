@@ -15,7 +15,7 @@ import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import QuickAddContact from './QuickAddContact';
-import { useDrawer } from "@alga-psa/ui";
+import { useDrawer, useClientDrawer } from "@alga-psa/ui";
 import ContactDetails from './ContactDetails';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import ContactsImportDialog from './ContactsImportDialog';
@@ -84,6 +84,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
   const [sortBy, setSortBy] = useState<string>('full_name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const { openDrawer } = useDrawer();
+  const clientDrawer = useClientDrawer();
   const router = useRouter();
   const contactTagsRef = useRef<Record<string, ITag[]>>({});
   const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
@@ -599,31 +600,31 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           return <span className="text-gray-500">{getClientName(clientId)}</span>;
         }
 
+        const handleClientOpen = () => {
+          if (clientDrawer) {
+            clientDrawer.openClientDrawer(client.client_id);
+            return;
+          }
+          openDrawer(
+            <ClientDetails
+              client={client}
+              documents={[]}
+              contacts={[]}
+              isInDrawer={true}
+              quickView={true}
+            />
+          );
+        };
+
         return (
           <div
             role="button"
             tabIndex={0}
-            onClick={() => openDrawer(
-              <ClientDetails
-                client={client}
-                documents={[]}
-                contacts={[]}
-                isInDrawer={true}
-                quickView={true}
-              />
-            )}
+            onClick={handleClientOpen}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                openDrawer(
-                  <ClientDetails
-                    client={client}
-                    documents={[]}
-                    contacts={[]}
-                    isInDrawer={true}
-                    quickView={true}
-                  />
-                );
+                handleClientOpen();
               }
             }}
             className="text-blue-600 hover:underline cursor-pointer"

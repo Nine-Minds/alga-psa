@@ -18,7 +18,7 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import InteractionsFeed from '../interactions/InteractionsFeed';
-import { useDrawer } from "@alga-psa/ui";
+import { useDrawer, useClientDrawer } from "@alga-psa/ui";
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Card } from '@alga-psa/ui/components/Card';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -29,8 +29,7 @@ import { validateEmailAddress, validatePhoneNumber, validateContactName, validat
 import Documents from '@alga-psa/documents/components/Documents';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import { useToast } from '@alga-psa/ui';
-import ContactTickets from './ContactTickets';
-import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
+import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import { ITicketCategory } from '@alga-psa/types';
 import { IBoard } from '@alga-psa/types';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -235,6 +234,8 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const drawer = useDrawer();
+  const clientDrawer = useClientDrawer();
+  const { getTicketFormOptions, renderContactTickets } = useClientCrossFeature();
 
   // Implement refreshContactData function
   const refreshContactData = useCallback(async () => {
@@ -600,6 +601,10 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
 
   const handleClientClick = async () => {
     if (editedContact.client_id) {
+      if (clientDrawer) {
+        clientDrawer.openClientDrawer(editedContact.client_id);
+        return;
+      }
       try {
         const client = await getClientById(editedContact.client_id);
         if (client) {
@@ -825,18 +830,18 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
           {ticketFormOptions ? (
-            <ContactTickets
-              contactId={editedContact.contact_name_id}
-              contactName={editedContact.full_name}
-              clientId={editedContact.client_id || ''}
-              clientName={getClientName(editedContact.client_id || '')}
-              initialBoards={ticketFormOptions.boardOptions}
-              initialStatuses={ticketFormOptions.statusOptions}
-              initialPriorities={ticketFormOptions.priorityOptions}
-              initialCategories={ticketFormOptions.categories}
-              initialTags={ticketFormOptions.tags || []}
-              initialUsers={ticketFormOptions.users || []}
-            />
+            renderContactTickets({
+              contactId: editedContact.contact_name_id,
+              contactName: editedContact.full_name,
+              clientId: editedContact.client_id || '',
+              clientName: getClientName(editedContact.client_id || ''),
+              initialBoards: ticketFormOptions.boardOptions,
+              initialStatuses: ticketFormOptions.statusOptions,
+              initialPriorities: ticketFormOptions.priorityOptions,
+              initialCategories: ticketFormOptions.categories,
+              initialTags: ticketFormOptions.tags || [],
+              initialUsers: ticketFormOptions.users || [],
+            })
           ) : (
             <div className="flex justify-center items-center h-32">
               <span>Loading ticket filters...</span>

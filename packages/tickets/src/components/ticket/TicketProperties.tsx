@@ -38,6 +38,7 @@ import { useDrawer } from '@alga-psa/ui';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useQuickAddClient } from '@alga-psa/ui/context';
 
 interface TicketPropertiesProps {
   id?: string;
@@ -174,15 +175,18 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   onAssignTeam,
 }) => {
   const { openDrawer } = useDrawer();
+  const { renderQuickAddContact } = useQuickAddClient();
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
 
   // Ref to prevent race conditions when rapidly adding/removing agents
   const isProcessingAgentsRef = useRef(false);
   const [contactFilterState, setContactFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
+  const [pickerContacts, setPickerContacts] = useState<IContact[]>(contacts);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [agentSchedules, setAgentSchedules] = useState<IAgentSchedule[]>([]);
@@ -194,6 +198,10 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [appointmentRequests, setAppointmentRequests] = useState<any[]>([]);
   const [showAppointmentTooltip, setShowAppointmentTooltip] = useState(false);
   const [isRemoveTeamDialogOpen, setIsRemoveTeamDialogOpen] = useState(false);
+
+  useEffect(() => {
+    setPickerContacts(contacts);
+  }, [contacts]);
   const [removeTeamMode, setRemoveTeamMode] = useState<'remove_all' | 'keep_all' | 'selective'>('remove_all');
   const [selectedTeamMemberIds, setSelectedTeamMemberIds] = useState<string[]>([]);
   const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
@@ -494,11 +502,12 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                   <div className="flex items-center group">
                     <ContactPicker
                       {...withDataAutomationId({ id: `${id}-contact-picker` })}
-                      contacts={contacts}
+                      contacts={pickerContacts}
                       value={selectedContactId ?? contactInfo?.contact_name_id ?? ''}
                       onValueChange={setSelectedContactId}
                       clientId={client?.client_id}
                       placeholder="Select or change contact"
+                      onAddNew={() => setIsQuickAddContactOpen(true)}
                     />
                   </div>
                   <div className="flex justify-end space-x-2">
@@ -529,6 +538,26 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               )}
             </div>
           </div>
+          {renderQuickAddContact({
+            isOpen: isQuickAddContactOpen,
+            onClose: () => setIsQuickAddContactOpen(false),
+            onContactAdded: (newContact) => {
+              setPickerContacts((prevContacts) => {
+                const existingIndex = prevContacts.findIndex((contact) => contact.contact_name_id === newContact.contact_name_id);
+                if (existingIndex >= 0) {
+                  const nextContacts = [...prevContacts];
+                  nextContacts[existingIndex] = newContact;
+                  return nextContacts;
+                }
+                return [...prevContacts, newContact];
+              });
+              setSelectedContactId(newContact.contact_name_id);
+              setIsQuickAddContactOpen(false);
+              setShowContactPicker(true);
+            },
+            clients,
+            selectedClientId: ticket.client_id || client?.client_id,
+          })}
           <div>
             <h5 className="font-bold">Created By</h5>
             <p className="text-sm">

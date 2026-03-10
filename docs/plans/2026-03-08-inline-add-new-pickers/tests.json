@@ -1,0 +1,376 @@
+[
+  {
+    "id": "T001",
+    "description": "ContactPicker renders '+ Add new contact' button with separator when onAddNew prop is provided",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "ContactPicker does NOT render '+ Add new contact' button when onAddNew prop is omitted",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "ContactPicker button has Plus icon and correct styling (w-full flex items-center gap-2 px-3 py-2)",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Clicking ContactPicker '+ Add new contact' calls onAddNew callback exactly once",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Clicking ContactPicker '+ Add new contact' closes the dropdown (isOpen becomes false)",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "QuickAddTicket: clicking '+ Add new contact' opens QuickAddContact dialog",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "QuickAddTicket: QuickAddContact receives the currently selected clientId as selectedClientId",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "QuickAddTicket: after creating contact via QuickAddContact, new contact is added to contacts list and auto-selected",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "TicketProperties: clicking '+ Add new contact' opens QuickAddContact with ticket's company_id",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "QuickAddInteraction: clicking '+ Add new contact' opens QuickAddContact with selectedClientId",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "OverallInteractionsFeed: clicking '+ Add new contact' opens QuickAddContact",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "ProjectQuickAdd: clicking '+ Add new contact' opens QuickAddContact with selectedClientId",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Projects list: clicking '+ Add new contact' opens QuickAddContact",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "ClientDetails: clicking '+ Add new contact' opens QuickAddContact with clientId pre-filled",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "BillingConfigForm: clicking '+ Add new contact' opens QuickAddContact",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "UserManagement: clicking '+ Add new contact' opens QuickAddContact",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "EntraReconciliationQueue: clicking '+ Add new contact' opens QuickAddContact",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "ClientPicker renders '+ Add new client' button with separator when onAddNew prop is provided",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "ClientPicker does NOT render '+ Add new client' button when onAddNew prop is omitted",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Clicking ClientPicker '+ Add new client' calls onAddNew and closes dropdown",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "QuickAddTicket: clicking '+ Add new client' opens QuickAddClient dialog",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "QuickAddTicket: after creating client via QuickAddClient, new client is added to list and auto-selected",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "ProjectQuickAdd: clicking '+ Add new client' opens QuickAddClient and auto-selects new client",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "ContractBasicsStep: clicking '+ Add new client' opens QuickAddClient and auto-selects new client",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "ManualInvoices: clicking '+ Add new client' opens QuickAddClient and auto-selects new client",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "QuickAddAsset: clicking '+ Add new client' opens QuickAddClient and auto-selects new client",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "QuickAddCategory component renders with category name input field",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "QuickAddCategory shows board selector when preselectedBoardId is NOT provided",
+    "implemented": true,
+    "featureIds": [
+      "F024",
+      "F025"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "QuickAddCategory hides board selector when preselectedBoardId IS provided",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "QuickAddCategory shows optional parent category dropdown filtered to selected board's categories",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "QuickAddCategory calls createCategory action on submit and invokes onCategoryCreated callback",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "QuickAddCategory shows validation error when category name is empty",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "QuickAddCategory shows validation error when board is required but not selected",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "QuickAddCategory fetches boards internally when boards prop is not provided",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "CategoriesSettings uses QuickAddCategory component for the add dialog",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "CategoriesSettings create-category flow still works after refactor (name, board, parent, display_order)",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "CategoriesSettings edit-category flow still works after refactor",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "TreeSelect renders '+ Add new' button with separator when onAddNew prop is provided",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "TreeSelect does NOT render '+ Add new' button when onAddNew is omitted",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "CategoryPicker passes onAddNew prop through to TreeSelect",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "QuickAddTicket: clicking '+ Add new category' opens QuickAddCategory with boardId pre-selected",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "QuickAddTicket: after creating category via QuickAddCategory, new category is added to list and auto-selected",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "TicketInfo: clicking '+ Add new category' opens QuickAddCategory with ticket's board_id",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "TicketingDashboard: clicking '+ Add new category' opens QuickAddCategory",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "TicketDetails: clicking '+ Add new category' opens QuickAddCategory with board context",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "Existing jest tests pass: npx jest --testPathPattern='QuickAddTicket|ContactPicker|TicketProperties|ClientPicker|CategoryPicker'",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F003",
+      "F015",
+      "F017",
+      "F028",
+      "F029"
+    ]
+  }
+]

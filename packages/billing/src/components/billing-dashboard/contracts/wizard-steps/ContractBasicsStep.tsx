@@ -29,6 +29,7 @@ import { format as formatDateFns, parse as parseDateFns } from 'date-fns';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { IClient } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { useQuickAddClient } from '@alga-psa/ui/context';
 
 type TemplateOption = {
   contract_id: string;
@@ -64,6 +65,7 @@ export function ContractBasicsStep({
   isTemplateLoading,
   templateError,
 }: ContractBasicsStepProps) {
+  const { renderQuickAddClient } = useQuickAddClient();
   const [clients, setClients] = useState<IClient[]>([]);
   const [isLoadingClients, setIsLoadingClients] = useState(true);
   const [poAmountInput, setPoAmountInput] = useState<string>('');
@@ -74,6 +76,7 @@ export function ContractBasicsStep({
   const [disabledClientIds, setDisabledClientIds] = useState<Set<string>>(new Set());
   const [startDate, setStartDate] = useState<Date | undefined>(parseLocalYMD(data.start_date));
   const [endDate, setEndDate] = useState<Date | undefined>(parseLocalYMD(data.end_date));
+  const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
 
   const currencyMeta = useMemo(() => {
     const currencyCode = data.currency_code || 'USD';
@@ -230,7 +233,17 @@ export function ContractBasicsStep({
           disabledClientIds={disabledClientIds}
           placeholder={isLoadingClients ? 'Loading clients…' : 'Select a client'}
           className="w-full"
+          onAddNew={() => setIsQuickAddClientOpen(true)}
         />
+        {renderQuickAddClient({
+          open: isQuickAddClientOpen,
+          onOpenChange: setIsQuickAddClientOpen,
+          onClientAdded: (newClient) => {
+            setClients(prev => [...prev, newClient]);
+            updateData({ client_id: newClient.client_id });
+          },
+          skipSuccessDialog: true,
+        })}
         {!data.client_id && (
           <p className="text-xs text-[rgb(var(--color-text-400))]">Choose the client this contract is for.</p>
         )}
