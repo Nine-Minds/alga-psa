@@ -146,6 +146,8 @@ export default function TicketingDashboardContainer({
   const latestFetchRequestIdRef = useRef(0);
   const lastAppliedSearchRef = useRef<string>('');
   const isSyncingFromHistoryRef = useRef(false);
+  // R1: Track initial mount to prevent unnecessary re-fetch when server data is already present
+  const isInitialMountRef = useRef(true);
 
   const defaultSortBy = initialFilters?.sortBy ?? 'entered_at';
   const defaultSortDirection = initialFilters?.sortDirection ?? 'desc';
@@ -421,6 +423,20 @@ export default function TicketingDashboardContainer({
 
     const normalizedPageSize = storedPageSize ?? initialPageSize;
     if (normalizedPageSize === pageSize) {
+      // R1: Clear initial mount flag even when no fetch is needed
+      isInitialMountRef.current = false;
+      return;
+    }
+
+    // R1: On initial mount, the server already provided data. Update state and URL
+    // to reflect the stored preference, but skip the re-fetch to avoid a duplicate
+    // request that causes spinner flash. The next user interaction (paging, filtering)
+    // will use the correct pageSize.
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      setCurrentPage(1);
+      setPageSize(normalizedPageSize);
+      updateURLWithFilters(activeFiltersRef.current, 1, normalizedPageSize);
       return;
     }
 

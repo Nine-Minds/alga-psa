@@ -1059,6 +1059,39 @@ function applyTicketListSort(
 }
 
 /**
+ * Get the ORDER BY clause as a raw SQL string for use in window functions.
+ * Mirrors the logic in applyTicketListSort but returns a string instead of modifying a query.
+ */
+function getTicketListSortOrderByClause(validatedFilters: ITicketListFilters): string {
+    const sortBy = validatedFilters.sortBy ?? 'entered_at';
+    const sortDirection: 'asc' | 'desc' = validatedFilters.sortDirection ?? 'desc';
+    const sortColumnMap: Record<string, { column?: string; rawExpression?: string }> = {
+      ticket_number: { column: 't.ticket_number' },
+      title: { column: 't.title' },
+      status_name: { column: 's.name' },
+      priority_name: { column: 'p.priority_name' },
+      board_name: { column: 'c.board_name' },
+      category_name: { column: 'cat.category_name' },
+      client_name: { column: 'comp.client_name' },
+      entered_at: { column: 't.entered_at' },
+      entered_by_name: { rawExpression: "COALESCE(CONCAT(u.first_name, ' ', u.last_name), '')" },
+      due_date: { column: 't.due_date' }
+    };
+    const selectedSort = sortColumnMap[sortBy] || sortColumnMap.entered_at;
+
+    let primarySort: string;
+    if (selectedSort.rawExpression) {
+      primarySort = `${selectedSort.rawExpression} ${sortDirection}`;
+    } else if (selectedSort.column) {
+      primarySort = `${selectedSort.column} ${sortDirection}`;
+    } else {
+      primarySort = `t.entered_at ${sortDirection}`;
+    }
+
+    return `${primarySort}, t.ticket_id DESC`;
+}
+
+/**
  * Validate and clean filter values, clearing "$undefined" string sentinel values.
  */
 function cleanFilterValues(validatedFilters: ITicketListFilters): ITicketListFilters {
@@ -1109,51 +1142,77 @@ export const getTicketsForList = withAuth(async (
     const totalCount = parseInt(String(count), 10);
 
     // Build query for paginated results
-    const query = applyTicketListSort(
-      baseQuery
-        .clone()
-        .select(
-          't.*',
-          trx.raw(
-            `(
-              SELECT COUNT(*)::int
-              FROM tickets as tc
-              WHERE tc.tenant = t.tenant
-                AND tc.master_ticket_id = t.ticket_id
-            ) as bundle_child_count`
-          ),
-          trx.raw(
-            `(
-              SELECT COUNT(DISTINCT x.client_id)::int
-              FROM (
-                SELECT t2.client_id as client_id
-                FROM tickets as t2
-                WHERE t2.tenant = t.tenant
-                  AND t2.ticket_id = t.ticket_id
-                UNION ALL
-                SELECT tc.client_id
-                FROM tickets as tc
-                WHERE tc.tenant = t.tenant
-                  AND tc.master_ticket_id = t.ticket_id
-              ) as x
-              WHERE x.client_id IS NOT NULL
-            ) as bundle_distinct_client_count`
-          ),
-          'mt.ticket_number as bundle_master_ticket_number',
-          's.name as status_name',
-          'p.priority_name',
-          'p.color as priority_color',
-          'c.board_name',
-          'cat.category_name',
-          'comp.client_name',
-          trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
-          trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
-          'tm.team_name as assigned_team_name',
-          trx.raw("(SELECT COUNT(*) FROM ticket_resources tr WHERE tr.ticket_id = t.ticket_id AND tr.tenant = t.tenant AND tr.additional_user_id IS NOT NULL)::int as additional_agent_count"),
-          trx.raw(`(SELECT COALESCE(json_agg(json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))), '[]'::json) FROM ticket_resources tr2 JOIN users uu ON tr2.additional_user_id = uu.user_id AND tr2.tenant = uu.tenant WHERE tr2.ticket_id = t.ticket_id AND tr2.tenant = t.tenant) as additional_agents`)
-        ),
-      validatedFilters
-    )
+    // R2: Select explicit columns instead of t.* to reduce response size
+    // R3: Use pre-aggregated LEFT JOINs instead of correlated subqueries
+    const paginatedQuery = baseQuery
+      .clone()
+      .joinRaw(`LEFT JOIN (
+        SELECT
+          tc.master_ticket_id,
+          tc.tenant,
+          COUNT(*)::int as bundle_child_count,
+          array_agg(DISTINCT tc.client_id) FILTER (WHERE tc.client_id IS NOT NULL) as child_client_ids
+        FROM tickets tc
+        WHERE tc.master_ticket_id IS NOT NULL AND tc.tenant = ?
+        GROUP BY tc.master_ticket_id, tc.tenant
+      ) as bs ON bs.master_ticket_id = t.ticket_id AND bs.tenant = t.tenant`, [tenant])
+      .joinRaw(`LEFT JOIN (
+        SELECT
+          tr.ticket_id,
+          tr.tenant,
+          COUNT(*) FILTER (WHERE tr.additional_user_id IS NOT NULL)::int as additional_agent_count,
+          COALESCE(
+            json_agg(
+              json_build_object('user_id', uu.user_id, 'name', CONCAT(uu.first_name, ' ', uu.last_name))
+            ) FILTER (WHERE uu.user_id IS NOT NULL),
+            '[]'::json
+          ) as additional_agents
+        FROM ticket_resources tr
+        LEFT JOIN users uu ON tr.additional_user_id = uu.user_id AND tr.tenant = uu.tenant
+        WHERE tr.tenant = ?
+        GROUP BY tr.ticket_id, tr.tenant
+      ) as ags ON ags.ticket_id = t.ticket_id AND ags.tenant = t.tenant`, [tenant])
+      .select(
+        // Ticket columns (explicit list avoids fetching large unused columns)
+        't.ticket_id', 't.ticket_number', 't.title', 't.url',
+        't.board_id', 't.client_id', 't.location_id', 't.contact_name_id',
+        't.status_id', 't.category_id', 't.subcategory_id', 't.priority_id',
+        't.entered_by', 't.updated_by', 't.closed_by',
+        't.assigned_to', 't.assigned_team_id',
+        't.entered_at', 't.updated_at', 't.closed_at', 't.due_date',
+        't.is_closed', 't.attributes', 't.estimated_hours',
+        't.master_ticket_id', 't.tenant',
+        't.itil_impact', 't.itil_urgency', 't.itil_priority_level',
+        't.response_state', 't.ticket_origin',
+        't.sla_policy_id', 't.sla_started_at',
+        't.sla_response_due_at', 't.sla_response_at', 't.sla_response_met',
+        't.sla_resolution_due_at', 't.sla_resolution_at', 't.sla_resolution_met',
+        't.sla_paused_at', 't.sla_total_pause_minutes',
+        // Bundle stats from pre-aggregated JOIN
+        trx.raw('COALESCE(bs.bundle_child_count, 0) as bundle_child_count'),
+        trx.raw(`COALESCE(
+          (SELECT COUNT(DISTINCT cid) FROM unnest(
+            array_append(COALESCE(bs.child_client_ids, ARRAY[]::uuid[]), t.client_id)
+          ) AS cid WHERE cid IS NOT NULL),
+          0
+        )::int as bundle_distinct_client_count`),
+        // Joined display columns
+        'mt.ticket_number as bundle_master_ticket_number',
+        's.name as status_name',
+        'p.priority_name',
+        'p.color as priority_color',
+        'c.board_name',
+        'cat.category_name',
+        'comp.client_name',
+        trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
+        trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
+        'tm.team_name as assigned_team_name',
+        // Additional agents from pre-aggregated JOIN
+        trx.raw('COALESCE(ags.additional_agent_count, 0)::int as additional_agent_count'),
+        trx.raw("COALESCE(ags.additional_agents, '[]'::json) as additional_agents"),
+      );
+
+    const query = applyTicketListSort(paginatedQuery, validatedFilters)
       .limit(pageSize)
       .offset((page - 1) * pageSize);
 
@@ -2308,36 +2367,49 @@ export const getAdjacentTicketIds = withAuth(async (
 
     const { builder: baseQuery } = await buildTicketListBaseQuery(trx, tenant, user, validatedFilters);
 
-    // Only fetch IDs and ticket numbers -- lightweight query
-    const ticketIds: { ticket_id: string; ticket_number: string }[] = await applyTicketListSort(
-      baseQuery.clone().select('t.ticket_id', 't.ticket_number'),
-      validatedFilters
-    );
+    // R6: Use window functions (LAG/LEAD/ROW_NUMBER) to find adjacent tickets
+    // in a single query instead of fetching ALL matching IDs into memory.
+    const sortOrderBy = getTicketListSortOrderByClause(validatedFilters);
 
-    const currentIndex = ticketIds.findIndex(t => t.ticket_id === currentTicketId);
+    const innerQuery = baseQuery.clone()
+      .select(
+        't.ticket_id',
+        't.ticket_number',
+        trx.raw(`LAG(t.ticket_id) OVER (ORDER BY ${sortOrderBy}) as prev_ticket_id`),
+        trx.raw(`LAG(t.ticket_number) OVER (ORDER BY ${sortOrderBy}) as prev_ticket_number`),
+        trx.raw(`LEAD(t.ticket_id) OVER (ORDER BY ${sortOrderBy}) as next_ticket_id`),
+        trx.raw(`LEAD(t.ticket_number) OVER (ORDER BY ${sortOrderBy}) as next_ticket_number`),
+        trx.raw(`ROW_NUMBER() OVER (ORDER BY ${sortOrderBy}) as rn`),
+        trx.raw(`COUNT(*) OVER () as total_count`)
+      );
 
-    if (currentIndex === -1) {
+    const results = await trx
+      .select('*')
+      .from(innerQuery.as('windowed'))
+      .where('ticket_id', currentTicketId);
+
+    if (results.length === 0) {
       // Current ticket is not in the filtered list (possibly status changed, etc.)
+      // Fall back to a count-only query for total
+      const [{ count }] = await baseQuery.clone().clearSelect().clearOrder().count('t.ticket_id as count');
       return {
         prevTicketId: null,
         nextTicketId: null,
         prevTicketNumber: null,
         nextTicketNumber: null,
         currentPosition: 0,
-        totalCount: ticketIds.length,
+        totalCount: parseInt(String(count), 10),
       };
     }
 
-    const prev = currentIndex > 0 ? ticketIds[currentIndex - 1] : null;
-    const next = currentIndex < ticketIds.length - 1 ? ticketIds[currentIndex + 1] : null;
-
+    const row = results[0];
     return {
-      prevTicketId: prev?.ticket_id ?? null,
-      nextTicketId: next?.ticket_id ?? null,
-      prevTicketNumber: prev?.ticket_number ?? null,
-      nextTicketNumber: next?.ticket_number ?? null,
-      currentPosition: currentIndex + 1,
-      totalCount: ticketIds.length,
+      prevTicketId: row.prev_ticket_id ?? null,
+      nextTicketId: row.next_ticket_id ?? null,
+      prevTicketNumber: row.prev_ticket_number ?? null,
+      nextTicketNumber: row.next_ticket_number ?? null,
+      currentPosition: parseInt(String(row.rn), 10),
+      totalCount: parseInt(String(row.total_count), 10),
     };
   });
 });
