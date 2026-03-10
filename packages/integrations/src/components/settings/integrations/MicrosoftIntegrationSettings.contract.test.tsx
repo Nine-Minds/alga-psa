@@ -206,7 +206,6 @@ function buildBindings(overrides: Array<Record<string, unknown>> | null = null) 
       profileId: 'profile-1',
       profileDisplayName: 'Primary Profile',
       isArchived: false,
-      isDefault: true,
     },
     {
       consumerType: 'email',
@@ -214,7 +213,6 @@ function buildBindings(overrides: Array<Record<string, unknown>> | null = null) 
       profileId: 'profile-1',
       profileDisplayName: 'Primary Profile',
       isArchived: false,
-      isDefault: true,
     },
     {
       consumerType: 'calendar',
@@ -222,7 +220,6 @@ function buildBindings(overrides: Array<Record<string, unknown>> | null = null) 
       profileId: 'profile-1',
       profileDisplayName: 'Primary Profile',
       isArchived: false,
-      isDefault: true,
     },
     {
       consumerType: 'teams',
@@ -230,7 +227,6 @@ function buildBindings(overrides: Array<Record<string, unknown>> | null = null) 
       profileId: 'profile-1',
       profileDisplayName: 'Primary Profile',
       isArchived: false,
-      isDefault: true,
     },
   ];
 }
@@ -269,7 +265,6 @@ describe('MicrosoftIntegrationSettings contracts', () => {
         profileId: 'profile-2',
         profileDisplayName: 'Secondary Profile',
         isArchived: false,
-        isDefault: false,
       },
     });
     createMicrosoftProfileMock.mockResolvedValue({ success: true });
@@ -304,6 +299,7 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     expect(screen.queryByText('Legacy Microsoft consumers')).not.toBeInTheDocument();
     expect(screen.queryByText(/default active profile remains the compatibility source/i)).not.toBeInTheDocument();
     expect(screen.queryByText('Current consumers')).not.toBeInTheDocument();
+    expect(screen.queryByText(/default profile\)/i)).not.toBeInTheDocument();
     expect(screen.getAllByText('Email Guidance').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Calendar Guidance').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Teams Guidance').length).toBeGreaterThan(0);
@@ -342,7 +338,6 @@ describe('MicrosoftIntegrationSettings contracts', () => {
           profileId: 'profile-1',
           profileDisplayName: 'Primary Profile',
           isArchived: false,
-          isDefault: true,
         },
       ]),
     });
@@ -393,6 +388,17 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     });
   });
 
+  it('T353/T354: binding summaries stop presenting the selected profile as a routing default', async () => {
+    render(<MicrosoftIntegrationSettings />);
+
+    await waitFor(() => {
+      expect(document.getElementById('microsoft-profile-profile-1')).not.toBeNull();
+    });
+
+    expect(screen.getByText('MSP SSO is bound to Primary Profile.')).toBeInTheDocument();
+    expect(screen.queryByText('MSP SSO is bound to Primary Profile (default profile).')).not.toBeInTheDocument();
+  });
+
   it('prompts reconnection guidance after email and calendar bindings change', async () => {
     const user = userEvent.setup();
     setMicrosoftConsumerBindingMock
@@ -404,7 +410,6 @@ describe('MicrosoftIntegrationSettings contracts', () => {
           profileId: 'profile-2',
           profileDisplayName: 'Secondary Profile',
           isArchived: false,
-          isDefault: false,
         },
       })
       .mockResolvedValueOnce({
@@ -415,7 +420,6 @@ describe('MicrosoftIntegrationSettings contracts', () => {
           profileId: 'profile-2',
           profileDisplayName: 'Secondary Profile',
           isArchived: false,
-          isDefault: false,
         },
       });
 

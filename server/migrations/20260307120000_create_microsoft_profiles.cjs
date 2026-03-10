@@ -3,6 +3,9 @@
  *
  * Secret material remains in the tenant secret provider; SQL stores only
  * metadata plus the secret reference name.
+ *
+ * The `is_default` flag is profile-management metadata only. Consumer routing
+ * belongs to explicit rows in `microsoft_profile_consumer_bindings`.
  */
 exports.up = async function up(knex) {
   const hasTable = await knex.schema.hasTable('microsoft_profiles');

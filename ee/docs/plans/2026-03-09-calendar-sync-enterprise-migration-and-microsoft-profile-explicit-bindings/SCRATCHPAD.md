@@ -369,3 +369,19 @@ Follow-on implementation notes for moving calendar sync to EE-only ownership and
 - (2026-03-09) MSP SSO binding-runtime validation commands:
   - `cd server && pnpm vitest run --config vitest.config.ts ../packages/auth/src/lib/sso/mspSsoResolution.test.ts ../packages/auth/src/lib/nextAuthOptions.mspContract.test.ts ../packages/integrations/src/lib/microsoftConsumerProfileResolution.test.ts src/test/unit/microsoft/microsoftConsumerRuntimeResolution.contract.test.ts`
   - `cd server && pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-09) Reduced the Microsoft `is_default` flag back to profile-management metadata instead of a consumer-routing hint:
+  - `packages/integrations/src/lib/microsoftConsumerProfileResolution.ts` now chooses migration backfill targets by matching the mirrored legacy Microsoft credentials to an active profile, or by using the only active profile when that choice is unambiguous,
+  - `packages/integrations/src/actions/integrations/microsoftActions.ts` now reuses that candidate-selection helper for consumer binding materialization, so missing binding rows no longer attach to whichever profile happens to be marked default,
+  - the binding UI still lets admins manage a default profile for profile CRUD and legacy secret mirroring, but the per-consumer binding rows no longer label a selected profile as the routing default.
+- (2026-03-09) Added focused default-profile cleanup coverage:
+  - `packages/integrations/src/actions/integrations/microsoftActions.test.ts` now proves enterprise email binding backfill follows the mirrored legacy Microsoft credentials instead of the `is_default` flag and fails closed when no unique routing candidate remains,
+  - `packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.contract.test.tsx` now asserts binding summaries stop rendering `(default profile)` as part of consumer routing copy.
+- (2026-03-09) Default-profile cleanup validation commands:
+  - `cd server && pnpm vitest run --config vitest.config.ts ../packages/integrations/src/actions/integrations/microsoftActions.test.ts ../packages/integrations/src/components/settings/integrations/MicrosoftIntegrationSettings.contract.test.tsx ../packages/integrations/src/lib/microsoftConsumerProfileResolution.test.ts ../packages/auth/src/lib/sso/mspSsoResolution.test.ts ../packages/auth/src/lib/nextAuthOptions.mspContract.test.ts src/test/unit/microsoft/microsoftConsumerRuntimeResolution.contract.test.ts`
+  - `cd server && pnpm exec tsc -p tsconfig.json --noEmit --pretty false`
+- (2026-03-09) Removed the last compatibility-default language from the shared Microsoft schema comments:
+  - `server/migrations/20260307120000_create_microsoft_profiles.cjs` now states that `is_default` is profile-management metadata only,
+  - `server/migrations/20260307143000_create_microsoft_profile_consumer_bindings.cjs` now states that each consumer chooses a profile through an explicit binding row,
+  - `server/src/test/unit/microsoft/microsoftConsumerSchema.contract.test.ts` locks in that wording so future migration edits do not reintroduce default-profile routing language.
+- (2026-03-09) Default-profile cleanup follow-up:
+  - `packages/integrations/src/actions/integrations/microsoftActions.test.ts` now pins the CE status contract to `NEXT_PUBLIC_EDITION=community` so the MSP SSO-only assertions remain deterministic regardless of the outer test environment.

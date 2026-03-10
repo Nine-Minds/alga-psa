@@ -270,6 +270,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
+  getSecret: vi.fn(async () => null),
   getSecretProviderInstance: async () => ({
     getTenantSecret: hoisted.getTenantSecretMock,
     setTenantSecret: hoisted.setTenantSecretMock,
@@ -286,6 +287,7 @@ import {
   createMicrosoftProfile,
   deleteMicrosoftProfile,
   getMicrosoftIntegrationStatus,
+  listMicrosoftConsumerBindings,
   listMicrosoftProfiles,
   resetMicrosoftProvidersToDisconnected,
   saveMicrosoftIntegrationSettings,
@@ -566,36 +568,115 @@ describe('Microsoft integration actions', () => {
     });
   });
 
+  it('T351/T352: binding backfill matches the mirrored legacy Microsoft credentials instead of the default-profile flag and fails closed when no unique candidate remains', async () => {
+    const previousEdition = process.env.NEXT_PUBLIC_EDITION;
+    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+
+    try {
+      const defaultProfile = await createMicrosoftProfile({
+        displayName: 'Default Profile',
+        clientId: 'client-id-1',
+        clientSecret: 'secret-1',
+        tenantId: 'tenant-guid-1',
+      });
+      const secondaryProfile = await createMicrosoftProfile({
+        displayName: 'Secondary Profile',
+        clientId: 'client-id-2',
+        clientSecret: 'secret-2',
+        tenantId: 'tenant-guid-2',
+      });
+
+      emailProviders.push({
+        id: 'email-provider-1',
+        tenant: 'tenant-1',
+        provider_type: 'microsoft',
+      });
+      tenantSecrets.set('tenant-1:microsoft_client_id', 'client-id-2');
+      tenantSecrets.set('tenant-1:microsoft_client_secret', 'secret-2');
+      tenantSecrets.set('tenant-1:microsoft_tenant_id', 'tenant-guid-2');
+
+      const migrated = await listMicrosoftConsumerBindings();
+      expect(migrated.success).toBe(true);
+      expect(migrated.bindings?.find((binding) => binding.consumerType === 'email')).toEqual({
+        consumerType: 'email',
+        consumerLabel: 'Email',
+        profileId: secondaryProfile.profile?.profileId,
+        profileDisplayName: 'Secondary Profile',
+        isArchived: false,
+      });
+      expect(migrated.bindings?.find((binding) => binding.consumerType === 'msp_sso')).toEqual({
+        consumerType: 'msp_sso',
+        consumerLabel: 'MSP SSO',
+        profileId: null,
+        profileDisplayName: undefined,
+        isArchived: false,
+      });
+
+      microsoftConsumerBindings.length = 0;
+      tenantSecrets.delete('tenant-1:microsoft_client_id');
+      tenantSecrets.delete('tenant-1:microsoft_client_secret');
+      tenantSecrets.delete('tenant-1:microsoft_tenant_id');
+
+      const failedClosed = await listMicrosoftConsumerBindings();
+      expect(failedClosed.success).toBe(true);
+      expect(failedClosed.bindings?.find((binding) => binding.consumerType === 'email')).toEqual({
+        consumerType: 'email',
+        consumerLabel: 'Email',
+        profileId: null,
+        profileDisplayName: undefined,
+        isArchived: false,
+      });
+      expect(defaultProfile.profile?.isDefault).toBe(true);
+    } finally {
+      if (previousEdition === undefined) {
+        delete process.env.NEXT_PUBLIC_EDITION;
+      } else {
+        process.env.NEXT_PUBLIC_EDITION = previousEdition;
+      }
+    }
+  });
+
   it('returns CE status metadata with only MSP SSO guidance and masked profile data', async () => {
-    appSecrets.set('NEXT_PUBLIC_BASE_URL', 'https://example.com');
-    mspSsoLoginDomains.push({
-      tenant: 'tenant-1',
-      domain: 'ce.example.com',
-      is_active: true,
-    });
+    const originalEdition = process.env.NEXT_PUBLIC_EDITION;
+    process.env.NEXT_PUBLIC_EDITION = 'community';
 
-    await saveMicrosoftIntegrationSettings({
-      clientId: 'client-id-123',
-      clientSecret: 'super-secret-value',
-      tenantId: 'tenant-guid',
-    });
+    try {
+      appSecrets.set('NEXT_PUBLIC_BASE_URL', 'https://example.com');
+      mspSsoLoginDomains.push({
+        tenant: 'tenant-1',
+        domain: 'ce.example.com',
+        is_active: true,
+      });
 
-    const result = await getMicrosoftIntegrationStatus();
+      await saveMicrosoftIntegrationSettings({
+        clientId: 'client-id-123',
+        clientSecret: 'super-secret-value',
+        tenantId: 'tenant-guid',
+      });
 
-    expect(result.success).toBe(true);
-    expect(result.config?.clientId).toBe('client-id-123');
-    expect(result.config?.clientSecretMasked?.endsWith('alue')).toBe(true);
-    expect(result.config?.clientSecretMasked).not.toContain('super-secret-value');
-    expect(result.redirectUris?.sso).toBe('https://example.com/api/auth/callback/azure-ad');
-    expect(result.redirectUris?.email).toBeUndefined();
-    expect(result.redirectUris?.calendar).toBeUndefined();
-    expect(result.redirectUris?.teamsTab).toBeUndefined();
-    expect(result.scopes?.sso).toContain('openid');
-    expect(result.scopes?.email).toBeUndefined();
-    expect(result.scopes?.calendar).toBeUndefined();
-    expect(result.scopes?.teams).toBeUndefined();
-    expect(result.profiles?.[0]?.displayName).toBe('Default Microsoft Profile');
-    expect(result.profiles?.[0]?.consumers).toEqual(['MSP SSO']);
+      const result = await getMicrosoftIntegrationStatus();
+
+      expect(result.success).toBe(true);
+      expect(result.config?.clientId).toBe('client-id-123');
+      expect(result.config?.clientSecretMasked?.endsWith('alue')).toBe(true);
+      expect(result.config?.clientSecretMasked).not.toContain('super-secret-value');
+      expect(result.redirectUris?.sso).toBe('https://example.com/api/auth/callback/azure-ad');
+      expect(result.redirectUris?.email).toBeUndefined();
+      expect(result.redirectUris?.calendar).toBeUndefined();
+      expect(result.redirectUris?.teamsTab).toBeUndefined();
+      expect(result.scopes?.sso).toContain('openid');
+      expect(result.scopes?.email).toBeUndefined();
+      expect(result.scopes?.calendar).toBeUndefined();
+      expect(result.scopes?.teams).toBeUndefined();
+      expect(result.profiles?.[0]?.displayName).toBe('Default Microsoft Profile');
+      expect(result.profiles?.[0]?.consumers).toEqual(['MSP SSO']);
+    } finally {
+      if (originalEdition === undefined) {
+        delete process.env.NEXT_PUBLIC_EDITION;
+      } else {
+        process.env.NEXT_PUBLIC_EDITION = originalEdition;
+      }
+    }
   });
 
   it('returns EE status metadata with email, calendar, and Teams guidance when enterprise edition is enabled', async () => {

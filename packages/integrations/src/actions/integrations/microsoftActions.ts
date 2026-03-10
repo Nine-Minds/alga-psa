@@ -18,6 +18,7 @@ import {
   MICROSOFT_PROFILE_CONSUMERS,
   type MicrosoftProfileConsumer,
 } from './microsoftShared';
+import { resolveMicrosoftBindingCandidateProfile } from '../../lib/microsoftConsumerProfileResolution';
 
 const MICROSOFT_CLIENT_ID_SECRET = 'microsoft_client_id';
 const MICROSOFT_CLIENT_SECRET_SECRET = 'microsoft_client_secret';
@@ -87,7 +88,6 @@ export interface MicrosoftConsumerBindingSummary {
   profileId?: string | null;
   profileDisplayName?: string;
   isArchived: boolean;
-  isDefault: boolean;
 }
 
 export interface MicrosoftProfileStatusResponse {
@@ -462,12 +462,8 @@ async function ensureMicrosoftConsumerBindingMigration(
 ): Promise<MicrosoftConsumerBindingRow[]> {
   await ensureLegacyMicrosoftProfileBackfill(knex, tenant, secretProvider, userId);
 
-  const profiles = await getTenantMicrosoftProfiles(knex, tenant);
-  const defaultProfile =
-    profiles.find((row) => row.is_default && !row.is_archived) ||
-    profiles.find((row) => !row.is_archived);
-
-  if (!defaultProfile) {
+  const candidateProfile = await resolveMicrosoftBindingCandidateProfile(knex, tenant, secretProvider);
+  if (!candidateProfile) {
     return [];
   }
 
@@ -505,7 +501,7 @@ async function ensureMicrosoftConsumerBindingMigration(
     const binding: MicrosoftConsumerBindingRow = {
       tenant,
       consumer_type: consumerType,
-      profile_id: defaultProfile.profile_id,
+      profile_id: candidateProfile.profile_id,
       created_by: userId || null,
       updated_by: userId || null,
       created_at: now,
@@ -1056,7 +1052,6 @@ export const listMicrosoftConsumerBindings = withAuth(async (
           profileId: binding?.profile_id ?? null,
           profileDisplayName: profile?.display_name,
           isArchived: Boolean(profile?.is_archived),
-          isDefault: Boolean(profile?.is_default),
         };
       }),
     };
@@ -1137,7 +1132,6 @@ export const setMicrosoftConsumerBinding = withAuth(async (
         profileId: input.profileId,
         profileDisplayName: profile.display_name,
         isArchived: false,
-        isDefault: profile.is_default,
       },
     };
   } catch (err: any) {

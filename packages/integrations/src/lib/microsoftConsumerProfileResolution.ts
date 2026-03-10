@@ -38,6 +38,15 @@ interface MicrosoftConsumerBindingRow {
   updated_at: string | Date;
 }
 
+export interface MicrosoftBindingCandidateProfile {
+  profile_id: string;
+  client_id: string;
+  tenant_id: string;
+  client_secret_ref: string;
+  is_default: boolean;
+  is_archived: boolean;
+}
+
 type ResolverStatus = 'ready' | 'not_configured' | 'invalid_profile';
 
 export interface MicrosoftConsumerProfileResolution {
@@ -77,6 +86,23 @@ function hasLegacyMicrosoftConfig(values: {
 
 function isConfigured(value?: string | null): boolean {
   return Boolean((value || '').trim());
+}
+
+async function getLegacyMicrosoftConfig(
+  secretProvider: Awaited<ReturnType<typeof getSecretProviderInstance>>,
+  tenant: string
+): Promise<{ clientId: string; clientSecret: string; tenantId: string }> {
+  const [clientId, clientSecret, tenantId] = await Promise.all([
+    secretProvider.getTenantSecret(tenant, LEGACY_MICROSOFT_CLIENT_ID_SECRET),
+    secretProvider.getTenantSecret(tenant, LEGACY_MICROSOFT_CLIENT_SECRET_SECRET),
+    secretProvider.getTenantSecret(tenant, LEGACY_MICROSOFT_TENANT_ID_SECRET),
+  ]);
+
+  return {
+    clientId: (clientId || '').trim(),
+    clientSecret: (clientSecret || '').trim(),
+    tenantId: normalizeTenantId(tenantId),
+  };
 }
 
 function getMicrosoftProfileSecretRef(profileId: string): string {
@@ -124,6 +150,59 @@ async function getMicrosoftProfileRow(
 ): Promise<MicrosoftProfileRow | undefined> {
   const row = await db('microsoft_profiles').where({ tenant, profile_id: profileId }).first();
   return row || undefined;
+}
+
+export async function resolveMicrosoftBindingCandidateProfile(
+  db: any,
+  tenant: string,
+  secretProvider: Awaited<ReturnType<typeof getSecretProviderInstance>>
+): Promise<MicrosoftBindingCandidateProfile | undefined> {
+  const activeProfiles = (await getTenantMicrosoftProfiles(db, tenant)).filter(
+    (profile) => !profile.is_archived
+  );
+
+  if (activeProfiles.length === 0) {
+    return undefined;
+  }
+
+  if (activeProfiles.length === 1) {
+    return activeProfiles[0];
+  }
+
+  const legacyConfig = await getLegacyMicrosoftConfig(secretProvider, tenant);
+  if (
+    !hasLegacyMicrosoftConfig({
+      clientId: legacyConfig.clientId,
+      clientSecret: legacyConfig.clientSecret,
+      tenantId: legacyConfig.tenantId,
+    })
+  ) {
+    return undefined;
+  }
+
+  const matches: MicrosoftProfileRow[] = [];
+  for (const profile of activeProfiles) {
+    if (legacyConfig.clientId && profile.client_id.trim() !== legacyConfig.clientId) {
+      continue;
+    }
+    if (
+      legacyConfig.tenantId &&
+      normalizeTenantId(profile.tenant_id) !== normalizeTenantId(legacyConfig.tenantId)
+    ) {
+      continue;
+    }
+
+    if (legacyConfig.clientSecret) {
+      const profileSecret = await secretProvider.getTenantSecret(tenant, profile.client_secret_ref);
+      if ((profileSecret || '').trim() !== legacyConfig.clientSecret) {
+        continue;
+      }
+    }
+
+    matches.push(profile);
+  }
+
+  return matches.length === 1 ? matches[0] : undefined;
 }
 
 async function ensureLegacyMicrosoftProfileBackfill(
@@ -224,12 +303,8 @@ async function ensureMicrosoftConsumerBindingMigration(
     return undefined;
   }
 
-  const profiles = await getTenantMicrosoftProfiles(db, tenant);
-  const defaultProfile =
-    profiles.find((row) => row.is_default && !row.is_archived) ||
-    profiles.find((row) => !row.is_archived);
-
-  if (!defaultProfile) {
+  const candidateProfile = await resolveMicrosoftBindingCandidateProfile(db, tenant, secretProvider);
+  if (!candidateProfile) {
     return undefined;
   }
 
@@ -241,7 +316,7 @@ async function ensureMicrosoftConsumerBindingMigration(
   const binding: MicrosoftConsumerBindingRow = {
     tenant,
     consumer_type: consumerType,
-    profile_id: defaultProfile.profile_id,
+    profile_id: candidateProfile.profile_id,
     created_by: null,
     updated_by: null,
     created_at: new Date(),

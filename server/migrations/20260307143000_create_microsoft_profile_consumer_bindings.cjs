@@ -1,8 +1,9 @@
 /**
  * Create tenant-scoped Microsoft profile consumer bindings.
  *
- * Each tenant consumer selects exactly one Microsoft profile. Legacy Microsoft
- * consumers are backfilled in application code; Teams remains explicit-only.
+ * Each tenant consumer selects exactly one Microsoft profile through an
+ * explicit binding row. Legacy Microsoft consumers are backfilled in
+ * application code; Teams remains explicit-only.
  */
 exports.up = async function up(knex) {
   const hasTable = await knex.schema.hasTable('microsoft_profile_consumer_bindings');

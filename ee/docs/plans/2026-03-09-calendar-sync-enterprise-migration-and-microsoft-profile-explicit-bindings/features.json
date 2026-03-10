@@ -1752,7 +1752,7 @@
   {
     "id": "F176",
     "description": "The default-profile concept is reduced to profile-management metadata only if it remains in schema at all.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Rollout / Migration",
@@ -1762,7 +1762,7 @@
   {
     "id": "F177",
     "description": "UI copy and behavior no longer rely on `is_default` as a compatibility signal for consumer routing.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Rollout / Migration",
@@ -1772,7 +1772,7 @@
   {
     "id": "F178",
     "description": "Shared migrations and comments stop describing consumer resolution in compatibility-default terms.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Rollout / Migration",

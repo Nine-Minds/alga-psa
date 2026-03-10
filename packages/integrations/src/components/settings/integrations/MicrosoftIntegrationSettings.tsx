@@ -230,7 +230,7 @@ function getBindingSummary(
     return `${consumerLabel} is bound to an unavailable profile.`;
   }
 
-  return `${consumerLabel} is bound to ${profile.displayName}${binding.isDefault ? ' (default profile)' : ''}.`;
+  return `${consumerLabel} is bound to ${profile.displayName}.`;
 }
 
 function getGuidanceBlocks(
@@ -726,7 +726,6 @@ export function MicrosoftIntegrationSettings() {
                       <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <div className="text-sm font-medium">{consumer.consumerLabel}</div>
-                        {binding?.profileId && binding.isDefault && <Badge variant="outline">Default profile</Badge>}
                       </div>
                       <div className="text-sm text-muted-foreground">{consumer.description}</div>
                     </div>
