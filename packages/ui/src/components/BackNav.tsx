@@ -1,6 +1,6 @@
 'use client';
 
-import { useContext } from 'react';
+import { useContext, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AutomationProps } from '../ui-reflection/types';
 import { Button } from './Button';
@@ -18,6 +18,23 @@ export default function BackNav({ children, href }: BackNavProps) {
   // Try to use unsaved changes context if available
   const unsavedChangesContext = useContext(UnsavedChangesContext);
 
+  const shouldUseBrowserBack = useCallback(
+    (returnFilters: string | null) => {
+      if (typeof window === 'undefined') {
+        return false;
+      }
+      if (!href || href !== '/msp/tickets' || !returnFilters) {
+        return false;
+      }
+      const historyState = window.history.state as { idx?: number } | null;
+      if (typeof historyState?.idx === 'number') {
+        return historyState.idx > 0;
+      }
+      return window.history.length > 1;
+    },
+    [href]
+  );
+
   const handleNavigation = () => {
     const navigateAction = () => {
       if (href) {
@@ -25,6 +42,11 @@ export default function BackNav({ children, href }: BackNavProps) {
         // NOTE: This filter persistence works even when tickets are opened in new tabs,
         // as the returnFilters query param is preserved in the URL
         const returnFilters = searchParams?.get('returnFilters') ?? null;
+
+        if (shouldUseBrowserBack(returnFilters)) {
+          router.back();
+          return;
+        }
 
         if (returnFilters && href === '/msp/tickets') {
           // Decode the filters and append them to the tickets URL

@@ -1180,7 +1180,7 @@ export const getTicketsForList = withAuth(async (
         't.entered_by', 't.updated_by', 't.closed_by',
         't.assigned_to', 't.assigned_team_id',
         't.entered_at', 't.updated_at', 't.closed_at', 't.due_date',
-        't.is_closed', 't.attributes', 't.estimated_hours',
+        't.is_closed', 't.attributes',
         't.master_ticket_id', 't.tenant',
         't.itil_impact', 't.itil_urgency', 't.itil_priority_level',
         't.response_state', 't.ticket_origin',
