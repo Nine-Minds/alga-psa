@@ -277,7 +277,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         })
         .orderBy('created_at', 'asc'),
 
-        // Get documents
+        // Get client-visible documents only
         trx('documents as d')
         .select('d.*')
         .join('document_associations as da', function() {
@@ -287,7 +287,8 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         .where({
           'da.entity_id': ticketId,
           'da.entity_type': 'ticket',
-          'd.tenant': tenant
+          'd.tenant': tenant,
+          'd.is_client_visible': true,
         }),
 
         // Get all users involved in the ticket, including avatar file_id

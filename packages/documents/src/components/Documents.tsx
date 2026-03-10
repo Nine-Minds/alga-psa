@@ -41,7 +41,8 @@ import {
   deleteDocument,
   removeDocumentAssociations,
   updateDocument,
-  toggleDocumentVisibility
+  toggleDocumentVisibility,
+  ensureEntityFolders
 } from '../actions/documentActions';
 import {
   getBlockContent,
@@ -278,6 +279,13 @@ const Documents = ({
       mounted = false;
     };
   }, []);
+
+  // In entity mode, ensure default folders are created on first visit
+  useEffect(() => {
+    if (entityId && entityType) {
+      void ensureEntityFolders(entityId, entityType);
+    }
+  }, [entityId, entityType]);
 
   // Sync currentFolder with URL changes (for breadcrumb/back-forward navigation)
   const prevSearchParamsRef = useRef(searchParams?.get('folder') ?? null);
@@ -547,12 +555,9 @@ const Documents = ({
       // Folder mode: auto-save to current folder if browsing one
       setDocumentFolderPath(currentFolder);
       await handleDocumentFolderSelected(currentFolder);
-    } else if (inFolderMode) {
-      // Folder mode at root: show folder selector
-      setShowDocumentFolderModal(true);
     } else {
-      // Entity mode: create document directly without folder
-      await handleDocumentFolderSelected(null);
+      // Show folder selector (both folder mode at root and entity mode)
+      setShowDocumentFolderModal(true);
     }
   };
 
@@ -1440,6 +1445,7 @@ const Documents = ({
                     await refreshDocuments();
                   }}
                   onCancel={() => setShowUpload(false)}
+                  getFoldersFn={getFoldersFn}
                 />
               </div>
             )}
@@ -1597,6 +1603,8 @@ const Documents = ({
             title={tDoc('folderSelector.newDocumentTitle', 'Select Folder for New Document')}
             description={tDoc('folderSelector.newDocumentDescription', 'Choose where to save this new document')}
             namespace={namespace}
+            entityId={entityId}
+            entityType={entityType}
             getFoldersFn={getFoldersFn}
           />
 
@@ -1618,6 +1626,8 @@ const Documents = ({
                 : tDoc('folderSelector.moveDescription', 'Select destination folder')
             }
             namespace={namespace}
+            entityId={entityId}
+            entityType={entityType}
             getFoldersFn={getFoldersFn}
           />
 
@@ -1634,6 +1644,8 @@ const Documents = ({
               defaultValue: `Select destination folder for ${selectedDocumentsForMove.size} document${selectedDocumentsForMove.size !== 1 ? 's' : ''}`
             })}
             namespace={namespace}
+            entityId={entityId}
+            entityType={entityType}
             getFoldersFn={getFoldersFn}
           />
 
@@ -1771,6 +1783,7 @@ const Documents = ({
                     await refreshDocuments();
                   }}
                   onCancel={() => setShowUpload(false)}
+                  getFoldersFn={getFoldersFn}
                 />
               </div>
             )}

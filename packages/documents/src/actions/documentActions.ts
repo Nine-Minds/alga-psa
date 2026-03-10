@@ -2553,14 +2553,10 @@ export const getFolders = withAuth(async (
     .where('tenant', tenant);
 
   if (hasEntityScope) {
-    // Entity context: show this entity's folders + global (unscoped) folders
-    explicitFolderQuery.where(function() {
-      this.where(function() {
-        this.where('entity_id', entityId).andWhere('entity_type', entityType);
-      }).orWhere(function() {
-        this.whereNull('entity_id').whereNull('entity_type');
-      });
-    });
+    // Entity context: show ONLY this entity's folders
+    explicitFolderQuery
+      .where('entity_id', entityId)
+      .andWhere('entity_type', entityType);
   }
   // No entity scope: show all folders
 
@@ -2575,21 +2571,14 @@ export const getFolders = withAuth(async (
     .andWhere('folder_path', '!=', '');
 
   if (hasEntityScope) {
-    // Entity context: show folders from this entity's docs + unassociated docs
-    implicitFoldersQuery.where(function() {
-      this.whereExists(function() {
-        this.select('*')
-          .from('document_associations as da')
-          .whereRaw('da.document_id = documents.document_id')
-          .andWhere('da.tenant', tenant)
-          .andWhere('da.entity_id', entityId)
-          .andWhere('da.entity_type', entityType);
-      }).orWhereNotExists(function() {
-        this.select('*')
-          .from('document_associations as da')
-          .whereRaw('da.document_id = documents.document_id')
-          .andWhere('da.tenant', tenant);
-      });
+    // Entity context: show folders only from this entity's docs
+    implicitFoldersQuery.whereExists(function() {
+      this.select('*')
+        .from('document_associations as da')
+        .whereRaw('da.document_id = documents.document_id')
+        .andWhere('da.tenant', tenant)
+        .andWhere('da.entity_id', entityId)
+        .andWhere('da.entity_type', entityType);
     });
   }
   // No entity scope: show all documents' folder paths
@@ -3064,16 +3053,14 @@ export const ensureEntityFolders = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  // Check if entity already has folders (skip if already initialized)
+  // Get existing entity folders
   const existingFolders = await knex('document_folders')
     .where('tenant', tenant)
     .andWhere('entity_id', entityId)
     .andWhere('entity_type', entityType)
     .select('folder_path', 'folder_id');
 
-  if (existingFolders.length > 0) {
-    return _getFolderTreeInternal(knex, tenant, entityId, entityType);
-  }
+  const existingPaths = new Set(existingFolders.map((f: { folder_path: string }) => f.folder_path));
 
   // Fetch default folders for this entity type
   const defaults = await knex('document_default_folders')
@@ -3083,10 +3070,16 @@ export const ensureEntityFolders = withAuth(async (
     .orderBy('sort_order', 'asc')
     .orderBy('folder_path', 'asc');
 
-  if (defaults.length > 0) {
-    const pathToFolderId = new Map<string, string>();
+  // Build a map of existing + new folder IDs for parent resolution
+  const pathToFolderId = new Map<string, string>();
+  for (const f of existingFolders as Array<{ folder_path: string; folder_id: string }>) {
+    pathToFolderId.set(f.folder_path, f.folder_id);
+  }
 
-    const foldersToInsert = defaults.map((item: { folder_name: string; folder_path: string; is_client_visible: boolean }) => {
+  // Only insert defaults that don't already exist
+  const foldersToInsert = defaults
+    .filter((item: { folder_path: string }) => !existingPaths.has(item.folder_path))
+    .map((item: { folder_name: string; folder_path: string; is_client_visible: boolean }) => {
       const folderId = uuidv4();
       pathToFolderId.set(item.folder_path, folderId);
 
@@ -3106,6 +3099,7 @@ export const ensureEntityFolders = withAuth(async (
       };
     });
 
+  if (foldersToInsert.length > 0) {
     await knex('document_folders').insert(foldersToInsert);
   }
 

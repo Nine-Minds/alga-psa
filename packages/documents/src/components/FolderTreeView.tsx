@@ -7,6 +7,7 @@ import { ChevronRight, ChevronDown, Folder, FolderOpen, Trash2, ChevronLeft } fr
 import toast from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import VisibilityToggle from './VisibilityToggle';
 
 interface FolderTreeViewProps {
@@ -33,6 +34,7 @@ export default function FolderTreeView({
   const [folderTree, setFolderTree] = useState<IFolderNode[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
   const { t } = useTranslation('common');
 
   const loadFolderTree = useCallback(async function loadFolderTree() {
@@ -80,19 +82,15 @@ export default function FolderTreeView({
     setExpandedFolders(newExpanded);
   }
 
-  async function handleDeleteFolder(path: string, e: React.MouseEvent) {
+  function handleDeleteFolder(path: string, e: React.MouseEvent) {
     e.stopPropagation();
+    setFolderToDelete(path);
+  }
 
-    if (
-      !confirm(
-        t('documents.folders.deleteConfirm', {
-          name: path,
-          defaultValue: `Are you sure you want to delete the folder "${path}"? This will only work if the folder is empty.`
-        })
-      )
-    ) {
-      return;
-    }
+  async function confirmDeleteFolder() {
+    const path = folderToDelete;
+    if (!path) return;
+    setFolderToDelete(null);
 
     try {
       const deleteResult = await deleteFolder(path);
@@ -267,6 +265,18 @@ export default function FolderTreeView({
 
       {folderTree.map(node => renderFolderNode(node, 0))}
       </div>
+
+      <ConfirmationDialog
+        isOpen={folderToDelete !== null}
+        onClose={() => setFolderToDelete(null)}
+        onConfirm={confirmDeleteFolder}
+        title={t('documents.folders.deleteTitle', 'Delete Folder')}
+        message={t('documents.folders.deleteConfirm', {
+          name: folderToDelete ?? '',
+          defaultValue: `Are you sure you want to delete the folder "${folderToDelete}"? This will only work if the folder is empty.`
+        })}
+        confirmLabel={t('documents.folders.deleteAction', 'Delete')}
+      />
     </div>
   );
 }

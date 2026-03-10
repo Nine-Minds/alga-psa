@@ -155,51 +155,60 @@ const SUGGESTED_DEFAULTS: ISuggestedDefault[] = [
   {
     entityType: 'client',
     items: [
-      { folderPath: '/Logos', sortOrder: 0, isClientVisible: false },
-      { folderPath: '/Contracts', sortOrder: 1, isClientVisible: true },
-      { folderPath: '/Contracts/SLAs', sortOrder: 2, isClientVisible: true },
-      { folderPath: '/Invoices', sortOrder: 3, isClientVisible: true },
-      { folderPath: '/Onboarding', sortOrder: 4, isClientVisible: true },
-      { folderPath: '/Technical', sortOrder: 5, isClientVisible: false },
-      { folderPath: '/Technical/Runbooks', sortOrder: 6, isClientVisible: false },
-      { folderPath: '/Meeting Notes', sortOrder: 7, isClientVisible: true },
-    ],
-  },
-  {
-    entityType: 'ticket',
-    items: [
-      { folderPath: '/Attachments', sortOrder: 0, isClientVisible: false },
-      { folderPath: '/Screenshots', sortOrder: 1, isClientVisible: false },
-    ],
-  },
-  {
-    entityType: 'project_task',
-    items: [
-      { folderPath: '/Deliverables', sortOrder: 0, isClientVisible: false },
-      { folderPath: '/Specifications', sortOrder: 1, isClientVisible: false },
-      { folderPath: '/Reference', sortOrder: 2, isClientVisible: false },
-    ],
-  },
-  {
-    entityType: 'contract',
-    items: [
-      { folderPath: '/Agreement', sortOrder: 0, isClientVisible: false },
-      { folderPath: '/Amendments', sortOrder: 1, isClientVisible: false },
-      { folderPath: '/Terms', sortOrder: 2, isClientVisible: false },
-    ],
-  },
-  {
-    entityType: 'asset',
-    items: [
-      { folderPath: '/Manuals', sortOrder: 0, isClientVisible: false },
-      { folderPath: '/Configuration', sortOrder: 1, isClientVisible: false },
-      { folderPath: '/Licenses', sortOrder: 2, isClientVisible: false },
+      { folderPath: '/Clients', sortOrder: 0, isClientVisible: false },
+      { folderPath: '/Clients/Logos', sortOrder: 1, isClientVisible: false },
+      { folderPath: '/Clients/Contracts', sortOrder: 2, isClientVisible: true },
+      { folderPath: '/Clients/Contracts/SLAs', sortOrder: 3, isClientVisible: true },
+      { folderPath: '/Clients/Invoices', sortOrder: 4, isClientVisible: true },
+      { folderPath: '/Clients/Onboarding', sortOrder: 5, isClientVisible: true },
+      { folderPath: '/Clients/Technical', sortOrder: 6, isClientVisible: false },
+      { folderPath: '/Clients/Technical/Runbooks', sortOrder: 7, isClientVisible: false },
+      { folderPath: '/Clients/Meeting Notes', sortOrder: 8, isClientVisible: true },
     ],
   },
   {
     entityType: 'contact',
     items: [
-      { folderPath: '/Avatars', sortOrder: 0, isClientVisible: false },
+      { folderPath: '/Contacts', sortOrder: 0, isClientVisible: false },
+      { folderPath: '/Contacts/Avatars', sortOrder: 1, isClientVisible: false },
+      { folderPath: '/Contacts/Correspondence', sortOrder: 2, isClientVisible: false },
+      { folderPath: '/Contacts/Agreements', sortOrder: 3, isClientVisible: false },
+      { folderPath: '/Contacts/Notes', sortOrder: 4, isClientVisible: false },
+    ],
+  },
+  {
+    entityType: 'ticket',
+    items: [
+      { folderPath: '/Tickets', sortOrder: 0, isClientVisible: false },
+      { folderPath: '/Tickets/Attachments', sortOrder: 1, isClientVisible: false },
+      { folderPath: '/Tickets/Screenshots', sortOrder: 2, isClientVisible: false },
+    ],
+  },
+  {
+    entityType: 'project_task',
+    items: [
+      { folderPath: '/Tasks', sortOrder: 0, isClientVisible: false },
+      { folderPath: '/Tasks/Deliverables', sortOrder: 1, isClientVisible: false },
+      { folderPath: '/Tasks/Specifications', sortOrder: 2, isClientVisible: false },
+      { folderPath: '/Tasks/Reference', sortOrder: 3, isClientVisible: false },
+    ],
+  },
+  {
+    entityType: 'contract',
+    items: [
+      { folderPath: '/Contracts', sortOrder: 0, isClientVisible: false },
+      { folderPath: '/Contracts/Agreement', sortOrder: 1, isClientVisible: false },
+      { folderPath: '/Contracts/Amendments', sortOrder: 2, isClientVisible: false },
+      { folderPath: '/Contracts/Terms', sortOrder: 3, isClientVisible: false },
+    ],
+  },
+  {
+    entityType: 'asset',
+    items: [
+      { folderPath: '/Assets', sortOrder: 0, isClientVisible: false },
+      { folderPath: '/Assets/Manuals', sortOrder: 1, isClientVisible: false },
+      { folderPath: '/Assets/Configuration', sortOrder: 2, isClientVisible: false },
+      { folderPath: '/Assets/Licenses', sortOrder: 3, isClientVisible: false },
     ],
   },
 ];

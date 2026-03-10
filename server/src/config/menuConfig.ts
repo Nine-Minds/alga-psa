@@ -18,7 +18,6 @@ import {
   FileSignature,
   FileText,
   FlaskConical,
-  FolderTree,
   Globe,
   Gauge,
   Handshake,
@@ -204,7 +203,6 @@ export const settingsNavigationSections: NavigationSection[] = [
       { name: 'Ticketing', icon: MessageSquare, href: '/msp/settings?tab=ticketing' },
       { name: 'SLA', icon: Timer, href: '/msp/settings/sla' },
       { name: 'Projects', icon: Layers, href: '/msp/settings?tab=projects' },
-      { name: 'Document Templates', icon: FolderTree, href: '/msp/settings?tab=document-templates' },
       { name: 'Interactions', icon: Handshake, href: '/msp/settings?tab=interactions' },
     ]
   },

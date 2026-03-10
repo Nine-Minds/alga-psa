@@ -16,12 +16,15 @@ export type { EntityType };
 function getImageFolderPath(entityType: EntityType): string {
   switch (entityType) {
     case 'client':
+      return '/Clients/Logos';
     case 'team':
+      return '/Teams/Logos';
     case 'tenant':
       return '/Logos';
     case 'user':
+      return '/Users/Avatars';
     case 'contact':
-      return '/Avatars';
+      return '/Contacts/Avatars';
     default:
       return '/Avatars';
   }
