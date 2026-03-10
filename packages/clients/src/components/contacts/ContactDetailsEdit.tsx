@@ -1,12 +1,12 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { ContactPhoneNumberInput, IClient, IContact, ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Flex, Text, Heading } from '@radix-ui/themes';
-import { updateContact, listInboundTicketDestinationOptions, getAllCountries, type ICountry, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions';
+import { updateContact, listInboundTicketDestinationOptions, getAllCountries, type ICountry, listContactPhoneTypeSuggestions, getCustomPhoneTypeUsageCount, deleteOrphanedPhoneTypes } from '@alga-psa/clients/actions';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { TagManager } from '@alga-psa/tags/components';
@@ -165,6 +165,17 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
         ...contact,
         phone_numbers: compactContactPhoneNumbers(contact.phone_numbers),
       });
+
+      // Clean up phone type definitions the user chose to delete
+      if (phoneTypesToDeleteRef.current.length > 0) {
+        try {
+          await deleteOrphanedPhoneTypes(phoneTypesToDeleteRef.current);
+        } catch {
+          // Non-critical: type cleanup failure shouldn't block save
+        }
+        phoneTypesToDeleteRef.current = [];
+      }
+
       onSave(updatedContact);
     } catch (err) {
       console.error('Error updating contact:', err);
@@ -191,6 +202,20 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
   const handleTagsChange = (updatedTags: ITag[]) => {
     setTags(updatedTags);
   };
+
+  const phoneTypesToDeleteRef = useRef<string[]>([]);
+
+  const handleCheckCustomTypeUsage = useCallback(async (label: string) => {
+    return getCustomPhoneTypeUsageCount(label);
+  }, []);
+
+  const handleDeleteOrphanedPhoneTypes = useCallback(async (labels: string[]) => {
+    // Record intent to delete these types after save
+    phoneTypesToDeleteRef.current = [
+      ...phoneTypesToDeleteRef.current,
+      ...labels.filter(l => !phoneTypesToDeleteRef.current.includes(l)),
+    ];
+  }, []);
 
   return (
     <ReflectionContainer id={id} label={`Edit Contact - ${contact.full_name}`}>
@@ -245,6 +270,8 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
                   customTypeSuggestions={customPhoneTypeSuggestions}
                   errorMessages={phoneValidationErrors}
                   onValidationChange={setPhoneValidationErrors}
+                  onCheckCustomTypeUsage={handleCheckCustomTypeUsage}
+                  onDeleteOrphanedPhoneTypes={handleDeleteOrphanedPhoneTypes}
                 />
               </td>
             </tr>

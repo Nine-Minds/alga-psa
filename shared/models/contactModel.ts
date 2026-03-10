@@ -768,6 +768,100 @@ export class ContactModel {
     return this.hydrateContactsWithPhoneNumbers(contacts as ContactRecord[], tenant, trx) as Promise<IContact[]>;
   }
 
+  /**
+   * Get usage count for a custom phone type label across all contacts in the tenant.
+   */
+  static async getCustomPhoneTypeUsageCount(
+    customTypeLabel: string,
+    tenant: string,
+    trx: Knex.Transaction
+  ): Promise<{ label: string; usageCount: number }> {
+    const normalized = customTypeLabel.trim().replace(/\s+/g, ' ').toLowerCase();
+
+    const result = await trx('contact_phone_numbers as cpn')
+      .join('contact_phone_type_definitions as cptd', function joinType() {
+        this.on('cpn.custom_phone_type_id', '=', 'cptd.contact_phone_type_id')
+          .andOn('cpn.tenant', '=', 'cptd.tenant');
+      })
+      .where('cpn.tenant', tenant)
+      .where('cptd.normalized_label', normalized)
+      .count<{ count: string }>('* as count')
+      .first();
+
+    return { label: customTypeLabel, usageCount: Number(result?.count ?? 0) };
+  }
+
+  /**
+   * Find custom phone types used by a contact that are not used by any other contact.
+   * These types would become orphaned if the contact is deleted.
+   */
+  static async findLastUsagePhoneTypes(
+    contactId: string,
+    tenant: string,
+    trx: Knex.Transaction
+  ): Promise<Array<{ contact_phone_type_id: string; label: string }>> {
+    // Get custom type IDs used by this contact
+    const contactTypeIds = await trx('contact_phone_numbers')
+      .where({ tenant, contact_name_id: contactId })
+      .whereNotNull('custom_phone_type_id')
+      .distinct('custom_phone_type_id')
+      .pluck('custom_phone_type_id');
+
+    if (contactTypeIds.length === 0) return [];
+
+    // Find which of those are used ONLY by this contact
+    const usageCounts = await trx('contact_phone_numbers')
+      .where('tenant', tenant)
+      .whereIn('custom_phone_type_id', contactTypeIds)
+      .groupBy('custom_phone_type_id')
+      .select('custom_phone_type_id')
+      .count<Array<{ custom_phone_type_id: string; count: string }>>('* as count');
+
+    const singleUseIds = usageCounts
+      .filter(row => Number(row.count) === 1)
+      .map(row => row.custom_phone_type_id);
+
+    if (singleUseIds.length === 0) return [];
+
+    return trx('contact_phone_type_definitions')
+      .where({ tenant })
+      .whereIn('contact_phone_type_id', singleUseIds)
+      .select('contact_phone_type_id', 'label');
+  }
+
+  /**
+   * Find orphaned custom phone type definitions that are no longer referenced
+   * by any contact_phone_numbers row in the tenant.
+   */
+  static async findOrphanedPhoneTypeDefinitions(
+    tenant: string,
+    trx: Knex.Transaction
+  ): Promise<Array<{ contact_phone_type_id: string; label: string }>> {
+    return trx('contact_phone_type_definitions as cptd')
+      .leftJoin('contact_phone_numbers as cpn', function joinPhones() {
+        this.on('cptd.contact_phone_type_id', '=', 'cpn.custom_phone_type_id')
+          .andOn('cptd.tenant', '=', 'cpn.tenant');
+      })
+      .whereNull('cpn.contact_phone_number_id')
+      .where('cptd.tenant', tenant)
+      .select('cptd.contact_phone_type_id', 'cptd.label');
+  }
+
+  /**
+   * Delete specific custom phone type definitions by ID.
+   */
+  static async deletePhoneTypeDefinitions(
+    typeIds: string[],
+    tenant: string,
+    trx: Knex.Transaction
+  ): Promise<number> {
+    if (typeIds.length === 0) return 0;
+    return trx('contact_phone_type_definitions')
+      .where({ tenant })
+      .whereIn('contact_phone_type_id', typeIds)
+      .delete();
+  }
+
   private static async ensureCustomPhoneTypeDefinitions(
     preparedRows: PreparedPhoneNumberInput[],
     tenant: string,

@@ -154,6 +154,7 @@ export const deleteContact = withAuth(async (
       await deleteEntityTags(trx, contactId, 'contact');
 
       // Clean up child records owned by the contact
+      await trx('contact_phone_numbers').where({ contact_name_id: contactId, tenant: tenantId }).delete();
       await trx('comments').where({ contact_id: contactId, tenant: tenantId }).delete();
       await trx('portal_invitations').where({ contact_id: contactId, tenant: tenantId }).delete();
       await trx('contact_phone_numbers').where({ contact_name_id: contactId, tenant: tenantId }).delete();
@@ -197,7 +198,7 @@ export const deleteContact = withAuth(async (
       ...result,
       deleted: result.deleted,
       success: result.deleted === true,
-      counts
+      counts,
     };
   } catch (err) {
     console.error('Error deleting contact:', err);
@@ -374,6 +375,64 @@ export const listContactPhoneTypeSuggestions = withAuth(async (
     return rows
       .map((row: { label?: string | null }) => row.label?.trim() ?? '')
       .filter((label): label is string => label.length > 0);
+  });
+});
+
+export const getCustomPhoneTypeUsageCount = withAuth(async (
+  user,
+  { tenant },
+  customTypeLabel: string
+): Promise<{ label: string; usageCount: number }> => {
+  const { knex: db } = await createTenantKnex();
+
+  if (!await hasPermissionAsync(user, 'contact', 'read')) {
+    return { label: customTypeLabel, usageCount: 0 };
+  }
+
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    return ContactModel.getCustomPhoneTypeUsageCount(customTypeLabel, tenant, trx);
+  });
+});
+
+export const getContactLastUsagePhoneTypes = withAuth(async (
+  user,
+  { tenant },
+  contactId: string
+): Promise<Array<{ contact_phone_type_id: string; label: string }>> => {
+  const { knex: db } = await createTenantKnex();
+
+  if (!await hasPermissionAsync(user, 'contact', 'read')) {
+    return [];
+  }
+
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    return ContactModel.findLastUsagePhoneTypes(contactId, tenant, trx);
+  });
+});
+
+export const deleteOrphanedPhoneTypes = withAuth(async (
+  user,
+  { tenant },
+  typeLabels: string[]
+): Promise<number> => {
+  const { knex: db } = await createTenantKnex();
+
+  if (!await hasPermissionAsync(user, 'contact', 'update')) {
+    throw new Error('Permission denied: Cannot manage phone types');
+  }
+
+  if (typeLabels.length === 0) return 0;
+
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    // Only delete types that are actually orphaned (safety check)
+    const orphaned = await ContactModel.findOrphanedPhoneTypeDefinitions(tenant, trx);
+    const normalizedRequested = new Set(
+      typeLabels.map(l => l.trim().replace(/\s+/g, ' ').toLowerCase())
+    );
+    const idsToDelete = orphaned
+      .filter(o => normalizedRequested.has(o.label.trim().replace(/\s+/g, ' ').toLowerCase()))
+      .map(o => o.contact_phone_type_id);
+    return ContactModel.deletePhoneTypeDefinitions(idsToDelete, tenant, trx);
   });
 });
 
