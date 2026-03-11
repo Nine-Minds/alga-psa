@@ -184,7 +184,7 @@ spec:
           {{- end }}
 
           # ----------- HOCUSPOCUS ----------------
-          {{- if or .Values.hocuspocus.enabled (not (include "sebastian.hostedEnvEnabled" .)) }}
+          {{- if .Values.hocuspocus.enabled }}
           - name: REQUIRE_HOCUSPOCUS
             value: "true"
           - name: HOCUSPOCUS_HOST
@@ -200,11 +200,11 @@ spec:
           - name: DB_TYPE
             value: "postgres"
           - name: DB_HOST
-            value: "db.{{ include "sebastian.namespace" . }}.svc.cluster.local"
+            value: "{{ include "sebastian.runtimeDbHost" . }}"
           - name: DB_USER_SERVER
             value: "app_user"
           - name: DB_PORT
-            value: "5432"
+            value: "{{ include "sebastian.runtimeDbPort" . }}"
           - name: DB_NAME_SERVER
             value: "server"
           - name: DB_USER_ADMIN
@@ -351,8 +351,10 @@ spec:
             value: "{{ .Values.logging.external.token }}"
 
           # ----------- HOCUSPOCUS ----------------
+          {{- if .Values.hocuspocus.enabled }}
           - name: HOCUSPOCUS_URL
             value: "ws://hocuspocus.{{ include "sebastian.namespace" . }}.svc.cluster.local:{{ .Values.hocuspocus.service.port }}"
+          {{- end }}
 
           # ----------- EMAIL ----------------
           - name: EMAIL_ENABLE

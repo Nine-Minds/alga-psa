@@ -1,0 +1,6 @@
+apiVersion: v2
+name: temporal
+description: Minimal Temporal deployment for Alga PSA appliance environments
+type: application
+version: 0.1.0
+appVersion: "1.27.2"

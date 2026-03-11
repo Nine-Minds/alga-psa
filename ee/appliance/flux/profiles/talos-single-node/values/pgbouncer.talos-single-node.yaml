@@ -1,0 +1,19 @@
+namespace: msp
+
+service:
+  name: pgbouncer
+  port: 6432
+
+postgres:
+  host: db.msp.svc.cluster.local
+  port: 5432
+  appDatabase: server
+  adminDatabase: postgres
+  appUser: app_user
+  adminUser: postgres
+  appPasswordSecret:
+    name: db-credentials
+    key: DB_PASSWORD_SERVER
+  adminPasswordSecret:
+    name: db-credentials
+    key: DB_PASSWORD_SUPERUSER

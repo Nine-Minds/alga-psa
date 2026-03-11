@@ -94,6 +94,32 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 {{- end }}
 
+{{/* Runtime DB host for workloads that should prefer PgBouncer when it is enabled. */}}
+{{- define "sebastian.runtimeDbHost" -}}
+{{- if .Values.db.enabled -}}
+{{- if and .Values.pgbouncer .Values.pgbouncer.enabled -}}
+{{- printf "%s.%s.svc.cluster.local" (.Values.pgbouncer.service.name | default "pgbouncer") (include "sebastian.namespace" .) -}}
+{{- else -}}
+{{- printf "db.%s.svc.cluster.local" (include "sebastian.namespace" .) -}}
+{{- end -}}
+{{- else -}}
+{{- .Values.config.db.host -}}
+{{- end -}}
+{{- end }}
+
+{{/* Runtime DB port for workloads that should prefer PgBouncer when it is enabled. */}}
+{{- define "sebastian.runtimeDbPort" -}}
+{{- if .Values.db.enabled -}}
+{{- if and .Values.pgbouncer .Values.pgbouncer.enabled -}}
+{{- printf "%v" (.Values.pgbouncer.service.port | default 6432) -}}
+{{- else -}}
+{{- printf "%v" (.Values.db.service.port | default 5432) -}}
+{{- end -}}
+{{- else -}}
+{{- printf "%v" .Values.config.db.port -}}
+{{- end -}}
+{{- end }}
+
 {{/*
 Render MICROSOFT_OAUTH_* env vars using the microsoft_integration config.
 */}}

@@ -1,0 +1,32 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: temporal-worker
+  namespace: alga-system
+spec:
+  interval: 10m
+  dependsOn:
+    - name: alga-core
+    - name: pgbouncer
+    - name: temporal
+  releaseName: temporal-worker
+  targetNamespace: msp
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  chart:
+    spec:
+      chart: ./ee/helm/temporal-worker
+      interval: 10m
+      sourceRef:
+        kind: GitRepository
+        name: flux-system
+        namespace: flux-system
+  valuesFrom:
+    - kind: ConfigMap
+      name: appliance-values-temporal-worker
+      valuesKey: temporal-worker.talos-single-node.yaml

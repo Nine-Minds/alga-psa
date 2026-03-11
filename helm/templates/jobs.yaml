@@ -1,35 +1,41 @@
-{{- if and (not .Values.devEnv.enabled) .Values.setup.runMigrations }}
+{{- if and (not .Values.devEnv.enabled) (or .Values.setup.runMigrations .Values.setup.runSeeds) }}
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: job-initial-setup
+  name: {{ include "sebastian.fullname" . }}-bootstrap
   namespace: {{ include "sebastian.namespace" . }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded,before-hook-creation
 spec:
-  ttlSecondsAfterFinished: 60
+  ttlSecondsAfterFinished: 300
   template:
     metadata:
-      name: job-initial-setup
+      name: {{ include "sebastian.fullname" . }}-bootstrap
     spec:
       {{- if .Values.setup.image.is_private }}
       imagePullSecrets:
         - name: "{{ .Values.setup.image.credentials }}"
       {{- end }}
       containers:
-        - name: job-initial-setup
+        - name: bootstrap
           image: "{{ .Values.setup.image.name }}:{{ .Values.setup.image.tag }}"
           imagePullPolicy: {{ .Values.setup.pullPolicy }}
-          command: ["/bin/sh", "-c"]
-          args:
-            - |
-              echo "Waiting for 30 seconds before starting..."
-              sleep 30
-              echo "Starting entrypoint script..."
-              ./entrypoint.sh
+          command: ["{{ .Values.setup.entrypoint | default "/opt/setup/entrypoint.sh" }}"]
           env:
             - name: APP_NAME
               value: "{{ .Values.nameOverride }}"
             - name: APP_ENV
-              value: "{{ .Values.env }}"
+              value: "{{ .Values.env | default "production" }}"
+            - name: NODE_ENV
+              value: "{{ .Values.env | default "production" }}"
+            - name: EDITION
+              value: "{{ .Values.edition | default "community" }}"
+            - name: SETUP_RUN_MIGRATIONS
+              value: {{ ternary "true" "false" .Values.setup.runMigrations | quote }}
+            - name: SETUP_RUN_SEEDS
+              value: {{ ternary "true" "false" .Values.setup.runSeeds | quote }}
 
             # Secret provider configuration for setup jobs
             - name: SECRET_READ_CHAIN
@@ -68,10 +74,19 @@ spec:
               value: "postgres"
             - name: DB_HOST
               value: "db.{{ include "sebastian.namespace" . }}.svc.cluster.local"
+            - name: DB_HOST_ADMIN
+              value: "db.{{ include "sebastian.namespace" . }}.svc.cluster.local"
             - name: DB_PORT
+              value: "5432"
+            - name: DB_PORT_ADMIN
               value: "5432"
             - name: DB_USER
               value: "postgres"
+            - name: DB_PASSWORD_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DB_PASSWORD_SUPERUSER
             - name: DB_PASSWORD_SUPERUSER
               valueFrom:
                 secretKeyRef:
@@ -100,25 +115,59 @@ spec:
               value: "{{ .Values.config.db.type }}"
             - name: DB_HOST
               value: "{{ .Values.config.db.host }}"
+            - name: DB_HOST_ADMIN
+              value: "{{ .Values.config.db.adminHost | default .Values.config.db.host }}"
             - name: DB_PORT
               value: "{{ .Values.config.db.port }}"
+            - name: DB_PORT_ADMIN
+              value: "{{ .Values.config.db.adminPort | default .Values.config.db.port }}"
             - name: DB_USER
               value: "{{ .Values.config.db.user }}"
+            - name: DB_PASSWORD_ADMIN
+              {{- if and .Values.config.db.server_password_admin_secret.name .Values.config.db.server_password_admin_secret.key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.db.server_password_admin_secret.name | quote }}
+                  key: {{ .Values.config.db.server_password_admin_secret.key | quote }}
+              {{- else }}
+              value: {{ .Values.config.db.server_admin_password | quote }}
+              {{- end }}
             - name: DB_PASSWORD_SUPERUSER
-              value: "{{ .Values.config.db.password }}"
+              {{- if and .Values.config.db.server_password_admin_secret.name .Values.config.db.server_password_admin_secret.key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.db.server_password_admin_secret.name | quote }}
+                  key: {{ .Values.config.db.server_password_admin_secret.key | quote }}
+              {{- else }}
+              value: {{ .Values.config.db.server_admin_password | quote }}
+              {{- end }}
             - name: DB_USER_HOCUSPOCUS
-              value: "{{ .Values.config.db.user }}"
+              value: "{{ .Values.config.db.hocuspocus_user | default "hocuspocus_user" }}"
             - name: DB_NAME_HOCUSPOCUS
               value: "{{ .Values.config.db.hocuspocus_database }}"
             - name: DB_PASSWORD_HOCUSPOCUS
-              value: "{{ .Values.config.db.password }}"
+              {{- if .Values.config.db.hocuspocus_password_secret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.db.hocuspocus_password_secret.name | quote }}
+                  key: {{ .Values.config.db.hocuspocus_password_secret.key | quote }}
+              {{- else }}
+              value: {{ .Values.config.db.password | quote }}
+              {{- end }}
             - name: DB_USER_SERVER
               value: "{{ .Values.config.db.user }}"
             - name: DB_NAME_SERVER
               value: "{{ .Values.config.db.server_database }}"
             - name: DB_PASSWORD_SERVER
-              value: "{{ .Values.config.db.password }}"
+              {{- if and .Values.config.db.server_password_secret.name .Values.config.db.server_password_secret.key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.db.server_password_secret.name | quote }}
+                  key: {{ .Values.config.db.server_password_secret.key | quote }}
+              {{- else }}
+              value: {{ .Values.config.db.server_password | quote }}
+              {{- end }}
             {{- end }}
       restartPolicy: Never
-  backoffLimit: 4
+  backoffLimit: 2
 {{- end }}

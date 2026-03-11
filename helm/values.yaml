@@ -43,6 +43,7 @@ setup:
     is_private: true
     credentials: harbor-credentials
     tag: "latest"
+  entrypoint: /opt/setup/entrypoint.sh
   pullPolicy: Always
   runMigrations: true
   runSeeds: true
@@ -262,6 +263,12 @@ db:
     existingClaim: ""
     size: 20Gi
     storageClass: "local-path"
+
+pgbouncer:
+  enabled: false
+  service:
+    name: pgbouncer
+    port: 6432
 
 persistence:
   enabled: true

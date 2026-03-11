@@ -20,6 +20,35 @@ handle_error() {
 set -e
 trap 'handle_error' ERR
 
+is_enabled() {
+    case "${1:-true}" in
+        [Ff][Aa][Ll][Ss][Ee]|0|[Nn][Oo]|[Oo][Ff][Ff])
+            return 1
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+}
+
+get_admin_password() {
+    local password=""
+
+    if [ -f /run/secrets/postgres_password ]; then
+        password=$(cat /run/secrets/postgres_password 2>/dev/null)
+    fi
+
+    if [ -z "$password" ] && [ -n "${DB_PASSWORD_ADMIN:-}" ]; then
+        password="${DB_PASSWORD_ADMIN}"
+    fi
+
+    if [ -z "$password" ] && [ -n "${DB_PASSWORD_SUPERUSER:-}" ]; then
+        password="${DB_PASSWORD_SUPERUSER}"
+    fi
+
+    echo "$password" | tr -d '[:space:]'
+}
+
 # Function to check if postgres is ready
 wait_for_postgres() {
     log "Waiting for PostgreSQL to be ready..."
@@ -35,7 +64,12 @@ wait_for_postgres() {
         export DB_HOST_ADMIN=$PG_ADMIN_HOST
         export DB_PORT_ADMIN=$PG_ADMIN_PORT
     fi
-    local PG_PASSWORD=$(cat /run/secrets/postgres_password | tr -d '[:space:]')
+    local PG_PASSWORD
+    PG_PASSWORD=$(get_admin_password)
+    if [ -z "$PG_PASSWORD" ]; then
+        log "ERROR: No admin database password available for wait_for_postgres"
+        exit 1
+    fi
     set +e  # Temporarily disable exit on error for the until loop
     until PGPASSWORD="${PG_PASSWORD}" psql -h ${PG_ADMIN_HOST} -p ${PG_ADMIN_PORT} -U postgres -c '\q' 2>/dev/null; do
         # Try direct Postgres as a smart fallback if PgBouncer is the target and not responding
@@ -60,13 +94,8 @@ check_seeds_status() {
     # Use DB_HOST_ADMIN for direct postgres connections (admin operations)
     local PG_ADMIN_HOST=${DB_HOST_ADMIN:-${DB_HOST:-postgres}}
     local PG_ADMIN_PORT=${DB_PORT_ADMIN:-${DB_PORT:-5432}}
-    local PG_PASSWORD=$(cat /run/secrets/postgres_password 2>/dev/null | tr -d '[:space:]')
-
-    # If reading from secrets failed, try environment variable
-    if [ -z "$PG_PASSWORD" ]; then
-        log "WARNING: Could not read password from secrets file in check_seeds_status, trying environment variable"
-        PG_PASSWORD="${DB_PASSWORD_ADMIN}"
-    fi
+    local PG_PASSWORD
+    PG_PASSWORD=$(get_admin_password)
 
     has_seeds=$(PGPASSWORD="${PG_PASSWORD}" psql -h ${PG_ADMIN_HOST} -p ${PG_ADMIN_PORT} -U postgres -d ${DB_NAME_SERVER:-server} -tAc "SELECT EXISTS (SELECT 1 FROM users LIMIT 1);" 2>/dev/null)
     if [ "$has_seeds" = "t" ]; then
@@ -98,62 +127,58 @@ main() {
     local PG_ADMIN_HOST=${DB_HOST_ADMIN:-${DB_HOST:-postgres}}
     local PG_ADMIN_PORT=${DB_PORT_ADMIN:-${DB_PORT:-5432}}
     # Read and trim the postgres password (be extra careful with whitespace)
-    local PG_PASSWORD=$(cat /run/secrets/postgres_password 2>/dev/null | tr -d '[:space:]')
-
-    # If reading from secrets failed, try environment variable
-    if [ -z "$PG_PASSWORD" ]; then
-        log "WARNING: Could not read password from secrets file, trying environment variable"
-        PG_PASSWORD="${DB_PASSWORD_ADMIN}"
-    fi
+    local PG_PASSWORD
+    PG_PASSWORD=$(get_admin_password)
 
     log "DEBUG: Connecting to ${PG_ADMIN_HOST}:${PG_ADMIN_PORT} with user postgres"
     log "DEBUG: Password available: $([ -n "$PG_PASSWORD" ] && echo 'yes' || echo 'no')"
     log "DEBUG: Password length: ${#PG_PASSWORD}"
 
-    log "Creating pgboss schema..."
-    # Add retry logic for pgboss schema creation in case of temporary connection issues
-    local RETRY_COUNT=0
-    local MAX_RETRIES=3
-    local RETRY_DELAY=2
+    if is_enabled "${SETUP_RUN_MIGRATIONS:-true}"; then
+        log "Creating pgboss schema..."
+        # Add retry logic for pgboss schema creation in case of temporary connection issues
+        local RETRY_COUNT=0
+        local MAX_RETRIES=3
+        local RETRY_DELAY=2
 
-    until PGPASSWORD="${PG_PASSWORD}" psql -h ${PG_ADMIN_HOST} -p ${PG_ADMIN_PORT} -U postgres -d ${DB_NAME_SERVER:-server} -c 'CREATE SCHEMA IF NOT EXISTS pgboss;' 2>&1; do
-        RETRY_COUNT=$((RETRY_COUNT + 1))
-        if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
-            log "ERROR: Failed to create pgboss schema after $MAX_RETRIES attempts"
-            log "Testing connection with psql..."
-            PGPASSWORD="${PG_PASSWORD}" psql -h ${PG_ADMIN_HOST} -p ${PG_ADMIN_PORT} -U postgres -d ${DB_NAME_SERVER:-server} -c 'SELECT version();' 2>&1 || log "Connection test failed"
-            log "Checking if Postgres is still accessible..."
-            pg_isready -h ${PG_ADMIN_HOST} -p ${PG_ADMIN_PORT} -U postgres || log "Postgres not ready"
-            exit 1
-        fi
-        log "Retry $RETRY_COUNT/$MAX_RETRIES: pgboss schema creation failed, retrying in ${RETRY_DELAY}s..."
-        sleep $RETRY_DELAY
-    done
-    log "pgboss schema created successfully"
+        until PGPASSWORD="${PG_PASSWORD}" psql -h ${PG_ADMIN_HOST} -p ${PG_ADMIN_PORT} -U postgres -d ${DB_NAME_SERVER:-server} -c 'CREATE SCHEMA IF NOT EXISTS pgboss;' 2>&1; do
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
+                log "ERROR: Failed to create pgboss schema after $MAX_RETRIES attempts"
+                log "Testing connection with psql..."
+                PGPASSWORD="${PG_PASSWORD}" psql -h ${PG_ADMIN_HOST} -p ${PG_ADMIN_PORT} -U postgres -d ${DB_NAME_SERVER:-server} -c 'SELECT version();' 2>&1 || log "Connection test failed"
+                log "Checking if Postgres is still accessible..."
+                pg_isready -h ${PG_ADMIN_HOST} -p ${PG_ADMIN_PORT} -U postgres || log "Postgres not ready"
+                exit 1
+            fi
+            log "Retry $RETRY_COUNT/$MAX_RETRIES: pgboss schema creation failed, retrying in ${RETRY_DELAY}s..."
+            sleep $RETRY_DELAY
+        done
+        log "pgboss schema created successfully"
 
-    log "Granting necessary permissions..."
-    PGPASSWORD="${PG_PASSWORD}" psql -h ${PG_ADMIN_HOST} -p ${PG_ADMIN_PORT} -U postgres -d ${DB_NAME_SERVER:-server} -c 'GRANT ALL ON SCHEMA public TO postgres;'
+        log "Granting necessary permissions..."
+        PGPASSWORD="${PG_PASSWORD}" psql -h ${PG_ADMIN_HOST} -p ${PG_ADMIN_PORT} -U postgres -d ${DB_NAME_SERVER:-server} -c 'GRANT ALL ON SCHEMA public TO postgres;'
 
-    log "Running migrations..."
+        log "Running migrations..."
 
-    # For Enterprise Edition, we need to run migrations from a combined directory
-    if [ "${EDITION}" = "enterprise" ] || [ "${EDITION}" = "ee" ]; then
-        log "Setting up EE migrations..."
+        # For Enterprise Edition, we need to run migrations from a combined directory
+        if [ "${EDITION}" = "enterprise" ] || [ "${EDITION}" = "ee" ]; then
+            log "Setting up EE migrations..."
 
-        # Create a combined migrations directory within /app/server
-        mkdir -p /app/server/combined-migrations
+            # Create a combined migrations directory within /app/server
+            mkdir -p /app/server/combined-migrations
 
-        # Copy base migrations first (these should run first)
-        log "Copying base migrations..."
-        cp /app/server/migrations/*.cjs /app/server/combined-migrations/ 2>/dev/null || true
+            # Copy base migrations first (these should run first)
+            log "Copying base migrations..."
+            cp /app/server/migrations/*.cjs /app/server/combined-migrations/ 2>/dev/null || true
 
-        # Copy EE migrations (these run after base migrations)
-        log "Copying EE migrations..."
-        cp /app/ee/server/migrations/*.cjs /app/server/combined-migrations/ 2>/dev/null || true
+            # Copy EE migrations (these run after base migrations)
+            log "Copying EE migrations..."
+            cp /app/ee/server/migrations/*.cjs /app/server/combined-migrations/ 2>/dev/null || true
 
-        # Create a temporary knexfile in /app/server where node_modules exist
-        log "Creating temporary knexfile for EE..."
-        cat > /app/server/knexfile-ee.cjs << 'EOF'
+            # Create a temporary knexfile in /app/server where node_modules exist
+            log "Creating temporary knexfile for EE..."
+            cat > /app/server/knexfile-ee.cjs << 'EOF'
 const fs = require('fs');
 const path = require('path');
 
@@ -193,62 +218,69 @@ module.exports = {
 };
 EOF
         
-        log "Running combined migrations for EE..."
-        log "Current directory: $(pwd)"
-        log "Migration directory contents:"
-        ls -la /app/server/combined-migrations/ || log "Could not list migration directory"
+            log "Running combined migrations for EE..."
+            log "Current directory: $(pwd)"
+            log "Migration directory contents:"
+            ls -la /app/server/combined-migrations/ || log "Could not list migration directory"
 
-        cd /app/server && NODE_ENV=migration timeout 300 npx knex migrate:latest --knexfile knexfile-ee.cjs --verbose || {
-            local exit_code=$?
-            if [ $exit_code -eq 124 ]; then
-                log "ERROR: EE migrations timed out after 300 seconds"
-            else
-                log "ERROR: EE migrations failed with exit code $exit_code"
-            fi
-            exit 1
-        }
-        log "EE migrations completed!"
+            cd /app/server && NODE_ENV=migration timeout 300 npx knex migrate:latest --knexfile knexfile-ee.cjs --verbose || {
+                local exit_code=$?
+                if [ $exit_code -eq 124 ]; then
+                    log "ERROR: EE migrations timed out after 300 seconds"
+                else
+                    log "ERROR: EE migrations failed with exit code $exit_code"
+                fi
+                exit 1
+            }
+            log "EE migrations completed!"
 
-        # Clean up
-        rm -rf /app/server/combined-migrations
-        rm -f /app/server/knexfile-ee.cjs
+            # Clean up
+            rm -rf /app/server/combined-migrations
+            rm -f /app/server/knexfile-ee.cjs
+        else
+            # For CE, just run the base migrations
+            log "Running base migrations for CE..."
+            log "Current directory: $(pwd)"
+            log "Migration directory: /app/server/migrations"
+            ls -la /app/server/migrations/ || log "Could not list migration directory"
+
+            NODE_ENV=migration timeout 300 npx knex migrate:latest --knexfile /app/server/knexfile.cjs --verbose || {
+                local exit_code=$?
+                if [ $exit_code -eq 124 ]; then
+                    log "ERROR: Migrations timed out after 300 seconds"
+                else
+                    log "ERROR: Migrations failed with exit code $exit_code"
+                fi
+                exit 1
+            }
+            log "Migrations completed!"
+        fi
     else
-        # For CE, just run the base migrations
-        log "Running base migrations for CE..."
-        log "Current directory: $(pwd)"
-        log "Migration directory: /app/server/migrations"
-        ls -la /app/server/migrations/ || log "Could not list migration directory"
-
-        NODE_ENV=migration timeout 300 npx knex migrate:latest --knexfile /app/server/knexfile.cjs --verbose || {
-            local exit_code=$?
-            if [ $exit_code -eq 124 ]; then
-                log "ERROR: Migrations timed out after 300 seconds"
-            else
-                log "ERROR: Migrations failed with exit code $exit_code"
-            fi
-            exit 1
-        }
-        log "Migrations completed!"
+        log "SETUP_RUN_MIGRATIONS is disabled; skipping pgboss schema creation and migrations."
     fi
 
     # Check if seeds need to be run
-    if ! check_seeds_status; then
-        log "Running seeds..."
-        log "Seed directory: /app/server/seeds"
-        ls -la /app/server/seeds/ || log "Could not list seed directory"
+    if is_enabled "${SETUP_RUN_SEEDS:-true}"; then
+        if ! check_seeds_status; then
+            log "Running seeds..."
+            log "Seed directory: /app/server/seeds"
+            ls -la /app/server/seeds/ || log "Could not list seed directory"
 
-        NODE_ENV=migration timeout 300 npx knex seed:run --knexfile /app/server/knexfile.cjs --verbose || {
-            local exit_code=$?
-            if [ $exit_code -eq 124 ]; then
-                log "ERROR: Seeds timed out after 300 seconds"
-            else
-                log "ERROR: Seeds failed with exit code $exit_code"
-            fi
-            exit $exit_code
-        }
-        log "Seeds completed!"
+            NODE_ENV=migration timeout 300 npx knex seed:run --knexfile /app/server/knexfile.cjs --verbose || {
+                local exit_code=$?
+                if [ $exit_code -eq 124 ]; then
+                    log "ERROR: Seeds timed out after 300 seconds"
+                else
+                    log "ERROR: Seeds failed with exit code $exit_code"
+                fi
+                exit $exit_code
+            }
+            log "Seeds completed!"
+        else
+            log "Seeds have already been run, skipping..."
+        fi
     else
-        log "Seeds have already been run, skipping..."
+        log "SETUP_RUN_SEEDS is disabled; skipping seeds."
     fi
 
     log "Setup completed!"

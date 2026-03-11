@@ -1,0 +1,104 @@
+[
+  {
+    "id": "T001",
+    "description": "Render: the Talos single-node Flux kustomization resolves without missing files or duplicate resource names.",
+    "implemented": true,
+    "featureIds": ["F001", "F002"]
+  },
+  {
+    "id": "T002",
+    "description": "Render: the `alga-core` appliance overlay renders the root chart successfully with enterprise single-node values.",
+    "implemented": true,
+    "featureIds": ["F002", "F005"]
+  },
+  {
+    "id": "T003",
+    "description": "Render: the new PgBouncer chart renders successfully with appliance values.",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T004",
+    "description": "Render: the workflow-worker appliance overlay renders successfully and points at the PgBouncer service host/port.",
+    "implemented": true,
+    "featureIds": ["F002", "F010"]
+  },
+  {
+    "id": "T005",
+    "description": "Render: the email-service appliance overlay renders successfully and points at the PgBouncer service host/port.",
+    "implemented": true,
+    "featureIds": ["F002", "F011"]
+  },
+  {
+    "id": "T006",
+    "description": "Render: the temporal-worker appliance overlay renders successfully and points at the PgBouncer service host/port.",
+    "implemented": true,
+    "featureIds": ["F002", "F012"]
+  },
+  {
+    "id": "T007",
+    "description": "Render: the appliance profile defines a Temporal release with single-node-safe persistence defaults.",
+    "implemented": true,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T008",
+    "description": "Contract: root-chart DB secret template keeps an existing `db-credentials` secret instead of regenerating passwords on reinstall.",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T009",
+    "description": "Contract: the root chart no longer emits separate migration and seed hooks when the unified bootstrap hook is enabled.",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T010",
+    "description": "Contract: the unified bootstrap hook uses the setup image and passes `SETUP_RUN_MIGRATIONS` and `SETUP_RUN_SEEDS` control flags.",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T011",
+    "description": "Contract: `setup/entrypoint.sh` can read the admin password from environment variables when `/run/secrets/postgres_password` is absent.",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T012",
+    "description": "Contract: the bootstrap path still checks database seed state before running seeds.",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T013",
+    "description": "Functional: a fresh install path would create DB/users, run migrations, run seeds once, and then allow the app workload to start.",
+    "implemented": false,
+    "featureIds": ["F007", "F009"]
+  },
+  {
+    "id": "T014",
+    "description": "Functional: a second reconcile against an existing seeded database would skip the seed phase and leave persisted data intact.",
+    "implemented": false,
+    "featureIds": ["F006", "F009"]
+  },
+  {
+    "id": "T015",
+    "description": "Functional: the server deployment uses PgBouncer when the appliance profile enables it while bootstrap continues to talk directly to Postgres.",
+    "implemented": true,
+    "featureIds": ["F005", "F007"]
+  },
+  {
+    "id": "T016",
+    "description": "Functional: appliance bootstrap/deploy scripts target the Talos single-node Flux profile path and fail clearly when required inputs are missing.",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T017",
+    "description": "Documentation: the design doc captures approved release boundaries, first-run semantics, and validation expectations.",
+    "implemented": true,
+    "featureIds": ["F014"]
+  }
+]

@@ -1,0 +1,70 @@
+namespace: msp
+env: production
+edition: enterprise
+host: alga.local
+domainSuffix: alga.local
+
+setup:
+  runMigrations: true
+  runSeeds: true
+  image:
+    name: ghcr.io/nine-minds/alga-psa-ee
+    is_private: false
+    credentials: ""
+    tag: latest
+
+server:
+  image:
+    name: ghcr.io/nine-minds/alga-psa-ee
+    is_private: false
+    credentials: ""
+    tag: latest
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 3000
+  persistence:
+    enabled: true
+    mountPath: /data/files
+    size: 50Gi
+    storageClass: local-path
+
+hocuspocus:
+  enabled: false
+
+temporal:
+  address: temporal-frontend.msp.svc.cluster.local:7233
+  namespace: default
+
+db:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 50Gi
+    storageClass: local-path
+
+redis:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: local-path
+
+pgbouncer:
+  enabled: true
+  service:
+    name: pgbouncer
+    port: 6432
+
+config:
+  storage:
+    default_provider: local
+    providers:
+      local:
+        enabled: true
+        base_path: /data/files
+    locations:
+      documents:
+        provider: local
+      avatars:
+        provider: local

@@ -1,0 +1,72 @@
+[
+  {
+    "id": "F001",
+    "description": "Add an appliance-owned Flux profile for Talos single-node deployment under `ee/appliance/flux/`.",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Add appliance values overlays for the root Alga chart and each EE service chart used by the Talos profile.",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Add appliance bootstrap/deploy scripts that target the Talos single-node Flux profile.",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "Add a Kubernetes deployment path for PgBouncer as a Helm chart under `ee/helm/pgbouncer`.",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "Route the root chart server deployment through PgBouncer when the appliance profile enables it.",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "Preserve generated root-chart DB credentials across Helm reconciliations instead of rotating them on reinstall.",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "description": "Replace the current split migration/seed Helm hook flow with a single idempotent bootstrap hook job using the setup image.",
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "description": "Make the setup entrypoint safe to run in Kubernetes jobs that provide DB credentials via environment variables rather than Docker secret files only.",
+    "implemented": true
+  },
+  {
+    "id": "F009",
+    "description": "Ensure the bootstrap flow only runs seeds when the application database is still unseeded.",
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "description": "Wire `workflow-worker` to the appliance profile with PgBouncer-backed DB configuration and release ordering.",
+    "implemented": true
+  },
+  {
+    "id": "F011",
+    "description": "Wire `email-service` to the appliance profile with PgBouncer-backed DB configuration and release ordering.",
+    "implemented": true
+  },
+  {
+    "id": "F012",
+    "description": "Wire `temporal-worker` to the appliance profile with PgBouncer-backed DB configuration and Temporal dependency ordering.",
+    "implemented": true
+  },
+  {
+    "id": "F013",
+    "description": "Wire a Temporal server release into the appliance profile for single-node operation.",
+    "implemented": true
+  },
+  {
+    "id": "F014",
+    "description": "Document the Talos appliance GitOps deployment shape and validation expectations in repo plan/design docs.",
+    "implemented": true
+  }
+]

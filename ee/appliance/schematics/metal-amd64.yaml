@@ -1,0 +1,3 @@
+# Minimal Talos Image Factory schematic for the Alga appliance.
+# Add extensions or kernel arguments here when the appliance needs them.
+customization: {}

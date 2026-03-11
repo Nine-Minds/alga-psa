@@ -1,0 +1,30 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: pgbouncer
+  namespace: alga-system
+spec:
+  interval: 10m
+  dependsOn:
+    - name: alga-core
+  releaseName: pgbouncer
+  targetNamespace: msp
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  chart:
+    spec:
+      chart: ./ee/helm/pgbouncer
+      interval: 10m
+      sourceRef:
+        kind: GitRepository
+        name: flux-system
+        namespace: flux-system
+  valuesFrom:
+    - kind: ConfigMap
+      name: appliance-values-pgbouncer
+      valuesKey: pgbouncer.talos-single-node.yaml

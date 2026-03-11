@@ -1,0 +1,6 @@
+apiVersion: v2
+name: pgbouncer
+description: PgBouncer connection pooler for Alga PSA appliance deployments
+type: application
+version: 0.1.0
+appVersion: "latest"

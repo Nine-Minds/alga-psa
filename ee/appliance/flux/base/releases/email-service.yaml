@@ -1,0 +1,31 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: email-service
+  namespace: alga-system
+spec:
+  interval: 10m
+  dependsOn:
+    - name: alga-core
+    - name: pgbouncer
+  releaseName: email-service
+  targetNamespace: msp
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  chart:
+    spec:
+      chart: ./ee/helm/email-service
+      interval: 10m
+      sourceRef:
+        kind: GitRepository
+        name: flux-system
+        namespace: flux-system
+  valuesFrom:
+    - kind: ConfigMap
+      name: appliance-values-email-service
+      valuesKey: email-service.talos-single-node.yaml
