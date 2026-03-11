@@ -37,6 +37,7 @@ const activities = proxyActivities<{
     stripePriceId?: string;
     stripeBaseItemId?: string;
     stripeBasePriceId?: string;
+    addons?: string[];
   }): Promise<CreateTenantActivityResult>;
   createAdminUser(input: {
     tenantId: string;
@@ -280,6 +281,7 @@ export async function tenantCreationWorkflow(
       stripePriceId: stripeDetails.stripePriceId,
       stripeBaseItemId: stripeDetails.stripeBaseItemId,
       stripeBasePriceId: stripeDetails.stripeBasePriceId,
+      addons: input.addons,
     });
     
     tenantCreated = true;

@@ -21,6 +21,9 @@ export interface TenantCreationInput {
   stripePriceId?: string;           // Per-user price ID (price_...)
   stripeBaseItemId?: string;        // Base fee subscription item ID (si_...) — multi-item only
   stripeBasePriceId?: string;       // Base fee price ID (price_...) — multi-item only
+
+  // Add-ons purchased with this subscription
+  addons?: string[];                // Add-on codes (e.g. ['ai-addon'])
 }
 
 export interface TenantCreationResult {
@@ -50,6 +53,9 @@ export interface CreateTenantActivityInput {
   stripePriceId?: string;           // Per-user price ID (price_...)
   stripeBaseItemId?: string;        // Base fee subscription item ID (si_...) — multi-item only
   stripeBasePriceId?: string;       // Base fee price ID (price_...) — multi-item only
+
+  // Add-ons purchased with this subscription
+  addons?: string[];                // Add-on codes (e.g. ['ai-addon'])
 }
 
 export interface CreateTenantActivityResult {
