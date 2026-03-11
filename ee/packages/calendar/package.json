@@ -1,0 +1,75 @@
+{
+  "name": "@alga-psa/ee-calendar",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./actions": {
+      "import": "./src/actions/index.ts",
+      "types": "./src/actions/index.ts"
+    },
+    "./components": {
+      "import": "./src/components/index.ts",
+      "types": "./src/components/index.ts"
+    },
+    "./components/*": {
+      "import": "./src/components/*.tsx",
+      "types": "./src/components/*.tsx"
+    },
+    "./routes": {
+      "import": "./src/routes/index.ts",
+      "types": "./src/routes/index.ts"
+    },
+    "./lib": {
+      "import": "./src/lib/index.ts",
+      "types": "./src/lib/index.ts"
+    },
+    "./lib/*": {
+      "import": "./src/lib/*.ts",
+      "types": "./src/lib/*.ts"
+    },
+    "./event-bus": {
+      "import": "./src/event-bus/index.ts",
+      "types": "./src/event-bus/index.ts"
+    },
+    "./jobs": {
+      "import": "./src/jobs/index.ts",
+      "types": "./src/jobs/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@alga-psa/core": "*",
+    "@alga-psa/db": "*",
+    "@alga-psa/event-bus": "*",
+    "@alga-psa/event-schemas": "*",
+    "@alga-psa/ui": "*",
+    "@alga-psa/scheduling": "*",
+    "@alga-psa/types": "*",
+    "@hookform/resolvers": "^3.10.0",
+    "axios": "^1.13.6",
+    "google-auth-library": "^10.5.0",
+    "googleapis": "^169.0.0",
+    "lucide-react": "^0.428.0",
+    "react-hook-form": "^7.62.0",
+    "uuid": "^10.0.0"
+  },
+  "peerDependencies": {
+    "next": "^16.0.0",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0"
+  }
+}

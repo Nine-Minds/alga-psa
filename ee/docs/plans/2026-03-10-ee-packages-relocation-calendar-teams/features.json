@@ -1,0 +1,612 @@
+[
+  {
+    "id": "F001",
+    "description": "Create a real enterprise calendar workspace package under `ee/packages/calendar`.",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Create a real enterprise Microsoft Teams workspace package under `ee/packages/microsoft-teams`.",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Choose non-colliding workspace and package names for the new EE calendar and Teams packages.",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "Add root index exports for the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "Add root index exports for the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "Add actions entrypoints for the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "description": "Add actions entrypoints for the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "description": "Add component entrypoints for the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F009",
+    "description": "Add component entrypoints for the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "description": "Add lib or service entrypoints for the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F011",
+    "description": "Add lib or service entrypoints for the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F012",
+    "description": "Register the enterprise calendar package in workspace metadata and project tooling.",
+    "implemented": true
+  },
+  {
+    "id": "F013",
+    "description": "Register the enterprise Microsoft Teams package in workspace metadata and project tooling.",
+    "implemented": true
+  },
+  {
+    "id": "F014",
+    "description": "Add package-local TypeScript config for the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F015",
+    "description": "Add package-local TypeScript config for the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F016",
+    "description": "Add package-local build scripts for the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F017",
+    "description": "Add package-local build scripts for the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F018",
+    "description": "Declare explicit runtime dependencies for the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F019",
+    "description": "Declare explicit runtime dependencies for the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F020",
+    "description": "Ensure React or UI peer dependency handling is valid for both new enterprise packages.",
+    "implemented": true
+  },
+  {
+    "id": "F021",
+    "description": "Move enterprise calendar actions out of `packages/ee` and into the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F022",
+    "description": "Move the enterprise calendar integrations settings component into the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F023",
+    "description": "Move the enterprise calendar profile settings component into the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F024",
+    "description": "Move enterprise calendar provider services into the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F025",
+    "description": "Move enterprise calendar sync service logic into the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F026",
+    "description": "Move enterprise calendar webhook processor logic into the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F027",
+    "description": "Move enterprise calendar webhook maintenance logic into the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F028",
+    "description": "Move enterprise calendar provider adapter implementations into the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F029",
+    "description": "Move enterprise calendar provider base abstractions into the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F030",
+    "description": "Move enterprise calendar event bus subscriber logic into the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F031",
+    "description": "Move enterprise calendar job-handler logic into the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F032",
+    "description": "Expose Google calendar OAuth callback handler logic from the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F033",
+    "description": "Expose Microsoft calendar OAuth callback handler logic from the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F034",
+    "description": "Expose Google calendar webhook handler logic from the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F035",
+    "description": "Expose Microsoft calendar webhook handler logic from the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F036",
+    "description": "Expose thin server-consumable calendar route handler entrypoints from the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F037",
+    "description": "Expose thin UI-consumable calendar component entrypoints from the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F038",
+    "description": "Remove duplicated live calendar logic split between `packages/ee` and `ee/server`.",
+    "implemented": true
+  },
+  {
+    "id": "F039",
+    "description": "Remove deep filesystem imports from enterprise calendar code to `ee/server` implementation files.",
+    "implemented": true
+  },
+  {
+    "id": "F040",
+    "description": "Make the enterprise calendar package the single source of truth for live enterprise calendar behavior.",
+    "implemented": true
+  },
+  {
+    "id": "F041",
+    "description": "Move enterprise Teams actions out of `packages/ee` and into the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F042",
+    "description": "Move enterprise Teams package-management actions into the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F043",
+    "description": "Move the enterprise Teams integrations settings component into the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F044",
+    "description": "Move enterprise Teams notification delivery logic into the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F045",
+    "description": "Move enterprise Teams auth and provider-resolution helpers into the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F046",
+    "description": "Move enterprise Teams bot handler logic into the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F047",
+    "description": "Move enterprise Teams message-extension handler logic into the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F048",
+    "description": "Move enterprise Teams quick-action handler logic into the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F049",
+    "description": "Move enterprise Teams tab access and auth state logic into the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F050",
+    "description": "Move enterprise Teams tenant and linked-user resolution logic into the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F051",
+    "description": "Move enterprise Teams deep-link helpers into the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F052",
+    "description": "Move enterprise Teams action registry logic into the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F053",
+    "description": "Expose Teams bot route handler entrypoints from the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F054",
+    "description": "Expose Teams message-extension route handler entrypoints from the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F055",
+    "description": "Expose Teams auth-callback route handler entrypoints from the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F056",
+    "description": "Expose Teams package-management route handler entrypoints from the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F057",
+    "description": "Expose Teams quick-action route handler entrypoints from the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F058",
+    "description": "Expose Teams tab page and server helper entrypoints from the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F059",
+    "description": "Remove duplicated live Teams logic split between `packages/ee` and `ee/server`.",
+    "implemented": true
+  },
+  {
+    "id": "F060",
+    "description": "Make the enterprise Microsoft Teams package the single source of truth for live enterprise Teams behavior.",
+    "implemented": true
+  },
+  {
+    "id": "F061",
+    "description": "Rewire EE Google calendar OAuth route entrypoints in `ee/server` to delegate to the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F062",
+    "description": "Rewire EE Microsoft calendar OAuth route entrypoints in `ee/server` to delegate to the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F063",
+    "description": "Rewire EE Google calendar webhook route entrypoints in `ee/server` to delegate to the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F064",
+    "description": "Rewire EE Microsoft calendar webhook route entrypoints in `ee/server` to delegate to the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F065",
+    "description": "Rewire EE calendar settings entrypoints in `ee/server` to delegate to the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F066",
+    "description": "Rewire EE calendar profile entrypoints in `ee/server` to delegate to the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F067",
+    "description": "Rewire EE Teams bot route entrypoints in `ee/server` to delegate to the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F068",
+    "description": "Rewire EE Teams message-extension route entrypoints in `ee/server` to delegate to the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F069",
+    "description": "Rewire EE Teams auth callback entrypoints in `ee/server` to delegate to the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F070",
+    "description": "Rewire EE Teams package-management route entrypoints in `ee/server` to delegate to the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F071",
+    "description": "Rewire EE Teams quick-action route entrypoints in `ee/server` to delegate to the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F072",
+    "description": "Rewire EE Teams tab page entrypoints in `ee/server` to delegate to the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F073",
+    "description": "Rewire any remaining EE server helper ownership for calendar to the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F074",
+    "description": "Rewire any remaining EE server helper ownership for Teams to the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F075",
+    "description": "Keep `ee/server` as a thin framework entrypoint layer rather than a second live implementation tree for calendar.",
+    "implemented": true
+  },
+  {
+    "id": "F076",
+    "description": "Keep `ee/server` as a thin framework entrypoint layer rather than a second live implementation tree for Teams.",
+    "implemented": true
+  },
+  {
+    "id": "F077",
+    "description": "Rewire shared calendar actions to the new enterprise calendar package entrypoints.",
+    "implemented": true
+  },
+  {
+    "id": "F078",
+    "description": "Rewire shared calendar settings wrappers to the new enterprise calendar package entrypoints.",
+    "implemented": true
+  },
+  {
+    "id": "F079",
+    "description": "Rewire shared calendar profile wrappers to the new enterprise calendar package entrypoints.",
+    "implemented": true
+  },
+  {
+    "id": "F080",
+    "description": "Rewire shared Teams actions to the new enterprise Microsoft Teams package entrypoints.",
+    "implemented": true
+  },
+  {
+    "id": "F081",
+    "description": "Rewire shared Teams package actions to the new enterprise Microsoft Teams package entrypoints.",
+    "implemented": true
+  },
+  {
+    "id": "F082",
+    "description": "Rewire shared Teams settings wrappers to the new enterprise Microsoft Teams package entrypoints.",
+    "implemented": true
+  },
+  {
+    "id": "F083",
+    "description": "Rewire shared Teams notification wrappers to the new enterprise Microsoft Teams package entrypoints.",
+    "implemented": true
+  },
+  {
+    "id": "F084",
+    "description": "Rewire shared Teams auth and provider-resolution wrappers to the new enterprise Microsoft Teams package entrypoints.",
+    "implemented": true
+  },
+  {
+    "id": "F085",
+    "description": "Reduce `packages/ee` calendar route files to CE stubs or temporary forwarders only.",
+    "implemented": true
+  },
+  {
+    "id": "F086",
+    "description": "Reduce `packages/ee` Teams route files to CE stubs or temporary forwarders only.",
+    "implemented": true
+  },
+  {
+    "id": "F087",
+    "description": "Reduce `packages/ee` calendar UI files to CE stubs or temporary forwarders only.",
+    "implemented": true
+  },
+  {
+    "id": "F088",
+    "description": "Reduce `packages/ee` Teams UI files to CE stubs or temporary forwarders only.",
+    "implemented": true
+  },
+  {
+    "id": "F089",
+    "description": "Reduce `packages/ee` calendar lib and action files to CE stubs or temporary forwarders only.",
+    "implemented": true
+  },
+  {
+    "id": "F090",
+    "description": "Reduce `packages/ee` Teams lib and action files to CE stubs or temporary forwarders only.",
+    "implemented": true
+  },
+  {
+    "id": "F091",
+    "description": "Remove any remaining shared deep imports into `ee/server` implementation files for calendar.",
+    "implemented": true
+  },
+  {
+    "id": "F092",
+    "description": "Remove any remaining shared deep imports into `ee/server` implementation files for Teams.",
+    "implemented": true
+  },
+  {
+    "id": "F093",
+    "description": "Update base TypeScript pathing so `packages/ee` is no longer the live source of truth for calendar and Teams enterprise code.",
+    "implemented": true
+  },
+  {
+    "id": "F094",
+    "description": "Update server TypeScript pathing for the new enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F095",
+    "description": "Update server TypeScript pathing for the new enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F096",
+    "description": "Update EE Next.js aliasing so calendar resolves to the new enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F097",
+    "description": "Update EE Next.js aliasing so Teams resolves to the new enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F098",
+    "description": "Keep CE Next.js aliasing fail-closed for calendar after the package move.",
+    "implemented": true
+  },
+  {
+    "id": "F099",
+    "description": "Keep CE Next.js aliasing fail-closed for Teams after the package move.",
+    "implemented": true
+  },
+  {
+    "id": "F100",
+    "description": "Update Vitest aliasing so calendar tests resolve consistently to the intended live or stub sources.",
+    "implemented": true
+  },
+  {
+    "id": "F101",
+    "description": "Update Vitest aliasing so Teams tests resolve consistently to the intended live or stub sources.",
+    "implemented": true
+  },
+  {
+    "id": "F102",
+    "description": "Include the enterprise calendar package in workspace build, lint, and typecheck targets.",
+    "implemented": true
+  },
+  {
+    "id": "F103",
+    "description": "Include the enterprise Microsoft Teams package in workspace build, lint, and typecheck targets.",
+    "implemented": true
+  },
+  {
+    "id": "F104",
+    "description": "Ensure CI dependency graph and task execution recognize the new enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F105",
+    "description": "Ensure CI dependency graph and task execution recognize the new enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F106",
+    "description": "Prevent new circular dependencies between shared packages, `ee/server`, and the new enterprise packages.",
+    "implemented": true
+  },
+  {
+    "id": "F107",
+    "description": "Remove or collapse obsolete duplicated calendar files after the package move.",
+    "implemented": true
+  },
+  {
+    "id": "F108",
+    "description": "Remove or collapse obsolete duplicated Teams files after the package move.",
+    "implemented": true
+  },
+  {
+    "id": "F109",
+    "description": "Update source comments and ownership notes that still describe `packages/ee` as live calendar implementation.",
+    "implemented": true
+  },
+  {
+    "id": "F110",
+    "description": "Update source comments and ownership notes that still describe `packages/ee` as live Teams implementation.",
+    "implemented": true
+  },
+  {
+    "id": "F111",
+    "description": "Document the new enterprise calendar package location in engineer-facing runbooks or scratchpad notes.",
+    "implemented": true
+  },
+  {
+    "id": "F112",
+    "description": "Document the new enterprise Microsoft Teams package location in engineer-facing runbooks or scratchpad notes.",
+    "implemented": true
+  },
+  {
+    "id": "F113",
+    "description": "Add a passing package-level typecheck target for the enterprise calendar package.",
+    "implemented": true
+  },
+  {
+    "id": "F114",
+    "description": "Add a passing package-level typecheck target for the enterprise Microsoft Teams package.",
+    "implemented": true
+  },
+  {
+    "id": "F115",
+    "description": "Keep server typecheck passing after the new enterprise package graph is introduced.",
+    "implemented": true
+  },
+  {
+    "id": "F116",
+    "description": "Keep targeted calendar route and component tests passing against the new package layout.",
+    "implemented": true
+  },
+  {
+    "id": "F117",
+    "description": "Keep targeted Teams route, action, and notification tests passing against the new package layout.",
+    "implemented": true
+  },
+  {
+    "id": "F118",
+    "description": "Keep CE stub contract tests passing for calendar after the relocation.",
+    "implemented": true
+  },
+  {
+    "id": "F119",
+    "description": "Keep CE stub contract tests passing for Teams after the relocation.",
+    "implemented": true
+  },
+  {
+    "id": "F120",
+    "description": "Eliminate remaining live calendar import paths that depend on `packages/ee` as the primary implementation root.",
+    "implemented": true
+  },
+  {
+    "id": "F121",
+    "description": "Eliminate remaining live Teams import paths that depend on `packages/ee` as the primary implementation root.",
+    "implemented": true
+  },
+  {
+    "id": "F122",
+    "description": "Leave unrelated enterprise domains in `packages/ee` untouched unless required by calendar or Teams dependencies.",
+    "implemented": true
+  }
+]

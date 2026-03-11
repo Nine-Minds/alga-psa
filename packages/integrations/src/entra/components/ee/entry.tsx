@@ -1,1 +1,5 @@
-export { default as EntraIntegrationSettings } from '@enterprise/components/settings/integrations/EntraIntegrationSettings';
+import React from 'react';
+
+export const EntraIntegrationSettings = (): React.JSX.Element => (
+  <div>Microsoft Entra integration is only available in Enterprise Edition.</div>
+);

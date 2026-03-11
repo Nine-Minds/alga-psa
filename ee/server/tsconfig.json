@@ -119,6 +119,8 @@
       "@alga-psa/scheduling/*": ["packages/scheduling/src/*"],
       "@alga-psa/workflows": ["ee/packages/workflows/src"],
       "@alga-psa/workflows/*": ["ee/packages/workflows/src/*"],
+      "@alga-psa/ee-stubs": ["ee/server/src/index.ts"],
+      "@alga-psa/ee-stubs/*": ["ee/server/src/*"],
       "@alga-psa/documents": ["packages/documents/src"],
       "@alga-psa/documents/*": ["packages/documents/src/*"],
       "@alga-psa/assets": ["packages/assets/src"],

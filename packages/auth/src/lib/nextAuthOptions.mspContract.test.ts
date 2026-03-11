@@ -26,8 +26,9 @@ describe('NextAuth MSP SSO contract', () => {
     expect(source).toContain("getTenantSecret(resolution.tenantId, 'google_client_secret')");
 
     expect(source).toContain("if (resolution.provider === 'azure-ad') {");
-    expect(source).toContain("getTenantSecret(resolution.tenantId, 'microsoft_client_id')");
-    expect(source).toContain("getTenantSecret(resolution.tenantId, 'microsoft_client_secret')");
+    expect(source).toContain('resolveMicrosoftConsumerProfileConfig(');
+    expect(source).toContain("'msp_sso'");
+    expect(source).not.toContain("getTenantSecret(resolution.tenantId, 'microsoft_client_id')");
   });
 
   it('T050/T051: invalid or expired resolver cookie contexts are ignored and app fallback remains in use', () => {
@@ -50,5 +51,22 @@ describe('NextAuth MSP SSO contract', () => {
   it('T059: Microsoft OAuth issuer defaults tenant to common when tenant ID is empty', () => {
     expect(source).toContain("issuer: `https://login.microsoftonline.com/${secrets.microsoftTenantId || 'common'}/v2.0`");
     expect(source).toContain("issuer: `https://login.microsoftonline.com/${process.env.MICROSOFT_OAUTH_TENANT_ID || 'common'}/v2.0`");
+  });
+
+  it('T149/T150: Teams auth can build request-scoped Microsoft-only auth options from the tenant-selected Teams profile', () => {
+    expect(source).toContain('import { resolveTeamsMicrosoftProviderConfig } from "./sso/teamsMicrosoftProviderResolution";');
+    expect(source).toContain('if (context?.teamsTenantId) {');
+    expect(source).toContain('const teamsMicrosoft = await resolveTeamsMicrosoftProviderConfig(context.teamsTenantId);');
+    expect(source).toContain('export async function buildTeamsAuthOptions(tenantId: string): Promise<NextAuthConfig> {');
+    expect(source).toContain('teamsTenantId: tenantId');
+    expect(source).toContain('teamsMicrosoftOnly: true');
+  });
+
+  it('T265/T266: shared MSP SSO and non-Teams auth paths depend on the shared Teams auth wrapper rather than importing EE Teams auth modules directly', () => {
+    expect(source).toContain('import { resolveTeamsMicrosoftProviderConfig } from "./sso/teamsMicrosoftProviderResolution";');
+    expect(source).not.toContain('ee/server/src/lib/auth/teamsMicrosoftProviderResolution');
+    expect(source).toContain('GoogleProvider({');
+    expect(source).toContain('AzureADProvider({');
+    expect(source).toContain('async function buildAuthOptions(');
   });
 });

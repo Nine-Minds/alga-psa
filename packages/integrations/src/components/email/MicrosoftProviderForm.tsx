@@ -17,8 +17,13 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { ExternalLink, CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './types';
-import { createEmailProvider, updateEmailProvider, upsertEmailProvider, getMicrosoftIntegrationStatus } from '@alga-psa/integrations/actions';
-import { initiateEmailOAuth } from '@alga-psa/integrations/actions';
+import {
+  createEmailProvider,
+  updateEmailProvider,
+  upsertEmailProvider,
+  getMicrosoftConsumerSetupStatus,
+  initiateEmailOAuth,
+} from '@alga-psa/integrations/actions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getInboundTicketDefaults } from '@alga-psa/integrations/actions';
 
@@ -52,6 +57,7 @@ export function MicrosoftProviderForm({
   const [error, setError] = useState<string | null>(null);
   const [providerSetupReady, setProviderSetupReady] = useState(false);
   const [providerSetupLoading, setProviderSetupLoading] = useState(true);
+  const [providerSetupMessage, setProviderSetupMessage] = useState<string | null>(null);
   const [oauthStatus, setOauthStatus] = useState<'idle' | 'authorizing' | 'success' | 'error'>('idle');
   const [oauthMessageReceived, setOauthMessageReceived] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
@@ -100,10 +106,12 @@ export function MicrosoftProviderForm({
   React.useEffect(() => {
     const loadProviderSetupStatus = async () => {
       try {
-        const res = await getMicrosoftIntegrationStatus();
-        setProviderSetupReady(Boolean(res.success && res.config?.ready));
+        const res = await getMicrosoftConsumerSetupStatus('email');
+        setProviderSetupReady(Boolean(res.success && res.ready));
+        setProviderSetupMessage(res.success ? res.message || null : null);
       } catch {
         setProviderSetupReady(false);
+        setProviderSetupMessage(null);
       } finally {
         setProviderSetupLoading(false);
       }
@@ -389,7 +397,8 @@ export function MicrosoftProviderForm({
                 <div className="space-y-2">
                   <div className="font-medium">Microsoft provider settings are not configured.</div>
                   <div className="text-sm text-muted-foreground">
-                    Configure Providers first in <strong>Settings → Integrations → Providers</strong>, then return here to authorize this mailbox.
+                    {providerSetupMessage ||
+                      'Configure Providers first in Settings → Integrations → Providers, then return here to authorize this mailbox.'}
                   </div>
                   <Button
                     id="configure-microsoft-providers-link"

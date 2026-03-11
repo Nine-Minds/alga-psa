@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { resolveMicrosoftConsumerProfileConfig } from '../microsoftConsumerProfileResolution';
 
 export type MspSsoProviderId = 'google' | 'azure-ad';
 export type MspSsoSource = 'tenant' | 'app';
@@ -233,8 +234,8 @@ export async function hasTenantProviderCredentials(
   tenant: string,
   provider: MspSsoProviderId
 ): Promise<boolean> {
-  const secretProvider = await getSecretProviderInstance();
   if (provider === 'google') {
+    const secretProvider = await getSecretProviderInstance();
     const [clientId, clientSecret] = await Promise.all([
       secretProvider.getTenantSecret(tenant, 'google_client_id'),
       secretProvider.getTenantSecret(tenant, 'google_client_secret'),
@@ -242,11 +243,8 @@ export async function hasTenantProviderCredentials(
     return isConfigured(clientId) && isConfigured(clientSecret);
   }
 
-  const [clientId, clientSecret] = await Promise.all([
-    secretProvider.getTenantSecret(tenant, 'microsoft_client_id'),
-    secretProvider.getTenantSecret(tenant, 'microsoft_client_secret'),
-  ]);
-  return isConfigured(clientId) && isConfigured(clientSecret);
+  const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(tenant, 'msp_sso');
+  return microsoftProfile.status === 'ready';
 }
 
 export async function hasAppFallbackProviderCredentials(

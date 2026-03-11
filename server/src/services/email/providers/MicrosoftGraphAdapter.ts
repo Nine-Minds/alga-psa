@@ -3,6 +3,7 @@ import { BaseEmailAdapter } from './base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/email.interfaces';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { resolveMicrosoftConsumerProfileConfig } from '@alga-psa/integrations/lib/microsoftConsumerProfileResolution';
 
 /**
  * Microsoft Graph API adapter for email processing
@@ -226,34 +227,17 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         throw new Error('No refresh token available');
       }
 
-      const vendorConfig = this.config.provider_config || {};
-
-      // Prefer env or provider_config, then fallback to tenant secrets
-      let clientId = vendorConfig.client_id || process.env.MICROSOFT_CLIENT_ID;
-      let clientSecret = vendorConfig.client_secret || process.env.MICROSOFT_CLIENT_SECRET;
-
-      if (!clientId || !clientSecret) {
-        const secretProvider = await getSecretProviderInstance();
-        clientId = clientId || (await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_client_id'));
-        clientSecret = clientSecret || (await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_client_secret'));
+      const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(this.config.tenant, 'email');
+      if (microsoftProfile.status !== 'ready') {
+        throw new Error(
+          microsoftProfile.message || 'Microsoft Email binding is not configured'
+        );
       }
 
+      const clientId = microsoftProfile.clientId;
+      const clientSecret = microsoftProfile.clientSecret;
       if (!clientId || !clientSecret) {
         throw new Error('Microsoft OAuth credentials not configured');
-      }
-
-      // Determine tenant authority for single-tenant apps
-      const vendorTenantId = (this.config.provider_config as any)?.tenant_id || this.config.provider_config?.tenantId;
-      let tenantAuthority = vendorTenantId || process.env.MICROSOFT_TENANT_ID;
-      if (!tenantAuthority) {
-        try {
-          const secretProvider = await getSecretProviderInstance();
-          tenantAuthority = await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_tenant_id')
-            || await secretProvider.getAppSecret('MICROSOFT_TENANT_ID')
-            || 'common';
-        } catch {
-          tenantAuthority = 'common';
-        }
       }
 
       const tokenUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/token`;

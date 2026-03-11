@@ -1,0 +1,2162 @@
+[
+  {
+    "id": "F001",
+    "description": "The follow-on plan explicitly references prior named-profile and Teams EE-boundary work so this migration is scoped as a continuation rather than a rewrite.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "The plan treats calendar EE migration and Microsoft explicit-binding cleanup as one coordinated effort with one shared acceptance checklist.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Shared Microsoft profiles remain shared infrastructure instead of being duplicated into an EE-only credential model.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Calendar sync is modeled as one EE feature rather than a collection of partially shared settings and runtime behaviors.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Microsoft consumers are modeled as explicit bindings instead of compatibility defaults or implicit cross-consumer fallbacks.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "CE ownership is limited to stubs, wrappers, or delegators where a route or import boundary must remain addressable.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "The migration does not add new product scope beyond EE ownership cleanup and Microsoft binding cleanup.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "The plan does not preserve legacy compatibility wording or pane structure when it conflicts with the explicit-binding target model.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "A CE availability contract is defined for every calendar settings, profile, route, and runtime surface.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "An EE availability contract is defined for every calendar settings, profile, route, and runtime surface.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "A CE availability contract is defined for Microsoft profile UI that should expose only MSP SSO.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "An EE availability contract is defined for Microsoft profile UI that should expose MSP SSO plus additional supported consumers.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Shared modules are required to consume edition-safe calendar entrypoints instead of concrete shared calendar implementations.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Shared modules are required to consume edition-safe Microsoft consumer helpers instead of compatibility default resolution.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "One source of truth exists for deciding whether a calendar surface is active, stubbed, or unavailable by edition.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "One source of truth exists for deciding which Microsoft consumer options are visible by edition.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "The migration inventory identifies every settings, profile, route, action, service, and subscriber file touched by the calendar EE move.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "The migration inventory identifies every settings, action, and compatibility surface touched by the Microsoft binding cleanup.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "The PRD documents which compatibility behaviors are intentionally deleted rather than preserved.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "The PRD documents which routes must stay stable even though ownership moves to EE.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "The plan documents the CE stub response shape for calendar settings and callback surfaces.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "The plan documents the EE delegation pattern for calendar settings and callback surfaces.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "The plan documents the CE-versus-EE Microsoft profile surface matrix.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "The plan documents the final acceptance matrix for edition ownership, bindings, and regression coverage.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Problem",
+      "Goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "The Integrations settings page no longer shows a Calendar category in CE.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "The Integrations settings page continues to show a Calendar category in EE.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "The shared Integrations settings composition stops rendering a live calendar configuration component in CE.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "The shared Integrations settings composition renders calendar through an EE entrypoint or stubbed wrapper pattern.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "The Calendar category description and copy are updated to match the EE-only ownership model.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "The Calendar settings component is re-homed behind an enterprise entry component rather than a shared direct import.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "The Calendar settings component follows the same lazy-load or modular entry pattern used by other EE settings surfaces where appropriate.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "CE requests that specify the Calendar category fall back safely to an available category instead of leaving a broken tab state.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "The selected-category URL handling tolerates the absence of Calendar in CE without client-side errors.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "No duplicate Calendar entry remains under Communication, Providers, or other shared settings categories.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Shared provider settings no longer link CE users toward Calendar setup flows.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "EE settings can still deep-link into Calendar setup from consumer-owned surfaces where needed.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "The user profile page no longer renders a Calendar tab in CE.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "The user profile page continues to render a Calendar tab in EE.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "CE profile tab routing ignores a Calendar tab query parameter safely and falls back to a valid tab.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "EE profile tab routing preserves and restores the Calendar tab state.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Calendar settings unavailable states use explicit EE-style messaging only when a route or wrapper must remain addressable in CE.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Calendar settings do not remain discoverable in CE through hidden cards, disabled shells, or stale navigation items.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Calendar settings continue to present the real configuration UX in EE rather than a placeholder shell.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "The profile page does not expose a dead-end or nonfunctional Calendar tab in CE.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Settings and profile tests cover edition-specific visibility for calendar entrypoints.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Documentation and screenshots stop describing Calendar as a shared integration surface.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Runbooks and references for Calendar settings are updated to point to EE-owned entrypoints.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "The overall settings information architecture remains internally consistent after the Calendar category becomes EE-only.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "The Google calendar OAuth callback route becomes a CE stub or EE delegator rather than a shared active implementation.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "The Microsoft calendar OAuth callback route becomes a CE stub or EE delegator rather than a shared active implementation.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "CE requests to the Google calendar callback route return an EE-unavailable response and do not exchange tokens.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "CE requests to the Microsoft calendar callback route return an EE-unavailable response and do not exchange tokens.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "EE requests to the Google calendar callback route delegate to an EE-owned implementation.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "EE requests to the Microsoft calendar callback route delegate to an EE-owned implementation.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Shared callback wrapper files stop importing concrete calendar provider services and adapters directly.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "EE callback implementations own provider creation, token exchange, and persistence side effects.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Calendar-specific OAuth state validation remains intact after the callback routes move behind EE wrappers.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "The existing calendar callback success contract remains stable for EE tenants after the refactor.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "The existing calendar callback error contract remains stable for EE tenants after the refactor.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Direct CE access to calendar callback routes cannot create calendar providers, provider tokens, or sync mappings.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "Edition-aware callback tests verify gating before any provider write occurs.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "Calendar callback wrappers preserve request-method handling and expected route semantics during EE delegation.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "Calendar callback wrappers preserve query parsing and state extraction semantics during EE delegation.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Contract tests assert that active calendar callback logic no longer lives in shared CE runtime modules.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "Any calendar webhook or subscription-maintenance entry routes become CE stubs or EE delegators.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "CE webhook or maintenance entry routes reject or no-op cleanly without running calendar logic.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "EE webhook or maintenance entry routes delegate to EE-owned implementations.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "Shared route registries stop advertising live calendar endpoints as shared CE capabilities.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "Middleware and auth handling no longer treat calendar callback routes as a shared CE feature surface.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "Route-level tests cover CE unavailable behavior, EE active behavior, and malformed calendar callback input.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "Route runbooks are updated to document EE ownership for calendar callbacks and maintenance entrypoints.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "The public callback URLs remain stable for EE tenants even though the implementation ownership changes.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "The shared Calendar integrations UI module is replaced by an EE-owned concrete implementation behind a stable entry boundary.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "The shared Calendar provider service no longer owns live calendar provider CRUD behavior in CE.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "The shared Calendar sync service no longer owns live calendar synchronization behavior in CE.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "The shared Google Calendar adapter no longer provides live CE runtime behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "The shared Microsoft Calendar adapter no longer provides live CE runtime behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "The shared calendar webhook maintenance service no longer provides live CE runtime behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "Calendar provider configuration create, update, and delete behavior executes only in EE-owned runtime code.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Calendar connect and disconnect behavior executes only in EE-owned runtime code.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "Calendar sync conflict publication and handling execute only in EE-owned runtime code.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "Calendar external-event import and merge logic execute only in EE-owned runtime code.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "Calendar provider status updates and error-state transitions execute only in EE-owned runtime code.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "Calendar mapping persistence and repair logic remain reachable only through EE-owned runtime code.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "CE startup no longer registers calendar subscribers or background sync handlers.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "EE startup continues to register calendar subscribers or background sync handlers.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "Schedule entry events in CE no longer trigger calendar synchronization side effects.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F088",
+    "description": "Schedule entry events in EE continue to trigger calendar synchronization side effects.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F089",
+    "description": "Shared packages expose only abstract, stubbed, or delegated calendar entrypoints after the extraction.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F090",
+    "description": "Enterprise packages expose the concrete calendar runtime modules after the extraction.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F091",
+    "description": "Ownership tests assert that shared packages do not reach into EE calendar code through raw filesystem-relative imports.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "Ownership tests assert that CE builds can import calendar wrappers without loading active calendar logic.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F093",
+    "description": "The calendar EE ownership contract explicitly includes webhook-renewal job paths.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F094",
+    "description": "The calendar EE ownership contract explicitly includes provider secret handling paths.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F095",
+    "description": "The calendar EE ownership contract explicitly includes adapter-selection and provider-type branching paths.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F096",
+    "description": "The calendar EE ownership contract explicitly includes any remaining background maintenance and subscription-renewal paths.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F097",
+    "description": "The Microsoft profile page in CE describes Microsoft profile reuse only in MSP SSO terms.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F098",
+    "description": "The Microsoft profile page in EE describes Microsoft profile reuse for MSP SSO plus additional supported consumers.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F099",
+    "description": "CE Microsoft profile UI omits Email consumer guidance.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "CE Microsoft profile UI omits Calendar consumer guidance.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "CE Microsoft profile UI omits Teams consumer guidance.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "CE Microsoft profile UI continues to show MSP SSO guidance and login-domain-related support copy.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F103",
+    "description": "EE Microsoft profile UI shows MSP SSO consumer guidance.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F104",
+    "description": "EE Microsoft profile UI shows Email consumer guidance.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F105",
+    "description": "EE Microsoft profile UI shows Calendar consumer guidance.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F106",
+    "description": "EE Microsoft profile UI shows Teams consumer guidance.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F107",
+    "description": "CE Microsoft profile UI omits non-SSO redirect URI guidance blocks.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F108",
+    "description": "EE Microsoft profile UI renders redirect URI guidance for supported non-SSO consumers.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F109",
+    "description": "CE Microsoft profile UI omits Teams Application ID URI guidance.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F110",
+    "description": "EE Microsoft profile UI renders Teams Application ID URI guidance when relevant metadata is available.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F111",
+    "description": "Create and edit profile dialogs stop referring to a default compatibility profile in CE.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F112",
+    "description": "Create and edit profile dialogs stop referring to a default compatibility profile in EE.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F113",
+    "description": "CE profile cards show only MSP SSO-related binding state and readiness context.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F114",
+    "description": "EE profile cards show binding state and readiness context for MSP SSO plus the supported EE consumers.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F115",
+    "description": "CE readiness copy references only MSP SSO-related prerequisites and usage.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F116",
+    "description": "EE readiness copy references the broader set of supported Microsoft consumers.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F117",
+    "description": "CE empty-state copy refers only to MSP SSO-oriented profile creation and reuse.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F118",
+    "description": "EE empty-state copy refers to broader Microsoft profile reuse across supported consumers.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F119",
+    "description": "Success toasts and helper copy stop describing Microsoft profiles as a compatibility source for legacy consumers.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F120",
+    "description": "The legacy Microsoft consumers pane is removed from the Microsoft profile page in all editions.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F121",
+    "description": "An explicit binding control exists for the MSP SSO consumer.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F122",
+    "description": "An explicit binding control exists for the Email consumer in EE.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F123",
+    "description": "An explicit binding control exists for the Calendar consumer in EE.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F124",
+    "description": "An explicit binding control exists for the Teams consumer in EE.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F125",
+    "description": "Binding UX is presented as one explicit row or control per consumer instead of a legacy consumers summary pane.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F126",
+    "description": "Binding UX shows the currently selected Microsoft profile for each visible consumer.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F127",
+    "description": "Archived Microsoft profiles are excluded from binding selection choices.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F128",
+    "description": "Binding UX surfaces archived-profile or readiness warnings when a currently bound profile is no longer healthy.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F129",
+    "description": "Changing one consumer binding does not modify unrelated consumer bindings.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F130",
+    "description": "Consumer binding changes are always tenant-scoped.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F131",
+    "description": "Consumer binding changes require the same system settings update permission used for Microsoft profile management.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F132",
+    "description": "Client-portal users cannot manage Microsoft consumer bindings.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F133",
+    "description": "CE exposes only the MSP SSO binding control.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F134",
+    "description": "CE does not render an Email binding control.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F135",
+    "description": "CE does not render a Calendar binding control.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F136",
+    "description": "CE does not render a Teams binding control.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F137",
+    "description": "EE renders all supported consumer binding controls consistently in the Microsoft profile management experience or its EE-owned extensions.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F138",
+    "description": "Binding UX supports clearing or reassigning a consumer only where the product rules explicitly allow it.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F139",
+    "description": "Teams rebinding continues to invalidate stale Teams install state without mutating unrelated bindings.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F140",
+    "description": "Calendar rebinding invalidates stale calendar provider configuration or prompts reconnection where required by the implementation.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F141",
+    "description": "Email rebinding invalidates or warns about stale Outlook provider connections where required by the implementation.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F142",
+    "description": "Binding UX copy explains that bindings are the source of truth for consumer selection.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F143",
+    "description": "Binding UX no longer relies on the old Current consumers badge block to communicate compatibility ownership.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F144",
+    "description": "Binding tests cover create, reassign, archived guard, permission guard, and edition visibility.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F145",
+    "description": "The consumer binding table becomes the only active source of consumer selection for migrated Microsoft consumers.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F146",
+    "description": "Legacy default fallback for MSP SSO is removed after explicit binding rollout is complete.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F147",
+    "description": "Legacy default fallback for Calendar is removed.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F148",
+    "description": "Teams remains an explicit-binding-only consumer.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F149",
+    "description": "Any retained Email fallback behavior is isolated as a temporary migration concern rather than the target design.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F150",
+    "description": "Legacy compatibility backfill routines are deleted or reduced to one-time migration-only responsibilities rather than steady-state runtime behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F151",
+    "description": "The binding list action returns an edition-aware set of visible consumers.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F152",
+    "description": "CE binding-list responses include only MSP SSO.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F153",
+    "description": "EE binding-list responses include MSP SSO plus supported EE consumers.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F154",
+    "description": "The binding write action enforces edition-aware allowed consumer types.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F155",
+    "description": "CE binding-write requests for Email are rejected.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F156",
+    "description": "CE binding-write requests for Calendar are rejected.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F157",
+    "description": "CE binding-write requests for Teams are rejected.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F158",
+    "description": "EE binding-write requests for supported consumers succeed when inputs are valid.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F159",
+    "description": "Consumer resolution prefers explicit binding rows before any legacy fallback logic is considered.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F160",
+    "description": "Consumer resolution returns no profile for migrated consumers when no explicit binding exists and fallback has been removed.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F161",
+    "description": "MSP SSO resolution uses the explicit binding path.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F162",
+    "description": "Email integration resolution uses the explicit binding path wherever that consumer remains supported.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F163",
+    "description": "Calendar integration resolution uses the explicit binding path.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F164",
+    "description": "Teams integration resolution continues to use the explicit binding path.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F165",
+    "description": "Microsoft integration status payloads return edition-appropriate redirect URI and scope metadata.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F166",
+    "description": "CE Microsoft status payloads omit non-SSO consumer details that should not appear in CE.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F167",
+    "description": "EE Microsoft status payloads include the non-SSO consumer details needed by EE profile management.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F168",
+    "description": "Action-layer tests cover the edition matrix, missing-binding behavior, archive guards, and removal of compatibility-default assumptions.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F169",
+    "description": "The existing Microsoft consumer binding table remains shared infrastructure after the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F170",
+    "description": "The supported consumer constraint set continues to represent MSP SSO, Email, Calendar, and Teams unless a deliberate narrowing migration is chosen.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F171",
+    "description": "Migration strategy backfills explicit MSP SSO bindings for existing tenants that rely on named Microsoft profiles.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F172",
+    "description": "Migration strategy defines how explicit Email bindings are created for any retained Outlook email behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F173",
+    "description": "Migration strategy backfills explicit Calendar bindings for existing EE tenants with connected calendar providers where needed.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F174",
+    "description": "Migration strategy preserves explicit Teams binding data.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F175",
+    "description": "No runtime consumer-resolution path depends on default-profile compatibility semantics after the cutover target state is reached.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F176",
+    "description": "The default-profile concept is reduced to profile-management metadata only if it remains in schema at all.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F177",
+    "description": "UI copy and behavior no longer rely on `is_default` as a compatibility signal for consumer routing.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F178",
+    "description": "Shared migrations and comments stop describing consumer resolution in compatibility-default terms.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F179",
+    "description": "Calendar schema and runtime ownership are documented as enterprise-owned in the migration plan.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F180",
+    "description": "A fresh CE install exposes no executable calendar feature surface even when shared schema objects exist.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F181",
+    "description": "A fresh EE install exposes the calendar feature surface through EE-owned codepaths.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F182",
+    "description": "Existing calendar provider rows remain usable by EE after ownership moves behind EE boundaries.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F183",
+    "description": "CE access to existing calendar provider rows cannot execute calendar synchronization behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F184",
+    "description": "Migration tests cover tenants with no Microsoft profiles.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F185",
+    "description": "Migration tests cover tenants with one default Microsoft profile and no binding rows.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F186",
+    "description": "Migration tests cover tenants with existing calendar providers that need explicit binding alignment.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F187",
+    "description": "Migration tests cover tenants with archived Microsoft profiles.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F188",
+    "description": "Migration tests cover invalid cross-tenant binding attempts.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F189",
+    "description": "Migration runbooks document any unsupported edge states that require manual cleanup instead of silent compatibility behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F190",
+    "description": "Schema documentation reflects shared binding infrastructure plus EE calendar ownership.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F191",
+    "description": "Scratchpad notes record the migration files and ownership boundaries that implement the cutover.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F192",
+    "description": "Contract tests assert both the Microsoft binding schema contract and the EE ownership of calendar runtime paths.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F193",
+    "description": "The old legacy Microsoft consumers pane codepath is removed.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F194",
+    "description": "The old default-compatibility-profile copy is removed.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F195",
+    "description": "Old tests that asserted the legacy Microsoft consumers pane are removed or replaced.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F196",
+    "description": "Old tests that asserted CE calendar presence are removed or replaced.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F197",
+    "description": "This plan cross-references the prior Teams EE-boundary migration plan.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F198",
+    "description": "This plan cross-references the prior named Microsoft profile and consumer-binding work.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F199",
+    "description": "The scratchpad records the key files affected by the calendar settings, profile, route, service, and subscriber refactor.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F200",
+    "description": "The scratchpad records the key files affected by Microsoft profile UI, action, and binding cleanup.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F201",
+    "description": "The runbook includes the plan-validator command for this plan folder.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F202",
+    "description": "The runbook includes the focused unit and integration suite list expected to validate this migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F203",
+    "description": "A CE review checklist confirms no calendar UI or runtime remains in shared surfaces.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F204",
+    "description": "An EE review checklist confirms the calendar flow remains complete after extraction.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F205",
+    "description": "A CE review checklist confirms the Microsoft profile page shows only MSP SSO-oriented content.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F206",
+    "description": "An EE review checklist confirms the Microsoft profile page shows the additional supported consumers.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F207",
+    "description": "A regression checklist confirms the earlier Teams EE cleanup remains intact.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F208",
+    "description": "A regression checklist confirms MSP SSO discovery and login-domain flows remain intact.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F209",
+    "description": "A regression checklist confirms the chosen Email consumer strategy is intentionally covered rather than left to compatibility defaults.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F210",
+    "description": "A regression checklist confirms binding changes do not regress profile archive or delete guards.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F211",
+    "description": "A regression checklist confirms CE stubs fail clearly instead of partially executing calendar logic.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F212",
+    "description": "A regression checklist confirms EE wrappers delegate to enterprise implementations instead of stale shared code.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F213",
+    "description": "The final acceptance checklist ties together the calendar EE move and explicit-binding cleanup as one cohesive migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F214",
+    "description": "The implementation plan stays self-contained under one dated plan folder with synchronized PRD, features, tests, and scratchpad artifacts.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F215",
+    "description": "Plan validation passes for artifact schema, feature/test shape, and cross-reference integrity.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  },
+  {
+    "id": "F216",
+    "description": "The plan inventory remains comprehensive enough to drive a multi-commit migration without reopening scope discovery.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Acceptance Criteria (Definition of Done)",
+      "Observability"
+    ]
+  }
+]

@@ -725,7 +725,8 @@ export class TicketService extends BaseService<ITicket> {
         user_id: context.userId,
         tenant: context.tenant,
         created_at: knex.raw('now()'),
-        updated_at: knex.raw('now()')
+        updated_at: knex.raw('now()'),
+        metadata: data.metadata,
       };
 
       const [comment] = await trx('comments').insert(commentData).returning('*');

@@ -9,7 +9,7 @@
 import dynamic from 'next/dynamic';
 
 const NinjaOneComplianceDashboard = dynamic(
-  () => import('@enterprise/components/settings/integrations/NinjaOneComplianceDashboard'),
+  () => import('@alga-psa/ee-stubs/components/settings/integrations/NinjaOneComplianceDashboard'),
   {
     loading: () => null,
     ssr: false,

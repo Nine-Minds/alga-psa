@@ -100,6 +100,16 @@ export {
 } from './integrations/googleActions';
 export {
   getMicrosoftIntegrationStatus,
+  getMicrosoftConsumerSetupStatus,
+  listMicrosoftProfiles,
+  listMicrosoftConsumerBindings,
+  createMicrosoftProfile,
+  setMicrosoftConsumerBinding,
+  updateMicrosoftProfile,
+  archiveMicrosoftProfile,
+  deleteMicrosoftProfile,
+  setDefaultMicrosoftProfile,
+  resolveMicrosoftProfileForConsumer,
   saveMicrosoftIntegrationSettings,
   resetMicrosoftProvidersToDisconnected
 } from './integrations/microsoftActions';
@@ -112,6 +122,13 @@ export {
   verifyMspSsoDomainClaimOwnership,
   revokeMspSsoDomainClaim,
 } from './integrations/mspSsoDomainActions';
+export {
+  getTeamsIntegrationStatus,
+  saveTeamsIntegrationSettings,
+} from './integrations/teamsActions';
+export {
+  getTeamsAppPackageStatus,
+} from './integrations/teamsPackageActions';
 export {
   initiateEntraDirectOAuth,
   connectEntraCipp,

@@ -65,7 +65,7 @@ function IntegrationBanner({ option }: { option: RmmIntegrationOption }) {
 
 // Dynamic import for NinjaOne (EE feature).
 const NinjaOneIntegrationSettings = dynamic(
-  () => import('@enterprise/components/settings/integrations/NinjaOneIntegrationSettings'),
+  () => import('@alga-psa/ee-stubs/components/settings/integrations/NinjaOneIntegrationSettings'),
   {
     loading: () => (
       <Card>

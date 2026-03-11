@@ -13,14 +13,28 @@ const serverRoot = path.resolve(__dirname, '..');
 const PRODUCTION_DB_NAMES = ['sebastian_prod', 'production', 'prod', 'server'];
 const TEST_DB_NAME = 'test_database';
 
+export interface CreateTestDbConnectionOptions {
+  databaseName?: string;
+  migrationsDir?: string;
+  seedsDir?: string;
+  runSeeds?: boolean;
+}
+
 export function verifyTestDatabase(dbName: string): void {
   if (PRODUCTION_DB_NAMES.includes(dbName.toLowerCase())) {
     throw new Error(`Attempting to use production database (${dbName}) for testing`);
   }
 }
 
-export async function createTestDbConnection(): Promise<Knex> {
-  verifyTestDatabase(TEST_DB_NAME);
+export async function createTestDbConnection(
+  options: CreateTestDbConnectionOptions = {}
+): Promise<Knex> {
+  const databaseName = options.databaseName || TEST_DB_NAME;
+  const migrationsDir = options.migrationsDir || path.join(serverRoot, 'migrations');
+  const seedsDir = options.seedsDir || path.join(serverRoot, 'seeds', 'dev');
+  const runSeeds = options.runSeeds ?? true;
+
+  verifyTestDatabase(databaseName);
 
   const dbHost = process.env.DB_HOST || 'localhost';
   const dbPort = parseInt(process.env.DB_PORT || '5432', 10);
@@ -29,11 +43,11 @@ export async function createTestDbConnection(): Promise<Knex> {
   const appUser = process.env.DB_USER_SERVER || 'app_user';
   const appPassword = await getSecret('db_password_server', 'DB_PASSWORD_SERVER', 'postpass123');
 
-  await recreateDatabase(TEST_DB_NAME, dbHost, dbPort, adminUser, adminPassword, appUser, appPassword);
+  await recreateDatabase(databaseName, dbHost, dbPort, adminUser, adminPassword, appUser, appPassword);
 
   process.env.DB_HOST = dbHost;
   process.env.DB_PORT = String(dbPort);
-  process.env.DB_NAME_SERVER = TEST_DB_NAME;
+  process.env.DB_NAME_SERVER = databaseName;
   process.env.DB_USER_SERVER = appUser;
   process.env.DB_USER_ADMIN = adminUser;
 
@@ -44,18 +58,20 @@ export async function createTestDbConnection(): Promise<Knex> {
       port: dbPort,
       user: adminUser,
       password: adminPassword,
-      database: TEST_DB_NAME,
+      database: databaseName,
     },
     migrations: {
-      directory: path.join(serverRoot, 'migrations'),
+      directory: migrationsDir,
     },
     seeds: {
-      directory: path.join(serverRoot, 'seeds', 'dev'),
+      directory: seedsDir,
     },
   });
 
   await adminKnex.migrate.latest();
-  await adminKnex.seed.run();
+  if (runSeeds) {
+    await adminKnex.seed.run();
+  }
   await adminKnex.destroy();
 
   const db = knex({
@@ -65,7 +81,7 @@ export async function createTestDbConnection(): Promise<Knex> {
       port: dbPort,
       user: appUser,
       password: appPassword,
-      database: TEST_DB_NAME,
+      database: databaseName,
     },
     asyncStackTraces: true,
     pool: {

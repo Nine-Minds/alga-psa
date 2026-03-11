@@ -7,7 +7,7 @@ function withOptionalTimestamp(field: string, value?: string): Record<string, un
   return value ? { [field]: value } : {};
 }
 
-export type NotificationChannel = 'email' | 'sms' | 'in_app' | 'push';
+export type NotificationChannel = 'email' | 'sms' | 'in_app' | 'push' | 'teams';
 
 export function buildNotificationSentPayload(params: {
   notificationId: string;
@@ -97,4 +97,3 @@ export function buildNotificationReadPayload(params: {
     ...(params.client ? { client: params.client } : {}),
   };
 }
-

@@ -22,7 +22,7 @@ import {
   searchServiceCatalogForPicker,
   getServicePrices,
   type CatalogPickerItem,
-} from '@alga-psa/billing/actions';
+} from '../../actions/materialCatalogActions';
 
 interface TicketMaterialsCardProps {
   id?: string;

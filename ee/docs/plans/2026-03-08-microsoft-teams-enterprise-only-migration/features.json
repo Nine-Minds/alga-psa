@@ -1,0 +1,1883 @@
+[
+  {
+    "id": "F001",
+    "description": "Planning artifacts: create a follow-on ALGA plan for the EE-only migration instead of rewriting the original Teams v1 plan.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Planning artifacts: the migration PRD explicitly references `2026-03-07-microsoft-teams-integration-v1` as historical context and dependency context.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Planning artifacts: the migration scratchpad records the CE code locations that currently own Teams behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Planning artifacts: the migration scratchpad records the Entra EE boundary pattern as the implementation precedent.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Planning artifacts: the migration plan treats Teams as unreleased and allows current dev/test Teams data to be discarded.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Planning artifacts: the migration plan treats shared Microsoft profiles as retained shared infrastructure rather than part of the EE extraction.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Planning artifacts: the migration plan defines `teams-integration-ui` as the sole new rollout flag assumed for this work.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Planning artifacts: the migration plan defines a fresh-install target state for CE and a separate fresh-install target state for EE.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Planning artifacts: the migration plan distinguishes migration work from already-complete shared Microsoft profile work.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Planning artifacts: the migration plan requires feature and test IDs that remain stable as the migration checklist evolves.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Availability model: define a single Teams availability helper that combines enterprise edition checks with the tenant-level `teams-integration-ui` flag.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Availability model: the shared Teams availability helper accepts tenant context for server-side runtime checks.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Availability model: the shared Teams availability helper accepts optional user context for flag evaluations that support user-aware targeting.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Availability model: Teams admin UI visibility is driven by the shared availability helper rather than ad hoc local checks.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Availability model: Teams runtime route access is driven by the shared availability helper rather than ad hoc local checks.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Availability model: Teams server action access is driven by the shared availability helper rather than ad hoc local checks.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Availability model: Teams notification delivery checks the shared availability helper before attempting runtime work.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Availability model: CE always resolves Teams availability to disabled regardless of tenant flag state.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Availability model: EE with the feature flag disabled resolves Teams availability to disabled without exposing active behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Availability model: EE with the feature flag enabled and valid tenant context resolves Teams availability to enabled.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Availability model: unavailable states distinguish `ce_unavailable`, `flag_disabled`, and `tenant_not_configured` rather than collapsing everything into one generic failure.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Availability model: Teams settings wrappers can render a disabled-state shell when EE is present but the tenant flag is off.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Availability model: Teams runtime wrappers can return a stable EE-unavailable response when running in CE.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Availability model: Teams runtime wrappers can return a stable disabled response when running in EE with the tenant flag off.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Availability model: Teams availability helpers are imported from a shared non-`use server` module so they are safe in both action and UI code.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Availability model: the migration introduces no second Teams rollout flag for separate runtime/UI behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Availability model: the migration does not repurpose unrelated existing flags such as `teams-v2` for Teams integration ownership gating.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Availability model: the plan records the canonical unavailable copy for CE and disabled-flag states so wrappers are consistent.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Availability model: flag evaluation defaults to disabled when feature-flag infrastructure is unavailable.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Availability model: all new EE Teams entrypoints are required to call the shared availability helper before touching tenant Teams state.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Settings IA: remove the Teams integration surface from the shared `Providers` category.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Settings IA: keep `MicrosoftIntegrationSettings` in the shared `Providers` category because Microsoft profiles remain shared infrastructure.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Settings IA: add the Teams integration surface to the `Communication` category.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Settings IA: keep existing Inbound Email configuration in `Communication` while adding Teams alongside it.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Settings IA: the shared settings page composes the Teams card through an EE-safe wrapper rather than importing the concrete shared Teams component directly.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Settings IA: the Teams settings wrapper only renders a Teams card when edition and flag checks pass.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Settings IA: the Teams settings wrapper renders nothing in CE so Teams is not discoverable in the settings UI.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Settings IA: the Teams settings wrapper renders nothing in EE when the tenant flag is disabled unless an explicit disabled-state shell is intentionally chosen.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Settings IA: the `Communication` tab description is updated so Teams fits the communication/inbox/collaboration grouping rather than provider credentials.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Settings IA: the `Providers` tab description no longer implies that Teams setup belongs there.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Settings IA: the settings integration index no longer exports a CE-shaped Teams settings component.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Settings IA: Teams settings entry points are renamed or wrapped so their ownership clearly indicates EE-only behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Settings IA: the Teams settings UI continues to reference shared Microsoft profiles instead of duplicating Microsoft credential entry.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Settings IA: Teams profile-selection UX remains tenant-admin-only.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Settings IA: no user-scoped Teams profile selector is introduced during the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Settings IA: the Teams settings entry preserves the existing Teams setup concepts such as profile selection, capability status, and package/install state.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Settings IA: Teams settings visibility does not depend on whether a tenant already has Teams data in the database.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Settings IA: the shared settings page no longer imports `TeamsIntegrationSettings` from a CE package path.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Settings IA: EE settings composition uses a wrapper or entry module consistent with the existing Entra pattern.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Settings IA: any Teams-related settings copy that says “Providers” is updated to say “Communication”.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Settings IA: Teams settings tests assert the new category placement instead of the historical provider placement.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Settings IA: Teams-specific settings help text remains scoped to MSP users and does not broaden product scope during the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Settings IA: the migration does not move Microsoft profile management into EE.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Settings IA: the migration does not add a second Teams settings surface in another settings area.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Route boundary: the Teams personal-tab page is converted from a shared active implementation into an EE-owned implementation or EE delegator.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Route boundary: the Teams tab page exports only wrapper code in shared CE paths when a public route boundary must remain present.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Route boundary: the Teams tab page returns an EE-unavailable result or `notFound` style response in CE.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "Route boundary: the Teams tab page returns a disabled-state response when running in EE with the tenant flag off.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "Route boundary: the Teams tab page delegates into EE code when running in EE with the tenant flag enabled.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Route boundary: Teams bot message routes are converted from shared active implementations into EE-owned implementations or EE delegators.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "Route boundary: Teams bot routes return an EE-unavailable response in CE.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "Route boundary: Teams bot routes return a disabled response in EE when the tenant flag is off.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "Route boundary: Teams bot routes delegate into EE implementations when Teams is enabled.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Route boundary: Teams message-extension query routes are converted from shared active implementations into EE-owned implementations or EE delegators.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "Route boundary: Teams message-extension action routes are converted from shared active implementations into EE-owned implementations or EE delegators.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "Route boundary: Teams message-extension routes return CE-unavailable responses when invoked from CE.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "Route boundary: Teams message-extension routes return disabled responses when invoked from EE with the tenant flag off.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "Route boundary: Teams message-extension routes delegate into EE implementations when Teams is enabled.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "Route boundary: Teams auth callback routes for tab, bot, and message extension are converted from shared active implementations into EE-owned implementations or EE delegators.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "Route boundary: Teams auth callback routes return EE-unavailable responses in CE.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "Route boundary: Teams auth callback routes return disabled responses in EE with the tenant flag off.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "Route boundary: Teams auth callback routes delegate into EE implementations when Teams is enabled.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "Route boundary: Teams package generation and install-status routes are converted from shared active implementations into EE-owned implementations or EE delegators.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "Route boundary: Teams package/install routes return EE-unavailable responses in CE.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "Route boundary: Teams package/install routes return disabled responses in EE with the tenant flag off.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "Route boundary: Teams package/install routes delegate into EE implementations when Teams is enabled.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "Route boundary: OPTIONS handling for any CE stubbed Teams API routes remains valid even when the EE implementation is unavailable.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "Route boundary: shared route wrappers cache EE dynamic imports safely so repeated requests do not reload modules unnecessarily.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "Route boundary: shared route wrappers log EE import failures in a bounded way without exposing stack traces to users.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Route boundary: shared route wrappers do not import EE modules eagerly in CE builds.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "Route boundary: the migration documents which Teams routes remain addressable as CE stubs and which become hard 404s.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "Route boundary: no remaining shared route directly executes Teams business logic after the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "EE ownership: concrete Teams tab rendering logic lives under an EE-owned path after the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "EE ownership: concrete Teams bot command handling lives under an EE-owned path after the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "EE ownership: concrete Teams message-extension search handling lives under an EE-owned path after the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "EE ownership: concrete Teams message-extension action handling lives under an EE-owned path after the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "EE ownership: concrete Teams adaptive-card and dialog submit handling lives under an EE-owned path after the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F088",
+    "description": "EE ownership: concrete Teams package manifest generation lives under an EE-owned path after the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F089",
+    "description": "EE ownership: concrete Teams install-status and package metadata logic lives under an EE-owned path after the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F090",
+    "description": "EE ownership: concrete Teams quick-action registry logic lives under an EE-owned path after the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F091",
+    "description": "EE ownership: concrete Teams notification delivery logic lives under an EE-owned path after the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "EE ownership: concrete Teams deep-link composition used only by Teams runtime surfaces lives under an EE-owned path after the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F093",
+    "description": "EE ownership: concrete Teams tenant-context resolution used only by Teams runtime surfaces lives under an EE-owned path after the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F094",
+    "description": "EE ownership: concrete Teams auth callback helpers used only by Teams runtime surfaces live under EE-owned paths after the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F095",
+    "description": "EE ownership: concrete Teams settings UI lives under an EE-owned path after the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F096",
+    "description": "EE ownership: concrete Teams setup state persistence helpers live under an EE-owned path after the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F097",
+    "description": "EE ownership: EE Teams components continue to consume shared Microsoft profile services through stable shared interfaces.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F098",
+    "description": "EE ownership: EE Teams components continue to consume shared PSA notification/link infrastructure through stable shared interfaces.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F099",
+    "description": "EE ownership: EE Teams components continue to consume shared auth/session primitives through stable shared interfaces.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "EE ownership: EE Teams modules are named and placed so future engineers can identify them as enterprise-only without inspecting internals.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "EE ownership: enterprise-only import aliases or package entrypoints are used consistently for Teams runtime modules.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "EE ownership: the migration does not create duplicate EE implementations for Microsoft profile management that already lives in shared code.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F103",
+    "description": "EE ownership: the migration does not create a second Teams integration model separate from the existing Teams tenant integration concept.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F104",
+    "description": "EE ownership: the migration keeps Teams as one EE integration spanning tab, bot, message extension, and notifications rather than fragmenting it into separate EE subsystems.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F105",
+    "description": "EE ownership: the migration keeps shared Microsoft profiles as the only supported credential source for Teams.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F106",
+    "description": "EE ownership: the migration does not add channel/chat notification routing or other new product scope while moving code to EE.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F107",
+    "description": "Server actions: shared Teams server-action modules stop exporting concrete Teams behavior directly from CE-owned paths.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F108",
+    "description": "Server actions: shared Teams server-action entrypoints become EE-unavailable stubs or EE delegators where external imports require a stable path.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F109",
+    "description": "Server actions: Teams package actions return EE-unavailable results in CE.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F110",
+    "description": "Server actions: Teams package actions return disabled results in EE when the tenant flag is off.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F111",
+    "description": "Server actions: Teams package actions delegate into EE implementations when Teams is enabled.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F112",
+    "description": "Server actions: Teams settings actions return EE-unavailable results in CE.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F113",
+    "description": "Server actions: Teams settings actions return disabled results in EE when the tenant flag is off.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F114",
+    "description": "Server actions: Teams settings actions delegate into EE implementations when Teams is enabled.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F115",
+    "description": "Server actions: Teams quick-action submit actions return EE-unavailable results in CE.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F116",
+    "description": "Server actions: Teams quick-action submit actions return disabled results in EE when the tenant flag is off.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F117",
+    "description": "Server actions: Teams quick-action submit actions delegate into EE implementations when Teams is enabled.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F118",
+    "description": "Server actions: Teams action modules call the shared Teams availability helper before reading Teams tenant state.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F119",
+    "description": "Server actions: Teams action result types remain stable across CE stubs and EE implementations so UI callers do not need edition-specific type handling.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F120",
+    "description": "Server actions: runtime constants and helpers needed by both UI and action code live outside `use server` files.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F121",
+    "description": "Server actions: CE action wrappers do not pull enterprise-only modules into client bundles.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F122",
+    "description": "Server actions: shared action indexes no longer make Teams look like a CE-managed provider integration.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F123",
+    "description": "Server actions: any shared consumer-binding helpers remain shared and are not moved into EE just because Teams uses them.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F124",
+    "description": "Server actions: Teams-specific provider-resolution helpers used only for Teams runtime behavior are moved out of shared auth action surfaces.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F125",
+    "description": "Server actions: Teams action wrappers preserve existing result-shape semantics for success, failure, unavailable, and disabled cases.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F126",
+    "description": "Server actions: teams package generation still depends on shared Microsoft profile selection state rather than duplicating profile data.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F127",
+    "description": "Server actions: teams settings persistence still enforces tenant-admin permissions after moving to EE.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F128",
+    "description": "Server actions: teams action wrappers remain safe to import from settings pages, notification code, and server components without edition leakage.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F129",
+    "description": "Server actions: shared CE code no longer uses Teams action modules as a source of reusable runtime constants.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F130",
+    "description": "Server actions: the migration explicitly tests the `use server` export shape of migrated Teams action modules.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F131",
+    "description": "Server actions: no remaining shared server-action module owns Teams business logic after the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F132",
+    "description": "Auth boundary: Teams-specific Microsoft provider resolution used by Teams runtime entrypoints is moved behind EE ownership or EE-safe wrappers.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F133",
+    "description": "Auth boundary: shared MSP SSO and non-Teams Microsoft auth paths continue to function without depending on EE Teams modules.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F134",
+    "description": "Auth boundary: Teams runtime auth checks still enforce MSP-user-only semantics after moving to EE.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F135",
+    "description": "Auth boundary: Teams runtime auth checks still enforce tenant matching after moving to EE.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F136",
+    "description": "Auth boundary: Teams runtime auth checks still enforce selected Teams Microsoft profile semantics after moving to EE.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F137",
+    "description": "Auth boundary: shared auth indexes no longer expose Teams-specific helpers as if they are CE-owned runtime features.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F138",
+    "description": "Auth boundary: Teams reauth URL helpers used only for Teams surfaces are moved behind EE ownership or EE-safe wrappers.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F139",
+    "description": "Auth boundary: CE does not attempt Teams auth callback flows after the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F140",
+    "description": "Auth boundary: EE flag-off state does not attempt Teams auth callback flows after the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F141",
+    "description": "Notification boundary: shared internal notification generation remains the source of truth for payloads and record links.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F142",
+    "description": "Notification boundary: Teams notification delivery is moved behind EE ownership or EE-safe wrappers.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F143",
+    "description": "Notification boundary: CE notification broadcasting never attempts Teams delivery after the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F144",
+    "description": "Notification boundary: EE flag-off notification broadcasting never attempts Teams delivery after the migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F145",
+    "description": "Notification boundary: EE flag-on notification broadcasting can reach Teams delivery through EE-owned code.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F146",
+    "description": "Notification boundary: shared notification broadening does not import concrete Teams delivery modules directly.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F147",
+    "description": "Notification boundary: Teams-specific notification templates or feed payload helpers used only for Teams delivery are EE-owned.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F148",
+    "description": "Notification boundary: Teams deep-link builders used only for Teams feed delivery are EE-owned or wrapped safely.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F149",
+    "description": "Notification boundary: non-Teams notification channels remain unaffected by the Teams EE extraction.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F150",
+    "description": "Notification boundary: the migration preserves the simplification cascade that Teams notifications are just another delivery channel for existing notification payloads.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F151",
+    "description": "Notification boundary: the migration does not add channel-targeted notification routing while moving delivery to EE.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F152",
+    "description": "Notification boundary: failures to load EE Teams notification delivery do not break the broader notification broadcast path.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F153",
+    "description": "Notification boundary: CE builds do not include Teams notification runtime by accident through shared notification imports.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F154",
+    "description": "Schema ownership: shared migration history no longer contains active ownership of Teams integration tables.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F155",
+    "description": "Schema ownership: shared migration history no longer contains active ownership of Teams package metadata columns or tables.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F156",
+    "description": "Schema ownership: EE migration history creates the Teams integration tables required for Teams tenant setup.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F157",
+    "description": "Schema ownership: EE migration history creates the Teams package metadata storage required for Teams manifest/install status.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F158",
+    "description": "Schema ownership: shared migration history continues to create Microsoft profile tables.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F159",
+    "description": "Schema ownership: shared migration history continues to create Microsoft profile consumer-binding tables.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F160",
+    "description": "Schema ownership: fresh CE installs do not create Teams-specific schema.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F161",
+    "description": "Schema ownership: fresh EE installs do create Teams-specific schema.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F162",
+    "description": "Schema ownership: CE migration validation asserts the absence of Teams tables.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F163",
+    "description": "Schema ownership: EE migration validation asserts the presence of Teams tables.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F164",
+    "description": "Schema ownership: Teams table creation remains tenant-scoped and aligned with the existing Teams integration data model after moving to EE.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F165",
+    "description": "Schema ownership: Teams package metadata persistence remains tenant-scoped after moving to EE.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F166",
+    "description": "Schema ownership: the migration plan does not include a production backfill for current dev/test Teams rows.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F167",
+    "description": "Schema ownership: any current shared Teams tables can be dropped or ignored in local/dev reset flows without preservation guarantees.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F168",
+    "description": "Schema ownership: the migration notes expected handling for developers whose local databases still have pre-migration shared Teams tables.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F169",
+    "description": "Schema ownership: the migration does not move shared Microsoft profile secrets or bindings into EE.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F170",
+    "description": "Schema ownership: the migration does not create duplicate copies of Microsoft profile tables inside EE.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F171",
+    "description": "Schema ownership: Teams schema tests run against migrated databases rather than source-string-only assertions.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F172",
+    "description": "Schema ownership: the plan records whether shared migration files are deleted, tombstoned, or replaced with no-op compatibility markers.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F173",
+    "description": "Schema ownership: the final schema boundary leaves no ambiguity about whether Teams is CE or EE at the database layer.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F174",
+    "description": "Cleanup: the shared integrations component index no longer exports an active Teams settings component.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F175",
+    "description": "Cleanup: the shared integrations settings page no longer imports Teams from a CE-owned component path.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F176",
+    "description": "Cleanup: shared route trees no longer contain active Teams business logic in page or API handlers.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F177",
+    "description": "Cleanup: shared notifications runtime no longer imports concrete Teams delivery code.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F178",
+    "description": "Cleanup: shared auth indexes no longer expose concrete Teams-only runtime modules when a wrapper would suffice.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F179",
+    "description": "Cleanup: Teams-specific helpers that are only meaningful for Teams runtime are moved out of generic shared utility files where appropriate.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F180",
+    "description": "Cleanup: comments and file names are updated so Teams enterprise ownership is obvious to future maintainers.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F181",
+    "description": "Cleanup: no settings copy still tells admins to configure Teams from the Providers tab.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F182",
+    "description": "Cleanup: no test names still describe Teams as a Providers-category integration unless they are historical references.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F183",
+    "description": "Cleanup: no docs introduced by this migration claim that Teams is available in CE.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F184",
+    "description": "Cleanup: no shared package barrel accidentally re-exports enterprise Teams code.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F185",
+    "description": "Cleanup: no EE module imports shared Teams code that is itself trying to import back into EE recursively.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F186",
+    "description": "Cleanup: stale temporary wrappers created during migration are removed before the work is considered complete.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F187",
+    "description": "Compatibility: shared Microsoft profile CRUD still works in CE after the Teams extraction.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F188",
+    "description": "Compatibility: shared Microsoft profile CRUD still works in EE after the Teams extraction.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F189",
+    "description": "Compatibility: shared default-profile compatibility behavior for email/calendar/MSP SSO remains intact after the Teams extraction.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F190",
+    "description": "Compatibility: Teams remains able to bind to a selected Microsoft profile through the shared consumer-binding model after the extraction.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F191",
+    "description": "Compatibility: the migration does not change tenant-admin permission requirements for managing Microsoft profiles.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F192",
+    "description": "Compatibility: the migration does not change tenant-admin permission requirements for managing Teams setup; it only changes ownership and placement.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F193",
+    "description": "Compatibility: CE tenants without Teams remain unaffected in behavior and schema after the extraction.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F194",
+    "description": "Compatibility: EE tenants with the feature flag off remain unaffected in behavior while Teams code remains unavailable.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F195",
+    "description": "Compatibility: EE tenants with the feature flag on can still use the same Teams v1 surface set after the extraction.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F196",
+    "description": "Compatibility: the migration preserves the single-integration mental model for Teams across tab, bot, message extension, and notifications.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F197",
+    "description": "Compatibility: the migration does not broaden Teams support to client users, channel-first workflows, or channel-targeted notifications.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F198",
+    "description": "Test infrastructure: add or update fixture helpers that can simulate CE, EE flag-off, and EE flag-on states for Teams settings and routes.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F199",
+    "description": "Test infrastructure: add or update fixture helpers that can simulate Teams availability checks without requiring live PostHog access.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F200",
+    "description": "Test infrastructure: add or update fixture helpers that can simulate fresh CE versus fresh EE migration states.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F201",
+    "description": "Test infrastructure: add or update fixture helpers that can simulate Teams-disabled wrapper results consistently across settings, actions, and routes.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F202",
+    "description": "Test infrastructure: contract tests are added or updated for settings placement in Communication vs Providers.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F203",
+    "description": "Test infrastructure: contract tests are added or updated for route delegation into EE implementations.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F204",
+    "description": "Test infrastructure: contract tests are added or updated for CE unavailable responses.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F205",
+    "description": "Test infrastructure: contract tests are added or updated for flag-disabled responses.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F206",
+    "description": "Test infrastructure: contract tests are added or updated for shared Microsoft profile compatibility after extraction.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F207",
+    "description": "Test infrastructure: contract tests are added or updated for schema ownership boundaries between shared and EE migrations.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F208",
+    "description": "Test infrastructure: scratchpad runbooks list the focused commands needed to validate settings, routes, actions, and migrations for this extraction.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F209",
+    "description": "Acceptance: the migration is not complete until Teams is invisible in CE, visible only in EE Communication when flagged on, and database ownership clearly matches that split.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  }
+]

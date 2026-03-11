@@ -5,6 +5,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex } from '@alga-psa/db';
 import { generateMicrosoftAuthUrl, generateGoogleAuthUrl, generateNonce, type OAuthState } from '../../utils/email/oauthHelpers';
+import { resolveMicrosoftConsumerProfileConfig } from '../../lib/microsoftConsumerProfileResolution';
 
 export const initiateEmailOAuth = withAuth(async (
   user,
@@ -47,22 +48,15 @@ export const initiateEmailOAuth = withAuth(async (
       // Google is always tenant-owned (CE and EE): do not fall back to app-level secrets.
       clientId = (await secretProvider.getTenantSecret(tenant, 'google_client_id')) || null;
     } else {
-      // Microsoft: tenant secrets take priority over env vars for self-hosted deployments
-      // IMPORTANT: Only use tenant credentials if BOTH client_id and client_secret are configured
-      // to avoid credential mismatch between OAuth initiation and callback
-      const tenantClientId = await secretProvider.getTenantSecret(tenant, 'microsoft_client_id');
-      const tenantClientSecret = await secretProvider.getTenantSecret(tenant, 'microsoft_client_secret');
-
-      if (tenantClientId && tenantClientSecret) {
-        // Both tenant secrets configured - use tenant credentials
-        clientId = tenantClientId;
-      } else if (process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET) {
-        // Both env vars configured - use env credentials
-        clientId = process.env.MICROSOFT_CLIENT_ID;
-      } else {
-        // Fallback to whatever is available (will likely fail, but let callback handle the error)
-        clientId = tenantClientId || process.env.MICROSOFT_CLIENT_ID || null;
+      const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(tenant, 'email');
+      if (microsoftProfile.status !== 'ready') {
+        return {
+          success: false,
+          error: microsoftProfile.message || 'Microsoft Email binding is not configured',
+        };
       }
+
+      clientId = microsoftProfile.clientId || null;
     }
 
     if (!effectiveRedirectUri) {

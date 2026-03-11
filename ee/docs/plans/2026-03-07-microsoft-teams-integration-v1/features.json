@@ -1,0 +1,2390 @@
+[
+  {
+    "id": "F001",
+    "description": "Microsoft profiles: tenant-owned named Microsoft profiles exist as the shared credential model for Teams.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Microsoft profiles: profile persistence stores tenant-scoped profile ID, display name, client ID, client secret reference, tenant ID, and readiness metadata.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Microsoft profiles: profile names are unique within a tenant.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Microsoft profiles: one profile can be marked as the tenant default for legacy Microsoft consumers.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Microsoft profiles: migrating from the singleton Microsoft configuration creates a default named profile automatically.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Microsoft profiles: migration preserves the current `microsoft_client_id` value for the default profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Microsoft profiles: migration preserves the current `microsoft_client_secret` value for the default profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Microsoft profiles: migration preserves the current `microsoft_tenant_id` value for the default profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Microsoft profiles: profile reads return masked secret state instead of raw secret material.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Microsoft profiles: profile readiness captures whether required credentials exist and whether consumer-specific setup can proceed.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Microsoft profiles: profile records can be archived without destroying historical consumer bindings.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Microsoft profiles: profile listing returns only the current tenant's profiles.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Microsoft profiles: profile creation validates required display name, client ID, client secret, and tenant ID fields.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Microsoft profiles: profile update supports rotating the client secret without forcing the UI to display the previous secret.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Microsoft profiles: deleting or archiving a profile that is still actively bound to a consumer is blocked until the binding is changed.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Microsoft profiles: the secret provider remains the storage system of record for profile credential material.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Microsoft profiles: profile reads and writes remain fully tenant-scoped.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Microsoft profiles: helper resolution returns the tenant default profile for compatibility paths when a consumer has no explicit binding.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Microsoft settings UI: the existing singleton Microsoft settings screen becomes a profile manager.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Microsoft settings UI: the profile manager lists all profiles with display name, tenant ID, default state, and readiness state.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Microsoft settings UI: admins can create a new named Microsoft profile from the settings screen.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Microsoft settings UI: admins can edit an existing named Microsoft profile from the settings screen.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Microsoft settings UI: admins can archive an existing named Microsoft profile from the settings screen.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Microsoft settings UI: admins can mark a named Microsoft profile as the default profile.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Microsoft settings UI: the form captures display name, client ID, client secret, and tenant ID.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Microsoft settings UI: the form preserves the existing client secret when the admin edits metadata without rotating the secret.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Microsoft settings UI: the screen continues to show the Microsoft Entra outbound link.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Microsoft settings UI: the screen shows Teams-required redirect URIs for each profile.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Microsoft settings UI: the screen shows existing email, calendar, and MSP SSO redirect URIs for each profile.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Microsoft settings UI: the screen shows Teams-required scope guidance for each profile.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Microsoft settings UI: the screen shows which consumers are currently bound to each profile.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Microsoft settings UI: the screen surfaces readiness or validation errors inline per profile.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Microsoft settings UI: the screen has an explicit empty state when no Microsoft profiles exist.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Microsoft settings UI: the screen retains a refresh path for reloading readiness and masked secret state.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Microsoft settings UI: destructive archive or delete actions require confirmation.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Microsoft settings UI: the Teams setup surface can be reached directly from profile management.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Consumer bindings: a tenant-scoped consumer binding model exists for Microsoft-profile consumers.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Consumer bindings: the model supports at least MSP SSO, email, calendar, and Teams as consumer types.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Consumer bindings: each consumer can reference exactly one selected Microsoft profile per tenant.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Consumer bindings: migration creates compatibility bindings so existing Microsoft consumers continue to work after profile introduction.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Consumer bindings: Teams requires an explicit selected profile instead of silently falling back to unrelated global Microsoft credentials.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Teams setup: a tenant-scoped Teams integration record exists.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Teams setup: the Teams integration record stores the selected Microsoft profile ID.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Teams setup: the Teams integration record stores install/configuration status for the tenant.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Teams setup: the Teams integration record stores enabled Teams capabilities for the tenant.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Teams setup: the Teams integration record stores personal-notification category preferences for the tenant.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Teams setup: the Teams integration record stores allowed action configuration for Teams quick actions.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Teams setup: a tenant-admin Teams setup UI exists.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Teams setup: the UI requires selecting one Microsoft profile before Teams can be activated.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Teams setup: the UI shows the selected profile's app-registration values, redirect URIs, and scope guidance.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Teams setup: the UI shows install / consent / readiness checklist state for Teams.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Teams setup: the UI can save draft setup progress before Teams is fully activated.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Teams setup: the UI can activate Teams once required setup is complete.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Teams setup: the UI can deactivate Teams without deleting the underlying Microsoft profile.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Teams setup: the UI shows the currently selected profile, current capability toggles, and notification categories.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Teams setup: the UI links back to Microsoft profile management when no eligible profile exists or the selected profile is invalid.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Teams setup: the settings navigation includes a Teams integration entry.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "Teams setup: a tenant without an eligible Microsoft profile receives a guided setup state instead of a blank error.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "Teams app package: a Teams app manifest/package model exists for PSA.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Teams app package: the manifest declares a personal tab.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "Teams app package: the manifest declares a personal-scope bot.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "Teams app package: the manifest declares a message extension.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "Teams app package: the manifest declares activity-feed notification capability.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Teams app package: the manifest uses the selected Microsoft profile's application identity and `webApplicationInfo` metadata.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "Teams app package: the manifest supports personal scope for the tab and bot.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "Teams app package: the manifest supports message and compose contexts needed for message-extension flows.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "Teams app package: the manifest omits channel-routing-specific notification requirements in v1.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "Teams app package: tenant install state supports at least not-configured, install-pending, active, and error states.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "Teams app package: setup surfaces can retrieve the tenant's current package/install metadata.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "Teams app package: bot IDs, app IDs, and package metadata are stored with the Teams integration record as needed.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "Teams app package: environment-specific base URLs are generated correctly for local, staging, and production packaging flows.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "Teams app package: changing the selected Teams profile invalidates stale package/install readiness state.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "Teams app package: setup surfaces can present a package download or install handoff for the tenant.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "Teams app package: deep-link targets used by notifications and action results stay consistent with the manifest capabilities.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "Teams identity: Teams authentication uses the tenant-selected Microsoft profile instead of an unrelated global Microsoft credential path.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "Teams identity: tab SSO resolves PSA tenant and MSP user context.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "Teams identity: bot SSO resolves PSA tenant and MSP user context.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "Teams identity: message extension SSO resolves PSA tenant and MSP user context.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "Teams identity: only MSP users are accepted into Teams flows in v1.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Teams identity: client-portal users are rejected from Teams flows in v1.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "Teams identity: Teams-authenticated requests reuse existing NextAuth/MSP SSO user resolution patterns where possible.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "Teams identity: missing, inactive, or unready selected profiles block Teams auth with admin-readable remediation state.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "Teams identity: user mapping can associate a Teams user identity to the correct PSA user within the tenant.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "Teams identity: requests from the wrong Microsoft / Teams tenant are rejected for the PSA tenant.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "Teams identity: deep-link entry points can bootstrap the destination without a separate PSA sign-in prompt inside Teams.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "Teams identity: expired or invalid sessions return a Teams-safe reauthentication path instead of raw OAuth errors.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "Teams identity: tenant resolution works correctly for Teams entry points across multiple vanity hosts or tenant slugs.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F088",
+    "description": "Teams identity: rebinding Teams to a new Microsoft profile invalidates stale auth assumptions for future requests.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F089",
+    "description": "Teams identity: authorization checks still run after Teams authentication before entity access is granted.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F090",
+    "description": "Teams identity: the selected profile takes precedence over broad app/global Microsoft env credentials for Teams-specific flows.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F091",
+    "description": "Teams identity: Teams surface handlers can distinguish unauthenticated, unauthorized, and not-configured tenant states.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "Teams identity: Teams-facing auth errors remain safe to show inside Teams UI constraints.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Security / Permissions",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F093",
+    "description": "Personal tab: a Teams personal tab entry point exists for PSA.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F094",
+    "description": "Personal tab: the default landing view opens a PSA \u201cmy work\u201d style starting point for technicians.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F095",
+    "description": "Personal tab: deep links can open a specific ticket view.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F096",
+    "description": "Personal tab: deep links can open a specific project task view.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F097",
+    "description": "Personal tab: deep links can open a specific approval view.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F098",
+    "description": "Personal tab: deep links can open a specific time-entry-related workflow view.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F099",
+    "description": "Personal tab: deep links can open related contact or client context when invoked from Teams message workflows.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "Personal tab: the initial tab load shows enough record context to confirm the user landed on the intended PSA entity.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "Personal tab: inaccessible or deleted entities fall back to a safe PSA landing state with an explanatory message.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "Personal tab: the tab offers an \u201copen in full PSA\u201d path when the user needs richer context or unsupported functionality.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F103",
+    "description": "Personal tab: the Teams tab preserves PSA authorization semantics for every rendered entity or action.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F104",
+    "description": "Personal tab: the tab prefers reusing existing PSA screens/components instead of building parallel Teams-only record UIs.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F105",
+    "description": "Personal tab: Teams bootstrap passes user and tenant context into existing PSA UI composition safely.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F106",
+    "description": "Personal tab: activity-feed notification deep links open the correct tab destination.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F107",
+    "description": "Personal tab: bot action results can open the correct tab destination.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F108",
+    "description": "Personal tab: message extension results can open the correct tab destination.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F109",
+    "description": "Personal tab: the landing experience handles cold-start setup or not-configured tenants gracefully.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F110",
+    "description": "Personal tab: the tab remains the escalation path for workflows that are too complex for cards or dialogs.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F111",
+    "description": "Teams action layer: a shared Teams action registry exists for bot commands, message-extension actions, and card/dialog submits.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F112",
+    "description": "Teams action layer: each supported action declares its required inputs and target entity types.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F113",
+    "description": "Teams action layer: shared entity resolvers handle tickets, tasks, contacts, approvals, and time-entry targets.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F114",
+    "description": "Teams action layer: shared authorization checks wrap the underlying PSA services or server actions.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F115",
+    "description": "Teams action layer: shared result mappers return Teams-safe summaries, buttons, and deep links.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F116",
+    "description": "Teams action layer: validation errors use one consistent response shape across bot, message extension, and cards/dialogs.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F117",
+    "description": "Teams action layer: action execution records the invoking surface so downstream PSA behavior can distinguish bot, message extension, and tab contexts.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F118",
+    "description": "Teams action layer: deep-link generation reuses existing PSA deep-link helpers instead of building Teams-specific URL logic.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F119",
+    "description": "Teams action layer: actions can distinguish read-only lookups from mutating operations.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F120",
+    "description": "Teams action layer: actions reuse existing PSA ticket, task, approval, contact, and time-entry business operations where possible.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F121",
+    "description": "Teams action layer: actions can expose allowed-action metadata for a user and entity.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F122",
+    "description": "Teams action layer: Teams input payloads are normalized into PSA-ready requests before execution.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F123",
+    "description": "Teams action layer: duplicate card/dialog submissions can be handled safely without creating duplicate mutations.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F124",
+    "description": "Teams action layer: partial-failure results return user-readable remediation guidance.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F125",
+    "description": "Teams action layer: Teams capability gating can disable unsupported actions centrally.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F126",
+    "description": "Teams action layer: action definitions are reused instead of reimplementing each workflow per Teams surface.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements",
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F127",
+    "description": "Personal bot: a Teams personal-scope bot exists for PSA.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F128",
+    "description": "Personal bot: a command router parses supported bot commands.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F129",
+    "description": "Personal bot: unsupported commands return a help-oriented response instead of silently failing.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F130",
+    "description": "Personal bot: a welcome/help response lists the supported v1 commands.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F131",
+    "description": "Personal bot: bot responses can render buttons or cards that open the tab or quick actions.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F132",
+    "description": "Personal bot: the bot respects tenant-level allowed-action configuration.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F133",
+    "description": "Personal bot: explicit entity references in commands are resolved consistently.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F134",
+    "description": "Personal bot: unsupported non-personal contexts return a clear \u201cpersonal scope only\u201d response for v1.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F135",
+    "description": "Personal bot command `my tickets`: returns the technician's relevant tickets.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F136",
+    "description": "Personal bot command `my tickets`: response items include enough summary data to act or click through.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F137",
+    "description": "Personal bot command `my tickets`: response items include deep links into the Teams tab or PSA web app.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F138",
+    "description": "Personal bot command `ticket <id>`: returns a ticket summary for a valid ticket reference.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F139",
+    "description": "Personal bot command `ticket <id>`: returns a clear not-found or not-authorized response for invalid references.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F140",
+    "description": "Personal bot command `assign ticket`: supports assigning a ticket to a technician.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F141",
+    "description": "Personal bot command `assign ticket`: can resolve the target ticket from command input or current bot workflow context.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F142",
+    "description": "Personal bot command `assign ticket`: can resolve the target assignee from available PSA users.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F143",
+    "description": "Personal bot command `assign ticket`: returns the updated assignment summary after success.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F144",
+    "description": "Personal bot command `add note`: supports appending an internal note to a target ticket.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F145",
+    "description": "Personal bot command `add note`: can resolve the target ticket from explicit input or current workflow context.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F146",
+    "description": "Personal bot command `add note`: returns the saved note result and deep link after success.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F147",
+    "description": "Personal bot command `reply to contact`: supports adding a customer-facing reply for a target ticket/contact context.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F148",
+    "description": "Personal bot command `reply to contact`: can prefill or resolve the ticket/contact context before submit.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F149",
+    "description": "Personal bot command `reply to contact`: returns the reply result and follow-up deep link after success.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F150",
+    "description": "Personal bot command `log time`: supports creating a time entry against a ticket.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F151",
+    "description": "Personal bot command `log time`: supports creating a time entry against a project task.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F152",
+    "description": "Personal bot command `log time`: collects minimal duration, note, and work-context data.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F153",
+    "description": "Personal bot command approvals: returns the technician's pending approvals.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F154",
+    "description": "Personal bot command approvals: can execute approve/reject or request-change actions for supported approval items.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F155",
+    "description": "Message extension: a Teams message extension exists for PSA.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F156",
+    "description": "Message extension: search commands can look up PSA tickets.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F157",
+    "description": "Message extension: search commands can look up PSA tasks.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F158",
+    "description": "Message extension: search commands can look up PSA contacts.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F159",
+    "description": "Message extension: search commands can look up approval-related work items needed for v1.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F160",
+    "description": "Message extension: search commands work from compose and command-box contexts.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F161",
+    "description": "Message extension: action commands work from message context.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F162",
+    "description": "Message extension: search queries remain tenant-scoped.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F163",
+    "description": "Message extension: search queries respect the invoking user's PSA permissions.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F164",
+    "description": "Message extension: search results support pagination or continuation for longer result sets.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F165",
+    "description": "Message extension: search results show compact summary information appropriate to Teams.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F166",
+    "description": "Message extension: search results include deep links to open the selected record in the Teams tab or PSA web app.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F167",
+    "description": "Message extension: search results can surface allowed quick actions where supported.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F168",
+    "description": "Message extension: unsupported message types or contexts return a clear, recoverable response.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F169",
+    "description": "Message extension: the extension is unavailable when the tenant Teams integration is not active.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F170",
+    "description": "Message extension: the extension respects tenant-level allowed-action configuration.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F171",
+    "description": "Message extension: Teams-authenticated context is available to search and action commands.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F172",
+    "description": "Message extension: users can open a matching ticket directly from search results.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F173",
+    "description": "Message extension: users can open a matching task directly from search results.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F174",
+    "description": "Message extension: users can open a matching contact or approval directly from search results when permitted.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F175",
+    "description": "Message extension: command definitions remain focused on lookup and message-driven actions rather than general chat.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F176",
+    "description": "Message extension: result rendering reuses the shared Teams action/result model.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F177",
+    "description": "Message extension: command invocation records which surface triggered the action for downstream processing.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F178",
+    "description": "Message extension: search behavior prefers existing PSA data-access patterns rather than Teams-specific record indexes.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F179",
+    "description": "Message action `create ticket from message`: supports creating a new PSA ticket from a Teams message.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F180",
+    "description": "Message action `create ticket from message`: captures subject/summary/body data from the Teams message context.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F181",
+    "description": "Message action `create ticket from message`: supports minimal admin-approved ticket fields such as board, status, and client/contact context.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F182",
+    "description": "Message action `create ticket from message`: stores Teams source-message reference metadata with the created work item.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F183",
+    "description": "Message action `create ticket from message`: confirms success with a deep link to the created ticket.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F184",
+    "description": "Message action `create ticket from message`: guards against duplicate submit behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F185",
+    "description": "Message action `update from message`: supports targeting an existing ticket.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F186",
+    "description": "Message action `update from message`: supports targeting an existing task when appropriate.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F187",
+    "description": "Message action `update from message`: supports appending an internal note derived from the Teams message.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F188",
+    "description": "Message action `update from message`: supports appending a customer-visible reply when the user has permission and the record state allows it.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F189",
+    "description": "Message action `update from message`: stores Teams source-message reference metadata with the update.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F190",
+    "description": "Message action `update from message`: confirms success with a deep link to the updated record.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F191",
+    "description": "Message action `update from message`: validates target-record permission before mutating PSA data.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F192",
+    "description": "Message action `update from message`: supports dialog handoff when more fields are needed than fit a one-click action.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F193",
+    "description": "Message action `update from message`: prefills action forms from the selected Teams message context.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F194",
+    "description": "Message action `create ticket from message`: can hand off to a richer tab flow when the selected message needs more complex ticket creation context.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F195",
+    "description": "Message action `update from message`: can hand off to the personal tab when the mutation is too complex for a dialog.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F196",
+    "description": "Message-driven actions: both create and update flows reuse the shared Teams action layer instead of bespoke handlers.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F197",
+    "description": "Quick actions: a shared adaptive-card/dialog submission path exists for Teams quick actions.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F198",
+    "description": "Quick actions: assign-ticket cards/dialogs collect the minimum required assignee and note inputs.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F199",
+    "description": "Quick actions: add-note cards/dialogs collect the minimum required note inputs.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F200",
+    "description": "Quick actions: reply-to-contact cards/dialogs collect the minimum required reply inputs.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F201",
+    "description": "Quick actions: log-time cards/dialogs collect the minimum required time-entry inputs.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F202",
+    "description": "Quick actions: approval cards/dialogs collect approval outcome and optional comment inputs.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F203",
+    "description": "Quick actions: forms can prefill fields from the invoking entity or Teams message context.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F204",
+    "description": "Quick actions: forms validate required fields before submission.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F205",
+    "description": "Quick actions: forms submit through the shared Teams action layer.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F206",
+    "description": "Quick actions: forms return success confirmations in Teams after submit.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F207",
+    "description": "Quick actions: forms return recoverable validation or state errors in Teams after submit.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F208",
+    "description": "Quick actions: forms support cancel/dismiss without side effects.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F209",
+    "description": "Quick actions: users only see quick actions they are allowed to perform.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F210",
+    "description": "Quick actions: the UI can redirect the user into the tab when the action exceeds quick-action complexity limits.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F211",
+    "description": "Teams notifications: a Teams delivery channel exists alongside existing PSA notification generation.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F212",
+    "description": "Teams notifications: tenant Teams setup stores category preferences for supported personal notifications.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F213",
+    "description": "Teams notifications: Teams delivery reuses existing notification payload generation rather than introducing a separate trigger catalog.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F214",
+    "description": "Teams notifications: Teams delivery reuses existing PSA deep-link resolution rather than building a second link system.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F215",
+    "description": "Teams notifications: recipient resolution can map an eligible PSA MSP user to a Teams user identity.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F216",
+    "description": "Teams notifications: delivery only targets users who have a valid Teams linkage/setup state.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F217",
+    "description": "Teams notifications: assignment-related events can trigger personal activity-feed notifications.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F218",
+    "description": "Teams notifications: customer-reply events can trigger personal activity-feed notifications.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F219",
+    "description": "Teams notifications: approval-request events can trigger personal activity-feed notifications.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F220",
+    "description": "Teams notifications: escalation events can trigger personal activity-feed notifications.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F221",
+    "description": "Teams notifications: SLA-risk events can trigger personal activity-feed notifications.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F222",
+    "description": "Teams notifications: payloads include enough title/body/entity context to identify the work item in Teams.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F223",
+    "description": "Teams notifications: payloads include deep links to the exact PSA record or workflow destination.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F224",
+    "description": "Teams notifications: category disablement at the tenant level suppresses Teams delivery for that category.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F225",
+    "description": "Teams notifications: missing user linkage suppresses Teams delivery without breaking the underlying PSA event.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F226",
+    "description": "Teams notifications: delivery state is captured in a reusable sent/delivered/failed model where available.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F227",
+    "description": "Teams notifications: clicking a notification opens the intended Teams tab or PSA web deep link destination.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F228",
+    "description": "Teams notifications: no queue-to-channel or board-to-channel mapping is required in v1.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F229",
+    "description": "Teams notifications: Teams delivery remains personal-notification-only in v1.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F230",
+    "description": "Teams notifications: the existing event bus/workflow infrastructure remains the notification trigger source.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F231",
+    "description": "Permissions: only authorized tenant admins can manage Microsoft profiles and Teams setup.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Rollout / Migration",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F232",
+    "description": "Permissions: tab, bot, message extension, and quick actions all enforce existing PSA authorization rules for the target entity/action.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Rollout / Migration",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F233",
+    "description": "Permissions: read-only users cannot execute mutating Teams actions.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Rollout / Migration",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F234",
+    "description": "Permissions: records outside the user's tenant or scope never appear in Teams search or lookup results.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Rollout / Migration",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F235",
+    "description": "Compatibility: migrating to named Microsoft profiles preserves current email, calendar, and MSP SSO behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Rollout / Migration",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F236",
+    "description": "Compatibility: a default Microsoft profile binding exists immediately after migration.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Rollout / Migration",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F237",
+    "description": "Compatibility: rebinding Teams to a different Microsoft profile does not silently rebind unrelated Microsoft consumers.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Rollout / Migration",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F238",
+    "description": "Compatibility: archiving the currently selected Teams profile is blocked until Teams is rebound or deactivated.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Rollout / Migration",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F239",
+    "description": "Compatibility: deleting the currently selected Teams profile is blocked until Teams is rebound or deactivated.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Rollout / Migration",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F240",
+    "description": "Compatibility: switching the selected Teams profile invalidates stale Teams auth or install readiness state.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Rollout / Migration",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F241",
+    "description": "Permissions: client-portal user sign-in attempts are rejected explicitly for Teams v1.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Rollout / Migration",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F242",
+    "description": "Fallback: a tenant without Teams install/setup receives guided readiness messaging instead of raw errors in Teams surfaces.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Rollout / Migration",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F243",
+    "description": "Fallback: unsupported bot contexts return a clear personal-scope guidance response.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Rollout / Migration",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F244",
+    "description": "Fallback: unsupported commands return a help response rather than a dead end.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Rollout / Migration",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F245",
+    "description": "Fallback: selected profiles missing required Teams setup or consent show actionable admin remediation state.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Rollout / Migration",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F246",
+    "description": "Fallback: Teams actions are unavailable when the selected profile or Teams integration is inactive.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Rollout / Migration",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F247",
+    "description": "Fallback: both bot and message extension respect the tenant's allowed-action configuration.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Rollout / Migration",
+      "Requirements"
+    ]
+  },
+  {
+    "id": "F248",
+    "description": "Compatibility: legacy singleton Microsoft settings APIs keep a migration-safe compatibility path while profile-based consumers are introduced.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Rollout / Migration",
+      "Requirements"
+    ]
+  }
+]

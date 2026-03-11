@@ -1,6 +1,16 @@
 export { getGoogleIntegrationStatus, saveGoogleIntegrationSettings, resetGoogleProvidersToDisconnected } from './googleActions';
 export {
   getMicrosoftIntegrationStatus,
+  getMicrosoftConsumerSetupStatus,
+  listMicrosoftProfiles,
+  listMicrosoftConsumerBindings,
+  createMicrosoftProfile,
+  setMicrosoftConsumerBinding,
+  updateMicrosoftProfile,
+  archiveMicrosoftProfile,
+  deleteMicrosoftProfile,
+  setDefaultMicrosoftProfile,
+  resolveMicrosoftProfileForConsumer,
   saveMicrosoftIntegrationSettings,
   resetMicrosoftProvidersToDisconnected
 } from './microsoftActions';
@@ -8,6 +18,13 @@ export {
   listMspSsoLoginDomains,
   saveMspSsoLoginDomains,
 } from './mspSsoDomainActions';
+export {
+  getTeamsIntegrationStatus,
+  saveTeamsIntegrationSettings,
+} from './teamsActions';
+export {
+  getTeamsAppPackageStatus,
+} from './teamsPackageActions';
 export {
   getXeroConnectionStatus,
   getXeroIntegrationStatus,

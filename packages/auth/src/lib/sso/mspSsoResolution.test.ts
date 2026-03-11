@@ -8,46 +8,100 @@ const domainRows: Array<{
   is_active: boolean;
   claim_status?: string;
 }> = [];
+const microsoftProfiles: Array<Record<string, unknown>> = [];
+const microsoftConsumerBindings: Array<Record<string, unknown>> = [];
 
 const getTenantSecretMock = vi.fn(async (tenant: string, key: string) => {
   return tenantSecrets.get(`${tenant}:${key}`) ?? null;
+});
+const setTenantSecretMock = vi.fn(async (tenant: string, key: string, value: string | null) => {
+  if (value === null) {
+    tenantSecrets.delete(`${tenant}:${key}`);
+    return;
+  }
+  tenantSecrets.set(`${tenant}:${key}`, value);
 });
 const getAppSecretMock = vi.fn(async (key: string) => {
   return appSecrets.get(key) ?? null;
 });
 
 const dbMock = vi.fn((table: string) => {
-  if (table !== 'msp_sso_tenant_login_domains') {
-    throw new Error(`Unexpected table: ${table}`);
+  const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
+  const matchesWhere = (row: Record<string, unknown>, conditions: Record<string, unknown>): boolean =>
+    Object.entries(conditions).every(([key, value]) => row[key] === value);
+
+  if (table === 'msp_sso_tenant_login_domains') {
+    const state: {
+      isActive?: boolean;
+      domain?: string;
+      tenant?: string;
+    } = {};
+
+    return {
+      where(conditions: { tenant?: string; is_active?: boolean }) {
+        state.tenant = conditions?.tenant;
+        state.isActive = conditions?.is_active;
+        return this;
+      },
+      first() {
+        const row = domainRows.find(
+          (candidate) =>
+            (state.tenant === undefined || candidate.tenant === state.tenant) &&
+            (state.isActive === undefined || candidate.is_active === state.isActive)
+        );
+        return Promise.resolve(row ? clone(row) : undefined);
+      },
+      select: () => ({
+        where: (conditions: { is_active?: boolean }) => {
+          state.isActive = conditions?.is_active;
+          return {
+            whereRaw: (_sql: string, bindings: unknown[]) => {
+              state.domain = String(bindings[0] ?? '').toLowerCase();
+              const rows = domainRows
+                .filter((row) => (state.isActive === undefined ? true : row.is_active === state.isActive))
+                .filter((row) => row.domain.toLowerCase() === state.domain)
+                .map((row) => ({ tenant: row.tenant, claim_status: row.claim_status }));
+              return Promise.resolve(rows);
+            },
+          };
+        },
+      }),
+    };
   }
 
-  const state: {
-    isActive?: boolean;
-    domain?: string;
-  } = {};
+  if (table === 'microsoft_profiles' || table === 'microsoft_profile_consumer_bindings') {
+    const rows = table === 'microsoft_profiles' ? microsoftProfiles : microsoftConsumerBindings;
+    const filters: Record<string, unknown>[] = [];
 
-  return {
-    select: () => ({
-      where: (conditions: { is_active?: boolean }) => {
-        state.isActive = conditions?.is_active;
-        return {
-          whereRaw: (_sql: string, bindings: unknown[]) => {
-            state.domain = String(bindings[0] ?? '').toLowerCase();
-            const rows = domainRows
-              .filter((row) => (state.isActive === undefined ? true : row.is_active === state.isActive))
-              .filter((row) => row.domain.toLowerCase() === state.domain)
-              .map((row) => ({ tenant: row.tenant, claim_status: row.claim_status }));
-            return Promise.resolve(rows);
-          },
-        };
+    return {
+      where(conditions: Record<string, unknown>) {
+        filters.push(conditions);
+        return this;
       },
-    }),
-  };
+      async first() {
+        const row = rows.find((candidate) => filters.every((filter) => matchesWhere(candidate, filter)));
+        return row ? clone(row) : undefined;
+      },
+      async select(..._args: unknown[]) {
+        return rows
+          .filter((candidate) => filters.every((filter) => matchesWhere(candidate, filter)))
+          .map((row) => clone(row));
+      },
+      async insert(values: Record<string, unknown> | Array<Record<string, unknown>>) {
+        const items = Array.isArray(values) ? values : [values];
+        items.forEach((item) => rows.push(clone(item)));
+        return items.length;
+      },
+    };
+  }
+
+  throw new Error(`Unexpected table: ${table}`);
 });
 
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: async () => ({
     getTenantSecret: (...args: unknown[]) => getTenantSecretMock(...args),
+    setTenantSecret: (...args: unknown[]) => setTenantSecretMock(...args),
     getAppSecret: (...args: unknown[]) => getAppSecretMock(...args),
   }),
 }));
@@ -75,7 +129,10 @@ describe('mspSsoResolution helpers', () => {
     tenantSecrets.clear();
     appSecrets.clear();
     domainRows.length = 0;
+    microsoftProfiles.length = 0;
+    microsoftConsumerBindings.length = 0;
     getTenantSecretMock.mockClear();
+    setTenantSecretMock.mockClear();
     getAppSecretMock.mockClear();
     dbMock.mockClear();
   });

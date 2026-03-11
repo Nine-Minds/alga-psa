@@ -108,7 +108,7 @@ export const emailUnsubscribedEventPayloadSchema = BaseDomainEventPayloadSchema.
 
 export type EmailUnsubscribedEventPayload = z.infer<typeof emailUnsubscribedEventPayloadSchema>;
 
-const notificationChannelSchema = z.enum(['email', 'sms', 'in_app', 'push']).describe('Notification channel');
+const notificationChannelSchema = z.enum(['email', 'sms', 'in_app', 'push', 'teams']).describe('Notification channel');
 
 export const notificationSentEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   notificationId: z.string().uuid(),

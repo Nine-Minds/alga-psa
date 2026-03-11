@@ -1,8 +1,4 @@
 import logger from '@alga-psa/core/logger';
-import { runWithTenant } from 'server/src/lib/db';
-import { CalendarWebhookMaintenanceService } from 'server/src/services/calendar/CalendarWebhookMaintenanceService';
-import { GoogleCalendarAdapter } from 'server/src/services/calendar/providers/GoogleCalendarAdapter';
-import { CalendarProviderService } from 'server/src/services/calendar/CalendarProviderService';
 
 export interface MicrosoftWebhookRenewalJobData extends Record<string, unknown> {
   tenantId: string;
@@ -13,78 +9,69 @@ export interface GooglePubSubVerificationJobData extends Record<string, unknown>
   tenantId: string;
 }
 
+type EeCalendarWebhookMaintenanceModule = {
+  renewMicrosoftCalendarWebhooks: (data: MicrosoftWebhookRenewalJobData) => Promise<void>;
+  verifyGoogleCalendarProvisioning: (data: GooglePubSubVerificationJobData) => Promise<void>;
+};
+
+const isEnterpriseEdition =
+  (process.env.EDITION ?? '').toLowerCase() === 'ee' ||
+  (process.env.EDITION ?? '').toLowerCase() === 'enterprise' ||
+  (process.env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise';
+
+let eeCalendarWebhookMaintenanceModulePromise:
+  | Promise<EeCalendarWebhookMaintenanceModule | null>
+  | null = null;
+
+async function loadEeCalendarWebhookMaintenanceModule(): Promise<EeCalendarWebhookMaintenanceModule | null> {
+  if (!isEnterpriseEdition) {
+    return null;
+  }
+
+  if (!eeCalendarWebhookMaintenanceModulePromise) {
+    eeCalendarWebhookMaintenanceModulePromise = import('@alga-psa/ee-calendar/jobs')
+      .then((mod) => {
+        if (
+          typeof mod?.renewMicrosoftCalendarWebhooks !== 'function' ||
+          typeof mod?.verifyGoogleCalendarProvisioning !== 'function'
+        ) {
+          return null;
+        }
+        return mod as EeCalendarWebhookMaintenanceModule;
+      })
+      .catch((error) => {
+        logger.error('[CalendarWebhookMaintenance] Failed to load EE maintenance module', { error });
+        return null;
+      });
+  }
+
+  return eeCalendarWebhookMaintenanceModulePromise;
+}
+
 export async function renewMicrosoftCalendarWebhooks(
   data: MicrosoftWebhookRenewalJobData
 ): Promise<void> {
-  const { tenantId, lookAheadMinutes = 180 } = data;
-
-  await runWithTenant(tenantId, async () => {
-    const service = new CalendarWebhookMaintenanceService();
-    const results = await service.renewMicrosoftWebhooks({
-      tenantId,
-      lookAheadMinutes
+  const eeModule = await loadEeCalendarWebhookMaintenanceModule();
+  if (!eeModule?.renewMicrosoftCalendarWebhooks) {
+    logger.info('[CalendarWebhookMaintenance] Skipping Microsoft renewal outside Enterprise Edition', {
+      tenantId: data.tenantId,
     });
+    return;
+  }
 
-    // Log summary
-    const successful = results.filter(r => r.success);
-    const failed = results.filter(r => !r.success);
-    
-    logger.info('[CalendarWebhookMaintenance] Microsoft webhook renewal completed', {
-      tenantId,
-      total: results.length,
-      successful: successful.length,
-      failed: failed.length,
-      actions: {
-        renewed: successful.filter(r => r.action === 'renewed').length,
-        recreated: successful.filter(r => r.action === 'recreated').length,
-        failed: failed.length
-      }
-    });
-
-    // Log individual failures for debugging
-    for (const result of failed) {
-      logger.error('[CalendarWebhookMaintenance] Failed to renew Microsoft webhook', {
-        tenantId,
-        providerId: result.providerId,
-        action: result.action,
-        error: result.error
-      });
-    }
-  });
+  await eeModule.renewMicrosoftCalendarWebhooks(data);
 }
 
 export async function verifyGoogleCalendarProvisioning(
   data: GooglePubSubVerificationJobData
 ): Promise<void> {
-  const { tenantId } = data;
-
-  await runWithTenant(tenantId, async () => {
-    const providerService = new CalendarProviderService();
-    const providers = await providerService.getProviders({
-      tenant: tenantId,
-      providerType: 'google',
-      isActive: true
+  const eeModule = await loadEeCalendarWebhookMaintenanceModule();
+  if (!eeModule?.verifyGoogleCalendarProvisioning) {
+    logger.info('[CalendarWebhookMaintenance] Skipping Google Pub/Sub verification outside Enterprise Edition', {
+      tenantId: data.tenantId,
     });
+    return;
+  }
 
-    for (const provider of providers) {
-      const fullProvider = await providerService.getProvider(provider.id, tenantId, {
-        includeSecrets: true
-      });
-
-      if (!fullProvider?.provider_config) {
-        continue;
-      }
-
-      const adapter = new GoogleCalendarAdapter(fullProvider);
-      try {
-        await adapter.registerWebhookSubscription();
-      } catch (error: any) {
-        logger.error('[CalendarWebhookMaintenance] Failed to verify Google Calendar webhook subscription', {
-          tenantId,
-          providerId: provider.id,
-          error: error?.message || error
-        });
-      }
-    }
-  });
+  await eeModule.verifyGoogleCalendarProvisioning(data);
 }

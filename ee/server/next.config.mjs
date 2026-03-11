@@ -52,6 +52,8 @@ const nextConfig = {
       '@alga-psa/event-schemas/': '../../packages/event-schemas/src/',
       // SSO provider buttons - always use EE implementation in EE server
       '@alga-psa/auth/sso/entry': './src/components/auth/SsoProviderButtons.tsx',
+      '@alga-psa/ee-stubs': './src',
+      '@alga-psa/ee-stubs/': './src/',
       '@alga-psa/workflows/entry': './src/workflows/entry.tsx',
       '@alga-psa/product-extension-actions': '../../packages/product-extension-actions/ee/entry.ts',
       '@alga-psa/product-extension-initialization': './src/lib/extensions/initialize.ts',
@@ -132,6 +134,8 @@ const nextConfig = {
         '@alga-psa/event-schemas': path.join(__dirname, '../../packages/event-schemas/src'),
         // SSO provider buttons - always use EE implementation in EE server
         '@alga-psa/auth/sso/entry': path.join(__dirname, 'src/components/auth/SsoProviderButtons.tsx'),
+        '@alga-psa/ee-stubs': path.join(__dirname, 'src'),
+        '@alga-psa/ee-stubs/': path.join(__dirname, 'src/'),
         '@alga-psa/workflows/entry': path.join(__dirname, 'src/workflows/entry.tsx'),
         '@alga-psa/product-extension-actions': path.join(__dirname, '../../packages/product-extension-actions/ee/entry.ts'),
         '@alga-psa/product-extension-initialization': path.join(__dirname, 'src/lib/extensions/initialize.ts'),

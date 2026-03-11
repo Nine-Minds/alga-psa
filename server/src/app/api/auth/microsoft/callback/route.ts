@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
+import { resolveMicrosoftConsumerProfileConfig } from '@alga-psa/integrations/lib/microsoftConsumerProfileResolution';
 import { getWebhookBaseUrl } from '../../../../../utils/email/webhookHelpers';
 import axios from 'axios';
 
@@ -133,49 +134,14 @@ export async function GET(request: NextRequest) {
     let clientSecret: string | null = null;
     const nextauthUrl = process.env.NEXTAUTH_URL || (await secretProvider.getAppSecret('NEXTAUTH_URL')) || '';
     const isHostedFlow = nextauthUrl.startsWith('https://algapsa.com');
-    
-    let credentialSource = 'unknown';
-    if (isHostedFlow) {
-      // Use app-level configuration
-      clientId = await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID') || null;
-      clientSecret = await secretProvider.getAppSecret('MICROSOFT_CLIENT_SECRET') || null;
-      credentialSource = 'app_secret';
-    } else {
-      // Use tenant-specific or fallback credentials
-      // Priority: tenant secrets (user-configured via UI) > env vars > app secrets
-      // IMPORTANT: Select credentials as a PAIR from the same source to avoid mismatch
-      const tenantClientId = await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_id');
-      const tenantClientSecret = await secretProvider.getTenantSecret(stateData.tenant, 'microsoft_client_secret');
-      const envClientId = process.env.MICROSOFT_CLIENT_ID || null;
-      const envClientSecret = process.env.MICROSOFT_CLIENT_SECRET || null;
-      const appClientId = await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID');
-      const appClientSecret = await secretProvider.getAppSecret('MICROSOFT_CLIENT_SECRET');
+    const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(stateData.tenant, 'email');
 
-      // Select credentials as a pair from the same source
-      if (tenantClientId && tenantClientSecret) {
-        clientId = tenantClientId;
-        clientSecret = tenantClientSecret;
-        credentialSource = 'tenant_secret';
-      } else if (envClientId && envClientSecret) {
-        clientId = envClientId;
-        clientSecret = envClientSecret;
-        credentialSource = 'env';
-      } else if (appClientId && appClientSecret) {
-        clientId = appClientId;
-        clientSecret = appClientSecret;
-        credentialSource = 'app_secret';
-      } else {
-        // Partial configuration - log warning for debugging
-        console.warn('[MS OAuth] Incomplete credential configuration detected', {
-          hasTenantClientId: !!tenantClientId,
-          hasTenantClientSecret: !!tenantClientSecret,
-          hasEnvClientId: !!envClientId,
-          hasEnvClientSecret: !!envClientSecret,
-          hasAppClientId: !!appClientId,
-          hasAppClientSecret: !!appClientSecret,
-        });
-        credentialSource = 'unknown';
-      }
+    let credentialSource = 'binding';
+    if (microsoftProfile.status === 'ready') {
+      clientId = microsoftProfile.clientId || null;
+      clientSecret = microsoftProfile.clientSecret || null;
+    } else {
+      credentialSource = 'unavailable';
     }
     // Normalize whitespace just in case the secret was copied with spaces/newlines
     clientId = clientId?.trim() || null;
@@ -307,9 +273,9 @@ export async function GET(request: NextRequest) {
                   created_at: provider.created_at,
                   updated_at: provider.updated_at,
                   provider_config: {
-                    client_id: msConfig.client_id,
-                    client_secret: msConfig.client_secret,
-                    tenant_id: msConfig.tenant_id,
+                    client_id: clientId,
+                    client_secret: clientSecret,
+                    tenant_id: microsoftProfile.status === 'ready' ? microsoftProfile.microsoftTenantId : null,
                     access_token: access_token,
                     refresh_token: refresh_token || null,
                     token_expires_at: expiresAt.toISOString(),

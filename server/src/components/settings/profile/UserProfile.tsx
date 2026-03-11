@@ -28,9 +28,9 @@ import {
 import { InternalNotificationPreferences } from '@alga-psa/notifications/components';
 import { PasswordChangeForm, UserAvatarUpload } from '@alga-psa/users/components';
 import { ApiKeysSetup, SessionManagement } from '@alga-psa/auth/components';
+import { isCalendarEnterpriseEdition, resolveUserProfileTab } from '@alga-psa/integrations/lib/calendarAvailability';
 import { toast } from 'react-hot-toast';
 import { validateContactName, validateEmailAddress, validatePhoneNumber } from '@alga-psa/validation';
-import { CalendarIntegrationsSettings } from '@alga-psa/integrations/components';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 import { LanguagePreference } from '@alga-psa/ui/components/LanguagePreference';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
@@ -53,6 +53,19 @@ const ConnectSsoWrapper = dynamic(
   },
 );
 
+const CalendarProfileSettings = dynamic(
+  () => import('@alga-psa/ee-calendar/components').then((mod) => mod.CalendarProfileSettings),
+  {
+    loading: () => (
+      <SettingsTabSkeleton
+        title="Calendar"
+        description="Loading calendar settings..."
+      />
+    ),
+    ssr: false,
+  },
+);
+
 type NotificationView = 'email' | 'internal';
 
 interface UserProfileProps {
@@ -63,6 +76,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const { t } = useTranslation('msp/settings');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
+  const isCalendarTabAvailable = isCalendarEnterpriseEdition();
   
   const [user, setUser] = useState<IUserWithRoles | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,18 +99,16 @@ export default function UserProfile({ userId }: UserProfileProps) {
   
   // Determine initial tab from URL or default to "Profile"
   const initialTab = useMemo(() => {
-    const validTabs = ['Profile', 'Security', 'Single Sign-On', 'API Keys', 'Notifications', 'Calendar'];
-    return tabParam && validTabs.includes(tabParam) ? tabParam : 'Profile';
-  }, [tabParam]);
+    return resolveUserProfileTab(tabParam, isCalendarTabAvailable);
+  }, [isCalendarTabAvailable, tabParam]);
 
   const [activeTab, setActiveTab] = useState<string>(initialTab);
 
   // Update active tab when URL parameter changes
   useEffect(() => {
-    const validTabs = ['Profile', 'Security', 'Single Sign-On', 'API Keys', 'Notifications', 'Calendar'];
-    const targetTab = tabParam && validTabs.includes(tabParam) ? tabParam : 'Profile';
+    const targetTab = resolveUserProfileTab(tabParam, isCalendarTabAvailable);
     setActiveTab(prev => prev !== targetTab ? targetTab : prev);
-  }, [tabParam]);
+  }, [isCalendarTabAvailable, tabParam]);
   
   // Handle tab change and update URL
   const handleTabChange = (tab: string) => {
@@ -539,10 +551,10 @@ export default function UserProfile({ userId }: UserProfileProps) {
         </Card>
       ),
     },
-    {
+    ...(isCalendarTabAvailable ? [{
       label: "Calendar",
-      content: <CalendarIntegrationsSettings />,
-    },
+      content: <CalendarProfileSettings />,
+    }] : []),
   ];
 
   return (
