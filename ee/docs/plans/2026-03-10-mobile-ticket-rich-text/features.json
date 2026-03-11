@@ -14,49 +14,49 @@
   {
     "id": "F003",
     "description": "Create a browser-targeted ticket rich-text runtime that instantiates the minimal Tiptap editor configuration needed for mobile view and edit flows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Architecture", "Requirements/Functional Requirements"]
   },
   {
     "id": "F004",
     "description": "Implement a thin typed bridge between React Native and the web editor runtime with init, command, request/response, and error envelopes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Architecture", "Requirements/Functional Requirements"]
   },
   {
     "id": "F005",
     "description": "Support editor initialization from current saved ticket description and ticket comment content strings.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "Requirements/Functional Requirements"]
   },
   {
     "id": "F006",
     "description": "Support read-only mode in the mobile editor runtime for rich display surfaces.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements"]
   },
   {
     "id": "F007",
     "description": "Support editable mode in the mobile editor runtime for ticket description edit and ticket comment compose flows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements"]
   },
   {
     "id": "F008",
     "description": "Implement the v1 mobile command set: focus, blur, set-content, getHTML, getJSON, toggle bold, toggle italic, toggle underline, toggle bullet list, toggle ordered list, undo, redo, and set-editable.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements", "UX / UI Notes"]
   },
   {
     "id": "F009",
     "description": "Emit lightweight editor state payloads so the mobile toolbar can reflect focus, active marks, active list state, and undo/redo capability.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements"]
   },
   {
     "id": "F010",
     "description": "Emit debounced content-change payloads from the runtime instead of sending full document data on every keystroke.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements", "Requirements/Non-functional Requirements"]
   },
   {

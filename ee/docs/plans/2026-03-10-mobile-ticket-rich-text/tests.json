@@ -26,67 +26,67 @@
   {
     "id": "T005",
     "description": "Unit: bridge envelope validators accept known native-to-web message shapes and reject malformed payloads.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F013"]
   },
   {
     "id": "T006",
     "description": "Unit: bridge envelope validators accept known web-to-native message shapes and reject malformed payloads.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F013"]
   },
   {
     "id": "T007",
     "description": "Unit: request/response correlation resolves `getHTML` with the matching request id.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F008"]
   },
   {
     "id": "T008",
     "description": "Unit: request/response correlation resolves `getJSON` with the matching request id.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F008"]
   },
   {
     "id": "T009",
     "description": "Unit: pending bridge requests time out cleanly when the runtime does not respond.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F024"]
   },
   {
     "id": "T010",
     "description": "Unit: runtime emits `editor-ready` only after initialization content and configuration have been applied.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003", "F004", "F005"]
   },
   {
     "id": "T011",
     "description": "Unit: runtime read-only mode does not mutate content and does not apply formatting commands.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006", "F013"]
   },
   {
     "id": "T012",
     "description": "Unit: runtime editable mode accepts typing and formatting commands after initialization.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007", "F008"]
   },
   {
     "id": "T013",
     "description": "Unit: runtime reports active bold, italic, underline, bullet-list, and ordered-list state in its `state-change` payload.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F009"]
   },
   {
     "id": "T014",
     "description": "Unit: runtime reports undo and redo capability correctly in its `state-change` payload.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F009"]
   },
   {
     "id": "T015",
     "description": "Unit: runtime debounces full `content-change` payload emission while still sending lightweight state changes promptly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {

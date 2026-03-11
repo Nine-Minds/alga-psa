@@ -20,6 +20,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-10) Keep existing comment items non-editable in the first user-facing mobile slice; only description edit and new comment composition are in scope.
 - (2026-03-10) Keep the first mobile content contract in `packages/tickets/src/lib/ticketRichText.ts` instead of creating a separate package now. This keeps the parsing logic close to the existing web ticket helpers while still exposing typed mobile bridge envelopes for later runtime/wrapper work.
 - (2026-03-10) Remove the `DEFAULT_BLOCK` dependency on `@alga-psa/ui/editor` from the shared ticket helper. The helper now owns a local empty paragraph block shape so unit tests and future mobile/runtime code do not pull in the web editor bundle transitively.
+- (2026-03-10) Implement the runtime and bridge as pure library classes in `packages/tickets` before wiring React Native. This keeps Tiptap behavior, request correlation, and debounced state emission testable in jsdom without needing a live WebView.
+- (2026-03-10) Use `@tiptap/core` with `StarterKit`, `Link`, and `Underline` for the mobile runtime. Initialize BlockNote/legacy content by converting it through shared HTML conversion helpers, and initialize ProseMirror payloads directly as JSON.
 
 ## Discoveries / Constraints
 
@@ -33,6 +35,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-10) Existing web ticket description work was recently formalized in `ee/docs/plans/2026-03-09-ticket-description-rich-text-cutover/PRD.md`; this mobile plan should stay aligned with that storage direction.
 - (2026-03-10) `packages/tickets/src/lib/ticketRichText.ts` originally only handled BlockNote arrays and plain text. It also imported `DEFAULT_BLOCK` through `@alga-psa/ui/editor`, which transitively loads `RichTextViewer` and `next-themes`; that made the helper harder to test in isolation.
 - (2026-03-10) `packages/tickets/vitest.config.ts` is the right test entrypoint for workspace package tests. Running the repo-root Vitest wrapper with a package file filter did not match the test file because the root config delegates to `server/vitest.config.ts`.
+- (2026-03-10) `ee/mobile/package.json` still does not declare `react-native-webview`, so the next mobile-wrapper slice will need to add the dependency and keep runtime logic outside the component layer.
+- (2026-03-10) Using the shared formatting package from the runtime test path emits existing test-environment secret fallback warnings on stderr, but the package-local runtime/bridge assertions still pass and the warning is unrelated to the new runtime behavior.
 
 ## Commands / Runbooks
 
@@ -57,6 +61,11 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-10) Validation notes:
   - `npx vitest run packages/tickets/src/lib/ticketRichText.test.ts` from the repo root did not find the package test because the root Vitest config is server-scoped.
   - `cd server && npx vitest run ../packages/tickets/src/lib/ticketRichText.test.ts` loaded the package test but failed before collection due to the helper's transitive `next-themes` dependency from `@alga-psa/ui/editor`; removing that dependency fixed the package-local test path.
+- (2026-03-10) Runtime and bridge implementation/validation:
+  - `sed -n '1,240p' packages/documents/src/components/DocumentEditor.tsx`
+  - `sed -n '1,220p' packages/documents/src/components/DocumentViewer.tsx`
+  - `cd packages/tickets && npx vitest run src/lib/ticketRichText.test.ts src/lib/ticketMobileEditorBridge.test.ts src/lib/ticketMobileEditorRuntime.test.ts --config vitest.config.ts`
+  - `npx eslint packages/tickets/src/lib/ticketMobileEditorRuntime.ts packages/tickets/src/lib/ticketMobileEditorRuntime.test.ts packages/tickets/src/lib/ticketMobileEditorBridge.ts packages/tickets/src/lib/ticketMobileEditorBridge.test.ts --max-warnings=0`
 
 ## Links / References
 
@@ -67,6 +76,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `server/src/lib/api/schemas/ticket.ts`
   - `packages/tickets/src/lib/ticketRichText.ts`
   - `packages/tickets/src/lib/index.ts`
+  - `packages/tickets/src/lib/ticketMobileEditorBridge.ts`
+  - `packages/tickets/src/lib/ticketMobileEditorRuntime.ts`
+  - `packages/tickets/vitest.config.ts`
   - `packages/ui/src/editor/RichTextViewer.tsx`
   - `packages/formatting/src/blocknoteUtils.ts`
 - Related plan:
