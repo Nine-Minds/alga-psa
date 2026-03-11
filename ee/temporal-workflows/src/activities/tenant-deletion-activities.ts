@@ -329,7 +329,8 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'tenant_extension_install_config', 'tenant_extension_install',
   'extensions',
 
-  // Tenant settings last (before tenant itself)
+  // Tenant add-ons and settings last (before tenant itself)
+  'tenant_addons',
   'tenant_settings',
 ];
 
