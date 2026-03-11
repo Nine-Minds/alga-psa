@@ -58,6 +58,8 @@ export default defineConfig({
       { find: /^@alga-psa\/ui$/, replacement: `${path.resolve(__dirname, '../../packages/ui/src/index.ts')}` },
       { find: /^@alga-psa\/integrations$/, replacement: `${path.resolve(__dirname, '../../packages/integrations/src/index.ts')}` },
       { find: /^@alga-psa\/integrations\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/integrations/src')}/$1` },
+      { find: /^@alga-psa\/ee-stubs$/, replacement: `${path.resolve(__dirname, './src/index.ts')}` },
+      { find: /^@alga-psa\/ee-stubs\/(.*)$/, replacement: `${path.resolve(__dirname, './src')}/$1` },
       { find: /^@alga-psa\/clients$/, replacement: `${path.resolve(__dirname, '../../packages/clients/src/index.ts')}` },
       { find: /^@alga-psa\/clients\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/clients/src')}/$1` },
       { find: /^@alga-psa\/core\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/core/src/lib')}/$1` },

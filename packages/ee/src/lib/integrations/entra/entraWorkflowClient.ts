@@ -5,35 +5,21 @@ export interface EntraWorkflowStartResult {
   error?: string;
 }
 
-export interface EntraWorkflowQueryResult {
-  available: boolean;
-  workflowId: string;
-  status?: string;
-  error?: string;
-}
-
-export async function startEntraDiscoveryWorkflow(_input: unknown): Promise<EntraWorkflowStartResult> {
-  return { available: false, error: 'Temporal client not available' };
+function unavailableResult(): EntraWorkflowStartResult {
+  return {
+    available: false,
+    error: 'Microsoft Entra workflows are only available in Enterprise Edition.',
+  };
 }
 
 export async function startEntraInitialSyncWorkflow(_input: unknown): Promise<EntraWorkflowStartResult> {
-  return { available: false, error: 'Temporal client not available' };
+  return unavailableResult();
 }
 
 export async function startEntraAllTenantsSyncWorkflow(_input: unknown): Promise<EntraWorkflowStartResult> {
-  return { available: false, error: 'Temporal client not available' };
+  return unavailableResult();
 }
 
 export async function startEntraTenantSyncWorkflow(_input: unknown): Promise<EntraWorkflowStartResult> {
-  return { available: false, error: 'Temporal client not available' };
-}
-
-export async function queryEntraWorkflowStatus(
-  workflowId: string
-): Promise<EntraWorkflowQueryResult> {
-  return {
-    available: false,
-    workflowId,
-    error: 'Temporal client not available',
-  };
+  return unavailableResult();
 }

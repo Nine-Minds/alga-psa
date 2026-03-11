@@ -205,6 +205,8 @@ const nextConfig = {
       '@alga-psa/ee-calendar/': '../ee/packages/calendar/src/',
       '@alga-psa/ee-microsoft-teams': '../ee/packages/microsoft-teams/src/index.ts',
       '@alga-psa/ee-microsoft-teams/': '../ee/packages/microsoft-teams/src/',
+      '@alga-psa/ee-stubs': isEE ? '../ee/server/src' : '../packages/ee/src',
+      '@alga-psa/ee-stubs/': isEE ? '../ee/server/src/' : '../packages/ee/src/',
       '@alga-psa/tags': '../packages/tags/src',
       '@alga-psa/tags/': '../packages/tags/src/',
       '@alga-psa/users': '../packages/users/src',
@@ -513,6 +515,12 @@ const nextConfig = {
       '@alga-psa/auth/sso/entry': isEE
         ? path.join(__dirname, '../ee/server/src/components/auth/SsoProviderButtons.tsx')
         : path.join(__dirname, '../packages/auth/src/components/SsoProviderButtons.tsx'),
+      '@alga-psa/ee-stubs': isEE
+        ? path.join(__dirname, '../ee/server/src')
+        : path.join(__dirname, '../packages/ee/src'),
+      '@alga-psa/ee-stubs/': isEE
+        ? path.join(__dirname, '../ee/server/src/')
+        : path.join(__dirname, '../packages/ee/src/'),
       '@alga-psa/integrations/email/providers/entry': isEE
         ? path.join(__dirname, '../packages/integrations/src/email/providers/ee/entry.tsx')
         : path.join(__dirname, '../packages/integrations/src/email/providers/oss/entry.tsx'),

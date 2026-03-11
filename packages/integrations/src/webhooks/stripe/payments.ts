@@ -9,7 +9,7 @@ async function loadEnterprisePayments(): Promise<{
   createStripePaymentProvider: any;
 } | null> {
   try {
-    const mod = await import('@enterprise/lib/payments');
+    const mod = await import('@alga-psa/ee-stubs/lib/payments');
     return {
       PaymentService: (mod as any).PaymentService,
       createStripePaymentProvider: (mod as any).createStripePaymentProvider,

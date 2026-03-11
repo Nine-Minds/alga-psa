@@ -30,12 +30,12 @@ async function clearStaleCredentialsForConnectionType(
   targetConnectionType: EntraConnectionType
 ): Promise<void> {
   if (targetConnectionType === 'direct') {
-    const cippSecretStore = await import('@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore');
+    const cippSecretStore = await import('@alga-psa/ee-stubs/lib/integrations/entra/providers/cipp/cippSecretStore');
     await cippSecretStore.clearEntraCippCredentials(tenant);
     return;
   }
 
-  const tokenStore = await import('@enterprise/lib/integrations/entra/auth/tokenStore');
+  const tokenStore = await import('@alga-psa/ee-stubs/lib/integrations/entra/auth/tokenStore');
   await tokenStore.clearEntraDirectTokenSet(tenant);
 }
 
@@ -324,7 +324,7 @@ export const initiateEntraDirectOAuth = withAuth(async (user, { tenant }) => {
     return flagDisabledResult<{ authUrl: string; state: string }>();
   }
 
-  const resolverModule = await import('@enterprise/lib/integrations/entra/auth/microsoftCredentialResolver');
+  const resolverModule = await import('@alga-psa/ee-stubs/lib/integrations/entra/auth/microsoftCredentialResolver');
   const credentials = await resolverModule.resolveMicrosoftCredentialsForTenant(tenant);
   if (!credentials) {
     return { success: false, error: 'Microsoft OAuth credentials are not configured for Entra direct connection' } as const;
@@ -529,7 +529,7 @@ export const connectEntraCipp = withAuth(async (
 
   await clearStaleCredentialsForConnectionType(tenant, 'cipp');
 
-  const cippSecretStore = await import('@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore');
+  const cippSecretStore = await import('@alga-psa/ee-stubs/lib/integrations/entra/providers/cipp/cippSecretStore');
   await cippSecretStore.saveEntraCippCredentials(tenant, {
     baseUrl: normalizedBaseUrl,
     apiToken,
@@ -882,7 +882,7 @@ export const confirmEntraMappings = withAuth(async (
     return confirmResult;
   }
 
-  const workflowClient = await import('@enterprise/lib/integrations/entra/entraWorkflowClient');
+  const workflowClient = await import('@alga-psa/ee-stubs/lib/integrations/entra/entraWorkflowClient');
   const workflowStart = await workflowClient.startEntraInitialSyncWorkflow({
     tenantId: tenant,
     actor: { userId: (user as { user_id?: string } | undefined)?.user_id },
@@ -1115,7 +1115,7 @@ export const startEntraSync = withAuth(async (
   }
 
   if (input.scope === 'all-tenants') {
-    const workflowClient = await import('@enterprise/lib/integrations/entra/entraWorkflowClient');
+    const workflowClient = await import('@alga-psa/ee-stubs/lib/integrations/entra/entraWorkflowClient');
     const workflowStart = await workflowClient.startEntraAllTenantsSyncWorkflow({
       tenantId: tenant,
       actor: { userId: (user as { user_id?: string } | undefined)?.user_id },
@@ -1157,7 +1157,7 @@ export const startEntraSync = withAuth(async (
       return { success: false, error: 'No active Entra mapping exists for this client.' } as const;
     }
 
-    const workflowClient = await import('@enterprise/lib/integrations/entra/entraWorkflowClient');
+    const workflowClient = await import('@alga-psa/ee-stubs/lib/integrations/entra/entraWorkflowClient');
     const workflowStart = await workflowClient.startEntraTenantSyncWorkflow({
       tenantId: tenant,
       managedTenantId: String(mapping.managed_tenant_id),
