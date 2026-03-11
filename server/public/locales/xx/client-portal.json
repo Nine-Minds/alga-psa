@@ -12,7 +12,9 @@
     "signOut": "11111",
     "clientPortal": "11111",
     "portal": "11111",
-    "notifications": "11111"
+    "notifications": "11111",
+    "documents": "11111",
+    "knowledgeBase": "11111"
   },
   "dashboard": {
     "title": "11111",

@@ -185,5 +185,31 @@
     "nameLabel": "11111",
     "namePlaceholder": "11111",
     "willCreateIn": "11111 {{folder}} 11111"
+  },
+  "portal": {
+    "subtitle": "11111",
+    "searchPlaceholder": "11111",
+    "showing": "11111 {{count}} 11111",
+    "loadError": "11111"
+  },
+  "kb": {
+    "title": "11111",
+    "subtitle": "11111",
+    "categories": "11111",
+    "allArticles": "11111",
+    "searchPlaceholder": "11111",
+    "articleCount": "11111 {{count}} 11111",
+    "noArticles": "11111",
+    "loadError": "11111",
+    "noContent": "11111",
+    "articleNotFound": "11111",
+    "backToArticles": "11111",
+    "views": "11111",
+    "wasHelpful": "11111",
+    "yes": "11111",
+    "no": "11111",
+    "feedbackThanks": "11111",
+    "feedbackError": "11111",
+    "filterByTags": "11111"
   }
 }
