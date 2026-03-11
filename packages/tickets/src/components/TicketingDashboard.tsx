@@ -38,6 +38,7 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { createTicketColumns } from '@alga-psa/tickets/lib';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import QuickAddCategory from './QuickAddCategory';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
@@ -127,7 +128,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['ticket']);
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
-  
+  // Ref to avoid teamsV2Enabled as a dep of the filter useEffect.
+  // The flag loads async (~200ms) from PostHog, and including it in deps
+  // causes a spurious fetch on every mount when the flag resolves.
+  const teamsV2EnabledRef = useRef(teamsV2Enabled);
+  teamsV2EnabledRef.current = teamsV2Enabled;
+
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
   const [selectedTicketIds, setSelectedTicketIds] = useState<Set<string>>(new Set());
   const [visibleTicketIds, setVisibleTicketIds] = useState<string[]>([]);
@@ -151,7 +157,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const [boards] = useState<IBoard[]>(initialBoards);
   const [clients] = useState<IClient[]>(initialClients);
-  const [categories] = useState<ITicketCategory[]>(initialCategories);
+  const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
   const [statusOptions] = useState<SelectOption[]>(initialStatuses);
   const [priorityOptions] = useState<SelectOption[]>(initialPriorities);
   
@@ -163,6 +169,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     initialFilterValues.categoryId ? [initialFilterValues.categoryId] : []
   );
   const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
+  const [isQuickAddCategoryOpen, setIsQuickAddCategoryOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState<string>(initialFilterValues.searchQuery ?? '');
   const [boardFilterState, setBoardFilterState] = useState<'active' | 'inactive' | 'all'>(initialFilterValues.boardFilterState ?? 'active');
 
@@ -305,7 +312,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setBoardFilterState(next.boardFilterState ?? 'active');
     setSelectedTags(next.tags ?? []);
     setSelectedAssignees(next.assignedToIds ?? []);
-    setSelectedTeams(teamsV2Enabled ? (next.assignedTeamIds ?? []) : []);
+    setSelectedTeams(teamsV2EnabledRef.current ? (next.assignedTeamIds ?? []) : []);
     setIncludeUnassigned(next.includeUnassigned ?? false);
     setSelectedDueDateFilter(next.dueDateFilter ?? 'all');
     setDueDateFilterValue((() => {
@@ -316,8 +323,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setSelectedSlaStatus(next.slaStatusFilter ?? 'all');
     setBundleView(next.bundleView ?? 'bundled');
   }, [
-    initialFilterValues,
-    teamsV2Enabled
+    initialFilterValues
+    // teamsV2Enabled read via ref — async PostHog resolution should not re-trigger this sync effect
   ]);
 
   // Ticket tags are now provided via initialTicketTags from server-side consolidated fetch
@@ -474,7 +481,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       showOpenOnly: selectedStatus === 'open',
       tags: selectedTags.length > 0 ? selectedTags : undefined,
       assignedToIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
-      assignedTeamIds: teamsV2Enabled && selectedTeams.length > 0 ? selectedTeams : undefined,
+      assignedTeamIds: teamsV2EnabledRef.current && selectedTeams.length > 0 ? selectedTeams : undefined,
       includeUnassigned: includeUnassigned || undefined,
       dueDateFilter: selectedDueDateFilter !== 'all' ? selectedDueDateFilter as ITicketListFilters['dueDateFilter'] : undefined,
       dueDateFrom: selectedDueDateFilter === 'after' && dueDateFilterValue ? dueDateFilterValue.toISOString() : undefined,
@@ -503,9 +510,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     selectedDueDateFilter,
     dueDateFilterValue,
     selectedResponseState,
-    selectedSlaStatus,
-    teamsV2Enabled
-    // onFiltersChanged intentionally omitted - we want to trigger only when filter values change, not when the callback changes
+    selectedSlaStatus
+    // teamsV2Enabled intentionally omitted — read via ref to avoid spurious fetch on mount when PostHog resolves async
+    // onFiltersChanged intentionally omitted — we want to trigger only when filter values change, not when the callback changes
   ]);
 
   const resetDeleteState = () => {
@@ -1462,6 +1469,28 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   showReset={true}
                   allowEmpty={true}
                   className="text-sm min-w-[200px]"
+                  onAddNew={() => setIsQuickAddCategoryOpen(true)}
+                />
+                <QuickAddCategory
+                  isOpen={isQuickAddCategoryOpen}
+                  onClose={() => setIsQuickAddCategoryOpen(false)}
+                  onCategoryCreated={(newCategory) => {
+                    setCategories((prevCategories) => {
+                      const existingIndex = prevCategories.findIndex((category) => category.category_id === newCategory.category_id);
+                      if (existingIndex >= 0) {
+                        const nextCategories = [...prevCategories];
+                        nextCategories[existingIndex] = newCategory;
+                        return nextCategories;
+                      }
+                      return [...prevCategories, newCategory];
+                    });
+                    setSelectedCategories([newCategory.category_id]);
+                    setExcludedCategories((prevExcluded) => prevExcluded.filter((categoryId) => categoryId !== newCategory.category_id));
+                    setIsQuickAddCategoryOpen(false);
+                  }}
+                  preselectedBoardId={selectedBoard || undefined}
+                  categories={categories}
+                  boards={boards}
                 />
                 <Input
                   id={`${id}-search-tickets-input`}

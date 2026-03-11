@@ -880,7 +880,8 @@ export const getTemplateWithDetails = withAuth(async (
             ...mapping,
             status_name: standardStatus.name,
             color: standardStatus.color || '#6B7280',
-            is_closed: standardStatus.is_closed
+            is_closed: standardStatus.is_closed,
+            icon: standardStatus.icon || null
           };
         }
 
@@ -894,7 +895,8 @@ export const getTemplateWithDetails = withAuth(async (
             ...mapping,
             status_name: customStatus.name,
             color: customStatus.color || '#6B7280',
-            is_closed: customStatus.is_closed
+            is_closed: customStatus.is_closed,
+            icon: customStatus.icon || null
           };
         }
       }

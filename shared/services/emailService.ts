@@ -7,6 +7,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import logger from '@alga-psa/core/logger';
 import { normalizeEmailAddress } from '../lib/email/addressUtils';
+import { ContactModel } from '../models/contactModel';
 
 // =============================================================================
 // INTERFACES
@@ -96,6 +97,28 @@ export interface SaveEmailClientAssociationOutput {
   associationId: string;
   email: string;
   client_id: string;
+}
+
+function buildDefaultPhoneNumbers(phone?: string) {
+  const trimmedPhone = phone?.trim();
+  if (!trimmedPhone) {
+    return [];
+  }
+
+  return [{
+    phone_number: trimmedPhone,
+    canonical_type: 'work' as const,
+    is_default: true,
+    display_order: 0,
+  }];
+}
+
+function getDefaultPhoneNumber(contact: {
+  default_phone_number?: string | null;
+  phone_numbers: Array<{ is_default: boolean; phone_number: string }>;
+}): string | undefined {
+  return contact.default_phone_number
+    || contact.phone_numbers.find((phoneNumber) => phoneNumber.is_default)?.phone_number;
 }
 
 export interface CreateTicketFromEmailInput {
@@ -230,7 +253,6 @@ export class EmailService {
           'contacts.email',
           'contacts.client_id',
           'clients.client_name',
-          'contacts.phone_number as phone',
           'contacts.role as title'
         )
         .where({
@@ -243,13 +265,14 @@ export class EmailService {
         return null;
       }
 
+      const hydratedContact = await ContactModel.getContactById(contact.contact_id, this.tenant, this.knex as Knex.Transaction);
       return {
         contact_id: contact.contact_id,
         name: contact.name,
         email: contact.email,
         client_id: contact.client_id || '',
         client_name: contact.client_name || '',
-        phone: contact.phone,
+        phone: hydratedContact ? getDefaultPhoneNumber(hydratedContact) : undefined,
         title: contact.title
       };
     } catch (error: any) {
@@ -285,29 +308,22 @@ export class EmailService {
       }
 
       // Create new contact
-      const contactId = uuidv4();
-      const now = new Date();
-
-      await this.knex('contacts').insert({
-        contact_name_id: contactId,
-        tenant: this.tenant,
+      const createdContact = await ContactModel.createContact({
         full_name: input.name || normalizedEmail,
         email: normalizedEmail,
         client_id: input.client_id,
-        phone_number: input.phone,
+        phone_numbers: buildDefaultPhoneNumbers(input.phone),
         role: input.title,
-        created_at: now,
-        updated_at: now
-      });
+      }, this.tenant, this.knex as Knex.Transaction);
 
       return {
-        id: contactId,
-        name: input.name || normalizedEmail,
-        email: normalizedEmail,
-        client_id: input.client_id,
-        phone: input.phone,
-        title: input.title,
-        created_at: now.toISOString(),
+        id: createdContact.contact_name_id,
+        name: createdContact.full_name,
+        email: createdContact.email || normalizedEmail,
+        client_id: createdContact.client_id || input.client_id,
+        phone: getDefaultPhoneNumber(createdContact),
+        title: createdContact.role || input.title,
+        created_at: createdContact.created_at || new Date().toISOString(),
         is_new: true
       };
     } catch (error: any) {

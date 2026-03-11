@@ -113,6 +113,8 @@ const _middleware = auth((request) => {
       // Mobile auth endpoints use OTT/refresh tokens (no x-api-key)
       '/api/v1/mobile/auth/',
       '/api/integrations/ninjaone/callback',
+      '/api/integrations/xero/connect',
+      '/api/integrations/xero/callback',
       // AI chat endpoints are session-authenticated (MSP UI)
       '/api/chat/',
       // Workflow bundle import/export is session-authenticated (developer + future UI tooling)
@@ -123,6 +125,7 @@ const _middleware = auth((request) => {
       '/api/webhooks/stripe',
       '/api/webhooks/ninjaone',
       '/api/webhooks/tacticalrmm',
+      '/api/share/',  // Public share link routes handle their own auth
       '/api/ext/',  // Extension API routes handle their own auth
       '/api/ext-proxy/',
       '/api/ext-debug/',  // Extension debug stream uses session auth

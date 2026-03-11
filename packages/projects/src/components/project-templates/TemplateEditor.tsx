@@ -1,19 +1,19 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useTruncationDetection } from '@alga-psa/ui/hooks';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { darkenColor } from '@alga-psa/ui/lib/colorUtils';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
-import { Card } from '@alga-psa/ui/components/Card';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import {
   ArrowLeft,
-  Circle,
+  Clipboard,
   Trash,
   FileText,
   Rocket,
@@ -32,6 +32,11 @@ import {
   Clock,
   Ban,
   GitBranch,
+  Search,
+  Pin,
+  X,
+  Columns3,
+  ChevronRight,
 } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import {
@@ -74,6 +79,8 @@ import { TemplateTaskForm } from './TemplateTaskForm';
 import { TemplateStatusManager } from './TemplateStatusManager';
 import TemplateTaskListView from './TemplateTaskListView';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
+import KanbanZoomControl, { calculateCardGap, calculateColumnWidth, calculateZoomScales } from '../KanbanZoomControl';
+import * as LucideIcons from 'lucide-react';
 import { LayoutGrid, List } from 'lucide-react';
 import styles from '../ProjectDetail.module.css';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
@@ -91,6 +98,15 @@ import {
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 
 // Task type icons mapping (fallback icons when database doesn't specify)
+// Helper to lighten hex color (for background)
+const lightenColor = (hex: string, percent: number) => {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const r = Math.min(255, Math.floor((num >> 16) + (255 - (num >> 16)) * percent));
+  const g = Math.min(255, Math.floor(((num >> 8) & 0x00ff) + (255 - ((num >> 8) & 0x00ff)) * percent));
+  const b = Math.min(255, Math.floor((num & 0x0000ff) + (255 - (num & 0x0000ff)) * percent));
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+};
+
 const taskTypeIcons: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
   task: CheckSquare,
   bug: Bug,
@@ -102,6 +118,17 @@ const taskTypeIcons: Record<string, React.ComponentType<{ className?: string; st
   deliverable: FileText,
 };
 
+const getTemplateStatusIcon = (statusMapping: IProjectTemplateStatusMapping): React.ReactNode => {
+  if (statusMapping.icon) {
+    const IconComponent = (LucideIcons as any)[statusMapping.icon];
+    if (IconComponent) {
+      return <IconComponent className="w-4 h-4" />;
+    }
+  }
+
+  return <Clipboard className="w-4 h-4" />;
+};
+
 interface TemplateEditorProps {
   template: IProjectTemplateWithDetails;
   onTemplateUpdated: () => void;
@@ -109,6 +136,7 @@ interface TemplateEditorProps {
 
 export default function TemplateEditor({ template: initialTemplate, onTemplateUpdated }: TemplateEditorProps) {
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
 
   // Core state
   const [template, setTemplate] = useState<IProjectTemplateWithDetails>(initialTemplate);
@@ -141,6 +169,14 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     initialTemplate.client_portal_config || DEFAULT_CLIENT_PORTAL_CONFIG
   );
 
+  // Confirmation dialog state
+  const [deletePhaseConfirmation, setDeletePhaseConfirmation] = useState<{
+    phaseId: string;
+    phaseName: string;
+  } | null>(null);
+  const [showDeleteTemplateConfirmation, setShowDeleteTemplateConfirmation] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<IProjectTemplateTask | null>(null);
+
   // View mode state
   type TemplateViewMode = 'kanban' | 'list';
   const [viewMode, setViewMode] = useState<TemplateViewMode>(() => {
@@ -149,6 +185,134 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     }
     return 'kanban';
   });
+
+  // Kanban controls state
+  const [kanbanZoomLevel, setKanbanZoomLevel] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      return parseInt(localStorage.getItem('template_kanban_zoom_level') || '50', 10);
+    }
+    return 50;
+  });
+  const [isHeaderPinned, setIsHeaderPinned] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('template_header_pinned') === 'true';
+    }
+    return false;
+  });
+  const [showStickyStatusNames, setShowStickyStatusNames] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('template_sticky_status_names') === 'true';
+    }
+    return false;
+  });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchBar, setShowSearchBar] = useState(false);
+  const [isPhasesPanelVisible, setIsPhasesPanelVisible] = useState(true);
+
+  // Refs for scroll sync
+  const kanbanBoardRef = useRef<HTMLDivElement>(null);
+  const kanbanHeaderRef = useRef<HTMLDivElement>(null);
+  const scrollbarProxyRef = useRef<HTMLDivElement>(null);
+  const stickyStatusStripRef = useRef<HTMLDivElement>(null);
+  const [boardScrollWidth, setBoardScrollWidth] = useState(0);
+  const [kanbanHeaderHeight, setKanbanHeaderHeight] = useState(0);
+
+  const kanbanColumnWidth = useMemo(() => calculateColumnWidth(kanbanZoomLevel), [kanbanZoomLevel]);
+  const kanbanCardGap = useMemo(() => calculateCardGap(kanbanZoomLevel), [kanbanZoomLevel]);
+
+  // Persist kanban settings to localStorage
+  const handleZoomChange = (level: number) => {
+    setKanbanZoomLevel(level);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('template_kanban_zoom_level', String(level));
+    }
+  };
+
+  const handleToggleHeaderPinned = () => {
+    const next = !isHeaderPinned;
+    setIsHeaderPinned(next);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('template_header_pinned', String(next));
+    }
+  };
+
+  const handleToggleStickyStatusNames = () => {
+    const next = !showStickyStatusNames;
+    setShowStickyStatusNames(next);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('template_sticky_status_names', String(next));
+    }
+  };
+
+  // Proxy scrollbar and sticky status strip: keep horizontal scroll positions in sync
+  useEffect(() => {
+    const container = kanbanBoardRef.current;
+    const proxy = scrollbarProxyRef.current;
+    const stickyStrip = stickyStatusStripRef.current;
+    if (!container || !proxy) return;
+
+    let isSyncing = false;
+
+    const syncScrollPositions = (source: 'container' | 'proxy' | 'sticky') => {
+      if (isSyncing) return;
+      isSyncing = true;
+      const nextLeft = source === 'container'
+        ? container.scrollLeft
+        : source === 'proxy'
+          ? proxy.scrollLeft
+          : (stickyStrip?.scrollLeft ?? 0);
+
+      if (source !== 'container') container.scrollLeft = nextLeft;
+      if (source !== 'proxy') proxy.scrollLeft = nextLeft;
+      if (stickyStrip && source !== 'sticky') stickyStrip.scrollLeft = nextLeft;
+      isSyncing = false;
+    };
+
+    const onContainerScroll = () => syncScrollPositions('container');
+    const onProxyScroll = () => syncScrollPositions('proxy');
+    const onStickyStripScroll = () => syncScrollPositions('sticky');
+
+    container.addEventListener('scroll', onContainerScroll);
+    proxy.addEventListener('scroll', onProxyScroll);
+    if (stickyStrip) {
+      stickyStrip.addEventListener('scroll', onStickyStripScroll);
+    }
+    syncScrollPositions('container');
+
+    // Track the board's scroll width with ResizeObserver
+    const updateWidth = () => {
+      setBoardScrollWidth(container.scrollWidth);
+    };
+    updateWidth();
+    const ro = new ResizeObserver(updateWidth);
+    ro.observe(container);
+    if (container.firstElementChild) {
+      ro.observe(container.firstElementChild);
+    }
+
+    return () => {
+      container.removeEventListener('scroll', onContainerScroll);
+      proxy.removeEventListener('scroll', onProxyScroll);
+      if (stickyStrip) {
+        stickyStrip.removeEventListener('scroll', onStickyStripScroll);
+      }
+      ro.disconnect();
+    };
+  }, [showStickyStatusNames, viewMode]);
+
+  // Track header height so the sticky status strip can stack below it
+  useEffect(() => {
+    const header = kanbanHeaderRef.current;
+    if (!header) return;
+
+    const updateHeight = () => {
+      setKanbanHeaderHeight(header.getBoundingClientRect().height);
+    };
+    updateHeight();
+    const ro = new ResizeObserver(updateHeight);
+    ro.observe(header);
+    return () => ro.disconnect();
+  }, [isHeaderPinned, viewMode]);
 
   // Persist view mode to localStorage
   const handleViewModeChange = (mode: TemplateViewMode) => {
@@ -281,24 +445,11 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     fetchTeams();
   }, [teamsV2Enabled]);
 
-  // Helper to lighten hex color (for background)
-  const lightenColor = (hex: string, percent: number) => {
-    const num = parseInt(hex.replace('#', ''), 16);
-    const r = Math.min(255, Math.floor((num >> 16) + (255 - (num >> 16)) * percent));
-    const g = Math.min(255, Math.floor(((num >> 8) & 0x00ff) + (255 - ((num >> 8) & 0x00ff)) * percent));
-    const b = Math.min(255, Math.floor((num & 0x0000ff) + (255 - (num & 0x0000ff)) * percent));
-    return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
-  };
-
   // ============================================================
   // TEMPLATE ACTIONS
   // ============================================================
 
   async function handleDeleteTemplate() {
-    if (!confirm('Are you sure you want to delete this template?')) {
-      return;
-    }
-
     try {
       setIsDeleting(true);
       await deleteTemplate(template.template_id);
@@ -308,6 +459,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       handleError(error, 'Failed to delete template');
     } finally {
       setIsDeleting(false);
+      setShowDeleteTemplateConfirmation(false);
     }
   }
 
@@ -375,20 +527,27 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     }
   };
 
-  const handleDeletePhase = async (phase: IProjectTemplatePhase) => {
-    if (!confirm(`Delete phase "${phase.phase_name}" and all its tasks?`)) {
-      return;
-    }
+  const handleDeletePhaseClick = (phase: IProjectTemplatePhase) => {
+    setDeletePhaseConfirmation({
+      phaseId: phase.template_phase_id,
+      phaseName: phase.phase_name,
+    });
+  };
+
+  const handleDeletePhase = async () => {
+    if (!deletePhaseConfirmation) return;
     try {
-      await deleteTemplatePhase(phase.template_phase_id);
-      setPhases((prev) => prev.filter((p) => p.template_phase_id !== phase.template_phase_id));
-      setTasks((prev) => prev.filter((t) => t.template_phase_id !== phase.template_phase_id));
-      if (selectedPhase?.template_phase_id === phase.template_phase_id) {
-        setSelectedPhase(phases.find((p) => p.template_phase_id !== phase.template_phase_id) || null);
+      await deleteTemplatePhase(deletePhaseConfirmation.phaseId);
+      setPhases((prev) => prev.filter((p) => p.template_phase_id !== deletePhaseConfirmation.phaseId));
+      setTasks((prev) => prev.filter((t) => t.template_phase_id !== deletePhaseConfirmation.phaseId));
+      if (selectedPhase?.template_phase_id === deletePhaseConfirmation.phaseId) {
+        setSelectedPhase(phases.find((p) => p.template_phase_id !== deletePhaseConfirmation.phaseId) || null);
       }
       toast.success('Phase deleted');
     } catch (error) {
       handleError(error, 'Failed to delete phase');
+    } finally {
+      setDeletePhaseConfirmation(null);
     }
   };
 
@@ -606,16 +765,20 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     }
   };
 
-  const handleDeleteTask = async (task: IProjectTemplateTask) => {
-    if (!confirm(`Delete task "${task.task_name}"?`)) {
-      return;
-    }
+  const handleDeleteTaskClick = (task: IProjectTemplateTask) => {
+    setTaskToDelete(task);
+  };
+
+  const handleDeleteTask = async () => {
+    if (!taskToDelete) return;
     try {
-      await deleteTemplateTask(task.template_task_id);
-      setTasks((prev) => prev.filter((t) => t.template_task_id !== task.template_task_id));
+      await deleteTemplateTask(taskToDelete.template_task_id);
+      setTasks((prev) => prev.filter((t) => t.template_task_id !== taskToDelete.template_task_id));
       toast.success('Task deleted');
     } catch (error) {
       handleError(error, 'Failed to delete task');
+    } finally {
+      setTaskToDelete(null);
     }
   };
 
@@ -762,9 +925,59 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
     return counts;
   }, [phases, tasks]);
 
+  // Compute task counts per status mapping for the selected phase
+  const statusTaskCounts = useMemo(() => {
+    if (!selectedPhase) return {} as Record<string, number>;
+    const pTasks = tasks.filter((t) => t.template_phase_id === selectedPhase.template_phase_id);
+    return pTasks.reduce<Record<string, number>>((counts, task) => {
+      const key = task.template_status_mapping_id || sortedStatusMappings[0]?.template_status_mapping_id || '';
+      counts[key] = (counts[key] ?? 0) + 1;
+      return counts;
+    }, {});
+  }, [tasks, selectedPhase, sortedStatusMappings]);
+
+  // Styling helper for sticky status strip items
+  const getStatusStripStyles = useCallback((statusColor: string) => {
+    const isDarkTheme = resolvedTheme === 'dark';
+    if (isDarkTheme) {
+      return {
+        itemStyle: {
+          backgroundColor: darkenColor(statusColor, 0.75),
+          borderColor: darkenColor(statusColor, 0.55),
+          color: lightenColor(statusColor, 0.40),
+        } as React.CSSProperties,
+        countStyle: {
+          backgroundColor: darkenColor(statusColor, 0.65),
+          color: lightenColor(statusColor, 0.40),
+        } as React.CSSProperties,
+      };
+    }
+    return {
+      itemStyle: {
+        backgroundColor: lightenColor(statusColor, 0.85),
+        borderColor: lightenColor(statusColor, 0.45),
+        color: statusColor,
+      } as React.CSSProperties,
+      countStyle: {
+        backgroundColor: lightenColor(statusColor, 0.62),
+        color: statusColor,
+      } as React.CSSProperties,
+    };
+  }, [resolvedTheme]);
+
   const phaseTasks = selectedPhase
     ? tasks.filter((task) => task.template_phase_id === selectedPhase.template_phase_id)
     : [];
+
+  // Filter tasks by search query
+  const filteredPhaseTasks = useMemo(() => {
+    if (!searchQuery.trim()) return phaseTasks;
+    const query = searchQuery.toLowerCase();
+    return phaseTasks.filter((task) =>
+      task.task_name.toLowerCase().includes(query) ||
+      (task.description && task.description.toLowerCase().includes(query))
+    );
+  }, [phaseTasks, searchQuery]);
 
   return (
     <>
@@ -811,6 +1024,42 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           onStatusAdded={handleStatusAdded}
           onStatusRemoved={handleStatusRemoved}
           onStatusReordered={handleStatusReordered}
+        />
+      )}
+
+      {showDeleteTemplateConfirmation && (
+        <ConfirmationDialog
+          isOpen={true}
+          onClose={() => setShowDeleteTemplateConfirmation(false)}
+          onConfirm={handleDeleteTemplate}
+          title="Delete Template"
+          message={`Are you sure you want to delete template "${template.template_name}"? This action cannot be undone.`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+        />
+      )}
+
+      {deletePhaseConfirmation && (
+        <ConfirmationDialog
+          isOpen={true}
+          onClose={() => setDeletePhaseConfirmation(null)}
+          onConfirm={handleDeletePhase}
+          title="Delete Phase"
+          message={`Are you sure you want to delete phase "${deletePhaseConfirmation.phaseName}"? This will also delete all tasks in this phase.`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+        />
+      )}
+
+      {taskToDelete && (
+        <ConfirmationDialog
+          isOpen={true}
+          onClose={() => setTaskToDelete(null)}
+          onConfirm={handleDeleteTask}
+          title="Delete Task"
+          message={`Are you sure you want to delete task "${taskToDelete.task_name}"?`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
         />
       )}
 
@@ -866,7 +1115,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                     Client Portal Visibility
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onSelect={handleDeleteTemplate}
+                    onSelect={() => setShowDeleteTemplateConfirmation(true)}
                     disabled={isDeleting}
                     className="text-destructive focus:text-destructive focus:bg-destructive/10"
                   >
@@ -916,7 +1165,10 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
           </Dialog>
         </div>
 
-        <div className={styles.mainContent}>
+        <div
+          className={styles.mainContent}
+          style={viewMode === 'kanban' ? { flex: '0 0 auto', minHeight: 'auto' } : undefined}
+        >
           {viewMode === 'list' ? (
             /* List View - Full Width */
             <div className="p-4 h-full">
@@ -931,7 +1183,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                 taskTypes={taskTypes}
                 priorities={priorities}
                 onTaskClick={handleEditTask}
-                onTaskDelete={handleDeleteTask}
+                onTaskDelete={handleDeleteTaskClick}
                 onAddPhase={handleAddPhase}
                 onAddTask={(phaseId, statusMappingId) => {
                   const phase = phases.find((p) => p.template_phase_id === phaseId);
@@ -948,27 +1200,54 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
             </div>
           ) : (
             /* Kanban View - Phases sidebar + Kanban board */
-            <div className={styles.contentWrapper}>
-              {/* Phases List - Left Side */}
-              <div className={styles.phasesList}>
-                <Card className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-semibold text-gray-700">Project Phases</h3>
-                    <Button id="add-phase" variant="default" size="sm" onClick={handleAddPhase}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="space-y-1">
+            <div
+              className={styles.contentWrapper}
+              style={{ flex: '0 0 auto', minHeight: 'auto', alignItems: 'flex-start' }}
+            >
+              {/* Collapsible Phases Panel */}
+              <div className={`${styles.phasesContainer} ${isPhasesPanelVisible ? styles.phasesContainerExpanded : styles.phasesContainerCollapsed}`}>
+                <Button
+                  id="toggle-phases-panel"
+                  variant="default"
+                  size="icon"
+                  className={styles.phasesPanelToggle}
+                  onClick={() => setIsPhasesPanelVisible(!isPhasesPanelVisible)}
+                  aria-label={isPhasesPanelVisible ? 'Hide phases panel' : 'Show phases panel'}
+                >
+                  <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${isPhasesPanelVisible ? 'rotate-180' : ''}`} />
+                </Button>
+                <div className={`${styles.phasesList} ${isPhasesPanelVisible ? styles.phasesListVisible : styles.phasesListHidden}`}>
+                  <div className={styles.phasesPanel}>
+                    <div className={styles.phasesPanelHeader}>
+                      <h2 className="text-xl font-bold mb-2">Project Phases</h2>
+                      <div className="flex gap-2 flex-wrap">
+                        <Button
+                          id="add-task-from-phases-panel"
+                          onClick={() => handleAddTask()}
+                          size="sm"
+                          disabled={!selectedPhase}
+                        >
+                          + Add Task
+                        </Button>
+                        <Button id="add-phase" variant="default" size="sm" onClick={handleAddPhase}>
+                          + Add Phase
+                        </Button>
+                      </div>
+                    </div>
+                    <ul className={styles.phasesScrollArea}>
                     {sortedPhases.length === 0 ? (
                       <div className="text-sm text-gray-500 text-center py-4">
                         No phases yet.
                         <br />
-                        <button
-                          className="text-purple-600 hover:underline mt-1"
+                        <Button
+                          id="add-first-phase"
+                          variant="ghost"
+                          size="sm"
+                          className="text-purple-600 hover:text-purple-700 mt-1"
                           onClick={handleAddPhase}
                         >
                           Add your first phase
-                        </button>
+                        </Button>
                       </div>
                     ) : (
                       sortedPhases.map((phase) => {
@@ -979,7 +1258,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                           tasks.find((t) => t.template_task_id === draggedTaskId)?.template_phase_id === phase.template_phase_id;
 
                         return (
-                        <div
+                        <li
                           key={phase.template_phase_id}
                           draggable={editingPhaseId !== phase.template_phase_id}
                           onDragStart={(e) => handlePhaseDragStart(e, phase.template_phase_id)}
@@ -987,10 +1266,10 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                           onDragLeave={handlePhaseDragLeave}
                           onDrop={(e) => handlePhaseDrop(e, phase)}
                           onDragEnd={handlePhaseDragEnd}
-                          className={`${styles.phaseItem} group relative px-3 py-2 rounded-lg transition-all cursor-pointer ${
+                          className={`${styles.phaseItem} relative flex items-center justify-between px-3 py-2.5 rounded-md cursor-pointer group ${
                             selectedPhase?.template_phase_id === phase.template_phase_id
-                              ? 'bg-purple-50 dark:bg-purple-950 text-purple-900 dark:text-purple-200'
-                              : 'hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))] text-gray-700 dark:text-gray-300'
+                              ? 'bg-purple-50 dark:bg-purple-500/10'
+                              : 'hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]'
                           } ${draggedPhaseId === phase.template_phase_id ? 'opacity-50' : ''} ${
                             isPhaseDrop ? styles.dragOver + ' ring-2 ring-purple-400' : ''
                           } ${
@@ -1005,45 +1284,53 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                           }}
                         >
                           {editingPhaseId === phase.template_phase_id ? (
-                            <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
-                              <Input
-                                value={editingPhaseName}
-                                onChange={(e) => setEditingPhaseName(e.target.value)}
-                                placeholder="Phase name"
-                                autoFocus
-                              />
-                              <TextArea
-                                value={editingPhaseDescription}
-                                onChange={(e) => setEditingPhaseDescription(e.target.value)}
-                                placeholder="Description (optional)"
-                                rows={2}
-                              />
-                              <div className="grid grid-cols-2 gap-2">
+                            <div className="flex flex-col w-full gap-3" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex-1 min-w-0">
                                 <div>
-                                  <label className="text-xs text-gray-500 dark:text-gray-400">Duration (days)</label>
+                                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phase Name</label>
                                   <Input
-                                    type="number"
-                                    value={editingPhaseDuration || ''}
-                                    onChange={(e) =>
-                                      setEditingPhaseDuration(e.target.value ? parseInt(e.target.value) : undefined)
-                                    }
-                                    placeholder="Days"
+                                    value={editingPhaseName}
+                                    onChange={(e) => setEditingPhaseName(e.target.value)}
+                                    placeholder="Phase name"
+                                    autoFocus
                                   />
                                 </div>
                                 <div>
-                                  <label className="text-xs text-gray-500 dark:text-gray-400">Start offset</label>
-                                  <Input
-                                    type="number"
-                                    value={editingPhaseOffset}
-                                    onChange={(e) => setEditingPhaseOffset(parseInt(e.target.value) || 0)}
-                                    placeholder="Days"
+                                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phase Description</label>
+                                  <TextArea
+                                    value={editingPhaseDescription}
+                                    onChange={(e) => setEditingPhaseDescription(e.target.value)}
+                                    placeholder="Description (optional)"
+                                    rows={2}
                                   />
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Duration</label>
+                                    <Input
+                                      type="number"
+                                      value={editingPhaseDuration || ''}
+                                      onChange={(e) =>
+                                        setEditingPhaseDuration(e.target.value ? parseInt(e.target.value) : undefined)
+                                      }
+                                      placeholder="Days"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Start offset</label>
+                                    <Input
+                                      type="number"
+                                      value={editingPhaseOffset}
+                                      onChange={(e) => setEditingPhaseOffset(parseInt(e.target.value) || 0)}
+                                      placeholder="Days"
+                                    />
+                                  </div>
                                 </div>
                               </div>
-                              <div className="flex justify-end gap-2">
+                              <div className="flex justify-end gap-2 mt-3">
                                 <Button
                                   id="cancel-edit-phase"
-                                  variant="ghost"
+                                  variant="outline"
                                   size="sm"
                                   onClick={() => setEditingPhaseId(null)}
                                 >
@@ -1055,13 +1342,15 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                               </div>
                             </div>
                           ) : (
-                            <div className="flex items-start gap-2">
-                              <GripVertical className="w-4 h-4 text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 cursor-grab mt-0.5 shrink-0" />
-                              <div className="flex-1 min-w-0">
+                            <>
+                              <div className="opacity-0 group-hover:opacity-100 transition-opacity cursor-grab pr-2">
+                                <GripVertical className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                              </div>
+                              <div className="flex flex-col flex-1 min-w-0">
                                 <div className="flex items-start justify-between gap-2">
                                   <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{phase.phase_name}</span>
                                   {phaseTaskCounts[phase.template_phase_id] !== undefined && (
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 shrink-0">
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 shrink-0">
                                       {phaseTaskCounts[phase.template_phase_id]} {phaseTaskCounts[phase.template_phase_id] === 1 ? 'task' : 'tasks'}
                                     </span>
                                   )}
@@ -1071,140 +1360,297 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
                                     {phase.description}
                                   </div>
                                 )}
-                                <div className="flex items-center gap-2 mt-1 text-xs text-gray-400 dark:text-gray-500">
-                                  {phase.duration_days !== undefined && phase.duration_days !== null && (
-                                    <span>{phase.duration_days}d</span>
-                                  )}
-                                  {phase.start_offset_days !== undefined && phase.start_offset_days > 0 && (
-                                    <span>+{phase.start_offset_days}d offset</span>
-                                  )}
+                                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                                  <div>
+                                    Duration: {phase.duration_days !== undefined && phase.duration_days !== null
+                                      ? `${phase.duration_days}d`
+                                      : 'Not set'}
+                                  </div>
+                                  <div>
+                                    Start offset: {phase.start_offset_days !== undefined && phase.start_offset_days > 0
+                                      ? `+${phase.start_offset_days}d`
+                                      : '0d'}
+                                  </div>
                                 </div>
                               </div>
-                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 shrink-0">
-                                <button
+                              <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 shrink-0">
+                                <Button
+                                  id={`edit-phase-${phase.template_phase_id}`}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="p-1 h-auto w-auto"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleEditPhase(phase);
                                   }}
-                                  className="p-1 rounded hover:bg-gray-200 dark:hover:bg-[rgb(var(--color-border-200))]"
                                 >
-                                  <Pencil className="w-3 h-3" />
-                                </button>
-                                <button
+                                  <Pencil className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  id={`delete-phase-${phase.template_phase_id}`}
+                                  variant="ghost"
+                                  size="sm"
+                                  className="p-1 h-auto w-auto text-destructive hover:text-destructive hover:bg-destructive/10"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    handleDeletePhase(phase);
+                                    handleDeletePhaseClick(phase);
                                   }}
-                                  className="p-1 rounded hover:bg-destructive/15 text-destructive"
                                 >
-                                  <Trash className="w-3 h-3" />
-                                </button>
+                                  <Trash className="w-4 h-4" />
+                                </Button>
                               </div>
-                            </div>
+                            </>
                           )}
-                        </div>
+                        </li>
                         );
                       })
                     )}
+                    </ul>
                   </div>
-                </Card>
+                </div>
               </div>
 
               {/* Kanban Board - Right Side */}
-              <div className={styles.kanbanContainer}>
-                {!selectedPhase ? (
-                  <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
-                    <div className="text-center">
-                      <p className="text-xl text-gray-600">
-                        {phases.length === 0
-                          ? 'Add a phase to get started'
-                          : 'Select a phase to view tasks'}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col h-full">
-                    {/* Phase Header */}
-                    <div className="mb-4">
-                      <div className="flex justify-between items-center gap-4">
-                        <div>
-                          <h2 className="text-xl font-bold mb-1">Phase: {selectedPhase.phase_name}</h2>
-                          {selectedPhase.description && (
-                            <p className="text-sm text-gray-600">{selectedPhase.description}</p>
-                          )}
-                          <div className="text-sm text-gray-500 mt-1">
-                            {selectedPhase.duration_days && `Duration: ${selectedPhase.duration_days} days`}
-                            {selectedPhase.start_offset_days > 0 &&
-                              ` | Start: +${selectedPhase.start_offset_days} days`}
-                          </div>
+              <div className={styles.kanbanArea} style={{ flex: '1 1 auto', minHeight: 'auto' }}>
+                {/* Pinnable header with phase info, search, and controls */}
+                <div
+                  ref={kanbanHeaderRef}
+                  className={`${styles.kanbanHeader} ${isHeaderPinned ? styles.kanbanHeaderPinned : ''}`}
+                >
+                  {selectedPhase && (
+                    <div className="flex items-center justify-between gap-4 pb-3">
+                      <div className="min-w-0">
+                        <h2 className="text-xl font-bold mb-1">Phase: {selectedPhase.phase_name}</h2>
+                        {selectedPhase.description && (
+                          <p className="text-sm text-gray-600">{selectedPhase.description}</p>
+                        )}
+                        <div className="text-sm text-gray-500 mt-1">
+                          {selectedPhase.duration_days && `Duration: ${selectedPhase.duration_days} days`}
+                          {selectedPhase.start_offset_days > 0 &&
+                            ` | Start: +${selectedPhase.start_offset_days} days`}
                         </div>
                       </div>
-                    </div>
-
-                    {/* Kanban Board */}
-                    <div className={styles.kanbanWrapper}>
-                      {sortedStatusMappings.length === 0 ? (
-                        <div className="text-center py-8 text-gray-500">
-                          <p>No status columns defined</p>
-                          <Button
-                            id="add-status-columns-empty"
-                            variant="outline"
-                            className="mt-4"
-                            onClick={() => setShowStatusManager(true)}
-                          >
-                            <Settings className="h-4 w-4 mr-2" />
-                            Add Status Columns
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className={styles.kanbanBoard}>
-                          {sortedStatusMappings.map((statusMapping, index) => {
-                            const isFirstColumn = index === 0;
-                            const statusTasks = phaseTasks.filter(
-                              (task) =>
-                                task.template_status_mapping_id ===
-                                  statusMapping.template_status_mapping_id ||
-                                (isFirstColumn && !task.template_status_mapping_id)
-                            );
-
-                            const displayName =
-                              statusMapping.status_name || statusMapping.custom_status_name || 'Status';
-                            const statusColor = statusMapping.color || '#6B7280';
-
-                            return (
-                              <StatusColumn
-                                key={statusMapping.template_status_mapping_id}
-                                statusMapping={statusMapping}
-                                displayName={displayName}
-                                statusColor={statusColor}
-                                tasks={statusTasks}
-                                lightenColor={lightenColor}
-                                onTaskDragStart={handleTaskDragStart}
-                                onTaskDragEnd={handleTaskDragEnd}
-                                onTaskDrop={handleTaskDrop}
-                                onEditTask={handleEditTask}
-                                onDeleteTask={handleDeleteTask}
-                                onAddTask={handleAddTask}
-                                onAssigneeChange={handleAssigneeChange}
-                                draggedTaskId={draggedTaskId}
-                                users={users}
-                                priorities={priorities}
-                                taskAssignments={taskAssignments}
-                                taskTypes={taskTypes}
-                                checklistItems={checklistItems}
-                                dependencies={dependencies}
-                                allTasks={tasks}
-                                avatarUrls={avatarUrls}
-                                teamNames={teamNames}
-                                teamAvatarUrls={teamAvatarUrls}
+                      <div className="flex items-center gap-4 flex-shrink-0">
+                        {/* Search */}
+                        {showSearchBar ? (
+                          <div className="flex items-center gap-1">
+                            <div className="relative">
+                              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                              <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Search tasks..."
+                                className="pl-7 pr-2 py-1 text-sm border border-gray-300 dark:border-[rgb(var(--color-border-200))] rounded-md w-48 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
+                                autoFocus
                               />
-                            );
-                          })}
-                        </div>
-                      )}
+                            </div>
+                            <Button
+                              id="close-search-bar"
+                              variant="ghost"
+                              size="sm"
+                              className="p-1 h-auto w-auto text-gray-400 hover:text-gray-600"
+                              onClick={() => { setShowSearchBar(false); setSearchQuery(''); }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Tooltip content="Search tasks">
+                            <Button
+                              id="open-search-bar"
+                              variant="ghost"
+                              size="sm"
+                              className="p-1.5 h-auto w-auto text-gray-400 hover:text-gray-600"
+                              onClick={() => setShowSearchBar(true)}
+                            >
+                              <Search className="h-4 w-4" />
+                            </Button>
+                          </Tooltip>
+                        )}
+                        {/* Zoom */}
+                        <KanbanZoomControl
+                          zoomLevel={kanbanZoomLevel}
+                          onZoomChange={handleZoomChange}
+                        />
+                        {/* Sticky status names toggle */}
+                        <Tooltip content={showStickyStatusNames ? "Hide sticky status names" : "Show sticky status names"}>
+                          <Button
+                            id="sticky-status-names-toggle"
+                            variant="ghost"
+                            size="sm"
+                            className={`p-1.5 h-auto w-auto transition-colors ${
+                              showStickyStatusNames
+                                ? 'bg-primary-100 text-primary-600'
+                                : 'text-gray-400 hover:text-gray-600'
+                            }`}
+                            onClick={handleToggleStickyStatusNames}
+                            aria-label={showStickyStatusNames ? "Hide sticky status names" : "Show sticky status names"}
+                          >
+                            <Columns3 className="h-4 w-4" />
+                          </Button>
+                        </Tooltip>
+                        {/* Pin header toggle */}
+                        <Tooltip content={isHeaderPinned ? "Unpin header" : "Pin header to top"}>
+                          <Button
+                            id="pin-header-toggle"
+                            variant="ghost"
+                            size="sm"
+                            className={`p-1.5 h-auto w-auto transition-colors ${
+                              isHeaderPinned
+                                ? 'bg-primary-100 text-primary-600'
+                                : 'text-gray-400 hover:text-gray-600'
+                            }`}
+                            onClick={handleToggleHeaderPinned}
+                            aria-label={isHeaderPinned ? "Unpin header" : "Pin header to top"}
+                          >
+                            <Pin className={`h-4 w-4 ${isHeaderPinned ? 'fill-current' : ''}`} />
+                          </Button>
+                        </Tooltip>
+                      </div>
+                    </div>
+                  )}
+                  {/* Proxy scrollbar */}
+                  <div className={styles.kanbanScrollbarProxy} ref={scrollbarProxyRef}>
+                    <div className={styles.kanbanScrollbarProxyInner} style={{ width: boardScrollWidth }} />
+                  </div>
+                </div>
+                {/* Sticky status strip */}
+                {showStickyStatusNames && selectedPhase && (
+                  <div
+                    className={styles.kanbanStatusStripSticky}
+                    style={{ top: isHeaderPinned ? `${kanbanHeaderHeight}px` : 0 }}
+                  >
+                    <div className={styles.kanbanStatusStripScroller} ref={stickyStatusStripRef}>
+                      <div className={styles.kanbanStatusStripTrack}>
+                        {sortedStatusMappings.map((statusMapping) => {
+                          const displayName = statusMapping.status_name || statusMapping.custom_status_name || 'Status';
+                          const statusColor = statusMapping.color || '#6B7280';
+                          const { itemStyle, countStyle } = getStatusStripStyles(statusColor);
+                          return (
+                            <div
+                              key={statusMapping.template_status_mapping_id}
+                              className={styles.kanbanStatusStripItem}
+                              style={{
+                                ...itemStyle,
+                                width: `${kanbanColumnWidth}px`,
+                                minWidth: `${kanbanColumnWidth}px`,
+                                maxWidth: `${kanbanColumnWidth}px`,
+                              }}
+                              title={displayName}
+                            >
+                              <span className={styles.kanbanStatusStripName}>
+                                {displayName}
+                              </span>
+                              <Button
+                                id={`sticky-add-task-${statusMapping.template_status_mapping_id}`}
+                                variant="default"
+                                size="sm"
+                                onClick={() => handleAddTask(statusMapping.template_status_mapping_id)}
+                                disabled={!selectedPhase}
+                                tooltipText="Add Task"
+                                tooltip={true}
+                                className="!w-5 !h-5 !p-0 !min-w-0 flex-shrink-0"
+                              >
+                                <Plus className="w-3 h-3 text-white" />
+                              </Button>
+                              <span className={styles.kanbanStatusStripCount} style={countStyle}>
+                                {statusTaskCounts[statusMapping.template_status_mapping_id] ?? 0}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 )}
+                {/* Scrollable kanban content */}
+                <div
+                  className={styles.kanbanContainer}
+                  ref={kanbanBoardRef}
+                  data-kanban-container="true"
+                  style={{ overflowY: 'visible', flex: '0 0 auto' }}
+                >
+                  {!selectedPhase ? (
+                    <div className="flex items-center justify-center h-64 bg-gray-100 rounded-lg">
+                      <div className="text-center">
+                        <p className="text-xl text-gray-600">
+                          {phases.length === 0
+                            ? 'Add a phase to get started'
+                            : 'Select a phase to view tasks'}
+                        </p>
+                      </div>
+                    </div>
+                  ) : sortedStatusMappings.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>No status columns defined</p>
+                      <Button
+                        id="add-status-columns-empty"
+                        variant="outline"
+                        className="mt-4"
+                        onClick={() => setShowStatusManager(true)}
+                      >
+                        <Settings className="h-4 w-4 mr-2" />
+                        Add Status Columns
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className={styles.kanbanWrapper} style={{ height: 'auto', minHeight: 'auto' }}>
+                      <div
+                        className={styles.kanbanBoard}
+                        style={{ height: 'auto', minHeight: 'auto', alignItems: 'flex-start' }}
+                      >
+                        {sortedStatusMappings.map((statusMapping, index) => {
+                          const isFirstColumn = index === 0;
+                          const statusTasks = filteredPhaseTasks.filter(
+                            (task) =>
+                              task.template_status_mapping_id ===
+                                statusMapping.template_status_mapping_id ||
+                              (isFirstColumn && !task.template_status_mapping_id)
+                          );
+
+                          const displayName =
+                            statusMapping.status_name || statusMapping.custom_status_name || 'Status';
+                          const statusColor = statusMapping.color || '#6B7280';
+                          const statusIcon = getTemplateStatusIcon(statusMapping);
+
+                          return (
+                            <TemplateStatusColumn
+                              key={statusMapping.template_status_mapping_id}
+                              statusMapping={statusMapping}
+                              displayName={displayName}
+                              statusColor={statusColor}
+                              tasks={statusTasks}
+                              lightenColor={lightenColor}
+                              statusIcon={statusIcon}
+                              onTaskDragStart={handleTaskDragStart}
+                              onTaskDragEnd={handleTaskDragEnd}
+                              onTaskDrop={handleTaskDrop}
+                              onEditTask={handleEditTask}
+                              onDeleteTask={handleDeleteTaskClick}
+                              onAddTask={handleAddTask}
+                              onAssigneeChange={handleAssigneeChange}
+                              draggedTaskId={draggedTaskId}
+                              users={users}
+                              priorities={priorities}
+                              taskAssignments={taskAssignments}
+                              taskTypes={taskTypes}
+                              checklistItems={checklistItems}
+                              dependencies={dependencies}
+                              allTasks={tasks}
+                              avatarUrls={avatarUrls}
+                              teamNames={teamNames}
+                              teamAvatarUrls={teamAvatarUrls}
+                              columnWidth={kanbanColumnWidth}
+                              cardGap={kanbanCardGap}
+                              zoomLevel={kanbanZoomLevel}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -1218,12 +1664,13 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
 // STATUS COLUMN COMPONENT
 // ============================================================
 
-interface StatusColumnProps {
+interface TemplateStatusColumnProps {
   statusMapping: IProjectTemplateStatusMapping;
   displayName: string;
   statusColor: string;
   tasks: IProjectTemplateTask[];
   lightenColor: (hex: string, percent: number) => string;
+  statusIcon: React.ReactNode;
   onTaskDragStart: (e: React.DragEvent, taskId: string) => void;
   onTaskDragEnd: () => void;
   onTaskDrop: (
@@ -1247,14 +1694,18 @@ interface StatusColumnProps {
   avatarUrls: Record<string, string | null>;
   teamNames?: Record<string, string>;
   teamAvatarUrls?: Record<string, string | null>;
+  columnWidth?: number;
+  cardGap?: number;
+  zoomLevel?: number;
 }
 
-function StatusColumn({
+function TemplateStatusColumn({
   statusMapping,
   displayName,
   statusColor,
   tasks,
   lightenColor,
+  statusIcon,
   onTaskDragStart,
   onTaskDragEnd,
   onTaskDrop,
@@ -1273,7 +1724,10 @@ function StatusColumn({
   avatarUrls,
   teamNames,
   teamAvatarUrls,
-}: StatusColumnProps) {
+  columnWidth = 350,
+  cardGap = 8,
+  zoomLevel = 50,
+}: TemplateStatusColumnProps) {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
   const [dropIndicatorPosition, setDropIndicatorPosition] = useState<number | null>(null);
@@ -1344,6 +1798,12 @@ function StatusColumn({
         isDraggedOver && draggedTaskId ? 'border-purple-500 ' + styles.dragOver : ''
       }`}
       style={{
+        width: `${columnWidth}px`,
+        minWidth: `${columnWidth}px`,
+        maxWidth: `${columnWidth}px`,
+        height: 'auto',
+        maxHeight: 'none',
+        alignSelf: 'flex-start',
         backgroundColor: isDark ? darkenColor(statusColor, 0.75) : lightenColor(statusColor, 0.85),
         borderColor: isDraggedOver && draggedTaskId ? undefined : (isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.70))
       }}
@@ -1352,86 +1812,93 @@ function StatusColumn({
       onDrop={handleDrop}
     >
       {/* Status Column Header */}
-      <div className="font-bold text-sm p-3 rounded-t-lg flex items-center justify-between relative">
-        <div
-          className="flex rounded-[20px] border-2 shadow-sm items-center ps-3 py-3 pe-4"
-          style={{
-            backgroundColor: isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.7),
-            borderColor: isDark ? darkenColor(statusColor, 0.40) : lightenColor(statusColor, 0.4),
-          }}
-        >
-          <Circle className="w-4 h-4 mr-2" fill={statusColor} stroke={statusColor} />
-          <span className="ml-2">{displayName}</span>
-        </div>
-        <div className={styles.statusHeader}>
-          <Button
-            id={`add-task-${statusMapping.template_status_mapping_id}`}
-            variant="default"
-            size="sm"
-            onClick={() => onAddTask(statusMapping.template_status_mapping_id)}
-            tooltipText="Add Task"
-            className="!w-6 !h-6 !p-0 !min-w-0"
-          >
-            <Plus className="w-4 h-4 text-white" />
-          </Button>
-          <span
-            className="text-xs font-medium px-2 py-0.5 rounded-full"
+      <div className={`font-bold ${zoomLevel <= 30 ? 'text-xs p-2' : 'text-sm p-3'} rounded-t-lg`}>
+        <div className="flex items-center justify-between gap-2">
+          <div
+            className={`${zoomLevel <= 30 ? 'rounded-xl border px-2 py-1.5' : 'rounded-2xl border-2 ps-3 py-3 pe-4'} flex items-center min-w-0 flex-1 shadow-sm`}
             style={{
               backgroundColor: isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.70),
-              color: isDark ? lightenColor(statusColor, 0.40) : statusColor
+              borderColor: isDark ? darkenColor(statusColor, 0.40) : lightenColor(statusColor, 0.40),
             }}
           >
-            {sortedTasks.length}
-          </span>
+            <span className="flex-shrink-0">{statusIcon}</span>
+            <span className={`${zoomLevel <= 30 ? 'ml-1.5 text-xs leading-tight' : 'ml-2'} truncate`}>
+              {displayName}
+            </span>
+          </div>
+          <div className={`${styles.statusHeader} flex-shrink-0 flex items-center`}>
+            <Button
+              id={`add-task-${statusMapping.template_status_mapping_id}`}
+              variant="default"
+              size="sm"
+              onClick={() => onAddTask(statusMapping.template_status_mapping_id)}
+              tooltipText="Add Task"
+              className={zoomLevel <= 30 ? '!w-5 !h-5 !p-0 !min-w-0' : '!w-6 !h-6 !p-0 !min-w-0'}
+            >
+              <Plus className={zoomLevel <= 30 ? 'w-3 h-3 text-white' : 'w-4 h-4 text-white'} />
+            </Button>
+            <span
+              className={`${zoomLevel <= 30 ? 'text-[10px] px-1.5' : 'text-xs px-2'} font-medium py-0.5 rounded-full`}
+              style={{
+                backgroundColor: isDark ? darkenColor(statusColor, 0.60) : lightenColor(statusColor, 0.70),
+                color: isDark ? lightenColor(statusColor, 0.40) : statusColor
+              }}
+            >
+              {sortedTasks.length}
+            </span>
+          </div>
         </div>
       </div>
 
       {/* Tasks in this status */}
-      <div className={styles.kanbanTasks}>
-        <div className="space-y-2">
-          {sortedTasks.map((task, index) => (
-            <div key={task.template_task_id}>
-              {/* Drop placeholder before task */}
-              <div
-                className={`${styles.dropPlaceholder} ${
-                  dropIndicatorPosition === index && draggedTaskId ? styles.visible : ''
-                }`}
-              />
-              <TaskCard
-                task={task}
-                onDragStart={onTaskDragStart}
-                onDragEnd={onTaskDragEnd}
-                onEdit={onEditTask}
-                onDelete={onDeleteTask}
-                onAssigneeChange={onAssigneeChange}
-                isDragging={draggedTaskId === task.template_task_id}
-                users={users}
-                priorities={priorities}
-                taskAssignments={taskAssignments.filter(
-                  (a) => a.template_task_id === task.template_task_id
-                )}
-                taskType={taskTypes.find((t) => t.type_key === task.task_type_key)}
-                checklistItemsCount={checklistItems.filter(
-                  (c) => c.template_task_id === task.template_task_id
-                ).length}
-                taskDependencies={{
-                  predecessors: dependencies.filter(d => d.successor_task_id === task.template_task_id),
-                  successors: dependencies.filter(d => d.predecessor_task_id === task.template_task_id)
-                }}
-                allTasks={allTasks}
-                avatarUrls={avatarUrls}
-                teamNames={teamNames}
-                teamAvatarUrls={teamAvatarUrls}
-              />
-            </div>
-          ))}
-          {/* Drop placeholder at end */}
-          <div
-            className={`${styles.dropPlaceholder} ${
-              dropIndicatorPosition === sortedTasks.length && draggedTaskId ? styles.visible : ''
-            }`}
-          />
-        </div>
+      <div
+        className={`${styles.kanbanTasks} ${styles.taskList}`}
+        data-kanban-column-tasks="true"
+        style={{ overflowY: 'visible', flex: '0 0 auto', gap: `${cardGap}px` }}
+      >
+        {sortedTasks.map((task, index) => (
+          <div key={task.template_task_id}>
+            {/* Drop placeholder before task */}
+            <div
+              className={`${styles.dropPlaceholder} ${
+                dropIndicatorPosition === index && draggedTaskId ? styles.visible : ''
+              }`}
+            />
+            <TaskCard
+              task={task}
+              onDragStart={onTaskDragStart}
+              onDragEnd={onTaskDragEnd}
+              onEdit={onEditTask}
+              onDelete={onDeleteTask}
+              onAssigneeChange={onAssigneeChange}
+              isDragging={draggedTaskId === task.template_task_id}
+              users={users}
+              priorities={priorities}
+              taskAssignments={taskAssignments.filter(
+                (a) => a.template_task_id === task.template_task_id
+              )}
+              taskType={taskTypes.find((t) => t.type_key === task.task_type_key)}
+              checklistItemsCount={checklistItems.filter(
+                (c) => c.template_task_id === task.template_task_id
+              ).length}
+              taskDependencies={{
+                predecessors: dependencies.filter(d => d.successor_task_id === task.template_task_id),
+                successors: dependencies.filter(d => d.predecessor_task_id === task.template_task_id)
+              }}
+              allTasks={allTasks}
+              avatarUrls={avatarUrls}
+              teamNames={teamNames}
+              teamAvatarUrls={teamAvatarUrls}
+              zoomLevel={zoomLevel}
+            />
+          </div>
+        ))}
+        {/* Drop placeholder at end */}
+        <div
+          className={`${styles.dropPlaceholder} ${
+            dropIndicatorPosition === sortedTasks.length && draggedTaskId ? styles.visible : ''
+          }`}
+        />
       </div>
     </div>
   );
@@ -1459,6 +1926,7 @@ interface TaskCardProps {
   avatarUrls: Record<string, string | null>;
   teamNames?: Record<string, string>;
   teamAvatarUrls?: Record<string, string | null>;
+  zoomLevel?: number;
 }
 
 function TaskCard({
@@ -1479,9 +1947,14 @@ function TaskCard({
   avatarUrls,
   teamNames = {},
   teamAvatarUrls = {},
+  zoomLevel = 50,
 }: TaskCardProps) {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const [isTitleExpanded, setIsTitleExpanded] = useState(false);
   const { ref: descriptionRef, isTruncated: isDescriptionTruncated } = useTruncationDetection<HTMLParagraphElement>();
+  const { ref: titleRef, isTruncated: isTitleTruncated } = useTruncationDetection<HTMLDivElement>();
+  const zoomScales = calculateZoomScales(zoomLevel);
+  const isCompact = zoomLevel <= 30;
 
   const handleDragStart = (e: React.DragEvent) => {
     document.body.classList.add('dragging-task');
@@ -1511,26 +1984,26 @@ function TaskCard({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={() => onEdit(task)}
-      className={`${styles.taskCard} relative bg-white dark:bg-[rgb(var(--color-card))] border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg p-3 shadow-sm transition-all duration-200 flex flex-col gap-1 cursor-pointer hover:border-gray-300 dark:hover:border-[rgb(var(--color-border-300))] ${
+      className={`${styles.taskCard} relative bg-white dark:bg-[rgb(var(--color-card))] border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg shadow-sm transition-all duration-200 flex flex-col cursor-pointer hover:shadow-md ${zoomScales.cardPadding} ${zoomScales.cardGap} ${
         isDragging ? styles.dragging : ''
       }`}
     >
       {/* Task type indicator */}
-      <div className="absolute top-2 left-2" title={taskType?.type_name || taskTypeKey}>
-        <Icon className="w-4 h-4" style={{ color: iconColor }} />
+      <div className={`absolute ${zoomLevel <= 15 ? 'top-1 left-1' : 'top-2 left-2'}`} title={taskType?.type_name || taskTypeKey}>
+        <Icon className={zoomLevel <= 15 ? 'w-3 h-3' : 'w-4 h-4'} style={{ color: iconColor }} />
       </div>
 
       {/* Action Menu Button */}
-      <div className="absolute top-1 right-1 z-10">
+      <div className={`absolute ${zoomLevel <= 15 ? 'top-0.5 right-0.5' : 'top-1 right-1'} z-10`}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
             <Button
               id={`task-actions-${task.template_task_id}`}
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0"
+              className={zoomLevel <= 15 ? 'h-5 w-5 p-0' : 'h-6 w-6 p-0'}
             >
-              <MoreVertical className="h-4 w-4" />
+              <MoreVertical className={zoomLevel <= 15 ? 'h-3 w-3' : 'h-4 w-4'} />
               <span className="sr-only">Task Actions</span>
             </Button>
           </DropdownMenuTrigger>
@@ -1551,50 +2024,79 @@ function TaskCard({
       </div>
 
       {/* Task name and priority */}
-      <div className="flex items-center gap-2 mb-1 w-full px-1 mt-5">
-        <div className="font-semibold text-lg flex-1">{task.task_name}</div>
-        {priority && (
-          <div className="flex items-center gap-1 shrink-0">
-            <div
-              className="w-2.5 h-2.5 rounded-full"
-              style={{ backgroundColor: priority.color || '#6B7280' }}
-              title={`Priority level: ${priority.priority_name}`}
-            />
+      <div className={`${isCompact ? '' : 'mb-1'} w-full px-1 ${zoomLevel <= 15 ? 'mt-3' : zoomLevel <= 30 ? 'mt-4' : 'mt-6'}`}>
+        <div className="flex items-center gap-2">
+          <div
+            ref={titleRef}
+            className={`font-semibold ${zoomScales.titleSize} flex-1 ${!isTitleExpanded ? 'line-clamp-4' : ''}`}
+          >
+            {task.task_name}
           </div>
+          {priority && (
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <div
+                className={`${zoomLevel <= 15 ? 'w-2 h-2' : 'w-3 h-3'} rounded-full`}
+                style={{ backgroundColor: priority.color || '#6B7280' }}
+                title={`Priority level: ${priority.priority_name}`}
+              />
+              {zoomLevel > 15 && (
+                <span className={`${zoomScales.metaSize} text-gray-600 dark:text-gray-400`}>
+                  {priority.priority_name}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+        {(isTitleTruncated || isTitleExpanded) && (
+          <Button
+            id={`toggle-title-${task.template_task_id}`}
+            variant="ghost"
+            size="sm"
+            className={`${zoomScales.metaSize} text-purple-600 hover:text-purple-700 font-medium p-0 h-auto w-auto ${isCompact ? '' : 'mt-1'}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsTitleExpanded(!isTitleExpanded);
+            }}
+          >
+            {isTitleExpanded ? 'See less' : 'See more'}
+          </Button>
         )}
       </div>
 
       {/* Description */}
-      {task.description && (
-        <div className="mb-1 px-1">
+      {task.description && zoomScales.showDescription && (
+        <div className={isCompact ? 'mb-0.5 px-1' : 'mb-2 px-1'}>
           <p
             ref={descriptionRef}
-            className={`text-sm text-gray-600 dark:text-gray-400 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
+            className={`${zoomScales.descSize} text-gray-600 dark:text-gray-400 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
           >
             {task.description}
           </p>
           {(isDescriptionTruncated || isDescriptionExpanded) && (
-            <button
+            <Button
+              id={`toggle-desc-${task.template_task_id}`}
+              variant="ghost"
+              size="sm"
+              className={`${zoomScales.metaSize} text-purple-600 hover:text-purple-700 font-medium p-0 h-auto w-auto ${isCompact ? '' : 'mt-1'}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setIsDescriptionExpanded(!isDescriptionExpanded);
               }}
-              className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-1"
             >
               {isDescriptionExpanded ? 'See less' : 'See more'}
-            </button>
+            </Button>
           )}
         </div>
       )}
 
       {/* Assignee picker */}
-      <div className="flex items-center gap-2 px-1" onClick={(e) => e.stopPropagation()}>
+      <div className={`flex items-center ${zoomLevel <= 30 ? 'gap-1' : 'gap-2'} px-1`} onClick={(e) => e.stopPropagation()}>
         <UserPicker
           value={task.assigned_to || ''}
           onValueChange={(newAssigneeId: string) =>
             onAssigneeChange(task.template_task_id, newAssigneeId || null)
           }
-          size="sm"
+          size={zoomLevel <= 30 ? 'xs' : 'sm'}
           users={users}
           getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
         />
@@ -1634,7 +2136,7 @@ function TaskCard({
             }
           >
             <span
-              className="text-xs font-medium cursor-help px-1.5 py-0.5 rounded"
+              className={`font-medium cursor-help rounded ${zoomLevel <= 30 ? 'text-[10px] px-1 py-0.5' : 'text-xs px-1.5 py-0.5'}`}
               style={{
                 color: 'rgb(var(--color-primary-500))',
                 backgroundColor: 'rgb(var(--color-primary-50))'
@@ -1647,20 +2149,22 @@ function TaskCard({
       </div>
 
       {/* Bottom row: estimated hours, duration, checklist, dependencies */}
-      <div className="flex items-center justify-between text-xs text-gray-500 px-1 mt-1">
+      <div className={`flex items-center justify-between px-1 ${zoomScales.metaSize} text-gray-500 dark:text-gray-400 ${isCompact ? 'mt-0.5' : 'mt-1'}`}>
         <div className="flex items-center gap-2">
           {task.estimated_hours && (
-            <span className="flex items-center gap-1 bg-gray-100 px-1.5 py-0.5 rounded">
+            <span className="flex items-center gap-1 bg-gray-50 dark:bg-[rgb(var(--color-border-100))] px-2 py-1 rounded">
               <Clock className="w-3 h-3" />
               {Number(task.estimated_hours) / 60}h
             </span>
           )}
           {task.duration_days && (
-            <span className="bg-gray-100 px-1.5 py-0.5 rounded">{task.duration_days}d</span>
+            <span className="bg-gray-50 dark:bg-[rgb(var(--color-border-100))] px-2 py-1 rounded">{task.duration_days}d</span>
           )}
+        </div>
+        <div className="flex items-center gap-2">
           {checklistItemsCount > 0 && (
             <span
-              className="flex items-center gap-1 bg-gray-100 px-1.5 py-0.5 rounded"
+              className="flex items-center gap-1 bg-gray-50 dark:bg-[rgb(var(--color-border-100))] px-2 py-1 rounded"
               title={`${checklistItemsCount} checklist item${checklistItemsCount > 1 ? 's' : ''}`}
             >
               <CheckSquare className="w-3 h-3" />

@@ -94,6 +94,39 @@ Controls access to the Tactical RMM integration configuration UI.
 - When disabled (default): Tactical RMM configuration is hidden from the RMM setup screen.
 - When enabled: Tactical RMM appears as a selectable RMM provider (and its configuration UI is shown).
 
+### 7. `knowledge-base`
+Controls access to the Knowledge Base feature on both MSP and Client Portal.
+
+**Affected Areas:**
+- **MSP Portal:**
+  - Documents → Knowledge Base sub-item in sidebar (hidden when disabled, Documents becomes a direct link)
+  - Knowledge Base page at `/msp/knowledge-base`
+  - Knowledge Base Review page at `/msp/knowledge-base/review`
+
+- **Client Portal:**
+  - Knowledge Base navigation link (hidden when disabled)
+  - Knowledge Base page at `/client-portal/knowledge-base`
+
+**Behavior:**
+- When disabled: Navigation links are hidden; pages show construction placeholder if accessed directly.
+
+### 8. `document-folder-templates`
+Controls access to new document features: client portal documents, folder structure configuration, and share links.
+
+**Affected Areas:**
+- **Client Portal:**
+  - Documents navigation link (hidden when disabled)
+  - Documents page at `/client-portal/documents`
+
+- **MSP Portal:**
+  - Settings gear button on Documents page (hidden when disabled)
+  - Document Templates Settings panel
+  - Share button on document storage cards (hidden when disabled)
+  - Share controls in document list view (hidden when disabled)
+
+**Behavior:**
+- When disabled: Client portal documents nav link is hidden (page shows construction placeholder if accessed directly). Folder templates config and share link UI are completely hidden.
+
 ## Implementation Details
 
 ### User Identification

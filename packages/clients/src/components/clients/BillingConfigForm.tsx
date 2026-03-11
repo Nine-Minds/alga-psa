@@ -9,6 +9,7 @@ import { FileText, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
+import QuickAddContact from '../contacts/QuickAddContact';
 
 interface BillingConfigFormProps {
     billingConfig: {
@@ -39,6 +40,12 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
     const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]); // Added
     const [isLoadingTaxRegions, setIsLoadingTaxRegions] = useState(true); // Added
     const [errorTaxRegions, setErrorTaxRegions] = useState<string | null>(null); // Added
+    const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
+    const [billingContacts, setBillingContacts] = useState<IContact[]>(contacts);
+
+    useEffect(() => {
+        setBillingContacts(contacts);
+    }, [contacts]);
 
     useEffect(() => {
         const loadTemplateData = async () => { // Renamed function
@@ -134,7 +141,7 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
                         </label>
                         <ContactPicker
                             id="client-billing-contact-select"
-                            contacts={contacts}
+                            contacts={billingContacts}
                             onValueChange={(contactId: string) => { // Use onValueChange and add type
                                 handleSelectChange('billing_contact_id')(contactId);
                                 // Clear billing email if contact is selected, keep it if contact is cleared
@@ -145,6 +152,27 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
                             value={billingConfig.billing_contact_id || ''}
                             clientId={clientId}
                             // Removed filterState, onFilterStateChange, and fitContent pp ps
+                            onAddNew={() => setIsQuickAddContactOpen(true)}
+                        />
+                        <QuickAddContact
+                            isOpen={isQuickAddContactOpen}
+                            onClose={() => setIsQuickAddContactOpen(false)}
+                            onContactAdded={(newContact) => {
+                                setBillingContacts((prevContacts) => {
+                                    const existingIndex = prevContacts.findIndex((contact) => contact.contact_name_id === newContact.contact_name_id);
+                                    if (existingIndex >= 0) {
+                                        const nextContacts = [...prevContacts];
+                                        nextContacts[existingIndex] = newContact;
+                                        return nextContacts;
+                                    }
+                                    return [...prevContacts, newContact];
+                                });
+                                handleSelectChange('billing_contact_id')(newContact.contact_name_id);
+                                handleSelectChange('billing_email')('');
+                                setIsQuickAddContactOpen(false);
+                            }}
+                            clients={[]}
+                            selectedClientId={clientId}
                         />
                     </div>
                     <div className="space-y-2">

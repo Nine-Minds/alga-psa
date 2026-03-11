@@ -58,7 +58,12 @@ export function createClientWithContacts() {
   const contacts = Array.from({ length: faker.number.int({ min: 1, max: 5 }) }, () => ({
     full_name: faker.person.fullName(),
     email: faker.internet.email(),
-    phone_number: faker.phone.number(),
+    phone_numbers: [{
+      phone_number: faker.phone.number(),
+      canonical_type: 'work',
+      is_default: true,
+      display_order: 0,
+    }],
     role: faker.person.jobTitle()
   }));
 

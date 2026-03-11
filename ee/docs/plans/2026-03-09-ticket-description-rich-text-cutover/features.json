@@ -1,0 +1,110 @@
+[
+  {
+    "id": "F001",
+    "description": "Replace the ticket description edit surface with the shared `TextEditor` used for ticket comments.",
+    "implemented": true,
+    "prdRefs": ["FR-001"]
+  },
+  {
+    "id": "F002",
+    "description": "Keep ticket description read mode on `RichTextViewer` while making edit mode rich text.",
+    "implemented": true,
+    "prdRefs": ["FR-002", "Users and Primary Flows"]
+  },
+  {
+    "id": "F003",
+    "description": "Load legacy plain-text descriptions into the editor as a paragraph fallback instead of failing to parse.",
+    "implemented": true,
+    "prdRefs": ["FR-003", "Rollout / Migration"]
+  },
+  {
+    "id": "F004",
+    "description": "Load previously-saved serialized BlockNote description JSON into the editor without data loss.",
+    "implemented": true,
+    "prdRefs": ["FR-004", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F005",
+    "description": "Persist description saves as serialized BlockNote JSON in `ticket.attributes.description` through the existing `onUpdateDescription(content: string)` contract.",
+    "implemented": true,
+    "prdRefs": ["FR-005", "Data / API / Integrations"]
+  },
+  {
+    "id": "F006",
+    "description": "Enable HTML-to-markdown normalization and markdown paste behavior in ticket description editing through the shared editor path.",
+    "implemented": true,
+    "prdRefs": ["FR-006", "Goals"]
+  },
+  {
+    "id": "F007",
+    "description": "Support pasted clipboard image upload in the description editor using the existing ticket document upload pipeline.",
+    "implemented": true,
+    "prdRefs": ["FR-007", "Users and Primary Flows"]
+  },
+  {
+    "id": "F008",
+    "description": "Persist description image blocks as document-backed references that render correctly after save and reopen.",
+    "implemented": true,
+    "prdRefs": ["FR-008", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F009",
+    "description": "Enable mentions and the existing shared editor affordances in ticket description editing.",
+    "implemented": true,
+    "prdRefs": ["FR-009", "Goals"]
+  },
+  {
+    "id": "F010",
+    "description": "Prompt the user to keep or delete draft-uploaded description images when canceling description edit.",
+    "implemented": true,
+    "prdRefs": ["FR-010", "UX / UI Notes"]
+  },
+  {
+    "id": "F011",
+    "description": "Implement the description cancel keep path so edit mode closes without deleting draft-uploaded images.",
+    "implemented": true,
+    "prdRefs": ["FR-011", "Users and Primary Flows"]
+  },
+  {
+    "id": "F012",
+    "description": "Implement the description cancel delete path so only the targeted draft-uploaded images are hard-deleted and ticket documents are refreshed.",
+    "implemented": true,
+    "prdRefs": ["FR-012", "Security / Permissions"]
+  },
+  {
+    "id": "F013",
+    "description": "Extract a shared ticket rich-text parsing helper for JSON and plain-text fallback loading.",
+    "implemented": true,
+    "prdRefs": ["FR-013", "NFR-004"]
+  },
+  {
+    "id": "F014",
+    "description": "Extract a shared ticket rich-text upload/session helper for clipboard image upload, validation, draft tracking, and cancel cleanup.",
+    "implemented": true,
+    "prdRefs": ["FR-014", "NFR-004"]
+  },
+  {
+    "id": "F015",
+    "description": "Move ticket comment compose flow onto the shared ticket rich-text upload/session helper without changing its current behavior.",
+    "implemented": true,
+    "prdRefs": ["FR-015", "NFR-005"]
+  },
+  {
+    "id": "F016",
+    "description": "Move existing ticket comment edit flow onto the shared ticket rich-text helper while preserving its current cancel semantics.",
+    "implemented": true,
+    "prdRefs": ["FR-015", "UX / UI Notes"]
+  },
+  {
+    "id": "F017",
+    "description": "Keep tickets with empty, legacy plain-text, and existing rich descriptions safe to open, cancel, save, and reopen.",
+    "implemented": true,
+    "prdRefs": ["FR-016", "NFR-002"]
+  },
+  {
+    "id": "F018",
+    "description": "Add automated coverage for description rich-text authoring, image cancel flows, and comment regressions after the shared-helper extraction.",
+    "implemented": true,
+    "prdRefs": ["FR-017"]
+  }
+]

@@ -1,0 +1,188 @@
+[
+  {
+    "id": "T001",
+    "description": "Component: ticket description edit mode renders the shared `TextEditor` instead of the prior plain-text field behavior.",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "Regression: description read mode still renders through `RichTextViewer` when not editing.",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: legacy plain-text description input is converted into a single paragraph block for editor initialization.",
+    "implemented": true,
+    "featureIds": ["F003", "F013", "F017"]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: valid serialized BlockNote description JSON is parsed into blocks without mutation.",
+    "implemented": true,
+    "featureIds": ["F004", "F013"]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: malformed description JSON falls back safely to paragraph text rather than crashing edit mode.",
+    "implemented": true,
+    "featureIds": ["F003", "F013", "F017"]
+  },
+  {
+    "id": "T006",
+    "description": "UI: saving a ticket description sends serialized BlockNote JSON through `onUpdateDescription(content: string)`.",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T007",
+    "description": "DB-backed integration happy path: updating a ticket description persists the serialized BlockNote JSON string in `tickets.attributes.description` and the value round-trips on refetch.",
+    "implemented": true,
+    "featureIds": ["F005", "F017"]
+  },
+  {
+    "id": "T008",
+    "description": "DB-backed integration guard path: description update is rejected or reported correctly when the caller lacks permission to update the ticket.",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T009",
+    "description": "Editor integration: pasted markdown in the description editor is converted through the shared markdown-to-blocks path.",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T010",
+    "description": "Editor integration: pasted HTML in the description editor is normalized through the same shared editor pipeline used for comments.",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T011",
+    "description": "Contract: description editor wires the ticket clipboard-image upload callback into `TextEditor.uploadFile`.",
+    "implemented": true,
+    "featureIds": ["F007", "F014"]
+  },
+  {
+    "id": "T012",
+    "description": "Integration: pasting one clipboard image into the description editor uploads it as a ticket document and returns a document-backed view URL.",
+    "implemented": true,
+    "featureIds": ["F007", "F014"]
+  },
+  {
+    "id": "T013",
+    "description": "Integration: pasting multiple clipboard images into the description editor preserves upload order and draft tracking identity.",
+    "implemented": true,
+    "featureIds": ["F007", "F014"]
+  },
+  {
+    "id": "T014",
+    "description": "Regression: unsupported MIME types or oversized clipboard files are still rejected through the shared ticket upload validation path.",
+    "implemented": true,
+    "featureIds": ["F007", "F014", "F015"]
+  },
+  {
+    "id": "T015",
+    "description": "Render: saved description image blocks resolve to ticket document-backed URLs and display inline after save and reopen.",
+    "implemented": true,
+    "featureIds": ["F008", "F017"]
+  },
+  {
+    "id": "T016",
+    "description": "Regression: existing saved rich descriptions reopen in edit mode without losing formatting, mentions, or image blocks.",
+    "implemented": true,
+    "featureIds": ["F008", "F017"]
+  },
+  {
+    "id": "T017",
+    "description": "Editor integration: description editor enables mention search and insertion using the same ticket mention source as comments.",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T018",
+    "description": "UI: canceling description edit with draft-uploaded images opens the keep/delete confirmation dialog.",
+    "implemented": true,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T019",
+    "description": "UI: choosing keep on description cancel closes edit mode without deleting uploaded draft images.",
+    "implemented": true,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T020",
+    "description": "API integration happy path: choosing delete on description cancel hard-deletes the targeted draft-uploaded images and refreshes ticket documents.",
+    "implemented": true,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T021",
+    "description": "API integration guard path: description cancel delete refuses to delete artifacts already referenced by saved content or not deletable by the requester.",
+    "implemented": true,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T022",
+    "description": "Unit: the shared ticket rich-text parsing helper returns the default empty block for empty or missing description content.",
+    "implemented": true,
+    "featureIds": ["F013", "F017"]
+  },
+  {
+    "id": "T023",
+    "description": "Unit: the shared ticket rich-text upload/session helper tracks draft-uploaded artifacts only for flows configured to track drafts.",
+    "implemented": true,
+    "featureIds": ["F014", "F016"]
+  },
+  {
+    "id": "T024",
+    "description": "Regression: ticket comment compose flow still prompts keep/delete on cancel after moving onto the shared ticket rich-text helper.",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T025",
+    "description": "Regression: ticket comment compose save path still clears draft tracking and closes the editor after a successful submit.",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T026",
+    "description": "Regression: existing comment edit flow still uploads pasted images but does not adopt the new description cancel prompt behavior.",
+    "implemented": true,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T027",
+    "description": "Regression: tickets with no description still open the editor with an empty default block and save/cancel safely.",
+    "implemented": true,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T028",
+    "description": "Flow contract: legacy plain-text description -> edit -> save -> reopen yields rich JSON persistence and correct viewer output.",
+    "implemented": true,
+    "featureIds": ["F003", "F005", "F017"]
+  },
+  {
+    "id": "T029",
+    "description": "Flow contract: rich description with pasted image -> cancel keep preserves ticket documents but leaves saved description unchanged.",
+    "implemented": true,
+    "featureIds": ["F007", "F010", "F011"]
+  },
+  {
+    "id": "T030",
+    "description": "Flow contract: rich description with pasted image -> cancel delete removes the draft-uploaded documents and leaves saved description unchanged.",
+    "implemented": true,
+    "featureIds": ["F007", "F010", "F012"]
+  },
+  {
+    "id": "T031",
+    "description": "Regression suite: comment compose, comment edit, and description edit all route through the shared ticket rich-text helper with their intended draft-tracking modes.",
+    "implemented": true,
+    "featureIds": ["F014", "F015", "F016", "F018"]
+  }
+]

@@ -20,6 +20,10 @@
       "types": "./dist/components/index.d.ts",
       "import": "./dist/components/index.mjs",
       "require": "./dist/components/index.js"
+    },
+    "./context/*": {
+      "import": "./src/context/*.tsx",
+      "types": "./src/context/*.tsx"
     }
   },
   "scripts": {

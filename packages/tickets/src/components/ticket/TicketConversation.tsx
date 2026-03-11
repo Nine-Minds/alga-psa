@@ -41,16 +41,12 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { getContactAvatarUrlAction, getUserContactId, searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
-import { uploadDocument } from '@alga-psa/documents/actions/documentActions';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { toast } from 'react-hot-toast';
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import { deleteDraftClipboardImages } from '../../actions/comment-actions/clipboardImageDraftActions';
+import { useTicketRichTextUploadSession } from './useTicketRichTextUploadSession';
 import {
-  createClipboardImageFilename,
-  renameClipboardImageForUpload,
-  validateClipboardImageFile,
-} from '../../lib/clipboardImageUtils';
+  getStoredTicketConversationNewestFirst,
+  setStoredTicketConversationNewestFirst,
+} from './ticketConversationOrderPreference';
 
 interface TicketConversationProps {
   id?: string;
@@ -120,15 +116,32 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const NO_STATUS_CHANGE = '__no_status_change__';
   const [resolutionCloseStatusId, setResolutionCloseStatusId] = useState<string>(NO_STATUS_CHANGE);
   const [contactAvatarUrls, setContactAvatarUrls] = useState<Record<string, string | null>>({});
-  const [draftClipboardImages, setDraftClipboardImages] = useState<
-    Array<{ documentId: string; fileId: string; name: string; url: string }>
-  >([]);
-  const [showDraftCancelDialog, setShowDraftCancelDialog] = useState(false);
-  const [isDeletingDraftImages, setIsDeletingDraftImages] = useState(false);
-  const clipboardUploadSequenceRef = React.useRef(0);
 
   const internalLabel = t('conversation.internal', 'Internal');
   const resolutionLabel = t('conversation.resolution', 'Resolution');
+
+  const discardComposeEditor = React.useCallback(() => {
+    onNewCommentContentChange(DEFAULT_BLOCK);
+    setShowEditor(false);
+  }, [onNewCommentContentChange]);
+
+  const composeUploadSession = useTicketRichTextUploadSession({
+    componentLabel: 'TicketConversation',
+    ticketId: ticket.ticket_id,
+    userId: currentUser?.id,
+    trackDraftUploads: true,
+    onDocumentsChanged: onClipboardImageUploaded,
+    onDiscard: discardComposeEditor,
+  });
+
+  const existingCommentUploadSession = useTicketRichTextUploadSession({
+    componentLabel: 'TicketConversation',
+    ticketId: ticket.ticket_id,
+    userId: currentUser?.id,
+    trackDraftUploads: false,
+    onDocumentsChanged: onClipboardImageUploaded,
+    onDiscard: onClose,
+  });
 
   const handleAddCommentClick = () => {
     // Auto-check toggles based on which tab is active
@@ -163,8 +176,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       
       if (success) {
         console.log('Comment added successfully, closing editor');
-        setDraftClipboardImages([]);
-        clipboardUploadSequenceRef.current = 0;
+        composeUploadSession.resetDraftTracking();
         setShowEditor(false);
       } else {
         console.log('Comment addition failed, keeping editor open');
@@ -175,218 +187,15 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   };
 
   const handleCancelComment = () => {
-    if (draftClipboardImages.length > 0) {
-      setShowDraftCancelDialog(true);
-      return;
-    }
-
-    setDraftClipboardImages([]);
-    clipboardUploadSequenceRef.current = 0;
-    onNewCommentContentChange(DEFAULT_BLOCK);
-    setShowEditor(false);
+    composeUploadSession.requestDiscard();
   };
-
-  const handleKeepDraftClipboardImages = () => {
-    console.info('[TicketConversation] Draft cancel action: keep uploaded clipboard images', {
-      ticketId: ticket.ticket_id,
-      imageCount: draftClipboardImages.length,
-    });
-    setShowDraftCancelDialog(false);
-    setDraftClipboardImages([]);
-    clipboardUploadSequenceRef.current = 0;
-    onNewCommentContentChange(DEFAULT_BLOCK);
-    setShowEditor(false);
-  };
-
-  const handleDeleteDraftClipboardImages = async () => {
-    if (!ticket.ticket_id) {
-      toast.error('Ticket context is missing for draft image deletion.');
-      return;
-    }
-    if (draftClipboardImages.length === 0) {
-      setShowDraftCancelDialog(false);
-      setShowEditor(false);
-      return;
-    }
-
-    setIsDeletingDraftImages(true);
-    try {
-      const result = await deleteDraftClipboardImages({
-        ticketId: ticket.ticket_id,
-        documentIds: draftClipboardImages.map((image) => image.documentId),
-      });
-
-      const deletedCount = result.deletedDocumentIds.length;
-      const failedCount = result.failures.length;
-
-      console.info('[TicketConversation] Draft cancel action: delete uploaded clipboard images', {
-        ticketId: ticket.ticket_id,
-        requestedCount: draftClipboardImages.length,
-        deletedCount,
-        failedCount,
-        failures: result.failures,
-      });
-
-      if (deletedCount > 0) {
-        toast.success(`Deleted ${deletedCount} pasted image${deletedCount === 1 ? '' : 's'}.`);
-        if (onClipboardImageUploaded) {
-          await Promise.resolve(onClipboardImageUploaded());
-        }
-      }
-      if (failedCount > 0) {
-        toast.error(`Could not delete ${failedCount} pasted image${failedCount === 1 ? '' : 's'}.`);
-      }
-
-      setShowDraftCancelDialog(false);
-      setDraftClipboardImages([]);
-      clipboardUploadSequenceRef.current = 0;
-      onNewCommentContentChange(DEFAULT_BLOCK);
-      setShowEditor(false);
-    } catch (error) {
-      console.error('[TicketConversation] Failed deleting draft clipboard images:', error);
-      toast.error('Failed to delete pasted images.');
-    } finally {
-      setIsDeletingDraftImages(false);
-    }
-  };
-
-  const uploadClipboardImage = React.useCallback(
-    async (file: File, options: { trackDraftImage: boolean }): Promise<string> => {
-      const { trackDraftImage } = options;
-      if (!ticket.ticket_id) {
-        throw new Error('Ticket ID is required for clipboard image upload.');
-      }
-      if (!currentUser?.id) {
-        throw new Error('User session is required for clipboard image upload.');
-      }
-
-      const validation = validateClipboardImageFile(file);
-      if (!validation.valid) {
-        console.warn('[TicketConversation] Clipboard upload rejected by validation', {
-          ticketId: ticket.ticket_id,
-          userId: currentUser.id,
-          mimeType: file.type,
-          sizeBytes: file.size,
-          reason: validation.error,
-        });
-        throw new Error(validation.error);
-      }
-
-      const sequence = (clipboardUploadSequenceRef.current += 1);
-      const timestamp = new Date();
-      const renamedFile = renameClipboardImageForUpload({
-        file,
-        timestamp,
-        sequence,
-      });
-
-      const formData = new FormData();
-      formData.append('file', renamedFile);
-
-      const uploadResult = await uploadDocument(formData, {
-        userId: currentUser.id,
-        ticketId: ticket.ticket_id,
-      });
-
-      if (isActionPermissionError(uploadResult)) {
-        const reason = uploadResult.permissionError || 'Clipboard image upload failed.';
-        console.error(`[TicketConversation] Clipboard image upload denied: ${reason}`, {
-          ticketId: ticket.ticket_id,
-          userId: currentUser.id,
-          sequence,
-          fileName: renamedFile.name,
-          mimeType: renamedFile.type,
-          sizeBytes: renamedFile.size,
-        });
-        toast.error(reason);
-        throw new Error(reason);
-      }
-
-      if (!uploadResult.success) {
-        const reason =
-          'error' in uploadResult && typeof uploadResult.error === 'string'
-            ? uploadResult.error
-            : 'Clipboard image upload failed.';
-        console.error(`[TicketConversation] Clipboard image upload failed: ${reason}`, {
-          ticketId: ticket.ticket_id,
-          userId: currentUser.id,
-          sequence,
-          fileName: renamedFile.name,
-          mimeType: renamedFile.type,
-          sizeBytes: renamedFile.size,
-          error: 'error' in uploadResult ? uploadResult.error : undefined,
-        });
-        toast.error(reason);
-        throw new Error(reason);
-      }
-
-      const uploadedDocument = uploadResult.document;
-      const fallbackName = createClipboardImageFilename({
-        timestamp,
-        sequence,
-        mimeType: renamedFile.type,
-      });
-      const viewUrl = uploadedDocument.file_id
-        ? `/api/documents/view/${uploadedDocument.file_id}`
-        : `/api/documents/download/${uploadedDocument.document_id}`;
-
-      if (trackDraftImage) {
-        setDraftClipboardImages((previous) => {
-          const exists = previous.some((item) => item.documentId === uploadedDocument.document_id);
-          if (exists) return previous;
-          return [
-            ...previous,
-            {
-              documentId: uploadedDocument.document_id,
-              fileId: uploadedDocument.file_id || '',
-              name: uploadedDocument.document_name || fallbackName,
-              url: viewUrl,
-            },
-          ];
-        });
-      }
-
-      console.info('[TicketConversation] Clipboard image uploaded', {
-        ticketId: ticket.ticket_id,
-        userId: currentUser.id,
-        sequence,
-        documentId: uploadedDocument.document_id,
-        fileId: uploadedDocument.file_id,
-        url: viewUrl,
-      });
-
-      if (onClipboardImageUploaded) {
-        void Promise.resolve(onClipboardImageUploaded()).catch((refreshError) => {
-          console.error('[TicketConversation] Failed to refresh documents after clipboard upload', {
-            ticketId: ticket.ticket_id,
-            userId: currentUser.id,
-            documentId: uploadedDocument.document_id,
-            error: refreshError,
-          });
-        });
-      }
-
-      return viewUrl;
-    },
-    [ticket.ticket_id, currentUser?.id, onClipboardImageUploaded]
-  );
-
-  const handleClipboardImageUpload = React.useCallback(
-    async (file: File): Promise<string> => {
-      return uploadClipboardImage(file, { trackDraftImage: true });
-    },
-    [uploadClipboardImage]
-  );
-
-  const handleClipboardImageUploadForExistingComment = React.useCallback(
-    async (file: File): Promise<string> => {
-      return uploadClipboardImage(file, { trackDraftImage: false });
-    },
-    [uploadClipboardImage]
-  );
 
   const toggleCommentOrder = () => {
-    setReverseOrder(!reverseOrder);
+    setReverseOrder((previousValue) => {
+      const nextValue = !previousValue;
+      setStoredTicketConversationNewestFirst(nextValue);
+      return nextValue;
+    });
   };
   // Removed renderButtonBar function as it's no longer needed
   const handleAddNewComment = async () => {
@@ -413,6 +222,10 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       setResolutionCloseStatusId(NO_STATUS_CHANGE);
     }
   }, [showEditor, isResolutionToggle]);
+
+  useEffect(() => {
+    setReverseOrder(getStoredTicketConversationNewestFirst(defaultNewestFirst));
+  }, [defaultNewestFirst]);
 
   // Fetch contact avatar URLs for client users
   useEffect(() => {
@@ -500,7 +313,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         onEdit={() => onEdit(mergedConversation)}
         onDelete={onDelete}
         hideInternalTab={hideInternalTab}
-        uploadFile={handleClipboardImageUploadForExistingComment}
+        uploadFile={existingCommentUploadSession.uploadFile}
       />
     );
     });
@@ -697,7 +510,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                     initialContent={DEFAULT_BLOCK}
                     onContentChange={onNewCommentContentChange}
                     searchMentions={searchUsersForMentions}
-                    uploadFile={handleClipboardImageUpload}
+                    uploadFile={composeUploadSession.uploadFile}
                   />
                 </Suspense>
                 <div className="flex justify-end space-x-2 mt-1">
@@ -740,10 +553,10 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       </div>
       <ConfirmationDialog
         id={`${compId}-clipboard-draft-cancel-dialog`}
-        isOpen={showDraftCancelDialog}
-        onClose={() => setShowDraftCancelDialog(false)}
-        onConfirm={handleDeleteDraftClipboardImages}
-        onCancel={handleKeepDraftClipboardImages}
+        isOpen={composeUploadSession.showDraftCancelDialog}
+        onClose={() => composeUploadSession.setShowDraftCancelDialog(false)}
+        onConfirm={composeUploadSession.deleteTrackedDraftClipboardImages}
+        onCancel={composeUploadSession.keepDraftClipboardImages}
         title={t('conversation.clipboardDraftCancelTitle', 'Pasted Images Detected')}
         message={t(
           'conversation.clipboardDraftCancelMessage',
@@ -752,7 +565,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         confirmLabel={t('conversation.deleteUploadedImages', 'Delete Images')}
         thirdButtonLabel={t('conversation.keepUploadedImages', 'Keep Images')}
         cancelLabel={t('common.continueEditing', 'Continue Editing')}
-        isConfirming={isDeletingDraftImages}
+        isConfirming={composeUploadSession.isDeletingDraftImages}
       />
     </div>
   );

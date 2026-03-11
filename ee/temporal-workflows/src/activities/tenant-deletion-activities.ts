@@ -186,6 +186,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'workflow_task_definitions',
 
   // === LEVEL 3: Mid-level entities ===
+  // Document-related leaf tables (must come before documents)
+  'document_share_access_log', 'document_share_links',
+  'kb_article_relations', 'kb_article_reviewers', 'kb_article_templates', 'kb_articles',
+  'document_default_folders',
   // Document associations must come before documents
   'document_associations',
 
@@ -258,10 +262,14 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'permissions', 'roles', 'teams',
 
   // The correct order to avoid constraint violations:
-  // 1. Delete clients first (after NULLing account_manager)
-  // 2. Delete contacts second (after NULLing client_id, before users that reference them)
-  // 3. Delete users last (they have NOT NULL contact_id that references contacts)
+  // 0. Delete contact phone rows first (they reference contacts and custom phone types)
+  // 1. Delete custom phone type definitions after their dependent phone rows
+  // 2. Delete clients next (after NULLing account_manager)
+  // 3. Delete contacts after clients (before users that reference them)
+  // 4. Delete users last (they have NOT NULL contact_id that references contacts)
 
+  'contact_phone_numbers',
+  'contact_phone_type_definitions',
   'clients',    // Delete clients FIRST (after NULLing account_manager references)
   'contacts',   // Delete contacts SECOND (after clients, before users that have NOT NULL contact_id)
   'users',      // Delete users LAST (they have NOT NULL contact_id → contacts)

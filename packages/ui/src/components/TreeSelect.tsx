@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useSyncExternalStore, useRef } from 'react';
 import * as RadixSelect from '@radix-ui/react-select';
-import { ChevronDown, ChevronRight, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, X } from 'lucide-react';
 import { useModality } from './ModalityContext';
 import { AutomationProps } from '../ui-reflection/types';
 import { Button } from './Button';
@@ -48,6 +48,8 @@ interface TreeSelectProps<T extends string = string> extends AutomationProps {
   showReset?: boolean;
   allowEmpty?: boolean;
   modal?: boolean;
+  onAddNew?: () => void;
+  addNewLabel?: string;
 }
 
 function TreeSelect<T extends string>({
@@ -67,6 +69,8 @@ function TreeSelect<T extends string>({
   showReset = false,
   allowEmpty = false,
   modal,
+  onAddNew,
+  addNewLabel = 'Add new',
 }: TreeSelectProps<T>): React.JSX.Element {
   const { modal: parentModal } = useModality();
   const isClient = useIsClient();
@@ -244,6 +248,17 @@ function TreeSelect<T extends string>({
     Promise.resolve().then(() => {
       isHandlingInternalClick.current = false;
       setIsOpen(false);
+    });
+  };
+
+  const handleAddNew = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isHandlingInternalClick.current = true;
+    setIsOpen(false);
+    Promise.resolve().then(() => {
+      isHandlingInternalClick.current = false;
+      onAddNew?.();
     });
   };
 
@@ -473,6 +488,19 @@ function TreeSelect<T extends string>({
                 )}
                 {options.flatMap((option: TreeSelectOption<T>) => renderOption(option))}
               </RadixSelect.Viewport>
+              {onAddNew && (
+                <>
+                  <div className="border-t border-gray-200" />
+                  <button
+                    type="button"
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-primary hover:bg-gray-100 cursor-pointer"
+                    onClick={handleAddNew}
+                  >
+                    <Plus className="h-4 w-4" />
+                    {addNewLabel}
+                  </button>
+                </>
+              )}
             </RadixSelect.Content>
           </RadixSelect.Portal>
         </RadixSelect.Root>

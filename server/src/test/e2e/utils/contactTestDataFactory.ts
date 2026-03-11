@@ -1,23 +1,12 @@
 import { Knex } from 'knex';
-import { v4 as uuidv4 } from 'uuid';
 import { faker } from '@faker-js/faker';
+import { ContactModel, type CreateContactInput, type UpdateContactInput } from '@alga-psa/shared/models/contactModel';
+import type { IContact } from '@alga-psa/types';
 
 /**
  * Contact interface matching database schema
  */
-export interface TestContact {
-  contact_name_id: string;
-  full_name: string;
-  client_id: string | null;
-  phone_number: string | null;
-  email: string;
-  role: string | null;
-  created_at: string;
-  updated_at: string;
-  is_inactive: boolean;
-  notes: string | null;
-  tenant: string;
-}
+export type TestContact = IContact;
 
 /**
  * Contact creation options
@@ -30,6 +19,19 @@ export interface CreateContactOptions {
   role?: string | null;
   is_inactive?: boolean;
   notes?: string | null;
+}
+
+function buildPhoneNumbers(phoneNumber?: string | null): CreateContactInput['phone_numbers'] {
+  if (!phoneNumber?.trim()) {
+    return [];
+  }
+
+  return [{
+    phone_number: phoneNumber.trim(),
+    canonical_type: 'work',
+    is_default: true,
+    display_order: 0,
+  }];
 }
 
 /**
@@ -58,28 +60,17 @@ export async function createTestContact(
   tenant: string,
   options: CreateContactOptions = {}
 ): Promise<TestContact> {
-  const contactId = uuidv4();
-  const now = new Date().toISOString();
-  
   const contactData = generateContactData(options);
-  
-  const contact: TestContact = {
-    contact_name_id: contactId,
-    full_name: contactData.full_name!,
-    client_id: options.client_id !== undefined ? options.client_id : null,
-    phone_number: contactData.phone_number!,
-    email: contactData.email!,
-    role: contactData.role!,
-    created_at: now,
-    updated_at: now,
-    is_inactive: contactData.is_inactive!,
-    notes: contactData.notes!,
-    tenant
-  };
 
-  await db('contacts').insert(contact);
-  
-  return contact;
+  return db.transaction((trx) => ContactModel.createContact({
+    full_name: contactData.full_name || '',
+    email: contactData.email || '',
+    client_id: options.client_id !== undefined ? options.client_id || undefined : undefined,
+    phone_numbers: buildPhoneNumbers(contactData.phone_number),
+    role: contactData.role || undefined,
+    notes: contactData.notes || undefined,
+    is_inactive: contactData.is_inactive ?? false,
+  }, tenant, trx));
 }
 
 /**
@@ -247,12 +238,7 @@ export async function getTestContactById(
   tenant: string,
   contactId: string
 ): Promise<TestContact | null> {
-  const contact = await db('contacts')
-    .where('tenant', tenant)
-    .where('contact_name_id', contactId)
-    .first();
-    
-  return contact || null;
+  return db.transaction((trx) => ContactModel.getContactById(contactId, tenant, trx));
 }
 
 /**
@@ -264,14 +250,17 @@ export async function updateTestContact(
   contactId: string,
   updates: Partial<CreateContactOptions>
 ): Promise<TestContact | null> {
-  const updated = await db('contacts')
-    .where('tenant', tenant)
-    .where('contact_name_id', contactId)
-    .update({
-      ...updates,
-      updated_at: new Date().toISOString()
-    })
-    .returning('*');
-    
-  return updated[0] || null;
+  return db.transaction(async (trx) => {
+    const updateInput: UpdateContactInput = {
+      ...('full_name' in updates ? { full_name: updates.full_name } : {}),
+      ...('client_id' in updates ? { client_id: updates.client_id || undefined } : {}),
+      ...('phone_number' in updates ? { phone_numbers: buildPhoneNumbers(updates.phone_number) } : {}),
+      ...('email' in updates ? { email: updates.email || undefined } : {}),
+      ...('role' in updates ? { role: updates.role || undefined } : {}),
+      ...('is_inactive' in updates ? { is_inactive: updates.is_inactive } : {}),
+      ...('notes' in updates ? { notes: updates.notes || undefined } : {}),
+    };
+
+    return ContactModel.updateContact(contactId, updateInput, tenant, trx);
+  });
 }

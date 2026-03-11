@@ -1,0 +1,224 @@
+[
+  {
+    "id": "T001",
+    "description": "Migration: creating `contact_phone_type_definitions` enforces tenant-scoped uniqueness on normalized custom labels.",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "Migration: creating `contact_phone_numbers` enforces that exactly one of `canonical_type` or `custom_phone_type_id` is set.",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T003",
+    "description": "Migration: `contact_phone_numbers` enforces at most one default phone number per contact.",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T004",
+    "description": "Migration: backfill converts an existing scalar `contacts.phone_number` into one default `work` phone row for the same contact.",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T005",
+    "description": "Migration: backfill leaves contacts with null/empty scalar phone values with zero normalized phone rows.",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T006",
+    "description": "DB-backed integration: normalized phone values are stored in searchable form independently of punctuation/spacing in the display phone string.",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T007",
+    "description": "Type/API: shared contact types reject legacy scalar-only contact payloads and accept `phone_numbers` collections.",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T008",
+    "description": "Validation: contact create rejects a phone collection with two rows both marked as default.",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T009",
+    "description": "Validation: contact create rejects a phone collection with numbers present but no default row selected.",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T010",
+    "description": "Validation: contact create accepts canonical phone rows and one custom-type row in the same payload.",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T011",
+    "description": "Validation: contact update reuses an existing tenant custom phone type definition when the same label is entered with different case or spacing.",
+    "implemented": true,
+    "featureIds": ["F008", "F011"]
+  },
+  {
+    "id": "T012",
+    "description": "DB-backed integration: creating a contact with multiple phone rows persists the parent contact and ordered child phone rows in one transaction.",
+    "implemented": true,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T013",
+    "description": "DB-backed integration: updating a contact can replace, reorder, and re-default child phone rows without leaving orphaned or duplicate rows behind.",
+    "implemented": true,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T014",
+    "description": "DB-backed integration: a failed contact phone write rolls back both parent and child mutations.",
+    "implemented": true,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T015",
+    "description": "Read-path integration: fetching a contact returns `phone_numbers` ordered by `display_order` and exposes the correct default row.",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T016",
+    "description": "UI integration: `ContactDetails.tsx` lets a user add a second phone row, assign a custom type, switch the default row, and save successfully.",
+    "implemented": true,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T017",
+    "description": "UI validation: `ContactDetails.tsx` prevents save when multiple phone rows are marked default.",
+    "implemented": true,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T018",
+    "description": "UI integration: `ContactDetailsEdit.tsx` renders existing multiple phone rows and preserves custom type labels on reopen.",
+    "implemented": true,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T019",
+    "description": "UI regression: `ContactDetailsView.tsx` shows the derived default phone instead of expecting scalar `phone_number`.",
+    "implemented": true,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T020",
+    "description": "UI integration: `QuickAddContact.tsx` can create a contact with one default canonical phone and one additional phone row.",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T021",
+    "description": "UI integration: `QuickAddClient.tsx` creates the inline contact with the normalized phone collection and persists the chosen default phone.",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T022",
+    "description": "UI regression: contacts list rows render the default phone number when a contact has multiple phone rows.",
+    "implemented": true,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T023",
+    "description": "UI regression: client-scoped contacts list rows render the default phone number when a contact has multiple phone rows.",
+    "implemented": true,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T024",
+    "description": "Search integration: contact search by a secondary non-default phone number returns the contact.",
+    "implemented": true,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T025",
+    "description": "Sorting integration: contact list phone sorting uses the default phone number rather than an arbitrary child row.",
+    "implemented": true,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T026",
+    "description": "UI regression: `TicketProperties.tsx` shows the default contact phone when the ticket has a contact with multiple phone rows.",
+    "implemented": true,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T027",
+    "description": "CSV import integration: importing one phone column creates one default normalized contact phone row.",
+    "implemented": true,
+    "featureIds": ["F019", "F020"]
+  },
+  {
+    "id": "T028",
+    "description": "CSV export integration: exporting contacts emits the derived default phone number rather than expecting `contacts.phone_number`.",
+    "implemented": true,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T029",
+    "description": "UI copy regression: `ContactsImportDialog.tsx` preview/help text reflects the normalized model and default-phone export/import rule.",
+    "implemented": true,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T030",
+    "description": "API schema regression: contact create/update endpoints validate `phone_numbers` collections and no longer require scalar `phone_number`.",
+    "implemented": true,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T031",
+    "description": "Workflow event regression: `CONTACT_CREATED` payloads emit the new phone data shape rather than scalar `phoneNumber` only.",
+    "implemented": true,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T032",
+    "description": "Workflow event regression: `CONTACT_UPDATED` change payloads capture additions, removals, and default changes in the normalized phone model.",
+    "implemented": true,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T033",
+    "description": "Integration: Entra sync maps `mobilePhone` to canonical `mobile` and preserves at least one `businessPhones[]` entry as canonical `work`.",
+    "implemented": true,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T034",
+    "description": "Integration: when Entra supplies both mobile and business phones, the chosen default matches the agreed precedence rule.",
+    "implemented": true,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T035",
+    "description": "Regression: contact test factories and seed helpers can create contacts with normalized phone rows without writing `contacts.phone_number` directly.",
+    "implemented": true,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T036",
+    "description": "DB-backed integration: after application cutover, contact create/update/read flows succeed without reading or writing `contacts.phone_number`.",
+    "implemented": true,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T037",
+    "description": "Migration: after Migration B, the schema no longer contains `contacts.phone_number` and the migrated application test suite still passes for contact flows.",
+    "implemented": true,
+    "featureIds": ["F006", "F024"]
+  }
+]

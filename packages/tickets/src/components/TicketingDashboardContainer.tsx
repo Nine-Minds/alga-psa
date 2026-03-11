@@ -146,6 +146,8 @@ export default function TicketingDashboardContainer({
   const latestFetchRequestIdRef = useRef(0);
   const lastAppliedSearchRef = useRef<string>('');
   const isSyncingFromHistoryRef = useRef(false);
+  // R1: Track initial mount to prevent unnecessary re-fetch when server data is already present
+  const isInitialMountRef = useRef(true);
 
   const defaultSortBy = initialFilters?.sortBy ?? 'entered_at';
   const defaultSortDirection = initialFilters?.sortDirection ?? 'desc';
@@ -201,7 +203,8 @@ export default function TicketingDashboardContainer({
   const {
     value: storedPageSize,
     setValue: setStoredPageSize,
-    hasLoadedInitial: hasLoadedPageSizePreference
+    hasLoadedInitial: hasLoadedPageSizePreference,
+    isLoading: isLoadingPageSizePreference
   } = useUserPreference<number>(
     TICKETS_PAGE_SIZE_SETTING,
     {
@@ -415,12 +418,37 @@ export default function TicketingDashboardContainer({
     if (typeof window !== 'undefined') {
       const hasExplicitPageSizeInUrl = new URLSearchParams(window.location.search).has('pageSize');
       if (hasExplicitPageSizeInUrl) {
+        // URL takes precedence; clear mount flag once server pref is settled
+        if (!isLoadingPageSizePreference) {
+          isInitialMountRef.current = false;
+        }
         return;
       }
     }
 
     const normalizedPageSize = storedPageSize ?? initialPageSize;
     if (normalizedPageSize === pageSize) {
+      // R1: Only clear mount flag once the server preference is also loaded.
+      // useUserPreference loads in two phases (localStorage then server).
+      // If we clear the flag after the localStorage phase, the later server
+      // response can trigger a spurious fetch.
+      if (!isLoadingPageSizePreference) {
+        isInitialMountRef.current = false;
+      }
+      return;
+    }
+
+    // R1: During the initial mount/load phase, the server already provided data.
+    // Update state and URL to reflect the stored preference, but skip the re-fetch.
+    // Keep the flag active while the server preference is still loading so that
+    // both the localStorage read AND the server response are covered.
+    if (isInitialMountRef.current) {
+      if (!isLoadingPageSizePreference) {
+        isInitialMountRef.current = false;
+      }
+      setCurrentPage(1);
+      setPageSize(normalizedPageSize);
+      updateURLWithFilters(activeFiltersRef.current, 1, normalizedPageSize);
       return;
     }
 
@@ -430,6 +458,7 @@ export default function TicketingDashboardContainer({
     void fetchTicketsRef.current(activeFiltersRef.current, 1, normalizedPageSize);
   }, [
     hasLoadedPageSizePreference,
+    isLoadingPageSizePreference,
     storedPageSize,
     pageSize,
     initialPageSize,

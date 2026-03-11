@@ -5,6 +5,7 @@ import {
   AtSign,
   BarChart3,
   Bell,
+  BookOpen,
   Building2,
   Calendar,
   CalendarClock,
@@ -109,7 +110,10 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'Documents',
         icon: FileText,
-        href: '/msp/documents'
+        subItems: [
+          { name: 'All Documents', icon: FileText, href: '/msp/documents' },
+          { name: 'Knowledge Base', icon: BookOpen, href: '/msp/knowledge-base' }
+        ]
       },
       {
         name: 'Assets',

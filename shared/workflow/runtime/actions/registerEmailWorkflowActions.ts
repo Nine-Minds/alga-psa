@@ -581,7 +581,7 @@ export function registerEmailWorkflowActionsV2(): void {
         content: commentPayload.content,
         format: commentPayload.format,
         source: 'email',
-        author_type: input.targetContactId ? 'contact' : 'system',
+        author_type: 'contact',
         author_id: input.targetAuthorUserId ?? undefined,
         contact_id: input.targetContactId ?? undefined,
         metadata: commentPayload.metadata
@@ -685,7 +685,7 @@ export function registerEmailWorkflowActionsV2(): void {
           : null;
       const resolvedContactId = input.contact_id ?? matchedContact?.contact_id;
       const resolvedAuthorId = input.author_id ?? matchedContact?.user_id;
-      const resolvedAuthorType = input.author_type ?? (resolvedContactId ? 'contact' : 'system');
+      const resolvedAuthorType = input.author_type ?? 'contact';
 
       const commentId = await createCommentFromEmail({
         ticket_id: input.ticketId,

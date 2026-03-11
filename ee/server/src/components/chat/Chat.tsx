@@ -13,6 +13,7 @@ import { HfInference } from '@huggingface/inference';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { useAIChatContext } from '@product/chat/context';
 
 import {
   readAssistantContentFromSse,
@@ -305,6 +306,7 @@ export const Chat: React.FC<ChatProps> = ({
   const [showValidationDialog, setShowValidationDialog] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
   const autoSendRef = useRef(false);
+  const aiContext = useAIChatContext();
   const streamAbortControllerRef = useRef<AbortController | null>(null);
   const executeAbortControllerRef = useRef<AbortController | null>(null);
   const messageOrderRef = useRef<number>(0);
@@ -680,6 +682,7 @@ export const Chat: React.FC<ChatProps> = ({
         },
         body: JSON.stringify({
           messages: conversationWithUser,
+          uiContext: aiContext,
         }),
         signal: abortController.signal,
       });
@@ -845,6 +848,7 @@ export const Chat: React.FC<ChatProps> = ({
     userMessageId,
     autoResizeTextarea,
     addAssistantMessageToPersistence,
+    aiContext,
   ]);
 
   useEffect(() => {
@@ -889,6 +893,7 @@ export const Chat: React.FC<ChatProps> = ({
           functionCall: pendingFunction.functionCall,
           action,
           chatId: pendingFunction.chatId ?? chatId,
+          uiContext: aiContext,
         }),
         signal: executeAbortController.signal,
       });
@@ -1008,7 +1013,7 @@ export const Chat: React.FC<ChatProps> = ({
       executeAbortControllerRef.current = null;
       setIsExecutingFunction(false);
     }
-  }, [pendingFunction, chatId, addAssistantMessageToPersistence]);
+  }, [pendingFunction, chatId, addAssistantMessageToPersistence, aiContext]);
 
   const persistedDisplayMessages = (messages as DisplayChatMessage[]).filter(
     (message) => resolveDisplayMessageRole(message) !== 'function',

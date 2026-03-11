@@ -217,4 +217,44 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
     });
   });
 
+  it('T025: unmatched parsed-email sender defaults to contact authorship', async () => {
+    findContactByEmailMock.mockResolvedValue(null);
+
+    const { registerEmailWorkflowActionsV2 } = await import('../registerEmailWorkflowActions');
+    registerEmailWorkflowActionsV2();
+
+    const action = registeredActions.find((entry) => entry.id === 'create_comment_from_parsed_email');
+    expect(action).toBeDefined();
+
+    await action!.handler(
+      {
+        ticketId: 'ticket-unmatched-1',
+        emailData: {
+          id: 'email-unmatched-1',
+          subject: 'Inbound subject',
+          body: { text: 'Inbound body' },
+          from: { email: 'unknown@example.com' },
+          to: [{ email: 'support@example.com' }],
+        },
+        parsedEmail: {
+          sanitizedText: 'Inbound body',
+          sanitizedHtml: undefined,
+          confidence: 'high',
+          metadata: {},
+        },
+      },
+      { tenantId: 'tenant-1' }
+    );
+
+    expect(createCommentFromEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ticket_id: 'ticket-unmatched-1',
+        author_type: 'contact',
+        author_id: undefined,
+        contact_id: undefined,
+      }),
+      'tenant-1'
+    );
+  });
+
 });

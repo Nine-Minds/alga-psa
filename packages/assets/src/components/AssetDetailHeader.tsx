@@ -18,7 +18,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { StatusBadge } from './shared/StatusBadge';
 import type { Asset } from '@alga-psa/types';
-import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
+import { useAssetCrossFeature } from '../context/AssetCrossFeatureContext';
 import { RemoteAccessButton } from './RemoteAccessButton';
 import { getRmmProviderDisplayName } from '../lib/rmmProviderDisplay';
 import { 
@@ -54,6 +54,7 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
 }) => {
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
   const { mutate } = useSWRConfig();
+  const { renderQuickAddTicket } = useAssetCrossFeature();
   const Icon = getAssetIcon(asset.asset_type);
   
   // Determine badge status
@@ -151,16 +152,16 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
         </div>
       </div>
 
-      <QuickAddTicket
-        open={isTicketDialogOpen}
-        onOpenChange={setIsTicketDialogOpen}
-        onTicketAdded={handleTicketAdded}
-        prefilledClient={asset.client_id ? {
+      {renderQuickAddTicket({
+        open: isTicketDialogOpen,
+        onOpenChange: setIsTicketDialogOpen,
+        onTicketAdded: handleTicketAdded,
+        prefilledClient: asset.client_id ? {
           id: asset.client_id,
           name: asset.client?.client_name || 'Unknown Client'
-        } : undefined}
-        assetId={asset.asset_id}
-      />
+        } : undefined,
+        assetId: asset.asset_id,
+      })}
     </>
   );
 };

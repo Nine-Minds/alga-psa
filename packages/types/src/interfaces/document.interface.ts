@@ -25,6 +25,7 @@ export interface IDocument extends TenantEntity {
 
     // Folder organization
     folder_path?: string;
+    is_client_visible?: boolean;
 
     // Preview/thumbnail system
     thumbnail_file_id?: string;
@@ -83,6 +84,7 @@ export interface DocumentFilters {
     sortBy?: 'document_name' | 'updated_at' | 'file_size' | 'created_by_full_name';
     sortOrder?: 'asc' | 'desc';
     showAllDocuments?: boolean;
+    clientVisibility?: 'all' | 'visible' | 'hidden';
 }
 
 // Document preview response
@@ -121,11 +123,26 @@ export interface PaginatedDocumentsResponse {
 }
 
 // Folder-related interfaces
+export interface IDocumentFolder extends TenantEntity {
+  folder_id: string;
+  folder_path: string;
+  folder_name: string;
+  parent_folder_id: string | null;
+  created_at?: Date;
+  created_by?: string | null;
+  entity_id?: string | null;
+  entity_type?: string | null;
+  is_client_visible?: boolean;
+}
+
 export interface IFolderNode {
   path: string;
   name: string;
   children: IFolderNode[];
   documentCount: number;
+  entity_id?: string | null;
+  entity_type?: string | null;
+  is_client_visible?: boolean;
 }
 
 export interface IFolderStats {

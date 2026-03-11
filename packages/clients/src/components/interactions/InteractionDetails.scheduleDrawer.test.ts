@@ -8,6 +8,6 @@ describe('InteractionDetails agent schedule wiring', () => {
     const content = fs.readFileSync(filePath, 'utf-8');
 
     expect(content).toContain('handleUserClick');
-    expect(content).toContain('<AgentScheduleDrawer');
+    expect(content).toContain('renderAgentSchedule');
   });
 });

@@ -8,7 +8,7 @@ import { QuickAddInteraction } from '../interactions/QuickAddInteraction';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Pen, Plus, ArrowLeft, ExternalLink } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { useDrawer } from '@alga-psa/ui';
+import { useDrawer, useClientDrawer } from '@alga-psa/ui';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import { ITag } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
@@ -92,6 +92,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const { openDrawer, goBack } = useDrawer();
+  const clientDrawer = useClientDrawer();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -141,6 +142,18 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
     return date.toLocaleDateString();
   };
 
+  const getPhoneTypeLabel = (phone: IContact['phone_numbers'][number]): string => {
+    if (phone.custom_type) {
+      return phone.custom_type;
+    }
+
+    if (phone.canonical_type) {
+      return phone.canonical_type.charAt(0).toUpperCase() + phone.canonical_type.slice(1);
+    }
+
+    return 'Other';
+  };
+
   const handleEditContact = () => {
     openDrawer(
       <ContactDetailsEdit
@@ -185,6 +198,10 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
 
   const handleClientClick = async () => {
     if (contact.client_id) {
+      if (clientDrawer) {
+        clientDrawer.openClientDrawer(contact.client_id);
+        return;
+      }
       try {
         setError(null);
         const client = await getClientById(contact.client_id);
@@ -319,8 +336,27 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
         <table className="min-w-full">
           <tbody>
             <TableRow label="Full Name" value={contact.full_name} />
-            <TableRow label="Email" value={contact.email} />
-            <TableRow label="Phone" value={contact.phone_number || 'N/A'} />
+            <TableRow label="Email" value={contact.email ?? 'N/A'} />
+            <tr>
+              <td className="py-2 font-semibold align-top">Phone:</td>
+              <td className="py-2">
+                {contact.phone_numbers.length === 0 ? (
+                  'N/A'
+                ) : (
+                  <div className="space-y-2">
+                    {contact.phone_numbers.map((phone) => (
+                      <div key={phone.contact_phone_number_id} className="rounded-md border border-gray-200 px-3 py-2">
+                        <div className="text-sm font-medium text-gray-900">{phone.phone_number}</div>
+                        <div className="text-xs text-gray-500">
+                          {getPhoneTypeLabel(phone)}
+                          {phone.is_default ? ' • Default' : ''}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </td>
+            </tr>
             <tr>
               <td className="py-2 font-semibold">Client:</td>
               <td className="py-2">

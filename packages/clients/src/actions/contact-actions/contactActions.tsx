@@ -9,7 +9,7 @@ import { getContactAvatarUrlsBatchAsync } from '../../lib/documentsHelpers';
 import { createTag } from '@alga-psa/tags/actions';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { hasPermissionAsync } from '../../lib/authHelpers';
-import { ContactModel, CreateContactInput } from '@alga-psa/shared/models/contactModel';
+import { ContactModel, CreateContactInput, UpdateContactInput } from '@alga-psa/shared/models/contactModel';
 import { withAuth } from '@alga-psa/auth';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -22,6 +22,35 @@ function maybeUserActor(user: any) {
   const userId = user?.user_id;
   if (typeof userId !== 'string' || !userId) return undefined;
   return { actorType: 'USER' as const, actorUserId: userId };
+}
+
+function buildDefaultPhoneNumbers(phoneNumber?: string | null) {
+  const trimmedPhoneNumber = phoneNumber?.trim();
+  if (!trimmedPhoneNumber) {
+    return [];
+  }
+
+  return [{
+    phone_number: trimmedPhoneNumber,
+    canonical_type: 'work' as const,
+    is_default: true,
+    display_order: 0,
+  }];
+}
+
+type ContactActionInput = Omit<Partial<IContact>, 'phone_numbers'> & {
+  phone_numbers?: CreateContactInput['phone_numbers'];
+};
+
+function getDerivedDefaultPhone(contact: Pick<IContact, 'default_phone_number' | 'phone_numbers'>): string {
+  return contact.default_phone_number
+    || contact.phone_numbers.find((phoneNumber) => phoneNumber.is_default)?.phone_number
+    || '';
+}
+
+function normalizeOptionalText(value: string | null | undefined): string | undefined {
+  const trimmedValue = value?.trim();
+  return trimmedValue ? trimmedValue : undefined;
 }
 
 async function cleanupEntraReferencesBeforeContactDelete(
@@ -63,22 +92,7 @@ export const getContactByContactNameId = withAuth(async (
     }
 
     // Fetch contact with client information
-    const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('contacts')
-        .select(
-          'contacts.*',
-          'clients.client_name'
-        )
-        .leftJoin('clients', function (this: Knex.JoinClause) {
-          this.on('contacts.client_id', 'clients.client_id')
-            .andOn('clients.tenant', 'contacts.tenant')
-        })
-        .where({
-          'contacts.contact_name_id': contactNameId,
-          'contacts.tenant': tenant
-        })
-        .first();
-    });
+    const contact = await withTransaction(db, async (trx: Knex.Transaction) => ContactModel.getContactById(contactNameId, tenant, trx));
 
     return contact || null;
   } catch (err) {
@@ -140,8 +154,10 @@ export const deleteContact = withAuth(async (
       await deleteEntityTags(trx, contactId, 'contact');
 
       // Clean up child records owned by the contact
+      await trx('contact_phone_numbers').where({ contact_name_id: contactId, tenant: tenantId }).delete();
       await trx('comments').where({ contact_id: contactId, tenant: tenantId }).delete();
       await trx('portal_invitations').where({ contact_id: contactId, tenant: tenantId }).delete();
+      await trx('contact_phone_numbers').where({ contact_name_id: contactId, tenant: tenantId }).delete();
 
       const contactRecord = await trx('contacts')
         .where({ contact_name_id: contactId, tenant: tenantId })
@@ -182,7 +198,7 @@ export const deleteContact = withAuth(async (
       ...result,
       deleted: result.deleted,
       success: result.deleted === true,
-      counts
+      counts,
     };
   } catch (err) {
     console.error('Error deleting contact:', err);
@@ -269,7 +285,8 @@ export const getContactsEligibleForInvitation = withAuth(async (
         .select('c.*', 'comp.client_name')
         .orderBy('c.full_name', 'asc');
 
-      return q;
+      const rows = await q;
+      return ContactModel.hydrateContactsWithPhoneNumbers(rows as any[], tenant, trx);
     });
 
     const contactIds = contacts.map((c: IContact) => c.contact_name_id);
@@ -290,7 +307,7 @@ export const getContactsEligibleForInvitation = withAuth(async (
 export const addContact = withAuth(async (
   user,
   { tenant },
-  contactData: Partial<IContact>
+  contactData: ContactActionInput
 ): Promise<IContact> => {
   const { knex: db } = await createTenantKnex();
 
@@ -300,30 +317,18 @@ export const addContact = withAuth(async (
 
   const createInput: CreateContactInput = {
     full_name: contactData.full_name || '',
-    email: contactData.email,
-    phone_number: contactData.phone_number,
+    email: contactData.email ?? undefined,
+    phone_numbers: contactData.phone_numbers ?? [],
     client_id: contactData.client_id || undefined,
-    role: contactData.role,
+    role: contactData.role ?? undefined,
     notes: contactData.notes || undefined,
-    is_inactive: contactData.is_inactive
+    is_inactive: contactData.is_inactive ?? undefined
   };
 
   // Use the shared ContactModel to create the contact
   // The model handles all validation and business logic
   const created = await withTransaction(db, async (trx: Knex.Transaction) => {
-    const contact = await ContactModel.createContact(
-      createInput,
-      tenant,
-      trx
-    );
-
-    return {
-      ...contact,
-      phone_number: contact.phone_number || '',
-      email: contact.email || '',
-      role: contact.role || '',
-      is_inactive: contact.is_inactive || false
-    } as IContact;
+    return ContactModel.createContact(createInput, tenant, trx);
   });
 
   const clientId = (created as any)?.client_id;
@@ -337,7 +342,9 @@ export const addContact = withAuth(async (
         clientId,
         fullName: created.full_name,
         email: created.email || undefined,
-        phoneNumber: created.phone_number || undefined,
+        phoneNumbers: created.phone_numbers,
+        defaultPhoneNumber: created.default_phone_number || undefined,
+        defaultPhoneType: created.default_phone_type || undefined,
         createdByUserId: user?.user_id,
         createdAt: occurredAt,
       }),
@@ -349,10 +356,90 @@ export const addContact = withAuth(async (
   return created;
 });
 
+export const listContactPhoneTypeSuggestions = withAuth(async (
+  user,
+  { tenant }
+): Promise<string[]> => {
+  const { knex: db } = await createTenantKnex();
+
+  if (!await hasPermissionAsync(user, 'contact', 'read')) {
+    return [];
+  }
+
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    const rows = await trx('contact_phone_type_definitions')
+      .where({ tenant })
+      .orderBy('label', 'asc')
+      .select('label');
+
+    return rows
+      .map((row: { label?: string | null }) => row.label?.trim() ?? '')
+      .filter((label): label is string => label.length > 0);
+  });
+});
+
+export const getCustomPhoneTypeUsageCount = withAuth(async (
+  user,
+  { tenant },
+  customTypeLabel: string
+): Promise<{ label: string; usageCount: number }> => {
+  const { knex: db } = await createTenantKnex();
+
+  if (!await hasPermissionAsync(user, 'contact', 'read')) {
+    return { label: customTypeLabel, usageCount: 0 };
+  }
+
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    return ContactModel.getCustomPhoneTypeUsageCount(customTypeLabel, tenant, trx);
+  });
+});
+
+export const getContactLastUsagePhoneTypes = withAuth(async (
+  user,
+  { tenant },
+  contactId: string
+): Promise<Array<{ contact_phone_type_id: string; label: string }>> => {
+  const { knex: db } = await createTenantKnex();
+
+  if (!await hasPermissionAsync(user, 'contact', 'read')) {
+    return [];
+  }
+
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    return ContactModel.findLastUsagePhoneTypes(contactId, tenant, trx);
+  });
+});
+
+export const deleteOrphanedPhoneTypes = withAuth(async (
+  user,
+  { tenant },
+  typeLabels: string[]
+): Promise<number> => {
+  const { knex: db } = await createTenantKnex();
+
+  if (!await hasPermissionAsync(user, 'contact', 'update')) {
+    throw new Error('Permission denied: Cannot manage phone types');
+  }
+
+  if (typeLabels.length === 0) return 0;
+
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    // Only delete types that are actually orphaned (safety check)
+    const orphaned = await ContactModel.findOrphanedPhoneTypeDefinitions(tenant, trx);
+    const normalizedRequested = new Set(
+      typeLabels.map(l => l.trim().replace(/\s+/g, ' ').toLowerCase())
+    );
+    const idsToDelete = orphaned
+      .filter(o => normalizedRequested.has(o.label.trim().replace(/\s+/g, ' ').toLowerCase()))
+      .map(o => o.contact_phone_type_id);
+    return ContactModel.deletePhoneTypeDefinitions(idsToDelete, tenant, trx);
+  });
+});
+
 export const updateContact = withAuth(async (
   user,
   { tenant },
-  contactData: Partial<IContact>
+  contactData: ContactActionInput
 ): Promise<IContact> => {
   const { knex: db } = await createTenantKnex();
 
@@ -411,48 +498,24 @@ export const updateContact = withAuth(async (
       (contactData as any).inbound_ticket_defaults_id = inboundDestinationId;
     }
 
-    const validFields: (keyof IContact)[] = [
-      'contact_name_id', 'full_name', 'client_id', 'phone_number',
-      'email', 'created_at', 'updated_at', 'is_inactive',
-      'role', 'notes', 'inbound_ticket_defaults_id' as keyof IContact
-    ];
-
-    const updateData: Partial<IContact> = {};
-    for (const key of validFields) {
-      if (key in contactData && contactData[key] !== undefined) {
-        let value = contactData[key];
-        if (typeof value === 'string') {
-          value = value.trim();
-          if (key === 'email') {
-            value = value.toLowerCase();
-          }
-        }
-        if ((key === 'client_id' || key === 'inbound_ticket_defaults_id') && value === '') {
-          (updateData as any)[key] = null;
-        } else {
-          (updateData as any)[key] = value;
-        }
-      }
-    }
-
-    updateData.updated_at = new Date().toISOString();
-
-    // Verify contact exists and perform update in transaction
     const updateResult = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const existingContact = await trx('contacts')
-        .where({ contact_name_id: contactData.contact_name_id, tenant })
-        .first();
+      const existingContact = await ContactModel.getContactById(contactData.contact_name_id!, tenant, trx);
 
       if (!existingContact) {
         throw new Error('VALIDATION_ERROR: The contact you are trying to update no longer exists');
       }
 
-      const [updated] = await trx('contacts')
-        .where({ contact_name_id: contactData.contact_name_id, tenant })
-        .update(updateData)
-        .returning('*');
+      const updated = await ContactModel.updateContact(contactData.contact_name_id!, {
+        full_name: contactData.full_name,
+        client_id: contactData.client_id === '' ? undefined : contactData.client_id || undefined,
+        phone_numbers: contactData.phone_numbers,
+        email: contactData.email ?? undefined,
+        role: contactData.role ?? undefined,
+        notes: contactData.notes ?? undefined,
+        is_inactive: contactData.is_inactive ?? undefined,
+      }, tenant, trx);
 
-      if (updateData.is_inactive === true) {
+      if (contactData.is_inactive === true) {
         await trx('users')
           .where({ contact_id: contactData.contact_name_id, tenant, user_type: 'client' })
           .update({ is_inactive: true });
@@ -461,8 +524,8 @@ export const updateContact = withAuth(async (
       return {
         before: existingContact,
         after: updated,
-        updatedFieldKeys: Object.keys(updateData),
-        occurredAt: updateData.updated_at,
+        updatedFieldKeys: Object.keys(contactData).filter((key) => key !== 'contact_name_id'),
+        occurredAt: updated.updated_at,
       };
     });
 
@@ -586,7 +649,6 @@ export const updateContactsForClient = withAuth(async (
       switch (contactKey) {
         case 'email':
         case 'full_name':
-        case 'phone_number':
         case 'role':
           acc[contactKey] = typeof value === 'string' ? value.trim() : String(value);
           if (contactKey === 'email' && acc[contactKey]) {
@@ -677,7 +739,7 @@ export async function exportContactsToCSV(
     return {
       full_name: contact.full_name || '',
       email: contact.email || '',
-      phone_number: contact.phone_number || '',
+      phone_number: getDerivedDefaultPhone(contact),
       client: client?.client_name || '',
       role: contact.role || '',
       notes: contact.notes || '',
@@ -786,21 +848,20 @@ export const importContactsFromCSV = withAuth(async (
           let savedContact: IContact;
 
           if (existingContact && updateExisting) {
-            const { tags, tenant: _tenant, ...contactDataWithoutTagsAndTenant } = contactData;
-            const updateData = {
-              ...contactDataWithoutTagsAndTenant,
+            const updateData: UpdateContactInput = {
               full_name: contactData.full_name.trim(),
-              email: contactData.email?.trim().toLowerCase() || existingContact.email,
-              phone_number: contactData.phone_number?.trim() || existingContact.phone_number,
-              role: contactData.role?.trim() || existingContact.role,
-              notes: contactData.notes?.trim() || existingContact.notes,
-              updated_at: new Date().toISOString()
+              email: contactData.email?.trim().toLowerCase() ?? existingContact.email ?? undefined,
+              phone_numbers: contactData.phone_numbers
+                ?? (contactData.phone_number !== undefined
+                  ? buildDefaultPhoneNumbers(contactData.phone_number)
+                  : existingContact.phone_numbers),
+              client_id: contactData.client_id || undefined,
+              is_inactive: contactData.is_inactive ?? undefined,
+              role: normalizeOptionalText(contactData.role) ?? existingContact.role ?? undefined,
+              notes: normalizeOptionalText(contactData.notes) ?? existingContact.notes ?? undefined,
             };
 
-            [savedContact] = await trx('contacts')
-              .where({ contact_name_id: existingContact.contact_name_id, tenant })
-              .update(updateData)
-              .returning('*');
+            savedContact = await ContactModel.updateContact(existingContact.contact_name_id, updateData, tenant, trx);
 
             if (contactData.tags !== undefined) {
               try {
@@ -834,19 +895,14 @@ export const importContactsFromCSV = withAuth(async (
             const contactToCreate = {
               full_name: contactData.full_name.trim(),
               email: contactData.email?.trim().toLowerCase() || '',
-              phone_number: contactData.phone_number?.trim() || '',
-              client_id: contactData.client_id,
+              phone_numbers: contactData.phone_numbers ?? buildDefaultPhoneNumbers(contactData.phone_number),
+              client_id: contactData.client_id || undefined,
               is_inactive: contactData.is_inactive || false,
-              role: contactData.role?.trim() || '',
-              notes: contactData.notes?.trim() || '',
-              tenant: tenant,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
+              role: normalizeOptionalText(contactData.role),
+              notes: normalizeOptionalText(contactData.notes),
             };
 
-            [savedContact] = await trx('contacts')
-              .insert(contactToCreate)
-              .returning('*');
+            savedContact = await ContactModel.createContact(contactToCreate, tenant, trx);
 
             if (contactData.tags) {
               try {
@@ -991,9 +1047,15 @@ export const getContactByEmail = withAuth(async (
     const { knex } = await createTenantKnex();
 
     const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('contacts')
-        .where({ email, client_id: clientId, tenant })
-        .first();
+      const existingContact = await trx('contacts')
+        .where({ email: email.toLowerCase(), client_id: clientId, tenant })
+        .first<{ contact_name_id: string }>();
+
+      if (!existingContact) {
+        return null;
+      }
+
+      return ContactModel.getContactById(existingContact.contact_name_id, tenant, trx);
     });
 
     return contact;
@@ -1015,12 +1077,14 @@ export const createClientContact = withAuth(async (
     fullName,
     email,
     phone = '',
+    phoneNumbers,
     jobTitle = ''
   }: {
     clientId: string;
     fullName: string;
     email: string;
     phone?: string;
+    phoneNumbers?: CreateContactInput['phone_numbers'];
     jobTitle?: string;
   }
 ) => {
@@ -1038,20 +1102,13 @@ export const createClientContact = withAuth(async (
     }
 
     const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const [inserted] = await trx('contacts')
-        .insert({
-          tenant,
-          client_id: clientId,
-          full_name: fullName,
-          email: email.trim().toLowerCase(),
-          phone_number: phone,
-          role: jobTitle,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .returning('*');
-
-      return inserted;
+      return ContactModel.createContact({
+        full_name: fullName,
+        email: email.trim().toLowerCase(),
+        phone_numbers: phoneNumbers ?? buildDefaultPhoneNumbers(phone),
+        client_id: clientId,
+        role: jobTitle,
+      }, tenant, trx);
     });
 
     return contact;

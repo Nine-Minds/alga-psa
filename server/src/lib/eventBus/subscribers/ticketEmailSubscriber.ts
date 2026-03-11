@@ -121,6 +121,19 @@ async function resolveTicketLinks(
   return { internalUrl, portalUrl };
 }
 
+function applyDefaultContactPhoneJoin(
+  query: Knex.QueryBuilder,
+  knex: Knex,
+  ticketAlias = 't',
+  phoneAlias = 'cpn_default'
+): Knex.QueryBuilder {
+  return query.leftJoin(`contact_phone_numbers as ${phoneAlias}`, function joinDefaultContactPhone() {
+    this.on(`${ticketAlias}.contact_name_id`, '=', `${phoneAlias}.contact_name_id`)
+      .andOn(`${ticketAlias}.tenant`, '=', `${phoneAlias}.tenant`)
+      .andOn(`${phoneAlias}.is_default`, '=', knex.raw('true'));
+  });
+}
+
 /**
  * Wrapper function that checks notification preferences before sending email
  * @param params - Same params as sendEventEmail
@@ -506,7 +519,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         'c.client_name',
         'co.email as contact_email',
         'co.full_name as contact_name',
-        'co.phone_number as contact_phone',
+        'cpn_default.phone_number as contact_phone',
         'p.priority_name',
         'p.color as priority_color',
         's.name as status_name',
@@ -538,6 +551,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         this.on('t.contact_name_id', 'co.contact_name_id')
             .andOn('t.tenant', 'co.tenant');
       })
+      .modify((queryBuilder) => applyDefaultContactPhoneJoin(queryBuilder, db))
       .leftJoin('users as au', function() {
         this.on('t.assigned_to', 'au.user_id')
             .andOn('t.tenant', 'au.tenant');
@@ -857,7 +871,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
         'c.client_name',
         'co.email as contact_email',
         'co.full_name as contact_name',
-        'co.phone_number as contact_phone',
+        'cpn_default.phone_number as contact_phone',
         'p.priority_name',
         'p.color as priority_color',
         's.name as status_name',
@@ -889,6 +903,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
         this.on('t.contact_name_id', 'co.contact_name_id')
             .andOn('t.tenant', 'co.tenant');
       })
+      .modify((queryBuilder) => applyDefaultContactPhoneJoin(queryBuilder, db))
       .leftJoin('users as au', function() {
         this.on('t.assigned_to', 'au.user_id')
             .andOn('t.tenant', 'au.tenant');
@@ -1364,7 +1379,7 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
         'c.client_name',
         'co.email as contact_email',
         'co.full_name as contact_name',
-        'co.phone_number as contact_phone',
+        'cpn_default.phone_number as contact_phone',
         'p.priority_name',
         'p.color as priority_color',
         's.name as status_name',
@@ -1396,6 +1411,7 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
         this.on('t.contact_name_id', 'co.contact_name_id')
             .andOn('t.tenant', 'co.tenant');
       })
+      .modify((queryBuilder) => applyDefaultContactPhoneJoin(queryBuilder, db))
       .leftJoin('users as au', function() {
         this.on('t.assigned_to', 'au.user_id')
             .andOn('t.tenant', 'au.tenant');
@@ -1622,7 +1638,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
         'c.client_name',
         'co.email as contact_email',
         'co.full_name as contact_name',
-        'co.phone_number as contact_phone',
+        'cpn_default.phone_number as contact_phone',
         'p.priority_name',
         'p.color as priority_color',
         's.name as status_name',
@@ -1654,6 +1670,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
         this.on('t.contact_name_id', 'co.contact_name_id')
             .andOn('t.tenant', 'co.tenant');
       })
+      .modify((queryBuilder) => applyDefaultContactPhoneJoin(queryBuilder, db))
       .leftJoin('users as au', function() {
         this.on('t.assigned_to', 'au.user_id')
             .andOn('t.tenant', 'au.tenant');
@@ -1990,7 +2007,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         'c.client_name',
         'co.email as contact_email',
         'co.full_name as contact_name',
-        'co.phone_number as contact_phone',
+        'cpn_default.phone_number as contact_phone',
         'p.priority_name',
         'p.color as priority_color',
         's.name as status_name',
@@ -2022,6 +2039,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         this.on('t.contact_name_id', 'co.contact_name_id')
             .andOn('t.tenant', 'co.tenant');
       })
+      .modify((queryBuilder) => applyDefaultContactPhoneJoin(queryBuilder, db))
       .leftJoin('users as au', function() {
         this.on('t.assigned_to', 'au.user_id')
             .andOn('t.tenant', 'au.tenant');
@@ -2382,7 +2400,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           'c.client_name',
           'co.email as contact_email',
           'co.full_name as contact_name',
-          'co.phone_number as contact_phone'
+          'cpn_default.phone_number as contact_phone'
         )
         .leftJoin('clients as c', function() {
           this.on('t.client_id', 'c.client_id')
@@ -2398,6 +2416,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
           this.on('t.contact_name_id', 'co.contact_name_id')
             .andOn('t.tenant', 'co.tenant');
         })
+        .modify((queryBuilder) => applyDefaultContactPhoneJoin(queryBuilder, db))
         .where({ 't.tenant': tenantId, 't.master_ticket_id': payload.ticketId });
 
       if (bundleChildren.length > 0) {
@@ -2555,7 +2574,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         'c.client_name',
         'co.email as contact_email',
         'co.full_name as contact_name',
-        'co.phone_number as contact_phone',
+        'cpn_default.phone_number as contact_phone',
         'p.priority_name',
         'p.color as priority_color',
         's.name as status_name',
@@ -2587,6 +2606,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         this.on('t.contact_name_id', 'co.contact_name_id')
             .andOn('t.tenant', 'co.tenant');
       })
+      .modify((queryBuilder) => applyDefaultContactPhoneJoin(queryBuilder, db))
       .leftJoin('users as au', function() {
         this.on('t.assigned_to', 'au.user_id')
             .andOn('t.tenant', 'au.tenant');
@@ -2834,7 +2854,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         'c.client_name',
         'co.email as contact_email',
         'co.full_name as contact_name',
-        'co.phone_number as contact_phone'
+        'cpn_default.phone_number as contact_phone'
       )
       .leftJoin('clients as c', function() {
         this.on('t.client_id', 'c.client_id')
@@ -2850,6 +2870,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
         this.on('t.contact_name_id', 'co.contact_name_id')
           .andOn('t.tenant', 'co.tenant');
       })
+      .modify((queryBuilder) => applyDefaultContactPhoneJoin(queryBuilder, db))
       .where({ 't.tenant': tenantId, 't.master_ticket_id': payload.ticketId });
 
     if (bundleChildren.length > 0) {

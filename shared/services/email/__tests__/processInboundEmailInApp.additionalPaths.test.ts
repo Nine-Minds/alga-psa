@@ -181,7 +181,7 @@ describe('processInboundEmailInApp additional authorship paths', () => {
     );
     expect(createCommentFromEmailMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        author_type: 'system',
+        author_type: 'contact',
         author_id: undefined,
         contact_id: undefined,
         metadata: expect.objectContaining({

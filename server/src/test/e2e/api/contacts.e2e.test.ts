@@ -62,7 +62,12 @@ describe('Contact API E2E Tests', () => {
         const newContact = {
           full_name: 'John Doe',
           email: 'john.doe@example.com',
-          phone_number: '+1-555-123-4567',
+          phone_numbers: [{
+            phone_number: '+1-555-123-4567',
+            canonical_type: 'work',
+            is_default: true,
+            display_order: 0,
+          }],
           client_id: env.clientId,
           role: 'Manager',
           notes: 'Test contact'
@@ -74,13 +79,21 @@ describe('Contact API E2E Tests', () => {
         expect(response.data.data).toMatchObject({
           full_name: newContact.full_name,
           email: newContact.email,
-          phone_number: newContact.phone_number,
+          default_phone_number: newContact.phone_numbers[0].phone_number,
           client_id: env.clientId,
           role: newContact.role,
           notes: newContact.notes,
           is_inactive: false,
           tenant: env.tenant
         });
+        expect(response.data.data.phone_numbers).toEqual([
+          expect.objectContaining({
+            phone_number: newContact.phone_numbers[0].phone_number,
+            canonical_type: 'work',
+            is_default: true,
+            display_order: 0,
+          }),
+        ]);
         expect(response.data.data.contact_name_id).toBeDefined();
       });
 
@@ -98,7 +111,12 @@ describe('Contact API E2E Tests', () => {
         const invalidContact = {
           full_name: 'Test User',
           email: 'not-an-email',
-          phone_number: '+1-555-123-4567'
+          phone_numbers: [{
+            phone_number: '+1-555-123-4567',
+            canonical_type: 'work',
+            is_default: true,
+            display_order: 0,
+          }]
         };
 
         const response = await env.apiClient.post(API_BASE, invalidContact);
@@ -174,7 +192,8 @@ describe('Contact API E2E Tests', () => {
       it('should delete a contact', async () => {
         const contact = await createTestContact(env.db, env.tenant, {
           full_name: 'To Delete',
-          email: 'delete@example.com'
+          email: 'delete@example.com',
+          phone_number: '+1-555-123-4567',
         });
 
         const response = await env.apiClient.delete(`${API_BASE}/${contact.contact_name_id}`);
@@ -183,6 +202,11 @@ describe('Contact API E2E Tests', () => {
         // Verify contact is deleted
         const getResponse = await env.apiClient.get(`${API_BASE}/${contact.contact_name_id}`);
         assertError(getResponse, 404);
+
+        const orphanedPhoneRows = await env.db('contact_phone_numbers')
+          .where({ tenant: env.tenant, contact_name_id: contact.contact_name_id });
+
+        expect(orphanedPhoneRows).toHaveLength(0);
       });
 
       it('should return 404 when deleting non-existent contact', async () => {

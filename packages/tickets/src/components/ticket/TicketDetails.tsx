@@ -78,6 +78,16 @@ import {
     searchEligibleChildTicketsAction,
     type EligibleChildTicket
 } from '../../actions/ticketBundleActions';
+import { deleteDraftClipboardImages } from '../../actions/comment-actions/clipboardImageDraftActions';
+import {
+    resolveCommentReferencedImageDocuments,
+    type CommentImageDocumentReference,
+} from '../../lib/commentImageDocuments';
+
+interface PendingCommentDelete {
+    commentId: string;
+    imageDocuments: CommentImageDocumentReference[];
+}
 
 interface TicketDetailsProps {
     id?: string; // Made optional to maintain backward compatibility
@@ -309,7 +319,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
     const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
+    const [commentToDelete, setCommentToDelete] = useState<PendingCommentDelete | null>(null);
+    const [isDeletingComment, setIsDeletingComment] = useState(false);
     const [isTimeEntryPeriodDialogOpen, setIsTimeEntryPeriodDialogOpen] = useState(false);
 
     // Debounced search for child tickets
@@ -884,6 +895,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     }, [ticket.ticket_id]);
 
+    const resetCommentDeleteState = useCallback(() => {
+        setIsDeleteDialogOpen(false);
+        setCommentToDelete(null);
+        setIsDeletingComment(false);
+    }, []);
+
     const handleAddNewComment = async (
         isInternal: boolean,
         isResolution: boolean,
@@ -1403,29 +1420,70 @@ const handleClose = () => {
     const handleDeleteRequest = (conversation: IComment) => {
         // Only allow users to delete their own comments
         if (userId === conversation.user_id) {
-            setCommentToDelete(conversation.comment_id!);
+            setCommentToDelete({
+                commentId: conversation.comment_id!,
+                imageDocuments: resolveCommentReferencedImageDocuments(conversation.note, documents),
+            });
             setIsDeleteDialogOpen(true);
         } else {
             toast.error('You can only delete your own comments');
         }
     };
 
-    const handleDeleteConfirm = async () => {
+    const handleDeleteConfirm = async (deleteImages: boolean) => {
         if (!commentToDelete) return;
-        
+
+        setIsDeletingComment(true);
         try {
-            await deleteComment(commentToDelete);
+            await deleteComment(commentToDelete.commentId);
             setConversations(prevConversations =>
-                prevConversations.filter(conv => conv.comment_id !== commentToDelete)
+                prevConversations.filter(conv => conv.comment_id !== commentToDelete.commentId)
             );
-            toast.success('Comment deleted successfully');
+
+            if (deleteImages && commentToDelete.imageDocuments.length > 0 && ticket.ticket_id) {
+                try {
+                    const result = await deleteDraftClipboardImages({
+                        ticketId: ticket.ticket_id,
+                        documentIds: commentToDelete.imageDocuments.map((document) => document.documentId),
+                    });
+
+                    const deletedCount = result.deletedDocumentIds.length;
+                    const failedCount = result.failures.length;
+
+                    if (deletedCount > 0) {
+                        await refreshTicketDocuments();
+                    }
+
+                    if (failedCount > 0) {
+                        toast.error(
+                            `Comment deleted, but could not delete ${failedCount} pasted image${failedCount === 1 ? '' : 's'}.`
+                        );
+                    } else if (deletedCount > 0) {
+                        toast.success(
+                            `Comment and ${deletedCount} pasted image${deletedCount === 1 ? '' : 's'} deleted successfully.`
+                        );
+                    } else {
+                        toast.success('Comment deleted successfully');
+                    }
+                } catch (imageDeleteError) {
+                    console.error('Failed to delete pasted images during comment deletion:', imageDeleteError);
+                    toast.error('Comment deleted, but failed to delete pasted images.');
+                }
+            } else {
+                toast.success('Comment deleted successfully');
+            }
         } catch (error) {
             handleError(error, 'Failed to delete comment');
         } finally {
-            setIsDeleteDialogOpen(false);
-            setCommentToDelete(null);
+            resetCommentDeleteState();
         }
     };
+
+    const deleteDialogImageCount = commentToDelete?.imageDocuments.length ?? 0;
+    const deleteDialogHasImages = deleteDialogImageCount > 0;
+    const deleteDialogMessage = deleteDialogHasImages
+        ? `This comment includes ${deleteDialogImageCount} pasted image${deleteDialogImageCount === 1 ? '' : 's'} that were uploaded as ticket documents. Delete the comment only, or also delete the pasted image${deleteDialogImageCount === 1 ? '' : 's'} permanently?`
+        : 'Are you sure you want to delete this comment? This action cannot be undone.';
 
     // Function to open ticket in a new window
     const openTicketInNewWindow = useCallback(() => {
@@ -1724,15 +1782,15 @@ const handleClose = () => {
                 <ConfirmationDialog
                     id={`${id}-delete-comment-dialog`}
                     isOpen={isDeleteDialogOpen}
-                    onClose={() => {
-                        setIsDeleteDialogOpen(false);
-                        setCommentToDelete(null);
-                    }}
-                    onConfirm={handleDeleteConfirm}
+                    onClose={resetCommentDeleteState}
+                    onConfirm={() => handleDeleteConfirm(true)}
+                    onCancel={deleteDialogHasImages ? () => handleDeleteConfirm(false) : undefined}
                     title="Delete Comment"
-                    message="Are you sure you want to delete this comment? This action cannot be undone."
-                    confirmLabel="Delete"
+                    message={deleteDialogMessage}
+                    confirmLabel={deleteDialogHasImages ? 'Delete Comment + Images' : 'Delete'}
+                    thirdButtonLabel={deleteDialogHasImages ? 'Delete Comment Only' : undefined}
                     cancelLabel="Cancel"
+                    isConfirming={isDeletingComment}
                 />
                 
                 {/* Timer Replace Confirmation */}
@@ -1964,6 +2022,7 @@ const handleClose = () => {
                                     renderProjectTaskActions={renderCreateProjectTask}
                                     teams={teams}
                                     onAssignTeam={handleAssignTeam}
+                                    onClipboardImageUploaded={refreshTicketDocuments}
                                     additionalAgents={additionalAgents.map(a => ({
                                         user_id: a.additional_user_id || a.assigned_to,
                                         name: availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))

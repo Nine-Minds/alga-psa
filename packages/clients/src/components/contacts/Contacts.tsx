@@ -6,7 +6,7 @@ import type { IClient } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import type { IDocument } from '@alga-psa/types';
 import { getAllContacts, getContactsByClient, getAllClients } from '@alga-psa/clients/actions';
-import { exportContactsToCSV, deleteContact, updateContact } from '@alga-psa/clients/actions';
+import { exportContactsToCSV, deleteContact, updateContact, getContactLastUsagePhoneTypes, deleteOrphanedPhoneTypes } from '@alga-psa/clients/actions';
 import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
@@ -15,7 +15,7 @@ import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import QuickAddContact from './QuickAddContact';
-import { useDrawer } from "@alga-psa/ui";
+import { useDrawer, useClientDrawer } from "@alga-psa/ui";
 import ContactDetails from './ContactDetails';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import ContactsImportDialog from './ContactsImportDialog';
@@ -27,6 +27,7 @@ import { TagManager } from '@alga-psa/tags/components';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { getUniqueTagTexts } from '@alga-psa/ui';
 import { DeleteEntityDialog } from '@alga-psa/ui';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getCurrentUserAsync } from '../../lib/usersHelpers';
 import { getDocumentsByEntity } from '@alga-psa/documents/actions/documentActions';
@@ -84,6 +85,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
   const [sortBy, setSortBy] = useState<string>('full_name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const { openDrawer } = useDrawer();
+  const clientDrawer = useClientDrawer();
   const router = useRouter();
   const contactTagsRef = useRef<Record<string, ITag[]>>({});
   const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
@@ -93,6 +95,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
   const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
   const [isDeleteValidating, setIsDeleteValidating] = useState(false);
   const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
+  const [lastUsagePhoneTypes, setLastUsagePhoneTypes] = useState<Array<{ contact_phone_type_id: string; label: string }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const [changesSavedInDrawer, setChangesSavedInDrawer] = useState(false);
@@ -432,6 +435,9 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
 
     setIsDeleteProcessing(true);
     try {
+      // Check for last-usage custom phone types before deleting
+      const lastUsageTypes = await getContactLastUsagePhoneTypes(contactToDelete.contact_name_id);
+
       const result = await deleteContact(contactToDelete.contact_name_id);
 
       if (result.success) {
@@ -441,6 +447,11 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
 
         resetDeleteState();
         toast.success(`${contactToDelete.full_name} has been deleted successfully.`);
+
+        // If there are orphaned phone types, ask the user what to do
+        if (lastUsageTypes.length > 0) {
+          setLastUsagePhoneTypes(lastUsageTypes);
+        }
       } else {
         setDeleteValidation(result);
       }
@@ -493,6 +504,20 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     setIsDeleteDialogOpen(false);
     setContactToDelete(null);
     setDeleteValidation(null);
+  };
+
+  const handleConfirmDeletePhoneTypes = async () => {
+    try {
+      const labels = lastUsagePhoneTypes.map(t => t.label);
+      await deleteOrphanedPhoneTypes(labels);
+    } catch (err) {
+      console.error('Error deleting orphaned phone types:', err);
+    }
+    setLastUsagePhoneTypes([]);
+  };
+
+  const handleKeepPhoneTypes = () => {
+    setLastUsagePhoneTypes([]);
   };
 
   const handleExportToCSV = async () => {
@@ -580,9 +605,12 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     },
     {
       title: 'Phone Number',
-      dataIndex: 'phone_number',
+      dataIndex: 'default_phone_number',
       width: '15%',
-      render: (value, record): React.ReactNode => record.phone_number || 'N/A',
+      render: (value, record): React.ReactNode =>
+        record.default_phone_number
+        || record.phone_numbers?.find((phoneNumber: any) => phoneNumber.is_default)?.phone_number
+        || 'N/A',
     },
     {
       title: 'Client',
@@ -599,31 +627,31 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           return <span className="text-gray-500">{getClientName(clientId)}</span>;
         }
 
+        const handleClientOpen = () => {
+          if (clientDrawer) {
+            clientDrawer.openClientDrawer(client.client_id);
+            return;
+          }
+          openDrawer(
+            <ClientDetails
+              client={client}
+              documents={[]}
+              contacts={[]}
+              isInDrawer={true}
+              quickView={true}
+            />
+          );
+        };
+
         return (
           <div
             role="button"
             tabIndex={0}
-            onClick={() => openDrawer(
-              <ClientDetails
-                client={client}
-                documents={[]}
-                contacts={[]}
-                isInDrawer={true}
-                quickView={true}
-              />
-            )}
+            onClick={handleClientOpen}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                openDrawer(
-                  <ClientDetails
-                    client={client}
-                    documents={[]}
-                    contacts={[]}
-                    isInDrawer={true}
-                    quickView={true}
-                  />
-                );
+                handleClientOpen();
               }
             }}
             className="text-blue-600 hover:underline cursor-pointer"
@@ -864,6 +892,19 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           validationResult={deleteValidation}
           isValidating={isDeleteValidating}
           isDeleting={isDeleteProcessing}
+        />
+
+        <ConfirmationDialog
+          id="last-usage-phone-types-dialog"
+          isOpen={lastUsagePhoneTypes.length > 0}
+          onClose={handleKeepPhoneTypes}
+          onConfirm={handleConfirmDeletePhoneTypes}
+          onCancel={handleKeepPhoneTypes}
+          title="Last Phone Type Usage"
+          message={`The following custom phone type${lastUsagePhoneTypes.length > 1 ? 's are' : ' is'} no longer used by any contact: ${lastUsagePhoneTypes.map(t => `"${t.label}"`).join(', ')}. Delete the type definition${lastUsagePhoneTypes.length > 1 ? 's' : ''}, or keep for future use?`}
+          confirmLabel="Delete Type"
+          thirdButtonLabel="Keep Type"
+          cancelLabel="Cancel"
         />
       </div>
   );

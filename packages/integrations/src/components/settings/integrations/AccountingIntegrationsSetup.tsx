@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import CSVIntegrationSettings from './CSVIntegrationSettings';
+import XeroIntegrationSettings from './XeroIntegrationSettings';
 import XeroCsvIntegrationSettings from './XeroCsvIntegrationSettings';
 import { cn } from '@alga-psa/ui/lib/utils';
 
@@ -67,52 +69,105 @@ function IntegrationBanner({ option }: { option: AccountingIntegrationOption }) 
 }
 
 export default function AccountingIntegrationsSetup() {
+  const searchParams = useSearchParams();
+  const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+
   const options = useMemo<AccountingIntegrationOption[]>(
-    () => [
-      {
-        id: 'quickbooks_online',
-        title: 'QuickBooks Online',
-        description: 'Connect your realm to sync invoices and manage mappings.',
-        disabled: true,
-        highlights: [
-          { label: 'Sync', value: '2-way' },
-          { label: 'Delivery', value: 'Instant' }
-        ]
-      },
-      {
-        id: 'xero',
-        title: 'Xero',
-        description: 'Connect your organisation to sync accounting exports and mappings.',
-        disabled: true,
-        highlights: [
-          { label: 'Sync', value: '2-way' },
-          { label: 'Delivery', value: 'Daily' }
-        ]
-      },
-      {
-        id: 'quickbooks_csv',
-        title: 'QuickBooks CSV',
-        description: 'Export invoices to CSV for manual import into QuickBooks and import tax data from reports.',
-        highlights: [
-          { label: 'Export', value: 'Manual' },
-          { label: 'Format', value: 'CSV' }
-        ]
-      },
-      {
-        id: 'xero_csv',
-        title: 'Xero CSV',
-        description: 'Export invoices to CSV for manual import into Xero and import tax data from Xero reports.',
-        highlights: [
-          { label: 'Export', value: 'Manual' },
-          { label: 'Format', value: 'CSV' }
-        ]
+    () => {
+      const next: AccountingIntegrationOption[] = [
+        {
+          id: 'quickbooks_online',
+          title: 'QuickBooks Online',
+          description: 'Connect your realm to sync invoices and manage mappings.',
+          disabled: true,
+          highlights: [
+            { label: 'Sync', value: '2-way' },
+            { label: 'Delivery', value: 'Instant' }
+          ]
+        }
+      ];
+
+      if (isEEAvailable) {
+        next.push({
+          id: 'xero',
+          title: 'Xero',
+          description: 'Connect your organisation with tenant-owned OAuth credentials for live accounting exports and mappings.',
+          badge: { label: 'Enterprise', variant: 'secondary' },
+          highlights: [
+            { label: 'Sync', value: '2-way' },
+            { label: 'Delivery', value: 'Live' }
+          ]
+        });
       }
-    ],
-    []
+
+      next.push(
+        {
+          id: 'quickbooks_csv',
+          title: 'QuickBooks CSV',
+          description: 'Export invoices to CSV for manual import into QuickBooks and import tax data from reports.',
+          highlights: [
+            { label: 'Export', value: 'Manual' },
+            { label: 'Format', value: 'CSV' }
+          ]
+        },
+        {
+          id: 'xero_csv',
+          title: 'Xero CSV',
+          description: 'Export invoices to CSV for manual import into Xero and import tax data from Xero reports.',
+          highlights: [
+            { label: 'Export', value: 'Manual' },
+            { label: 'Format', value: 'CSV' }
+          ]
+        }
+      );
+
+      return next;
+    },
+    [isEEAvailable]
   );
 
-  const [selected, setSelected] = useState<AccountingIntegrationId>('quickbooks_csv');
+  const requestedIntegration = searchParams?.get('accounting_integration');
+  const oauthStatus = searchParams?.get('xero_status');
+  const [selected, setSelected] = useState<AccountingIntegrationId>(() => {
+    if ((requestedIntegration === 'xero' || oauthStatus) && isEEAvailable) {
+      return 'xero';
+    }
+    return 'quickbooks_csv';
+  });
+
+  useEffect(() => {
+    if ((requestedIntegration === 'xero' || oauthStatus) && isEEAvailable) {
+      setSelected('xero');
+      return;
+    }
+
+    if (requestedIntegration === 'xero_csv') {
+      setSelected('xero_csv');
+      return;
+    }
+
+    if (requestedIntegration === 'quickbooks_csv') {
+      setSelected('quickbooks_csv');
+    }
+  }, [isEEAvailable, oauthStatus, requestedIntegration]);
+
+  useEffect(() => {
+    if (options.some((option) => option.id === selected)) {
+      return;
+    }
+    setSelected(options[0]?.id ?? 'quickbooks_csv');
+  }, [options, selected]);
+
   const selectedOption = options.find((option) => option.id === selected) ?? options[0];
+
+  const updateUrlSelection = (nextSelection: AccountingIntegrationId) => {
+    const currentSearchParams = new URLSearchParams(window.location.search);
+    currentSearchParams.set('tab', 'integrations');
+    currentSearchParams.set('category', 'accounting');
+    currentSearchParams.set('accounting_integration', nextSelection);
+    const newUrl = `${window.location.pathname}?${currentSearchParams.toString()}`;
+    window.history.pushState({}, '', newUrl);
+  };
 
   return (
     <div className="space-y-6" id="accounting-integrations-setup">
@@ -158,6 +213,7 @@ export default function AccountingIntegrationsSetup() {
                   onClick={() => {
                     if (isDisabled) return;
                     setSelected(option.id);
+                    updateUrlSelection(option.id);
                   }}
                   id={`accounting-integration-configure-${option.id}`}
                 >
@@ -183,6 +239,8 @@ export default function AccountingIntegrationsSetup() {
 
         {selected === 'quickbooks_csv' ? (
           <CSVIntegrationSettings />
+        ) : selected === 'xero' ? (
+          <XeroIntegrationSettings />
         ) : selected === 'xero_csv' ? (
           <XeroCsvIntegrationSettings />
         ) : (

@@ -1,3 +1,4 @@
+import type { ContactPhoneNumberInput } from '@alga-psa/types';
 import type { EntraSyncUser } from './types';
 
 function toObject(value: unknown): Record<string, unknown> {
@@ -31,6 +32,35 @@ function fallbackDisplayName(user: EntraSyncUser): string {
   return (user.email || user.userPrincipalName || 'Entra Contact').split('@')[0];
 }
 
+export function buildEntraContactPhoneNumbers(user: EntraSyncUser): ContactPhoneNumberInput[] {
+  const businessPhones = user.businessPhones
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const mobilePhone = user.mobilePhone?.trim() || '';
+
+  const phoneNumbers: ContactPhoneNumberInput[] = [];
+
+  businessPhones.forEach((phoneNumber, index) => {
+    phoneNumbers.push({
+      phone_number: phoneNumber,
+      canonical_type: 'work',
+      is_default: index === 0,
+      display_order: phoneNumbers.length,
+    });
+  });
+
+  if (mobilePhone) {
+    phoneNumbers.push({
+      phone_number: mobilePhone,
+      canonical_type: 'mobile',
+      is_default: businessPhones.length === 0,
+      display_order: phoneNumbers.length,
+    });
+  }
+
+  return phoneNumbers;
+}
+
 export function buildContactFieldSyncPatch(
   user: EntraSyncUser,
   fieldSyncConfig: unknown
@@ -47,7 +77,7 @@ export function buildContactFieldSyncPatch(
   }
 
   if (isEnabled(config, ['phone', 'phoneNumber', 'phone_number', 'mobilePhone', 'mobile_phone'])) {
-    patch.phone_number = user.mobilePhone || user.businessPhones[0] || null;
+    patch.phone_numbers = buildEntraContactPhoneNumbers(user);
   }
 
   if (isEnabled(config, ['role', 'jobTitle', 'job_title'])) {

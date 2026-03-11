@@ -2,29 +2,38 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import axios from 'axios';
+import logger from '@alga-psa/core/logger';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 
 import {
-  getXeroClientId,
-  getXeroClientSecret,
+  getXeroRedirectUri,
   XeroConnectionsStore,
+  resolveXeroOAuthCredentials,
   upsertStoredXeroConnections,
   XERO_TOKEN_URL
 } from '../../../../lib/xero/xeroClientService';
 
 const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-const XERO_REDIRECT_URI = `${NEXTAUTH_URL}/api/integrations/xero/callback`;
 const XERO_CONNECTIONS_URL = 'https://api.xero.com/connections';
 
-const SUCCESS_PATH = '/msp/settings?tab=integrations&xero_status=success';
-const FAILURE_PATH = '/msp/settings?tab=integrations&xero_status=failure';
+const SUCCESS_PATH =
+  '/msp/settings?tab=integrations&category=accounting&accounting_integration=xero&xero_status=success';
+const FAILURE_PATH =
+  '/msp/settings?tab=integrations&category=accounting&accounting_integration=xero&xero_status=failure';
 
 type XeroStatePayload = {
   tenantId: string;
   csrf: string;
   codeVerifier: string;
 };
+
+function isEnterpriseEdition(): boolean {
+  return (
+    (process.env.EDITION ?? '').toLowerCase() === 'ee' ||
+    (process.env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise'
+  );
+}
 
 function createRedirect(path: string, params?: Record<string, string | undefined>) {
   const url = new URL(path, NEXTAUTH_URL);
@@ -39,6 +48,13 @@ function createRedirect(path: string, params?: Record<string, string | undefined
 }
 
 export async function GET(request: Request): Promise<NextResponse> {
+  if (!isEnterpriseEdition()) {
+    return NextResponse.json(
+      { error: 'Xero integration is only available in Enterprise Edition.' },
+      { status: 501 }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const errorParam = searchParams.get('error');
   const code = searchParams.get('code');
@@ -65,12 +81,16 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   const tenantId = statePayload.tenantId;
   const secretProvider = await getSecretProviderInstance();
-  const [clientId, clientSecret] = await Promise.all([
-    getXeroClientId(secretProvider),
-    getXeroClientSecret(secretProvider)
-  ]);
+  const redirectUri = await getXeroRedirectUri(secretProvider);
 
-  if (!clientId || !clientSecret) {
+  let credentials;
+  try {
+    credentials = await resolveXeroOAuthCredentials(tenantId, secretProvider);
+  } catch (error) {
+    logger.warn('[xeroOAuth] Callback received without usable credentials', {
+      tenantId,
+      error: error instanceof Error ? error.message : error
+    });
     return createRedirect(FAILURE_PATH, { xero_error: 'config_missing' });
   }
 
@@ -78,9 +98,9 @@ export async function GET(request: Request): Promise<NextResponse> {
     const tokenParams = new URLSearchParams({
       grant_type: 'authorization_code',
       code,
-      redirect_uri: XERO_REDIRECT_URI,
-      client_id: String(clientId),
-      client_secret: String(clientSecret),
+      redirect_uri: redirectUri,
+      client_id: String(credentials.clientId),
+      client_secret: String(credentials.clientSecret),
       code_verifier: statePayload.codeVerifier
     });
 
@@ -123,7 +143,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       }
     });
 
-    const connections: Array<{ id?: string; tenantId?: string }> = Array.isArray(
+    const connections: Array<{ id?: string; tenantId?: string; tenantName?: string }> = Array.isArray(
       connectionsResponse.data
     )
       ? connectionsResponse.data
@@ -143,6 +163,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       connectionUpdates[connection.id] = {
         connectionId: connection.id,
         xeroTenantId: connection.tenantId,
+        tenantName: connection.tenantName,
         accessToken,
         refreshToken,
         accessTokenExpiresAt,
@@ -160,9 +181,19 @@ export async function GET(request: Request): Promise<NextResponse> {
       prioritize: Object.keys(connectionUpdates)
     });
 
+    logger.info('[xeroOAuth] Completed Xero OAuth callback', {
+      tenantId,
+      credentialSource: credentials.source,
+      connectionCount: Object.keys(connectionUpdates).length,
+      defaultConnectionId: Object.keys(connectionUpdates)[0]
+    });
+
     return createRedirect(SUCCESS_PATH);
   } catch (error) {
-    console.error('[xeroOAuth] failed to complete OAuth callback for tenant', tenantId, error);
+    logger.error('[xeroOAuth] Failed to complete OAuth callback', {
+      tenantId,
+      error: error instanceof Error ? error.message : 'unknown_error'
+    });
     return createRedirect(FAILURE_PATH, { xero_error: 'oauth_failed' });
   }
 }

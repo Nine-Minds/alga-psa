@@ -4,7 +4,8 @@
   "type": "module",
   "exports": {
     "./ee/entry": "./ee/entry.tsx",
-    "./oss/entry": "./oss/entry.tsx"
+    "./oss/entry": "./oss/entry.tsx",
+    "./context": "./context.tsx"
   },
   "dependencies": {},
   "devDependencies": {}

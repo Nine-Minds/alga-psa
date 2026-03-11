@@ -36,6 +36,7 @@ import { IClient } from '@alga-psa/types';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
+import QuickAddContact from '../contacts/QuickAddContact';
 
 interface QuickAddInteractionProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -77,6 +78,7 @@ export function QuickAddInteraction({
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [contacts, setContacts] = useState<IContact[]>([]);
+  const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
   const tenant = useTenant()!;
   const { data: session } = useSession();
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
@@ -489,6 +491,7 @@ export function QuickAddInteraction({
       const fullInteraction = await getInteractionById(resultInteraction.interaction_id!);
       
       onInteractionAdded(fullInteraction);
+      setIsQuickAddContactOpen(false);
       onClose();
       
       // Clear form fields only if not editing
@@ -538,11 +541,12 @@ export function QuickAddInteraction({
       <Dialog
         isOpen={isOpen}
         onClose={() => {
-          setHasAttemptedSubmit(false);
-          setValidationErrors([]);
-          setEndTimeError('');
-          onClose();
-        }}
+        setHasAttemptedSubmit(false);
+        setValidationErrors([]);
+        setEndTimeError('');
+        setIsQuickAddContactOpen(false);
+        onClose();
+      }}
         title={isEditMode ? 'Edit Interaction' : 'Add New Interaction'}
         className="max-w-2xl"
         hideCloseButton={false}
@@ -665,11 +669,31 @@ export function QuickAddInteraction({
                         placeholder={!selectedClientId ? "Select client first" : "Select Contact"}
                         disabled={!selectedClientId}
                         buttonWidth="fit"
+                        onAddNew={selectedClientId ? () => setIsQuickAddContactOpen(true) : undefined}
                       />
                     </div>
                   </div>
                 </div>
               )}
+              <QuickAddContact
+                isOpen={isQuickAddContactOpen}
+                onClose={() => setIsQuickAddContactOpen(false)}
+                onContactAdded={(newContact) => {
+                  setContacts((prevContacts) => {
+                    const existingIndex = prevContacts.findIndex((contact) => contact.contact_name_id === newContact.contact_name_id);
+                    if (existingIndex >= 0) {
+                      const nextContacts = [...prevContacts];
+                      nextContacts[existingIndex] = newContact;
+                      return nextContacts;
+                    }
+                    return [...prevContacts, newContact];
+                  });
+                  setSelectedContactId(newContact.contact_name_id);
+                  setIsQuickAddContactOpen(false);
+                }}
+                clients={clients}
+                selectedClientId={selectedClientId}
+              />
               
               {/* Status for non-edit mode - shown for create mode */}
               {!isEditMode && (

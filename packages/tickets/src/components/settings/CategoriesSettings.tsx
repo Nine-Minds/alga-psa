@@ -6,7 +6,6 @@ import { Plus, MoreVertical, CornerDownRight } from "lucide-react";
 import type { ITicketCategory, DeletionValidationResult } from '@alga-psa/types';
 import {
   getAllCategories,
-  createCategory,
   updateCategory,
   deleteCategory,
   validateCategoryDeletion
@@ -31,6 +30,7 @@ import {
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import QuickAddCategory from '../QuickAddCategory';
 
 const CategoriesSettings = (): React.JSX.Element => {
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
@@ -186,51 +186,26 @@ const CategoriesSettings = (): React.JSX.Element => {
 
   const handleSaveCategory = async () => {
     try {
+      if (!editingCategory) {
+        return;
+      }
+
       if (!formData.category_name.trim()) {
         setError('Category name is required');
         return;
       }
 
-      if (editingCategory) {
-        const updateData: any = {
-          category_name: formData.category_name,
-          display_order: formData.display_order
-        };
-        
-        // Only include board_id for parent categories
-        if (!editingCategory.parent_category) {
-          updateData.board_id = formData.board_id;
-        }
-        
-        await updateCategory(editingCategory.category_id, updateData);
-        toast.success('Category updated successfully');
-      } else {
-        // For new categories
-        if (!formData.parent_category && !formData.board_id) {
-          setError('Board is required for top-level categories');
-          return;
-        }
-        
-        const createData: any = {
-          category_name: formData.category_name,
-          display_order: formData.display_order
-        };
-        
-        if (formData.parent_category) {
-          // For subcategories, get board from parent
-          const parentCategory = categories.find(cat => cat.category_id === formData.parent_category);
-          if (parentCategory) {
-            createData.board_id = parentCategory.board_id;
-            createData.parent_category = formData.parent_category;
-          }
-        } else {
-          // For top-level categories
-          createData.board_id = formData.board_id;
-        }
-        
-        await createCategory(createData);
-        toast.success('Category created successfully');
+      const updateData: any = {
+        category_name: formData.category_name,
+        display_order: formData.display_order
+      };
+      
+      if (!editingCategory.parent_category) {
+        updateData.board_id = formData.board_id;
       }
+      
+      await updateCategory(editingCategory.category_id, updateData);
+      toast.success('Category updated successfully');
       
       setShowAddEditDialog(false);
       setEditingCategory(null);
@@ -482,143 +457,109 @@ const CategoriesSettings = (): React.JSX.Element => {
         isDeleting={isDeleteProcessing}
       />
 
-      {/* Add/Edit Dialog */}
-      <Dialog 
-        isOpen={showAddEditDialog} 
+      <QuickAddCategory
+        isOpen={showAddEditDialog && !editingCategory}
         onClose={() => {
           setShowAddEditDialog(false);
           setEditingCategory(null);
-          setFormData({ category_name: '', display_order: 0, board_id: '', parent_category: '' });
           setError(null);
-        }} 
-        title={editingCategory ? "Edit Category" : "Add Category"}
-      >
-        <DialogContent>
-          <div className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            <div>
-              <Label htmlFor="category_name">Category Name *</Label>
-              <Input
-                id="category_name"
-                value={formData.category_name}
-                onChange={(e) => setFormData({ ...formData, category_name: e.target.value })}
-                placeholder="Enter category name"
-              />
-            </div>
-            {!editingCategory && !formData.parent_category && (
+        }}
+        onCategoryCreated={async () => {
+          setShowAddEditDialog(false);
+          setEditingCategory(null);
+          await fetchCategories();
+        }}
+        categories={categories}
+        boards={boards}
+      />
+
+      {editingCategory && (
+        <Dialog 
+          isOpen={showAddEditDialog} 
+          onClose={() => {
+            setShowAddEditDialog(false);
+            setEditingCategory(null);
+            setFormData({ category_name: '', display_order: 0, board_id: '', parent_category: '' });
+            setError(null);
+          }} 
+          title="Edit Category"
+        >
+          <DialogContent>
+            <div className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
               <div>
-                <Label htmlFor="board_id">Board *</Label>
-                <CustomSelect
-                  value={formData.board_id}
-                  onValueChange={(value) => setFormData({ ...formData, board_id: value })}
-                  options={boards
-                    .filter(ch => ch.category_type !== 'itil')
-                    .map(ch => ({
-                      value: ch.board_id || '',
-                      label: ch.board_name || ''
-                    }))}
-                  placeholder="Select a board"
-                  className="w-full"
+                <Label htmlFor="category_name">Category Name *</Label>
+                <Input
+                  id="category_name"
+                  value={formData.category_name}
+                  onChange={(e) => setFormData({ ...formData, category_name: e.target.value })}
+                  placeholder="Enter category name"
+                />
+              </div>
+              {!editingCategory.parent_category && (
+                <>
+                  <div>
+                    <Label htmlFor="board_id">Board</Label>
+                    <CustomSelect
+                      value={formData.board_id}
+                      onValueChange={(value) => setFormData({ ...formData, board_id: value })}
+                      options={boards
+                        .filter(ch => ch.category_type !== 'itil')
+                        .map(ch => ({
+                          value: ch.board_id || '',
+                          label: ch.board_name || ''
+                        }))}
+                      placeholder="Select a board"
+                      className="w-full"
+                    />
+                  </div>
+                  {formData.board_id !== editingCategory.board_id && (
+                    <Alert>
+                      <AlertDescription>
+                        Changing the board for this parent category will also update all its subcategories to the same board.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </>
+              )}
+              <div>
+                <Label htmlFor="display_order">Display Order</Label>
+                <Input
+                  id="display_order"
+                  type="number"
+                  value={formData.display_order}
+                  onChange={(e) => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })}
+                  placeholder="Enter display order"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Required for top-level categories
+                  Controls the order in which categories appear in dropdown menus throughout the platform. Lower numbers appear first.
                 </p>
               </div>
-            )}
-            {!editingCategory && (
-              <div>
-                <Label htmlFor="parent_category">Parent Category (Optional)</Label>
-                <CustomSelect
-                  value={formData.parent_category || 'none'}
-                  onValueChange={(value) => {
-                    const actualValue = value === 'none' ? '' : value;
-                    setFormData({ ...formData, parent_category: actualValue });
-                  }}
-                  options={[
-                    { value: 'none', label: 'None (Top-level category)' },
-                    ...categories
-                      .filter(cat => !cat.parent_category)
-                      .filter(cat => !formData.board_id || cat.board_id === formData.board_id)
-                      .map(cat => ({
-                        value: cat.category_id,
-                        label: formData.board_id
-                          ? cat.category_name
-                          : `${cat.category_name} (${boards.find(b => b.board_id === cat.board_id)?.board_name || 'No board'})`
-                      }))
-                  ]}
-                  placeholder="Select parent category"
-                  className="w-full"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {formData.board_id
-                    ? 'Select a parent to create a subcategory, or leave empty for top-level'
-                    : 'Select a board first, or pick a parent category to inherit its board'}
-                </p>
-              </div>
-            )}
-            {editingCategory && !editingCategory.parent_category && (
-              <>
-                <div>
-                  <Label htmlFor="board_id">Board</Label>
-                  <CustomSelect
-                    value={formData.board_id}
-                    onValueChange={(value) => setFormData({ ...formData, board_id: value })}
-                    options={boards
-                      .filter(ch => ch.category_type !== 'itil')
-                      .map(ch => ({
-                        value: ch.board_id || '',
-                        label: ch.board_name || ''
-                      }))}
-                    placeholder="Select a board"
-                    className="w-full"
-                  />
-                </div>
-                {formData.board_id !== editingCategory.board_id && (
-                  <Alert>
-                    <AlertDescription>
-                      Changing the board for this parent category will also update all its subcategories to the same board.
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </>
-            )}
-            <div>
-              <Label htmlFor="display_order">Display Order</Label>
-              <Input
-                id="display_order"
-                type="number"
-                value={formData.display_order}
-                onChange={(e) => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })}
-                placeholder="Enter display order"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Controls the order in which categories appear in dropdown menus throughout the platform. Lower numbers appear first.
-              </p>
             </div>
-          </div>
-        </DialogContent>
-        <DialogFooter>
-          <Button 
-            id="cancel-category-dialog"
-            variant="outline" 
-            onClick={() => {
-              setShowAddEditDialog(false);
-              setEditingCategory(null);
-              setFormData({ category_name: '', display_order: 0, board_id: '', parent_category: '' });
-              setError(null);
-            }}
-          >
-            Cancel
-          </Button>
-          <Button id="save-category-button" onClick={handleSaveCategory}>
-            {editingCategory ? 'Update' : 'Create'}
-          </Button>
-        </DialogFooter>
-      </Dialog>
+          </DialogContent>
+          <DialogFooter>
+            <Button 
+              id="cancel-category-dialog"
+              variant="outline" 
+              onClick={() => {
+                setShowAddEditDialog(false);
+                setEditingCategory(null);
+                setFormData({ category_name: '', display_order: 0, board_id: '', parent_category: '' });
+                setError(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button id="save-category-button" onClick={handleSaveCategory}>
+              Update
+            </Button>
+          </DialogFooter>
+        </Dialog>
+      )}
 
       {/* Import Dialog */}
       <Dialog 

@@ -12,6 +12,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Globe, Send, Inbox, Mail, Eye, EyeOff } from 'lucide-react';
 import {
@@ -28,6 +29,10 @@ import { getEmailSettings, updateEmailSettings, getEmailProviders } from '@alga-
 import ManagedDomainList from './ManagedDomainList';
 
 type OutboundProvider = 'resend' | 'smtp';
+type EmailSettingsUpdateInput = Partial<TenantEmailSettings> & {
+  defaultFromDomain?: string | null;
+  ticketingFromEmail?: string | null;
+};
 
 type ManagedEmailOverrides = {
   getManagedEmailDomains?: () => Promise<ManagedDomainStatus[]>;
@@ -62,6 +67,20 @@ function getManagedEmailOverrides(): ManagedEmailOverrides | undefined {
 
 interface EmailSettingsProps {}
 
+function extractEmailDomain(value?: string | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  const parts = trimmed.split('@');
+  if (parts.length !== 2) {
+    return null;
+  }
+
+  return parts[1]?.trim().toLowerCase() || null;
+}
+
 export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   const [domains, setDomains] = useState<ManagedDomainStatus[]>([]);
   const [loadingDomains, setLoadingDomains] = useState(true);
@@ -76,10 +95,12 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   const [ticketingFromError, setTicketingFromError] = useState<string | null>(null);
   const [ticketingFromWarning, setTicketingFromWarning] = useState<string | null>(null);
   const [savingTicketingFrom, setSavingTicketingFrom] = useState(false);
+  const [showClearTicketingFromDialog, setShowClearTicketingFromDialog] = useState(false);
   const [loadingOutbound, setLoadingOutbound] = useState(true);
   const [outboundProvider, setOutboundProvider] = useState<OutboundProvider>('resend');
   const [showSmtpPassword, setShowSmtpPassword] = useState(false);
   const [savingSmtp, setSavingSmtp] = useState(false);
+  const [pendingDomainRemoval, setPendingDomainRemoval] = useState<string | null>(null);
 
   useEffect(() => {
     loadDomains();
@@ -186,9 +207,6 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     if (current) {
       setTicketingFromOption(hasMatch ? current : 'custom');
       setTicketingFromCustom(current);
-    } else if (mailboxes.length > 0) {
-      setTicketingFromOption(mailboxes[0]);
-      setTicketingFromCustom(mailboxes[0]);
     } else {
       setTicketingFromOption('custom');
       setTicketingFromCustom('');
@@ -241,7 +259,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       const updated = await updateEmailSettings({
         ticketingFromEmail: normalized,
         defaultFromDomain: outboundDomain || emailSettings?.defaultFromDomain
-      });
+      } satisfies EmailSettingsUpdateInput);
 
       setEmailSettings(updated);
       initializeTicketingFromSelection(updated, inboundProviders);
@@ -252,6 +270,43 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     } finally {
       setSavingTicketingFrom(false);
     }
+  };
+
+  const handleClearTicketingFrom = async () => {
+    if (!emailSettings?.ticketingFromEmail) {
+      return;
+    }
+
+    setSavingTicketingFrom(true);
+    try {
+      const updated = await updateEmailSettings({
+        ticketingFromEmail: null,
+      } satisfies EmailSettingsUpdateInput);
+
+      setEmailSettings(updated);
+      initializeTicketingFromSelection(updated, inboundProviders);
+      setShowClearTicketingFromDialog(false);
+      toast.success('Ticketing from address cleared');
+    } catch (err: any) {
+      console.error('[ManagedEmailSettings] Failed to clear ticketing from address', err);
+      toast.error(err.message || 'Failed to clear ticketing from address');
+    } finally {
+      setSavingTicketingFrom(false);
+    }
+  };
+
+  const getDomainRemovalImpact = (domain: string | null) => {
+    const normalizedDomain = domain?.trim().toLowerCase() || '';
+    const removesActiveOutboundDomain =
+      emailSettings?.defaultFromDomain?.trim().toLowerCase() === normalizedDomain;
+    const removesTicketingFromDomain =
+      removesActiveOutboundDomain ||
+      extractEmailDomain(emailSettings?.ticketingFromEmail) === normalizedDomain;
+
+    return {
+      removesActiveOutboundDomain,
+      removesTicketingFromDomain,
+    };
   };
 
 
@@ -375,12 +430,34 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     }
   };
 
-  const handleDeleteDomain = async (domain: string) => {
+  const handleDeleteDomain = async () => {
+    if (!pendingDomainRemoval) {
+      return;
+    }
+
+    const domain = pendingDomainRemoval;
+    const { removesActiveOutboundDomain, removesTicketingFromDomain } = getDomainRemovalImpact(domain);
+
     setBusyDomain(domain);
     try {
       const deleter = overrides?.deleteManagedEmailDomain ?? deleteManagedEmailDomain;
       await deleter(domain);
-      toast.success('Domain removal scheduled');
+
+      if (emailSettings && (removesActiveOutboundDomain || removesTicketingFromDomain)) {
+        const updatedSettings = await updateEmailSettings({
+          defaultFromDomain: removesActiveOutboundDomain ? null : emailSettings.defaultFromDomain,
+          ticketingFromEmail: removesTicketingFromDomain ? null : emailSettings.ticketingFromEmail,
+        } satisfies EmailSettingsUpdateInput);
+        setEmailSettings(updatedSettings);
+        initializeTicketingFromSelection(updatedSettings, inboundProviders);
+      }
+
+      setPendingDomainRemoval(null);
+      toast.success(
+        removesTicketingFromDomain
+          ? 'Domain removal scheduled and ticketing From address cleared'
+          : 'Domain removal scheduled'
+      );
       await loadDomains();
     } catch (err: any) {
       console.error(err);
@@ -481,7 +558,7 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
                 loading={loadingDomains}
                 busyDomain={busyDomain}
                 onRefresh={handleRefreshDomain}
-                onDelete={handleDeleteDomain}
+                onDelete={(domain) => setPendingDomainRemoval(domain)}
               />
             </CardContent>
           </Card>
@@ -673,7 +750,17 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
                   </Alert>
                 )}
 
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-2">
+                  {emailSettings?.ticketingFromEmail ? (
+                    <Button
+                      id="clear-ticketing-from"
+                      variant="outline"
+                      onClick={() => setShowClearTicketingFromDialog(true)}
+                      disabled={savingTicketingFrom || loadingOutbound}
+                    >
+                      Clear From Address
+                    </Button>
+                  ) : null}
                   <Button
                     id="save-ticketing-from"
                     onClick={handleSaveTicketingFrom}
@@ -700,6 +787,32 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
         </div>
         <EmailProviderConfiguration />
       </TabsContent>
+      <ConfirmationDialog
+        isOpen={showClearTicketingFromDialog}
+        onClose={() => setShowClearTicketingFromDialog(false)}
+        onConfirm={handleClearTicketingFrom}
+        title="Clear Ticketing From Address"
+        message="Clear the saved ticketing From address? Ticket notifications will stop using a custom From address until you save a new one."
+        confirmLabel="Clear From Address"
+        cancelLabel="Cancel"
+        isConfirming={savingTicketingFrom}
+        id="managed-email-clear-ticketing-from"
+      />
+      <ConfirmationDialog
+        isOpen={!!pendingDomainRemoval}
+        onClose={() => setPendingDomainRemoval(null)}
+        onConfirm={handleDeleteDomain}
+        title="Remove Managed Domain"
+        message={
+          pendingDomainRemoval && getDomainRemovalImpact(pendingDomainRemoval).removesActiveOutboundDomain
+            ? `Remove ${pendingDomainRemoval}? This will also clear the saved ticketing From address because this domain is currently active for outbound email.`
+            : `Remove ${pendingDomainRemoval ?? 'this domain'}?`
+        }
+        confirmLabel="Remove Domain"
+        cancelLabel="Cancel"
+        isConfirming={Boolean(pendingDomainRemoval && busyDomain === pendingDomainRemoval)}
+        id="managed-email-remove-domain"
+      />
     </Tabs>
   );
 };

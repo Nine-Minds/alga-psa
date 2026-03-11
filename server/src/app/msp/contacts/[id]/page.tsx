@@ -9,6 +9,7 @@ import { getContactByContactNameId } from '@alga-psa/clients/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { getContactPortalPermissions } from '@alga-psa/auth/actions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { AIChatContextBoundary } from '@product/chat/context';
 import type { Metadata } from 'next';
 
 const getCachedContact = cache((id: string) => getContactByContactNameId(id));
@@ -76,6 +77,19 @@ const ContactDetailPage = async ({ params, searchParams }: ContactDetailPageProp
     }
 
     return (
+      <AIChatContextBoundary
+        value={{
+          pathname: `/msp/contacts/${id}`,
+          screen: {
+            key: 'contacts.detail',
+            label: 'Contact Details',
+          },
+          record: {
+            type: 'contact',
+            id,
+          },
+        }}
+      >
         <div className="p-6">
           <ContactDetails
             contact={contact}
@@ -85,6 +99,7 @@ const ContactDetailPage = async ({ params, searchParams }: ContactDetailPageProp
             userPermissions={permissions}
           />
         </div>
+      </AIChatContextBoundary>
     );
   } catch (error) {
     console.error(`Error fetching data for contact with id ${id}:`, error);

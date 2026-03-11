@@ -7,6 +7,7 @@ import { createDefaultTaxSettings } from '@alga-psa/shared/billingClients';
 import {
   buildClientCreatedPayload,
 } from '@alga-psa/shared/workflow/streams/domainEventBuilders/clientEventBuilders';
+import { ContactModel } from '@alga-psa/shared/models/contactModel';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import type { IClient, IContact } from '@alga-psa/types';
 import type { Knex } from 'knex';
@@ -24,6 +25,20 @@ function extractNameFromEmail(email: string): string {
     .split(' ')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
+}
+
+function buildDefaultPhoneNumbers(phone?: string) {
+  const trimmedPhone = phone?.trim();
+  if (!trimmedPhone) {
+    return [];
+  }
+
+  return [{
+    phone_number: trimmedPhone,
+    canonical_type: 'work' as const,
+    is_default: true,
+    display_order: 0,
+  }];
 }
 
 export const getIntegrationClients = withAuth(async (
@@ -55,7 +70,7 @@ export const findIntegrationContactByEmailAddress = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return trx('contacts')
+    const baseContact = await trx('contacts')
       .select('contacts.*', 'clients.client_name')
       .leftJoin('clients', function joinClients() {
         this.on('contacts.client_id', '=', 'clients.client_id')
@@ -66,6 +81,16 @@ export const findIntegrationContactByEmailAddress = withAuth(async (
         'contacts.tenant': tenant,
       })
       .first();
+
+    if (!baseContact) {
+      return null;
+    }
+
+    const [hydratedContact] = await ContactModel.hydrateContactsWithPhoneNumbers([baseContact as any], tenant, trx);
+    return {
+      ...hydratedContact,
+      client_name: (baseContact as { client_name?: string | null }).client_name ?? null,
+    };
   });
 
   return (contact ?? null) as (IContact & { client_name?: string | null }) | null;
@@ -85,7 +110,7 @@ export const createOrFindIntegrationContactByEmail = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const existingContact = await trx('contacts')
+    const existingBaseContact = await trx('contacts')
       .select('contacts.*', 'clients.client_name')
       .leftJoin('clients', function joinClients() {
         this.on('contacts.client_id', '=', 'clients.client_id')
@@ -97,39 +122,33 @@ export const createOrFindIntegrationContactByEmail = withAuth(async (
       })
       .first();
 
-    if (existingContact) {
-      if (existingContact.client_id !== input.clientId) {
-        if (!existingContact.client_id) {
+    if (existingBaseContact) {
+      if (existingBaseContact.client_id !== input.clientId) {
+        if (!existingBaseContact.client_id) {
           throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system without a client assignment');
         }
-        throw new Error(`EMAIL_EXISTS: This email is already associated with ${existingContact.client_name || 'another client'}`);
+        throw new Error(`EMAIL_EXISTS: This email is already associated with ${existingBaseContact.client_name || 'another client'}`);
       }
+
+      const [existingContact] = await ContactModel.hydrateContactsWithPhoneNumbers([existingBaseContact as any], tenant, trx);
 
       return {
         contact: {
           ...(existingContact as IContact),
-          client_name: existingContact.client_name || '',
+          client_name: existingBaseContact.client_name || '',
         },
         isNew: false,
       };
     }
 
-    const contactName = input.name || extractNameFromEmail(input.email);
-    const now = new Date();
-
-    const [newContact] = await trx('contacts')
-      .insert({
-        tenant,
-        client_id: input.clientId,
-        full_name: contactName,
-        email: input.email.toLowerCase(),
-        phone_number: input.phone,
-        role: input.title,
-        is_inactive: false,
-        created_at: now,
-        updated_at: now,
-      })
-      .returning('*');
+    const newContact = await ContactModel.createContact({
+      full_name: input.name || extractNameFromEmail(input.email),
+      email: input.email.toLowerCase(),
+      client_id: input.clientId,
+      phone_numbers: buildDefaultPhoneNumbers(input.phone),
+      role: input.title,
+      is_inactive: false,
+    }, tenant, trx);
 
     const client = await trx('clients')
       .select('client_name')

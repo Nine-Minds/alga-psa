@@ -8,9 +8,10 @@ import {
   resolveEntraQueueToNew,
   type EntraReconciliationQueueItem,
 } from '@alga-psa/integrations/actions';
-import { getAllContacts } from '@alga-psa/clients/actions';
+import { getAllClients, getAllContacts } from '@alga-psa/clients/actions';
+import { QuickAddContact } from '@alga-psa/clients/components';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
-import type { IContact } from '@alga-psa/types';
+import type { IClient, IContact } from '@alga-psa/types';
 
 function formatDateTime(value: string): string {
   const parsed = Date.parse(value);
@@ -23,9 +24,11 @@ export default function EntraReconciliationQueue() {
   const [error, setError] = React.useState<string | null>(null);
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
   const [items, setItems] = React.useState<EntraReconciliationQueueItem[]>([]);
+  const [clients, setClients] = React.useState<IClient[]>([]);
   const [allContacts, setAllContacts] = React.useState<IContact[]>([]);
   const [resolvingItemId, setResolvingItemId] = React.useState<string | null>(null);
   const [existingContactIdByItem, setExistingContactIdByItem] = React.useState<Record<string, string>>({});
+  const [quickAddItem, setQuickAddItem] = React.useState<EntraReconciliationQueueItem | null>(null);
 
   const loadQueue = React.useCallback(async () => {
     setLoading(true);
@@ -47,6 +50,18 @@ export default function EntraReconciliationQueue() {
   React.useEffect(() => {
     void loadQueue();
   }, [loadQueue]);
+
+  React.useEffect(() => {
+    const loadClients = async () => {
+      try {
+        const result = await getAllClients();
+        setClients(Array.isArray(result) ? result : []);
+      } catch {
+        setClients([]);
+      }
+    };
+    void loadClients();
+  }, []);
 
   React.useEffect(() => {
     const loadContacts = async () => {
@@ -179,6 +194,7 @@ export default function EntraReconciliationQueue() {
                   placeholder="Select existing contact..."
                   label="Existing Contact"
                   buttonWidth="full"
+                  onAddNew={() => setQuickAddItem(item)}
                 />
                 <Button
                   id={`entra-queue-resolve-existing-${item.queueItemId}`}
@@ -205,6 +221,31 @@ export default function EntraReconciliationQueue() {
           ))}
         </div>
       ) : null}
+
+      <QuickAddContact
+        isOpen={quickAddItem !== null}
+        onClose={() => setQuickAddItem(null)}
+        onContactAdded={(newContact) => {
+          setAllContacts((currentContacts) => {
+            const existingIndex = currentContacts.findIndex((contact) => contact.contact_name_id === newContact.contact_name_id);
+            if (existingIndex >= 0) {
+              const nextContacts = [...currentContacts];
+              nextContacts[existingIndex] = newContact;
+              return nextContacts;
+            }
+            return [...currentContacts, newContact];
+          });
+          if (quickAddItem) {
+            setExistingContactIdByItem((current) => ({
+              ...current,
+              [quickAddItem.queueItemId]: newContact.contact_name_id,
+            }));
+          }
+          setQuickAddItem(null);
+        }}
+        clients={clients}
+        selectedClientId={quickAddItem?.clientId || null}
+      />
     </div>
   );
 }

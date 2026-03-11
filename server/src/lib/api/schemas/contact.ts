@@ -4,27 +4,48 @@
  */
 
 import { z } from 'zod';
+import { CONTACT_PHONE_CANONICAL_TYPES } from '@alga-psa/shared/interfaces/contact.interfaces';
 import { 
   uuidSchema, 
   emailSchema, 
-  phoneSchema, 
   createListQuerySchema, 
   createUpdateSchema,
   baseFilterSchema,
   booleanTransform
 } from './common';
 
+const contactPhoneCanonicalTypeSchema = z.enum(CONTACT_PHONE_CANONICAL_TYPES);
+const contactPhoneNumberInputSchema = z.object({
+  contact_phone_number_id: uuidSchema.optional(),
+  phone_number: z.string().trim().min(1, 'Phone number is required'),
+  canonical_type: contactPhoneCanonicalTypeSchema.nullish(),
+  custom_type: z.string().trim().min(1).nullish(),
+  is_default: z.boolean().optional(),
+  display_order: z.number().int().min(0).optional()
+});
+
+const contactPhoneNumberResponseSchema = z.object({
+  contact_phone_number_id: uuidSchema,
+  phone_number: z.string(),
+  normalized_phone_number: z.string(),
+  canonical_type: contactPhoneCanonicalTypeSchema.nullable(),
+  custom_phone_type_id: uuidSchema.nullable().optional(),
+  custom_type: z.string().nullable(),
+  is_default: z.boolean(),
+  display_order: z.number().int().min(0)
+});
+
 // Create contact schema
 export const createContactSchema = z.object({
   full_name: z.string().min(1, 'Full name is required').max(255),
   client_id: uuidSchema.optional(),
-  phone_number: phoneSchema,
+  phone_numbers: z.array(contactPhoneNumberInputSchema).optional().default([]),
   email: emailSchema,
   role: z.string().max(100).optional(),
   notes: z.string().optional(),
   is_inactive: z.boolean().optional().default(false),
   tags: z.array(z.string()).optional()
-});
+}).strict();
 
 // Update contact schema (all fields optional)
 export const updateContactSchema = createUpdateSchema(createContactSchema);
@@ -49,7 +70,9 @@ export const contactResponseSchema = z.object({
   contact_name_id: uuidSchema,
   full_name: z.string(),
   client_id: uuidSchema.nullable(),
-  phone_number: z.string().nullable(),
+  phone_numbers: z.array(contactPhoneNumberResponseSchema),
+  default_phone_number: z.string().nullable().optional(),
+  default_phone_type: z.string().nullable().optional(),
   email: z.string(),
   role: z.string().nullable(),
   created_at: z.string().datetime(),

@@ -9,3 +9,4 @@ export { default as RmmIntegrationsSetup } from './RmmIntegrationsSetup';
 export { TeamsEnterpriseIntegrationSettings } from './TeamsEnterpriseIntegrationSettings';
 export { default as XeroCsvClientSyncPanel } from './XeroCsvClientSyncPanel';
 export { default as XeroCsvIntegrationSettings } from './XeroCsvIntegrationSettings';
+export { default as XeroIntegrationSettings } from './XeroIntegrationSettings';

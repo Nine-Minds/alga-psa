@@ -1,0 +1,38 @@
+/* @vitest-environment node */
+
+import fs from 'node:fs';
+import path from 'node:path';
+import { describe, expect, it } from 'vitest';
+
+function read(relativePath: string): string {
+  return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
+}
+
+describe('categories settings quick-add refactor contract', () => {
+  it('T035: CategoriesSettings uses QuickAddCategory for the add dialog', () => {
+    const source = read('../CategoriesSettings.tsx');
+
+    expect(source).toContain("import QuickAddCategory from '../QuickAddCategory';");
+    expect(source).toContain('<QuickAddCategory');
+    expect(source).toContain('isOpen={showAddEditDialog && !editingCategory}');
+  });
+
+  it('T036: CategoriesSettings keeps the create-category flow wired through QuickAddCategory and refreshes data after create', () => {
+    const source = read('../CategoriesSettings.tsx');
+
+    expect(source).toContain('onCategoryCreated={async () => {');
+    expect(source).toContain('await fetchCategories();');
+    expect(source).toContain('categories={categories}');
+    expect(source).toContain('boards={boards}');
+  });
+
+  it('T037: CategoriesSettings keeps the edit-category flow inline and refreshes after update', () => {
+    const source = read('../CategoriesSettings.tsx');
+
+    expect(source).toContain('{editingCategory && (');
+    expect(source).toContain('title="Edit Category"');
+    expect(source).toContain('await updateCategory(editingCategory.category_id, updateData);');
+    expect(source).toContain("toast.success('Category updated successfully');");
+    expect(source).toContain('await fetchCategories();');
+  });
+});

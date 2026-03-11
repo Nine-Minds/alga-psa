@@ -72,15 +72,24 @@ const ContactPickerDialog = ({
   useEffect(() => {
     const filtered = contacts.filter((contact: IContact) => {
       const matchesClient = !prefilledClientId || contact.client_id === prefilledClientId;
+      const defaultPhoneNumber = contact.default_phone_number
+        || contact.phone_numbers.find((phoneNumber) => phoneNumber.is_default)?.phone_number
+        || '';
       const matchesSearch = !searchTerm || (
         contact.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        contact.phone_number.toLowerCase().includes(searchTerm.toLowerCase())
+        (contact.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
+        defaultPhoneNumber.toLowerCase().includes(searchTerm.toLowerCase())
       );
       return matchesClient && matchesSearch;
     });
     setFilteredContacts(filtered);
   }, [contacts, searchTerm, prefilledClientId]);
+
+  const getDefaultPhoneNumber = (contact: IContact): string => (
+    contact.default_phone_number
+    || contact.phone_numbers.find((phoneNumber) => phoneNumber.is_default)?.phone_number
+    || ''
+  );
 
   const columns: ColumnDefinition<IContact>[] = [
     {
@@ -105,7 +114,8 @@ const ContactPickerDialog = ({
     },
     {
       title: 'Phone',
-      dataIndex: 'phone_number',
+      dataIndex: 'default_phone_number',
+      render: (_, record) => getDefaultPhoneNumber(record),
     },
     {
       title: 'Action',

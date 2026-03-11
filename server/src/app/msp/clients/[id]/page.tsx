@@ -6,7 +6,9 @@ import { getClientById } from '@alga-psa/clients/actions';
 import { notFound } from 'next/navigation';
 import { ClientDetails } from '@alga-psa/clients';
 import { getSurveyClientSummary } from '@alga-psa/surveys/actions/survey-actions/surveyDashboardActions';
+import { AIChatContextBoundary } from '@product/chat/context';
 import type { Metadata } from 'next';
+
 
 const getCachedClient = cache((id: string) => getClientById(id));
 
@@ -46,15 +48,29 @@ const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {
     const documents = isActionPermissionError(documentsResult) ? [] : documentsResult;
 
     return (
-      <div className="w-full px-4">
-        <ClientDetails
-          client={client}
-          documents={documents}
-          contacts={contacts}
-          isInDrawer={false}
-          surveySummary={surveySummary}
-        />
-      </div>
+      <AIChatContextBoundary
+        value={{
+          pathname: `/msp/clients/${id}`,
+          screen: {
+            key: 'clients.detail',
+            label: 'Client Details',
+          },
+          record: {
+            type: 'client',
+            id,
+          },
+        }}
+      >
+        <div className="w-full px-4">
+          <ClientDetails
+            client={client}
+            documents={documents}
+            contacts={contacts}
+            isInDrawer={false}
+            surveySummary={surveySummary}
+          />
+        </div>
+      </AIChatContextBoundary>
     );
   } catch (error) {
     console.error(`Error fetching data for client with id ${id}:`, error);

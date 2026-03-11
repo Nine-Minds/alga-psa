@@ -22,3 +22,20 @@ export { default as FolderBreadcrumb } from './FolderBreadcrumb';
 export { default as FolderManager } from './FolderManager';
 export { default as FolderSelectorModal } from './FolderSelectorModal';
 export { default as FolderTreeView } from './FolderTreeView';
+export { default as VisibilityToggle } from './VisibilityToggle';
+export { default as ShareLinkDialog } from './ShareLinkDialog';
+
+// Settings components
+export { DocumentTemplatesSettings } from './settings';
+
+// Knowledge Base components
+export {
+  KBArticleList,
+  KBArticleFilters,
+  KBArticleEditor,
+  KBPublishingControls,
+  KBReviewDashboard,
+  KBCategoryTree,
+  KBStalenessBadge,
+  KnowledgeBasePage,
+} from './kb';
