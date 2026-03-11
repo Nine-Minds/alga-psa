@@ -146,7 +146,7 @@
   {
     "id": "F025",
     "description": "Add automated coverage for the ticket-scoped bridge, shared content helpers, mobile wrapper integration, and ticket detail screen flows on both description and comment paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Acceptance Criteria (Definition of Done)"]
   }
 ]

@@ -45,7 +45,7 @@ export function TicketDetailScreen({ route }: Props) {
   );
 }
 
-function TicketDetailBody({
+export function TicketDetailBody({
   ticketId,
   config,
   session,

@@ -54,6 +54,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-10) Existing saved comment items stay non-editable by rendering the read-only wrapper only. System/event timeline items still render as plain italic text rather than going through the rich wrapper.
 - (2026-03-11) After installing `@tiptap/extension-image`, the lockfile refreshed Tiptap to `3.20.x`; `@tiptap/starter-kit` now includes `link` and `underline`, so the runtime must configure those through `StarterKit.configure(...)` instead of registering duplicate standalone extensions.
 - (2026-03-11) Explicit malformed-content detection in `ee/mobile/src/features/ticketRichText/helpers.ts` now keeps JSON-looking but unparsable payloads on a plain-text fallback path instead of mounting the WebView editor.
+- (2026-03-11) Export `TicketDetailBody` for behavior-focused tests so mobile ticket save/draft/send coverage can exercise the actual screen state machine with mocked APIs/storage instead of reimplementing it through isolated section tests.
 
 ## Commands / Runbooks
 
@@ -117,6 +118,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd packages/tickets && npx vitest run src/lib/ticketMobileEditorRuntime.test.ts --config vitest.config.ts`
   - `cd ee/mobile && npx vitest run src/screens/TicketDetailScreen.richTextSections.test.ts src/features/ticketRichText/TicketRichTextEditor.test.ts --config vitest.config.ts`
   - `cd ee/mobile && npx tsc --noEmit`
+- (2026-03-11) Ticket screen behavior coverage checkpoint:
+  - `cd ee/mobile && npx vitest run src/screens/TicketDetailScreen.richTextBehaviors.test.ts --config vitest.config.ts`
+  - `cd ee/mobile && npx tsc --noEmit`
 
 ## Links / References
 
@@ -144,6 +148,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `ee/mobile/test/mocks/react-native-webview.ts`
   - `ee/mobile/src/screens/TicketDetailScreen.tsx`
   - `ee/mobile/src/screens/TicketDetailScreen.richTextSections.test.ts`
+  - `ee/mobile/src/screens/TicketDetailScreen.richTextBehaviors.test.ts`
   - `packages/ui/src/editor/RichTextViewer.tsx`
   - `packages/formatting/src/blocknoteUtils.ts`
   - `server/src/test/unit/api/ticketRichRender.responseSchema.test.ts`
@@ -167,3 +172,5 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 
 - (2026-03-11) Completed `F022` by preserving image-backed content in the mobile runtime and wiring read-only description/comment surfaces to hand external link taps back to native `Linking`.
 - (2026-03-11) Completed `T023`, `T028`, and `T029` with component coverage for malformed description fallback, comment-link handoff, and image-backed comment routing, plus runtime coverage that serialized image blocks survive read-only initialization.
+- (2026-03-11) Completed `F025` by adding behavior-level screen tests for description save/cancel plus comment draft persistence/send flows on top of the existing helper, bridge, runtime, wrapper, and section coverage.
+- (2026-03-11) Completed `T025`, `T026`, `T031`, and `T032` in `ee/mobile/src/screens/TicketDetailScreen.richTextBehaviors.test.ts`.

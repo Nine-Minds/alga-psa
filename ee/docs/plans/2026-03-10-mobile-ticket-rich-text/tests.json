@@ -146,13 +146,13 @@
   {
     "id": "T025",
     "description": "Component: saving an edited mobile ticket description persists the serialized rich-text string through the existing ticket attribute update path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015", "F021"]
   },
   {
     "id": "T026",
     "description": "Component: canceling mobile ticket description editing leaves persisted content unchanged.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {
@@ -182,13 +182,13 @@
   {
     "id": "T031",
     "description": "Component: unsent mobile ticket rich-comment drafts still persist across screen reloads for the same user and ticket.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017", "F022"]
   },
   {
     "id": "T032",
     "description": "Component: submitting a new rich mobile ticket comment sends the serialized rich-text string through the existing comment creation flow.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017", "F020"]
   },
   {
