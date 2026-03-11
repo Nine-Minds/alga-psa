@@ -7,7 +7,7 @@ import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
 import { addTicketComment, getTicketById, getTicketComments, getTicketPriorities, getTicketStatuses, updateTicketAssignment, updateTicketAttributes, updateTicketPriority, updateTicketStatus, type TicketComment, type TicketDetail, type TicketPriority, type TicketStatus } from "../api/tickets";
 import { ErrorState, LoadingState } from "../ui/states";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { getCachedTicketDetail, invalidateTicketsListCache, setCachedTicketDetail } from "../cache/ticketsCache";
 import { getCachedTicketStatuses, setCachedTicketStatuses } from "../cache/referenceDataCache";
@@ -22,6 +22,15 @@ import { copyToClipboard } from "../clipboard/clipboard";
 import { useNetworkStatus } from "../network/useNetworkStatus";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { useToast } from "../ui/toast/ToastProvider";
+import {
+  extractPlainTextFromRichEditorJson,
+  extractPlainTextFromSerializedRichEditorContent,
+  serializeRichEditorJson,
+} from "../features/ticketRichText/helpers";
+import {
+  TicketRichTextEditor,
+  type TicketRichTextEditorRef,
+} from "../features/ticketRichText/TicketRichTextEditor";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TicketDetail">;
 
@@ -67,10 +76,16 @@ function TicketDetailBody({
   const [commentsError, setCommentsError] = useState<string | null>(null);
   const [commentsVisibleCount, setCommentsVisibleCount] = useState(20);
   const [commentDraft, setCommentDraft] = useState("");
+  const [commentDraftPlainText, setCommentDraftPlainText] = useState("");
   const [commentIsInternal, setCommentIsInternal] = useState(true);
   const [commentSendError, setCommentSendError] = useState<string | null>(null);
   const [commentSending, setCommentSending] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
+  const [descriptionEditing, setDescriptionEditing] = useState(false);
+  const [descriptionDraft, setDescriptionDraft] = useState("");
+  const [descriptionPlainText, setDescriptionPlainText] = useState("");
+  const [descriptionSaving, setDescriptionSaving] = useState(false);
+  const [descriptionError, setDescriptionError] = useState<string | null>(null);
   const [statusPickerOpen, setStatusPickerOpen] = useState(false);
   const [statusOptions, setStatusOptions] = useState<TicketStatus[]>([]);
   const [statusOptionsLoading, setStatusOptionsLoading] = useState(false);
@@ -96,6 +111,8 @@ function TicketDetailBody({
   const [timeEntryUpdating, setTimeEntryUpdating] = useState(false);
   const [timeEntryError, setTimeEntryError] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+  const commentEditorRef = useRef<TicketRichTextEditorRef>(null);
+  const descriptionEditorRef = useRef<TicketRichTextEditorRef>(null);
   const network = useNetworkStatus();
   const isOffline = isOfflineStatus(network);
   const commentSendInFlightRef = useRef(false);
@@ -121,6 +138,7 @@ function TicketDetailBody({
       if (canceled) return;
       if (saved) {
         setCommentDraft(saved.text);
+        setCommentDraftPlainText(extractPlainTextFromSerializedRichEditorContent(saved.text));
         setCommentIsInternal(saved.isInternal);
       } else {
         const pref = await getSecureJson<boolean>(visibilityPrefKey);
@@ -136,6 +154,16 @@ function TicketDetailBody({
       canceled = true;
     };
   }, [draftKey, visibilityPrefKey]);
+
+  useEffect(() => {
+    if (descriptionEditing || !ticket) {
+      return;
+    }
+
+    const currentDescription = extractDescription(ticket) ?? "";
+    setDescriptionDraft(currentDescription);
+    setDescriptionPlainText(extractPlainTextFromSerializedRichEditorContent(currentDescription));
+  }, [descriptionEditing, ticket]);
 
   useEffect(() => {
     if (!draftLoaded) return;
@@ -243,8 +271,13 @@ function TicketDetailBody({
     if (commentSendInFlightRef.current || commentSending) return;
     commentSendInFlightRef.current = true;
     const originalDraft = commentDraft;
+    const originalDraftPlainText = commentDraftPlainText;
     const originalIsInternal = commentIsInternal;
-    const text = originalDraft.trim();
+    const draftJson = commentEditorRef.current ? await commentEditorRef.current.getJSON().catch(() => null) : null;
+    const serializedDraft = draftJson ? serializeRichEditorJson(draftJson) : originalDraft.trim();
+    const text = draftJson
+      ? extractPlainTextFromRichEditorJson(draftJson).trim()
+      : originalDraftPlainText.trim();
     if (!text) {
       setCommentSendError("Comment cannot be empty.");
       commentSendInFlightRef.current = false;
@@ -265,7 +298,7 @@ function TicketDetailBody({
     const optimisticId = `optimistic-${Date.now()}`;
     const optimisticComment: TicketComment = {
       comment_id: optimisticId,
-      comment_text: text,
+      comment_text: serializedDraft,
       is_internal: originalIsInternal,
       created_at: new Date().toISOString(),
       created_by_name: session.user?.name ?? session.user?.email ?? "You",
@@ -274,6 +307,7 @@ function TicketDetailBody({
 
     setComments((prev) => [...prev, optimisticComment]);
     setCommentDraft("");
+    setCommentDraftPlainText("");
     setCommentSendError(null);
     setCommentSending(true);
     try {
@@ -281,7 +315,7 @@ function TicketDetailBody({
       const result = await addTicketComment(client, {
         apiKey: session.accessToken,
         ticketId,
-        comment_text: text,
+        comment_text: serializedDraft,
         is_internal: commentIsInternal,
         auditHeaders,
       });
@@ -289,6 +323,7 @@ function TicketDetailBody({
         if (result.error.kind === "permission") {
           setComments((prev) => prev.filter((c) => c.comment_id !== optimisticId));
           setCommentDraft(originalDraft);
+          setCommentDraftPlainText(originalDraftPlainText);
           setCommentIsInternal(originalIsInternal);
           setCommentSendError("You don’t have permission to add comments to this ticket.");
           showToast({ message: "Comment not sent", tone: "error" });
@@ -298,6 +333,7 @@ function TicketDetailBody({
           const msg = getApiErrorMessage(result.error.body);
           setComments((prev) => prev.filter((c) => c.comment_id !== optimisticId));
           setCommentDraft(originalDraft);
+          setCommentDraftPlainText(originalDraftPlainText);
           setCommentIsInternal(originalIsInternal);
           setCommentSendError(msg ?? "Comment was rejected by the server.");
           showToast({ message: "Comment not sent", tone: "error" });
@@ -305,6 +341,7 @@ function TicketDetailBody({
         }
         setComments((prev) => prev.filter((c) => c.comment_id !== optimisticId));
         setCommentDraft(originalDraft);
+        setCommentDraftPlainText(originalDraftPlainText);
         setCommentIsInternal(originalIsInternal);
         setCommentSendError("Unable to send comment. Please try again.");
         showToast({ message: "Comment not sent", tone: "error" });
@@ -330,6 +367,81 @@ function TicketDetailBody({
     } finally {
       setCommentSending(false);
       commentSendInFlightRef.current = false;
+    }
+  };
+
+  const startDescriptionEditing = () => {
+    const currentDescription = extractDescription(ticket) ?? "";
+    setDescriptionDraft(currentDescription);
+    setDescriptionPlainText(extractPlainTextFromSerializedRichEditorContent(currentDescription));
+    setDescriptionError(null);
+    setDescriptionEditing(true);
+  };
+
+  const cancelDescriptionEditing = () => {
+    const currentDescription = extractDescription(ticket) ?? "";
+    setDescriptionDraft(currentDescription);
+    setDescriptionPlainText(extractPlainTextFromSerializedRichEditorContent(currentDescription));
+    setDescriptionError(null);
+    setDescriptionEditing(false);
+  };
+
+  const saveDescription = async () => {
+    if (!client || !session || descriptionSaving) {
+      return;
+    }
+
+    if (!descriptionEditorRef.current) {
+      setDescriptionError("Editor is still loading. Please try again.");
+      return;
+    }
+
+    setDescriptionSaving(true);
+    setDescriptionError(null);
+
+    try {
+      const nextJson = await descriptionEditorRef.current.getJSON();
+      const serializedDescription = serializeRichEditorJson(nextJson);
+      const nextPlainText = extractPlainTextFromRichEditorJson(nextJson).trim();
+      const nextAttributes = getTicketAttributes(ticket);
+
+      if (nextPlainText) {
+        nextAttributes.description = serializedDescription;
+      } else {
+        delete (nextAttributes as any).description;
+      }
+
+      const auditHeaders = await getClientMetadataHeaders();
+      const result = await updateTicketAttributes(client, {
+        apiKey: session.accessToken,
+        ticketId,
+        attributes: Object.keys(nextAttributes).length === 0 ? null : nextAttributes,
+        auditHeaders,
+      });
+
+      if (!result.ok) {
+        if (result.error.kind === "permission") {
+          setDescriptionError("You don’t have permission to edit this ticket description.");
+          return;
+        }
+        if (result.error.kind === "validation") {
+          const msg = getApiErrorMessage(result.error.body);
+          setDescriptionError(msg ?? "Description update was rejected by the server.");
+          return;
+        }
+        setDescriptionError("Unable to update the ticket description. Please try again.");
+        return;
+      }
+
+      setTicket(result.data.data);
+      setCachedTicketDetail(ticketId, result.data.data);
+      invalidateTicketsListCache();
+      setDescriptionDraft(serializedDescription);
+      setDescriptionPlainText(nextPlainText);
+      setDescriptionEditing(false);
+      showToast({ message: "Description updated", tone: "success" });
+    } finally {
+      setDescriptionSaving(false);
     }
   };
 
@@ -835,7 +947,22 @@ function TicketDetailBody({
           <View style={{ height: spacing.sm }} />
           <KeyValue label="Client" value={stringOrDash(ticket.client_name)} />
           <View style={{ height: spacing.sm }} />
-          <DescriptionSection ticket={ticket} />
+          <DescriptionSection
+            ticket={ticket}
+            isEditing={descriptionEditing}
+            draftContent={descriptionDraft}
+            draftPlainText={descriptionPlainText}
+            saving={descriptionSaving}
+            error={descriptionError}
+            editorRef={descriptionEditorRef}
+            onStartEditing={startDescriptionEditing}
+            onCancelEditing={cancelDescriptionEditing}
+            onSave={() => void saveDescription()}
+            onDraftChange={(nextContent, nextPlainText) => {
+              setDescriptionDraft(nextContent);
+              setDescriptionPlainText(nextPlainText);
+            }}
+          />
           <View style={{ height: spacing.sm }} />
           <CommentsSection
             comments={comments}
@@ -847,14 +974,19 @@ function TicketDetailBody({
           />
           <View style={{ height: spacing.sm }} />
           <CommentComposer
-            draft={commentDraft}
-            onChangeDraft={setCommentDraft}
+            draftContent={commentDraft}
+            draftPlainText={commentDraftPlainText}
             isInternal={commentIsInternal}
             onChangeIsInternal={setCommentIsInternal}
             onSend={() => void sendComment()}
             sending={commentSending}
             offline={isOffline}
             error={commentSendError}
+            editorRef={commentEditorRef}
+            onDraftChange={(nextContent, nextPlainText) => {
+              setCommentDraft(nextContent);
+              setCommentDraftPlainText(nextPlainText);
+            }}
           />
           <View style={{ height: spacing.sm }} />
           <KeyValue label="Created" value={formatDateTimeWithRelative(ticket.entered_at)} />
@@ -1314,24 +1446,28 @@ function StatusPickerModal({
   );
 }
 
-function CommentComposer({
-  draft,
-  onChangeDraft,
+export function CommentComposer({
+  draftContent,
+  draftPlainText,
   isInternal,
   onChangeIsInternal,
   onSend,
   sending,
   offline,
   error,
+  editorRef,
+  onDraftChange,
 }: {
-  draft: string;
-  onChangeDraft: (value: string) => void;
+  draftContent: string;
+  draftPlainText: string;
   isInternal: boolean;
   onChangeIsInternal: (value: boolean) => void;
   onSend: () => void;
   sending: boolean;
   offline: boolean;
   error: string | null;
+  editorRef: RefObject<TicketRichTextEditorRef | null>;
+  onDraftChange: (content: string, plainText: string) => void;
 }) {
   return (
     <View
@@ -1345,32 +1481,30 @@ function CommentComposer({
       }}
     >
       <Text style={{ ...typography.caption, color: colors.mutedText }}>Add comment</Text>
-      <TextInput
-        value={draft}
-        onChangeText={onChangeDraft}
-        multiline
-        placeholder="Write an update…"
-        accessibilityLabel="Comment text"
-        style={{
-          minHeight: 80,
-          marginTop: spacing.sm,
-          padding: spacing.sm,
-          borderWidth: 1,
-          borderColor: colors.border,
-          borderRadius: 10,
-          backgroundColor: colors.background,
-          color: colors.text,
-          textAlignVertical: "top",
-        }}
-      />
+      <View style={{ marginTop: spacing.sm }}>
+        <TicketRichTextEditor
+          ref={editorRef}
+          content={draftContent}
+          editable={!sending}
+          showToolbar
+          height={180}
+          loadingLabel="Loading comment editor…"
+          onContentChange={({ json }) => {
+            onDraftChange(
+              serializeRichEditorJson(json),
+              extractPlainTextFromRichEditorJson(json),
+            );
+          }}
+        />
+      </View>
       <Text
         style={{
           ...typography.caption,
           marginTop: spacing.sm,
-          color: draft.length > MAX_COMMENT_LENGTH ? colors.danger : colors.mutedText,
+          color: draftPlainText.length > MAX_COMMENT_LENGTH ? colors.danger : colors.mutedText,
         }}
       >
-        {draft.length}/{MAX_COMMENT_LENGTH}
+        {draftPlainText.length}/{MAX_COMMENT_LENGTH}
       </Text>
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
@@ -1391,7 +1525,7 @@ function CommentComposer({
       <View style={{ marginTop: spacing.sm }}>
         <PrimaryButton
           onPress={onSend}
-          disabled={sending || offline || draft.trim().length === 0}
+          disabled={sending || offline || draftPlainText.trim().length === 0 || draftPlainText.length > MAX_COMMENT_LENGTH}
           accessibilityLabel="Send comment"
         >
           {sending ? "Sending…" : "Send"}
@@ -1489,7 +1623,7 @@ function ActionChip({
   );
 }
 
-function CommentsSection({
+export function CommentsSection({
   comments,
   visibleCount,
   onLoadMore,
@@ -1562,10 +1696,11 @@ function CommentsSection({
             const eventType = (c as any).event_type as TicketComment["event_type"] | undefined;
             const isSystemEvent = kind === "event" || typeof eventType === "string";
             const isOptimistic = Boolean((c as any).optimistic);
-            const eventText = ((c as any).event_text as string | undefined) ?? (eventType ? `${eventType}: ${c.comment_text}` : c.comment_text);
+            const commentPlainText = extractPlainTextFromSerializedRichEditorContent(c.comment_text);
+            const eventText = ((c as any).event_text as string | undefined) ?? (eventType ? `${eventType}: ${commentPlainText}` : commentPlainText);
             const badgeLabel = isSystemEvent ? "Event" : isOptimistic ? "Sending" : c.is_internal ? "Internal" : "Public";
             const accessibilityLabel = `${badgeLabel}. ${c.created_by_name ?? "Unknown"}. ${formatDateTimeWithRelative(c.created_at)}. ${
-              isSystemEvent ? eventText : c.comment_text
+              isSystemEvent ? eventText : commentPlainText || "Rich comment"
             }`;
 
             return (
@@ -1588,9 +1723,20 @@ function CommentsSection({
                     <Badge label={c.is_internal ? "Internal" : "Public"} tone={c.is_internal ? "warning" : "info"} />
                   )}
                 </View>
-                <Text style={{ ...typography.body, color: colors.text, marginTop: 2, fontStyle: isSystemEvent ? "italic" : "normal" }}>
-                  {isSystemEvent ? eventText : c.comment_text}
-                </Text>
+                {isSystemEvent ? (
+                  <Text style={{ ...typography.body, color: colors.text, marginTop: 2, fontStyle: "italic" }}>
+                    {eventText}
+                  </Text>
+                ) : (
+                  <View style={{ marginTop: spacing.xs }}>
+                    <TicketRichTextEditor
+                      content={c.comment_text}
+                      editable={false}
+                      height={96}
+                      loadingLabel="Loading comment…"
+                    />
+                  </View>
+                )}
               </View>
             );
           })}
@@ -1615,9 +1761,32 @@ function CommentsSection({
   );
 }
 
-function DescriptionSection({ ticket }: { ticket: TicketDetail }) {
+export function DescriptionSection({
+  ticket,
+  isEditing,
+  draftContent,
+  draftPlainText,
+  saving,
+  error,
+  editorRef,
+  onStartEditing,
+  onCancelEditing,
+  onSave,
+  onDraftChange,
+}: {
+  ticket: TicketDetail;
+  isEditing: boolean;
+  draftContent: string;
+  draftPlainText: string;
+  saving: boolean;
+  error: string | null;
+  editorRef: RefObject<TicketRichTextEditorRef | null>;
+  onStartEditing: () => void;
+  onCancelEditing: () => void;
+  onSave: () => void;
+  onDraftChange: (content: string, plainText: string) => void;
+}) {
   const description = extractDescription(ticket);
-  const links = extractLinks(description ?? "");
 
   return (
     <View
@@ -1633,39 +1802,58 @@ function DescriptionSection({ ticket }: { ticket: TicketDetail }) {
       <Text accessibilityRole="header" style={{ ...typography.caption, color: colors.mutedText }}>
         Description
       </Text>
-      <Text style={{ ...typography.body, color: colors.text, marginTop: 2 }}>
-        {description ?? "—"}
-      </Text>
-
-      {links.length > 0 ? (
-        <View style={{ marginTop: spacing.sm }}>
-          <Text style={{ ...typography.caption, color: colors.mutedText }}>Links</Text>
-          {links.slice(0, 5).map((url) => (
-            <Pressable
-              key={url}
-              accessibilityRole="button"
-              accessibilityLabel={`Open link ${url}`}
-              onPress={() => {
-                Alert.alert("Open link?", url, [
-                  { text: "Cancel", style: "cancel" },
-                  {
-                    text: "Open",
-                    onPress: () => {
-                      void Linking.openURL(url);
-                    },
-                  },
-                ]);
+      <View style={{ marginTop: spacing.sm }}>
+        {isEditing ? (
+          <>
+            <TicketRichTextEditor
+              ref={editorRef}
+              content={draftContent}
+              editable={!saving}
+              showToolbar
+              height={220}
+              loadingLabel="Loading description editor…"
+              onContentChange={({ json }) => {
+                onDraftChange(
+                  serializeRichEditorJson(json),
+                  extractPlainTextFromRichEditorJson(json),
+                );
               }}
-              style={({ pressed }) => ({
-                marginTop: spacing.sm,
-                opacity: pressed ? 0.85 : 1,
-              })}
-            >
-              <Text style={{ ...typography.caption, color: colors.primary }}>{url}</Text>
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
+            />
+            <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
+              {draftPlainText.length} characters
+            </Text>
+            {error ? (
+              <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
+                {error}
+              </Text>
+            ) : null}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
+              <ActionChip label="Cancel" onPress={onCancelEditing} disabled={saving} />
+              <View style={{ width: spacing.sm }} />
+              <ActionChip label={saving ? "Saving…" : "Save"} onPress={onSave} disabled={saving} loading={saving} />
+            </View>
+          </>
+        ) : description ? (
+          <>
+            <TicketRichTextEditor
+              content={description}
+              editable={false}
+              height={140}
+              loadingLabel="Loading description…"
+            />
+            <View style={{ marginTop: spacing.sm }}>
+              <ActionChip label="Edit description" onPress={onStartEditing} />
+            </View>
+          </>
+        ) : (
+          <>
+            <Text style={{ ...typography.body, color: colors.text }}>{draftPlainText || "—"}</Text>
+            <View style={{ marginTop: spacing.sm }}>
+              <ActionChip label="Add description" onPress={onStartEditing} />
+            </View>
+          </>
+        )}
+      </View>
     </View>
   );
 }
@@ -1692,7 +1880,7 @@ function stringOrDash(value: unknown): string {
   return typeof value === "string" && value.trim() ? value : "—";
 }
 
-function extractDescription(ticket: TicketDetail): string | null {
+export function extractDescription(ticket: TicketDetail): string | null {
   const attrs = (ticket as any).attributes as unknown;
   if (!attrs || typeof attrs !== "object") return null;
   const obj = attrs as Record<string, unknown>;
@@ -1739,12 +1927,6 @@ function dateInputToIso(input: string): string | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return null;
   const d = new Date(`${trimmed}T00:00:00`);
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
-}
-
-function extractLinks(text: string): string[] {
-  const matches = text.match(/https?:\/\/[^\s)\]]+/g) ?? [];
-  const unique = Array.from(new Set(matches));
-  return unique;
 }
 
 function getApiErrorMessage(body: unknown): string | null {

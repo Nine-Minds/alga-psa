@@ -128,7 +128,7 @@
   {
     "id": "T022",
     "description": "Component: mobile ticket description section renders rich formatted content instead of a plain `Text` node when rich content is present.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014", "F022"]
   },
   {
@@ -140,7 +140,7 @@
   {
     "id": "T024",
     "description": "Component: entering mobile ticket description edit mode mounts the rich editor wrapper with the existing description content.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {
@@ -158,7 +158,7 @@
   {
     "id": "T027",
     "description": "Component: mobile ticket comment items render formatted rich content instead of raw JSON when saved comments contain serialized rich-text strings.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F022"]
   },
   {
@@ -176,7 +176,7 @@
   {
     "id": "T030",
     "description": "Component: mobile ticket comment composer mounts the rich editor wrapper and preserves the existing internal/public visibility controls.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   },
   {
@@ -194,7 +194,7 @@
   {
     "id": "T033",
     "description": "Component: mobile existing saved comments remain non-editable in v1 even though the wrapper exists elsewhere on the screen.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {

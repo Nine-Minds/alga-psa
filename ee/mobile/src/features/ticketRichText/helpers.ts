@@ -100,6 +100,29 @@ export function extractPlainTextFromRichEditorJson(json: unknown): string {
   return "";
 }
 
+export function extractPlainTextFromSerializedRichEditorContent(
+  content: string | null | undefined,
+): string {
+  if (!content) {
+    return "";
+  }
+
+  const trimmed = content.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+    try {
+      return extractPlainTextFromRichEditorJson(JSON.parse(trimmed));
+    } catch {
+      return content;
+    }
+  }
+
+  return content;
+}
+
 export function serializeRichEditorJson(json: unknown): string {
   return JSON.stringify(json);
 }

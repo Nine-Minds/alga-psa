@@ -80,31 +80,31 @@
   {
     "id": "F014",
     "description": "Replace ticket description read mode in the mobile ticket detail screen with rich-text rendering driven by the new wrapper/runtime path.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "Requirements/Functional Requirements"]
   },
   {
     "id": "F015",
     "description": "Replace ticket description edit mode in the mobile ticket detail screen with the rich-text editor wrapper while preserving the existing save path through ticket attributes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "Data / API / Integrations"]
   },
   {
     "id": "F016",
     "description": "Replace mobile ticket comment display in the conversation area with rich-text rendering driven by the new wrapper/runtime path.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "Requirements/Functional Requirements"]
   },
   {
     "id": "F017",
     "description": "Replace the mobile plain-text ticket comment composer with the rich-text editor wrapper while preserving internal/public comment controls and draft persistence.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "UX / UI Notes"]
   },
   {
     "id": "F018",
     "description": "Keep mobile existing-comment items non-editable in v1 even though the underlying wrapper is reusable enough to support that in a later phase.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Non-goals", "UX / UI Notes"]
   },
   {
@@ -122,7 +122,7 @@
   {
     "id": "F021",
     "description": "Continue to accept legacy plain-text ticket content and lazily upgrade it to the canonical serialized rich-text string on the next successful edit/save.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Rollout / Migration"]
   },
   {
@@ -134,7 +134,7 @@
   {
     "id": "F023",
     "description": "Keep the mobile ticket screen resilient by falling back to safe plain-text display rather than crashing when saved ticket content is malformed or partially legacy-formatted.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Non-functional Requirements", "Rollout / Migration"]
   },
   {

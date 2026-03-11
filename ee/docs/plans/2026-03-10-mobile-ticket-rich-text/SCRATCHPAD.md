@@ -25,6 +25,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-10) Resolve the first API contract revision by exposing derived HTML only for now: `description_html` on ticket detail responses and `comment_html` on ticket comment responses. This satisfies mobile rendering/debugging needs without expanding the transport shape to normalized JSON yet.
 - (2026-03-10) Keep the browser runtime authoritative in `packages/tickets`, but keep the React Native-side bridge client local to `ee/mobile`. The mobile app is not configured as a workspace package consumer, so this avoids dragging unrelated web/server package code into Expo typecheck while still generating the local WebView HTML bundle from the shared runtime.
 - (2026-03-10) Package the mobile editor runtime as a generated inline HTML module (`generatedEditorHtml.ts`) built by esbuild from a browser-only entry file. This satisfies the no-dev-server requirement while keeping the generated asset reproducible from source.
+- (2026-03-10) Use the same `TicketRichTextEditor` wrapper for both read-only and editable ticket surfaces in v1. Read mode passes the saved serialized content string through the read-only runtime, while edit/compose mode turns on the native toolbar and saves back serialized ProseMirror JSON.
 
 ## Discoveries / Constraints
 
@@ -46,6 +47,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-10) `ee/mobile` is not listed in the repo workspaces, has no existing Metro config, and cannot safely import `packages/*` source directly without extra setup. Adding `ee/mobile/metro.config.js` is enough for app/runtime resolution, but mobile typecheck still needs to exclude the generator scripts that intentionally import shared package source.
 - (2026-03-10) `react-native-webview` was not installed in `ee/mobile` even though the package lock mentioned it transitively. The wrapper slice installed it explicitly and added `react-test-renderer` + types for wrapper-level unit tests.
 - (2026-03-10) Bundling the shared runtime for WebView initially failed because `ticketMobileEditorRuntime.ts` imported the formatting package root, which pulled server-only transitive modules into the browser bundle. Switching that runtime import to the specific `packages/formatting/src/blocknoteUtils` source file made the inline browser bundle viable.
+- (2026-03-10) The mobile ticket screen did not previously have any description edit mode at all; the rich-text slice adds explicit add/edit/cancel/save actions for the description section while continuing to use the existing `updateTicketAttributes()` path.
+- (2026-03-10) For comment drafts, the screen now stores the serialized rich content string in secure storage and derives plain text locally for length validation, empty checks, and accessibility labels. On send, it re-reads editor JSON and serializes it so legacy plain-text drafts get upgraded on the next successful send.
+- (2026-03-10) Existing saved comment items stay non-editable by rendering the read-only wrapper only. System/event timeline items still render as plain italic text rather than going through the rich wrapper.
 
 ## Commands / Runbooks
 
@@ -92,6 +96,15 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `npx eslint ee/mobile/src/features/ticketRichText/TicketRichTextEditor.tsx ee/mobile/src/features/ticketRichText/TicketRichTextToolbar.tsx ee/mobile/src/features/ticketRichText/bridge.ts ee/mobile/src/features/ticketRichText/helpers.ts ee/mobile/src/features/ticketRichText/types.ts ee/mobile/src/features/ticketRichText/TicketRichTextEditor.test.ts ee/mobile/test/mocks/react-native.ts ee/mobile/test/mocks/react-native-webview.ts ee/mobile/vitest.config.ts ee/mobile/vitest.setup.ts ee/mobile/metro.config.js packages/tickets/src/lib/ticketMobileEditorRuntime.ts --max-warnings=0`
 - (2026-03-10) Validation note:
   - `react-test-renderer` emits an upstream deprecation warning on stderr under React 19 during the wrapper tests, but the tests themselves pass and there is no current mobile-native testing library in this app to replace it.
+- (2026-03-10) Ticket screen rich-flow implementation/validation:
+  - `sed -n '1,260p' ee/mobile/src/screens/TicketDetailScreen.tsx`
+  - `sed -n '1445,1910p' ee/mobile/src/screens/TicketDetailScreen.tsx`
+  - `cd ee/mobile && npx tsc --noEmit`
+- (2026-03-10) Ticket screen section test coverage:
+  - `cd ee/mobile && npx vitest run src/screens/TicketDetailScreen.richTextSections.test.ts --config vitest.config.ts`
+  - `cd ee/mobile && npx vitest run src/features/ticketRichText/TicketRichTextEditor.test.ts src/screens/TicketDetailScreen.richTextSections.test.ts --config vitest.config.ts`
+- (2026-03-10) Validation note:
+  - The section tests mock `TicketRichTextEditor`, `Badge`, and `PrimaryButton` so they verify the ticket screen’s read/edit/compose wiring without retesting the WebView runtime internals.
 
 ## Links / References
 
@@ -117,6 +130,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `ee/mobile/src/features/ticketRichText/generatedEditorHtml.ts`
   - `ee/mobile/src/features/ticketRichText/TicketRichTextEditor.test.ts`
   - `ee/mobile/test/mocks/react-native-webview.ts`
+  - `ee/mobile/src/screens/TicketDetailScreen.tsx`
+  - `ee/mobile/src/screens/TicketDetailScreen.richTextSections.test.ts`
   - `packages/ui/src/editor/RichTextViewer.tsx`
   - `packages/formatting/src/blocknoteUtils.ts`
   - `server/src/test/unit/api/ticketRichRender.responseSchema.test.ts`

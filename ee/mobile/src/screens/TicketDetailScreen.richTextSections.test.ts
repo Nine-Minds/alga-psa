@@ -1,0 +1,274 @@
+import React, { createRef } from "react";
+import { describe, expect, it, vi } from "vitest";
+import { act, create, type ReactTestRenderer } from "react-test-renderer";
+import type { TicketRichTextEditorRef } from "../features/ticketRichText/TicketRichTextEditor";
+
+vi.mock("../auth/AuthContext", () => ({
+  useAuth: () => ({
+    session: null,
+    refreshSession: () => undefined,
+  }),
+}));
+
+vi.mock("../config/appConfig", () => ({
+  getAppConfig: () => ({
+    ok: true,
+    baseUrl: "https://example.com",
+  }),
+}));
+
+vi.mock("../api", () => ({
+  createApiClient: () => null,
+}));
+
+vi.mock("../api/tickets", () => ({
+  addTicketComment: vi.fn(),
+  getTicketById: vi.fn(),
+  getTicketComments: vi.fn(),
+  getTicketPriorities: vi.fn(),
+  getTicketStatuses: vi.fn(),
+  updateTicketAssignment: vi.fn(),
+  updateTicketAttributes: vi.fn(),
+  updateTicketPriority: vi.fn(),
+  updateTicketStatus: vi.fn(),
+}));
+
+vi.mock("../hooks/usePullToRefresh", () => ({
+  usePullToRefresh: () => ({
+    refreshing: false,
+    refresh: () => Promise.resolve(),
+  }),
+}));
+
+vi.mock("../cache/ticketsCache", () => ({
+  getCachedTicketDetail: () => null,
+  invalidateTicketsListCache: () => undefined,
+  setCachedTicketDetail: () => undefined,
+}));
+
+vi.mock("../cache/referenceDataCache", () => ({
+  getCachedTicketStatuses: () => null,
+  setCachedTicketStatuses: () => undefined,
+}));
+
+vi.mock("../storage/secureStorage", () => ({
+  getSecureJson: async () => null,
+  secureStorage: {
+    deleteItem: async () => undefined,
+  },
+  setSecureJson: async () => undefined,
+}));
+
+vi.mock("../device/clientMetadata", () => ({
+  getClientMetadataHeaders: async () => ({}),
+}));
+
+vi.mock("../api/timeEntries", () => ({
+  createTimeEntry: vi.fn(),
+}));
+
+vi.mock("../network/useNetworkStatus", () => ({
+  useNetworkStatus: () => ({}),
+}));
+
+vi.mock("../network/isOffline", () => ({
+  isOffline: () => false,
+}));
+
+vi.mock("../ui/toast/ToastProvider", () => ({
+  useToast: () => ({
+    showToast: () => undefined,
+  }),
+}));
+
+vi.mock("../ui/formatters/dateTime", () => ({
+  formatDateTimeWithRelative: () => "just now",
+}));
+
+vi.mock("../clipboard/clipboard", () => ({
+  copyToClipboard: async () => ({
+    copiedText: "copied",
+  }),
+}));
+
+vi.mock("../urls/hostedUrls", () => ({
+  buildTicketWebUrl: () => "https://example.com/ticket/1",
+}));
+
+vi.mock("../ui/components/Badge", () => ({
+  Badge: (props: Record<string, unknown>) => React.createElement("MockBadge", props),
+}));
+
+vi.mock("../ui/components/PrimaryButton", () => ({
+  PrimaryButton: (props: Record<string, unknown>) =>
+    React.createElement("MockPrimaryButton", props, props.children as React.ReactNode),
+}));
+
+vi.mock("../features/ticketRichText/TicketRichTextEditor", () => ({
+  TicketRichTextEditor: (props: Record<string, unknown>) =>
+    React.createElement("MockRichTextEditor", props),
+}));
+
+import {
+  CommentComposer,
+  CommentsSection,
+  DescriptionSection,
+} from "./TicketDetailScreen";
+
+function render(node: React.ReactElement): ReactTestRenderer {
+  let renderer: ReactTestRenderer | null = null;
+  act(() => {
+    renderer = create(node);
+  });
+
+  if (!renderer) {
+    throw new Error("Renderer was not created");
+  }
+
+  return renderer;
+}
+
+function findMockRichTextEditor(renderer: ReactTestRenderer) {
+  return renderer.root.find((node) => (node.type as string) === "MockRichTextEditor");
+}
+
+const richDescription = "[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Rich description\",\"styles\":{\"bold\":true}}]}]";
+const richComment = "[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Rich reply\",\"styles\":{\"italic\":true}}]}]";
+
+describe("TicketDetailScreen rich text sections", () => {
+  it("renders rich description content through the rich-text wrapper in read mode", () => {
+    const renderer = render(
+      React.createElement(DescriptionSection, {
+        ticket: {
+          ticket_id: "ticket-1",
+          ticket_number: "T-1",
+          title: "Example",
+          attributes: {
+            description: richDescription,
+          },
+        },
+        isEditing: false,
+        draftContent: richDescription,
+        draftPlainText: "Rich description",
+        saving: false,
+        error: null,
+        editorRef: createRef<TicketRichTextEditorRef>(),
+        onStartEditing: () => undefined,
+        onCancelEditing: () => undefined,
+        onSave: () => undefined,
+        onDraftChange: () => undefined,
+      }),
+    );
+
+    const richEditor = findMockRichTextEditor(renderer);
+    expect(richEditor.props.content).toBe(richDescription);
+    expect(richEditor.props.editable).toBe(false);
+  });
+
+  it("mounts the rich editor wrapper with existing description content in edit mode", () => {
+    const renderer = render(
+      React.createElement(DescriptionSection, {
+        ticket: {
+          ticket_id: "ticket-1",
+          ticket_number: "T-1",
+          title: "Example",
+          attributes: {
+            description: richDescription,
+          },
+        },
+        isEditing: true,
+        draftContent: richDescription,
+        draftPlainText: "Rich description",
+        saving: false,
+        error: null,
+        editorRef: createRef<TicketRichTextEditorRef>(),
+        onStartEditing: () => undefined,
+        onCancelEditing: () => undefined,
+        onSave: () => undefined,
+        onDraftChange: () => undefined,
+      }),
+    );
+
+    const richEditor = findMockRichTextEditor(renderer);
+    expect(richEditor.props.content).toBe(richDescription);
+    expect(richEditor.props.editable).toBe(true);
+    expect(richEditor.props.showToolbar).toBe(true);
+  });
+
+  it("renders saved ticket comments through the rich-text wrapper", () => {
+    const renderer = render(
+      React.createElement(CommentsSection, {
+        comments: [
+          {
+            comment_id: "comment-1",
+            comment_text: richComment,
+            is_internal: true,
+            created_by_name: "Alice",
+            created_at: "2026-03-11T00:00:00.000Z",
+          },
+        ],
+        visibleCount: 20,
+        onLoadMore: () => undefined,
+        onJumpToLatest: () => undefined,
+        onJumpToTop: () => undefined,
+        error: null,
+      }),
+    );
+
+    const richEditor = findMockRichTextEditor(renderer);
+    expect(richEditor.props.content).toBe(richComment);
+    expect(richEditor.props.editable).toBe(false);
+  });
+
+  it("mounts the rich comment composer while preserving visibility controls", () => {
+    const renderer = render(
+      React.createElement(CommentComposer, {
+        draftContent: richComment,
+        draftPlainText: "Rich reply",
+        isInternal: true,
+        onChangeIsInternal: () => undefined,
+        onSend: () => undefined,
+        sending: false,
+        offline: false,
+        error: null,
+        editorRef: createRef<TicketRichTextEditorRef>(),
+        onDraftChange: () => undefined,
+      }),
+    );
+
+    const richEditor = findMockRichTextEditor(renderer);
+    expect(richEditor.props.content).toBe(richComment);
+    expect(richEditor.props.showToolbar).toBe(true);
+    expect(
+      renderer.root.find((node) => (node.type as string) === "Pressable" && node.props.accessibilityLabel === "Internal ✓"),
+    ).toBeTruthy();
+    expect(
+      renderer.root.find((node) => (node.type as string) === "Pressable" && node.props.accessibilityLabel === "Public"),
+    ).toBeTruthy();
+  });
+
+  it("keeps existing saved comments non-editable in v1", () => {
+    const renderer = render(
+      React.createElement(CommentsSection, {
+        comments: [
+          {
+            comment_id: "comment-1",
+            comment_text: richComment,
+            is_internal: false,
+            created_by_name: "Alice",
+            created_at: "2026-03-11T00:00:00.000Z",
+          },
+        ],
+        visibleCount: 20,
+        onLoadMore: () => undefined,
+        onJumpToLatest: () => undefined,
+        onJumpToTop: () => undefined,
+        error: null,
+      }),
+    );
+
+    const richEditor = findMockRichTextEditor(renderer);
+    expect(richEditor.props.editable).toBe(false);
+    expect(richEditor.props.showToolbar).toBeUndefined();
+  });
+});
