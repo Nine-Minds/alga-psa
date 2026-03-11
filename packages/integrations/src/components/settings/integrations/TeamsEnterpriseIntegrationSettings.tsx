@@ -1,27 +1,8 @@
 'use client';
 
-import dynamic from 'next/dynamic';
-import { Card, CardContent } from '@alga-psa/ui/components/Card';
-import Spinner from '@alga-psa/ui/components/Spinner';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { resolveTeamsAvailability } from '../../../lib/teamsAvailability';
-
-const EnterpriseTeamsIntegrationSettings = dynamic(
-  () => import('@alga-psa/ee-microsoft-teams/components').then((mod) => mod.TeamsIntegrationSettings),
-  {
-    loading: () => (
-      <Card>
-        <CardContent className="py-8">
-          <div className="flex flex-col items-center justify-center gap-2">
-            <Spinner size="md" />
-            <span className="text-sm text-muted-foreground">Loading Microsoft Teams settings...</span>
-          </div>
-        </CardContent>
-      </Card>
-    ),
-    ssr: false,
-  }
-);
+import { TeamsIntegrationSettings } from './TeamsIntegrationSettings';
 
 export function TeamsEnterpriseIntegrationSettings() {
   const teamsUiFlag = useFeatureFlag('teams-integration-ui', { defaultValue: false });
@@ -36,5 +17,5 @@ export function TeamsEnterpriseIntegrationSettings() {
     return null;
   }
 
-  return <EnterpriseTeamsIntegrationSettings />;
+  return <TeamsIntegrationSettings />;
 }

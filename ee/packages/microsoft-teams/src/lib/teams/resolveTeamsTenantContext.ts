@@ -3,7 +3,7 @@ import {
   TEAMS_CAPABILITIES,
   type TeamsCapability,
   type TeamsInstallStatus,
-} from '@alga-psa/integrations/actions/integrations/teamsShared';
+} from './teamsShared';
 
 interface TeamsTenantContextRow {
   tenant: string;

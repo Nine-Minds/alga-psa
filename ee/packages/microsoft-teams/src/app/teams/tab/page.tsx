@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { Card } from '@alga-psa/ui/components/Card';
-import { getTeamsAvailability, type TeamsAvailability } from '@alga-psa/integrations/lib/teamsAvailability';
+import { getTeamsAvailability, type TeamsAvailability } from '../../../lib/teams/teamsAvailability';
 import { buildTeamsReauthPath } from '../../../lib/teams/buildTeamsReauthUrl';
 import { buildTeamsFullPsaUrl } from '../../../lib/teams/buildTeamsFullPsaUrl';
 import { resolveTeamsTabAccessState } from '../../../lib/teams/resolveTeamsTabAccessState';

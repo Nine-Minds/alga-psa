@@ -1,5 +1,4 @@
-import { CalendarProviderConfig, ExternalCalendarEvent } from '@/interfaces/calendar.interfaces';
-import { IScheduleEntry } from '@/interfaces/schedule.interfaces';
+import type { CalendarProviderConfig, ExternalCalendarEvent, IScheduleEntry } from '@alga-psa/types';
 
 /**
  * Base abstract class for calendar provider adapters
@@ -163,4 +162,3 @@ export abstract class BaseCalendarAdapter {
    */
   abstract listCalendars(): Promise<Array<{ id: string; name: string; primary?: boolean }>>;
 }
-

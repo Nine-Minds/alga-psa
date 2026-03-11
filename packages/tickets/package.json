@@ -37,7 +37,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@alga-psa/billing": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/formatting": "*",

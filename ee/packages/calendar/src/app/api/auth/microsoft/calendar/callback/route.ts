@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { CalendarProviderService } from '@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService';
 import { MicrosoftCalendarAdapter } from '@alga-psa/ee-calendar/lib/services/calendar/providers/MicrosoftCalendarAdapter';
-import { resolveMicrosoftConsumerProfileConfig } from '@alga-psa/integrations/lib/microsoftConsumerProfileResolution';
-import { consumeCalendarOAuthState } from '@/utils/calendar/oauthStateStore';
-import { decodeCalendarState } from '@/utils/calendar/oauthHelpers';
-import { CalendarProviderConfig } from '@/interfaces/calendar.interfaces';
-import { getWebhookBaseUrl } from '@/utils/email/webhookHelpers';
+import { resolveMicrosoftConsumerProfileConfig } from '../../../../../../lib/microsoftConsumerProfileResolution';
+import { consumeCalendarOAuthState } from '../../../../../../lib/utils/calendar/oauthStateStore';
+import { decodeCalendarState } from '../../../../../../lib/utils/calendar/oauthHelpers';
+import type { CalendarProviderConfig } from '@alga-psa/types';
+import { getWebhookBaseUrl } from '../../../../../../lib/utils/email/webhookHelpers';
 import axios from 'axios';
 import { randomBytes } from 'crypto';
-import { resolveCalendarRedirectUri } from '@/utils/calendar/redirectUri';
+import { resolveCalendarRedirectUri } from '../../../../../../lib/utils/calendar/redirectUri';
 
 export const dynamic = 'force-dynamic';
 

@@ -5,11 +5,11 @@
 
 import { CalendarSyncService } from './CalendarSyncService';
 import { CalendarProviderService } from './CalendarProviderService';
-import { CalendarProviderConfig } from '@/interfaces/calendar.interfaces';
+import type { CalendarProviderConfig } from '@alga-psa/types';
 import { GoogleCalendarAdapter } from './providers/GoogleCalendarAdapter';
 import { MicrosoftCalendarAdapter } from './providers/MicrosoftCalendarAdapter';
 import { BaseCalendarAdapter } from './providers/base/BaseCalendarAdapter';
-import { runWithTenant, createTenantKnex } from '@/lib/db';
+import { runWithTenant, createTenantKnex } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 export class CalendarWebhookProcessor {

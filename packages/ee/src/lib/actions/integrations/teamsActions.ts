@@ -1,8 +1,55 @@
-import type {
-  TeamsIntegrationExecutionState,
-  TeamsIntegrationSettingsInput,
-  TeamsIntegrationStatusResponse,
-} from '@alga-psa/integrations/actions/integrations/teamsContracts';
+type TeamsInstallStatus = 'not_configured' | 'install_pending' | 'active' | 'error';
+type TeamsCapability =
+  | 'personal_tab'
+  | 'personal_bot'
+  | 'message_extension'
+  | 'activity_notifications';
+type TeamsNotificationCategory =
+  | 'assignment'
+  | 'customer_reply'
+  | 'approval_request'
+  | 'escalation'
+  | 'sla_risk';
+type TeamsAllowedAction =
+  | 'assign_ticket'
+  | 'add_note'
+  | 'reply_to_contact'
+  | 'log_time'
+  | 'approval_response';
+
+interface TeamsIntegrationStatusResponse {
+  success: boolean;
+  error?: string;
+  integration?: {
+    selectedProfileId: string | null;
+    installStatus: TeamsInstallStatus;
+    enabledCapabilities: TeamsCapability[];
+    notificationCategories: TeamsNotificationCategory[];
+    allowedActions: TeamsAllowedAction[];
+    appId: string | null;
+    botId: string | null;
+    packageMetadata: Record<string, unknown> | null;
+    lastError: string | null;
+  };
+}
+
+interface TeamsIntegrationExecutionState {
+  selectedProfileId: string | null;
+  installStatus: TeamsInstallStatus;
+  enabledCapabilities: TeamsCapability[];
+  allowedActions: TeamsAllowedAction[];
+  appId: string | null;
+  packageMetadata: Record<string, unknown> | null;
+}
+
+interface TeamsIntegrationSettingsInput {
+  selectedProfileId?: string | null;
+  installStatus?: TeamsInstallStatus;
+  enabledCapabilities?: TeamsCapability[];
+  notificationCategories?: TeamsNotificationCategory[];
+  allowedActions?: TeamsAllowedAction[];
+  lastError?: string | null;
+}
 
 const DEFAULT_EXECUTION_STATE: TeamsIntegrationExecutionState = {
   selectedProfileId: null,

@@ -1,4 +1,4 @@
 export {
   TeamsIntegrationSettings,
   TeamsIntegrationSettings as default,
-} from '@alga-psa/ee-microsoft-teams/components';
+} from '@alga-psa/integrations/components';

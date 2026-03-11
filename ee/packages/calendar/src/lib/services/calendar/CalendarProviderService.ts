@@ -5,9 +5,9 @@
 
 import crypto from 'crypto';
 import type { Knex } from 'knex';
-import { createTenantKnex } from '@/lib/db';
-import { CalendarProviderConfig } from '@/interfaces/calendar.interfaces';
-import { getSecret } from '@/lib/utils/getSecret';
+import { createTenantKnex } from '@alga-psa/db';
+import type { CalendarProviderConfig } from '@alga-psa/types';
+import { getSecret } from '../../utils/getSecret';
 
 export interface CreateCalendarProviderData {
   tenant: string;

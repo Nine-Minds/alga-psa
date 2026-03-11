@@ -20,8 +20,8 @@ import {
   initiateCalendarOAuth,
   createCalendarProvider,
   updateCalendarProvider,
-  getMicrosoftConsumerSetupStatus,
-} from '@alga-psa/integrations/actions';
+} from '../../actions';
+import { getMicrosoftCalendarSetupStatus } from '../../lib/actions/integrations/calendarSetupActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { CalendarProviderConfig } from '@alga-psa/types';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -83,7 +83,7 @@ export function MicrosoftCalendarProviderForm({
   useEffect(() => {
     const loadProviderSetupStatus = async () => {
       try {
-        const res = await getMicrosoftConsumerSetupStatus('calendar');
+        const res = await getMicrosoftCalendarSetupStatus();
         setProviderSetupReady(Boolean(res.success && res.ready));
         setProviderSetupMessage(res.success ? res.message || null : null);
       } catch {

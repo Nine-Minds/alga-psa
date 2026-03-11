@@ -3,18 +3,25 @@
  * Handles bidirectional synchronization between Alga schedule entries and external calendars
  */
 
-import { createTenantKnex } from '@/lib/db';
-import { withTransaction } from '@alga-psa/db';
-import { CalendarProviderConfig, CalendarEventMapping, CalendarSyncResult, ExternalCalendarEvent } from '@/interfaces/calendar.interfaces';
-import { IScheduleEntry } from '@/interfaces/schedule.interfaces';
+import { createTenantKnex, withTransaction } from '@alga-psa/db';
+import type {
+  CalendarProviderConfig,
+  CalendarEventMapping,
+  CalendarSyncResult,
+  ExternalCalendarEvent,
+  IScheduleEntry,
+} from '@alga-psa/types';
 import { CalendarProviderService } from './CalendarProviderService';
 import { GoogleCalendarAdapter } from './providers/GoogleCalendarAdapter';
 import { MicrosoftCalendarAdapter } from './providers/MicrosoftCalendarAdapter';
 import { BaseCalendarAdapter } from './providers/base/BaseCalendarAdapter';
-import { mapScheduleEntryToExternalEvent, mapExternalEventToScheduleEntry } from '@/utils/calendar/eventMapping';
+import {
+  mapScheduleEntryToExternalEvent,
+  mapExternalEventToScheduleEntry,
+} from '../../utils/calendar/eventMapping';
 import ScheduleEntry from '@alga-psa/scheduling/models/scheduleEntry';
 import { v4 as uuidv4 } from 'uuid';
-import { publishEvent } from '@/lib/eventBus/publishers';
+import { publishEvent } from '../../eventBus/publishers';
 
 export class CalendarSyncService {
   private providerService: CalendarProviderService;

@@ -1,10 +1,10 @@
 import axios, { AxiosInstance } from 'axios';
 import { BaseCalendarAdapter } from './base/BaseCalendarAdapter';
-import { CalendarProviderConfig, ExternalCalendarEvent } from '@/interfaces/calendar.interfaces';
-import { resolveMicrosoftConsumerProfileConfig } from '@alga-psa/integrations/lib/microsoftConsumerProfileResolution';
+import type { CalendarProviderConfig, ExternalCalendarEvent } from '@alga-psa/types';
+import { resolveMicrosoftConsumerProfileConfig } from '../../../microsoftConsumerProfileResolution';
 import { getAdminConnection } from '@alga-psa/db';
 import { CalendarProviderService } from '../CalendarProviderService';
-import { getWebhookBaseUrl } from '@/utils/email/webhookHelpers';
+import { getWebhookBaseUrl } from '../../../utils/email/webhookHelpers';
 
 /**
  * Microsoft Graph API adapter for calendar synchronization

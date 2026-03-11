@@ -1,11 +1,11 @@
 import axios, { AxiosInstance } from 'axios';
 import { BaseCalendarAdapter } from './base/BaseCalendarAdapter';
-import { CalendarProviderConfig, ExternalCalendarEvent } from '@/interfaces/calendar.interfaces';
+import type { CalendarProviderConfig, ExternalCalendarEvent } from '@alga-psa/types';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
 import { CalendarProviderService } from '../CalendarProviderService';
-import { getWebhookBaseUrl } from '@/utils/email/webhookHelpers';
+import { getWebhookBaseUrl } from '../../../utils/email/webhookHelpers';
 import { randomUUID } from 'crypto';
 
 /**

@@ -3,7 +3,6 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex } from '@alga-psa/db';
 import { getSSORegistry } from '@alga-psa/auth';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import type { InternalNotification } from '@alga-psa/notifications';
 import {
   buildNotificationDeliveredPayload,
   buildNotificationFailedPayload,
@@ -50,6 +49,17 @@ interface TeamsPackageMetadata {
 
 interface TeamsRecipientLink {
   providerAccountId: string;
+}
+
+interface TeamsNotificationInput {
+  internal_notification_id: string;
+  tenant: string;
+  user_id: string;
+  template_name: string | null;
+  title: string | null;
+  message: string | null;
+  link: string | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 export type TeamsNotificationDeliveryResult =
@@ -99,7 +109,7 @@ function getPackageBaseUrl(metadata: unknown): string {
   return normalizeString((metadata as TeamsPackageMetadata).baseUrl);
 }
 
-function getNotificationSubtype(notification: InternalNotification): string {
+function getNotificationSubtype(notification: TeamsNotificationInput): string {
   if (!notification.metadata || typeof notification.metadata !== 'object') {
     return '';
   }
@@ -108,7 +118,7 @@ function getNotificationSubtype(notification: InternalNotification): string {
 }
 
 export function classifyTeamsNotificationCategory(
-  notification: InternalNotification
+  notification: TeamsNotificationInput
 ): TeamsNotificationCategory | null {
   const templateName = normalizeString(notification.template_name);
   const link = normalizeString(notification.link);
@@ -156,7 +166,7 @@ function mapCategoryToActivityType(category: TeamsNotificationCategory): TeamsAc
   }
 }
 
-function buildTemplateParameters(notification: InternalNotification): Array<{ name: string; value: string }> {
+function buildTemplateParameters(notification: TeamsNotificationInput): Array<{ name: string; value: string }> {
   return [
     {
       name: 'item',
@@ -251,7 +261,7 @@ async function fetchMicrosoftGraphAppToken(params: {
 }
 
 export async function deliverTeamsNotificationImpl(
-  notification: InternalNotification
+  notification: TeamsNotificationInput
 ): Promise<TeamsNotificationDeliveryResult> {
   const category = classifyTeamsNotificationCategory(notification);
   if (!category) {
@@ -308,7 +318,7 @@ export async function deliverTeamsNotificationImpl(
       channel: 'teams',
       recipientId: notification.user_id,
       sentAt: now,
-      templateId: notification.template_name,
+      templateId: notification.template_name ?? undefined,
       contextType: category,
     }),
     ctx: {

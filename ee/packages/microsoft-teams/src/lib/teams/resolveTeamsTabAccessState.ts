@@ -1,12 +1,15 @@
 import type { ServiceContext } from '@alga-psa/db';
-import { hasPermission } from 'server/src/lib/auth/rbac';
-import { ContactService } from 'server/src/lib/api/services/ContactService';
-import { ProjectService } from 'server/src/lib/api/services/ProjectService';
-import { TicketService } from 'server/src/lib/api/services/TicketService';
-import { TimeEntryService } from 'server/src/lib/api/services/TimeEntryService';
-import { TimeSheetService } from 'server/src/lib/api/services/TimeSheetService';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import type { TeamsTabAuthState } from './resolveTeamsTabAuthState';
 import type { TeamsTabDestination } from './resolveTeamsTabDestination';
+import {
+  getTeamsApprovalById,
+  getTeamsContactById,
+  getTeamsProjectTaskById,
+  getTeamsTicketById,
+  getTeamsTimeEntryById,
+  listTeamsProjectTasks,
+} from './teamsPsaData';
 
 type TeamsTabReadyAuthState = Extract<TeamsTabAuthState, { status: 'ready' }>;
 
@@ -18,15 +21,12 @@ export type TeamsTabAccessState =
       message: string;
     };
 
-const ticketService = new TicketService();
-const projectService = new ProjectService();
-const contactService = new ContactService();
-const timeEntryService = new TimeEntryService();
-const timeSheetService = new TimeSheetService();
-
 function buildPermissionUser(state: TeamsTabReadyAuthState) {
   return {
     user_id: state.userId,
+    username: state.userId,
+    email: '',
+    is_inactive: false,
     user_type: 'internal' as const,
     tenant: state.tenantId,
   };
@@ -78,7 +78,7 @@ export async function resolveTeamsTabAccessState(
         return permissionFailure;
       }
 
-      const ticket = await ticketService.getById(destination.ticketId, context);
+      const ticket = await getTeamsTicketById(destination.ticketId, context);
       return ticket
         ? { status: 'ready' }
         : {
@@ -100,7 +100,7 @@ export async function resolveTeamsTabAccessState(
       }
 
       try {
-        const tasks = await projectService.getTasks(destination.projectId, context);
+        const tasks = await listTeamsProjectTasks(destination.projectId, context);
         return tasks.some((task) => task.task_id === destination.taskId)
           ? { status: 'ready' }
           : {
@@ -128,7 +128,7 @@ export async function resolveTeamsTabAccessState(
         return permissionFailure;
       }
 
-      const approval = await timeSheetService.getById(destination.approvalId, context);
+      const approval = await getTeamsApprovalById(destination.approvalId, context);
       return approval
         ? { status: 'ready' }
         : {
@@ -149,7 +149,7 @@ export async function resolveTeamsTabAccessState(
         return permissionFailure;
       }
 
-      const entry = await timeEntryService.getById(destination.entryId, context);
+      const entry = await getTeamsTimeEntryById(destination.entryId, context);
       return entry
         ? { status: 'ready' }
         : {
@@ -170,7 +170,7 @@ export async function resolveTeamsTabAccessState(
         return permissionFailure;
       }
 
-      const contact = await contactService.getById(destination.contactId, context);
+      const contact = await getTeamsContactById(destination.contactId, context);
       return contact
         ? { status: 'ready' }
         : {

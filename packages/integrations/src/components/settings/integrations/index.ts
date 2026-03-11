@@ -7,6 +7,7 @@ export { MspSsoLoginDomainsSettings } from './MspSsoLoginDomainsSettings';
 export { default as NinjaOneComplianceDashboard } from './NinjaOneComplianceDashboard';
 export { default as RmmIntegrationsSetup } from './RmmIntegrationsSetup';
 export { TeamsEnterpriseIntegrationSettings } from './TeamsEnterpriseIntegrationSettings';
+export { TeamsIntegrationSettings } from './TeamsIntegrationSettings';
 export { default as XeroCsvClientSyncPanel } from './XeroCsvClientSyncPanel';
 export { default as XeroCsvIntegrationSettings } from './XeroCsvIntegrationSettings';
 export { default as XeroIntegrationSettings } from './XeroIntegrationSettings';

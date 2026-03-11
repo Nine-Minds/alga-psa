@@ -46,8 +46,6 @@
     "@alga-psa/documents": "*",
     "@alga-psa/event-bus": "*",
     "@alga-psa/formatting": "*",
-    "@alga-psa/integrations": "*",
-    "@alga-psa/notifications": "*",
     "@alga-psa/ui": "*",
     "lucide-react": "^0.428.0"
   },

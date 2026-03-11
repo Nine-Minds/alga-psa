@@ -1,6 +1,6 @@
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex } from '@alga-psa/db';
-import { getMicrosoftProfileReadiness } from '@alga-psa/integrations/actions/integrations/providerReadiness';
+import { getMicrosoftProfileReadiness } from './providerReadiness';
 import {
   TEAMS_ALLOWED_ACTIONS,
   TEAMS_CAPABILITIES,
@@ -10,12 +10,12 @@ import {
   type TeamsCapability,
   type TeamsInstallStatus,
   type TeamsNotificationCategory,
-} from '@alga-psa/integrations/actions/integrations/teamsShared';
+} from '../../teams/teamsShared';
 import type {
   TeamsIntegrationExecutionState,
   TeamsIntegrationSettingsInput,
   TeamsIntegrationStatusResponse,
-} from '@alga-psa/integrations/actions/integrations/teamsContracts';
+} from '../../teams/teamsContracts';
 
 interface TeamsIntegrationRow {
   tenant: string;

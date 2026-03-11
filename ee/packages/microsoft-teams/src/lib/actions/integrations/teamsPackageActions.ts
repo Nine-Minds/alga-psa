@@ -1,13 +1,15 @@
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { withAuth } from '@alga-psa/auth/withAuth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex } from '@alga-psa/db';
-import { getMicrosoftProfileReadiness } from '@alga-psa/integrations/actions/integrations/providerReadiness';
+import { getMicrosoftProfileReadiness } from './providerReadiness';
+import { getTeamsAvailability } from '../../teams/teamsAvailability';
 import {
   buildTeamsPersonalTabDeepLink,
   TEAMS_PERSONAL_TAB_ENTITY_ID,
 } from '../../teams/teamsDeepLinks';
-import type { TeamsAppPackageStatusResponse } from '@alga-psa/integrations/actions/integrations/teamsContracts';
-import type { TeamsInstallStatus } from '@alga-psa/integrations/actions/integrations/teamsShared';
+import type { TeamsAppPackageStatusResponse } from '../../teams/teamsContracts';
+import type { TeamsInstallStatus } from '../../teams/teamsShared';
 
 interface TeamsIntegrationRow {
   tenant: string;
@@ -395,3 +397,18 @@ export async function getTeamsAppPackageStatusImpl(
     return { success: false, error: err?.message || 'Failed to build Teams app package metadata' };
   }
 }
+
+export const getTeamsAppPackageStatus = withAuth(async (
+  user,
+  { tenant }
+): Promise<TeamsAppPackageStatusResponse> => {
+  const availability = await getTeamsAvailability({
+    tenantId: tenant,
+    userId: (user as any)?.user_id,
+  });
+  if (!availability.enabled) {
+    return { success: false, error: availability.message };
+  }
+
+  return getTeamsAppPackageStatusImpl(user, { tenant });
+});

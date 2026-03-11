@@ -1,3 +1,1 @@
-export {
-  CalendarIntegrationsSettings as default,
-} from '@alga-psa/ee-calendar/components';
+export { CalendarIntegrationsSettings as default } from '../../../lib/calendarStubs';

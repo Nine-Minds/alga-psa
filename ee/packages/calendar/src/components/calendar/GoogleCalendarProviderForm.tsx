@@ -16,11 +16,11 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { CheckCircle, Clock, ExternalLink, XCircle } from 'lucide-react';
-import { initiateCalendarOAuth, createCalendarProvider, updateCalendarProvider } from '@alga-psa/integrations/actions';
+import { initiateCalendarOAuth, createCalendarProvider, updateCalendarProvider } from '../../actions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { CalendarProviderConfig } from '@alga-psa/types';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { getGoogleIntegrationStatus } from '@alga-psa/integrations/actions';
+import { getGoogleCalendarSetupStatus } from '../../lib/actions/integrations/calendarSetupActions';
 
 const googleCalendarProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
@@ -101,7 +101,7 @@ export function GoogleCalendarProviderForm({
   useEffect(() => {
     const loadGoogleStatus = async () => {
       try {
-        const res = await getGoogleIntegrationStatus();
+        const res = await getGoogleCalendarSetupStatus();
         if (!res.success) {
           setGoogleConfigReady(false);
           return;

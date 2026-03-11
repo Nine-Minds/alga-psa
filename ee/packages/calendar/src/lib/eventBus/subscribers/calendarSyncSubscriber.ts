@@ -3,7 +3,7 @@
  * Handles schedule entry events and triggers calendar synchronization
  */
 
-import { getEventBus } from 'server/src/lib/eventBus';
+import { getEventBus } from '@alga-psa/event-bus';
 import { 
   ScheduleEntryCreatedEvent, 
   ScheduleEntryUpdatedEvent, 
@@ -14,10 +14,8 @@ import {
 import { CalendarSyncService } from '@alga-psa/ee-calendar/lib/services/calendar/CalendarSyncService';
 import { CalendarProviderService } from '@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService';
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex, runWithTenant } from 'server/src/lib/db';
-import { TenantEmailService, StaticTemplateProcessor } from '@alga-psa/email';
-import { CalendarProviderConfig } from '@/interfaces/calendar.interfaces';
-import { IScheduleEntry } from '@/interfaces/schedule.interfaces';
+import { createTenantKnex, runWithTenant } from '@alga-psa/db';
+import type { CalendarProviderConfig, IScheduleEntry } from '@alga-psa/types';
 import { isValidEmail } from '@alga-psa/core';
 
 let syncService: CalendarSyncService;
@@ -465,49 +463,21 @@ async function handleCalendarConflictDetected(event: CalendarConflictDetectedEve
         return;
       }
 
-      const subject = buildConflictEmailSubject(scheduleEntry?.title, provider?.name);
-      const htmlBody = buildConflictEmailHtml({
-        scheduleEntry,
-        provider,
-        externalEventId,
-        algaLastModified,
-        externalLastModified
-      });
-      const textBody = buildConflictEmailText({
-        scheduleEntry,
-        provider,
-        externalEventId,
-        algaLastModified,
-        externalLastModified
-      });
-
-      const processor = new StaticTemplateProcessor(subject, htmlBody, textBody);
       const notifiedAt = new Date().toISOString();
 
-      for (const recipient of recipients) {
-        try {
-          await TenantEmailService.sendEmail({
-            tenantId,
-            to: recipient,
-            templateProcessor: processor
-          });
-          logger.info('[CalendarSyncSubscriber] Sent conflict notification email', {
-            mappingId,
-            recipient
-          });
-        } catch (emailError: any) {
-          logger.error('[CalendarSyncSubscriber] Failed to send conflict notification email', {
-            mappingId,
-            recipient,
-            error: emailError?.message || emailError
-          });
-        }
-      }
+      logger.warn('[CalendarSyncSubscriber] Calendar conflict email delivery is disabled in ee-calendar package', {
+        mappingId,
+        recipients,
+        scheduleEntryId,
+        externalEventId,
+        algaLastModified,
+        externalLastModified
+      });
 
       const baseMessage =
         mapping.sync_error_message ||
         'Conflict detected: both calendars have been modified';
-      const updatedMessage = `${baseMessage} (notification sent ${notifiedAt})`;
+      const updatedMessage = `${baseMessage} (notification recorded ${notifiedAt})`;
 
       await knex('calendar_event_mappings')
         .where('id', mappingId)
@@ -525,90 +495,6 @@ async function handleCalendarConflictDetected(event: CalendarConflictDetectedEve
       error: error.message || error
     });
   }
-}
-
-function buildConflictEmailSubject(title?: string | null, providerName?: string | null): string {
-  const safeTitle = title && title.trim().length > 0 ? title.trim() : 'schedule entry';
-  const providerSuffix = providerName && providerName.trim().length > 0 ? ` (${providerName.trim()})` : '';
-  return `Calendar sync conflict detected for ${safeTitle}${providerSuffix}`;
-}
-
-function buildConflictEmailHtml(params: {
-  scheduleEntry?: Partial<IScheduleEntry> | null;
-  provider?: CalendarProviderConfig | null;
-  externalEventId: string;
-  algaLastModified?: string;
-  externalLastModified?: string;
-}): string {
-  const { scheduleEntry, provider, externalEventId, algaLastModified, externalLastModified } = params;
-  const title = scheduleEntry?.title || 'Schedule entry';
-  const providerName = provider?.name || provider?.provider_type || 'calendar provider';
-
-  return `
-    <p>Hello,</p>
-    <p>A calendar sync conflict was detected while syncing <strong>${escapeHtml(title)}</strong> with <strong>${escapeHtml(providerName)}</strong>.</p>
-    <ul>
-      <li><strong>Scheduled start:</strong> ${escapeHtml(formatDateTime(scheduleEntry?.scheduled_start))}</li>
-      <li><strong>Scheduled end:</strong> ${escapeHtml(formatDateTime(scheduleEntry?.scheduled_end))}</li>
-      <li><strong>External event ID:</strong> ${escapeHtml(externalEventId)}</li>
-      <li><strong>Alga last modified:</strong> ${escapeHtml(formatDateTime(algaLastModified))}</li>
-      <li><strong>External last modified:</strong> ${escapeHtml(formatDateTime(externalLastModified))}</li>
-    </ul>
-    <p>Please open <strong>Settings → Calendar Integrations</strong> in Alga PSA to review and resolve this conflict.</p>
-    <p>If you no longer need this sync, you can disable the provider to suppress further notifications.</p>
-    <p>— Alga PSA Calendar Sync</p>
-  `;
-}
-
-function buildConflictEmailText(params: {
-  scheduleEntry?: Partial<IScheduleEntry> | null;
-  provider?: CalendarProviderConfig | null;
-  externalEventId: string;
-  algaLastModified?: string;
-  externalLastModified?: string;
-}): string {
-  const { scheduleEntry, provider, externalEventId, algaLastModified, externalLastModified } = params;
-  const title = scheduleEntry?.title || 'Schedule entry';
-  const providerName = provider?.name || provider?.provider_type || 'calendar provider';
-
-  return [
-    'Hello,',
-    '',
-    `A calendar sync conflict was detected while syncing "${title}" with ${providerName}.`,
-    '',
-    `Scheduled start: ${formatDateTime(scheduleEntry?.scheduled_start)}`,
-    `Scheduled end: ${formatDateTime(scheduleEntry?.scheduled_end)}`,
-    `External event ID: ${externalEventId}`,
-    `Alga last modified: ${formatDateTime(algaLastModified)}`,
-    `External last modified: ${formatDateTime(externalLastModified)}`,
-    '',
-    'Open Settings → Calendar Integrations in Alga PSA to review and resolve this conflict.',
-    'You can disable the provider if you no longer want to sync this calendar.',
-    '',
-    '— Alga PSA Calendar Sync'
-  ].join('\n');
-}
-
-function formatDateTime(value: unknown): string {
-  if (!value) {
-    return '—';
-  }
-
-  const date = value instanceof Date ? value : new Date(value as string);
-  if (Number.isNaN(date.getTime())) {
-    return String(value);
-  }
-
-  return date.toISOString();
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 /**

@@ -13,7 +13,12 @@ export { dynamic };
 async function loadRoute(): Promise<EeRouteModule | null> {
   return loadCalendarEeRoute<EeRouteModule>(
     'calendar/webhooks/google',
-    async () => import('@enterprise/app/api/calendar/webhooks/google/route') as Promise<EeRouteModule>
+    async () =>
+      import('@alga-psa/ee-calendar/routes').then((mod) => ({
+        GET: mod.handleGoogleCalendarWebhookGet,
+        POST: mod.handleGoogleCalendarWebhookPost,
+        OPTIONS: mod.handleGoogleCalendarWebhookOptions,
+      })) as Promise<EeRouteModule>
   );
 }
 

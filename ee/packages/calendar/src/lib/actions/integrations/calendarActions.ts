@@ -7,10 +7,10 @@ import {
   generateMicrosoftCalendarAuthUrl,
   generateCalendarNonce,
   encodeCalendarState,
-} from '@alga-psa/integrations/utils/calendar/oauthHelpers';
-import { resolveCalendarRedirectUri } from '@alga-psa/integrations/utils/calendar/redirectUri';
-import { storeCalendarOAuthState } from '@alga-psa/integrations/utils/calendar/oauthStateStore';
-import { resolveMicrosoftConsumerProfileConfig } from '@alga-psa/integrations/lib/microsoftConsumerProfileResolution';
+} from '../../utils/calendar/oauthHelpers';
+import { resolveCalendarRedirectUri } from '../../utils/calendar/redirectUri';
+import { storeCalendarOAuthState } from '../../utils/calendar/oauthStateStore';
+import { resolveMicrosoftConsumerProfileConfig } from '../../microsoftConsumerProfileResolution';
 import type { CalendarProviderConfig, CalendarSyncStatus, CalendarConflictResolution } from '@alga-psa/types';
 import { CalendarProviderService } from '@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService';
 import { GoogleCalendarAdapter } from '@alga-psa/ee-calendar/lib/services/calendar/providers/GoogleCalendarAdapter';

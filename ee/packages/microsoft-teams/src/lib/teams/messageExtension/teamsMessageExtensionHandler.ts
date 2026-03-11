@@ -1,9 +1,7 @@
 import { createTenantKnex, getUserWithRoles } from '@alga-psa/db';
 import { getTeamsIntegrationExecutionStateImpl as getTeamsIntegrationExecutionState } from '../../actions/integrations/teamsActions';
 import { NextResponse } from 'next/server';
-import { hasPermission } from 'server/src/lib/auth/rbac';
-import { ContactService } from 'server/src/lib/api/services/ContactService';
-import { TicketService } from 'server/src/lib/api/services/TicketService';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { buildTeamsMessageExtensionResultDeepLinkFromPsaUrl } from '../teamsDeepLinks';
 import { getTeamsRuntimeAvailability } from '../getTeamsRuntimeAvailability';
 import {
@@ -15,14 +13,16 @@ import {
   type TeamsActionResult,
   type TeamsActionSurface,
 } from '../actions/teamsActionRegistry';
-import { listPendingApprovalsForTeams } from 'server/src/lib/teams/approvals/queryPendingApprovalsForTeams';
 import { resolveTeamsLinkedUser } from '../resolveTeamsLinkedUser';
 import { resolveTeamsTenantContext } from '../resolveTeamsTenantContext';
 import { buildTeamsAvailabilityJsonResponse } from '../teamsAvailabilityResponses';
+import {
+  listPendingApprovalsForTeams,
+  searchTeamsContacts,
+  searchTeamsTickets,
+} from '../teamsPsaData';
 
 const MESSAGE_EXTENSION_SURFACE: TeamsActionSurface = 'message_extension';
-const ticketService = new TicketService();
-const contactService = new ContactService();
 const teamsActionTitleById = new Map(listTeamsActionDefinitions().map((definition) => [definition.id, definition.title]));
 const SEARCH_SURFACED_ACTION_IDS = new Set(['assign_ticket', 'add_note', 'reply_to_contact', 'log_time', 'approval_response']);
 const UPDATE_TARGET_TYPE_VALUES = ['ticket', 'project_task'] as const;
@@ -898,19 +898,12 @@ async function searchTicketHits(params: {
     return [];
   }
 
-  const results = await ticketService.search(
-    {
-      query: params.query,
-      fields: ['title', 'ticket_number', 'client_name', 'contact_name'],
-      include_closed: false,
-      limit: params.limit,
-    } as any,
-    {
-      tenant: params.tenantId,
-      userId: params.user.user_id,
-      user: params.user,
-    }
-  );
+  const results = await searchTeamsTickets({
+    tenantId: params.tenantId,
+    query: params.query,
+    limit: params.limit,
+    includeClosed: false,
+  });
 
   return results
     .map((ticket) => normalizeOptionalString((ticket as { ticket_id?: string }).ticket_id))
@@ -974,19 +967,11 @@ async function searchContactHits(params: {
     return [];
   }
 
-  const results = await contactService.search(
-    {
-      query: params.query,
-      fields: ['full_name', 'email', 'phone_number', 'role'],
-      include_inactive: false,
-      limit: params.limit,
-    } as any,
-    {
-      tenant: params.tenantId,
-      userId: params.user.user_id,
-      user: params.user,
-    }
-  );
+  const results = await searchTeamsContacts({
+    tenantId: params.tenantId,
+    query: params.query,
+    limit: params.limit,
+  });
 
   return results
     .map((contact) => ({

@@ -1,1 +1,4 @@
-export * from '@alga-psa/ee-calendar/jobs';
+export {
+  renewMicrosoftCalendarWebhooks,
+  verifyGoogleCalendarProvisioning,
+} from '../../../lib/calendarStubs';

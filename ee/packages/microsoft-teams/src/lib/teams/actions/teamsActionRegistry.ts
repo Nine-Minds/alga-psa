@@ -11,21 +11,35 @@ import {
 import {
   type TeamsAllowedAction,
   type TeamsCapability,
-} from '@alga-psa/integrations/actions/integrations/teamsShared';
-import type { TeamsIntegrationExecutionState } from '@alga-psa/integrations/actions/integrations/teamsContracts';
+} from '../teamsShared';
+import type { TeamsIntegrationExecutionState } from '../teamsContracts';
 import { getTeamsIntegrationExecutionStateImpl as getTeamsIntegrationExecutionState } from '../../actions/integrations/teamsActions';
 import { z, ZodError } from 'zod';
-import { hasPermission } from 'server/src/lib/auth/rbac';
-import { ContactService } from 'server/src/lib/api/services/ContactService';
-import { ProjectService } from 'server/src/lib/api/services/ProjectService';
-import { TicketService } from 'server/src/lib/api/services/TicketService';
-import { TimeEntryService } from 'server/src/lib/api/services/TimeEntryService';
-import { TimeSheetService } from 'server/src/lib/api/services/TimeSheetService';
-import { ForbiddenError, NotFoundError, ValidationError } from 'server/src/lib/api/middleware/apiMiddleware';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { buildTeamsFullPsaUrl } from '../buildTeamsFullPsaUrl';
-import { listPendingApprovalsForTeams, type TeamsPendingApprovalRecord } from 'server/src/lib/teams/approvals/queryPendingApprovalsForTeams';
 import type { TeamsTabDestination } from '../resolveTeamsTabDestination';
 import { describeTeamsTabDestination } from '../resolveTeamsTabDestination';
+import {
+  ForbiddenError,
+  NotFoundError,
+  ValidationError,
+} from './teamsActionErrors';
+import {
+  addTeamsTicketComment,
+  approveTeamsTimeSheet,
+  createTeamsTimeEntry,
+  getTeamsApprovalById,
+  getTeamsContactById,
+  getTeamsProjectTaskById,
+  getTeamsTicketById,
+  getTeamsTimeEntryById,
+  listAssignedOpenTeamsTickets,
+  listPendingApprovalsForTeams,
+  type TeamsPendingApprovalRecord,
+  requestChangesForTeamsTimeSheet,
+  searchTeamsTickets,
+  updateTeamsTicketAssignee,
+} from '../teamsPsaData';
 
 export const TEAMS_ACTION_SURFACES = ['bot', 'message_extension', 'quick_action'] as const;
 export type TeamsActionSurface = typeof TEAMS_ACTION_SURFACES[number];
@@ -169,31 +183,31 @@ type TeamsResolvedTarget =
   | {
       entityType: 'ticket';
       id: string;
-      entity: Awaited<ReturnType<TicketService['getById']>>;
+      entity: Awaited<ReturnType<typeof getTeamsTicketById>>;
       destination: TeamsTabDestination;
     }
   | {
       entityType: 'project_task';
       id: string;
-      entity: Awaited<ReturnType<ProjectService['getTaskById']>>;
+      entity: Awaited<ReturnType<typeof getTeamsProjectTaskById>>;
       destination: TeamsTabDestination;
     }
   | {
       entityType: 'approval';
       id: string;
-      entity: Awaited<ReturnType<TimeSheetService['getById']>>;
+      entity: Awaited<ReturnType<typeof getTeamsApprovalById>>;
       destination: TeamsTabDestination;
     }
   | {
       entityType: 'time_entry';
       id: string;
-      entity: Awaited<ReturnType<TimeEntryService['getById']>>;
+      entity: Awaited<ReturnType<typeof getTeamsTimeEntryById>>;
       destination: TeamsTabDestination;
     }
   | {
       entityType: 'contact';
       id: string;
-      entity: Awaited<ReturnType<ContactService['getById']>>;
+      entity: Awaited<ReturnType<typeof getTeamsContactById>>;
       destination: TeamsTabDestination;
     };
 
@@ -233,12 +247,6 @@ type TeamsActionDefinition<TNormalized extends Record<string, unknown> = Record<
     items?: TeamsActionResultItem[];
   }>;
 };
-
-const ticketService = new TicketService();
-const projectService = new ProjectService();
-const contactService = new ContactService();
-const timeEntryService = new TimeEntryService();
-const timeSheetService = new TimeSheetService();
 
 const duplicateResults = new Map<string, TeamsActionResult>();
 const inFlightResults = new Map<string, Promise<TeamsActionResult>>();
@@ -462,7 +470,7 @@ async function resolveTargetInternal(
 ): Promise<TeamsResolvedTarget> {
   switch (reference.entityType) {
     case 'ticket': {
-      const entity = await ticketService.getById(reference.ticketId, serviceContext);
+      const entity = await getTeamsTicketById(reference.ticketId, serviceContext);
       if (!entity) {
         throw new NotFoundError('Ticket not found');
       }
@@ -476,7 +484,7 @@ async function resolveTargetInternal(
     }
 
     case 'project_task': {
-      const entity = await projectService.getTaskById(reference.taskId, serviceContext);
+      const entity = await getTeamsProjectTaskById(reference.taskId, serviceContext);
       if (!entity) {
         throw new NotFoundError('Project task not found');
       }
@@ -504,7 +512,7 @@ async function resolveTargetInternal(
     }
 
     case 'approval': {
-      const entity = await timeSheetService.getById(reference.approvalId, serviceContext);
+      const entity = await getTeamsApprovalById(reference.approvalId, serviceContext);
       if (!entity) {
         throw new NotFoundError('Approval item not found');
       }
@@ -518,7 +526,7 @@ async function resolveTargetInternal(
     }
 
     case 'time_entry': {
-      const entity = await timeEntryService.getById(reference.entryId, serviceContext);
+      const entity = await getTeamsTimeEntryById(reference.entryId, serviceContext);
       if (!entity) {
         throw new NotFoundError('Time entry not found');
       }
@@ -532,7 +540,7 @@ async function resolveTargetInternal(
     }
 
     case 'contact': {
-      const entity = await contactService.getById(reference.contactId, serviceContext);
+      const entity = await getTeamsContactById(reference.contactId, serviceContext);
       if (!entity) {
         throw new NotFoundError('Contact not found');
       }
@@ -988,21 +996,14 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
         'You do not have permission to view tickets from Teams.'
       ),
     execute: async (normalized, context) => {
-      const result = await ticketService.list(
-        {
-          page: 1,
-          limit: normalized.limit as number,
-          fields: ['mobile_list'],
-          filters: {
-            assigned_to: context.request.user.user_id,
-            is_closed: false,
-          },
-        },
-        context.serviceContext
-      );
+      const tickets = await listAssignedOpenTeamsTickets({
+        tenantId: context.request.tenantId,
+        assignedToUserId: context.request.user.user_id,
+        limit: normalized.limit as number,
+      });
 
       const items = await Promise.all(
-        result.data.map((ticket) =>
+        tickets.map((ticket) =>
           buildItemForDestination(
             'ticket',
             String((ticket as { ticket_id?: string }).ticket_id ?? ''),
@@ -1345,15 +1346,14 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
         };
       }
 
-      await ticketService.addComment(
-        target.id,
-        {
-          comment_text: String(normalized.content),
-          is_internal: normalized.updateType !== 'customer_reply',
-          metadata: normalized.metadata as Record<string, unknown> | undefined,
-        },
-        context.serviceContext
-      );
+      await addTeamsTicketComment({
+        ticketId: target.id,
+        tenantId: context.request.tenantId,
+        actorUserId: context.request.user.user_id,
+        commentText: String(normalized.content),
+        isInternal: normalized.updateType !== 'customer_reply',
+        metadata: normalized.metadata as Record<string, unknown> | undefined,
+      });
 
       return {
         summary: {
@@ -1390,20 +1390,20 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
     authorize: async (_normalized, context) =>
       ensurePermission(context.request.user, 'ticket', 'update', 'You do not have permission to assign tickets from Teams.'),
     execute: async (normalized, context) => {
-      await ticketService.update(
-        String(normalized.ticketId),
-        { assigned_to: String(normalized.assigneeId) },
-        context.serviceContext
-      );
+      await updateTeamsTicketAssignee({
+        ticketId: String(normalized.ticketId),
+        tenantId: context.request.tenantId,
+        assigneeId: String(normalized.assigneeId),
+        actorUserId: context.request.user.user_id,
+      });
       if (normalized.note) {
-        await ticketService.addComment(
-          String(normalized.ticketId),
-          {
-            comment_text: String(normalized.note),
-            is_internal: true,
-          },
-          context.serviceContext
-        );
+        await addTeamsTicketComment({
+          ticketId: String(normalized.ticketId),
+          tenantId: context.request.tenantId,
+          actorUserId: context.request.user.user_id,
+          commentText: String(normalized.note),
+          isInternal: true,
+        });
       }
 
       const target = await resolveTargetInternal(
@@ -1441,15 +1441,14 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
     authorize: async (_normalized, context) =>
       ensurePermission(context.request.user, 'ticket', 'update', 'You do not have permission to add ticket notes from Teams.'),
     execute: async (normalized, context) => {
-      await ticketService.addComment(
-        String(normalized.ticketId),
-        {
-          comment_text: String(normalized.note),
-          is_internal: true,
-          metadata: normalized.metadata as Record<string, unknown> | undefined,
-        },
-        context.serviceContext
-      );
+      await addTeamsTicketComment({
+        ticketId: String(normalized.ticketId),
+        tenantId: context.request.tenantId,
+        actorUserId: context.request.user.user_id,
+        commentText: String(normalized.note),
+        isInternal: true,
+        metadata: normalized.metadata as Record<string, unknown> | undefined,
+      });
 
       const target = await resolveTargetInternal(
         { entityType: 'ticket', ticketId: String(normalized.ticketId) },
@@ -1486,15 +1485,14 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
     authorize: async (_normalized, context) =>
       ensurePermission(context.request.user, 'ticket', 'update', 'You do not have permission to send ticket replies from Teams.'),
     execute: async (normalized, context) => {
-      await ticketService.addComment(
-        String(normalized.ticketId),
-        {
-          comment_text: String(normalized.reply),
-          is_internal: false,
-          metadata: normalized.metadata as Record<string, unknown> | undefined,
-        },
-        context.serviceContext
-      );
+      await addTeamsTicketComment({
+        ticketId: String(normalized.ticketId),
+        tenantId: context.request.tenantId,
+        actorUserId: context.request.user.user_id,
+        commentText: String(normalized.reply),
+        isInternal: false,
+        metadata: normalized.metadata as Record<string, unknown> | undefined,
+      });
 
       const target = await resolveTargetInternal(
         { entityType: 'ticket', ticketId: String(normalized.ticketId) },
@@ -1553,17 +1551,16 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
     execute: async (normalized, context) => {
       const startTime = new Date(String(normalized.startTime));
       const endTime = new Date(startTime.getTime() + Number(normalized.durationMinutes) * 60_000);
-      const created = await timeEntryService.create(
-        {
-          work_item_type: String(normalized.entityType) as 'ticket' | 'project_task',
-          work_item_id: String(normalized.workItemId),
-          start_time: startTime.toISOString(),
-          end_time: endTime.toISOString(),
-          notes: String(normalized.note || ''),
-          is_billable: Boolean(normalized.isBillable),
-        },
-        context.serviceContext
-      );
+      const created = await createTeamsTimeEntry({
+        tenantId: context.request.tenantId,
+        actorUserId: context.request.user.user_id,
+        workItemType: String(normalized.entityType) as 'ticket' | 'project_task',
+        workItemId: String(normalized.workItemId),
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        notes: String(normalized.note || ''),
+        billable: Boolean(normalized.isBillable),
+      });
 
       const workItemType = String(normalized.entityType);
       const destination =
@@ -1611,20 +1608,20 @@ const actionDefinitions: Record<TeamsActionId, TeamsActionDefinition> = {
     execute: async (normalized, context) => {
       const approvalId = String(normalized.approvalId);
       if (normalized.outcome === 'approve') {
-        await timeSheetService.approveTimeSheet(
+        await approveTeamsTimeSheet({
           approvalId,
-          { approval_notes: normalized.comment ? String(normalized.comment) : undefined },
-          context.serviceContext
-        );
+          tenantId: context.request.tenantId,
+          actorUserId: context.request.user.user_id,
+          approvalNotes: normalized.comment ? String(normalized.comment) : undefined,
+        });
       } else {
-        await timeSheetService.requestChanges(
+        await requestChangesForTeamsTimeSheet({
           approvalId,
-          {
-            change_reason: String(normalized.comment),
-            detailed_feedback: String(normalized.comment),
-          },
-          context.serviceContext
-        );
+          tenantId: context.request.tenantId,
+          actorUserId: context.request.user.user_id,
+          changeReason: String(normalized.comment),
+          detailedFeedback: String(normalized.comment),
+        });
       }
 
       const target = await resolveTargetInternal(

@@ -1,1 +1,1 @@
-export * from '@alga-psa/ee-calendar/lib/services/calendar/providers/GoogleCalendarAdapter';
+export { GoogleCalendarAdapter } from '../../../../lib/calendarStubs';

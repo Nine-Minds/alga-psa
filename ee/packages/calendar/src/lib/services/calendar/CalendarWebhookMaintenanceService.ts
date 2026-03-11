@@ -1,15 +1,10 @@
 import { getAdminConnection } from '@alga-psa/db';
-import { CalendarProviderConfig } from '@/interfaces/calendar.interfaces';
+import type { CalendarProviderConfig } from '@alga-psa/types';
 import { MicrosoftCalendarAdapter } from './providers/MicrosoftCalendarAdapter';
 import logger from '@alga-psa/core/logger';
 import { CalendarProviderService } from './CalendarProviderService';
-import { getAnalytics } from '@alga-psa/analytics';
 
-// PostHog analytics (EE only)
-let analytics: any = null;
-if (process.env.EDITION === 'enterprise') {
-  analytics = getAnalytics();
-}
+const analytics: { capture: (event: string, payload: Record<string, unknown>) => Promise<void> } | null = null;
 
 interface RenewalOptions {
   tenantId?: string;

@@ -1,4 +1,4 @@
-import type { TeamsAvailability } from '@alga-psa/integrations/lib/teamsAvailability';
+import type { TeamsAvailability } from './teamsAvailability';
 import { NextResponse } from 'next/server';
 
 export function getTeamsAvailabilityHttpStatus(availability: TeamsAvailability): number {

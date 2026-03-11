@@ -5,7 +5,7 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import type { IProjectMaterial, IServicePrice } from '@alga-psa/types';
-import type { CatalogPickerItem } from '@alga-psa/billing/actions';
+import type { CatalogPickerItem } from '../src/actions/materialCatalogActions';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 
 let mockMaterials: IProjectMaterial[] = [];
@@ -60,7 +60,7 @@ vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/billing/actions', () => ({
+vi.mock('../src/actions/materialCatalogActions', () => ({
   listProjectMaterials: vi.fn(async () => mockMaterials),
   searchServiceCatalogForPicker: vi.fn(async () => ({ items: mockProducts })),
   getServicePrices: vi.fn(async () => mockPrices),
@@ -75,7 +75,7 @@ describe('ProjectMaterialsDrawer', () => {
     mockProducts = [];
     mockPrices = [];
 
-    const actions = await import('@alga-psa/billing/actions');
+    const actions = await import('../src/actions/materialCatalogActions');
     vi.mocked(actions.listProjectMaterials).mockClear();
     vi.mocked(actions.listProjectMaterials).mockImplementation(async () => mockMaterials);
     vi.mocked(actions.searchServiceCatalogForPicker).mockClear();
@@ -91,7 +91,7 @@ describe('ProjectMaterialsDrawer', () => {
   });
 
   it('shows loading state while materials are fetched (T003)', async () => {
-    const actions = await import('@alga-psa/billing/actions');
+    const actions = await import('../src/actions/materialCatalogActions');
     let resolveMaterials: (value: IProjectMaterial[]) => void = () => undefined;
     const pending = new Promise<IProjectMaterial[]>((resolve) => {
       resolveMaterials = resolve;
@@ -271,7 +271,7 @@ describe('ProjectMaterialsDrawer', () => {
       { service_id: 'service-2', service_name: 'Gadget', sku: null } as CatalogPickerItem,
     ];
 
-    const actions = await import('@alga-psa/billing/actions');
+    const actions = await import('../src/actions/materialCatalogActions');
     const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
     render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
 
@@ -367,7 +367,7 @@ describe('ProjectMaterialsDrawer', () => {
       { service_id: 'service-1', currency_code: 'USD', rate: 1500 } as IServicePrice,
     ];
 
-    const actions = await import('@alga-psa/billing/actions');
+    const actions = await import('../src/actions/materialCatalogActions');
     const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
     render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
 
@@ -489,7 +489,7 @@ describe('ProjectMaterialsDrawer', () => {
       } as IProjectMaterial,
     ];
 
-    const actions = await import('@alga-psa/billing/actions');
+    const actions = await import('../src/actions/materialCatalogActions');
     const ProjectMaterialsDrawer = (await import('../src/components/ProjectMaterialsDrawer')).default;
     const { container } = render(<ProjectMaterialsDrawer projectId="project-1" clientId="client-1" />);
 

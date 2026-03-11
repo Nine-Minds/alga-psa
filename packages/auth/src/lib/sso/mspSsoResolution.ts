@@ -1,7 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getAdminConnection } from '@alga-psa/db/admin';
-import { resolveMicrosoftConsumerProfileConfig } from '@alga-psa/integrations/lib/microsoftConsumerProfileResolution';
+import { resolveMicrosoftConsumerProfileConfig } from '../microsoftConsumerProfileResolution';
 
 export type MspSsoProviderId = 'google' | 'azure-ad';
 export type MspSsoSource = 'tenant' | 'app';

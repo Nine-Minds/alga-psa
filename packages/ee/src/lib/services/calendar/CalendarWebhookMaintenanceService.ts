@@ -1,1 +1,1 @@
-export * from '@alga-psa/ee-calendar/lib/services/calendar/CalendarWebhookMaintenanceService';
+export { CalendarWebhookMaintenanceService } from '../../../lib/calendarStubs';

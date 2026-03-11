@@ -43,7 +43,7 @@ import { generateDeviceFingerprint, getDeviceInfo } from "./deviceFingerprint";
 import { getLocationFromIp } from "./geolocation";
 import { getConnection } from "@alga-psa/db";
 import { getPortalDomain, getPortalDomainByHostname } from "./PortalDomainModel";
-import { resolveMicrosoftConsumerProfileConfig } from "@alga-psa/integrations/lib/microsoftConsumerProfileResolution";
+import { resolveMicrosoftConsumerProfileConfig } from "./microsoftConsumerProfileResolution";
 
 function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, protocol: string): void {
     if (!portCandidate || portCandidate.length === 0) {

@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { CalendarProviderService } from '@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService';
 import { GoogleCalendarAdapter } from '@alga-psa/ee-calendar/lib/services/calendar/providers/GoogleCalendarAdapter';
-import { consumeCalendarOAuthState } from '@/utils/calendar/oauthStateStore';
-import { decodeCalendarState } from '@/utils/calendar/oauthHelpers';
-import { CalendarProviderConfig } from '@/interfaces/calendar.interfaces';
+import { consumeCalendarOAuthState } from '../../../../../../lib/utils/calendar/oauthStateStore';
+import { decodeCalendarState } from '../../../../../../lib/utils/calendar/oauthHelpers';
+import type { CalendarProviderConfig } from '@alga-psa/types';
 import axios from 'axios';
-import { resolveCalendarRedirectUri } from '@/utils/calendar/redirectUri';
+import { resolveCalendarRedirectUri } from '../../../../../../lib/utils/calendar/redirectUri';
 
 export const dynamic = 'force-dynamic';
 

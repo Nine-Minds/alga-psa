@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getTeamsAppPackageStatus } from '@alga-psa/integrations/actions';
-import { TEAMS_AVAILABILITY_MESSAGES } from '@alga-psa/integrations/lib/teamsAvailability';
+import { getTeamsAppPackageStatus } from '../../../../lib/actions/integrations/teamsPackageActions';
+import { TEAMS_AVAILABILITY_MESSAGES } from '../../../../lib/teams/teamsAvailability';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';

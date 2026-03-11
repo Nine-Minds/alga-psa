@@ -13,7 +13,12 @@ export { dynamic };
 async function loadRoute(): Promise<EeRouteModule | null> {
   return loadCalendarEeRoute<EeRouteModule>(
     'calendar/webhooks/microsoft',
-    async () => import('@enterprise/app/api/calendar/webhooks/microsoft/route') as Promise<EeRouteModule>
+    async () =>
+      import('@alga-psa/ee-calendar/routes').then((mod) => ({
+        GET: mod.handleMicrosoftCalendarWebhookGet,
+        POST: mod.handleMicrosoftCalendarWebhookPost,
+        OPTIONS: mod.handleMicrosoftCalendarWebhookOptions,
+      })) as Promise<EeRouteModule>
   );
 }
 

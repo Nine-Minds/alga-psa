@@ -1,1 +1,4 @@
-export * from '@alga-psa/ee-calendar/event-bus';
+export {
+  registerCalendarSyncSubscriber,
+  unregisterCalendarSyncSubscriber,
+} from '../../../lib/calendarStubs';

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getTeamsAvailability } from '@alga-psa/integrations/lib/teamsAvailability';
+import { getTeamsAvailability } from './teamsAvailability';
 import { resolveTeamsTabAuthState, type TeamsTabAuthState } from './resolveTeamsTabAuthState';
 import { buildTeamsReauthUrl } from './buildTeamsReauthUrl';
 

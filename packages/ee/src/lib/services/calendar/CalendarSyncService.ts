@@ -1,1 +1,1 @@
-export * from '@alga-psa/ee-calendar/lib/services/calendar/CalendarSyncService';
+export { CalendarSyncService } from '../../../lib/calendarStubs';

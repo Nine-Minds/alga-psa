@@ -1,7 +1,7 @@
 import { createTenantKnex, getUserWithRoles } from '@alga-psa/db';
 import { getTeamsIntegrationExecutionStateImpl as getTeamsIntegrationExecutionState } from '../../actions/integrations/teamsActions';
 import { NextResponse } from 'next/server';
-import { hasPermission } from 'server/src/lib/auth/rbac';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { getTeamsRuntimeAvailability } from '../getTeamsRuntimeAvailability';
 import { buildTeamsAvailabilityJsonResponse } from '../teamsAvailabilityResponses';
 import {

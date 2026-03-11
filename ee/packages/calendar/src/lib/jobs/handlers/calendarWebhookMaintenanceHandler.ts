@@ -1,5 +1,5 @@
 import logger from '@alga-psa/core/logger';
-import { runWithTenant } from 'server/src/lib/db';
+import { runWithTenant } from '@alga-psa/db';
 import { CalendarWebhookMaintenanceService } from '@alga-psa/ee-calendar/lib/services/calendar/CalendarWebhookMaintenanceService';
 import { GoogleCalendarAdapter } from '@alga-psa/ee-calendar/lib/services/calendar/providers/GoogleCalendarAdapter';
 import { CalendarProviderService } from '@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService';
