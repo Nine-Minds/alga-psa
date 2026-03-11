@@ -405,6 +405,43 @@ describe("TicketDetailScreen rich text behavior flows", () => {
     expect(readOnlyDescription.props.content).toBe(baseTicket.attributes?.description);
   });
 
+  it("upgrades legacy plain-text descriptions to serialized rich-text content on save", async () => {
+    getTicketByIdMock.mockImplementation(() =>
+      createSuccessResult({
+        ...baseTicket,
+        attributes: {
+          description: "Legacy plain description",
+        },
+      } satisfies TicketDetail)
+    );
+
+    const renderer = renderBody();
+    await flushAsyncWork();
+
+    pressControl(renderer, "Edit description");
+
+    const descriptionEditor = findRichTextEditor(renderer, "Loading description editor…");
+    expect(descriptionEditor.props.content).toBe("Legacy plain description");
+
+    await act(async () => {
+      (descriptionEditor.props.onContentChange as ((payload: { json: unknown }) => void) | undefined)?.({
+        json: updatedDescriptionJson,
+      });
+    });
+
+    pressControl(renderer, "Save");
+    await flushAsyncWork();
+
+    expect(updateTicketAttributesMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        attributes: expect.objectContaining({
+          description: JSON.stringify(updatedDescriptionJson),
+        }),
+      }),
+    );
+  });
+
   it("keeps unsent rich-comment drafts across reloads for the same user and ticket", async () => {
     const renderer = renderBody();
     await flushAsyncWork();

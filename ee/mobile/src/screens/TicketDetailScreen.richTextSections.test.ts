@@ -308,6 +308,31 @@ describe("TicketDetailScreen rich text sections", () => {
     expect(richEditor.props.editable).toBe(false);
   });
 
+  it("keeps legacy plain-text comments viewable through the read-only wrapper path", () => {
+    const renderer = render(
+      React.createElement(CommentsSection, {
+        comments: [
+          {
+            comment_id: "comment-1",
+            comment_text: "Legacy plain text reply",
+            is_internal: false,
+            created_by_name: "Alice",
+            created_at: "2026-03-11T00:00:00.000Z",
+          },
+        ],
+        visibleCount: 20,
+        onLoadMore: () => undefined,
+        onJumpToLatest: () => undefined,
+        onJumpToTop: () => undefined,
+        error: null,
+      }),
+    );
+
+    const richEditor = findMockRichTextEditor(renderer);
+    expect(richEditor.props.content).toBe("Legacy plain text reply");
+    expect(richEditor.props.editable).toBe(false);
+  });
+
   it("mounts the rich comment composer while preserving visibility controls", () => {
     const renderer = render(
       React.createElement(CommentComposer, {

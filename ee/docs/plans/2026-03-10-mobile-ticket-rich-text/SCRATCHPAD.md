@@ -121,6 +121,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-11) Ticket screen behavior coverage checkpoint:
   - `cd ee/mobile && npx vitest run src/screens/TicketDetailScreen.richTextBehaviors.test.ts --config vitest.config.ts`
   - `cd ee/mobile && npx tsc --noEmit`
+- (2026-03-11) Legacy guard-path coverage checkpoint:
+  - `cd ee/mobile && npx vitest run src/screens/TicketDetailScreen.richTextSections.test.ts src/screens/TicketDetailScreen.richTextBehaviors.test.ts --config vitest.config.ts`
+  - `cd ee/mobile && npx tsc --noEmit`
+  - `cd server && npx vitest run src/test/e2e/api/tickets.e2e.test.ts`
 
 ## Links / References
 
@@ -174,3 +178,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-11) Completed `T023`, `T028`, and `T029` with component coverage for malformed description fallback, comment-link handoff, and image-backed comment routing, plus runtime coverage that serialized image blocks survive read-only initialization.
 - (2026-03-11) Completed `F025` by adding behavior-level screen tests for description save/cancel plus comment draft persistence/send flows on top of the existing helper, bridge, runtime, wrapper, and section coverage.
 - (2026-03-11) Completed `T025`, `T026`, `T031`, and `T032` in `ee/mobile/src/screens/TicketDetailScreen.richTextBehaviors.test.ts`.
+- (2026-03-11) Completed `T039` and `T041` with legacy-content guard coverage at the mobile screen layer: plain-text descriptions still seed the editor and save back serialized JSON, while plain-text comments remain viewable through the read-only wrapper path.
+
+## Current Blockers
+
+- (2026-03-11) `server/src/test/e2e/api/tickets.e2e.test.ts` is currently skipped wholesale by the existing local server/e2e harness in this environment, so the new DB-backed API round-trip assertions for serialized rich descriptions/comments compile but do not execute here. `T038` and `T040` remain blocked pending a runnable server e2e environment.

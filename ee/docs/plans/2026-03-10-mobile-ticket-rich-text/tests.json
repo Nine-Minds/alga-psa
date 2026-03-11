@@ -230,7 +230,7 @@
   {
     "id": "T039",
     "description": "DB-backed integration guard path: legacy plain-text `ticket.attributes.description` loads into the mobile editor and saves back as canonical serialized rich-text content.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015", "F021"]
   },
   {
@@ -242,7 +242,7 @@
   {
     "id": "T041",
     "description": "DB-backed integration guard path: legacy plain-text saved comment content remains viewable in mobile rich read-only rendering without crashing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F023"]
   },
   {
