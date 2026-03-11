@@ -75,7 +75,7 @@ export function SignInScreen() {
   const onSignIn = async () => {
     if (!baseUrl) {
       analytics.trackEvent(MobileAnalyticsEvents.authSignInBlocked, { reason: "missing_base_url" });
-      setError("Missing configuration. Please set EXPO_PUBLIC_ALGA_BASE_URL.");
+      setError("Missing hosted sign-in configuration.");
       return;
     }
     if (!hostAllowed) {

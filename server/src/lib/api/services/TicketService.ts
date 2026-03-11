@@ -29,6 +29,7 @@ import {
 import { ListOptions } from '../controllers/types';
 import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
+import { renderTicketDescriptionHtml, renderTicketRichTextHtml } from './ticketRichRender';
 // import { performanceTracker } from '../../analytics/performanceTracking';
 
 const TICKET_MOBILE_LIST_FIELDS = [
@@ -331,7 +332,7 @@ export class TicketService extends BaseService<ITicket> {
     const documents = await this.getTicketDocuments(id, context);
 
     return {
-      ...(ticket as ITicketWithDetails),
+      ...this.withDescriptionHtml(ticket as ITicketWithDetails),
       documents
     } as ITicketWithDetails;
   }
@@ -572,8 +573,15 @@ export class TicketService extends BaseService<ITicket> {
         }
       });
 
-      return ticket as ITicket;
+      return this.withDescriptionHtml(ticket as ITicket);
     });
+  }
+
+  private withDescriptionHtml<T extends ITicket>(ticket: T): T & { description_html: string } {
+    return {
+      ...ticket,
+      description_html: renderTicketDescriptionHtml(ticket.attributes),
+    };
   }
 
   /**
@@ -679,6 +687,7 @@ export class TicketService extends BaseService<ITicket> {
     return comments.map(comment => ({
       ...comment,
       comment_text: comment.note,
+      comment_html: renderTicketRichTextHtml(comment.note),
       created_by: comment.user_id ?? null,
       created_by_name: comment.created_by_name || comment.author_contact_name || null,
       author_contact_id: comment.author_contact_id || comment.contact_id || null,
@@ -758,6 +767,7 @@ export class TicketService extends BaseService<ITicket> {
       return {
         ...comment,
         comment_text: comment.note,
+        comment_html: renderTicketRichTextHtml(comment.note),
         created_by: comment.user_id ?? null,
         author_contact_id: comment.contact_id ?? null,
         author_contact_name: null,
@@ -1149,6 +1159,10 @@ export class TicketService extends BaseService<ITicket> {
    * Safely publish events
    */
   private async safePublishEvent(eventType: string, event: any): Promise<void> {
+    if (process.env.E2E_SKIP_APP_INIT === 'true') {
+      return;
+    }
+
     try {
       await getEventBus().publish(
         {

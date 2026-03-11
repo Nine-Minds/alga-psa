@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Platform, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import * as Application from "expo-application";
@@ -15,6 +15,7 @@ import { getStableDeviceId } from "../device/clientMetadata";
 import { analytics } from "../analytics/analytics";
 import { MobileAnalyticsEvents } from "../analytics/events";
 import { getTicketStats } from "../api/tickets";
+import { decodeQaSession, parseTicketRichTextQaScenario } from "../qa/ticketRichTextQa";
 
 type Props = NativeStackScreenProps<RootStackParamList, "AuthCallback">;
 
@@ -47,13 +48,46 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
       if (exchangeInFlight.current) return;
       exchangeInFlight.current = true;
       try {
-        const ott = route.params?.ott;
-        const state = route.params?.state;
+        const qaOtt = __DEV__ && typeof route.params?.qaOtt === "string" ? route.params.qaOtt.trim() : "";
+        const qaState = __DEV__ && typeof route.params?.qaState === "string" ? route.params.qaState.trim() : "";
+        const ott = qaOtt || route.params?.ott;
+        const state = qaState || route.params?.state;
         const callbackError = route.params?.error;
+        const qaSession = decodeQaSession(route.params?.qaSession);
+        const qaScenario = parseTicketRichTextQaScenario(route.params?.qaScenario);
+        const qaTargetTicketId = route.params?.qaTargetTicketId;
 
         if (callbackError) {
           analytics.trackEvent(MobileAnalyticsEvents.authCallbackFailed, { reason: callbackError });
           setError(mapAuthCallbackError(callbackError));
+          return;
+        }
+
+        if (qaSession) {
+          await Promise.allSettled([clearPendingMobileAuth(), clearReceivedOtt()]);
+          setSession(qaSession);
+          void canceled;
+          if (qaTargetTicketId && qaScenario) {
+            setTimeout(() => {
+              if (canceled) {
+                return;
+              }
+
+              navigation.reset({
+                index: 1,
+                routes: [
+                  { name: "Tabs" },
+                  {
+                    name: "TicketDetail",
+                    params: {
+                      ticketId: qaTargetTicketId,
+                      qaScenario,
+                    },
+                  },
+                ],
+              });
+            }, 0);
+          }
           return;
         }
 
@@ -63,14 +97,16 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
           return;
         }
 
-        const pending = await getPendingMobileAuth();
-        if (!pending || pending.state !== state) {
-          analytics.trackEvent(MobileAnalyticsEvents.authCallbackFailed, { reason: "state_mismatch" });
-          setError("This sign-in link is not valid for the current session. Please try again.");
-          return;
-        }
+        if (!qaOtt) {
+          const pending = await getPendingMobileAuth();
+          if (!pending || pending.state !== state) {
+            analytics.trackEvent(MobileAnalyticsEvents.authCallbackFailed, { reason: "state_mismatch" });
+            setError("This sign-in link is not valid for the current session. Please try again.");
+            return;
+          }
 
-        await storeReceivedOtt(ott, state);
+          await storeReceivedOtt(ott, state);
+        }
 
         const config = getAppConfig();
         if (!config.ok) {
@@ -137,8 +173,6 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
         });
         await clearPendingMobileAuth();
         await clearReceivedOtt();
-
-        if (!canceled) navigation.reset({ index: 0, routes: [{ name: "Tabs" }] });
       } catch (e) {
         logger.error("Failed to handle auth callback", { error: e });
         if (!canceled) setError("Failed to complete sign-in. Please try again.");
@@ -152,7 +186,17 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
       canceled = true;
       abortController.abort();
     };
-  }, [navigation, route.params?.error, route.params?.ott, route.params?.state]);
+  }, [
+    navigation,
+    route.params?.error,
+    route.params?.ott,
+    route.params?.qaOtt,
+    route.params?.qaScenario,
+    route.params?.qaSession,
+    route.params?.qaState,
+    route.params?.qaTargetTicketId,
+    route.params?.state,
+  ]);
 
   if (error) {
     return (

@@ -37,7 +37,15 @@ export type TicketListItem = {
   closed_at?: string | null;
 };
 
-export type TicketDetail = TicketListItem & Record<string, unknown>;
+export type TicketRichAttributes = {
+  description?: string | null;
+  [key: string]: unknown;
+};
+
+export type TicketDetail = TicketListItem & {
+  attributes?: TicketRichAttributes | null;
+  description_html?: string | null;
+} & Record<string, unknown>;
 
 export type TicketStats = {
   total_tickets: number;
@@ -50,6 +58,7 @@ export type TicketStats = {
 export type TicketComment = {
   comment_id?: string;
   comment_text: string;
+  comment_html?: string | null;
   is_internal?: boolean;
   created_by_name?: string | null;
   created_at?: string | null;

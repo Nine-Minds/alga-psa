@@ -18,6 +18,8 @@ screenshots/
 *.webp
 *.webm
 *.mp4
+!ee/mobile/assets/
+!ee/mobile/assets/**
 ee/server/playwright-storage/
 .tmp/
 tmp/

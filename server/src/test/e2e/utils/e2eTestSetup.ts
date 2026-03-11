@@ -1,4 +1,4 @@
-import { Knex } from 'knex';
+import { Knex, knex as createKnex } from 'knex';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { createTestEnvironment } from '../../../../test-utils/testDataFactory';
 import { createTestApiKey, ApiTestClient } from './apiTestHelpers';
@@ -76,7 +76,11 @@ export async function setupE2ETestEnvironment(options: {
     const cleanup = async () => {
       try {
         // Clean up test data in reverse order of creation
-        // Delete tickets first as they reference contacts
+        await db('comments')
+          .where('tenant', tenantId)
+          .delete();
+
+        // Delete tickets after dependent comments
         await db('tickets')
           .where('tenant', tenantId)
           .delete();
@@ -231,13 +235,28 @@ export async function setupE2ETestEnvironment(options: {
 }
 
 async function normalizeServiceBillingConstraints(db: Knex): Promise<void> {
-  await db.raw('ALTER TABLE service_types DROP CONSTRAINT IF EXISTS service_types_billing_method_check');
-  await db.raw('ALTER TABLE service_types DROP CONSTRAINT IF EXISTS billing_method_check');
-  await db.raw("ALTER TABLE service_types ADD CONSTRAINT service_types_billing_method_check CHECK (billing_method IN ('fixed','per_unit','hourly','usage'))");
+  const adminDb = createKnex({
+    client: 'pg',
+    connection: {
+      host: process.env.DB_HOST || '127.0.0.1',
+      port: parseInt(process.env.DB_PORT || '5432', 10),
+      database: process.env.DB_NAME_SERVER || 'server',
+      user: process.env.DB_USER_ADMIN || 'postgres',
+      password: process.env.DB_PASSWORD_ADMIN || process.env.DB_PASSWORD_SERVER || 'postpass123',
+    },
+  });
 
-  await db.raw('ALTER TABLE service_catalog DROP CONSTRAINT IF EXISTS service_catalog_billing_method_check');
-  await db.raw('ALTER TABLE service_catalog DROP CONSTRAINT IF EXISTS billing_method_check');
-  await db.raw("ALTER TABLE service_catalog ADD CONSTRAINT service_catalog_billing_method_check CHECK (billing_method IN ('fixed','per_unit','hourly','usage'))");
+  try {
+    await adminDb.raw('ALTER TABLE service_types DROP CONSTRAINT IF EXISTS service_types_billing_method_check');
+    await adminDb.raw('ALTER TABLE service_types DROP CONSTRAINT IF EXISTS billing_method_check');
+    await adminDb.raw("ALTER TABLE service_types ADD CONSTRAINT service_types_billing_method_check CHECK (billing_method IN ('fixed','per_unit','hourly','usage'))");
+
+    await adminDb.raw('ALTER TABLE service_catalog DROP CONSTRAINT IF EXISTS service_catalog_billing_method_check');
+    await adminDb.raw('ALTER TABLE service_catalog DROP CONSTRAINT IF EXISTS billing_method_check');
+    await adminDb.raw("ALTER TABLE service_catalog ADD CONSTRAINT service_catalog_billing_method_check CHECK (billing_method IN ('fixed','per_unit','hourly','usage'))");
+  } finally {
+    await adminDb.destroy();
+  }
 }
 
 /**

@@ -1,0 +1,152 @@
+[
+  {
+    "id": "F001",
+    "description": "Create a ticket-scoped shared mobile rich-text contract for ticket descriptions and ticket comments, including parse/serialize helpers and bridge payload types.",
+    "implemented": true,
+    "prdRefs": ["Requirements/Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F002",
+    "description": "Extend ticket rich-text parsing helpers to tolerate legacy plain text, serialized BlockNote JSON arrays, and ProseMirror/Tiptap `{type:'doc'}` content for mobile initialization.",
+    "implemented": true,
+    "prdRefs": ["Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F003",
+    "description": "Create a browser-targeted ticket rich-text runtime that instantiates the minimal Tiptap editor configuration needed for mobile view and edit flows.",
+    "implemented": true,
+    "prdRefs": ["Architecture", "Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F004",
+    "description": "Implement a thin typed bridge between React Native and the web editor runtime with init, command, request/response, and error envelopes.",
+    "implemented": true,
+    "prdRefs": ["Architecture", "Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F005",
+    "description": "Support editor initialization from current saved ticket description and ticket comment content strings.",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F006",
+    "description": "Support read-only mode in the mobile editor runtime for rich display surfaces.",
+    "implemented": true,
+    "prdRefs": ["Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F007",
+    "description": "Support editable mode in the mobile editor runtime for ticket description edit and ticket comment compose flows.",
+    "implemented": true,
+    "prdRefs": ["Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F008",
+    "description": "Implement the v1 mobile command set: focus, blur, set-content, getHTML, getJSON, toggle bold, toggle italic, toggle underline, toggle bullet list, toggle ordered list, undo, redo, and set-editable.",
+    "implemented": true,
+    "prdRefs": ["Requirements/Functional Requirements", "UX / UI Notes"]
+  },
+  {
+    "id": "F009",
+    "description": "Emit lightweight editor state payloads so the mobile toolbar can reflect focus, active marks, active list state, and undo/redo capability.",
+    "implemented": true,
+    "prdRefs": ["Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F010",
+    "description": "Emit debounced content-change payloads from the runtime instead of sending full document data on every keystroke.",
+    "implemented": true,
+    "prdRefs": ["Requirements/Functional Requirements", "Requirements/Non-functional Requirements"]
+  },
+  {
+    "id": "F011",
+    "description": "Package the web editor runtime so the mobile app can load it locally in production without a live dev server.",
+    "implemented": true,
+    "prdRefs": ["Requirements/Non-functional Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F012",
+    "description": "Create a React Native rich-text wrapper component and imperative ref API that hides WebView or DOM runtime details from ticket screens.",
+    "implemented": true,
+    "prdRefs": ["Architecture", "Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F013",
+    "description": "Harden the mobile wrapper by restricting navigation to local editor-controlled content and surfacing structured bridge errors safely.",
+    "implemented": true,
+    "prdRefs": ["Security / Permissions", "Requirements/Non-functional Requirements"]
+  },
+  {
+    "id": "F014",
+    "description": "Replace ticket description read mode in the mobile ticket detail screen with rich-text rendering driven by the new wrapper/runtime path.",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F015",
+    "description": "Replace ticket description edit mode in the mobile ticket detail screen with the rich-text editor wrapper while preserving the existing save path through ticket attributes.",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Data / API / Integrations"]
+  },
+  {
+    "id": "F016",
+    "description": "Replace mobile ticket comment display in the conversation area with rich-text rendering driven by the new wrapper/runtime path.",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F017",
+    "description": "Replace the mobile plain-text ticket comment composer with the rich-text editor wrapper while preserving internal/public comment controls and draft persistence.",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "UX / UI Notes"]
+  },
+  {
+    "id": "F018",
+    "description": "Keep mobile existing-comment items non-editable in v1 even though the underlying wrapper is reusable enough to support that in a later phase.",
+    "implemented": true,
+    "prdRefs": ["Non-goals", "UX / UI Notes"]
+  },
+  {
+    "id": "F019",
+    "description": "Expose server-derived rich render data for ticket descriptions and comments, such as normalized HTML output, using existing shared formatting helpers instead of a mobile-only converter.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F020",
+    "description": "Update mobile ticket API types to understand the richer ticket description and ticket comment payloads needed by the new renderer and editor flows.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F021",
+    "description": "Continue to accept legacy plain-text ticket content and lazily upgrade it to the canonical serialized rich-text string on the next successful edit/save.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Rollout / Migration"]
+  },
+  {
+    "id": "F022",
+    "description": "Render supported saved links, lists, headings, mentions, and attachment-backed image content safely in mobile read-only surfaces when present in persisted data.",
+    "implemented": true,
+    "prdRefs": ["Requirements/Functional Requirements"]
+  },
+  {
+    "id": "F023",
+    "description": "Keep the mobile ticket screen resilient by falling back to safe plain-text display rather than crashing when saved ticket content is malformed or partially legacy-formatted.",
+    "implemented": true,
+    "prdRefs": ["Requirements/Non-functional Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F024",
+    "description": "Add development-friendly bridge diagnostics for editor ready timing, request timeouts, and unknown message types without enabling verbose production logging.",
+    "implemented": true,
+    "prdRefs": ["Observability"]
+  },
+  {
+    "id": "F025",
+    "description": "Add automated coverage for the ticket-scoped bridge, shared content helpers, mobile wrapper integration, and ticket detail screen flows on both description and comment paths.",
+    "implemented": true,
+    "prdRefs": ["Acceptance Criteria (Definition of Done)"]
+  }
+]

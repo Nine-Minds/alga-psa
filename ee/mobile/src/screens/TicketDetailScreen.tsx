@@ -7,7 +7,7 @@ import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
 import { addTicketComment, getTicketById, getTicketComments, getTicketPriorities, getTicketStatuses, updateTicketAssignment, updateTicketAttributes, updateTicketPriority, updateTicketStatus, type TicketComment, type TicketDetail, type TicketPriority, type TicketStatus } from "../api/tickets";
 import { ErrorState, LoadingState } from "../ui/states";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { getCachedTicketDetail, invalidateTicketsListCache, setCachedTicketDetail } from "../cache/ticketsCache";
 import { getCachedTicketStatuses, setCachedTicketStatuses } from "../cache/referenceDataCache";
@@ -22,26 +22,121 @@ import { copyToClipboard } from "../clipboard/clipboard";
 import { useNetworkStatus } from "../network/useNetworkStatus";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { useToast } from "../ui/toast/ToastProvider";
+import {
+  extractPlainTextFromRichEditorJson,
+  extractPlainTextFromSerializedRichEditorContent,
+  isMalformedRichEditorContent,
+  serializeRichEditorJson,
+} from "../features/ticketRichText/helpers";
+import {
+  TicketRichTextEditor,
+  type TicketRichTextEditorRef,
+} from "../features/ticketRichText/TicketRichTextEditor";
+import type { TicketRichTextQaScenario } from "../qa/ticketRichTextQa";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TicketDetail">;
 
 const MAX_COMMENT_LENGTH = 5000;
+const QA_LINK_URL = "https://example.com/mobile-rich-text-smoke";
+const QA_DESCRIPTION_JSON = {
+  type: "doc",
+  content: [
+    {
+      type: "paragraph",
+      content: [
+        { type: "text", text: "Mobile rich text smoke check: " },
+        {
+          type: "text",
+          text: "open reference link",
+          marks: [
+            {
+              type: "link",
+              attrs: {
+                href: QA_LINK_URL,
+                target: "_blank",
+                rel: "noopener noreferrer nofollow",
+              },
+            },
+          ],
+        },
+      ],
+    },
+    {
+      type: "bulletList",
+      content: [
+        {
+          type: "listItem",
+          content: [{ type: "paragraph", content: [{ type: "text", text: "Checklist item one" }] }],
+        },
+        {
+          type: "listItem",
+          content: [{ type: "paragraph", content: [{ type: "text", text: "Checklist item two" }] }],
+        },
+      ],
+    },
+  ],
+} as const;
+const QA_COMMENT_JSON = {
+  type: "doc",
+  content: [
+    {
+      type: "paragraph",
+      content: [
+        { type: "text", text: "QA comment sent from native rich text flow." },
+      ],
+    },
+    {
+      type: "orderedList",
+      content: [
+        {
+          type: "listItem",
+          content: [{ type: "paragraph", content: [{ type: "text", text: "Confirm editor loads" }] }],
+        },
+        {
+          type: "listItem",
+          content: [{ type: "paragraph", content: [{ type: "text", text: "Confirm save path works" }] }],
+        },
+      ],
+    },
+  ],
+} as const;
+const QA_DESCRIPTION_CONTENT = serializeRichEditorJson(QA_DESCRIPTION_JSON);
+const QA_DESCRIPTION_PLAIN_TEXT = extractPlainTextFromRichEditorJson(QA_DESCRIPTION_JSON).trim();
+const QA_COMMENT_CONTENT = serializeRichEditorJson(QA_COMMENT_JSON);
+const QA_COMMENT_PLAIN_TEXT = extractPlainTextFromRichEditorJson(QA_COMMENT_JSON).trim();
+
+type TicketRichTextQaStatus =
+  | {
+      scenario: TicketRichTextQaScenario;
+      state: "running" | "passed" | "failed";
+      step: string;
+      detail?: string;
+    }
+  | null;
 
 export function TicketDetailScreen({ route }: Props) {
   const config = useMemo(() => getAppConfig(), []);
   const { session, refreshSession } = useAuth();
   return (
-    <TicketDetailBody ticketId={route.params.ticketId} config={config} session={session} refreshSession={refreshSession} />
+    <TicketDetailBody
+      ticketId={route.params.ticketId}
+      qaScenario={route.params.qaScenario}
+      config={config}
+      session={session}
+      refreshSession={refreshSession}
+    />
   );
 }
 
-function TicketDetailBody({
+export function TicketDetailBody({
   ticketId,
+  qaScenario,
   config,
   session,
   refreshSession,
 }: {
   ticketId: string;
+  qaScenario?: TicketRichTextQaScenario;
   config: ReturnType<typeof getAppConfig>;
   session: ReturnType<typeof useAuth>["session"];
   refreshSession: ReturnType<typeof useAuth>["refreshSession"];
@@ -67,10 +162,16 @@ function TicketDetailBody({
   const [commentsError, setCommentsError] = useState<string | null>(null);
   const [commentsVisibleCount, setCommentsVisibleCount] = useState(20);
   const [commentDraft, setCommentDraft] = useState("");
+  const [commentDraftPlainText, setCommentDraftPlainText] = useState("");
   const [commentIsInternal, setCommentIsInternal] = useState(true);
   const [commentSendError, setCommentSendError] = useState<string | null>(null);
   const [commentSending, setCommentSending] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);
+  const [descriptionEditing, setDescriptionEditing] = useState(false);
+  const [descriptionDraft, setDescriptionDraft] = useState("");
+  const [descriptionPlainText, setDescriptionPlainText] = useState("");
+  const [descriptionSaving, setDescriptionSaving] = useState(false);
+  const [descriptionError, setDescriptionError] = useState<string | null>(null);
   const [statusPickerOpen, setStatusPickerOpen] = useState(false);
   const [statusOptions, setStatusOptions] = useState<TicketStatus[]>([]);
   const [statusOptionsLoading, setStatusOptionsLoading] = useState(false);
@@ -96,13 +197,26 @@ function TicketDetailBody({
   const [timeEntryUpdating, setTimeEntryUpdating] = useState(false);
   const [timeEntryError, setTimeEntryError] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+  const commentEditorRef = useRef<TicketRichTextEditorRef>(null);
+  const descriptionEditorRef = useRef<TicketRichTextEditorRef>(null);
   const network = useNetworkStatus();
   const isOffline = isOfflineStatus(network);
   const commentSendInFlightRef = useRef(false);
   const statusUpdateInFlightRef = useRef(false);
+  const qaScenarioStartedRef = useRef(false);
+  const qaLinkCallbackRef = useRef<(() => void) | null>(null);
   const [assignmentUpdating, setAssignmentUpdating] = useState(false);
   const [assignmentAction, setAssignmentAction] = useState<"assign" | "unassign" | null>(null);
   const [assignmentError, setAssignmentError] = useState<string | null>(null);
+  const [qaStatus, setQaStatus] = useState<TicketRichTextQaStatus>(null);
+  const [qaAutoPressLink, setQaAutoPressLink] = useState(false);
+
+  useEffect(() => {
+    qaScenarioStartedRef.current = false;
+    qaLinkCallbackRef.current = null;
+    setQaAutoPressLink(false);
+    setQaStatus(null);
+  }, [qaScenario, ticketId]);
 
   const draftKey = useMemo(() => {
     const userId = session?.user?.id ?? "anonymous";
@@ -121,6 +235,7 @@ function TicketDetailBody({
       if (canceled) return;
       if (saved) {
         setCommentDraft(saved.text);
+        setCommentDraftPlainText(extractPlainTextFromSerializedRichEditorContent(saved.text));
         setCommentIsInternal(saved.isInternal);
       } else {
         const pref = await getSecureJson<boolean>(visibilityPrefKey);
@@ -136,6 +251,16 @@ function TicketDetailBody({
       canceled = true;
     };
   }, [draftKey, visibilityPrefKey]);
+
+  useEffect(() => {
+    if (descriptionEditing || !ticket) {
+      return;
+    }
+
+    const currentDescription = extractDescription(ticket) ?? "";
+    setDescriptionDraft(currentDescription);
+    setDescriptionPlainText(extractPlainTextFromSerializedRichEditorContent(currentDescription));
+  }, [descriptionEditing, ticket]);
 
   useEffect(() => {
     if (!draftLoaded) return;
@@ -208,6 +333,385 @@ function TicketDetailBody({
     };
   }, [client, fetchTicket, session, ticketId]);
 
+  const updateQaStatus = useCallback(
+    (next: Exclude<TicketRichTextQaStatus, null>) => {
+      setQaStatus(next);
+      console.info("[TicketRichTextQA]", next.scenario, next.state, next.step, next.detail ?? "");
+    },
+    [],
+  );
+
+  const handleRichTextLinkPress = useCallback(
+    (url: string) => {
+      if (qaScenario && url === QA_LINK_URL) {
+        setQaAutoPressLink(false);
+        qaLinkCallbackRef.current?.();
+        qaLinkCallbackRef.current = null;
+        updateQaStatus({
+          scenario: qaScenario,
+          state: "passed",
+          step: "Triggered rich-text link handoff",
+          detail: url,
+        });
+      }
+
+      void Linking.openURL(url);
+    },
+    [qaScenario, updateQaStatus],
+  );
+
+  const persistDescriptionContent = useCallback(
+    async (serializedDescription: string, nextPlainText: string): Promise<boolean> => {
+      if (!client || !session || !ticket || descriptionSaving) {
+        return false;
+      }
+
+      setDescriptionSaving(true);
+      setDescriptionError(null);
+
+      try {
+        const nextAttributes = getTicketAttributes(ticket);
+
+        if (nextPlainText) {
+          nextAttributes.description = serializedDescription;
+        } else {
+          delete (nextAttributes as any).description;
+        }
+
+        const auditHeaders = await getClientMetadataHeaders();
+        const result = await updateTicketAttributes(client, {
+          apiKey: session.accessToken,
+          ticketId,
+          attributes: Object.keys(nextAttributes).length === 0 ? null : nextAttributes,
+          auditHeaders,
+        });
+
+        if (!result.ok) {
+          if (result.error.kind === "permission") {
+            setDescriptionError("You don’t have permission to edit this ticket description.");
+            return false;
+          }
+          if (result.error.kind === "validation") {
+            const msg = getApiErrorMessage(result.error.body);
+            setDescriptionError(msg ?? "Description update was rejected by the server.");
+            return false;
+          }
+          setDescriptionError("Unable to update the ticket description. Please try again.");
+          return false;
+        }
+
+        setTicket(result.data.data);
+        setCachedTicketDetail(ticketId, result.data.data);
+        invalidateTicketsListCache();
+        setDescriptionDraft(serializedDescription);
+        setDescriptionPlainText(nextPlainText);
+        setDescriptionEditing(false);
+        showToast({ message: "Description updated", tone: "success" });
+        return true;
+      } finally {
+        setDescriptionSaving(false);
+      }
+    },
+    [client, descriptionSaving, session, showToast, ticket, ticketId],
+  );
+
+  const submitCommentPayload = useCallback(
+    async ({
+      serializedDraft,
+      text,
+      originalDraft,
+      originalDraftPlainText,
+      originalIsInternal,
+    }: {
+      serializedDraft: string;
+      text: string;
+      originalDraft: string;
+      originalDraftPlainText: string;
+      originalIsInternal: boolean;
+    }): Promise<boolean> => {
+      if (!client || !session) return false;
+      if (commentSendInFlightRef.current || commentSending) return false;
+      commentSendInFlightRef.current = true;
+
+      const trimmedText = text.trim();
+      if (!trimmedText) {
+        setCommentSendError("Comment cannot be empty.");
+        commentSendInFlightRef.current = false;
+        return false;
+      }
+      if (trimmedText.length > MAX_COMMENT_LENGTH) {
+        setCommentSendError(`Comment is too long (max ${MAX_COMMENT_LENGTH} characters).`);
+        commentSendInFlightRef.current = false;
+        return false;
+      }
+      if (isOffline) {
+        setCommentSendError("You’re offline. Your draft is saved and will be ready to send when you’re back online.");
+        showToast({ message: "Offline — draft saved", tone: "info" });
+        commentSendInFlightRef.current = false;
+        return false;
+      }
+
+      const optimisticId = `optimistic-${Date.now()}`;
+      const optimisticComment: TicketComment = {
+        comment_id: optimisticId,
+        comment_text: serializedDraft,
+        is_internal: originalIsInternal,
+        created_at: new Date().toISOString(),
+        created_by_name: session.user?.name ?? session.user?.email ?? "You",
+        optimistic: true,
+      };
+
+      setComments((prev) => [...prev, optimisticComment]);
+      setCommentDraft("");
+      setCommentDraftPlainText("");
+      setCommentSendError(null);
+      setCommentSending(true);
+      try {
+        const auditHeaders = await getClientMetadataHeaders();
+        const result = await addTicketComment(client, {
+          apiKey: session.accessToken,
+          ticketId,
+          comment_text: serializedDraft,
+          is_internal: originalIsInternal,
+          auditHeaders,
+        });
+        if (!result.ok) {
+          if (result.error.kind === "permission") {
+            setComments((prev) => prev.filter((c) => c.comment_id !== optimisticId));
+            setCommentDraft(originalDraft);
+            setCommentDraftPlainText(originalDraftPlainText);
+            setCommentIsInternal(originalIsInternal);
+            setCommentSendError("You don’t have permission to add comments to this ticket.");
+            showToast({ message: "Comment not sent", tone: "error" });
+            return false;
+          }
+          if (result.error.kind === "validation") {
+            const msg = getApiErrorMessage(result.error.body);
+            setComments((prev) => prev.filter((c) => c.comment_id !== optimisticId));
+            setCommentDraft(originalDraft);
+            setCommentDraftPlainText(originalDraftPlainText);
+            setCommentIsInternal(originalIsInternal);
+            setCommentSendError(msg ?? "Comment was rejected by the server.");
+            showToast({ message: "Comment not sent", tone: "error" });
+            return false;
+          }
+          setComments((prev) => prev.filter((c) => c.comment_id !== optimisticId));
+          setCommentDraft(originalDraft);
+          setCommentDraftPlainText(originalDraftPlainText);
+          setCommentIsInternal(originalIsInternal);
+          setCommentSendError("Unable to send comment. Please try again.");
+          showToast({ message: "Comment not sent", tone: "error" });
+          return false;
+        }
+
+        setComments((prev) =>
+          prev.map((c) => {
+            if (c.comment_id !== optimisticId) return c;
+            return {
+              ...c,
+              ...result.data.data,
+              created_by_name: (result.data.data as any).created_by_name ?? c.created_by_name,
+              comment_text: result.data.data.comment_text ?? c.comment_text,
+              optimistic: false,
+            };
+          }),
+        );
+        await secureStorage.deleteItem(draftKey);
+        invalidateTicketsListCache();
+        await Promise.all([fetchTicket(), fetchComments()]);
+        showToast({ message: "Comment sent", tone: "success" });
+        return true;
+      } finally {
+        setCommentSending(false);
+        commentSendInFlightRef.current = false;
+      }
+    },
+    [client, commentSending, draftKey, fetchComments, fetchTicket, isOffline, session, showToast, ticketId],
+  );
+
+  const sendComment = async () => {
+    if (!client || !session) return;
+    const originalDraft = commentDraft;
+    const originalDraftPlainText = commentDraftPlainText;
+    const originalIsInternal = commentIsInternal;
+    const draftJson = commentEditorRef.current ? await commentEditorRef.current.getJSON().catch(() => null) : null;
+    const serializedDraft = draftJson ? serializeRichEditorJson(draftJson) : originalDraft.trim();
+    const text = draftJson
+      ? extractPlainTextFromRichEditorJson(draftJson).trim()
+      : originalDraftPlainText.trim();
+    await submitCommentPayload({
+      serializedDraft,
+      text,
+      originalDraft,
+      originalDraftPlainText,
+      originalIsInternal,
+    });
+  };
+
+  const startDescriptionEditing = () => {
+    if (!ticket) return;
+    const currentDescription = extractDescription(ticket) ?? "";
+    setDescriptionDraft(currentDescription);
+    setDescriptionPlainText(extractPlainTextFromSerializedRichEditorContent(currentDescription));
+    setDescriptionError(null);
+    setDescriptionEditing(true);
+  };
+
+  const cancelDescriptionEditing = () => {
+    if (!ticket) return;
+    const currentDescription = extractDescription(ticket) ?? "";
+    setDescriptionDraft(currentDescription);
+    setDescriptionPlainText(extractPlainTextFromSerializedRichEditorContent(currentDescription));
+    setDescriptionError(null);
+    setDescriptionEditing(false);
+  };
+
+  const saveDescription = async () => {
+    if (!client || !session || descriptionSaving) {
+      return;
+    }
+
+    if (!descriptionEditorRef.current) {
+      setDescriptionError("Editor is still loading. Please try again.");
+      return;
+    }
+
+    const nextJson = await descriptionEditorRef.current.getJSON().catch(() => null);
+    if (!nextJson) {
+      setDescriptionError("Unable to read the editor content right now. Please try again.");
+      return;
+    }
+
+    const serializedDescription = serializeRichEditorJson(nextJson);
+    const nextPlainText = extractPlainTextFromRichEditorJson(nextJson).trim();
+    await persistDescriptionContent(serializedDescription, nextPlainText);
+  };
+
+  useEffect(() => {
+    if (!qaScenario || qaScenarioStartedRef.current) {
+      return;
+    }
+
+    if (initialLoading || !ticket || !draftLoaded) {
+      return;
+    }
+
+    qaScenarioStartedRef.current = true;
+
+    const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+    const waitForQaLink = () =>
+      new Promise<void>((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          qaLinkCallbackRef.current = null;
+          reject(new Error("Timed out waiting for rich-text link handoff"));
+        }, 2_000);
+
+        qaLinkCallbackRef.current = () => {
+          clearTimeout(timeoutId);
+          resolve();
+        };
+      });
+
+    const runScenario = async () => {
+      try {
+        if (qaScenario === "malformed-guard") {
+          const hasMalformedDescription = Boolean(
+            extractDescription(ticket) && isMalformedRichEditorContent(extractDescription(ticket) ?? ""),
+          );
+          const hasMalformedComment = comments.some((comment) => {
+            const kind = (comment as any).kind as TicketComment["kind"] | undefined;
+            const eventType = (comment as any).event_type as TicketComment["event_type"] | undefined;
+            if (kind === "event" || typeof eventType === "string") return false;
+            return isMalformedRichEditorContent(comment.comment_text);
+          });
+
+          if (!hasMalformedDescription && !hasMalformedComment) {
+            throw new Error("Malformed QA scenario requires malformed description or comment content.");
+          }
+
+          updateQaStatus({
+            scenario: qaScenario,
+            state: "passed",
+            step: "Malformed content stayed on safe text fallback",
+          });
+          return;
+        }
+
+        updateQaStatus({
+          scenario: qaScenario,
+          state: "running",
+          step: "Opening description editor",
+        });
+        startDescriptionEditing();
+        setDescriptionDraft(QA_DESCRIPTION_CONTENT);
+        setDescriptionPlainText(QA_DESCRIPTION_PLAIN_TEXT);
+        await pause(600);
+
+        updateQaStatus({
+          scenario: qaScenario,
+          state: "running",
+          step: "Saving rich description",
+        });
+        const descriptionSaved = await persistDescriptionContent(
+          QA_DESCRIPTION_CONTENT,
+          QA_DESCRIPTION_PLAIN_TEXT,
+        );
+        if (!descriptionSaved) {
+          throw new Error("Description save failed");
+        }
+
+        await pause(600);
+        updateQaStatus({
+          scenario: qaScenario,
+          state: "running",
+          step: "Sending rich comment",
+        });
+        setCommentDraft(QA_COMMENT_CONTENT);
+        setCommentDraftPlainText(QA_COMMENT_PLAIN_TEXT);
+        const commentSent = await submitCommentPayload({
+          serializedDraft: QA_COMMENT_CONTENT,
+          text: QA_COMMENT_PLAIN_TEXT,
+          originalDraft: QA_COMMENT_CONTENT,
+          originalDraftPlainText: QA_COMMENT_PLAIN_TEXT,
+          originalIsInternal: true,
+        });
+        if (!commentSent) {
+          throw new Error("Comment send failed");
+        }
+
+        await pause(600);
+        updateQaStatus({
+          scenario: qaScenario,
+          state: "running",
+          step: "Triggering rich-text link handoff",
+          detail: QA_LINK_URL,
+        });
+        setQaAutoPressLink(true);
+        await waitForQaLink();
+      } catch (scenarioError) {
+        setQaAutoPressLink(false);
+        updateQaStatus({
+          scenario: qaScenario,
+          state: "failed",
+          step: "QA scenario failed",
+          detail: scenarioError instanceof Error ? scenarioError.message : "Unknown error",
+        });
+      }
+    };
+
+    void runScenario();
+  }, [
+    comments,
+    draftLoaded,
+    initialLoading,
+    persistDescriptionContent,
+    qaScenario,
+    submitCommentPayload,
+    ticket,
+    updateQaStatus,
+  ]);
+
   if (!config.ok) {
     return <ErrorState title="Configuration error" description={config.error} />;
   }
@@ -237,101 +741,6 @@ function TicketDetailBody({
   const isWatching = meUserId ? getWatcherUserIds(ticket).includes(meUserId) : false;
   const assignedToId = (ticket as any).assigned_to as string | null | undefined;
   const isAssignedToMe = Boolean(meUserId && assignedToId && assignedToId === meUserId);
-
-  const sendComment = async () => {
-    if (!client || !session) return;
-    if (commentSendInFlightRef.current || commentSending) return;
-    commentSendInFlightRef.current = true;
-    const originalDraft = commentDraft;
-    const originalIsInternal = commentIsInternal;
-    const text = originalDraft.trim();
-    if (!text) {
-      setCommentSendError("Comment cannot be empty.");
-      commentSendInFlightRef.current = false;
-      return;
-    }
-    if (text.length > MAX_COMMENT_LENGTH) {
-      setCommentSendError(`Comment is too long (max ${MAX_COMMENT_LENGTH} characters).`);
-      commentSendInFlightRef.current = false;
-      return;
-    }
-    if (isOffline) {
-      setCommentSendError("You’re offline. Your draft is saved and will be ready to send when you’re back online.");
-      showToast({ message: "Offline — draft saved", tone: "info" });
-      commentSendInFlightRef.current = false;
-      return;
-    }
-
-    const optimisticId = `optimistic-${Date.now()}`;
-    const optimisticComment: TicketComment = {
-      comment_id: optimisticId,
-      comment_text: text,
-      is_internal: originalIsInternal,
-      created_at: new Date().toISOString(),
-      created_by_name: session.user?.name ?? session.user?.email ?? "You",
-      optimistic: true,
-    };
-
-    setComments((prev) => [...prev, optimisticComment]);
-    setCommentDraft("");
-    setCommentSendError(null);
-    setCommentSending(true);
-    try {
-      const auditHeaders = await getClientMetadataHeaders();
-      const result = await addTicketComment(client, {
-        apiKey: session.accessToken,
-        ticketId,
-        comment_text: text,
-        is_internal: commentIsInternal,
-        auditHeaders,
-      });
-      if (!result.ok) {
-        if (result.error.kind === "permission") {
-          setComments((prev) => prev.filter((c) => c.comment_id !== optimisticId));
-          setCommentDraft(originalDraft);
-          setCommentIsInternal(originalIsInternal);
-          setCommentSendError("You don’t have permission to add comments to this ticket.");
-          showToast({ message: "Comment not sent", tone: "error" });
-          return;
-        }
-        if (result.error.kind === "validation") {
-          const msg = getApiErrorMessage(result.error.body);
-          setComments((prev) => prev.filter((c) => c.comment_id !== optimisticId));
-          setCommentDraft(originalDraft);
-          setCommentIsInternal(originalIsInternal);
-          setCommentSendError(msg ?? "Comment was rejected by the server.");
-          showToast({ message: "Comment not sent", tone: "error" });
-          return;
-        }
-        setComments((prev) => prev.filter((c) => c.comment_id !== optimisticId));
-        setCommentDraft(originalDraft);
-        setCommentIsInternal(originalIsInternal);
-        setCommentSendError("Unable to send comment. Please try again.");
-        showToast({ message: "Comment not sent", tone: "error" });
-        return;
-      }
-
-      setComments((prev) =>
-        prev.map((c) => {
-          if (c.comment_id !== optimisticId) return c;
-          return {
-            ...c,
-            ...result.data.data,
-            created_by_name: (result.data.data as any).created_by_name ?? c.created_by_name,
-            comment_text: result.data.data.comment_text ?? c.comment_text,
-            optimistic: false,
-          };
-        }),
-      );
-      await secureStorage.deleteItem(draftKey);
-      invalidateTicketsListCache();
-      await Promise.all([fetchTicket(), fetchComments()]);
-      showToast({ message: "Comment sent", tone: "success" });
-    } finally {
-      setCommentSending(false);
-      commentSendInFlightRef.current = false;
-    }
-  };
 
   const submitStatus = async (statusId: string) => {
     if (!client || !session) return;
@@ -678,6 +1087,40 @@ function TicketDetailBody({
             <Text style={{ ...typography.caption, color: "#7C2D12", marginTop: 2 }}>{error.description}</Text>
           </View>
         ) : null}
+        {qaStatus ? (
+          <View
+            style={{
+              padding: spacing.md,
+              borderRadius: 12,
+              backgroundColor:
+                qaStatus.state === "failed"
+                  ? "#FEE2E2"
+                  : qaStatus.state === "passed"
+                    ? "#DCFCE7"
+                    : "#DBEAFE",
+              borderWidth: 1,
+              borderColor:
+                qaStatus.state === "failed"
+                  ? "#DC2626"
+                  : qaStatus.state === "passed"
+                    ? "#16A34A"
+                    : "#2563EB",
+              marginBottom: spacing.md,
+            }}
+          >
+            <Text style={{ ...typography.caption, color: colors.text, fontWeight: "700" }}>
+              QA {qaStatus.scenario}
+            </Text>
+            <Text style={{ ...typography.caption, color: colors.text, marginTop: 2 }}>
+              {qaStatus.state.toUpperCase()} - {qaStatus.step}
+            </Text>
+            {qaStatus.detail ? (
+              <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: 2 }}>
+                {qaStatus.detail}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
 
         <Text style={{ ...typography.caption, color: colors.mutedText }}>
           {ticket.ticket_number}
@@ -835,7 +1278,24 @@ function TicketDetailBody({
           <View style={{ height: spacing.sm }} />
           <KeyValue label="Client" value={stringOrDash(ticket.client_name)} />
           <View style={{ height: spacing.sm }} />
-          <DescriptionSection ticket={ticket} />
+          <DescriptionSection
+            ticket={ticket}
+            isEditing={descriptionEditing}
+            draftContent={descriptionDraft}
+            draftPlainText={descriptionPlainText}
+            saving={descriptionSaving}
+            error={descriptionError}
+            editorRef={descriptionEditorRef}
+            onLinkPress={handleRichTextLinkPress}
+            qaAutoPressFirstLink={qaAutoPressLink}
+            onStartEditing={startDescriptionEditing}
+            onCancelEditing={cancelDescriptionEditing}
+            onSave={() => void saveDescription()}
+            onDraftChange={(nextContent, nextPlainText) => {
+              setDescriptionDraft(nextContent);
+              setDescriptionPlainText(nextPlainText);
+            }}
+          />
           <View style={{ height: spacing.sm }} />
           <CommentsSection
             comments={comments}
@@ -844,17 +1304,23 @@ function TicketDetailBody({
             onJumpToLatest={scrollToLatest}
             onJumpToTop={scrollToTop}
             error={commentsError}
+            onLinkPress={handleRichTextLinkPress}
           />
           <View style={{ height: spacing.sm }} />
           <CommentComposer
-            draft={commentDraft}
-            onChangeDraft={setCommentDraft}
+            draftContent={commentDraft}
+            draftPlainText={commentDraftPlainText}
             isInternal={commentIsInternal}
             onChangeIsInternal={setCommentIsInternal}
             onSend={() => void sendComment()}
             sending={commentSending}
             offline={isOffline}
             error={commentSendError}
+            editorRef={commentEditorRef}
+            onDraftChange={(nextContent, nextPlainText) => {
+              setCommentDraft(nextContent);
+              setCommentDraftPlainText(nextPlainText);
+            }}
           />
           <View style={{ height: spacing.sm }} />
           <KeyValue label="Created" value={formatDateTimeWithRelative(ticket.entered_at)} />
@@ -1314,24 +1780,28 @@ function StatusPickerModal({
   );
 }
 
-function CommentComposer({
-  draft,
-  onChangeDraft,
+export function CommentComposer({
+  draftContent,
+  draftPlainText,
   isInternal,
   onChangeIsInternal,
   onSend,
   sending,
   offline,
   error,
+  editorRef,
+  onDraftChange,
 }: {
-  draft: string;
-  onChangeDraft: (value: string) => void;
+  draftContent: string;
+  draftPlainText: string;
   isInternal: boolean;
   onChangeIsInternal: (value: boolean) => void;
   onSend: () => void;
   sending: boolean;
   offline: boolean;
   error: string | null;
+  editorRef: RefObject<TicketRichTextEditorRef | null>;
+  onDraftChange: (content: string, plainText: string) => void;
 }) {
   return (
     <View
@@ -1345,32 +1815,30 @@ function CommentComposer({
       }}
     >
       <Text style={{ ...typography.caption, color: colors.mutedText }}>Add comment</Text>
-      <TextInput
-        value={draft}
-        onChangeText={onChangeDraft}
-        multiline
-        placeholder="Write an update…"
-        accessibilityLabel="Comment text"
-        style={{
-          minHeight: 80,
-          marginTop: spacing.sm,
-          padding: spacing.sm,
-          borderWidth: 1,
-          borderColor: colors.border,
-          borderRadius: 10,
-          backgroundColor: colors.background,
-          color: colors.text,
-          textAlignVertical: "top",
-        }}
-      />
+      <View style={{ marginTop: spacing.sm }}>
+        <TicketRichTextEditor
+          ref={editorRef}
+          content={draftContent}
+          editable={!sending}
+          showToolbar
+          height={180}
+          loadingLabel="Loading comment editor…"
+          onContentChange={({ json }) => {
+            onDraftChange(
+              serializeRichEditorJson(json),
+              extractPlainTextFromRichEditorJson(json),
+            );
+          }}
+        />
+      </View>
       <Text
         style={{
           ...typography.caption,
           marginTop: spacing.sm,
-          color: draft.length > MAX_COMMENT_LENGTH ? colors.danger : colors.mutedText,
+          color: draftPlainText.length > MAX_COMMENT_LENGTH ? colors.danger : colors.mutedText,
         }}
       >
-        {draft.length}/{MAX_COMMENT_LENGTH}
+        {draftPlainText.length}/{MAX_COMMENT_LENGTH}
       </Text>
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
@@ -1391,7 +1859,7 @@ function CommentComposer({
       <View style={{ marginTop: spacing.sm }}>
         <PrimaryButton
           onPress={onSend}
-          disabled={sending || offline || draft.trim().length === 0}
+          disabled={sending || offline || draftPlainText.trim().length === 0 || draftPlainText.length > MAX_COMMENT_LENGTH}
           accessibilityLabel="Send comment"
         >
           {sending ? "Sending…" : "Send"}
@@ -1489,13 +1957,14 @@ function ActionChip({
   );
 }
 
-function CommentsSection({
+export function CommentsSection({
   comments,
   visibleCount,
   onLoadMore,
   onJumpToLatest,
   onJumpToTop,
   error,
+  onLinkPress,
 }: {
   comments: TicketComment[];
   visibleCount: number;
@@ -1503,6 +1972,7 @@ function CommentsSection({
   onJumpToLatest: () => void;
   onJumpToTop: () => void;
   error: string | null;
+  onLinkPress?: (url: string) => void;
 }) {
   const startIndex = Math.max(0, comments.length - visibleCount);
   const visible = comments.slice(startIndex);
@@ -1562,10 +2032,11 @@ function CommentsSection({
             const eventType = (c as any).event_type as TicketComment["event_type"] | undefined;
             const isSystemEvent = kind === "event" || typeof eventType === "string";
             const isOptimistic = Boolean((c as any).optimistic);
-            const eventText = ((c as any).event_text as string | undefined) ?? (eventType ? `${eventType}: ${c.comment_text}` : c.comment_text);
+            const commentPlainText = extractPlainTextFromSerializedRichEditorContent(c.comment_text);
+            const eventText = ((c as any).event_text as string | undefined) ?? (eventType ? `${eventType}: ${commentPlainText}` : commentPlainText);
             const badgeLabel = isSystemEvent ? "Event" : isOptimistic ? "Sending" : c.is_internal ? "Internal" : "Public";
             const accessibilityLabel = `${badgeLabel}. ${c.created_by_name ?? "Unknown"}. ${formatDateTimeWithRelative(c.created_at)}. ${
-              isSystemEvent ? eventText : c.comment_text
+              isSystemEvent ? eventText : commentPlainText || "Rich comment"
             }`;
 
             return (
@@ -1588,9 +2059,27 @@ function CommentsSection({
                     <Badge label={c.is_internal ? "Internal" : "Public"} tone={c.is_internal ? "warning" : "info"} />
                   )}
                 </View>
-                <Text style={{ ...typography.body, color: colors.text, marginTop: 2, fontStyle: isSystemEvent ? "italic" : "normal" }}>
-                  {isSystemEvent ? eventText : c.comment_text}
-                </Text>
+                {isSystemEvent ? (
+                  <Text style={{ ...typography.body, color: colors.text, marginTop: 2, fontStyle: "italic" }}>
+                    {eventText}
+                  </Text>
+                ) : (
+                  isMalformedRichEditorContent(c.comment_text) ? (
+                    <Text style={{ ...typography.body, color: colors.text, marginTop: 2 }}>
+                      {commentPlainText || "—"}
+                    </Text>
+                  ) : (
+                    <View style={{ marginTop: spacing.xs }}>
+                      <TicketRichTextEditor
+                        content={c.comment_text}
+                        editable={false}
+                        height={96}
+                        loadingLabel="Loading comment…"
+                        onLinkPress={onLinkPress}
+                      />
+                    </View>
+                  )
+                )}
               </View>
             );
           })}
@@ -1615,9 +2104,36 @@ function CommentsSection({
   );
 }
 
-function DescriptionSection({ ticket }: { ticket: TicketDetail }) {
+export function DescriptionSection({
+  ticket,
+  isEditing,
+  draftContent,
+  draftPlainText,
+  saving,
+  error,
+  editorRef,
+  onLinkPress,
+  qaAutoPressFirstLink = false,
+  onStartEditing,
+  onCancelEditing,
+  onSave,
+  onDraftChange,
+}: {
+  ticket: TicketDetail;
+  isEditing: boolean;
+  draftContent: string;
+  draftPlainText: string;
+  saving: boolean;
+  error: string | null;
+  editorRef: RefObject<TicketRichTextEditorRef | null>;
+  onLinkPress?: (url: string) => void;
+  qaAutoPressFirstLink?: boolean;
+  onStartEditing: () => void;
+  onCancelEditing: () => void;
+  onSave: () => void;
+  onDraftChange: (content: string, plainText: string) => void;
+}) {
   const description = extractDescription(ticket);
-  const links = extractLinks(description ?? "");
 
   return (
     <View
@@ -1633,39 +2149,62 @@ function DescriptionSection({ ticket }: { ticket: TicketDetail }) {
       <Text accessibilityRole="header" style={{ ...typography.caption, color: colors.mutedText }}>
         Description
       </Text>
-      <Text style={{ ...typography.body, color: colors.text, marginTop: 2 }}>
-        {description ?? "—"}
-      </Text>
-
-      {links.length > 0 ? (
-        <View style={{ marginTop: spacing.sm }}>
-          <Text style={{ ...typography.caption, color: colors.mutedText }}>Links</Text>
-          {links.slice(0, 5).map((url) => (
-            <Pressable
-              key={url}
-              accessibilityRole="button"
-              accessibilityLabel={`Open link ${url}`}
-              onPress={() => {
-                Alert.alert("Open link?", url, [
-                  { text: "Cancel", style: "cancel" },
-                  {
-                    text: "Open",
-                    onPress: () => {
-                      void Linking.openURL(url);
-                    },
-                  },
-                ]);
+      <View style={{ marginTop: spacing.sm }}>
+        {isEditing ? (
+          <>
+            <TicketRichTextEditor
+              ref={editorRef}
+              content={draftContent}
+              editable={!saving}
+              showToolbar
+              height={220}
+              loadingLabel="Loading description editor…"
+              onContentChange={({ json }) => {
+                onDraftChange(
+                  serializeRichEditorJson(json),
+                  extractPlainTextFromRichEditorJson(json),
+                );
               }}
-              style={({ pressed }) => ({
-                marginTop: spacing.sm,
-                opacity: pressed ? 0.85 : 1,
-              })}
-            >
-              <Text style={{ ...typography.caption, color: colors.primary }}>{url}</Text>
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
+            />
+            <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
+              {draftPlainText.length} characters
+            </Text>
+            {error ? (
+              <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
+                {error}
+              </Text>
+            ) : null}
+            <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
+              <ActionChip label="Cancel" onPress={onCancelEditing} disabled={saving} />
+              <View style={{ width: spacing.sm }} />
+              <ActionChip label={saving ? "Saving…" : "Save"} onPress={onSave} disabled={saving} loading={saving} />
+            </View>
+          </>
+        ) : description && !isMalformedRichEditorContent(description) ? (
+          <>
+            <TicketRichTextEditor
+              content={description}
+              editable={false}
+              height={140}
+              loadingLabel="Loading description…"
+              onLinkPress={onLinkPress}
+              qaAutoPressFirstLink={qaAutoPressFirstLink}
+            />
+            <View style={{ marginTop: spacing.sm }}>
+              <ActionChip label="Edit description" onPress={onStartEditing} />
+            </View>
+          </>
+        ) : (
+          <>
+            <Text style={{ ...typography.body, color: colors.text }}>
+              {description ? extractPlainTextFromSerializedRichEditorContent(description) : draftPlainText || "—"}
+            </Text>
+            <View style={{ marginTop: spacing.sm }}>
+              <ActionChip label="Add description" onPress={onStartEditing} />
+            </View>
+          </>
+        )}
+      </View>
     </View>
   );
 }
@@ -1692,15 +2231,13 @@ function stringOrDash(value: unknown): string {
   return typeof value === "string" && value.trim() ? value : "—";
 }
 
-function extractDescription(ticket: TicketDetail): string | null {
+export function extractDescription(ticket: TicketDetail): string | null {
   const attrs = (ticket as any).attributes as unknown;
   if (!attrs || typeof attrs !== "object") return null;
   const obj = attrs as Record<string, unknown>;
-  const candidates = [obj.description, obj.details, obj.summary];
-  for (const c of candidates) {
-    if (typeof c === "string" && c.trim()) return c.trim();
-  }
-  return null;
+  return typeof obj.description === "string" && obj.description.trim()
+    ? obj.description.trim()
+    : null;
 }
 
 function getTicketAttributes(ticket: TicketDetail): Record<string, unknown> {
@@ -1739,12 +2276,6 @@ function dateInputToIso(input: string): string | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return null;
   const d = new Date(`${trimmed}T00:00:00`);
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
-}
-
-function extractLinks(text: string): string[] {
-  const matches = text.match(/https?:\/\/[^\s)\]]+/g) ?? [];
-  const unique = Array.from(new Set(matches));
-  return unique;
 }
 
 function getApiErrorMessage(body: unknown): string | null {

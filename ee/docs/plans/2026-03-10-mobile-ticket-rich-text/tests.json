@@ -1,0 +1,272 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: ticket mobile rich-text helper parses legacy plain text into a paragraph block document.",
+    "implemented": true,
+    "featureIds": ["F001", "F002", "F021"]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: ticket mobile rich-text helper parses serialized BlockNote JSON arrays without mutation.",
+    "implemented": true,
+    "featureIds": ["F001", "F002"]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: ticket mobile rich-text helper parses ProseMirror/Tiptap `{type:'doc'}` content into the runtime initialization shape.",
+    "implemented": true,
+    "featureIds": ["F001", "F002"]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: ticket mobile rich-text helper returns a safe empty default for null, undefined, or whitespace-only values.",
+    "implemented": true,
+    "featureIds": ["F001", "F002"]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: bridge envelope validators accept known native-to-web message shapes and reject malformed payloads.",
+    "implemented": true,
+    "featureIds": ["F004", "F013"]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: bridge envelope validators accept known web-to-native message shapes and reject malformed payloads.",
+    "implemented": true,
+    "featureIds": ["F004", "F013"]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: request/response correlation resolves `getHTML` with the matching request id.",
+    "implemented": true,
+    "featureIds": ["F004", "F008"]
+  },
+  {
+    "id": "T008",
+    "description": "Unit: request/response correlation resolves `getJSON` with the matching request id.",
+    "implemented": true,
+    "featureIds": ["F004", "F008"]
+  },
+  {
+    "id": "T009",
+    "description": "Unit: pending bridge requests time out cleanly when the runtime does not respond.",
+    "implemented": true,
+    "featureIds": ["F004", "F024"]
+  },
+  {
+    "id": "T010",
+    "description": "Unit: runtime emits `editor-ready` only after initialization content and configuration have been applied.",
+    "implemented": true,
+    "featureIds": ["F003", "F004", "F005"]
+  },
+  {
+    "id": "T011",
+    "description": "Unit: runtime read-only mode does not mutate content and does not apply formatting commands.",
+    "implemented": true,
+    "featureIds": ["F006", "F013"]
+  },
+  {
+    "id": "T012",
+    "description": "Unit: runtime editable mode accepts typing and formatting commands after initialization.",
+    "implemented": true,
+    "featureIds": ["F007", "F008"]
+  },
+  {
+    "id": "T013",
+    "description": "Unit: runtime reports active bold, italic, underline, bullet-list, and ordered-list state in its `state-change` payload.",
+    "implemented": true,
+    "featureIds": ["F008", "F009"]
+  },
+  {
+    "id": "T014",
+    "description": "Unit: runtime reports undo and redo capability correctly in its `state-change` payload.",
+    "implemented": true,
+    "featureIds": ["F008", "F009"]
+  },
+  {
+    "id": "T015",
+    "description": "Unit: runtime debounces full `content-change` payload emission while still sending lightweight state changes promptly.",
+    "implemented": true,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T016",
+    "description": "Unit: wrapper imperative ref forwards `focus()` and `blur()` into the web runtime bridge.",
+    "implemented": true,
+    "featureIds": ["F008", "F012"]
+  },
+  {
+    "id": "T017",
+    "description": "Unit: wrapper imperative ref forwards `setContent()` into the web runtime bridge.",
+    "implemented": true,
+    "featureIds": ["F008", "F012"]
+  },
+  {
+    "id": "T018",
+    "description": "Unit: wrapper imperative ref resolves `getHTML()` from the web runtime response path.",
+    "implemented": true,
+    "featureIds": ["F008", "F012"]
+  },
+  {
+    "id": "T019",
+    "description": "Unit: wrapper imperative ref resolves `getJSON()` from the web runtime response path.",
+    "implemented": true,
+    "featureIds": ["F008", "F012"]
+  },
+  {
+    "id": "T020",
+    "description": "Unit: wrapper keeps toolbar controls disabled until `editor-ready` has been received.",
+    "implemented": true,
+    "featureIds": ["F009", "F012", "F023"]
+  },
+  {
+    "id": "T021",
+    "description": "Unit: wrapper blocks unexpected external navigation attempts from the editor runtime.",
+    "implemented": true,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T022",
+    "description": "Component: mobile ticket description section renders rich formatted content instead of a plain `Text` node when rich content is present.",
+    "implemented": true,
+    "featureIds": ["F014", "F022"]
+  },
+  {
+    "id": "T023",
+    "description": "Component: mobile ticket description section falls back to safe plain-text display when the saved description payload is malformed.",
+    "implemented": true,
+    "featureIds": ["F014", "F023"]
+  },
+  {
+    "id": "T024",
+    "description": "Component: entering mobile ticket description edit mode mounts the rich editor wrapper with the existing description content.",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T025",
+    "description": "Component: saving an edited mobile ticket description persists the serialized rich-text string through the existing ticket attribute update path.",
+    "implemented": true,
+    "featureIds": ["F015", "F021"]
+  },
+  {
+    "id": "T026",
+    "description": "Component: canceling mobile ticket description editing leaves persisted content unchanged.",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T027",
+    "description": "Component: mobile ticket comment items render formatted rich content instead of raw JSON when saved comments contain serialized rich-text strings.",
+    "implemented": true,
+    "featureIds": ["F016", "F022"]
+  },
+  {
+    "id": "T028",
+    "description": "Component: mobile ticket comment items preserve tappable links inside rendered rich content.",
+    "implemented": true,
+    "featureIds": ["F016", "F022"]
+  },
+  {
+    "id": "T029",
+    "description": "Component: mobile ticket comment items render supported saved inline image content when the saved note references attachment-backed images.",
+    "implemented": true,
+    "featureIds": ["F016", "F022"]
+  },
+  {
+    "id": "T030",
+    "description": "Component: mobile ticket comment composer mounts the rich editor wrapper and preserves the existing internal/public visibility controls.",
+    "implemented": true,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T031",
+    "description": "Component: unsent mobile ticket rich-comment drafts still persist across screen reloads for the same user and ticket.",
+    "implemented": true,
+    "featureIds": ["F017", "F022"]
+  },
+  {
+    "id": "T032",
+    "description": "Component: submitting a new rich mobile ticket comment sends the serialized rich-text string through the existing comment creation flow.",
+    "implemented": true,
+    "featureIds": ["F017", "F020"]
+  },
+  {
+    "id": "T033",
+    "description": "Component: mobile existing saved comments remain non-editable in v1 even though the wrapper exists elsewhere on the screen.",
+    "implemented": true,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T034",
+    "description": "API contract: ticket detail responses expose normalized rich render data for description content suitable for mobile rendering.",
+    "implemented": true,
+    "featureIds": ["F019", "F020"]
+  },
+  {
+    "id": "T035",
+    "description": "API contract: ticket comment list responses expose normalized rich render data for saved comment content suitable for mobile rendering.",
+    "implemented": true,
+    "featureIds": ["F019", "F020"]
+  },
+  {
+    "id": "T036",
+    "description": "Unit: server rich render helper derives HTML for serialized BlockNote JSON using the shared formatting package rather than a mobile-only renderer.",
+    "implemented": true,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T037",
+    "description": "Unit: server rich render helper derives HTML for ProseMirror/Tiptap `{type:'doc'}` payloads using the shared formatting package.",
+    "implemented": true,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T038",
+    "description": "DB-backed integration happy path: updating a ticket description from mobile persists a serialized rich-text string into `ticket.attributes.description` and the value round-trips on refetch.",
+    "implemented": true,
+    "featureIds": ["F015", "F021"]
+  },
+  {
+    "id": "T039",
+    "description": "DB-backed integration guard path: legacy plain-text `ticket.attributes.description` loads into the mobile editor and saves back as canonical serialized rich-text content.",
+    "implemented": true,
+    "featureIds": ["F015", "F021"]
+  },
+  {
+    "id": "T040",
+    "description": "DB-backed integration happy path: creating a mobile ticket comment persists the serialized rich-text string through the ticket comments API and returns render-friendly content on refetch.",
+    "implemented": true,
+    "featureIds": ["F017", "F019", "F020"]
+  },
+  {
+    "id": "T041",
+    "description": "DB-backed integration guard path: legacy plain-text saved comment content remains viewable in mobile rich read-only rendering without crashing.",
+    "implemented": true,
+    "featureIds": ["F016", "F023"]
+  },
+  {
+    "id": "T042",
+    "description": "Integration: development-only bridge diagnostics log editor ready timing and request timeout failures without enabling noisy production logging.",
+    "implemented": true,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T043",
+    "description": "Manual QA: iOS ticket detail screen supports viewing, editing description, composing comment, tapping links, and saving normal-sized content without layout breakage.",
+    "implemented": true,
+    "featureIds": ["F011", "F014", "F015", "F016", "F017"]
+  },
+  {
+    "id": "T044",
+    "description": "Manual QA: Android ticket detail screen supports viewing, editing description, composing comment, tapping links, and saving normal-sized content without layout breakage.",
+    "implemented": true,
+    "featureIds": ["F011", "F014", "F015", "F016", "F017"]
+  },
+  {
+    "id": "T045",
+    "description": "Manual QA: malformed saved description or comment payloads degrade to safe text display rather than breaking the rest of the ticket detail screen.",
+    "implemented": true,
+    "featureIds": ["F023"]
+  }
+]
