@@ -6,6 +6,7 @@ import { build } from "esbuild";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..");
+const mobileNodeModulesPath = path.join(projectRoot, "node_modules");
 const browserEntryPath = path.join(
   projectRoot,
   "scripts/ticket-mobile-editor-browser-entry.ts",
@@ -22,6 +23,7 @@ const result = await build({
   write: false,
   format: "iife",
   platform: "browser",
+  nodePaths: [mobileNodeModulesPath],
   target: ["es2019"],
   minify: true,
   legalComments: "none",
