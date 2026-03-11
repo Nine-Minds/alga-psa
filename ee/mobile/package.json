@@ -8,9 +8,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "generate:ticket-editor": "node ./scripts/generate-ticket-mobile-editor-html.mjs",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "npm run generate:ticket-editor && tsc --noEmit",
     "lint": "eslint . --max-warnings=0",
-    "test": "vitest run"
+    "test": "npm run generate:ticket-editor && vitest run"
   },
   "dependencies": {
     "@react-native-community/netinfo": "11.4.1",
@@ -37,6 +37,7 @@
     "@types/react-test-renderer": "^19.1.0",
     "@typescript-eslint/eslint-plugin": "^8.8.0",
     "@typescript-eslint/parser": "^8.8.0",
+    "esbuild": "^0.27.2",
     "eslint": "^8.57.0",
     "react-test-renderer": "^19.1.0",
     "typescript": "~5.9.2",

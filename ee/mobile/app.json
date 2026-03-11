@@ -15,8 +15,11 @@
     },
     "ios": {
       "bundleIdentifier": "com.alga.psa.mobile",
-      "buildNumber": "1",
-      "supportsTablet": true
+      "buildNumber": "5",
+      "supportsTablet": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.alga.psa.mobile",
@@ -34,6 +37,12 @@
     "plugins": [
       "expo-secure-store",
       "expo-localization"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "2bca0b9d-3deb-4e30-8134-55e03b7479d7"
+      }
+    },
+    "owner": "nine-minds-llc"
   }
 }

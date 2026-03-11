@@ -49,6 +49,20 @@ function extractBlockText(block: unknown): string {
         return "";
       }
 
+      if ((item as { type?: unknown }).type === "link") {
+        const linkedContent = (item as { content?: unknown }).content;
+        if (!Array.isArray(linkedContent)) {
+          return "";
+        }
+
+        return linkedContent
+          .map((linkedItem) => {
+            const text = (linkedItem as { text?: unknown })?.text;
+            return typeof text === "string" ? text : "";
+          })
+          .join("");
+      }
+
       const text = (item as { text?: unknown }).text;
       return typeof text === "string" ? text : "";
     })

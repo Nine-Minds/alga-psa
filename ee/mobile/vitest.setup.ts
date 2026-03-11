@@ -5,5 +5,6 @@ const testGlobals = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;
 };
 
+process.env.NODE_ENV = "development";
 testGlobals.__DEV__ = true;
 testGlobals.IS_REACT_ACT_ENVIRONMENT = true;

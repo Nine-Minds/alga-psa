@@ -42,6 +42,14 @@ export function createTicketRichTextParagraph(text: string): PartialBlock[] {
   ];
 }
 
+function createDefaultBlockProps() {
+  return {
+    textAlignment: 'left' as const,
+    backgroundColor: 'default' as const,
+    textColor: 'default' as const,
+  };
+}
+
 export type TicketRichTextProseMirrorMark = {
   type: string;
   attrs?: Record<string, unknown>;
@@ -217,6 +225,240 @@ function extractTextFromProseMirror(node: unknown): string {
   return blockTypes.has(record.type) ? `${childText}\n` : childText;
 }
 
+type TicketRichTextInlineContent =
+  | {
+      type: 'text';
+      text: string;
+      styles: Record<string, unknown>;
+    }
+  | {
+      type: 'link';
+      href: string;
+      content: Array<{
+        type: 'text';
+        text: string;
+        styles: Record<string, unknown>;
+      }>;
+    };
+
+function getInlineStylesFromMarks(marks: TicketRichTextProseMirrorMark[] | undefined): Record<string, unknown> {
+  const styles: Record<string, unknown> = {};
+
+  for (const mark of marks ?? []) {
+    switch (mark.type) {
+      case 'bold':
+        styles.bold = true;
+        break;
+      case 'italic':
+        styles.italic = true;
+        break;
+      case 'underline':
+        styles.underline = true;
+        break;
+      case 'strike':
+        styles.strike = true;
+        break;
+      case 'textStyle':
+        if (typeof mark.attrs?.color === 'string' && mark.attrs.color.trim()) {
+          styles.textColor = mark.attrs.color.trim();
+        }
+        if (typeof mark.attrs?.backgroundColor === 'string' && mark.attrs.backgroundColor.trim()) {
+          styles.backgroundColor = mark.attrs.backgroundColor.trim();
+        }
+        break;
+    }
+  }
+
+  return styles;
+}
+
+function getLinkHrefFromMarks(marks: TicketRichTextProseMirrorMark[] | undefined): string | null {
+  for (const mark of marks ?? []) {
+    if (mark.type !== 'link') {
+      continue;
+    }
+
+    const href = mark.attrs?.href;
+    if (typeof href === 'string' && href.trim()) {
+      return href.trim();
+    }
+  }
+
+  return null;
+}
+
+function createEmptyInlineText(): TicketRichTextInlineContent {
+  return {
+    type: 'text',
+    text: '',
+    styles: {},
+  };
+}
+
+function normalizeInlineContent(
+  content: TicketRichTextInlineContent[],
+): TicketRichTextInlineContent[] {
+  if (content.length === 0) {
+    return [createEmptyInlineText()];
+  }
+
+  return content;
+}
+
+function convertInlineNodeToBlockNoteContent(
+  node: TicketRichTextProseMirrorNode,
+): TicketRichTextInlineContent[] {
+  if (node.type === 'text') {
+    const text = typeof node.text === 'string' ? node.text : '';
+    const styles = getInlineStylesFromMarks(node.marks);
+    const href = getLinkHrefFromMarks(node.marks);
+
+    if (href) {
+      return [
+        {
+          type: 'link',
+          href,
+          content: [{
+            type: 'text',
+            text,
+            styles,
+          }],
+        },
+      ];
+    }
+
+    return [{
+      type: 'text',
+      text,
+      styles,
+    }];
+  }
+
+  if (node.type === 'hardBreak') {
+    return [{
+      type: 'text',
+      text: '\n',
+      styles: {},
+    }];
+  }
+
+  if (!Array.isArray(node.content)) {
+    return [];
+  }
+
+  return node.content.flatMap(convertInlineNodeToBlockNoteContent);
+}
+
+function createFallbackParagraphBlock(node: TicketRichTextProseMirrorNode): PartialBlock[] {
+  const text = extractTextFromProseMirror(node).trimEnd();
+
+  return text
+    ? createTicketRichTextParagraph(text)
+    : cloneDefaultBlock();
+}
+
+function convertListItemNode(
+  node: TicketRichTextProseMirrorNode,
+  listType: 'bulletListItem' | 'numberedListItem',
+): PartialBlock[] {
+  const children = Array.isArray(node.content) ? node.content : [];
+  const firstTextualChild = children.find((child) => child.type === 'paragraph' || child.type === 'heading');
+  const nestedChildren = children.flatMap((child) => {
+    if (child === firstTextualChild) {
+      return [];
+    }
+
+    return convertProseMirrorNodeToBlockNote(child);
+  });
+
+  const block: PartialBlock = {
+    type: listType,
+    props: createDefaultBlockProps(),
+    content: normalizeInlineContent(
+      firstTextualChild && Array.isArray(firstTextualChild.content)
+        ? firstTextualChild.content.flatMap(convertInlineNodeToBlockNoteContent)
+        : []
+    ),
+  };
+
+  if (nestedChildren.length > 0) {
+    block.children = nestedChildren;
+  }
+
+  return [block];
+}
+
+function convertProseMirrorNodeToBlockNote(node: TicketRichTextProseMirrorNode): PartialBlock[] {
+  switch (node.type) {
+    case 'doc':
+      return Array.isArray(node.content)
+        ? node.content.flatMap(convertProseMirrorNodeToBlockNote)
+        : cloneDefaultBlock();
+    case 'paragraph':
+      return [{
+        type: 'paragraph',
+        props: createDefaultBlockProps(),
+        content: normalizeInlineContent(
+          Array.isArray(node.content)
+            ? node.content.flatMap(convertInlineNodeToBlockNoteContent)
+            : []
+        ),
+      }];
+    case 'heading':
+      return [{
+        type: 'heading',
+        props: {
+          ...createDefaultBlockProps(),
+          level: typeof node.attrs?.level === 'number' ? node.attrs.level : 1,
+        },
+        content: normalizeInlineContent(
+          Array.isArray(node.content)
+            ? node.content.flatMap(convertInlineNodeToBlockNoteContent)
+            : []
+        ),
+      }];
+    case 'bullet_list':
+      return Array.isArray(node.content)
+        ? node.content.flatMap((child) => convertListItemNode(child, 'bulletListItem'))
+        : cloneDefaultBlock();
+    case 'ordered_list':
+      return Array.isArray(node.content)
+        ? node.content.flatMap((child) => convertListItemNode(child, 'numberedListItem'))
+        : cloneDefaultBlock();
+    case 'list_item':
+      return convertListItemNode(node, 'bulletListItem');
+    case 'image': {
+      const url = typeof node.attrs?.src === 'string' ? node.attrs.src.trim() : '';
+      if (!url) {
+        return cloneDefaultBlock();
+      }
+
+      return [{
+        type: 'image',
+        props: {
+          url,
+          name: typeof node.attrs?.alt === 'string' ? node.attrs.alt.trim() : '',
+          caption: typeof node.attrs?.title === 'string' ? node.attrs.title.trim() : '',
+        },
+      }];
+    }
+    case 'blockquote':
+    case 'code_block':
+      return createFallbackParagraphBlock(node);
+    default:
+      return createFallbackParagraphBlock(node);
+  }
+}
+
+export function convertProseMirrorToTicketRichTextBlocks(
+  document: TicketRichTextProseMirrorDoc
+): PartialBlock[] {
+  const converted = convertProseMirrorNodeToBlockNote(document)
+    .filter((block) => block && typeof block === 'object');
+
+  return converted.length > 0 ? converted : cloneDefaultBlock();
+}
+
 export function createEmptyTicketMobileRichTextDocument(): TicketMobileRichTextDocument {
   return {
     format: 'blocknote',
@@ -283,10 +525,7 @@ export function parseTicketRichTextContent(
     return parsed.content;
   }
 
-  const extractedText = extractTextFromProseMirror(parsed.content).trimEnd();
-  return extractedText
-    ? createTicketRichTextParagraph(extractedText)
-    : cloneDefaultBlock();
+  return convertProseMirrorToTicketRichTextBlocks(parsed.content);
 }
 
 export function serializeTicketRichTextContent(content: PartialBlock[]): string {

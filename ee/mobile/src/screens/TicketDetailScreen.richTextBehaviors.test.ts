@@ -40,26 +40,23 @@ const {
 
 function parseEditorContent(content: string | null | undefined): unknown {
   if (!content) {
-    return { type: "doc", content: [] };
+    return [];
   }
 
   const trimmed = content.trim();
   if (!trimmed) {
-    return { type: "doc", content: [] };
+    return [];
   }
 
   try {
     return JSON.parse(trimmed);
   } catch {
-    return {
-      type: "doc",
-      content: [
-        {
-          type: "paragraph",
-          content: [{ type: "text", text: content }],
-        },
-      ],
-    };
+    return [
+      {
+        type: "paragraph",
+        content: [{ type: "text", text: content, styles: {} }],
+      },
+    ];
   }
 }
 
@@ -215,25 +212,19 @@ const baseTicket: TicketDetail = {
   },
 };
 
-const updatedDescriptionJson = {
-  type: "doc",
-  content: [
-    {
-      type: "paragraph",
-      content: [{ type: "text", text: "Updated description" }],
-    },
-  ],
-};
+const updatedDescriptionJson = [
+  {
+    type: "paragraph",
+    content: [{ type: "text", text: "Updated description", styles: {} }],
+  },
+];
 
-const richCommentJson = {
-  type: "doc",
-  content: [
-    {
-      type: "paragraph",
-      content: [{ type: "text", text: "Rich mobile comment" }],
-    },
-  ],
-};
+const richCommentJson = [
+  {
+    type: "paragraph",
+    content: [{ type: "text", text: "Rich mobile comment", styles: {} }],
+  },
+];
 
 const baseSession = {
   tenantId: "tenant-1",

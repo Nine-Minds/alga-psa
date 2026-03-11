@@ -6,6 +6,7 @@ import type {
   TicketMobileEditorRequest,
   TicketMobileEditorStatePayload,
   TicketMobileEditorWebToNativeMessage,
+  TicketMobileRichTextDocument,
 } from './ticketRichText';
 
 const ticketMobileEditorCommandSchema = z.enum([
@@ -192,7 +193,10 @@ export class TicketMobileEditorBridgeClient {
     });
   }
 
-  sendCommand(command: TicketMobileEditorCommand, value?: unknown): void {
+  sendCommand(
+    command: TicketMobileEditorCommand,
+    value?: string | boolean | TicketMobileRichTextDocument
+  ): void {
     this.post({
       type: 'command',
       payload: {

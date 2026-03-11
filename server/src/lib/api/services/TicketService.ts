@@ -332,8 +332,7 @@ export class TicketService extends BaseService<ITicket> {
     const documents = await this.getTicketDocuments(id, context);
 
     return {
-      ...(ticket as ITicketWithDetails),
-      description_html: renderTicketDescriptionHtml(ticket.attributes),
+      ...this.withDescriptionHtml(ticket as ITicketWithDetails),
       documents
     } as ITicketWithDetails;
   }
@@ -574,8 +573,15 @@ export class TicketService extends BaseService<ITicket> {
         }
       });
 
-      return ticket as ITicket;
+      return this.withDescriptionHtml(ticket as ITicket);
     });
+  }
+
+  private withDescriptionHtml<T extends ITicket>(ticket: T): T & { description_html: string } {
+    return {
+      ...ticket,
+      description_html: renderTicketDescriptionHtml(ticket.attributes),
+    };
   }
 
   /**

@@ -337,7 +337,7 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
             onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
             javaScriptEnabled
             domStorageEnabled
-            scrollEnabled={false}
+            scrollEnabled={!editable}
             setSupportMultipleWindows={false}
             javaScriptCanOpenWindowsAutomatically={false}
             style={{

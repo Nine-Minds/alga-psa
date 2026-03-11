@@ -106,6 +106,8 @@ async function flushAsync(): Promise<void> {
   await act(async () => {
     await Promise.resolve();
     await Promise.resolve();
+    await Promise.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
   });
 }
 
@@ -197,7 +199,19 @@ describe("AuthCallbackScreen dev QA session import", () => {
     });
     expect(clearPendingMobileAuthMock).toHaveBeenCalled();
     expect(clearReceivedOttMock).toHaveBeenCalled();
-    expect(navigation.reset).not.toHaveBeenCalled();
+    expect(navigation.reset).toHaveBeenCalledWith({
+      index: 1,
+      routes: [
+        { name: "Tabs" },
+        {
+          name: "TicketDetail",
+          params: {
+            ticketId: "ticket-123",
+            qaScenario: "richtext-smoke",
+          },
+        },
+      ],
+    });
     expect(createApiClientMock).not.toHaveBeenCalled();
     expect(exchangeOttWithRetryMock).not.toHaveBeenCalled();
     expect(getTicketStatsMock).not.toHaveBeenCalled();

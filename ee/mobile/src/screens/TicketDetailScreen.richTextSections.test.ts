@@ -245,6 +245,9 @@ describe("TicketDetailScreen rich text sections", () => {
         onJumpToLatest: () => undefined,
         onJumpToTop: () => undefined,
         error: null,
+        onLinkPress: (url: string) => {
+          void Linking.openURL(url);
+        },
       }),
     );
 
@@ -254,7 +257,7 @@ describe("TicketDetailScreen rich text sections", () => {
   });
 
   it("preserves tappable links for rich comment items through the screen wrapper", () => {
-    const openUrlSpy = vi.spyOn(Linking, "openURL").mockResolvedValueOnce(undefined as never);
+    const onLinkPress = vi.fn();
     const renderer = render(
       React.createElement(CommentsSection, {
         comments: [
@@ -271,6 +274,7 @@ describe("TicketDetailScreen rich text sections", () => {
         onJumpToLatest: () => undefined,
         onJumpToTop: () => undefined,
         error: null,
+        onLinkPress,
       }),
     );
 
@@ -279,8 +283,7 @@ describe("TicketDetailScreen rich text sections", () => {
       (richEditor.props.onLinkPress as ((url: string) => void) | undefined)?.("https://example.com/comment-link");
     });
 
-    expect(openUrlSpy).toHaveBeenCalledWith("https://example.com/comment-link");
-    openUrlSpy.mockRestore();
+    expect(onLinkPress).toHaveBeenCalledWith("https://example.com/comment-link");
   });
 
   it("routes saved image-backed comment content through the rich-text wrapper", () => {

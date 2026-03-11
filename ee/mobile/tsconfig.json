@@ -6,12 +6,12 @@
   "include": [
     "App.tsx",
     "index.ts",
+    "scripts/**/*",
     "src/**/*",
     "test/**/*",
     "vitest.setup.ts"
   ],
   "exclude": [
-    "node_modules",
-    "scripts"
+    "node_modules"
   ]
 }

@@ -3,6 +3,7 @@ export { calculateItilPriority, ItilLabels } from './itilUtils';
 export { getCommentResponseSource, getLatestCustomerResponseSource } from './responseSource';
 export { resolveCommentAuthor } from './commentAuthorResolution';
 export {
+  convertProseMirrorToTicketRichTextBlocks,
   createEmptyTicketMobileRichTextDocument,
   createTicketRichTextParagraph,
   parseTicketMobileRichTextDocument,

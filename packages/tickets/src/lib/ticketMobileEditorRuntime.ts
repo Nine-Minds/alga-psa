@@ -11,7 +11,10 @@ import type {
   TicketMobileRichTextDocument,
   TicketMobileRichTextFormat,
 } from './ticketRichText';
-import { parseTicketMobileRichTextDocument } from './ticketRichText';
+import {
+  convertProseMirrorToTicketRichTextBlocks,
+  parseTicketMobileRichTextDocument,
+} from './ticketRichText';
 import { parseTicketMobileEditorNativeToWebMessage } from './ticketMobileEditorBridge';
 
 const blockStateTypes = new Set([
@@ -164,7 +167,7 @@ export class TicketMobileEditorRuntime {
       });
     } else {
       this.editor.setEditable(payload.editable, false);
-      this.editor.commands.setContent(initialContent, false);
+      this.editor.commands.setContent(initialContent, { emitUpdate: false });
     }
 
     this.editor.setEditable(payload.editable, false);
@@ -254,7 +257,7 @@ export class TicketMobileEditorRuntime {
 
     const value = request === 'get-html'
       ? this.editor.getHTML()
-      : this.editor.getJSON();
+      : this.getNormalizedJsonValue();
 
     this.emitMessage({
       type: 'response',
@@ -284,7 +287,7 @@ export class TicketMobileEditorRuntime {
 
     this.currentFormat = nextDocument.format;
     const nextContent = this.toEditorContent(nextDocument);
-    editor.commands.setContent(nextContent, true);
+    editor.commands.setContent(nextContent, { emitUpdate: true });
     this.emitStateChange();
     return true;
   }
@@ -356,7 +359,7 @@ export class TicketMobileEditorRuntime {
       type: 'content-change',
       payload: {
         html: this.editor.getHTML(),
-        json: this.editor.getJSON(),
+        json: this.getNormalizedJsonValue(),
       },
     });
   }
@@ -386,6 +389,17 @@ export class TicketMobileEditorRuntime {
     }
 
     return convertBlockContentToHTML(document.content);
+  }
+
+  private getNormalizedJsonValue() {
+    if (!this.editor) {
+      return [];
+    }
+
+    const json = this.editor.getJSON();
+    return this.hasProseMirrorDoc(json)
+      ? convertProseMirrorToTicketRichTextBlocks(json)
+      : [];
   }
 
   private isRichTextDocument(value: unknown): value is TicketMobileRichTextDocument {
@@ -426,5 +440,17 @@ export class TicketMobileEditorRuntime {
 
     const candidate = value as { type?: unknown; content?: unknown };
     return candidate.type === 'doc' || (typeof candidate.type === 'string' && blockStateTypes.has(candidate.type));
+  }
+
+  private hasProseMirrorDoc(value: unknown): value is {
+    type: 'doc';
+    content: unknown[];
+  } {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return false;
+    }
+
+    const candidate = value as { type?: unknown; content?: unknown };
+    return candidate.type === 'doc' && Array.isArray(candidate.content);
   }
 }

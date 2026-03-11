@@ -67,8 +67,27 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
           await Promise.allSettled([clearPendingMobileAuth(), clearReceivedOtt()]);
           setSession(qaSession);
           void canceled;
-          void qaTargetTicketId;
-          void qaScenario;
+          if (qaTargetTicketId && qaScenario) {
+            setTimeout(() => {
+              if (canceled) {
+                return;
+              }
+
+              navigation.reset({
+                index: 1,
+                routes: [
+                  { name: "Tabs" },
+                  {
+                    name: "TicketDetail",
+                    params: {
+                      ticketId: qaTargetTicketId,
+                      qaScenario,
+                    },
+                  },
+                ],
+              });
+            }, 0);
+          }
           return;
         }
 

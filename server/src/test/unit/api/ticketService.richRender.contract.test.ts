@@ -12,7 +12,10 @@ describe('TicketService rich render contract', () => {
     const source = readTicketServiceSource();
 
     expect(source).toContain("import { renderTicketDescriptionHtml, renderTicketRichTextHtml } from './ticketRichRender';");
+    expect(source).toContain('private withDescriptionHtml');
     expect(source).toContain('description_html: renderTicketDescriptionHtml(ticket.attributes)');
+    expect(source).toContain('...this.withDescriptionHtml(ticket as ITicketWithDetails)');
+    expect(source).toContain('return this.withDescriptionHtml(ticket as ITicket);');
   });
 
   it('maps comment_html onto ticket comment responses', () => {

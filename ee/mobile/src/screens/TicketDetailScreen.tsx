@@ -576,7 +576,12 @@ export function TicketDetailBody({
       return;
     }
 
-    const nextJson = await descriptionEditorRef.current.getJSON();
+    const nextJson = await descriptionEditorRef.current.getJSON().catch(() => null);
+    if (!nextJson) {
+      setDescriptionError("Unable to read the editor content right now. Please try again.");
+      return;
+    }
+
     const serializedDescription = serializeRichEditorJson(nextJson);
     const nextPlainText = extractPlainTextFromRichEditorJson(nextJson).trim();
     await persistDescriptionContent(serializedDescription, nextPlainText);
@@ -2230,11 +2235,9 @@ export function extractDescription(ticket: TicketDetail): string | null {
   const attrs = (ticket as any).attributes as unknown;
   if (!attrs || typeof attrs !== "object") return null;
   const obj = attrs as Record<string, unknown>;
-  const candidates = [obj.description, obj.details, obj.summary];
-  for (const c of candidates) {
-    if (typeof c === "string" && c.trim()) return c.trim();
-  }
-  return null;
+  return typeof obj.description === "string" && obj.description.trim()
+    ? obj.description.trim()
+    : null;
 }
 
 function getTicketAttributes(ticket: TicketDetail): Record<string, unknown> {

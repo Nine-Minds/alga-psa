@@ -141,6 +141,55 @@ describe('TicketMobileEditorRuntime', () => {
     expect(editor.getHTML()).toContain('updated');
   });
 
+  it('returns BlockNote-style JSON payloads for bridge requests and content-change events', async () => {
+    runtime.handleMessage({
+      type: 'init',
+      payload: {
+        content: 'Hello mobile',
+        editable: true,
+      },
+    });
+
+    const editor = requireEditor(runtime.getEditor());
+    editor.commands.selectAll();
+    runtime.handleMessage({ type: 'command', payload: { command: 'toggle-bold' } });
+    editor.commands.focus('end');
+    editor.commands.insertContent(' updated');
+
+    await Promise.resolve();
+
+    runtime.handleMessage({
+      type: 'request',
+      payload: {
+        requestId: 'json-check',
+        request: 'get-json',
+      },
+    });
+
+    expect(getLastMessage(messages, 'response').payload).toEqual({
+      requestId: 'json-check',
+      request: 'get-json',
+      value: [
+        {
+          type: 'paragraph',
+          props: {
+            textAlignment: 'left',
+            backgroundColor: 'default',
+            textColor: 'default',
+          },
+          content: [
+            {
+              type: 'text',
+              text: 'Hello mobile updated',
+              styles: { bold: true },
+            },
+          ],
+        },
+      ],
+    });
+
+  });
+
   it('reports active bold, italic, underline, bullet-list, and ordered-list state changes', () => {
     runtime.handleMessage({
       type: 'init',

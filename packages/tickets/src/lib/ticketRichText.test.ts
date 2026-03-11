@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  convertProseMirrorToTicketRichTextBlocks,
   createEmptyTicketMobileRichTextDocument,
   createTicketRichTextParagraph,
   parseTicketMobileRichTextDocument,
@@ -71,6 +72,27 @@ describe('ticketRichText', () => {
             {
               type: 'text',
               text: 'Mobile rich text',
+              marks: [{ type: 'bold' }],
+            },
+          ],
+        },
+        {
+          type: 'bullet_list',
+          content: [
+            {
+              type: 'list_item',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [
+                    {
+                      type: 'text',
+                      text: 'Bullet item',
+                      marks: [{ type: 'link', attrs: { href: 'https://example.com' } }],
+                    },
+                  ],
+                },
+              ],
             },
           ],
         },
@@ -82,9 +104,76 @@ describe('ticketRichText', () => {
       sourceFormat: 'prosemirror',
       content: document,
     });
-    expect(parseTicketRichTextContent(JSON.stringify(document))).toEqual(
-      createTicketRichTextParagraph('Mobile rich text')
-    );
+    expect(parseTicketRichTextContent(JSON.stringify(document))).toEqual([
+      {
+        type: 'paragraph',
+        props: {
+          textAlignment: 'left',
+          backgroundColor: 'default',
+          textColor: 'default',
+        },
+        content: [
+          {
+            type: 'text',
+            text: 'Mobile rich text',
+            styles: { bold: true },
+          },
+        ],
+      },
+      {
+        type: 'bulletListItem',
+        props: {
+          textAlignment: 'left',
+          backgroundColor: 'default',
+          textColor: 'default',
+        },
+        content: [
+          {
+            type: 'link',
+            href: 'https://example.com',
+            content: [
+              {
+                type: 'text',
+                text: 'Bullet item',
+                styles: {},
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+  });
+
+  it('converts ProseMirror documents to BlockNote blocks for mobile save round-trips', () => {
+    const document = {
+      type: 'doc' as const,
+      content: [
+        {
+          type: 'heading',
+          attrs: { level: 2 },
+          content: [{ type: 'text', text: 'Heading' }],
+        },
+      ],
+    };
+
+    expect(convertProseMirrorToTicketRichTextBlocks(document)).toEqual([
+      {
+        type: 'heading',
+        props: {
+          textAlignment: 'left',
+          backgroundColor: 'default',
+          textColor: 'default',
+          level: 2,
+        },
+        content: [
+          {
+            type: 'text',
+            text: 'Heading',
+            styles: {},
+          },
+        ],
+      },
+    ]);
   });
 
   it('returns a safe empty mobile document for null, undefined, or blank values', () => {
