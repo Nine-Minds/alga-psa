@@ -9,6 +9,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "react-native": path.resolve(__dirname, "test/mocks/react-native.ts"),
+      "react-native-webview": path.resolve(__dirname, "test/mocks/react-native-webview.ts"),
     },
   },
   test: {

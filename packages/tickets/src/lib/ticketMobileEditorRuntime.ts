@@ -2,7 +2,7 @@ import { Editor, type Content } from '@tiptap/core';
 import Link from '@tiptap/extension-link';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
-import { convertBlockContentToHTML } from '@alga-psa/formatting';
+import { convertBlockContentToHTML } from '../../../formatting/src/blocknoteUtils';
 import type {
   TicketMobileEditorCommand,
   TicketMobileEditorInitPayload,

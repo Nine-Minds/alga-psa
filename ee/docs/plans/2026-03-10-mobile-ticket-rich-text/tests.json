@@ -92,37 +92,37 @@
   {
     "id": "T016",
     "description": "Unit: wrapper imperative ref forwards `focus()` and `blur()` into the web runtime bridge.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F012"]
   },
   {
     "id": "T017",
     "description": "Unit: wrapper imperative ref forwards `setContent()` into the web runtime bridge.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F012"]
   },
   {
     "id": "T018",
     "description": "Unit: wrapper imperative ref resolves `getHTML()` from the web runtime response path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F012"]
   },
   {
     "id": "T019",
     "description": "Unit: wrapper imperative ref resolves `getJSON()` from the web runtime response path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F012"]
   },
   {
     "id": "T020",
     "description": "Unit: wrapper keeps toolbar controls disabled until `editor-ready` has been received.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009", "F012", "F023"]
   },
   {
     "id": "T021",
     "description": "Unit: wrapper blocks unexpected external navigation attempts from the editor runtime.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {

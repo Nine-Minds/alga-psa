@@ -62,19 +62,19 @@
   {
     "id": "F011",
     "description": "Package the web editor runtime so the mobile app can load it locally in production without a live dev server.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Non-functional Requirements", "Rollout / Migration"]
   },
   {
     "id": "F012",
     "description": "Create a React Native rich-text wrapper component and imperative ref API that hides WebView or DOM runtime details from ticket screens.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Architecture", "Requirements/Functional Requirements"]
   },
   {
     "id": "F013",
     "description": "Harden the mobile wrapper by restricting navigation to local editor-controlled content and surfacing structured bridge errors safely.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Security / Permissions", "Requirements/Non-functional Requirements"]
   },
   {

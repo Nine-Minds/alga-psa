@@ -23,6 +23,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-10) Implement the runtime and bridge as pure library classes in `packages/tickets` before wiring React Native. This keeps Tiptap behavior, request correlation, and debounced state emission testable in jsdom without needing a live WebView.
 - (2026-03-10) Use `@tiptap/core` with `StarterKit`, `Link`, and `Underline` for the mobile runtime. Initialize BlockNote/legacy content by converting it through shared HTML conversion helpers, and initialize ProseMirror payloads directly as JSON.
 - (2026-03-10) Resolve the first API contract revision by exposing derived HTML only for now: `description_html` on ticket detail responses and `comment_html` on ticket comment responses. This satisfies mobile rendering/debugging needs without expanding the transport shape to normalized JSON yet.
+- (2026-03-10) Keep the browser runtime authoritative in `packages/tickets`, but keep the React Native-side bridge client local to `ee/mobile`. The mobile app is not configured as a workspace package consumer, so this avoids dragging unrelated web/server package code into Expo typecheck while still generating the local WebView HTML bundle from the shared runtime.
+- (2026-03-10) Package the mobile editor runtime as a generated inline HTML module (`generatedEditorHtml.ts`) built by esbuild from a browser-only entry file. This satisfies the no-dev-server requirement while keeping the generated asset reproducible from source.
 
 ## Discoveries / Constraints
 
@@ -41,6 +43,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-10) There is still no existing local WebView HTML asset pattern in `ee/mobile`; the closest repo precedent is the extension iframe/browser bundle flow, so the wrapper slice will need to establish its own asset-loading path.
 - (2026-03-10) `convertBlockContentToHTML()` already handles serialized BlockNote JSON and ProseMirror `{type:'doc'}` payloads, but it logs and returns an invalid-content placeholder for legacy plain strings. The new server helper wraps it and falls back to escaped plain text for malformed/legacy content instead of propagating the placeholder to mobile.
 - (2026-03-10) Server ticket detail/comment contracts can be extended compatibly by adding optional `description_html` and `comment_html` fields; existing `comment_text` and description storage semantics do not need to change for this slice.
+- (2026-03-10) `ee/mobile` is not listed in the repo workspaces, has no existing Metro config, and cannot safely import `packages/*` source directly without extra setup. Adding `ee/mobile/metro.config.js` is enough for app/runtime resolution, but mobile typecheck still needs to exclude the generator scripts that intentionally import shared package source.
+- (2026-03-10) `react-native-webview` was not installed in `ee/mobile` even though the package lock mentioned it transitively. The wrapper slice installed it explicitly and added `react-test-renderer` + types for wrapper-level unit tests.
+- (2026-03-10) Bundling the shared runtime for WebView initially failed because `ticketMobileEditorRuntime.ts` imported the formatting package root, which pulled server-only transitive modules into the browser bundle. Switching that runtime import to the specific `packages/formatting/src/blocknoteUtils` source file made the inline browser bundle viable.
 
 ## Commands / Runbooks
 
@@ -77,6 +82,16 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run src/test/unit/api/ticketRichRender.responseSchema.test.ts src/test/unit/api/ticketRichRender.helper.test.ts src/test/unit/api/ticketService.richRender.contract.test.ts src/test/unit/api/ticketCommentResponseSchema.contactAuthor.test.ts src/test/unit/api/ticketService.getTicketComments.contactAuthor.test.ts`
 - (2026-03-10) Validation note:
   - Linting `server/src/lib/api/services/TicketService.ts` and `server/vitest.config.ts` with `--max-warnings=0` still fails because those files already carry unrelated repo warnings. The targeted lint pass for the new helper/tests/mobile API types is clean.
+- (2026-03-10) Mobile wrapper/runtime packaging implementation/validation:
+  - `cd ee/mobile && npm install`
+  - `cd ee/mobile && npx expo install react-native-webview`
+  - `cd ee/mobile && npm install -D react-test-renderer@19.1.0 @types/react-test-renderer@19.1.0`
+  - `node ee/mobile/scripts/generate-ticket-mobile-editor-html.mjs`
+  - `cd ee/mobile && npx vitest run src/features/ticketRichText/TicketRichTextEditor.test.ts --config vitest.config.ts`
+  - `cd ee/mobile && npx tsc --noEmit`
+  - `npx eslint ee/mobile/src/features/ticketRichText/TicketRichTextEditor.tsx ee/mobile/src/features/ticketRichText/TicketRichTextToolbar.tsx ee/mobile/src/features/ticketRichText/bridge.ts ee/mobile/src/features/ticketRichText/helpers.ts ee/mobile/src/features/ticketRichText/types.ts ee/mobile/src/features/ticketRichText/TicketRichTextEditor.test.ts ee/mobile/test/mocks/react-native.ts ee/mobile/test/mocks/react-native-webview.ts ee/mobile/vitest.config.ts ee/mobile/vitest.setup.ts ee/mobile/metro.config.js packages/tickets/src/lib/ticketMobileEditorRuntime.ts --max-warnings=0`
+- (2026-03-10) Validation note:
+  - `react-test-renderer` emits an upstream deprecation warning on stderr under React 19 during the wrapper tests, but the tests themselves pass and there is no current mobile-native testing library in this app to replace it.
 
 ## Links / References
 
@@ -91,6 +106,17 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `packages/tickets/src/lib/ticketMobileEditorBridge.ts`
   - `packages/tickets/src/lib/ticketMobileEditorRuntime.ts`
   - `packages/tickets/vitest.config.ts`
+  - `ee/mobile/metro.config.js`
+  - `ee/mobile/scripts/generate-ticket-mobile-editor-html.mjs`
+  - `ee/mobile/scripts/ticket-mobile-editor-browser-entry.ts`
+  - `ee/mobile/src/features/ticketRichText/TicketRichTextEditor.tsx`
+  - `ee/mobile/src/features/ticketRichText/TicketRichTextToolbar.tsx`
+  - `ee/mobile/src/features/ticketRichText/bridge.ts`
+  - `ee/mobile/src/features/ticketRichText/helpers.ts`
+  - `ee/mobile/src/features/ticketRichText/types.ts`
+  - `ee/mobile/src/features/ticketRichText/generatedEditorHtml.ts`
+  - `ee/mobile/src/features/ticketRichText/TicketRichTextEditor.test.ts`
+  - `ee/mobile/test/mocks/react-native-webview.ts`
   - `packages/ui/src/editor/RichTextViewer.tsx`
   - `packages/formatting/src/blocknoteUtils.ts`
   - `server/src/test/unit/api/ticketRichRender.responseSchema.test.ts`
