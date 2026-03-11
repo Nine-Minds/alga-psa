@@ -29,6 +29,7 @@ import {
 import { ListOptions } from '../controllers/types';
 import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
+import { renderTicketDescriptionHtml, renderTicketRichTextHtml } from './ticketRichRender';
 // import { performanceTracker } from '../../analytics/performanceTracking';
 
 const TICKET_MOBILE_LIST_FIELDS = [
@@ -332,6 +333,7 @@ export class TicketService extends BaseService<ITicket> {
 
     return {
       ...(ticket as ITicketWithDetails),
+      description_html: renderTicketDescriptionHtml(ticket.attributes),
       documents
     } as ITicketWithDetails;
   }
@@ -679,6 +681,7 @@ export class TicketService extends BaseService<ITicket> {
     return comments.map(comment => ({
       ...comment,
       comment_text: comment.note,
+      comment_html: renderTicketRichTextHtml(comment.note),
       created_by: comment.user_id ?? null,
       created_by_name: comment.created_by_name || comment.author_contact_name || null,
       author_contact_id: comment.author_contact_id || comment.contact_id || null,
@@ -758,6 +761,7 @@ export class TicketService extends BaseService<ITicket> {
       return {
         ...comment,
         comment_text: comment.note,
+        comment_html: renderTicketRichTextHtml(comment.note),
         created_by: comment.user_id ?? null,
         author_contact_id: comment.contact_id ?? null,
         author_contact_name: null,

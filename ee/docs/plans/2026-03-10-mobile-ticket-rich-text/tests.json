@@ -200,25 +200,25 @@
   {
     "id": "T034",
     "description": "API contract: ticket detail responses expose normalized rich render data for description content suitable for mobile rendering.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019", "F020"]
   },
   {
     "id": "T035",
     "description": "API contract: ticket comment list responses expose normalized rich render data for saved comment content suitable for mobile rendering.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019", "F020"]
   },
   {
     "id": "T036",
     "description": "Unit: server rich render helper derives HTML for serialized BlockNote JSON using the shared formatting package rather than a mobile-only renderer.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {
     "id": "T037",
     "description": "Unit: server rich render helper derives HTML for ProseMirror/Tiptap `{type:'doc'}` payloads using the shared formatting package.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {

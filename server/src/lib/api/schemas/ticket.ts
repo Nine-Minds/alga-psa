@@ -160,7 +160,8 @@ export const ticketWithDetailsResponseSchema = ticketResponseSchema.extend({
     first_name: z.string(),
     last_name: z.string(),
     email: z.string()
-  }).optional()
+  }).optional(),
+  description_html: z.string().optional()
 });
 
 // Ticket comment schemas
@@ -176,6 +177,7 @@ export const ticketCommentResponseSchema = z.object({
   comment_id: uuidSchema,
   ticket_id: uuidSchema,
   comment_text: z.string(),
+  comment_html: z.string().optional(),
   is_internal: z.boolean(),
   time_spent: z.number().nullable(),
   created_by: uuidSchema.nullable(),

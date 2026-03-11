@@ -22,6 +22,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-10) Remove the `DEFAULT_BLOCK` dependency on `@alga-psa/ui/editor` from the shared ticket helper. The helper now owns a local empty paragraph block shape so unit tests and future mobile/runtime code do not pull in the web editor bundle transitively.
 - (2026-03-10) Implement the runtime and bridge as pure library classes in `packages/tickets` before wiring React Native. This keeps Tiptap behavior, request correlation, and debounced state emission testable in jsdom without needing a live WebView.
 - (2026-03-10) Use `@tiptap/core` with `StarterKit`, `Link`, and `Underline` for the mobile runtime. Initialize BlockNote/legacy content by converting it through shared HTML conversion helpers, and initialize ProseMirror payloads directly as JSON.
+- (2026-03-10) Resolve the first API contract revision by exposing derived HTML only for now: `description_html` on ticket detail responses and `comment_html` on ticket comment responses. This satisfies mobile rendering/debugging needs without expanding the transport shape to normalized JSON yet.
 
 ## Discoveries / Constraints
 
@@ -37,6 +38,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-10) `packages/tickets/vitest.config.ts` is the right test entrypoint for workspace package tests. Running the repo-root Vitest wrapper with a package file filter did not match the test file because the root config delegates to `server/vitest.config.ts`.
 - (2026-03-10) `ee/mobile/package.json` still does not declare `react-native-webview`, so the next mobile-wrapper slice will need to add the dependency and keep runtime logic outside the component layer.
 - (2026-03-10) Using the shared formatting package from the runtime test path emits existing test-environment secret fallback warnings on stderr, but the package-local runtime/bridge assertions still pass and the warning is unrelated to the new runtime behavior.
+- (2026-03-10) There is still no existing local WebView HTML asset pattern in `ee/mobile`; the closest repo precedent is the extension iframe/browser bundle flow, so the wrapper slice will need to establish its own asset-loading path.
+- (2026-03-10) `convertBlockContentToHTML()` already handles serialized BlockNote JSON and ProseMirror `{type:'doc'}` payloads, but it logs and returns an invalid-content placeholder for legacy plain strings. The new server helper wraps it and falls back to escaped plain text for malformed/legacy content instead of propagating the placeholder to mobile.
+- (2026-03-10) Server ticket detail/comment contracts can be extended compatibly by adding optional `description_html` and `comment_html` fields; existing `comment_text` and description storage semantics do not need to change for this slice.
 
 ## Commands / Runbooks
 
@@ -66,6 +70,13 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `sed -n '1,220p' packages/documents/src/components/DocumentViewer.tsx`
   - `cd packages/tickets && npx vitest run src/lib/ticketRichText.test.ts src/lib/ticketMobileEditorBridge.test.ts src/lib/ticketMobileEditorRuntime.test.ts --config vitest.config.ts`
   - `npx eslint packages/tickets/src/lib/ticketMobileEditorRuntime.ts packages/tickets/src/lib/ticketMobileEditorRuntime.test.ts packages/tickets/src/lib/ticketMobileEditorBridge.ts packages/tickets/src/lib/ticketMobileEditorBridge.test.ts --max-warnings=0`
+- (2026-03-10) Server/mobile render-contract implementation/validation:
+  - `sed -n '1,220p' server/src/lib/api/services/ticketRichRender.ts`
+  - `git diff -- server/src/lib/api/services/ticketRichRender.ts server/src/lib/api/services/TicketService.ts server/src/lib/api/schemas/ticket.ts ee/mobile/src/api/tickets.ts`
+  - `npx eslint server/src/lib/api/services/ticketRichRender.ts server/src/test/unit/api/ticketRichRender.responseSchema.test.ts server/src/test/unit/api/ticketRichRender.helper.test.ts server/src/test/unit/api/ticketService.richRender.contract.test.ts ee/mobile/src/api/tickets.ts --max-warnings=0`
+  - `cd server && npx vitest run src/test/unit/api/ticketRichRender.responseSchema.test.ts src/test/unit/api/ticketRichRender.helper.test.ts src/test/unit/api/ticketService.richRender.contract.test.ts src/test/unit/api/ticketCommentResponseSchema.contactAuthor.test.ts src/test/unit/api/ticketService.getTicketComments.contactAuthor.test.ts`
+- (2026-03-10) Validation note:
+  - Linting `server/src/lib/api/services/TicketService.ts` and `server/vitest.config.ts` with `--max-warnings=0` still fails because those files already carry unrelated repo warnings. The targeted lint pass for the new helper/tests/mobile API types is clean.
 
 ## Links / References
 
@@ -73,6 +84,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `ee/mobile/src/screens/TicketDetailScreen.tsx`
   - `ee/mobile/src/api/tickets.ts`
   - `server/src/lib/api/services/TicketService.ts`
+  - `server/src/lib/api/services/ticketRichRender.ts`
   - `server/src/lib/api/schemas/ticket.ts`
   - `packages/tickets/src/lib/ticketRichText.ts`
   - `packages/tickets/src/lib/index.ts`
@@ -81,6 +93,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `packages/tickets/vitest.config.ts`
   - `packages/ui/src/editor/RichTextViewer.tsx`
   - `packages/formatting/src/blocknoteUtils.ts`
+  - `server/src/test/unit/api/ticketRichRender.responseSchema.test.ts`
+  - `server/src/test/unit/api/ticketRichRender.helper.test.ts`
+  - `server/src/test/unit/api/ticketService.richRender.contract.test.ts`
 - Related plan:
   - `ee/docs/plans/2026-03-09-ticket-description-rich-text-cutover/PRD.md`
 - External references used during research:
@@ -91,7 +106,6 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 
 ## Open Questions
 
-- Should the first API contract revision expose only derived HTML render fields, or both HTML and normalized JSON payloads for mobile consumers?
 - Is heading support required in the initial mobile toolbar, or should v1 remain limited to inline formatting and lists?
 - Is rendering saved image content sufficient for v1, or do we need image insertion support in the first mobile editor release?
 - Is rendering existing mentions sufficient for v1, or do we need mobile mention authoring in the first release?

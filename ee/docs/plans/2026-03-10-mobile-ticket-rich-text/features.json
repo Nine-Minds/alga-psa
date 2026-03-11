@@ -110,13 +110,13 @@
   {
     "id": "F019",
     "description": "Expose server-derived rich render data for ticket descriptions and comments, such as normalized HTML output, using existing shared formatting helpers instead of a mobile-only converter.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {
     "id": "F020",
     "description": "Update mobile ticket API types to understand the richer ticket description and ticket comment payloads needed by the new renderer and editor flows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {
