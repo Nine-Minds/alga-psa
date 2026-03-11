@@ -438,85 +438,83 @@ export function TicketsListScreen({ navigation }: Props) {
     );
   }
 
-  const header = useMemo(() => {
-    return (
-      <View style={{ marginBottom: spacing.md }}>
-        {stats ? (
-          <View
+  const header = (
+    <View style={{ marginBottom: spacing.md }}>
+      {stats ? (
+        <View
+          style={{
+            padding: spacing.md,
+            borderRadius: 12,
+            backgroundColor: colors.card,
+            borderWidth: 1,
+            borderColor: colors.border,
+            marginBottom: spacing.md,
+          }}
+        >
+          <Text style={{ ...typography.caption, color: colors.mutedText }}>Summary</Text>
+          <Text style={{ ...typography.body, color: colors.text, marginTop: 2 }}>
+            Open {stats.open_tickets} • Unassigned {stats.unassigned_tickets} • Overdue {stats.overdue_tickets}
+          </Text>
+        </View>
+      ) : null}
+      <View style={{ flexDirection: "row" }}>
+        <View style={{ flex: 1 }}>
+          <TextInput
+            value={searchInput}
+            onChangeText={setSearchInput}
+            placeholder="Search tickets"
+            autoCapitalize="none"
+            autoCorrect={false}
+            accessibilityLabel="Search tickets"
             style={{
-              padding: spacing.md,
-              borderRadius: 12,
-              backgroundColor: colors.card,
-              borderWidth: 1,
-              borderColor: colors.border,
-              marginBottom: spacing.md,
-            }}
-          >
-            <Text style={{ ...typography.caption, color: colors.mutedText }}>Summary</Text>
-            <Text style={{ ...typography.body, color: colors.text, marginTop: 2 }}>
-              Open {stats.open_tickets} • Unassigned {stats.unassigned_tickets} • Overdue {stats.overdue_tickets}
-            </Text>
-          </View>
-        ) : null}
-        <View style={{ flexDirection: "row" }}>
-          <View style={{ flex: 1 }}>
-            <TextInput
-              value={searchInput}
-              onChangeText={setSearchInput}
-              placeholder="Search tickets"
-              autoCapitalize="none"
-              autoCorrect={false}
-              accessibilityLabel="Search tickets"
-              style={{
-                paddingVertical: spacing.sm,
-                paddingHorizontal: spacing.md,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: colors.border,
-                backgroundColor: colors.background,
-                color: colors.text,
-              }}
-            />
-          </View>
-          <View style={{ width: spacing.sm }} />
-          <Pressable
-            onPress={() => setFiltersOpen(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Open filters"
-            style={({ pressed }) => ({
+              paddingVertical: spacing.sm,
               paddingHorizontal: spacing.md,
               borderRadius: 12,
               borderWidth: 1,
               borderColor: colors.border,
-              backgroundColor: colors.card,
-              justifyContent: "center",
-              opacity: pressed ? 0.95 : 1,
-            })}
-          >
-            <Text style={{ ...typography.caption, color: colors.text, fontWeight: "600" }}>Filters</Text>
-          </Pressable>
+              backgroundColor: colors.background,
+              color: colors.text,
+            }}
+          />
         </View>
-        <FilterChipBar
-          filters={filters}
+        <View style={{ width: spacing.sm }} />
+        <Pressable
           onPress={() => setFiltersOpen(true)}
-          onClearAll={() => setFilters({ ...DEFAULT_FILTERS })}
-        />
-        {lastRefreshedAtIso ? (
-          <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.mutedText }}>
-            Last refreshed: {formatDateTimeWithRelative(lastRefreshedAtIso)}
-          </Text>
-        ) : null}
-        <QuickFilters
-          onSelect={(kind) => {
-            if (kind === "mine") setFilters({ ...filters, assignee: "me" });
-            if (kind === "unassigned") setFilters({ ...filters, assignee: "unassigned" });
-            if (kind === "highPriority") setFilters({ ...filters, priorityName: "high" });
-            if (kind === "recent") setFilters({ ...filters, updatedSinceDays: 7, updatedSinceDate: "" });
-          }}
-        />
+          accessibilityRole="button"
+          accessibilityLabel="Open filters"
+          style={({ pressed }) => ({
+            paddingHorizontal: spacing.md,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.card,
+            justifyContent: "center",
+            opacity: pressed ? 0.95 : 1,
+          })}
+        >
+          <Text style={{ ...typography.caption, color: colors.text, fontWeight: "600" }}>Filters</Text>
+        </Pressable>
       </View>
-    );
-  }, [filters, searchInput, stats]);
+      <FilterChipBar
+        filters={filters}
+        onPress={() => setFiltersOpen(true)}
+        onClearAll={() => setFilters({ ...DEFAULT_FILTERS })}
+      />
+      {lastRefreshedAtIso ? (
+        <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.mutedText }}>
+          Last refreshed: {formatDateTimeWithRelative(lastRefreshedAtIso)}
+        </Text>
+      ) : null}
+      <QuickFilters
+        onSelect={(kind) => {
+          if (kind === "mine") setFilters({ ...filters, assignee: "me" });
+          if (kind === "unassigned") setFilters({ ...filters, assignee: "unassigned" });
+          if (kind === "highPriority") setFilters({ ...filters, priorityName: "high" });
+          if (kind === "recent") setFilters({ ...filters, updatedSinceDays: 7, updatedSinceDate: "" });
+        }}
+      />
+    </View>
+  );
 
   return (
     <View style={{ flex: 1 }}>

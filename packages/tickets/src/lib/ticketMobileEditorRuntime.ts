@@ -54,10 +54,15 @@ export class TicketMobileEditorRuntime {
   private currentFormat: TicketMobileRichTextFormat = 'blocknote';
 
   constructor(options: TicketMobileEditorRuntimeOptions) {
+    const timerHost = globalThis as typeof globalThis & {
+      setTimeout: typeof setTimeout;
+      clearTimeout: typeof clearTimeout;
+    };
+
     this.element = options.element;
     this.emitMessage = options.emitMessage;
-    this.setTimeoutFn = options.setTimeoutFn ?? setTimeout;
-    this.clearTimeoutFn = options.clearTimeoutFn ?? clearTimeout;
+    this.setTimeoutFn = options.setTimeoutFn ?? timerHost.setTimeout.bind(timerHost);
+    this.clearTimeoutFn = options.clearTimeoutFn ?? timerHost.clearTimeout.bind(timerHost);
   }
 
   getEditor(): Editor | null {

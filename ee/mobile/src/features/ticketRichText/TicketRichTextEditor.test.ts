@@ -255,6 +255,25 @@ describe("TicketRichTextEditor", () => {
     );
   });
 
+  it("can auto-press the first rendered link for dev QA flows", () => {
+    renderEditor({
+      editable: false,
+      qaAutoPressFirstLink: true,
+    });
+
+    emitLoadEnd();
+    emitRuntimeMessage({
+      type: "editor-ready",
+      payload: {
+        format: "blocknote",
+        editable: false,
+      },
+    });
+
+    expect(__getLastInjectedJavaScript()).toContain("document.querySelector('a[href]')");
+    expect(__getLastInjectedJavaScript()).toContain("link.click()");
+  });
+
   it("logs ready timing and request timeout failures only in development", async () => {
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);

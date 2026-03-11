@@ -29,6 +29,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-11) Let ticket screen read-only surfaces provide the external-link callback to the wrapper, and have the wrapper fall back to `Linking.openURL` only when the screen does not supply one. This keeps external navigation blocked inside the WebView while making link handling testable at the screen layer.
 - (2026-03-11) Use Tiptap's `Image` extension in the mobile runtime so BlockNote image blocks converted to HTML are preserved in read-only rendering without adding mobile-side image authoring.
 - (2026-03-11) When the focused ticket rich-text e2e server runs with `E2E_SKIP_APP_INIT=true`, skip `TicketService.safePublishEvent()` so comment creation can exercise DB-backed API round trips without requiring Redis/event-bus infrastructure in the local harness.
+- (2026-03-11) For autonomous native QA, reuse the existing `AuthCallback` route instead of inventing a second dev-only screen. Dev-only `qaSession` and `qaOtt`/`qaState` params are enough to bootstrap a signed-in mobile session and then deep-link straight into ticket detail scenarios on both simulators.
+- (2026-03-11) Let successful auth callback handling rely on `setSession()` and the root navigator's signed-in branch instead of forcing `navigation.reset(...)`. The conditional navigator already swaps stacks, and the explicit reset produced dev-time navigator errors on Android.
 
 ## Discoveries / Constraints
 
@@ -58,7 +60,21 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-11) Export `TicketDetailBody` for behavior-focused tests so mobile ticket save/draft/send coverage can exercise the actual screen state machine with mocked APIs/storage instead of reimplementing it through isolated section tests.
 - (2026-03-11) Docker is not usable in this environment right now, but local PostgreSQL 14 binaries are installed; a host-run database on `127.0.0.1:5438` is enough to execute focused Next-backed ticket API round-trip tests.
 - (2026-03-11) `ee/mobile` currently only has `.env.example`; without a real `.env` containing `EXPO_PUBLIC_ALGA_BASE_URL`, the Expo app cannot reach an authenticated ticket environment for manual iOS/Android QA.
-- (2026-03-11) `xcrun simctl` lists iOS simulators on this machine, but `adb devices` reports no attached Android device or running emulator, so Android manual QA cannot be executed here yet.
+- (2026-03-11) `xcrun simctl` lists iOS simulators on this machine. `adb devices` is empty until an emulator is started, but `emulator -list-avds` confirms a local `Pixel_8_API_35` AVD is available if the remaining server/auth blockers are resolved.
+- (2026-03-11) This worktree also lacks `server/.env` and `server/.env.local`, so there is no branch-local server target configured for live mobile QA without borrowing another worktree's infrastructure.
+- (2026-03-11) A live OrbStack-backed Alga infrastructure appears to be available from the `teams-integration` worktree on PostgreSQL `55433`, Redis `16380`, and GreenMail SMTP `3026`, but no corresponding HTTP server port is currently listening.
+- (2026-03-11) Expo Secure Store on iOS uses generic keychain password items keyed by service `app:no-auth` / `app:auth`, but `xcrun simctl keychain` only supports certificate operations, so the app session and pending mobile-auth state cannot be pre-seeded from the shell without app-side changes.
+- (2026-03-11) This machine does not have `idb`, `applesimutils`, or `cliclick`, and `simctl` exposes no tap/text input commands, so there is no reliable native iOS UI automation path available here for the remaining "manual QA" plan items.
+- (2026-03-11) Android tooling is partially available after all: the machine has the Android emulator binary, `adb`, and a `Pixel_8_API_35` AVD. The remaining Android blocker is not device availability but the lack of a reachable authenticated server target plus no app-side auth bypass hook.
+- (2026-03-11) A host-run server wire-in attempt against `teams-integration` failed: TCP ports `55433`, `16380`, and `3026` listen via OrbStack, but `psql postgresql://app_user:postpass123@127.0.0.1:55433/server?connect_timeout=3` times out and `pg_isready -h 127.0.0.1 -p 55433 -d server -U app_user -t 3` reports no response.
+- (2026-03-11) Because Expo Secure Store uses encrypted native storage on Android as well, `adb` access is not enough to seed a mobile session or pending auth state from the shell without app-side support.
+- (2026-03-11) The mobile app does not currently expose any dev-only auth/session injection or ticket deep-link bootstrap that would let manual QA bypass the interactive browser sign-in flow.
+- (2026-03-11) A host-run Next server can be started directly from this worktree on `http://127.0.0.1:3301` against the local `test_database` on PostgreSQL `127.0.0.1:5438` with `E2E_SKIP_APP_INIT=true`; `/api/v1/mobile/auth/capabilities` and `/auth/mobile/handoff` both respond correctly in that configuration.
+- (2026-03-11) The focused ticket rich-text test database already contains internal users, roles, and tickets under tenant `f859dad3-1bca-42b2-99b5-a35af12960eb`; updating `glinda@emeraldcity.oz` to a real password hash made browser sign-in theoretically possible for a human-run mobile check.
+- (2026-03-11) The remaining blocker for `T043`-`T045` is now native execution, not server reachability: there is still no reliable shell-driven iOS interaction path on this machine, and the mobile app still lacks a dev-only session/bootstrap hook that would let the simulator or emulator skip the interactive sign-in/browser return path.
+- (2026-03-11) Expo Go on Android only preserved deep-link paths and query params reliably when `adb` invoked `am start` inside a quoted device-shell command like `adb shell 'am start ...'`; otherwise Expo only received the bare `exp://127.0.0.1:8081` root URL.
+- (2026-03-11) `AuthCallbackScreen` was still calling `navigation.reset({ name: 'Tabs' })` after successful OTT exchange. Because the root stack is conditionally rendered by auth state, that reset could target the wrong navigator tree and emit a dev-time `RESET` warning instead of transitioning cleanly.
+- (2026-03-11) `TicketDetailBody` had a real hook-order bug once the dev QA scenario hook was added below the early `ticket/session` returns. Android native reloads surfaced it immediately with `Rendered more hooks than during the previous render.`; moving all hooks above the return guards fixed the crash.
 
 ## Commands / Runbooks
 
@@ -136,6 +152,54 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd ee/mobile && npx tsc --noEmit`
 - (2026-03-11) Validation note:
   - The focused ticket rich-text e2e runs a real Next server and full test DB setup, so it emits a large amount of migration/bootstrap logging before the two assertions complete successfully.
+- (2026-03-11) Manual-QA environment audit:
+  - `ls -la ee/mobile`
+  - `sed -n '1,220p' ee/mobile/.env.example`
+  - `xcrun simctl list devices`
+  - `adb devices`
+  - `lsof -iTCP -sTCP:LISTEN -n -P | rg ':(3003|55433|16380|57432|6380|6433|1234|4025|4143|4993) '`
+  - `rg -n '55433|16380|3026' ../*/server/.env ../*/server/.env.local /Users/roberisaacs/alga-psa/server/.env`
+  - `xcrun simctl help`
+  - `xcrun simctl help keychain`
+  - `which idb || true`
+  - `which applesimutils || true`
+  - `which cliclick || true`
+  - `rg -n "kSec|SecureStore|keychain|service" ee/mobile/node_modules/expo-secure-store -g '*.{m,mm,swift,h,ts,js}'`
+- (2026-03-11) Android/manual-QA follow-up audit:
+  - `which emulator || true`
+  - `emulator -list-avds 2>/dev/null || true`
+  - `which adb || true`
+  - `ls -la server | sed -n '1,120p'`
+  - `ls -la ../teams-integration/server | sed -n '1,120p'`
+  - `grep -n 'postgres\\|pgbouncer\\|redis\\|hocuspocus' /etc/hosts || true`
+  - `for d in ../*; do for f in "$d/server/.env" "$d/server/.env.local"; do if [ -f "$f" ]; then printf '=== %s ===\\n' "$f"; rg -n '^(EXPOSE_SERVER_PORT|EXPOSE_DB_PORT|EXPOSE_REDIS_PORT|EXPOSE_PGBOUNCER_PORT|DB_PASSWORD_ADMIN|HOST|NEXTAUTH_URL|APPLICATION_URL)=' "$f"; fi; done; done`
+  - `PORT=3301 npm run dev`
+  - `PGPASSWORD=postpass123 psql 'postgresql://app_user:postpass123@127.0.0.1:55433/server?connect_timeout=3' -c 'select 1'`
+  - `pg_isready -h 127.0.0.1 -p 55433 -d server -U app_user -t 3`
+  - `sed -n '1,260p' ee/mobile/src/auth/AuthContext.tsx`
+  - `sed -n '1,120p' ee/mobile/src/storage/secureStorage.ts`
+  - `rg -n "DEV|__DEV__|debug.*session|seed.*session|test session|mock auth|bypass auth|deep link.*ticket" ee/mobile/src -g '*.{ts,tsx}'`
+- (2026-03-11) Local host-run mobile-auth target checkpoint:
+  - `psql 'postgresql://postgres:postpass123@127.0.0.1:5438/postgres' -Atqc "select datname from pg_database order by datname;"`
+  - `psql 'postgresql://app_user:postpass123@127.0.0.1:5438/test_database' -F $'\t' -Atqc "select ticket_id, ticket_number, title, tenant from tickets order by updated_at desc limit 10;"`
+  - `NEXTAUTH_SECRET=localtest-nextauth-secret npx tsx -e "import { hashPassword } from './packages/core/src/lib/encryption.ts'; (async () => { console.log(await hashPassword('TestPassword123!')); })();"`
+  - `psql 'postgresql://app_user:postpass123@127.0.0.1:5438/test_database' -Atqc "update users set hashed_password='<generated hash>' where email='glinda@emeraldcity.oz';"`
+  - `cd server && PORT=3301 HOST=http://127.0.0.1:3301 NEXTAUTH_URL=http://127.0.0.1:3301 APPLICATION_URL=http://127.0.0.1:3301 NM_STORE_URL=http://127.0.0.1:3301 DB_HOST=127.0.0.1 DB_PORT=5438 DB_NAME_SERVER=test_database DB_USER_ADMIN=postgres DB_USER_SERVER=app_user DB_PASSWORD_ADMIN=postpass123 DB_PASSWORD_SERVER=postpass123 NEXTAUTH_SECRET=localtest-nextauth-secret E2E_SKIP_APP_INIT=true npm run dev`
+  - `curl -sS --max-time 5 http://127.0.0.1:3301/api/v1/mobile/auth/capabilities`
+  - `curl -I -sS --max-time 5 'http://127.0.0.1:3301/auth/mobile/handoff?redirect=alga://auth/callback&state=test-state'`
+- (2026-03-11) Human-run manual QA bootstrap if someone takes over interactively:
+  - Base URL: `http://127.0.0.1:3301`
+  - Browser login: `glinda@emeraldcity.oz` / `TestPassword123!`
+  - Rich-text ticket candidates in `test_database`: `TIC1006`, `TIC1007`, `TIC1003`, `TIC1002`, `TIC1001`
+- (2026-03-11) Native QA automation checkpoint:
+  - Generate a dev OTT directly in `test_database`, then open Expo Go auth callback on Android:
+    - `adb shell 'am start -W -a android.intent.action.VIEW -d "exp://127.0.0.1:8081/--/auth/callback?qaOtt=<ott>&qaState=<state>" host.exp.exponent'`
+  - Open the Android rich smoke and malformed guard scenarios:
+    - `adb shell 'am start -W -a android.intent.action.VIEW -d "exp://127.0.0.1:8081/--/ticket/23579d62-a0f1-41e8-ac15-e3a7e317a67b?qaScenario=richtext-smoke" host.exp.exponent'`
+    - `adb shell 'am start -W -a android.intent.action.VIEW -d "exp://127.0.0.1:8081/--/ticket/4ccb0b24-1bb3-4921-8007-e34f985eb927?qaScenario=malformed-guard" host.exp.exponent'`
+  - Capture native evidence:
+    - `adb exec-out screencap -p > /tmp/android-malformed-passed.png`
+    - `xcrun simctl io booted screenshot /tmp/ios-ticket-richtext-mid.png`
 
 ## Links / References
 
@@ -193,8 +257,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-11) Completed `T025`, `T026`, `T031`, and `T032` in `ee/mobile/src/screens/TicketDetailScreen.richTextBehaviors.test.ts`.
 - (2026-03-11) Completed `T039` and `T041` with legacy-content guard coverage at the mobile screen layer: plain-text descriptions still seed the editor and save back serialized JSON, while plain-text comments remain viewable through the read-only wrapper path.
 - (2026-03-11) Completed `T038` and `T040` with a new focused Next-backed e2e that updates rich descriptions and creates rich comments against a real test database, plus harness fixes for admin-only schema normalization and comment cleanup ordering.
+- (2026-03-11) Completed the remaining manual-native plan items `T043`, `T044`, and `T045` by adding a dev-only QA bootstrap on `AuthCallback`, then running the smoke and malformed guard scenarios on iOS and Android against the host-run server at `http://127.0.0.1:3301`.
+- (2026-03-11) Added focused dev-QA coverage around the new session/bootstrap path in `ee/mobile/src/screens/AuthCallbackScreen.qaSession.test.ts`, plus wrapper coverage that auto-pressing the first read-only link stays available for the native smoke scenario.
+- (2026-03-11) Fixed two native-only issues uncovered while closing manual QA: auth callback no longer forces a navigator reset after session exchange, and `TicketDetailBody` no longer changes hook order once the QA scenario effect is active.
 
 ## Current Blockers
 
-- (2026-03-11) `T043` and `T045` are blocked until `ee/mobile/.env` points at a reachable authenticated Alga environment; the Expo app currently has no `EXPO_PUBLIC_ALGA_BASE_URL` configured in this worktree.
-- (2026-03-11) `T044` is additionally blocked by the absence of any attached Android device or running emulator in `adb devices`.
+- (2026-03-11) No remaining blockers in this plan folder. Feature and test checklist items are complete.

@@ -254,19 +254,19 @@
   {
     "id": "T043",
     "description": "Manual QA: iOS ticket detail screen supports viewing, editing description, composing comment, tapping links, and saving normal-sized content without layout breakage.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011", "F014", "F015", "F016", "F017"]
   },
   {
     "id": "T044",
     "description": "Manual QA: Android ticket detail screen supports viewing, editing description, composing comment, tapping links, and saving normal-sized content without layout breakage.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011", "F014", "F015", "F016", "F017"]
   },
   {
     "id": "T045",
     "description": "Manual QA: malformed saved description or comment payloads degrade to safe text display rather than breaking the rest of the ticket detail screen.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   }
 ]

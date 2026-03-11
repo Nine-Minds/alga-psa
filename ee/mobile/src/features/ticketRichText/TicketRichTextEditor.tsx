@@ -68,6 +68,7 @@ export type TicketRichTextEditorProps = {
   onContentChange?: (payload: { html: string; json: unknown }) => void;
   onError?: (payload: { code: string; message: string; requestId?: string }) => void;
   onLinkPress?: (url: string) => void;
+  qaAutoPressFirstLink?: boolean;
 };
 
 export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRichTextEditorProps>(
@@ -87,12 +88,14 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
       onContentChange,
       onError,
       onLinkPress,
+      qaAutoPressFirstLink = false,
     },
     ref,
   ) {
     const webViewRef = useRef<WebView>(null);
     const bridgeRef = useRef<TicketMobileEditorBridgeClient | null>(null);
     const hasLoadedRef = useRef(false);
+    const qaAutoPressTriggeredRef = useRef(false);
     const loadStartedAtRef = useRef<number | null>(null);
     const lastContentRef = useRef<string | null | undefined>(content);
     const lastEditableRef = useRef(editable);
@@ -178,6 +181,22 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
       lastContentRef.current = content;
       bridgeRef.current.sendCommand("set-content", content ?? "");
     }, [content]);
+
+    useEffect(() => {
+      if (!qaAutoPressFirstLink) {
+        qaAutoPressTriggeredRef.current = false;
+        return;
+      }
+
+      if (!isDevEnvironment() || !ready || editable || qaAutoPressTriggeredRef.current) {
+        return;
+      }
+
+      qaAutoPressTriggeredRef.current = true;
+      webViewRef.current?.injectJavaScript(
+        "(() => { const link = document.querySelector('a[href]'); if (link instanceof HTMLElement) link.click(); })(); true;",
+      );
+    }, [editable, qaAutoPressFirstLink, ready]);
 
     useImperativeHandle(ref, () => ({
       focus() {

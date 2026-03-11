@@ -1,6 +1,7 @@
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
+import { Linking } from "react-native";
 import type { TicketComment, TicketDetail } from "../api/tickets";
 
 const {
@@ -260,7 +261,9 @@ async function flushAsyncWork(): Promise<void> {
   });
 }
 
-function renderBody(): ReactTestRenderer {
+function renderBody(
+  props: Partial<React.ComponentProps<typeof TicketDetailBody>> = {},
+): ReactTestRenderer {
   let renderer: ReactTestRenderer | null = null;
 
   act(() => {
@@ -274,6 +277,8 @@ function renderBody(): ReactTestRenderer {
         },
         session: baseSession,
         refreshSession: async () => null,
+        qaScenario: undefined,
+        ...props,
       }),
     );
   });
@@ -497,5 +502,57 @@ describe("TicketDetailScreen rich text behavior flows", () => {
       }),
     );
     expect(deleteItemMock).toHaveBeenCalledWith("alga.mobile.ticketDraft.user-1.ticket-1");
+  });
+
+  it("can run the dev QA smoke scenario through description save, comment send, and link handoff", async () => {
+    vi.useFakeTimers();
+    const openUrlSpy = vi.spyOn(Linking, "openURL").mockResolvedValue(undefined as never);
+
+    try {
+      const renderer = renderBody({ qaScenario: "richtext-smoke" });
+      await flushAsyncWork();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(700);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(700);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(700);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      const readOnlyDescription = findRichTextEditor(renderer, "Loading description…");
+      expect(readOnlyDescription.props.qaAutoPressFirstLink).toBe(true);
+      expect(updateTicketAttributesMock).toHaveBeenCalledTimes(1);
+      expect(addTicketCommentMock).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        (readOnlyDescription.props.onLinkPress as ((url: string) => void) | undefined)?.(
+          "https://example.com/mobile-rich-text-smoke",
+        );
+      });
+      await flushAsyncWork();
+
+      expect(openUrlSpy).toHaveBeenCalledWith("https://example.com/mobile-rich-text-smoke");
+      expect(
+        renderer.root.findAll(
+          (node) =>
+            (node.type as string) === "Text" &&
+            String(Array.isArray(node.props.children) ? node.props.children.join("") : node.props.children).includes(
+              "PASSED - Triggered rich-text link handoff",
+            ),
+        ),
+      ).toHaveLength(1);
+    } finally {
+      openUrlSpy.mockRestore();
+      vi.useRealTimers();
+    }
   });
 });
