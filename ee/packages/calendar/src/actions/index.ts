@@ -1,3 +1,5 @@
+'use server';
+
 import { withAuth } from '@alga-psa/auth/withAuth';
 import {
   initiateCalendarOAuthImpl,

@@ -76,6 +76,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // MSP SSO domain claim lifecycle (dependent challenges before claim rows)
   'msp_sso_domain_verification_challenges', 'msp_sso_tenant_login_domains',
 
+  // Microsoft profile bindings (dependents before profile definitions)
+  'microsoft_profile_consumer_bindings', 'teams_integrations', 'microsoft_profiles',
+
   // User related details
   'user_notification_preferences', 'user_internal_notification_preferences', 'user_preferences',
   'role_permissions', 'user_roles', 'user_auth_accounts',
