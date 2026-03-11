@@ -83,6 +83,7 @@ export interface DocumentFilters {
     sortBy?: 'document_name' | 'updated_at' | 'file_size' | 'created_by_full_name';
     sortOrder?: 'asc' | 'desc';
     showAllDocuments?: boolean;
+    clientVisibility?: 'all' | 'visible' | 'hidden';
 }
 
 // Document preview response

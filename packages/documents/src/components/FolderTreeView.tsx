@@ -1,16 +1,21 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { IFolderNode } from '@alga-psa/types';
-import { getFolderTree, deleteFolder } from '../actions/documentActions';
+import { getFolderTree, deleteFolder, toggleFolderVisibilityByPath } from '../actions/documentActions';
 import { ChevronRight, ChevronDown, Folder, FolderOpen, Trash2, ChevronLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import VisibilityToggle from './VisibilityToggle';
 
 interface FolderTreeViewProps {
   onFolderSelect: (folderPath: string | null) => void;
   selectedFolder: string | null;
+  entityId?: string;
+  entityType?: string;
+  showVisibilityIndicators?: boolean;
   onFolderDeleted?: () => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
@@ -19,6 +24,9 @@ interface FolderTreeViewProps {
 export default function FolderTreeView({
   onFolderSelect,
   selectedFolder,
+  entityId,
+  entityType,
+  showVisibilityIndicators = false,
   onFolderDeleted,
   isCollapsed = false,
   onToggleCollapse
@@ -26,11 +34,27 @@ export default function FolderTreeView({
   const [folderTree, setFolderTree] = useState<IFolderNode[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [folderToDelete, setFolderToDelete] = useState<string | null>(null);
   const { t } = useTranslation('common');
+
+  const loadFolderTree = useCallback(async function loadFolderTree() {
+    try {
+      const tree = await getFolderTree(entityId ?? null, entityType ?? null);
+      if (isActionPermissionError(tree)) {
+        handleError(tree.permissionError);
+        return;
+      }
+      setFolderTree(tree);
+    } catch (error) {
+      handleError(error, 'Failed to load folder tree');
+    } finally {
+      setLoading(false);
+    }
+  }, [entityId, entityType]);
 
   useEffect(() => {
     loadFolderTree();
-  }, []);
+  }, [loadFolderTree]);
 
   // Auto-expand parent folders when a folder is selected
   useEffect(() => {
@@ -48,21 +72,6 @@ export default function FolderTreeView({
     }
   }, [selectedFolder]);
 
-  async function loadFolderTree() {
-    try {
-      const tree = await getFolderTree();
-      if (isActionPermissionError(tree)) {
-        handleError(tree.permissionError);
-        return;
-      }
-      setFolderTree(tree);
-    } catch (error) {
-      handleError(error, t('documents.folders.loadFailed', 'Failed to load folder tree'));
-    } finally {
-      setLoading(false);
-    }
-  }
-
   function toggleFolder(path: string) {
     const newExpanded = new Set(expandedFolders);
     if (newExpanded.has(path)) {
@@ -73,19 +82,15 @@ export default function FolderTreeView({
     setExpandedFolders(newExpanded);
   }
 
-  async function handleDeleteFolder(path: string, e: React.MouseEvent) {
+  function handleDeleteFolder(path: string, e: React.MouseEvent) {
     e.stopPropagation();
+    setFolderToDelete(path);
+  }
 
-    if (
-      !confirm(
-        t('documents.folders.deleteConfirm', {
-          name: path,
-          defaultValue: `Are you sure you want to delete the folder "${path}"? This will only work if the folder is empty.`
-        })
-      )
-    ) {
-      return;
-    }
+  async function confirmDeleteFolder() {
+    const path = folderToDelete;
+    if (!path) return;
+    setFolderToDelete(null);
 
     try {
       const deleteResult = await deleteFolder(path);
@@ -112,6 +117,32 @@ export default function FolderTreeView({
       }
     } catch (error) {
       handleError(error, t('documents.folders.deleteFailed', 'Failed to delete folder'));
+    }
+  }
+
+  async function handleToggleVisibility(node: IFolderNode) {
+    const newValue = !node.is_client_visible;
+    try {
+      const result = await toggleFolderVisibilityByPath(
+        node.path,
+        newValue,
+        entityId ?? null,
+        entityType ?? null
+      );
+      if (isActionPermissionError(result)) {
+        handleError(result.permissionError);
+        return;
+      }
+      if (result.folderUpdated) {
+        toast.success(
+          newValue
+            ? t('documents.visibility.markedVisible', { defaultValue: `"${node.name}" is now visible in client portal` })
+            : t('documents.visibility.markedHidden', { defaultValue: `"${node.name}" is now hidden from client portal` })
+        );
+        await loadFolderTree();
+      }
+    } catch (error) {
+      handleError(error, t('documents.visibility.toggleFailed', 'Failed to update folder visibility'));
     }
   }
 
@@ -157,6 +188,21 @@ export default function FolderTreeView({
           )}
 
           <span className="text-sm flex-1">{node.name}</span>
+          {showVisibilityIndicators && typeof node.is_client_visible === 'boolean' && (
+            <div
+              className="flex items-center"
+              onClick={(e) => e.stopPropagation()}
+              title={node.is_client_visible
+                ? t('documents.visibility.clientVisible', 'Client visible')
+                : t('documents.visibility.internalOnly', 'Internal only')}
+            >
+              <VisibilityToggle
+                id={`folder-visibility-indicator-${node.path.replace(/\//g, '-')}`}
+                isClientVisible={Boolean(node.is_client_visible)}
+                onToggle={() => handleToggleVisibility(node)}
+              />
+            </div>
+          )}
           <span className="text-xs text-gray-500">
             {node.documentCount}
           </span>
@@ -219,6 +265,18 @@ export default function FolderTreeView({
 
       {folderTree.map(node => renderFolderNode(node, 0))}
       </div>
+
+      <ConfirmationDialog
+        isOpen={folderToDelete !== null}
+        onClose={() => setFolderToDelete(null)}
+        onConfirm={confirmDeleteFolder}
+        title={t('documents.folders.deleteTitle', 'Delete Folder')}
+        message={t('documents.folders.deleteConfirm', {
+          name: folderToDelete ?? '',
+          defaultValue: `Are you sure you want to delete the folder "${folderToDelete}"? This will only work if the folder is empty.`
+        })}
+        confirmLabel={t('documents.folders.deleteAction', 'Delete')}
+      />
     </div>
   );
 }

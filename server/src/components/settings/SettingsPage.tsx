@@ -45,6 +45,7 @@ import { EmailSettings } from '@alga-psa/integrations/email/settings/entry';
 import Link from 'next/link';
 // Removed import: import { getCurrentUser } from '@alga-psa/users/actions';
 import { ProjectSettings } from '@alga-psa/projects/components';
+
 import { SecretsManagement } from './secrets';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
@@ -85,6 +86,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     ...(isMspI18nEnabled && { language: 'Language' }),
     ticketing: 'Ticketing',
     projects: 'Projects',
+
     interactions: 'Interactions',
     notifications: 'Notifications',
     'time-entry': 'Time Entry',
@@ -194,6 +196,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       icon: Layers,
       content: <ProjectSettings />,
     },
+
     {
       label: "Interactions",
       icon: Handshake,

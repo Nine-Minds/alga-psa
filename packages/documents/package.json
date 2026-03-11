@@ -46,6 +46,10 @@
       "import": "./src/lib/entityImageService.ts",
       "types": "./src/lib/entityImageService.ts"
     },
+    "./lib/shareLinkPublic": {
+      "import": "./src/lib/shareLinkPublic.ts",
+      "types": "./src/lib/shareLinkPublic.ts"
+    },
     "./storage/StorageService": {
       "import": "./src/storage/StorageService.ts",
       "types": "./src/storage/StorageService.ts"

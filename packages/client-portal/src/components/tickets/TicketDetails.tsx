@@ -16,6 +16,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
   getClientTicketDetails,
   getClientTicketDocuments,
+  getClientDocumentFolders,
   addClientTicketComment,
   updateClientTicketComment,
   deleteClientTicketComment,
@@ -87,6 +88,20 @@ export function TicketDetails({
       styles: {}
     }]
   }]);
+  // Client-scoped folder fetcher: returns only folders from client-visible documents
+  const getClientFolders = useCallback(async (): Promise<string[]> => {
+    const folderTree = await getClientDocumentFolders();
+    const paths: string[] = [];
+    const collectPaths = (nodes: typeof folderTree) => {
+      for (const node of nodes) {
+        paths.push(node.path);
+        if (node.children?.length) collectPaths(node.children);
+      }
+    };
+    collectPaths(folderTree);
+    return paths.sort();
+  }, []);
+
   const refreshTicketDocuments = useCallback(async () => {
     if (!ticketId) return;
     try {
@@ -741,6 +756,7 @@ export function TicketDetails({
                     const docs = await getClientTicketDocuments(ticketId);
                     setDocuments(docs);
                   }}
+                  getFoldersFn={getClientFolders}
                 />
               </Card>
             </div>

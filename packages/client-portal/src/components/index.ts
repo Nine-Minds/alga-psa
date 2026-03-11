@@ -11,6 +11,8 @@ export { AppointmentRequestDetailsPage } from './appointments/AppointmentRequest
 export { RequestAppointmentModal } from './appointments/RequestAppointmentModal';
 
 export { default as BillingOverview } from './billing/BillingOverview';
+
+export { default as ClientDocumentsPage } from './documents/ClientDocumentsPage';
 export { PaymentRedirect } from './billing/PaymentRedirect';
 export { default as PaymentSuccessContent } from './billing/PaymentSuccessContent';
 
@@ -33,3 +35,6 @@ export { default as LicenseManagementPage } from './account/LicenseManagementPag
 export { default as ClientPortalLayout } from './layout/ClientPortalLayout';
 
 export { default as ClientPortalTenantDiscovery } from './auth/ClientPortalTenantDiscovery';
+
+// Knowledge Base
+export { ClientKBPage, ClientKBArticleView } from './kb';

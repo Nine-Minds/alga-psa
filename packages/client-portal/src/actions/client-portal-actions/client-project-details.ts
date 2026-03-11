@@ -521,7 +521,8 @@ export const uploadClientTaskDocument = withAuth(async (
         created_by: user.user_id,
         entered_at: new Date(),
         updated_at: new Date(),
-        folder_path: folderPath ?? null
+        folder_path: folderPath ?? null,
+        is_client_visible: true,               // Client-uploaded docs are always visible to client portal
       });
 
       await trx('document_associations').insert({
@@ -587,7 +588,7 @@ export const getClientTaskDocuments = withAuth(async (
     return { success: false, error: 'Task documents not available' };
   }
 
-  // Get documents
+  // Get client-visible documents
   const documents = await knex('documents as d')
     .join('document_associations as da', function() {
       this.on('d.document_id', 'da.document_id').andOn('d.tenant', 'da.tenant');
@@ -598,7 +599,8 @@ export const getClientTaskDocuments = withAuth(async (
     .where({
       'da.entity_type': 'project_task',
       'da.entity_id': taskId,
-      'd.tenant': tenant
+      'd.tenant': tenant,
+      'd.is_client_visible': true,
     })
     .select(
       'd.document_id',

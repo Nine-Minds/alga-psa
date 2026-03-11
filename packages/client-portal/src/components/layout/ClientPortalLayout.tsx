@@ -4,7 +4,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { signOut } from "next-auth/react";
-import { LogOut, User, CreditCard } from 'lucide-react';
+import { LogOut, User, CreditCard, FileText, BookOpen } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +18,7 @@ import type { IUserWithRoles } from '@alga-psa/types';
 import { useRouter } from 'next/navigation';
 import { checkClientPortalPermissions, getSignOutTenantSlug } from '@alga-psa/client-portal/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useBranding } from '@alga-psa/tenancy/components';
 import { ClientExtensionsMenu } from '@alga-psa/client-portal/components';
 import { NotificationBell } from '@alga-psa/notifications/components';
@@ -37,6 +38,8 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
   const router = useRouter();
   const { t } = useTranslation('client-portal');
   const { branding } = useBranding();
+  const { enabled: knowledgeBaseEnabled } = useFeatureFlag('knowledge-base', { defaultValue: false });
+  const { enabled: documentFeaturesEnabled } = useFeatureFlag('document-folder-templates', { defaultValue: false });
 
   // Use SWR hook for contact avatar - automatically updates when invalidated
   const { avatarUrl } = useContactAvatar(userData?.contact_id ?? undefined, userData?.tenant);
@@ -127,6 +130,22 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
                 >
                   {t('nav.projects')}
                 </Link>
+                {documentFeaturesEnabled && (
+                  <Link
+                    href="/client-portal/documents"
+                    className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"
+                  >
+                    {t('nav.documents')}
+                  </Link>
+                )}
+                {knowledgeBaseEnabled && (
+                  <Link
+                    href="/client-portal/knowledge-base"
+                    className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"
+                  >
+                    {t('nav.knowledgeBase', 'Knowledge Base')}
+                  </Link>
+                )}
                 <Link
                   href="/client-portal/appointments"
                   className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"

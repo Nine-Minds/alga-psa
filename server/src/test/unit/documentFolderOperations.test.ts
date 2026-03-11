@@ -4,6 +4,8 @@ import {
   getFolders,
   getDocumentsByFolder,
   moveDocumentsToFolder,
+  toggleFolderVisibility,
+  ensureEntityFolders,
   getFolderStats,
   createFolder,
   deleteFolder
@@ -44,6 +46,7 @@ type MockKnex = ReturnType<typeof createMockKnex>;
 const CHAINABLE_METHODS = [
   'select',
   'where',
+  'whereExists',
   'whereNull',
   'whereNotNull',
   'andWhere',
@@ -352,30 +355,10 @@ describe('Document Folder Operations', () => {
       expect(orWhereCalled).toBe(true);
     });
 
-    it('should filter documents at database level based on user permissions', async () => {
+    it('should scope global folder queries to unassociated documents', async () => {
       vi.mocked(getEntityTypesForUser).mockResolvedValue(['tenant', 'ticket']);
 
-      let whereNotExistsCalled = false;
-      let orWhereExistsCalled = false;
-
       const queryBuilder = createQueryBuilder();
-      queryBuilder.where = vi.fn(function(this: any, ...args: any[]) {
-        if (typeof args[0] === 'function') {
-          const nestedBuilder = {
-            whereNotExists: vi.fn(() => {
-              whereNotExistsCalled = true;
-              return nestedBuilder;
-            }),
-            orWhereExists: vi.fn(() => {
-              orWhereExistsCalled = true;
-              return nestedBuilder;
-            })
-          };
-          args[0].call(nestedBuilder);
-          return queryBuilder;
-        }
-        return queryBuilder;
-      });
 
       const clonedQuery = createQueryBuilder();
       clonedQuery.countDistinct = vi.fn().mockResolvedValue([{ count: '0' }]);
@@ -402,9 +385,75 @@ describe('Document Folder Operations', () => {
 
       await getDocumentsByFolder('/Legal', false, 1, 15);
 
-      // Verify permission filtering was applied
-      expect(whereNotExistsCalled).toBe(true);
-      expect(orWhereExistsCalled).toBe(true);
+      expect(queryBuilder.whereNotExists).toHaveBeenCalled();
+      expect(queryBuilder.whereExists).not.toHaveBeenCalled();
+    });
+
+    it('should scope folder queries to provided entity association when entity params are passed', async () => {
+      const queryBuilder = createQueryBuilder();
+      let sawEntityIdFilter = false;
+      let sawEntityTypeFilter = false;
+      let sawAllowedEntityTypeFilter = false;
+
+      queryBuilder.whereExists = vi.fn(function(this: any, callback: (this: any) => void) {
+        const nestedBuilder: any = {};
+        nestedBuilder.select = vi.fn().mockReturnValue(nestedBuilder);
+        nestedBuilder.from = vi.fn().mockReturnValue(nestedBuilder);
+        nestedBuilder.whereRaw = vi.fn().mockReturnValue(nestedBuilder);
+        nestedBuilder.andWhere = vi.fn((column: string, value: any) => {
+          if (column === 'da.entity_id' && value === 'entity-123') {
+            sawEntityIdFilter = true;
+          }
+
+          if (column === 'da.entity_type' && value === 'client') {
+            sawEntityTypeFilter = true;
+          }
+
+          return nestedBuilder;
+        });
+        nestedBuilder.whereIn = vi.fn((column: string, values: string[]) => {
+          if (column === 'da.entity_type' && Array.isArray(values) && values.includes('client')) {
+            sawAllowedEntityTypeFilter = true;
+          }
+
+          return nestedBuilder;
+        });
+
+        callback.call(nestedBuilder);
+        return queryBuilder;
+      });
+
+      const clonedQuery = createQueryBuilder();
+      clonedQuery.countDistinct = vi.fn().mockResolvedValue([{ count: '0' }]);
+      queryBuilder.clone = vi.fn().mockReturnValue(clonedQuery);
+
+      queryBuilder.leftJoin = vi.fn().mockReturnValue({
+        ...queryBuilder,
+        select: vi.fn().mockReturnValue({
+          ...queryBuilder,
+          distinct: vi.fn().mockReturnValue({
+            ...queryBuilder,
+            orderByRaw: vi.fn().mockReturnValue({
+              ...queryBuilder,
+              limit: vi.fn().mockReturnValue({
+                ...queryBuilder,
+                offset: vi.fn().mockResolvedValue([])
+              })
+            })
+          }),
+        })
+      });
+
+      mockKnex.mockImplementation(() => queryBuilder);
+      vi.mocked(getEntityTypesForUser).mockResolvedValue(['client', 'ticket']);
+
+      await getDocumentsByFolder('/Legal', false, 1, 15, undefined, 'entity-123', 'client');
+
+      expect(queryBuilder.whereExists).toHaveBeenCalled();
+      expect(queryBuilder.whereNotExists).not.toHaveBeenCalled();
+      expect(sawEntityIdFilter).toBe(true);
+      expect(sawEntityTypeFilter).toBe(true);
+      expect(sawAllowedEntityTypeFilter).toBe(true);
     });
 
     it('should handle null folder path (root folder)', async () => {
@@ -567,6 +616,93 @@ describe('Document Folder Operations', () => {
     });
   });
 
+  describe('toggleFolderVisibility', () => {
+    it('should toggle folder visibility without cascading documents', async () => {
+      mockKnex.first.mockResolvedValue({
+        folder_id: 'folder-1',
+        folder_path: '/Legal',
+        entity_id: null,
+        entity_type: null,
+      });
+
+      const result = await toggleFolderVisibility('folder-1', true, false);
+
+      expect(result).toEqual({
+        folderUpdated: true,
+        updatedDocuments: 0,
+      });
+      expect(mockKnex.update).toHaveBeenCalledTimes(1);
+      expect(mockKnex.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          is_client_visible: true,
+          updated_at: expect.any(Date),
+        })
+      );
+    });
+
+    it('should cascade visibility to global documents when requested', async () => {
+      mockKnex.first.mockResolvedValue({
+        folder_id: 'folder-1',
+        folder_path: '/Legal',
+        entity_id: null,
+        entity_type: null,
+      });
+      mockKnex.update
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(3);
+
+      const result = await toggleFolderVisibility('folder-1', false, true);
+
+      expect(result).toEqual({
+        folderUpdated: true,
+        updatedDocuments: 3,
+      });
+      expect(mockKnex.whereNotExists).toHaveBeenCalled();
+      expect(mockKnex.update).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          is_client_visible: false,
+          updated_at: expect.any(Date),
+        })
+      );
+    });
+
+    it('should cascade visibility to entity-scoped documents when folder is entity scoped', async () => {
+      mockKnex.first.mockResolvedValue({
+        folder_id: 'folder-1',
+        folder_path: '/Contracts',
+        entity_id: 'client-123',
+        entity_type: 'client',
+      });
+      mockKnex.update
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(2);
+
+      const result = await toggleFolderVisibility('folder-1', true, true);
+
+      expect(result).toEqual({
+        folderUpdated: true,
+        updatedDocuments: 2,
+      });
+      expect(mockKnex.whereExists).toHaveBeenCalled();
+    });
+
+    it('should throw when folder does not exist', async () => {
+      mockKnex.first.mockResolvedValue(undefined);
+
+      await expect(toggleFolderVisibility('missing-folder', true, false)).rejects.toThrow('Folder not found');
+      expect(mockKnex.update).not.toHaveBeenCalled();
+    });
+
+    it('should require document update permission', async () => {
+      vi.mocked(hasPermission).mockImplementation(async (user, resource, action) => {
+        return resource === 'document' && action === 'update' ? false : true;
+      });
+
+      await expect(toggleFolderVisibility('folder-1', true, false)).resolves.toEqual({ permissionError: 'Permission denied' });
+    });
+  });
+
   describe('getFolderStats', () => {
     it('should return document count and total size for folder', async () => {
       const mockStats = {
@@ -625,6 +761,25 @@ describe('Document Folder Operations', () => {
     });
   });
 
+  describe('ensureEntityFolders', () => {
+    it('should return empty tree for valid entity scope (phase 1 stub)', async () => {
+      await expect(ensureEntityFolders('entity-123', 'client')).resolves.toEqual([]);
+    });
+
+    it('should require both entityId and entityType', async () => {
+      await expect(ensureEntityFolders('', 'client')).rejects.toThrow('Both entityId and entityType are required');
+      await expect(ensureEntityFolders('entity-123', '')).rejects.toThrow('Both entityId and entityType are required');
+    });
+
+    it('should require document read permission', async () => {
+      vi.mocked(hasPermission).mockImplementation(async (user, resource, action) => {
+        return resource === 'document' && action === 'read' ? false : true;
+      });
+
+      await expect(ensureEntityFolders('entity-123', 'client')).resolves.toEqual({ permissionError: 'Permission denied' });
+    });
+  });
+
   describe('createFolder', () => {
     it('should create a new folder', async () => {
       const folderPath = '/Legal/Contracts';
@@ -639,7 +794,27 @@ describe('Document Folder Operations', () => {
           tenant: 'tenant-123',
           folder_path: folderPath,
           folder_name: 'Contracts',
+          entity_id: null,
+          entity_type: null,
+          is_client_visible: false,
           created_by: 'user-123'
+        })
+      );
+    });
+
+    it('should create an entity-scoped folder with visibility flag', async () => {
+      const folderPath = '/Contracts';
+
+      mockKnex.first.mockResolvedValue(null);
+
+      await createFolder(folderPath, 'client-123', 'client', true);
+
+      expect(mockKnex.insert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          folder_path: folderPath,
+          entity_id: 'client-123',
+          entity_type: 'client',
+          is_client_visible: true,
         })
       );
     });
@@ -694,6 +869,15 @@ describe('Document Folder Operations', () => {
     it('should reject invalid folder paths', async () => {
       await expect(createFolder('InvalidPath')).rejects.toThrow('Folder path must start with /');
       await expect(createFolder('/')).rejects.toThrow('Invalid folder path');
+    });
+
+    it('should require both entityId and entityType when scoping folder', async () => {
+      await expect(createFolder('/Legal', 'client-123')).rejects.toThrow(
+        'Both entityId and entityType are required when scoping a folder to an entity'
+      );
+      await expect(createFolder('/Legal', null, 'client')).rejects.toThrow(
+        'Both entityId and entityType are required when scoping a folder to an entity'
+      );
     });
 
     it('should require document create permission', async () => {
