@@ -94,10 +94,17 @@ function ProgressRing({ value }: { value: number }) {
 function ProgressSummaryCard({ completed, total }: { completed: number; total: number }) {
   const safeTotal = Math.max(1, total);
   const percent = (completed / safeTotal) * 100;
+  const isComplete = completed === total;
+  const messageVariant =
+    completed === 0
+      ? 'default-muted'
+      : isComplete
+        ? 'success'
+        : 'info';
   const message =
     completed === 0
       ? 'Just getting started!'
-      : completed === total
+      : isComplete
         ? 'All set - great job!'
         : 'Keep going - you\'ve got this!';
 
@@ -112,7 +119,9 @@ function ProgressSummaryCard({ completed, total }: { completed: number; total: n
           </p>
         </div>
         <Progress value={percent} max={100} size="sm" className="mt-2" />
-        <p className="mt-1 text-xs font-medium text-orange-600">{message}</p>
+        <Badge variant={messageVariant} size="sm" className="mt-2 w-fit">
+          {message}
+        </Badge>
       </div>
     </div>
   );
@@ -366,19 +375,6 @@ export default function DashboardOnboardingSection({
     return null;
   }
 
-  if (visibleSteps.length === 0 && hiddenSteps.length > 0) {
-    return (
-      <div className={className}>
-        <HiddenStepsPanel
-          steps={hiddenSteps}
-          onRestore={handleRestore}
-          isPending={isPending}
-          activeStepId={activeStepId}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className={className}>
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -424,7 +420,7 @@ export default function DashboardOnboardingSection({
       ) : null}
 
       {hiddenSteps.length > 0 ? (
-        <div className={cn('mt-6', !isOnboardingComplete && 'pt-2')}>
+        <div className={cn('mt-6', visibleSteps.length > 0 && !isOnboardingComplete && 'pt-2')}>
           <HiddenStepsPanel
             steps={hiddenSteps}
             onRestore={handleRestore}
