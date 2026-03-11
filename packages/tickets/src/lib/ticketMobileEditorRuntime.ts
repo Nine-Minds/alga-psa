@@ -10,6 +10,7 @@ import type {
   TicketMobileEditorWebToNativeMessage,
   TicketMobileRichTextDocument,
   TicketMobileRichTextFormat,
+  TicketRichTextProseMirrorDoc,
 } from './ticketRichText';
 import {
   convertProseMirrorToTicketRichTextBlocks,
@@ -418,7 +419,7 @@ export class TicketMobileEditorRuntime {
     }
 
     if (candidate.format === 'prosemirror') {
-      return candidate.sourceFormat === 'prosemirror' && this.hasBlockContent(candidate.content);
+      return candidate.sourceFormat === 'prosemirror' && this.hasProseMirrorDoc(candidate.content);
     }
 
     return (
@@ -442,10 +443,7 @@ export class TicketMobileEditorRuntime {
     return candidate.type === 'doc' || (typeof candidate.type === 'string' && blockStateTypes.has(candidate.type));
   }
 
-  private hasProseMirrorDoc(value: unknown): value is {
-    type: 'doc';
-    content: unknown[];
-  } {
+  private hasProseMirrorDoc(value: unknown): value is TicketRichTextProseMirrorDoc {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
       return false;
     }

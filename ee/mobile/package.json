@@ -13,6 +13,7 @@
     "test": "npm run generate:ticket-editor && vitest run"
   },
   "dependencies": {
+    "@blocknote/core": "^0.47.0",
     "@tiptap/core": "^3.20.0",
     "@tiptap/extension-image": "^3.20.1",
     "@tiptap/extension-link": "^3.20.0",
