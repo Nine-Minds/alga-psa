@@ -128,7 +128,7 @@
   {
     "id": "F022",
     "description": "Render supported saved links, lists, headings, mentions, and attachment-backed image content safely in mobile read-only surfaces when present in persisted data.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements/Functional Requirements"]
   },
   {

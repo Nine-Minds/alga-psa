@@ -266,8 +266,11 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
       }
 
       if (decision.externalUrl) {
-        callbacksRef.current.onLinkPress?.(decision.externalUrl);
-        void Linking.openURL(decision.externalUrl);
+        if (callbacksRef.current.onLinkPress) {
+          callbacksRef.current.onLinkPress(decision.externalUrl);
+        } else {
+          void Linking.openURL(decision.externalUrl);
+        }
         reportError({
           code: "external-navigation-blocked",
           message: `Blocked editor navigation to ${decision.externalUrl}`,

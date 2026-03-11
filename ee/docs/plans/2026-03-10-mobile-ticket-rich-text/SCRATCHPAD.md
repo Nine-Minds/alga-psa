@@ -26,6 +26,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-10) Keep the browser runtime authoritative in `packages/tickets`, but keep the React Native-side bridge client local to `ee/mobile`. The mobile app is not configured as a workspace package consumer, so this avoids dragging unrelated web/server package code into Expo typecheck while still generating the local WebView HTML bundle from the shared runtime.
 - (2026-03-10) Package the mobile editor runtime as a generated inline HTML module (`generatedEditorHtml.ts`) built by esbuild from a browser-only entry file. This satisfies the no-dev-server requirement while keeping the generated asset reproducible from source.
 - (2026-03-10) Use the same `TicketRichTextEditor` wrapper for both read-only and editable ticket surfaces in v1. Read mode passes the saved serialized content string through the read-only runtime, while edit/compose mode turns on the native toolbar and saves back serialized ProseMirror JSON.
+- (2026-03-11) Let ticket screen read-only surfaces provide the external-link callback to the wrapper, and have the wrapper fall back to `Linking.openURL` only when the screen does not supply one. This keeps external navigation blocked inside the WebView while making link handling testable at the screen layer.
+- (2026-03-11) Use Tiptap's `Image` extension in the mobile runtime so BlockNote image blocks converted to HTML are preserved in read-only rendering without adding mobile-side image authoring.
 
 ## Discoveries / Constraints
 
@@ -50,6 +52,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-10) The mobile ticket screen did not previously have any description edit mode at all; the rich-text slice adds explicit add/edit/cancel/save actions for the description section while continuing to use the existing `updateTicketAttributes()` path.
 - (2026-03-10) For comment drafts, the screen now stores the serialized rich content string in secure storage and derives plain text locally for length validation, empty checks, and accessibility labels. On send, it re-reads editor JSON and serializes it so legacy plain-text drafts get upgraded on the next successful send.
 - (2026-03-10) Existing saved comment items stay non-editable by rendering the read-only wrapper only. System/event timeline items still render as plain italic text rather than going through the rich wrapper.
+- (2026-03-11) After installing `@tiptap/extension-image`, the lockfile refreshed Tiptap to `3.20.x`; `@tiptap/starter-kit` now includes `link` and `underline`, so the runtime must configure those through `StarterKit.configure(...)` instead of registering duplicate standalone extensions.
+- (2026-03-11) Explicit malformed-content detection in `ee/mobile/src/features/ticketRichText/helpers.ts` now keeps JSON-looking but unparsable payloads on a plain-text fallback path instead of mounting the WebView editor.
 
 ## Commands / Runbooks
 
@@ -107,6 +111,12 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - The section tests mock `TicketRichTextEditor`, `Badge`, and `PrimaryButton` so they verify the ticket screen’s read/edit/compose wiring without retesting the WebView runtime internals.
 - (2026-03-10) Validation note:
   - `TicketRichTextEditor.test.ts` now also covers the dev-only diagnostics path by asserting ready-timing and request-timeout logs appear when `__DEV__` is true and stay silent when `__DEV__` is false.
+- (2026-03-11) Rich read-only rendering checkpoint:
+  - `npm install @tiptap/extension-image@^3.0.0 --save`
+  - `cd ee/mobile && npm run generate:ticket-editor`
+  - `cd packages/tickets && npx vitest run src/lib/ticketMobileEditorRuntime.test.ts --config vitest.config.ts`
+  - `cd ee/mobile && npx vitest run src/screens/TicketDetailScreen.richTextSections.test.ts src/features/ticketRichText/TicketRichTextEditor.test.ts --config vitest.config.ts`
+  - `cd ee/mobile && npx tsc --noEmit`
 
 ## Links / References
 
@@ -152,3 +162,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Is heading support required in the initial mobile toolbar, or should v1 remain limited to inline formatting and lists?
 - Is rendering saved image content sufficient for v1, or do we need image insertion support in the first mobile editor release?
 - Is rendering existing mentions sufficient for v1, or do we need mobile mention authoring in the first release?
+
+## Recent Progress
+
+- (2026-03-11) Completed `F022` by preserving image-backed content in the mobile runtime and wiring read-only description/comment surfaces to hand external link taps back to native `Linking`.
+- (2026-03-11) Completed `T023`, `T028`, and `T029` with component coverage for malformed description fallback, comment-link handoff, and image-backed comment routing, plus runtime coverage that serialized image blocks survive read-only initialization.

@@ -1,6 +1,7 @@
 import React, { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
+import { Linking } from "react-native";
 import type { TicketRichTextEditorRef } from "../features/ticketRichText/TicketRichTextEditor";
 
 vi.mock("../auth/AuthContext", () => ({
@@ -134,6 +135,8 @@ function findMockRichTextEditor(renderer: ReactTestRenderer) {
 
 const richDescription = "[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Rich description\",\"styles\":{\"bold\":true}}]}]";
 const richComment = "[{\"type\":\"paragraph\",\"content\":[{\"type\":\"text\",\"text\":\"Rich reply\",\"styles\":{\"italic\":true}}]}]";
+const richImageComment = "[{\"type\":\"image\",\"props\":{\"url\":\"/api/documents/view/file-123\",\"name\":\"clipboard-image.png\",\"caption\":\"Screenshot\"}}]";
+const malformedDescription = "{\"type\":";
 
 describe("TicketDetailScreen rich text sections", () => {
   it("renders rich description content through the rich-text wrapper in read mode", () => {
@@ -195,6 +198,36 @@ describe("TicketDetailScreen rich text sections", () => {
     expect(richEditor.props.showToolbar).toBe(true);
   });
 
+  it("falls back to safe plain-text display when the saved description payload is malformed", () => {
+    const renderer = render(
+      React.createElement(DescriptionSection, {
+        ticket: {
+          ticket_id: "ticket-1",
+          ticket_number: "T-1",
+          title: "Example",
+          attributes: {
+            description: malformedDescription,
+          },
+        },
+        isEditing: false,
+        draftContent: malformedDescription,
+        draftPlainText: malformedDescription,
+        saving: false,
+        error: null,
+        editorRef: createRef<TicketRichTextEditorRef>(),
+        onStartEditing: () => undefined,
+        onCancelEditing: () => undefined,
+        onSave: () => undefined,
+        onDraftChange: () => undefined,
+      }),
+    );
+
+    expect(
+      renderer.root.findAll((node) => (node.type as string) === "MockRichTextEditor"),
+    ).toHaveLength(0);
+    expect(renderer.root.findByProps({ children: malformedDescription })).toBeTruthy();
+  });
+
   it("renders saved ticket comments through the rich-text wrapper", () => {
     const renderer = render(
       React.createElement(CommentsSection, {
@@ -217,6 +250,61 @@ describe("TicketDetailScreen rich text sections", () => {
 
     const richEditor = findMockRichTextEditor(renderer);
     expect(richEditor.props.content).toBe(richComment);
+    expect(richEditor.props.editable).toBe(false);
+  });
+
+  it("preserves tappable links for rich comment items through the screen wrapper", () => {
+    const openUrlSpy = vi.spyOn(Linking, "openURL").mockResolvedValueOnce(undefined as never);
+    const renderer = render(
+      React.createElement(CommentsSection, {
+        comments: [
+          {
+            comment_id: "comment-1",
+            comment_text: richComment,
+            is_internal: false,
+            created_by_name: "Alice",
+            created_at: "2026-03-11T00:00:00.000Z",
+          },
+        ],
+        visibleCount: 20,
+        onLoadMore: () => undefined,
+        onJumpToLatest: () => undefined,
+        onJumpToTop: () => undefined,
+        error: null,
+      }),
+    );
+
+    const richEditor = findMockRichTextEditor(renderer);
+    act(() => {
+      (richEditor.props.onLinkPress as ((url: string) => void) | undefined)?.("https://example.com/comment-link");
+    });
+
+    expect(openUrlSpy).toHaveBeenCalledWith("https://example.com/comment-link");
+    openUrlSpy.mockRestore();
+  });
+
+  it("routes saved image-backed comment content through the rich-text wrapper", () => {
+    const renderer = render(
+      React.createElement(CommentsSection, {
+        comments: [
+          {
+            comment_id: "comment-1",
+            comment_text: richImageComment,
+            is_internal: false,
+            created_by_name: "Alice",
+            created_at: "2026-03-11T00:00:00.000Z",
+          },
+        ],
+        visibleCount: 20,
+        onLoadMore: () => undefined,
+        onJumpToLatest: () => undefined,
+        onJumpToTop: () => undefined,
+        error: null,
+      }),
+    );
+
+    const richEditor = findMockRichTextEditor(renderer);
+    expect(richEditor.props.content).toBe(richImageComment);
     expect(richEditor.props.editable).toBe(false);
   });
 

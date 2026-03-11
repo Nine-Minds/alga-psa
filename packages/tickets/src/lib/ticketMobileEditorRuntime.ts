@@ -1,7 +1,6 @@
 import { Editor, type Content } from '@tiptap/core';
-import Link from '@tiptap/extension-link';
+import Image from '@tiptap/extension-image';
 import StarterKit from '@tiptap/starter-kit';
-import Underline from '@tiptap/extension-underline';
 import { convertBlockContentToHTML } from '../../../formatting/src/blocknoteUtils';
 import type {
   TicketMobileEditorCommand,
@@ -104,17 +103,22 @@ export class TicketMobileEditorRuntime {
         element: this.element,
         editable: payload.editable,
         extensions: [
-          StarterKit,
-          Link.configure({
-            openOnClick: false,
-            autolink: true,
-            linkOnPaste: true,
-            HTMLAttributes: {
-              target: '_blank',
-              rel: 'noopener noreferrer',
+          StarterKit.configure({
+            link: {
+              openOnClick: false,
+              autolink: true,
+              linkOnPaste: true,
+              HTMLAttributes: {
+                target: '_blank',
+                rel: 'noopener noreferrer',
+              },
             },
+            underline: {},
           }),
-          Underline,
+          Image.configure({
+            inline: false,
+            allowBase64: false,
+          }),
         ],
         content: initialContent,
         editorProps: {

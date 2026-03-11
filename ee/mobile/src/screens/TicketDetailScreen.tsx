@@ -25,6 +25,7 @@ import { useToast } from "../ui/toast/ToastProvider";
 import {
   extractPlainTextFromRichEditorJson,
   extractPlainTextFromSerializedRichEditorContent,
+  isMalformedRichEditorContent,
   serializeRichEditorJson,
 } from "../features/ticketRichText/helpers";
 import {
@@ -1728,14 +1729,23 @@ export function CommentsSection({
                     {eventText}
                   </Text>
                 ) : (
-                  <View style={{ marginTop: spacing.xs }}>
-                    <TicketRichTextEditor
-                      content={c.comment_text}
-                      editable={false}
-                      height={96}
-                      loadingLabel="Loading comment…"
-                    />
-                  </View>
+                  isMalformedRichEditorContent(c.comment_text) ? (
+                    <Text style={{ ...typography.body, color: colors.text, marginTop: 2 }}>
+                      {commentPlainText || "—"}
+                    </Text>
+                  ) : (
+                    <View style={{ marginTop: spacing.xs }}>
+                      <TicketRichTextEditor
+                        content={c.comment_text}
+                        editable={false}
+                        height={96}
+                        loadingLabel="Loading comment…"
+                        onLinkPress={(url) => {
+                          void Linking.openURL(url);
+                        }}
+                      />
+                    </View>
+                  )
                 )}
               </View>
             );
@@ -1833,13 +1843,16 @@ export function DescriptionSection({
               <ActionChip label={saving ? "Saving…" : "Save"} onPress={onSave} disabled={saving} loading={saving} />
             </View>
           </>
-        ) : description ? (
+        ) : description && !isMalformedRichEditorContent(description) ? (
           <>
             <TicketRichTextEditor
               content={description}
               editable={false}
               height={140}
               loadingLabel="Loading description…"
+              onLinkPress={(url) => {
+                void Linking.openURL(url);
+              }}
             />
             <View style={{ marginTop: spacing.sm }}>
               <ActionChip label="Edit description" onPress={onStartEditing} />
@@ -1847,7 +1860,9 @@ export function DescriptionSection({
           </>
         ) : (
           <>
-            <Text style={{ ...typography.body, color: colors.text }}>{draftPlainText || "—"}</Text>
+            <Text style={{ ...typography.body, color: colors.text }}>
+              {description ? extractPlainTextFromSerializedRichEditorContent(description) : draftPlainText || "—"}
+            </Text>
             <View style={{ marginTop: spacing.sm }}>
               <ActionChip label="Add description" onPress={onStartEditing} />
             </View>

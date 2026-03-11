@@ -123,6 +123,26 @@ export function extractPlainTextFromSerializedRichEditorContent(
   return content;
 }
 
+export function isMalformedRichEditorContent(
+  content: string | null | undefined,
+): boolean {
+  if (!content) {
+    return false;
+  }
+
+  const trimmed = content.trim();
+  if (!trimmed || (!trimmed.startsWith("[") && !trimmed.startsWith("{"))) {
+    return false;
+  }
+
+  try {
+    JSON.parse(trimmed);
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 export function serializeRichEditorJson(json: unknown): string {
   return JSON.stringify(json);
 }

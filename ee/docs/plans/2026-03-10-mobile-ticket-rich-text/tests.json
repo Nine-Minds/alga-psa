@@ -134,7 +134,7 @@
   {
     "id": "T023",
     "description": "Component: mobile ticket description section falls back to safe plain-text display when the saved description payload is malformed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014", "F023"]
   },
   {
@@ -164,13 +164,13 @@
   {
     "id": "T028",
     "description": "Component: mobile ticket comment items preserve tappable links inside rendered rich content.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F022"]
   },
   {
     "id": "T029",
     "description": "Component: mobile ticket comment items render supported saved inline image content when the saved note references attachment-backed images.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F022"]
   },
   {

@@ -163,10 +163,29 @@ describe('TicketMobileEditorRuntime', () => {
       underline: true,
     });
 
+    runtime.destroy();
+    messages = [];
+    runtime = new TicketMobileEditorRuntime({
+      element: container,
+      emitMessage: (message) => {
+        messages.push(message);
+      },
+    });
+    runtime.handleMessage({
+      type: 'init',
+      payload: {
+        content: 'List state',
+        editable: true,
+      },
+    });
+
+    const listEditor = requireEditor(runtime.getEditor());
+    listEditor.commands.focus('start');
     runtime.handleMessage({ type: 'command', payload: { command: 'toggle-bullet-list' } });
     const bulletState = getLastMessage(messages, 'state-change').payload;
     expect(bulletState.toolbar.bulletList).toBe(true);
 
+    listEditor.commands.focus('start');
     runtime.handleMessage({ type: 'command', payload: { command: 'toggle-ordered-list' } });
     const orderedState = getLastMessage(messages, 'state-change').payload;
     expect(orderedState.toolbar.orderedList).toBe(true);
@@ -242,5 +261,28 @@ describe('TicketMobileEditorRuntime', () => {
     const contentMessages = messages.filter((message) => message.type === 'content-change');
     expect(contentMessages).toHaveLength(baselineContentChanges + 1);
     expect(getLastMessage(messages, 'content-change').payload.html).toContain('Debounce');
+  });
+
+  it('preserves attachment-backed image content in read-only initialization output', () => {
+    runtime.handleMessage({
+      type: 'init',
+      payload: {
+        content: JSON.stringify([
+          {
+            type: 'image',
+            props: {
+              url: '/api/documents/view/file-123',
+              name: 'clipboard-image.png',
+              caption: 'Screenshot',
+            },
+          },
+        ]),
+        editable: false,
+      },
+    });
+
+    const editor = requireEditor(runtime.getEditor());
+    expect(editor.getHTML()).toContain('<img');
+    expect(editor.getHTML()).toContain('/api/documents/view/file-123');
   });
 });
