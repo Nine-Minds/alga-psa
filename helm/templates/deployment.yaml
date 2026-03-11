@@ -664,6 +664,22 @@ spec:
           - name: STRIPE_PREMIUM_USER_ANNUAL_PRICE_ID
             value: "{{ .Values.stripe.premium_user_annual_price_id }}"
           {{- end }}
+          {{- if .Values.stripe.early_adopters_base_price_id }}
+          - name: STRIPE_EARLY_ADOPTERS_BASE_PRICE_ID
+            value: "{{ .Values.stripe.early_adopters_base_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.early_adopters_user_price_id }}
+          - name: STRIPE_EARLY_ADOPTERS_USER_PRICE_ID
+            value: "{{ .Values.stripe.early_adopters_user_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.early_adopters_base_annual_price_id }}
+          - name: STRIPE_EARLY_ADOPTERS_BASE_ANNUAL_PRICE_ID
+            value: "{{ .Values.stripe.early_adopters_base_annual_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.early_adopters_user_annual_price_id }}
+          - name: STRIPE_EARLY_ADOPTERS_USER_ANNUAL_PRICE_ID
+            value: "{{ .Values.stripe.early_adopters_user_annual_price_id }}"
+          {{- end }}
           {{- end }}
 
           # ----------- IPINFO INTEGRATION ----------------
