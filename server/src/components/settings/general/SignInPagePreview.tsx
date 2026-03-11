@@ -4,6 +4,7 @@
 import React from 'react';
 import { Ticket, FileText, Eye, History, EyeOff } from 'lucide-react';
 import Image from 'next/image';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface SignInPagePreviewProps {
   branding: {
@@ -15,6 +16,7 @@ interface SignInPagePreviewProps {
 }
 
 export default function SignInPagePreview({ branding }: SignInPagePreviewProps) {
+  const { t } = useTranslation('msp/settings');
   const { logoUrl, primaryColor, secondaryColor, clientName } = branding;
 
   // Convert hex to RGB
@@ -69,7 +71,7 @@ export default function SignInPagePreview({ branding }: SignInPagePreviewProps) 
               />
             )}
             <span className="text-xl font-bold text-gray-800">
-              {clientName ? `${clientName} Client Portal` : 'Client Portal'}
+              {clientName ? `${clientName} ${t('clientPortal.signInPreview.portalTitle')}` : t('clientPortal.signInPreview.portalTitle')}
             </span>
           </div>
         </div>
@@ -88,35 +90,35 @@ export default function SignInPagePreview({ branding }: SignInPagePreviewProps) 
                 <Ticket className="w-20 h-20" style={{ color: primaryColor }} />
               )}
             </div>
-            <p className="text-lg font-bold text-center text-gray-800 mb-1">Welcome to Your Client Portal</p>
-            <p className="text-xs text-center text-gray-600 mb-4">Manage your support tickets and stay connected</p>
+            <p className="text-lg font-bold text-center text-gray-800 mb-1">{t('clientPortal.signInPreview.welcome')}</p>
+            <p className="text-xs text-center text-gray-600 mb-4">{t('clientPortal.signInPreview.subtitle')}</p>
             <div className="space-y-2">
               <div className="flex items-start space-x-2">
                 <Ticket className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: primaryColor }} />
                 <div>
-                  <p className="text-xs font-semibold text-gray-700">Submit Support Tickets</p>
-                  <p className="text-xs text-gray-500">Create and manage your support requests</p>
+                  <p className="text-xs font-semibold text-gray-700">{t('clientPortal.signInPreview.features.submitTickets.title')}</p>
+                  <p className="text-xs text-gray-500">{t('clientPortal.signInPreview.features.submitTickets.description')}</p>
                 </div>
               </div>
               <div className="flex items-start space-x-2">
                 <Eye className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: primaryColor }} />
                 <div>
-                  <p className="text-xs font-semibold text-gray-700">Track Ticket Status</p>
-                  <p className="text-xs text-gray-500">Monitor progress in real-time</p>
+                  <p className="text-xs font-semibold text-gray-700">{t('clientPortal.signInPreview.features.trackStatus.title')}</p>
+                  <p className="text-xs text-gray-500">{t('clientPortal.signInPreview.features.trackStatus.description')}</p>
                 </div>
               </div>
               <div className="flex items-start space-x-2">
                 <History className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: primaryColor }} />
                 <div>
-                  <p className="text-xs font-semibold text-gray-700">Ticket History</p>
-                  <p className="text-xs text-gray-500">Access your complete support history</p>
+                  <p className="text-xs font-semibold text-gray-700">{t('clientPortal.signInPreview.features.ticketHistory.title')}</p>
+                  <p className="text-xs text-gray-500">{t('clientPortal.signInPreview.features.ticketHistory.description')}</p>
                 </div>
               </div>
               <div className="flex items-start space-x-2">
                 <FileText className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: primaryColor }} />
                 <div>
-                  <p className="text-xs font-semibold text-gray-700">Documentation Access</p>
-                  <p className="text-xs text-gray-500">View shared documents and resources</p>
+                  <p className="text-xs font-semibold text-gray-700">{t('clientPortal.signInPreview.features.documentation.title')}</p>
+                  <p className="text-xs text-gray-500">{t('clientPortal.signInPreview.features.documentation.description')}</p>
                 </div>
               </div>
             </div>
@@ -125,24 +127,24 @@ export default function SignInPagePreview({ branding }: SignInPagePreviewProps) 
           {/* Right side - sign in form */}
           <div className="w-1/2 flex items-center justify-center">
             <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
-              <h3 className="text-lg font-bold mb-1 text-center">Sign In</h3>
-              <p className="text-xs text-gray-600 text-center mb-4">Please enter your credentials to access your account.</p>
+              <h3 className="text-lg font-bold mb-1 text-center">{t('clientPortal.signInPreview.signIn.title')}</h3>
+              <p className="text-xs text-gray-600 text-center mb-4">{t('clientPortal.signInPreview.signIn.description')}</p>
 
               <div className="space-y-3">
                 {/* Email field */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('clientPortal.signInPreview.signIn.email')}</label>
                   <div className="w-full px-3 py-1.5 text-xs border border-gray-300 rounded-md bg-gray-50 text-gray-400">
-                    Enter your email
+                    {t('clientPortal.signInPreview.signIn.emailPlaceholder')}
                   </div>
                 </div>
 
                 {/* Password field */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Password</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">{t('clientPortal.signInPreview.signIn.password')}</label>
                   <div className="relative">
                     <div className="w-full px-3 py-1.5 pr-8 text-xs border border-gray-300 rounded-md bg-gray-50 text-gray-400">
-                      Enter your password
+                      {t('clientPortal.signInPreview.signIn.passwordPlaceholder')}
                     </div>
                     <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
                       <EyeOff className="h-3 w-3 text-gray-400" />
@@ -156,7 +158,7 @@ export default function SignInPagePreview({ branding }: SignInPagePreviewProps) 
                     className="text-xs"
                     style={{ color: secondaryColor }}
                   >
-                    Forgot your password?
+                    {t('clientPortal.signInPreview.signIn.forgotPassword')}
                   </span>
                 </div>
 
@@ -165,13 +167,13 @@ export default function SignInPagePreview({ branding }: SignInPagePreviewProps) 
                   className="w-full py-2 px-3 text-xs font-medium text-white rounded-md text-center"
                   style={{ backgroundColor: secondaryColor }}
                 >
-                  Sign In
+                  {t('clientPortal.signInPreview.signIn.title')}
                 </div>
 
                 {/* MSP Staff link */}
                 <div className="mt-4 pt-3 border-t text-center">
                   <span className="text-xs text-gray-600">
-                    MSP Staff? Login here →
+                    {t('clientPortal.signInPreview.signIn.mspStaffLogin')}
                   </span>
                 </div>
               </div>

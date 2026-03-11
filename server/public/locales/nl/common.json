@@ -468,6 +468,13 @@
     "responseSource": {
       "clientPortal": "Ontvangen via Klantenportaal",
       "inboundEmail": "Ontvangen via e-mail"
+    },
+    "origin": {
+      "internal": "Intern aangemaakt",
+      "clientPortal": "Aangemaakt via klantenportaal",
+      "inboundEmail": "Aangemaakt via inkomende e-mail",
+      "api": "Aangemaakt via API",
+      "other": "Aangemaakt via overig"
     }
   },
   "surveys": {
@@ -562,7 +569,8 @@
           "boards": "Borden",
           "statuses": "Statussen",
           "priorities": "Prioriteiten",
-          "any": "Alle"
+          "any": "Alle",
+          "unrestricted": "Geldt voor elk ticket en project"
         },
         "status": {
           "enabled": "Actief",
@@ -613,38 +621,27 @@
         },
         "noTemplates": "Maak eerst een enquêtemal voordat u triggers toevoegt.",
         "prioritiesMixed": "De geselecteerde boards gebruiken verschillende prioriteitstypen. Alle prioriteiten worden getoond."
-      },
-      "response": {
-        "invalidTitle": "Enquête niet beschikbaar",
-        "invalidMessage": "Deze feedbacklink is niet meer geldig of is al gebruikt.",
-        "ratingPrompt": "Hoe was je ervaring?",
-        "ratingAssistive": "Kies een score van 1 tot {{scale}}",
-        "commentLabel": "Extra opmerkingen (optioneel)",
-        "submitButton": "Feedback verzenden",
-        "submitting": "Bezig met verzenden…",
-        "submittedTitle": "Bedankt voor je terugkoppeling!",
-        "submittedMessage": "{{thankYouText}}",
-        "retryButton": "Opnieuw proberen",
-        "ratingSubmitted": "Feedback verzonden",
-        "errorMessage": "Je feedback kon niet worden opgeslagen. Probeer het opnieuw.",
-        "selectRatingError": "Kies een score voordat je verzendt.",
-        "supportMessage": "Neem contact op met je technicus als je vragen hebt."
       }
     },
     "response": {
-      "pageTitle": "Klanttevredenheidsonderzoek"
+      "pageTitle": "Klanttevredenheidsonderzoek",
+      "invalidTitle": "Enquête niet beschikbaar",
+      "invalidMessage": "Deze feedbacklink is niet meer geldig of is al gebruikt.",
+      "ratingPrompt": "Hoe was je ervaring?",
+      "ratingAssistive": "Kies een score van 1 tot {{scale}}",
+      "commentLabel": "Extra opmerkingen (optioneel)",
+      "submitButton": "Feedback verzenden",
+      "submitting": "Bezig met verzenden…",
+      "submittedTitle": "Bedankt voor je terugkoppeling!",
+      "submittedMessage": "{{thankYouText}}",
+      "retryButton": "Opnieuw proberen",
+      "ratingSubmitted": "Feedback verzonden",
+      "errorMessage": "Je feedback kon niet worden opgeslagen. Probeer het opnieuw.",
+      "selectRatingError": "Kies een score voordat je verzendt.",
+      "supportMessage": "Neem contact op met je technicus als je vragen hebt."
     }
   },
-  "notifications": {
-    "viewAll": "Alle meldingen bekijken",
-    "categories": {
-      "Authentication": "Authenticatie",
-      "Invoices": "Facturen",
-      "Projects": "Projecten",
-      "Tickets": "Tickets",
-      "Time Entries": "Tijdregistraties"
-    }
-  },
+  "notifications": {},
   "availability": {
     "settings": {
       "title": "Beschikbaarheidsinstellingen",
@@ -875,6 +872,8 @@
     "required": "Verplicht",
     "optional": "Optioneel",
     "notSpecified": "Niet gespecificeerd",
-    "unknown": "Onbekend"
+    "unknown": "Onbekend",
+    "uploading": "Uploaden...",
+    "submitting": "Verzenden..."
   }
 }

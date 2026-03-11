@@ -1,0 +1,73 @@
+{
+  "nav": {
+    "home": "55555",
+    "userActivities": "55555",
+    "tickets": "55555",
+    "surveys": "55555",
+    "projects": "55555",
+    "projectsAll": "55555",
+    "projectsTemplates": "55555",
+    "clients": "55555",
+    "contacts": "55555",
+    "documents": "55555",
+    "assets": "55555",
+    "timeManagement": "55555",
+    "timeEntry": "55555",
+    "approvals": "55555",
+    "billing": "55555",
+    "schedule": "55555",
+    "technicianDispatch": "55555",
+    "automationHub": "55555",
+    "workflows": "55555",
+    "runs": "55555",
+    "events": "55555",
+    "deadLetter": "55555",
+    "systemMonitor": "55555",
+    "jobs": "55555",
+    "emailLogs": "55555",
+    "extensions": "55555"
+  },
+  "sidebar": {
+    "backToMain": "55555",
+    "searchPlaceholder": "55555",
+    "settings": "55555",
+    "support": "55555"
+  },
+  "settings": {
+    "sections": {
+      "organizationAccess": "55555",
+      "workManagement": "55555",
+      "timeBilling": "55555",
+      "communication": "55555",
+      "dataIntegration": "55555",
+      "experimental": "55555"
+    },
+    "tabs": {
+      "general": "55555",
+      "users": "55555",
+      "teams": "55555",
+      "clientPortal": "55555",
+      "ticketing": "55555",
+      "projects": "55555",
+      "interactions": "55555",
+      "notifications": "55555",
+      "timeEntry": "55555",
+      "billing": "55555",
+      "secrets": "55555",
+      "importExport": "55555",
+      "email": "55555",
+      "integrations": "55555",
+      "extensions": "55555",
+      "experimentalFeatures": "55555",
+      "profile": "55555",
+      "security": "55555"
+    }
+  },
+  "header": {
+    "userFallback": "55555",
+    "quickAccess": "55555",
+    "profile": "55555",
+    "account": "55555",
+    "signOut": "55555"
+  }
+}

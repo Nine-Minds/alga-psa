@@ -1,0 +1,138 @@
+{
+  "modal": {
+    "title": "55555",
+    "editTitle": "55555",
+    "step": "55555",
+    "of": "55555"
+  },
+  "steps": {
+    "service": "55555",
+    "date": "55555",
+    "time": "55555",
+    "confirm": "55555"
+  },
+  "step1": {
+    "title": "55555",
+    "description": "55555",
+    "selectService": "55555",
+    "serviceLabel": "55555",
+    "ticketLabel": "55555",
+    "selectTicket": "55555",
+    "noTicket": "55555",
+    "searchTickets": "55555",
+    "noTicketsFound": "55555",
+    "ticketHint": "55555"
+  },
+  "step2": {
+    "title": "55555",
+    "description": "55555",
+    "selectDate": "55555",
+    "selectedDate": "55555"
+  },
+  "step3": {
+    "title": "55555",
+    "description": "55555",
+    "selectTime": "55555",
+    "minutes": "55555",
+    "noTimeSlotsAvailable": "55555",
+    "technicianLabel": "55555",
+    "selectTechnician": "55555",
+    "noPreference": "55555",
+    "technicianHint": "55555"
+  },
+  "step4": {
+    "title": "55555",
+    "description": "55555",
+    "descriptionPlaceholder": "55555",
+    "summaryTitle": "55555",
+    "service": "55555",
+    "dateTime": "55555",
+    "at": "55555",
+    "duration": "55555",
+    "technician": "55555",
+    "linkedTicket": "55555",
+    "approvalNote": "55555",
+    "submit": "55555",
+    "update": "55555"
+  },
+  "status": {
+    "pending": "55555",
+    "approved": "55555",
+    "declined": "55555",
+    "cancelled": "55555"
+  },
+  "errors": {
+    "loadServicesFailed": "55555",
+    "loadDatesFailed": "55555",
+    "loadSlotsFailed": "55555",
+    "createFailed": "55555",
+    "updateFailed": "55555",
+    "loadFailed": "55555"
+  },
+  "messages": {
+    "requestSuccess": "55555",
+    "requestSuccessDetail": "55555",
+    "updateSuccess": "55555",
+    "updateSuccessDetail": "55555",
+    "cancelSuccess": "55555",
+    "cancelFailed": "55555"
+  },
+  "page": {
+    "title": "55555",
+    "subtitle": "55555",
+    "requestButton": "55555",
+    "noAppointments": "55555",
+    "noAppointmentsDescription": "55555"
+  },
+  "filters": {
+    "all": "55555",
+    "pending": "55555",
+    "approved": "55555",
+    "declined": "55555"
+  },
+  "table": {
+    "service": "55555",
+    "dateTime": "55555",
+    "status": "55555",
+    "technician": "55555",
+    "actions": "55555",
+    "minutes": "55555",
+    "notAssigned": "55555",
+    "viewDetails": "55555",
+    "edit": "55555",
+    "cancel": "55555"
+  },
+  "details": {
+    "title": "55555",
+    "statusApproved": "55555",
+    "statusPending": "55555",
+    "statusDeclined": "55555",
+    "statusCancelled": "55555",
+    "reason": "55555",
+    "reference": "55555",
+    "service": "55555",
+    "dateTime": "55555",
+    "technician": "55555",
+    "linkedTicket": "55555",
+    "description": "55555",
+    "created": "55555",
+    "approved": "55555",
+    "cancelButton": "55555"
+  },
+  "cancel": {
+    "title": "55555",
+    "message": "55555",
+    "confirm": "55555"
+  },
+  "ticketSection": {
+    "title": "55555",
+    "service": "55555",
+    "publicRequest": "55555",
+    "minutes": "55555",
+    "preferred": "55555",
+    "approvedBy": "55555",
+    "on": "55555",
+    "declined": "55555",
+    "invalidDateTime": "55555"
+  }
+}

@@ -1,0 +1,878 @@
+{
+  "nav": {
+    "dashboard": "11111",
+    "tickets": "11111",
+    "clients": "11111",
+    "projects": "11111",
+    "billing": "11111",
+    "reports": "11111",
+    "settings": "11111",
+    "profile": "11111",
+    "logout": "11111",
+    "help": "11111"
+  },
+  "actions": {
+    "save": "11111",
+    "cancel": "11111",
+    "delete": "11111",
+    "edit": "11111",
+    "create": "11111",
+    "update": "11111",
+    "submit": "11111",
+    "back": "11111",
+    "next": "11111",
+    "previous": "11111",
+    "search": "11111",
+    "filter": "11111",
+    "export": "11111",
+    "import": "11111",
+    "download": "11111",
+    "upload": "11111",
+    "refresh": "11111",
+    "close": "11111",
+    "confirm": "11111",
+    "add": "11111",
+    "remove": "11111",
+    "clear": "11111",
+    "reset": "11111",
+    "view": "11111",
+    "copy": "11111",
+    "duplicate": "11111",
+    "openMenu": "11111",
+    "confirmDeletion": "11111",
+    "saving": "11111"
+  },
+  "status": {
+    "loading": "11111",
+    "saving": "11111",
+    "processing": "11111",
+    "success": "11111",
+    "error": "11111",
+    "warning": "11111",
+    "info": "11111",
+    "pending": "11111",
+    "active": "11111",
+    "inactive": "11111",
+    "completed": "11111",
+    "cancelled": "11111"
+  },
+  "messages": {
+    "welcome": "11111",
+    "confirmDelete": "11111",
+    "confirmDeletion": "11111",
+    "saveSuccess": "11111",
+    "saveError": "11111",
+    "loadError": "11111",
+    "noData": "11111",
+    "required": "11111",
+    "invalidEmail": "11111",
+    "invalidPassword": "11111",
+    "passwordMismatch": "11111"
+  },
+  "errors": {
+    "auth": {
+      "notAuthenticated": "11111",
+      "accessDenied": "11111",
+      "clientPortalOnly": "11111",
+      "insufficientPermissions": "11111",
+      "userIdNotFound": "11111",
+      "tenantNotFound": "11111",
+      "userNotFound": "11111",
+      "contactNotFound": "11111",
+      "clientNotFound": "11111"
+    },
+    "permissions": {
+      "tickets": {
+        "read": "11111",
+        "readDetails": "11111",
+        "create": "11111",
+        "update": "11111",
+        "updateStatus": "11111",
+        "addComments": "11111",
+        "updateComments": "11111",
+        "deleteComments": "11111"
+      }
+    }
+  },
+  "fields": {
+    "notes": "11111"
+  },
+  "tickets": {
+    "origin": {
+      "internal": "11111",
+      "clientPortal": "11111",
+      "inboundEmail": "11111",
+      "api": "11111",
+      "other": "11111"
+    },
+    "responseSource": {
+      "clientPortal": "11111",
+      "inboundEmail": "11111"
+    }
+  },
+  "time": {
+    "today": "11111",
+    "yesterday": "11111",
+    "tomorrow": "11111",
+    "thisWeek": "11111",
+    "lastWeek": "11111",
+    "thisMonth": "11111",
+    "lastMonth": "11111",
+    "thisYear": "11111",
+    "lastYear": "11111",
+    "seconds": "11111",
+    "minutes": "11111",
+    "hours": "11111",
+    "days": "11111",
+    "weeks": "11111",
+    "months": "11111",
+    "years": "11111"
+  },
+  "language": {
+    "selectLanguage": "11111",
+    "changeLanguage": "11111",
+    "currentLanguage": "11111",
+    "preference": {
+      "label": "11111",
+      "helper": "11111",
+      "placeholder": "11111",
+      "cleared": "11111",
+      "updating": "11111",
+      "notSet": "11111",
+      "notSetWithSource": "11111 {{source}} 11111 {{languageName}} 11111 {{locale}} 11111",
+      "source": {
+        "client": "11111",
+        "tenant": "11111",
+        "system": "11111"
+      }
+    }
+  },
+  "yes": "11111",
+  "no": "11111",
+  "clients": {
+    "locations": {
+      "sectionTitle": "11111",
+      "manageButton": "11111",
+      "dialogTitle": "11111 {{client}} 11111",
+      "managerLabel": "11111",
+      "listTitle": "11111",
+      "buttons": {
+        "add": "11111",
+        "save": "11111"
+      },
+      "card": {
+        "unnamed": "11111",
+        "setDefault": "11111",
+        "edit": "11111",
+        "delete": "11111",
+        "addressLabel": "11111",
+        "addressHelper": "11111",
+        "phoneLabel": "11111",
+        "phoneHelper": "11111",
+        "phoneValue": "11111 {{phone}} 11111",
+        "emailLabel": "11111",
+        "emailHelper": "11111",
+        "emailValue": "11111 {{email}} 11111",
+        "billingTag": "11111",
+        "shippingTag": "11111",
+        "notesLabel": "11111",
+        "notesHelper": "11111"
+      },
+      "form": {
+        "locationName": "11111",
+        "locationNameHelper": "11111",
+        "addressLine1": "11111",
+        "addressLine1Helper": "11111",
+        "addressLine2": "11111",
+        "addressLine2Helper": "11111",
+        "addressLine3": "11111",
+        "city": "11111",
+        "cityHelper": "11111",
+        "stateProvince": "11111",
+        "stateProvinceHelper": "11111",
+        "postalCode": "11111",
+        "postalCodeHelper": "11111",
+        "country": "11111",
+        "countryHelper": "11111",
+        "phone": "11111",
+        "phoneHelper": "11111",
+        "email": "11111",
+        "emailHelper": "11111",
+        "taxRegion": "11111",
+        "taxRegionHelper": "11111",
+        "notes": "11111",
+        "notesHelper": "11111",
+        "defaultLocation": "11111",
+        "defaultLocationHelper": "11111",
+        "billingAddress": "11111",
+        "billingAddressHelper": "11111",
+        "shippingAddress": "11111",
+        "shippingAddressHelper": "11111",
+        "placeholder": {
+          "locationName": "11111",
+          "addressLine1": "11111",
+          "city": "11111",
+          "country": "11111",
+          "loadingCountries": "11111",
+          "taxRegionOption": "11111",
+          "taxRegion": "11111"
+        }
+      },
+      "validation": {
+        "title": "11111"
+      },
+      "errors": {
+        "loadTaxRegions": "11111",
+        "loadCountries": "11111",
+        "loadLocations": "11111",
+        "save": "11111",
+        "delete": "11111",
+        "setDefault": "11111"
+      },
+      "success": {
+        "create": "11111",
+        "update": "11111",
+        "delete": "11111",
+        "setDefault": "11111"
+      },
+      "dialog": {
+        "addTitle": "11111",
+        "editTitle": "11111",
+        "deleteTitle": "11111",
+        "deleteMessage": "11111 {{name}} 11111"
+      },
+      "empty": {
+        "title": "11111",
+        "description": "11111"
+      }
+    }
+  },
+  "pagination": {
+    "previous": "11111",
+    "next": "11111",
+    "pageInfo": "11111 {{current}} 11111 {{total}} 11111 {{count}} 11111",
+    "page": "11111",
+    "of": "11111",
+    "showing": "11111 {{from}} 11111 {{to}} 11111 {{total}} 11111",
+    "rowsPerPage": "11111",
+    "first": "11111",
+    "last": "11111",
+    "itemsLabel": "11111",
+    "itemsPerPageOption": "11111 {{count}} 11111",
+    "itemsPerPagePlaceholder": "11111",
+    "reflectionLabel": "11111",
+    "range": "11111 {{from}} 11111 {{to}} 11111 {{total}} 11111 {{itemLabel}} 11111",
+    "ariaLabel": "11111",
+    "totalItems": "11111 {{count}} 11111 {{itemLabel}} 11111",
+    "totalRecordsInline": "11111 {{count}} 11111",
+    "pageOf": "11111 {{current}} 11111 {{total}} 11111"
+  },
+  "documents": {
+    "title": "11111",
+    "noDocuments": "11111",
+    "upload": "11111",
+    "download": "11111",
+    "remove": "11111",
+    "detach": "11111",
+    "preview": "11111",
+    "linkDocuments": "11111",
+    "editDocument": "11111",
+    "viewDocument": "11111",
+    "downloadToPlay": "11111",
+    "delete": "11111",
+    "deletePermanently": "11111",
+    "previewUnavailable": "11111",
+    "newDocument": "11111",
+    "uploadFile": "11111",
+    "deleteTitle": "11111",
+    "deleteMessage": "11111 {{name}} 11111",
+    "deleteVideoTitle": "11111",
+    "deleteVideoMessage": "11111 {{name}} 11111",
+    "removeTitle": "11111",
+    "removeMessage": "11111 {{name}} 11111",
+    "removeVideoTitle": "11111",
+    "removeVideoMessage": "11111 {{name}} 11111",
+    "downloadFile": "11111",
+    "videoUnsupported": "11111 {{mimeType}} 11111",
+    "videoTagUnsupported": "11111",
+    "unnamed": "11111",
+    "videoDownloadInfo": "11111",
+    "previewUnavailableNoId": "11111",
+    "previewLoadFailed": "11111",
+    "videoCodecWarning": "11111",
+    "messages": {
+      "fetchFailed": "11111",
+      "folderCreated": "11111 {{name}} 11111",
+      "folderCreateFailed": "11111",
+      "moveDocumentsSuccess_one": "11111 {{count}} 11111 {{destination}} 11111",
+      "moveDocumentsSuccess_other": "11111 {{count}} 11111 {{destination}} 11111",
+      "moveDocumentsFailed": "11111",
+      "deleteSuccess": "11111 {{name}} 11111",
+      "deleteFailed": "11111",
+      "removeAssociationFailed": "11111",
+      "moveDocumentSuccess": "11111 {{name}} 11111",
+      "moveDocumentFailed": "11111",
+      "createFailed": "11111",
+      "saveFailed": "11111",
+      "loadContentFailed": "11111",
+      "downloadFailed": "11111",
+      "bulkDeleteFailed": "11111",
+      "bulkDeleteSuccess_one": "11111 {{count}} 11111",
+      "bulkDeleteSuccess_other": "11111 {{count}} 11111"
+    },
+    "empty": {
+      "default": "11111",
+      "folder": "11111"
+    },
+    "validation": {
+      "nameRequired": "11111"
+    },
+    "bulkActions": {
+      "selected_one": "11111 {{count}} 11111",
+      "selected_other": "11111 {{count}} 11111",
+      "moveToFolder": "11111",
+      "deleteSelected": "11111",
+      "clearSelection": "11111"
+    },
+    "prompts": {
+      "confirmBulkDelete_one": "11111 {{count}} 11111",
+      "confirmBulkDelete_other": "11111 {{count}} 11111"
+    },
+    "pagination": {
+      "perPage": "11111 {{count}} 11111"
+    },
+    "folderSelector": {
+      "defaultTitle": "11111",
+      "defaultDescription": "11111",
+      "singleDescription": "11111 {{fileName}} 11111",
+      "multipleDescription": "11111 {{count}} 11111",
+      "newDocumentTitle": "11111",
+      "newDocumentDescription": "11111",
+      "moveTitle": "11111",
+      "moveDescriptionWithName": "11111 {{name}} 11111",
+      "moveDescription": "11111",
+      "bulkMoveTitle": "11111",
+      "bulkMoveDescription_one": "11111 {{count}} 11111",
+      "bulkMoveDescription_other": "11111 {{count}} 11111",
+      "errors": {
+        "nameRequired": "11111",
+        "invalidCharacters": "11111",
+        "createFailed": "11111"
+      },
+      "creating": "11111",
+      "createButton": "11111",
+      "newFolderButton": "11111",
+      "parentLabel": "11111 {{folder}} 11111",
+      "rootLabel": "11111",
+      "namePlaceholder": "11111",
+      "loading": "11111",
+      "rootOption": "11111",
+      "empty": "11111"
+    },
+    "filters": {
+      "searchLabel": "11111",
+      "searchPlaceholder": "11111",
+      "typeLabel": "11111",
+      "entityTypeLabel": "11111",
+      "uploadedByLabel": "11111",
+      "uploadedByPlaceholder": "11111",
+      "updatedStartLabel": "11111",
+      "updatedEndLabel": "11111",
+      "startDatePlaceholder": "11111",
+      "endDatePlaceholder": "11111",
+      "sortByLabel": "11111",
+      "clear": "11111",
+      "showAllDocuments": "11111",
+      "typeOptions": {
+        "all": "11111",
+        "pdf": "11111",
+        "image": "11111",
+        "text": "11111",
+        "video": "11111",
+        "other": "11111"
+      },
+      "sortOptions": {
+        "updated_at": "11111",
+        "document_name": "11111",
+        "file_size": "11111",
+        "created_by_full_name": "11111"
+      },
+      "sortOrder": {
+        "default": {
+          "asc": "11111",
+          "desc": "11111"
+        },
+        "document_name": {
+          "asc": "11111",
+          "desc": "11111"
+        },
+        "updated_at": {
+          "asc": "11111",
+          "desc": "11111"
+        },
+        "file_size": {
+          "asc": "11111",
+          "desc": "11111"
+        },
+        "created_by_full_name": {
+          "asc": "11111",
+          "desc": "11111"
+        }
+      }
+    },
+    "selector": {
+      "title": "11111",
+      "reflectionLabel": "11111",
+      "searchPlaceholder": "11111",
+      "foldersLabel": "11111",
+      "folderHint": "11111 {{folder}} 11111",
+      "saving": "11111",
+      "selectDocument": "11111",
+      "associateSelected": "11111",
+      "errors": {
+        "configuration": "11111",
+        "invalidData": "11111",
+        "load": "11111",
+        "save": "11111"
+      },
+      "configErrorTitle": "11111",
+      "configErrorMessage": "11111"
+    },
+    "uploadSection": {
+      "reflectionLabel": "11111",
+      "dragDrop": "11111",
+      "browse": "11111",
+      "uploading": "11111",
+      "uploadingProgress": "11111 {{current}} 11111 {{total}} 11111",
+      "pending": "11111",
+      "error": "11111",
+      "fileError": "11111"
+    },
+    "folders": {
+      "root": "11111",
+      "loadFailed": "11111",
+      "deleteConfirm": "11111 {{name}} 11111",
+      "deleteSuccess": "11111 {{name}} 11111",
+      "deleteFailed": "11111",
+      "deleteAction": "11111",
+      "loading": "11111",
+      "title": "11111",
+      "collapse": "11111",
+      "allDocuments": "11111"
+    },
+    "folderManager": {
+      "title": "11111",
+      "nameLabel": "11111",
+      "namePlaceholder": "11111",
+      "willCreateIn": "11111 {{folder}} 11111"
+    },
+    "notifications": {
+      "viewAll": "11111",
+      "categories": {
+        "Authentication": "11111",
+        "Invoices": "11111",
+        "Projects": "11111",
+        "Tickets": "11111",
+        "Time Entries": "11111"
+      }
+    }
+  },
+  "surveys": {
+    "common": {
+      "loading": "11111"
+    },
+    "settings": {
+      "tabLabel": "11111",
+      "title": "11111",
+      "subtitle": "11111",
+      "tabs": {
+        "templates": "11111",
+        "triggers": "11111"
+      },
+      "templateList": {
+        "title": "11111",
+        "description": "11111",
+        "createButton": "11111",
+        "emptyTitle": "11111",
+        "emptyDescription": "11111",
+        "table": {
+          "name": "11111",
+          "rating": "11111",
+          "status": "11111",
+          "updated": "11111",
+          "actions": "11111"
+        },
+        "defaultBadge": "11111",
+        "status": {
+          "enabled": "11111",
+          "disabled": "11111"
+        },
+        "toasts": {
+          "created": "11111",
+          "updated": "11111",
+          "deleted": "11111",
+          "setDefault": "11111",
+          "error": "11111",
+          "deleteError": "11111"
+        },
+        "errors": {
+          "load": "11111"
+        },
+        "deleteConfirm": "11111"
+      },
+      "templateForm": {
+        "titleCreate": "11111",
+        "titleEdit": "11111",
+        "labels": {
+          "name": "11111",
+          "ratingType": "11111",
+          "ratingScale": "11111",
+          "ratingLabels": "11111",
+          "promptText": "11111",
+          "commentPrompt": "11111",
+          "thankYouText": "11111",
+          "isDefault": "11111",
+          "enabled": "11111"
+        },
+        "placeholders": {
+          "ratingLabels": "11111"
+        },
+        "help": {
+          "ratingLabels": "11111"
+        },
+        "ratingTypes": {
+          "stars": "11111",
+          "numbers": "11111",
+          "emojis": "11111"
+        },
+        "actions": {
+          "create": "11111",
+          "save": "11111",
+          "delete": "11111"
+        }
+      },
+      "triggerList": {
+        "title": "11111",
+        "description": "11111",
+        "createButton": "11111",
+        "emptyTitle": "11111",
+        "emptyDescription": "11111",
+        "table": {
+          "template": "11111",
+          "type": "11111",
+          "conditions": "11111",
+          "status": "11111",
+          "updated": "11111",
+          "actions": "11111"
+        },
+        "conditions": {
+          "boards": "11111",
+          "statuses": "11111",
+          "priorities": "11111",
+          "any": "11111",
+          "unrestricted": "11111"
+        },
+        "status": {
+          "enabled": "11111",
+          "disabled": "11111"
+        },
+        "toasts": {
+          "created": "11111",
+          "updated": "11111",
+          "deleted": "11111",
+          "error": "11111",
+          "deleteError": "11111"
+        },
+        "errors": {
+          "load": "11111"
+        },
+        "deleteConfirm": "11111"
+      },
+      "triggerForm": {
+        "titleCreate": "11111",
+        "titleEdit": "11111",
+        "labels": {
+          "template": "11111",
+          "triggerType": "11111",
+          "boardIds": "11111",
+          "statusIds": "11111",
+          "priorities": "11111",
+          "enabled": "11111"
+        },
+        "placeholders": {
+          "boardIds": "11111",
+          "statusIds": "11111",
+          "priorities": "11111"
+        },
+        "help": {
+          "conditions": "11111"
+        },
+        "actions": {
+          "create": "11111",
+          "save": "11111",
+          "delete": "11111"
+        },
+        "triggerTypes": {
+          "ticket_closed": "11111",
+          "project_completed": "11111"
+        },
+        "errors": {
+          "reference": "11111"
+        },
+        "noTemplates": "11111",
+        "prioritiesMixed": "11111"
+      }
+    },
+    "response": {
+      "pageTitle": "11111",
+      "invalidTitle": "11111",
+      "invalidMessage": "11111",
+      "ratingPrompt": "11111",
+      "ratingAssistive": "11111 {{scale}} 11111",
+      "commentLabel": "11111",
+      "submitButton": "11111",
+      "submitting": "11111",
+      "submittedTitle": "11111",
+      "submittedMessage": "11111 {{thankYouText}} 11111",
+      "retryButton": "11111",
+      "ratingSubmitted": "11111",
+      "errorMessage": "11111",
+      "selectRatingError": "11111",
+      "supportMessage": "11111"
+    }
+  },
+  "availability": {
+    "settings": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "tabs": {
+      "general": "11111",
+      "userHours": "11111",
+      "serviceRules": "11111",
+      "exceptions": "11111"
+    },
+    "general": {
+      "advanceBookingDays": "11111",
+      "advanceBookingDaysHelper": "11111",
+      "minimumNoticeHours": "11111",
+      "minimumNoticeHoursHelper": "11111",
+      "defaultBufferBefore": "11111",
+      "defaultBufferAfter": "11111",
+      "bufferHelper": "11111"
+    },
+    "userHours": {
+      "selectUser": "11111",
+      "dayOfWeek": "11111",
+      "startTime": "11111",
+      "endTime": "11111",
+      "available": "11111",
+      "cloneSettings": "11111",
+      "maxAppointmentsPerDay": "11111"
+    },
+    "serviceRules": {
+      "selectService": "11111",
+      "allowWithoutContract": "11111",
+      "advanceBooking": "11111",
+      "maxAppointments": "11111"
+    },
+    "exceptions": {
+      "addException": "11111",
+      "date": "11111",
+      "reason": "11111",
+      "userSpecific": "11111",
+      "companyWide": "11111"
+    },
+    "messages": {
+      "saveSuccess": "11111",
+      "saveFailed": "11111",
+      "loadFailed": "11111"
+    }
+  },
+  "appointments": {
+    "requests": {
+      "title": "11111",
+      "viewAll": "11111",
+      "approve": "11111",
+      "decline": "11111",
+      "assignTech": "11111",
+      "internalNotes": "11111",
+      "pendingCount": "11111 {{count}} 11111",
+      "filterByStatus": "11111",
+      "filterByService": "11111",
+      "filterByDate": "11111"
+    },
+    "panel": {
+      "title": "11111",
+      "description": "11111",
+      "noRequests": "11111",
+      "loadingRequests": "11111"
+    },
+    "card": {
+      "requesterName": "11111",
+      "companyName": "11111",
+      "service": "11111",
+      "requestedDateTime": "11111",
+      "duration": "11111",
+      "preferredTechnician": "11111",
+      "linkedTicket": "11111",
+      "actions": "11111"
+    },
+    "approvalModal": {
+      "title": "11111",
+      "confirmDateTime": "11111",
+      "modifyDateTime": "11111",
+      "assignedUser": "11111",
+      "linkToTicket": "11111",
+      "internalNotes": "11111",
+      "approve": "11111",
+      "approving": "11111"
+    },
+    "declineModal": {
+      "title": "11111",
+      "reason": "11111",
+      "reasonRequired": "11111",
+      "reasonPlaceholder": "11111",
+      "decline": "11111",
+      "declining": "11111"
+    },
+    "detailsModal": {
+      "title": "11111",
+      "requesterInfo": "11111",
+      "requestInfo": "11111",
+      "status": "11111",
+      "createdAt": "11111",
+      "approvedAt": "11111",
+      "approvedBy": "11111",
+      "declinedReason": "11111"
+    },
+    "status": {
+      "pending": "11111",
+      "approved": "11111",
+      "declined": "11111",
+      "cancelled": "11111"
+    },
+    "messages": {
+      "approveSuccess": "11111",
+      "approveFailed": "11111",
+      "declineSuccess": "11111",
+      "declineFailed": "11111",
+      "loadFailed": "11111",
+      "scheduleEntryCreated": "11111"
+    }
+  },
+  "common": {
+    "actions": "11111",
+    "active": "11111",
+    "inactive": "11111",
+    "loading": "11111",
+    "uploading": "11111",
+    "error": "11111",
+    "save": "11111",
+    "cancel": "11111",
+    "delete": "11111",
+    "edit": "11111",
+    "close": "11111",
+    "confirm": "11111",
+    "yes": "11111",
+    "no": "11111",
+    "search": "11111",
+    "filter": "11111",
+    "resetFilters": "11111",
+    "sort": "11111",
+    "refresh": "11111",
+    "export": "11111",
+    "import": "11111",
+    "download": "11111",
+    "upload": "11111",
+    "selectAll": "11111",
+    "clearSelection": "11111",
+    "view": "11111",
+    "back": "11111",
+    "next": "11111",
+    "previous": "11111",
+    "submit": "11111",
+    "submitting": "11111",
+    "reset": "11111",
+    "noData": "11111",
+    "required": "11111",
+    "optional": "11111",
+    "notSpecified": "11111",
+    "unknown": "11111"
+  },
+  "sessionManagement": {
+    "title": "11111",
+    "description": "11111",
+    "states": {
+      "loading": "11111",
+      "noSessions": "11111"
+    },
+    "labels": {
+      "unknownDevice": "11111",
+      "currentSession": "11111",
+      "yourSession": "11111",
+      "lastActive": "11111"
+    },
+    "loginMethods": {
+      "password": "11111",
+      "googleOAuth": "11111",
+      "microsoftOAuth": "11111",
+      "keycloak": "11111"
+    },
+    "userTypes": {
+      "internal": "11111",
+      "client": "11111"
+    },
+    "actions": {
+      "logout": "11111",
+      "revoke": "11111",
+      "revoking": "11111",
+      "loggingOut": "11111",
+      "logoutFromOther": "11111 {{count}} 11111 {{count, plural, one {} other {s}} 11111"
+    },
+    "confirmations": {
+      "logoutCurrent": "11111",
+      "logoutAllOther": "11111"
+    },
+    "prompts": {
+      "enter2FA": "11111"
+    },
+    "messages": {
+      "loggingOut": "11111",
+      "sessionRevoked": "11111"
+    },
+    "warnings": {
+      "oauthLogout": "11111 {{provider}} 11111"
+    },
+    "errors": {
+      "fetchFailed": "11111",
+      "loadFailed": "11111",
+      "revokeFailed": "11111",
+      "revokeAllFailed": "11111",
+      "logoutAllFailed": "11111",
+      "adminAccessRequired": "11111"
+    },
+    "admin": {
+      "title": "11111",
+      "description": "11111 {{sessionCount}} 11111 {{userCount}} 11111",
+      "searchPlaceholder": "11111",
+      "noResults": "11111"
+    }
+  },
+  "projects": {
+    "task": {
+      "comments": {
+        "title": "11111",
+        "internal_only": "11111",
+        "placeholder": "11111",
+        "add_comment": "11111",
+        "no_comments": "11111",
+        "edited": "11111",
+        "error_creating": "11111",
+        "error_updating": "11111",
+        "error_deleting": "11111",
+        "confirm_delete": "11111"
+      }
+    }
+  }
+}

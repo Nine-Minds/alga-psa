@@ -1,0 +1,1259 @@
+{
+  "page": {
+    "title": "Ustawienia administratora"
+  },
+  "tabs": {
+    "general": "Ogólne",
+    "experimentalFeatures": "Funkcje eksperymentalne",
+    "clientPortal": "Portal klienta",
+    "users": "Użytkownicy",
+    "teams": "Zespoły",
+    "language": "Język",
+    "ticketing": "Obsługa zgłoszeń",
+    "projects": "Projekty",
+    "interactions": "Interakcje",
+    "notifications": "Powiadomienia",
+    "timeEntry": "Ewidencja czasu",
+    "billing": "Rozliczenia",
+    "secrets": "Sekrety",
+    "importExport": "Import/Eksport",
+    "email": "E-mail",
+    "integrations": "Integracje",
+    "extensions": "Rozszerzenia"
+  },
+  "unsavedChanges": {
+    "title": "Niezapisane zmiany",
+    "message": "Mają Państwo niezapisane zmiany. Czy na pewno chcą Państwo opuścić tę stronę? Zmiany zostaną utracone."
+  },
+  "general": {
+    "title": "Ustawienia ogólne",
+    "description": "Zarządzanie nazwą organizacji i domyślnym klientem. Domyślny klient jest używany do celów konfiguracyjnych i reprezentuje Państwa MSP.",
+    "fields": {
+      "organizationName": {
+        "label": "Nazwa organizacji"
+      },
+      "defaultTimezone": {
+        "label": "Domyślna strefa czasowa",
+        "help": "Używana w wiadomościach e-mail i powiadomieniach, gdy użytkownik nie ustawił własnej strefy czasowej."
+      }
+    },
+    "actions": {
+      "saveOrganizationName": "Zapisz nazwę organizacji",
+      "saveDefaultTimezone": "Zapisz domyślną strefę czasową"
+    },
+    "clients": {
+      "title": "Klienci",
+      "table": {
+        "name": "Nazwa",
+        "default": "Domyślny",
+        "actions": "Akcje"
+      },
+      "placeholder": "Wybierz klienta do dodania",
+      "addClient": "Dodaj klienta"
+    },
+    "messages": {
+      "success": {
+        "tenantNameUpdated": "Nazwa organizacji została zaktualizowana pomyślnie",
+        "timezoneUpdated": "Domyślna strefa czasowa została zaktualizowana pomyślnie",
+        "clientAdded": "Klient został dodany pomyślnie",
+        "clientRemoved": "Klient został usunięty pomyślnie",
+        "defaultClientUpdated": "Domyślny klient został zaktualizowany pomyślnie"
+      },
+      "error": {
+        "loadTenantData": "Nie udało się załadować danych organizacji",
+        "updateTenantName": "Nie udało się zaktualizować nazwy organizacji",
+        "updateTimezone": "Nie udało się zaktualizować strefy czasowej",
+        "selectClient": "Proszę wybrać klienta",
+        "clientNotFound": "Nie znaleziono klienta",
+        "addClient": "Nie udało się dodać klienta",
+        "removeClient": "Nie udało się usunąć klienta",
+        "setDefaultClient": "Nie udało się ustawić domyślnego klienta",
+        "loadClients": "Nie udało się załadować klientów"
+      }
+    }
+  },
+  "experimentalFeatures": {
+    "title": "Funkcje eksperymentalne",
+    "description": "Włączanie lub wyłączanie funkcji eksperymentalnych dla Państwa organizacji.",
+    "alert": {
+      "title": "Eksperymentalne",
+      "description": "Funkcje eksperymentalne mogą ulec zmianie lub zostać usunięte bez uprzedzenia."
+    },
+    "features": {
+      "aiAssistant": {
+        "name": "Asystent AI",
+        "description": "Włącz funkcje Szybkie pytanie i Czat na pasku bocznym, oparte na AI.",
+        "restriction": "Dostępne tylko dla głównej organizacji rozliczeniowej."
+      },
+      "workflowAutomation": {
+        "name": "Automatyzacja przepływów pracy",
+        "description": "Włącz eksperymentalne funkcje automatyzacji przepływów pracy w panelu sterowania i edytorze przepływów pracy."
+      }
+    },
+    "actions": {
+      "save": "Zapisz",
+      "saving": "Zapisywanie...",
+      "retry": "Ponów"
+    },
+    "loading": "Ładowanie funkcji eksperymentalnych...",
+    "messages": {
+      "success": {
+        "saved": "Ustawienia funkcji eksperymentalnych zostały zapisane. Proszę odświeżyć stronę, aby zastosować zmiany."
+      },
+      "error": {
+        "loadFailed": "Nie udało się załadować ustawień funkcji eksperymentalnych.",
+        "saveFailed": "Nie udało się zapisać ustawień funkcji eksperymentalnych."
+      }
+    }
+  },
+  "users": {
+    "title": "Zarządzanie użytkownikami",
+    "description": {
+      "msp": "Zarządzanie użytkownikami MSP i uprawnieniami",
+      "client": "Zarządzanie użytkownikami portalu klienta i ich dostępem"
+    },
+    "viewSwitcher": {
+      "msp": "MSP",
+      "clientPortal": "Portal klienta"
+    },
+    "license": {
+      "usage": "Użytkownicy MSP: wykorzystano {{used}}{{limit}} licencji",
+      "noLimit": " (Bez limitu)",
+      "ofLimit": " z {{limit}}",
+      "addLicensePrompt": "Aby dodać nowego użytkownika, należy zakupić dodatkowe licencje",
+      "addLicense": "Dodaj licencję"
+    },
+    "search": "Szukaj użytkowników",
+    "filter": {
+      "all": "Wszyscy użytkownicy",
+      "active": "Aktywni użytkownicy",
+      "inactive": "Nieaktywni użytkownicy",
+      "selectStatus": "Wybierz status"
+    },
+    "tabs": {
+      "list": "Lista",
+      "structure": "Struktura",
+      "listDescription": "Zarządzanie poszczególnymi użytkownikami, rolami i uprawnieniami.",
+      "structureDescription": "Wizualizacja i zarządzanie hierarchią raportowania w organizacji."
+    },
+    "actions": {
+      "createNewUser": "Utwórz nowego użytkownika",
+      "createNewClientUser": "Utwórz nowego użytkownika portalu klienta",
+      "copyPortalLink": "Kopiuj link logowania do portalu",
+      "copying": "Kopiowanie...",
+      "createUser": "Utwórz użytkownika",
+      "sendInvitation": "Wyślij zaproszenie do portalu",
+      "cancel": "Anuluj"
+    },
+    "form": {
+      "title": {
+        "msp": "Utwórz nowego użytkownika MSP",
+        "client": "Utwórz nowego użytkownika portalu klienta"
+      },
+      "fields": {
+        "firstName": "Imię",
+        "lastName": "Nazwisko",
+        "email": "E-mail",
+        "client": "Klient",
+        "clientOptional": "(opcjonalnie)",
+        "primaryRole": "Rola główna",
+        "selectRole": "Wybierz rolę",
+        "reportsTo": "Przełożony",
+        "reportsToOptional": "(opcjonalnie)",
+        "selectManager": "Wybierz przełożonego",
+        "existingContact": "Istniejący kontakt",
+        "existingContactOptional": "(opcjonalnie)",
+        "selectExistingContact": "Wybierz istniejący kontakt (opcjonalnie)",
+        "selectExistingContactRequired": "Wybierz istniejący kontakt",
+        "selectContactToInvite": "Wybierz kontakt do zaproszenia",
+        "password": "Hasło",
+        "passwordOptional": "(Pozostaw puste, aby wysłać zaproszenie)",
+        "passwordPlaceholder": {
+          "msp": "Wprowadź hasło",
+          "client": "Pozostaw puste, aby wysłać zaproszenie"
+        },
+        "selectClient": "Wybierz klienta"
+      },
+      "passwordAlert": {
+        "withPassword": "Ustawienie hasła spowoduje natychmiastowe utworzenie użytkownika. Użytkownik będzie mógł się zalogować od razu.",
+        "withoutPassword": "Hasło nie jest wymagane — wyślemy zaproszenie do portalu, aby użytkownik mógł je ustawić."
+      },
+      "requirePasswordChange": "Wymagaj zmiany hasła przy pierwszym logowaniu"
+    },
+    "table": {
+      "firstName": "Imię",
+      "lastName": "Nazwisko",
+      "email": "E-mail",
+      "client": "Klient",
+      "role": "Rola",
+      "lastLogin": "Ostatnie logowanie",
+      "actions": "Akcje",
+      "noClient": "Brak klienta",
+      "noRole": "Brak roli",
+      "never": "Nigdy",
+      "viaMethod": "przez {{method}}",
+      "loading": "Ładowanie...",
+      "openMenu": "Otwórz menu",
+      "edit": "Edytuj",
+      "remove": "Usuń"
+    },
+    "loading": "Ładowanie użytkowników...",
+    "messages": {
+      "success": {
+        "portalInvitationSent": "Zaproszenie do portalu zostało wysłane pomyślnie!",
+        "clientPortalUserCreated": "Użytkownik portalu klienta został utworzony pomyślnie!",
+        "copiedVanityLink": "Skopiowano niestandardowy link logowania do portalu do schowka",
+        "copiedCanonicalLink": "Skopiowano kanoniczny link logowania do portalu do schowka"
+      },
+      "error": {
+        "fetchUsers": "Nie udało się pobrać użytkowników",
+        "fetchRoles": "Nie udało się pobrać ról",
+        "fetchClients": "Nie udało się pobrać klientów",
+        "createUser": "Nie udało się utworzyć użytkownika",
+        "sendInvitation": "Nie udało się wysłać zaproszenia",
+        "sendInvitationManual": "Nie udało się wysłać zaproszenia. Można je wysłać ręcznie z listy użytkowników.",
+        "createClientPortalUser": "Nie udało się utworzyć użytkownika portalu klienta",
+        "clipboardUnavailable": "Interfejs API schowka nie jest dostępny w tej przeglądarce.",
+        "copyPortalLink": "Nie udało się skopiować linku logowania do portalu",
+        "fillRequiredFields": "Proszę wypełnić wszystkie wymagane pola",
+        "fixValidationErrors": "Proszę poprawić błędy walidacji przed kontynuowaniem",
+        "fixValidationBeforeInvitation": "Proszę poprawić błędy walidacji przed wysłaniem zaproszenia",
+        "emailAlreadyInUse": "Ten adres e-mail jest już w użyciu. Proszę użyć innego adresu e-mail.",
+        "portalUserExists": "Użytkownik portalu już istnieje dla tego kontaktu lub adresu e-mail.",
+        "portalUserExistsForContact": "Użytkownik portalu już istnieje dla tego kontaktu. Proszę użyć resetowania hasła dla istniejącego użytkownika.",
+        "selectAppropriateRole": "Proszę wybrać odpowiednią rolę dla tego typu użytkownika",
+        "contactMissingEmail": "Kontakt \"{{name}}\" nie ma adresu e-mail. Proszę zaktualizować adres e-mail kontaktu przed wysłaniem zaproszenia.",
+        "licenseLimit": "Nie można aktywować użytkownika: osiągnięto limit licencji. Proszę dezaktywować innego użytkownika lub zaktualizować licencję."
+      }
+    }
+  },
+  "userDetails": {
+    "title": "Szczegóły użytkownika",
+    "fields": {
+      "firstName": {
+        "label": "Imię",
+        "placeholder": "Wprowadź imię"
+      },
+      "lastName": {
+        "label": "Nazwisko",
+        "placeholder": "Wprowadź nazwisko"
+      },
+      "email": {
+        "label": "E-mail",
+        "placeholder": "Wprowadź adres e-mail"
+      },
+      "reportsTo": {
+        "label": "Przełożony",
+        "placeholder": "Wybierz przełożonego"
+      },
+      "lastLogin": "Ostatnie logowanie",
+      "roles": "Role",
+      "status": "Status",
+      "statusHelp": "Ustaw status konta użytkownika",
+      "newPassword": "Nowe hasło"
+    },
+    "status": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny",
+      "inactiveTag": "(Nieaktywny)"
+    },
+    "actions": {
+      "addRole": "Dodaj rolę",
+      "selectRoleToAdd": "Wybierz rolę do dodania",
+      "removeRole": "Usuń",
+      "setPassword": "Ustaw hasło",
+      "cancel": "Anuluj",
+      "saveChanges": "Zapisz zmiany"
+    },
+    "dialog": {
+      "setPassword": {
+        "title": "Ustaw hasło użytkownika (Administrator)"
+      }
+    },
+    "messages": {
+      "success": {
+        "passwordChanged": "Hasło zostało zmienione pomyślnie",
+        "userUpdated": "Użytkownik został zaktualizowany pomyślnie"
+      },
+      "error": {
+        "userNotFound": "Nie znaleziono użytkownika",
+        "loadFailed": "Nie udało się załadować szczegółów użytkownika. Proszę spróbować ponownie.",
+        "addRoleFailed": "Nie udało się dodać roli. Proszę spróbować ponownie.",
+        "removeRoleFailed": "Nie udało się usunąć roli. Proszę spróbować ponownie.",
+        "updateUserNotFound": "Nie udało się zaktualizować użytkownika. Nie znaleziono użytkownika.",
+        "updateFailed": "Nie udało się zaktualizować użytkownika. Proszę spróbować ponownie.",
+        "passwordTooShort": "Hasło musi mieć co najmniej 8 znaków",
+        "passwordChangeFailed": "Nie udało się zmienić hasła",
+        "passwordChangeError": "Wystąpił błąd podczas zmiany hasła"
+      }
+    }
+  },
+  "teams": {
+    "title": "Zarządzanie zespołami",
+    "description": "Tworzenie i zarządzanie zespołami, przypisywanie liderów zespołów oraz organizowanie członków w ramach organizacji",
+    "loading": "Ładowanie zespołów...",
+    "emptyState": "Proszę wybrać zespół, aby zarządzać członkami",
+    "list": {
+      "title": "Zespoły",
+      "addNewTeam": "Dodaj nowy zespół",
+      "createTeam": "Utwórz zespół",
+      "cancel": "Anuluj",
+      "delete": "Usuń",
+      "placeholder": "Wprowadź nazwę nowego zespołu",
+      "selectManager": "Wybierz kierownika"
+    },
+    "details": {
+      "loading": "Ładowanie szczegółów zespołu...",
+      "notFound": "Nie znaleziono zespołu",
+      "fields": {
+        "teamLead": "Lider zespołu",
+        "addMember": "Dodaj członka"
+      },
+      "placeholders": {
+        "teamName": "Wprowadź nazwę zespołu",
+        "selectTeamLead": "Wybierz lidera zespołu",
+        "selectUserToAdd": "Wybierz użytkownika do dodania"
+      },
+      "alert": {
+        "unsavedChanges": "Mają Państwo niezapisane zmiany"
+      },
+      "actions": {
+        "discard": "Odrzuć",
+        "saveChanges": "Zapisz zmiany",
+        "saveName": "Zapisz nazwę",
+        "cancel": "Anuluj",
+        "editName": "Edytuj nazwę",
+        "remove": "Usuń"
+      },
+      "table": {
+        "teamMembers": "Członkowie zespołu",
+        "member": "Członek",
+        "role": "Rola"
+      },
+      "badge": {
+        "new": "Nowy",
+        "lead": "Lider"
+      },
+      "memberCount": "{{count}} członek",
+      "leadName": "Lider: {{name}}",
+      "memberCount_plural": "{{count}} członków"
+    },
+    "messages": {
+      "error": {
+        "loadFailed": "Nie udało się załadować zespołów. Proszę spróbować ponownie.",
+        "fetchUsers": "Nie udało się pobrać użytkowników",
+        "createFailed": "Nie udało się utworzyć zespołu: {{error}}",
+        "deleteFailed": "Nie udało się usunąć zespołu"
+      }
+    }
+  },
+  "ticketing": {
+    "title": "Ustawienia zgłoszeń",
+    "tabs": {
+      "display": "Wyświetlanie",
+      "ticketNumbering": "Numeracja zgłoszeń",
+      "boards": "Tablice",
+      "statuses": "Statusy",
+      "priorities": "Priorytety",
+      "categories": "Kategorie"
+    },
+    "numbering": {
+      "title": "Format numeru",
+      "description": "Zdefiniuj prefiks, wypełnienie cyframi i bieżącą sekwencję",
+      "fields": {
+        "prefix": {
+          "label": "Prefiks numeru zgłoszenia",
+          "placeholder": "TK-",
+          "help": "Opcjonalny prefiks dla numerów zgłoszeń. Pozostaw puste, aby nie używać prefiksu, lub wprowadź własny prefiks (np. 'TK-')"
+        },
+        "minimumDigits": {
+          "label": "Minimalna liczba cyfr",
+          "help": "Minimalna liczba cyfr dla numeru sekwencyjnego. Na przykład, 6 zmienia '1' na '000001'"
+        },
+        "initialValue": {
+          "label": "Wartość początkowa",
+          "placeholder": "Wprowadź wartość",
+          "help": "Ustaw numer początkowy dla sekwencji. Można go ustawić tylko raz."
+        },
+        "lastUsedNumber": {
+          "label": "Ostatni użyty numer",
+          "help": "Ostatni przypisany numer. Następny numer będzie o jeden wyższy od tej wartości."
+        },
+        "nextPreview": {
+          "label": "Podgląd następnego numeru zgłoszenia",
+          "help": "To jest numer, który zostanie przypisany do następnego zgłoszenia"
+        }
+      },
+      "actions": {
+        "saveChanges": "Zapisz zmiany",
+        "cancel": "Anuluj"
+      },
+      "dialog": {
+        "title": "Aktualizacja ustawień numeracji zgłoszeń",
+        "message": "Zmiana tych ustawień wpłynie na sposób generowania nowych numerów zgłoszeń. Ta zmiana nie wpłynie na istniejące zgłoszenia. Czy na pewno chcą Państwo kontynuować?",
+        "confirm": "Zaktualizuj ustawienia"
+      },
+      "loading": "Ładowanie...",
+      "messages": {
+        "error": {
+          "noSettings": "Nie znaleziono ustawień numeracji zgłoszeń. Proszę skontaktować się z administratorem.",
+          "loadFailed": "Nie udało się załadować ustawień numeracji zgłoszeń",
+          "updateFailed": "Nie udało się zaktualizować ustawień"
+        },
+        "success": {
+          "updated": "Ustawienia numeracji zgłoszeń zostały pomyślnie zaktualizowane"
+        }
+      }
+    },
+    "statuses": {
+      "title": "Statusy zgłoszeń",
+      "alert": "Status domyślny: Gdy klienci tworzą zgłoszenia przez portal klienta, automatycznie zostanie im przypisany status oznaczony jako domyślny. Tylko jeden status może być ustawiony jako domyślny w danym momencie.",
+      "table": {
+        "name": "Nazwa",
+        "status": "Status",
+        "default": "Domyślny",
+        "order": "Kolejność",
+        "actions": "Akcje"
+      },
+      "statusLabels": {
+        "closed": "Zamknięty",
+        "open": "Otwarty",
+        "closedHelp": "Zgłoszenia z tym statusem zostaną oznaczone jako zamknięte",
+        "openHelp": "Zgłoszenia z tym statusem pozostaną otwarte",
+        "defaultHelp": "Domyślny status dla nowych zgłoszeń z portalu klienta"
+      },
+      "actions": {
+        "addStatus": "Dodaj status",
+        "importStandard": "Importuj ze standardowych statusów",
+        "edit": "Edytuj",
+        "delete": "Usuń"
+      },
+      "messages": {
+        "success": {
+          "deleted": "Status został usunięty pomyślnie",
+          "updated": "Status został zaktualizowany pomyślnie"
+        },
+        "error": {
+          "lastClosed": "Co najmniej jeden status musi pozostać oznaczony jako zamknięty",
+          "deleteLastClosed": "Nie można usunąć ostatniego zamkniętego statusu dla tego typu.",
+          "removeDefault": "Nie można usunąć statusu domyślnego z ostatniego statusu domyślnego"
+        }
+      }
+    },
+    "boards": {
+      "title": "Tablice",
+      "alert": "Tablice organizują zgłoszenia w logiczne grupy. Każda tablica może mieć własnego domyślnego agenta, priorytet i politykę SLA.",
+      "table": {
+        "name": "Nazwa",
+        "description": "Opis",
+        "status": "Status",
+        "default": "Domyślny",
+        "defaultAgent": "Domyślny agent",
+        "defaultPriority": "Domyślny priorytet",
+        "boardManager": "Menedżer tablicy",
+        "order": "Kolejność",
+        "itilBoard": "Tablica ITIL",
+        "actions": "Akcje"
+      },
+      "statusLabels": {
+        "active": "Aktywna",
+        "inactive": "Nieaktywna"
+      },
+      "actions": {
+        "addBoard": "Dodaj tablicę",
+        "importStandard": "Importuj ze standardowych tablic",
+        "edit": "Edytuj",
+        "delete": "Usuń",
+        "cancel": "Anuluj",
+        "close": "Zamknij",
+        "create": "Utwórz",
+        "update": "Zaktualizuj",
+        "importSelected": "Importuj zaznaczone"
+      },
+      "fields": {
+        "boardName": {
+          "label": "Nazwa tablicy",
+          "placeholder": "Wprowadź nazwę tablicy"
+        },
+        "description": {
+          "label": "Opis",
+          "placeholder": "Wprowadź opis tablicy"
+        },
+        "displayOrder": {
+          "label": "Kolejność wyświetlania",
+          "placeholder": "Wprowadź kolejność wyświetlania",
+          "help": "Kontroluje kolejność wyświetlania tablic na liście"
+        },
+        "inactive": "Oznacz jako nieaktywną",
+        "itilCompliant": "Zgodność z ITIL",
+        "boardConfiguration": "Konfiguracja tablicy",
+        "boardManager": {
+          "label": "Menedżer tablicy",
+          "placeholder": "Wybierz menedżera tablicy",
+          "help": "Użytkownik odpowiedzialny za zarządzanie tą tablicą"
+        },
+        "defaultAssignedAgent": {
+          "label": "Domyślnie przypisany agent",
+          "placeholder": "Wybierz domyślnego agenta",
+          "help": "Nowe zgłoszenia na tej tablicy będą domyślnie przypisywane do tego agenta"
+        },
+        "defaultPriority": {
+          "label": "Domyślny priorytet",
+          "placeholder": "Wybierz domyślny priorytet",
+          "help": "Nowe zgłoszenia na tej tablicy będą domyślnie korzystać z tego priorytetu",
+          "none": "Brak"
+        },
+        "slaPolicy": {
+          "label": "Polityka SLA",
+          "placeholder": "Wybierz politykę SLA",
+          "help": "Polityka SLA stosowana do zgłoszeń na tej tablicy",
+          "none": "Brak"
+        }
+      },
+      "dialog": {
+        "addBoard": "Dodaj tablicę",
+        "editBoard": "Edytuj tablicę",
+        "deleteBoardTitle": "Usuń tablicę",
+        "deleteBoardMessage": "Ta operacja trwale usunie tablicę.",
+        "cleanupItilTitle": "Wyczyść tablicę ITIL",
+        "cleanupItilMessage": "Ta operacja usunie kategorie ITIL i macierz priorytetów powiązane z tą tablicą.",
+        "deleteOnly": "Tylko usuń",
+        "deleteAndCleanup": "Usuń i wyczyść",
+        "deleteAll": "Usuń wszystko",
+        "importTitle": "Importuj standardowe tablice",
+        "importDescription": "Wybierz standardowe tablice do zaimportowania do organizacji:",
+        "importEmpty": "Brak standardowych tablic dostępnych do importu.",
+        "conflictsTitle": "Rozwiąż konflikty importu",
+        "conflictsDescription": "Następujące elementy mają konflikty, które należy rozwiązać:",
+        "nameConflict": "Nazwa już istnieje",
+        "skipItem": "Pomiń ten element",
+        "importNewName": "Importuj z inną nazwą:",
+        "importWithResolutions": "Importuj z rozwiązaniami",
+        "orderConflict": "Kolejność {{order}} jest już zajęta",
+        "importWithOrder": "Importuj z kolejnością {{order}}"
+      },
+      "importTable": {
+        "active": "Aktywna"
+      },
+      "itilInfo": {
+        "title": "Informacje ITIL",
+        "tooltip": "Ta tablica stosuje najlepsze praktyki ITIL",
+        "categoriesTitle": "Kategorie ITIL",
+        "priorityMatrixTitle": "Macierz priorytetów",
+        "impactDescription": "Poziomy wpływu określają zakres problemu",
+        "urgencyDescription": "Poziomy pilności określają, jak szybko problem wymaga rozwiązania",
+        "priorityDescription": "Priorytet jest obliczany na podstawie wpływu i pilności"
+      },
+      "messages": {
+        "success": {
+          "created": "Tablica została utworzona pomyślnie",
+          "updated": "Tablica została zaktualizowana pomyślnie",
+          "deleted": "Tablica została usunięta pomyślnie",
+          "imported": "Tablice zostały zaimportowane pomyślnie"
+        },
+        "error": {
+          "fetchFailed": "Nie udało się załadować tablic",
+          "fetchAvailableFailed": "Nie udało się pobrać dostępnych tablic do importu",
+          "nameRequired": "Nazwa tablicy jest wymagana",
+          "saveFailed": "Nie udało się zapisać tablicy",
+          "lastDefault": "Nie można usunąć ostatniej domyślnej tablicy"
+        }
+      }
+    }
+  },
+  "interactions": {
+    "title": "Ustawienia interakcji",
+    "tabs": {
+      "types": "Typy interakcji",
+      "statuses": "Statusy interakcji"
+    },
+    "types": {
+      "title": "Typy interakcji",
+      "loading": "Ładowanie typów interakcji...",
+      "table": {
+        "name": "Nazwa",
+        "order": "Kolejność",
+        "actions": "Akcje"
+      },
+      "actions": {
+        "addType": "Dodaj typ interakcji",
+        "importStandard": "Importuj ze standardowych typów interakcji",
+        "edit": "Edytuj",
+        "delete": "Usuń",
+        "cancel": "Anuluj",
+        "importSelected": "Importuj wybrane"
+      },
+      "dialog": {
+        "import": {
+          "title": "Importuj standardowe typy interakcji",
+          "description": "Wybierz standardowe typy interakcji do zaimportowania do Państwa organizacji:",
+          "empty": "Brak dostępnych standardowych typów interakcji do importu."
+        },
+        "conflicts": {
+          "title": "Rozwiąż konflikty importu",
+          "description": "Następujące elementy mają konflikty, które wymagają rozwiązania:",
+          "nameConflict": "Nazwa już istnieje",
+          "orderConflict": "Kolejność {{order}} jest już w użyciu",
+          "skipItem": "Pomiń ten element",
+          "importDifferentName": "Importuj z inną nazwą:",
+          "importDifferentOrder": "Importuj z kolejnością {{order}}",
+          "resolve": "Importuj z rozwiązaniami"
+        }
+      },
+      "messages": {
+        "success": {
+          "deleted": "Typ interakcji został usunięty",
+          "imported": "Zaimportowano {{count}} typ interakcji",
+          "imported_plural": "Zaimportowano {{count}} typów interakcji"
+        },
+        "error": {
+          "fetchFailed": "Nie udało się pobrać typów interakcji",
+          "validateDeleteFailed": "Nie udało się zweryfikować usunięcia typu interakcji",
+          "deleteFailed": "Nie udało się usunąć typu interakcji",
+          "checkConflicts": "Nie udało się sprawdzić konfliktów",
+          "importFailed": "Nie udało się zaimportować typów interakcji",
+          "fetchAvailable": "Nie udało się pobrać dostępnych typów interakcji do importu"
+        }
+      }
+    },
+    "statuses": {
+      "title": "Statusy interakcji",
+      "alert": "Statusy interakcji: Śledzenie stanu interakcji z klientami, takich jak rozmowy telefoniczne, wiadomości e-mail i spotkania.",
+      "table": {
+        "name": "Nazwa",
+        "status": "Status",
+        "order": "Kolejność",
+        "actions": "Akcje"
+      },
+      "statusLabels": {
+        "closedHelp": "Interakcje z tym statusem zostaną oznaczone jako zamknięte",
+        "openHelp": "Interakcje z tym statusem pozostaną otwarte"
+      },
+      "actions": {
+        "addStatus": "Dodaj status",
+        "importStandard": "Importuj ze standardowych",
+        "edit": "Edytuj",
+        "delete": "Usuń"
+      },
+      "messages": {
+        "success": {
+          "updated": "Status został zaktualizowany pomyślnie",
+          "deleted": "Status został usunięty pomyślnie",
+          "imported": "Pomyślnie zaimportowano {{count}} statusów"
+        },
+        "error": {
+          "lastClosed": "Co najmniej jeden status musi pozostać oznaczony jako zamknięty",
+          "deleteLastClosed": "Nie można usunąć ostatniego zamkniętego statusu dla tego typu."
+        }
+      }
+    },
+    "quickAdd": {
+      "dialog": {
+        "createTitle": "Utwórz typ interakcji",
+        "editTitle": "Edytuj typ interakcji"
+      },
+      "fields": {
+        "name": {
+          "label": "Nazwa typu interakcji:",
+          "placeholder": "np. 'Rozmowa wdrożeniowa z klientem', 'Prezentacja sprzedażowa', 'Przegląd projektu'"
+        },
+        "displayOrder": {
+          "label": "Kolejność wyświetlania:",
+          "placeholder": "np. 1, 2, 3..."
+        },
+        "icon": {
+          "label": "Wybierz ikonę:"
+        }
+      },
+      "preview": {
+        "title": "Podgląd:",
+        "empty": "Wprowadź nazwę typu powyżej"
+      },
+      "actions": {
+        "cancel": "Anuluj",
+        "create": "Utwórz typ",
+        "update": "Zaktualizuj typ",
+        "creating": "Tworzenie...",
+        "updating": "Aktualizowanie..."
+      },
+      "messages": {
+        "error": {
+          "nameRequired": "Proszę wprowadzić nazwę dla typu interakcji.",
+          "saveFailed": "Nie udało się wykonać akcji {{action}} dla typu interakcji. Proszę spróbować ponownie."
+        }
+      }
+    }
+  },
+  "clientPortal": {
+    "language": {
+      "title": "Ustawienia języka",
+      "description": "Konfiguracja domyślnych ustawień językowych portalu klienta. Te ustawienia dotyczą wszystkich użytkowników i klientów, chyba że zostaną nadpisane.",
+      "fields": {
+        "defaultLanguage": "Język domyślny",
+        "availableLanguages": "Dostępne języki"
+      },
+      "help": {
+        "defaultLanguage": "To będzie domyślny język dla wszystkich użytkowników portalu klienta i powiadomień e-mail, chyba że zostanie nadpisany przez ustawienia klienta lub indywidualne preferencje użytkownika",
+        "availableLanguages": "Wybierz, które języki są dostępne do wyboru przez użytkowników"
+      },
+      "hierarchy": {
+        "title": "Hierarchia preferencji językowych",
+        "description": "Ta hierarchia dotyczy zarówno interfejsu portalu klienta, jak i powiadomień e-mail wysyłanych do użytkowników portalu klienta:",
+        "userPreference": "Indywidualne preferencje użytkownika (najwyższy priorytet)",
+        "clientDefault": "Domyślny język klienta",
+        "orgDefault": "Domyślny język organizacji (konfigurowany tutaj)",
+        "systemDefault": "Domyślny język systemu (angielski)",
+        "note": "Uwaga: Wewnętrzni użytkownicy MSP zawsze otrzymują wiadomości e-mail w języku angielskim"
+      }
+    },
+    "branding": {
+      "title": "Branding i wygląd",
+      "description": "Dostosuj wygląd portalu klienta za pomocą identyfikacji wizualnej Państwa firmy.",
+      "fields": {
+        "companyName": "Nazwa firmy",
+        "companyLogo": "Logo firmy",
+        "colorPalette": "Paleta kolorów",
+        "primaryColor": "Kolor główny",
+        "secondaryColor": "Kolor dodatkowy"
+      },
+      "help": {
+        "companyName": "Będzie wyświetlana w nagłówku portalu klienta",
+        "companyLogo": "Zalecane: PNG lub SVG, maks. 2 MB, przezroczyste tło",
+        "primaryColor": "Używany dla przycisków, linków i wyróżnień",
+        "secondaryColor": "Używany dla akcentów i akcji dodatkowych"
+      },
+      "preview": "Podgląd",
+      "previewDarkMode": "Podgląd trybu ciemnego",
+      "actions": {
+        "saveBranding": "Zapisz ustawienia brandingu",
+        "previewDashboard": "Podgląd pulpitu klienta",
+        "hideDashboard": "Ukryj pulpit klienta",
+        "previewSignIn": "Podgląd strony logowania",
+        "hideSignIn": "Ukryj stronę logowania"
+      },
+      "customDomainRequired": "Wymagana jest konfiguracja domeny niestandardowej"
+    },
+    "dashboardPreview": {
+      "title": "Państwa portal klienta",
+      "welcome": "Witamy ponownie!",
+      "subtitle": "Oto przegląd aktywności na Państwa koncie",
+      "openTickets": "Otwarte zgłoszenia",
+      "activeProjects": "Aktywne projekty",
+      "invoices": "Faktury",
+      "urgent": "{{count}} pilnych",
+      "nearDeadline": "{{count}} zbliżających się do terminu",
+      "dueThisMonth": "Do zapłaty w tym miesiącu",
+      "recentActivity": "Ostatnia aktywność",
+      "ticketUpdated": "Zgłoszenie #1234 zostało zaktualizowane",
+      "hoursAgo": "{{count}} godzin temu",
+      "newInvoice": "Wygenerowano nową fakturę",
+      "milestoneCompleted": "Kamień milowy projektu został ukończony",
+      "dayAgo": "1 dzień temu",
+      "createTicket": "Utwórz zgłoszenie",
+      "viewProjects": "Wyświetl projekty"
+    },
+    "signInPreview": {
+      "portalTitle": "Portal klienta",
+      "welcome": "Witamy w Państwa portalu klienta",
+      "subtitle": "Zarządzaj zgłoszeniami pomocy technicznej i bądź na bieżąco",
+      "features": {
+        "submitTickets": {
+          "title": "Składanie zgłoszeń pomocy technicznej",
+          "description": "Tworzenie i zarządzanie zgłoszeniami pomocy technicznej"
+        },
+        "trackStatus": {
+          "title": "Śledzenie statusu zgłoszeń",
+          "description": "Monitorowanie postępów w czasie rzeczywistym"
+        },
+        "ticketHistory": {
+          "title": "Historia zgłoszeń",
+          "description": "Dostęp do pełnej historii pomocy technicznej"
+        },
+        "documentation": {
+          "title": "Dostęp do dokumentacji",
+          "description": "Przeglądanie udostępnionych dokumentów i zasobów"
+        }
+      },
+      "signIn": {
+        "title": "Logowanie",
+        "description": "Proszę wprowadzić dane logowania, aby uzyskać dostęp do konta.",
+        "email": "E-mail",
+        "emailPlaceholder": "Wprowadź adres e-mail",
+        "password": "Hasło",
+        "passwordPlaceholder": "Wprowadź hasło",
+        "forgotPassword": "Nie pamiętasz hasła?",
+        "mspStaffLogin": "Pracownik MSP? Zaloguj się tutaj →"
+      }
+    }
+  },
+  "mspLanguage": {
+    "title": "Język",
+    "description": "Konfiguracja domyślnych ustawień językowych portalu MSP. Te ustawienia dotyczą wszystkich użytkowników MSP, chyba że zostaną nadpisane przez indywidualne preferencje.",
+    "fields": {
+      "defaultLanguage": "Język domyślny",
+      "availableLanguages": "Dostępne języki"
+    },
+    "help": {
+      "defaultLanguage": "To będzie domyślny język dla wszystkich użytkowników portalu MSP, chyba że zostanie nadpisany przez ich osobiste preferencje.",
+      "availableLanguages": "Wybierz, które języki są dostępne do wyboru przez użytkowników MSP"
+    },
+    "hierarchy": {
+      "title": "Hierarchia preferencji językowych",
+      "userPreference": "Indywidualne preferencje użytkownika (najwyższy priorytet)",
+      "orgDefault": "Domyślny język organizacji (konfigurowany tutaj)",
+      "systemDefault": "Domyślny język systemu (angielski)"
+    }
+  },
+  "notifications": {
+    "title": "Ustawienia powiadomień",
+    "description": {
+      "email": "Konfiguracja sposobu wysyłania powiadomień e-mail przez Państwa organizację",
+      "internal": "Konfiguracja sposobu wysyłania powiadomień wewnętrznych przez Państwa organizację"
+    },
+    "viewSwitcher": {
+      "email": "Powiadomienia e-mail",
+      "internal": "Powiadomienia wewnętrzne"
+    },
+    "emailTabs": {
+      "settings": "Ustawienia",
+      "emailTemplates": "Szablony e-mail",
+      "categories": "Kategorie",
+      "telemetry": "Telemetria"
+    },
+    "internalTabs": {
+      "categories": "Kategorie"
+    },
+    "sections": {
+      "globalSettings": {
+        "title": "Ustawienia globalne",
+        "description": "Konfiguracja globalnych ustawień powiadomień"
+      },
+      "emailTemplates": {
+        "title": "Szablony e-mail",
+        "description": "Zarządzanie szablonami powiadomień e-mail"
+      },
+      "categories": {
+        "title": "Kategorie powiadomień",
+        "description": "Zarządzanie kategoriami i typami powiadomień"
+      },
+      "internalCategories": {
+        "title": "Kategorie powiadomień wewnętrznych",
+        "description": "Zarządzanie kategoriami i typami powiadomień wewnętrznych"
+      },
+      "telemetry": {
+        "title": "Telemetria i analityka",
+        "description": "Zarządzanie preferencjami telemetrii i analityki"
+      }
+    }
+  },
+  "timeEntry": {
+    "title": "Ustawienia wpisów czasu",
+    "description": "Zarządzanie ustawieniami wpisów czasu i okresami rozliczeniowymi"
+  },
+  "billing": {
+    "title": "Ustawienia rozliczeń",
+    "description": "Zarządzanie rozliczeniami i subskrypcją"
+  },
+  "secrets": {
+    "title": "Zarządzanie sekretami",
+    "description": "Zarządzanie zaszyfrowanymi sekretami do użycia w przepływach pracy. Sekrety mogą być odwoływane w akcjach przepływów pracy za pomocą składni $secret.",
+    "list": {
+      "title": "Sekrety",
+      "description": "Zarządzanie sekretami do użycia w przepływach pracy. Sekrety są szyfrowane i mogą być odwoływane za pomocą { $secret: \"SECRET_NAME\" }",
+      "search": "Szukaj sekretów...",
+      "createSecret": "Utwórz sekret",
+      "table": {
+        "name": "Nazwa",
+        "description": "Opis",
+        "lastUpdated": "Ostatnia aktualizacja",
+        "lastAccessed": "Ostatni dostęp",
+        "actions": "Akcje",
+        "never": "Nigdy",
+        "empty": "-"
+      },
+      "tooltips": {
+        "edit": "Edytuj sekret",
+        "delete": "Usuń sekret"
+      }
+    },
+    "dialog": {
+      "createTitle": "Utwórz sekret",
+      "editTitle": "Edytuj sekret",
+      "deleteTitle": "Usuń sekret",
+      "fields": {
+        "name": {
+          "label": "Nazwa *",
+          "placeholder": "MY_API_KEY",
+          "help": "Używaj tylko wielkich liter, cyfr i znaków podkreślenia"
+        },
+        "value": {
+          "label": "Wartość *",
+          "placeholder": "Wprowadź wartość sekretu",
+          "editPlaceholder": "Wprowadź nową wartość, aby zaktualizować",
+          "editHelp": "Pozostaw puste, aby zachować bieżącą wartość"
+        },
+        "description": {
+          "label": "Opis",
+          "placeholder": "Do czego służy ten sekret?"
+        }
+      },
+      "delete": {
+        "confirmation": "Czy na pewno chcą Państwo usunąć sekret {{name}}?",
+        "usedByWorkflows": "Ten sekret jest używany przez {{count}} przepływ(ów) pracy",
+        "usedByWarning": "Usunięcie go spowoduje, że te przepływy pracy nie będą działać, gdy spróbują uzyskać dostęp do tego sekretu.",
+        "cannotUndo": "Tej operacji nie można cofnąć.",
+        "typeToConfirm": "Wpisz {{name}}, aby potwierdzić:",
+        "placeholder": "Wprowadź nazwę sekretu"
+      },
+      "actions": {
+        "cancel": "Anuluj",
+        "create": "Utwórz sekret",
+        "update": "Zaktualizuj sekret",
+        "delete": "Usuń sekret",
+        "saving": "Zapisywanie...",
+        "deleting": "Usuwanie..."
+      }
+    },
+    "messages": {
+      "success": {
+        "created": "Sekret \"{{name}}\" został utworzony",
+        "updated": "Sekret \"{{name}}\" został zaktualizowany",
+        "deleted": "Sekret \"{{name}}\" został usunięty"
+      },
+      "error": {
+        "loadFailed": "Nie udało się załadować sekretów",
+        "deleteFailed": "Nie udało się usunąć sekretu",
+        "saveFailed": "Nie udało się zapisać sekretu",
+        "nameRequired": "Nazwa sekretu jest wymagana",
+        "valueRequired": "Wartość sekretu jest wymagana",
+        "noChanges": "Brak zmian do zapisania",
+        "fixValidation": "Proszę poprawić błędy walidacji"
+      }
+    }
+  },
+  "importExport": {
+    "title": "Import i eksport przestrzeni roboczej",
+    "description": "Konfiguracja importów, eksportów i zautomatyzowanych przepływów danych z jednego centrum sterowania.",
+    "history": {
+      "title": "Historia importu i eksportu",
+      "description": "Przegląd wszystkich zadań importu i eksportu w jednym miejscu.",
+      "empty": "Nie znaleziono zadań importu ani eksportu. Wygeneruj podgląd, aby utworzyć pierwsze zadanie.",
+      "table": {
+        "date": "Data",
+        "source": "Źródło",
+        "file": "Plik",
+        "status": "Status",
+        "created": "Utworzone",
+        "duplicates": "Duplikaty",
+        "errors": "Błędy"
+      }
+    },
+    "tabs": {
+      "assetImport": "Import zasobów",
+      "assetExport": "Eksport zasobów",
+      "templatesAutomation": "Szablony i automatyzacja"
+    },
+    "import": {
+      "fields": {
+        "importSource": "Źródło importu",
+        "uploadFile": "Prześlij plik",
+        "fieldMapping": "Mapowanie pól",
+        "rememberMapping": "Zapamiętaj to mapowanie dla przyszłych importów"
+      },
+      "placeholders": {
+        "noSources": "Brak dostępnych źródeł importu",
+        "selectSource": "Wybierz źródło importu",
+        "sourceColumn": "Nazwa kolumny źródłowej",
+        "example": "np. {{example}}"
+      },
+      "help": {
+        "fieldMapping": "Wprowadź nazwy kolumn z pliku, które odpowiadają poszczególnym wymaganym polom zasobów. Pozostaw opcjonalne pola puste, aby je pominąć."
+      },
+      "alerts": {
+        "selectSource": "Wybierz źródło importu, aby kontynuować.",
+        "chooseFile": "Wybierz plik CSV lub XLSX, aby kontynuować.",
+        "validationIssues": "Wykryto problemy z walidacją."
+      },
+      "actions": {
+        "generatePreview": "Generuj podgląd",
+        "preparingPreview": "Przygotowywanie podglądu…",
+        "proceedWithImport": "Kontynuuj import",
+        "startingImport": "Rozpoczynanie importu…",
+        "refresh": "Odśwież",
+        "refreshing": "Odświeżanie…",
+        "cancel": "Anuluj",
+        "importSelected": "Importuj wybrane"
+      },
+      "preview": {
+        "title": "Podgląd importu",
+        "description": "Wyświetlanie do pierwszych 10 wierszy z {{totalRows}} łącznych rekordów.",
+        "stats": {
+          "total": "Łącznie",
+          "valid": "Poprawne",
+          "duplicates": "Duplikaty",
+          "errors": "Błędy"
+        },
+        "table": {
+          "row": "Wiersz",
+          "values": "Wartości",
+          "issues": "Problemy"
+        },
+        "empty": "Brak dostępnych wierszy podglądu."
+      }
+    },
+    "export": {
+      "comingSoon": "Narzędzia eksportu zasobów będą dostępne wkrótce. Planowane funkcje obejmują eksportowanie filtrowanych list zasobów, danych audytu i szablonów mapowania bezpośrednio do CSV/XLSX."
+    },
+    "templates": {
+      "comingSoon": "Szablony mapowania i zaplanowane importy będą dostępne tutaj. Zapisuj mapowania kolumn, udostępniaj je zespołowi i konfiguruj powtarzające się zadania."
+    },
+    "jobDetails": {
+      "title": "Szczegóły zadania importu",
+      "stats": {
+        "totalRows": "Łączna liczba wierszy",
+        "processed": "Przetworzone",
+        "created": "Utworzone",
+        "updated": "Zaktualizowane",
+        "duplicates": "Duplikaty",
+        "errors": "Błędy"
+      },
+      "sections": {
+        "summary": "Podsumowanie",
+        "records": "Rekordy ({{count}})",
+        "errors": "Błędy ({{count}})",
+        "duplicates": "Duplikaty ({{count}})"
+      },
+      "fields": {
+        "source": "Źródło",
+        "originalFileName": "Oryginalna nazwa pliku",
+        "storedFileId": "Identyfikator zapisanego pliku",
+        "documentId": "Identyfikator dokumentu",
+        "documentAssociation": "Powiązanie dokumentu",
+        "clientAssociation": "Powiązanie z klientem",
+        "associatedClient": "Powiązany klient",
+        "defaultClientContext": "Domyślny kontekst klienta",
+        "tenantClientFallback": "Klient zastępczy organizacji",
+        "externalId": "Identyfikator zewnętrzny",
+        "status": "Status",
+        "sampleValues": "Przykładowe wartości",
+        "error": "Błąd",
+        "duplicateMatch": "Dopasowanie duplikatu"
+      },
+      "empty": {
+        "noRecords": "Brak przetworzonych rekordów.",
+        "noErrors": "Nie zarejestrowano błędów walidacji.",
+        "noDuplicates": "Nie wykryto duplikatów dla tego zadania.",
+        "noValues": "Brak wartości"
+      },
+      "truncated": "Wyświetlanie pierwszych {{count}} rekordów. Pobierz wyniki zadania, aby uzyskać pełną historię."
+    }
+  },
+  "email": {
+    "title": "Konfiguracja e-mail",
+    "description": "Konfiguracja dostawców e-mail, domen i ustawień"
+  },
+  "extensions": {
+    "title": "Zarządzanie rozszerzeniami",
+    "description": "Instalowanie, konfigurowanie i zarządzanie rozszerzeniami w celu rozszerzenia funkcjonalności Alga PSA.",
+    "tabs": {
+      "manage": "Zarządzanie",
+      "install": "Instalacja"
+    },
+    "enterpriseOnly": {
+      "title": "Funkcja wersji Enterprise",
+      "description": "Rozszerzenia są dostępne w wersji Enterprise programu Alga PSA."
+    },
+    "links": {
+      "needLogs": "Potrzebujesz logów rozszerzenia?",
+      "debugConsole": "Otwórz konsolę debugowania Service Proxy Demo"
+    },
+    "loading": {
+      "extensions": "Ładowanie rozszerzeń...",
+      "installer": "Ładowanie instalatora..."
+    }
+  },
+  "security": {
+    "title": "Ustawienia bezpieczeństwa",
+    "tabs": {
+      "roles": "Role",
+      "sessions": "Sesje",
+      "sso": "Single Sign-On",
+      "permissions": "Uprawnienia",
+      "userRoles": "Role użytkowników",
+      "policies": "Zasady",
+      "apiKeys": "Klucze API"
+    },
+    "loading": {
+      "roles": "Ładowanie konfiguracji ról...",
+      "permissions": "Ładowanie konfiguracji uprawnień...",
+      "userRoles": "Ładowanie konfiguracji ról użytkowników...",
+      "policies": "Ładowanie konfiguracji zasad...",
+      "apiKeys": "Ładowanie konfiguracji kluczy API...",
+      "sso": "Ładowanie narzędzi zarządzania SSO...",
+      "sessions": "Ładowanie aktywnych sesji..."
+    },
+    "userRoles": {
+      "title": "Przypisywanie ról użytkownikom",
+      "description": {
+        "msp": "Zarządzanie przypisaniami ról użytkowników MSP",
+        "client": "Zarządzanie przypisaniami ról użytkowników portalu klienta"
+      },
+      "viewSwitcher": {
+        "msp": "MSP",
+        "clientPortal": "Portal klienta"
+      },
+      "showInactive": "Pokaż nieaktywnych użytkowników",
+      "fields": {
+        "selectUser": "Wybierz użytkownika",
+        "selectRole": "Wybierz rolę"
+      },
+      "actions": {
+        "assignRole": "Przypisz rolę"
+      },
+      "table": {
+        "user": "Użytkownik",
+        "email": "E-mail",
+        "roles": "Role",
+        "actions": "Akcje"
+      },
+      "noRolesAssigned": "Brak przypisanych ról",
+      "removeRole": "Usuń {{role}}",
+      "emptyState": {
+        "noUsers": "Nie znaleziono użytkowników typu {{type}}",
+        "inactiveHidden": "(nieaktywni użytkownicy ukryci)"
+      },
+      "inactiveTag": "(Nieaktywny)"
+    },
+    "sessions": {
+      "title": "Wszystkie sesje użytkowników",
+      "subtitle": "{{sessionCount}} aktywna sesja u {{userCount}} użytkownika",
+      "subtitle_plural": "{{sessionCount}} aktywnych sesji u {{userCount}} użytkowników",
+      "filters": {
+        "search": "Szukaj",
+        "searchPlaceholder": "Szukaj po nazwie, e-mailu, urządzeniu lub adresie IP...",
+        "user": "Użytkownik",
+        "allUsers": "Wszyscy użytkownicy",
+        "loginMethod": "Metoda logowania",
+        "allMethods": "Wszystkie metody",
+        "userType": "Typ użytkownika",
+        "allTypes": "Wszystkie typy",
+        "from": "Od",
+        "to": "Do",
+        "selectDate": "Wybierz datę",
+        "reset": "Resetuj"
+      },
+      "loginMethods": {
+        "password": "Hasło",
+        "google": "Google OAuth",
+        "microsoft": "Microsoft OAuth",
+        "keycloak": "Keycloak"
+      },
+      "userTypes": {
+        "internal": "Wewnętrzny",
+        "client": "Klient"
+      },
+      "session": {
+        "yourSession": "Państwa sesja",
+        "unknownDevice": "Nieznane urządzenie",
+        "lastActive": "Ostatnia aktywność {{time}} temu",
+        "logout": "Wyloguj",
+        "revoke": "Unieważnij",
+        "revoking": "Unieważnianie..."
+      },
+      "oauthWarning": "Unieważnienie tej sesji nie spowoduje cofnięcia dostępu OAuth {{provider}}. Proszę cofnąć dostęp w ustawieniach konta {{provider}}.",
+      "confirmLogout": "Czy na pewno chcą Państwo wylogować się z tego urządzenia?",
+      "messages": {
+        "loggingOut": "Wylogowywanie...",
+        "revoked": "Sesja została unieważniona pomyślnie"
+      },
+      "emptyState": {
+        "loading": "Ładowanie sesji...",
+        "noMatch": "Żadne sesje nie pasują do wyszukiwania",
+        "noSessions": "Nie znaleziono aktywnych sesji"
+      }
+    }
+  },
+  "profile": {
+    "tabs": {
+      "profile": "Profil",
+      "security": "Bezpieczeństwo",
+      "sso": "Single Sign-On",
+      "apiKeys": "Klucze API",
+      "notifications": "Powiadomienia",
+      "calendar": "Kalendarz"
+    },
+    "basicInfo": {
+      "title": "Podstawowe informacje"
+    },
+    "fields": {
+      "firstName": {
+        "label": "Imię *"
+      },
+      "lastName": {
+        "label": "Nazwisko *"
+      },
+      "email": {
+        "label": "E-mail *"
+      },
+      "phoneNumber": {
+        "label": "Numer telefonu"
+      },
+      "timeZone": {
+        "label": "Strefa czasowa"
+      }
+    },
+    "actions": {
+      "saveChanges": "Zapisz zmiany"
+    },
+    "notifications": {
+      "title": "Preferencje powiadomień",
+      "viewSwitcher": {
+        "email": "E-mail",
+        "internal": "Wewnętrzne"
+      }
+    },
+    "loading": "Ładowanie profilu...",
+    "messages": {
+      "success": {
+        "profileUpdated": "Profil został zaktualizowany pomyślnie"
+      },
+      "error": {
+        "userNotFound": "Nie znaleziono użytkownika",
+        "fillRequiredFields": "Proszę wypełnić wszystkie wymagane pola"
+      }
+    },
+    "validation": {
+      "firstNameRequired": "Imię jest wymagane",
+      "lastNameRequired": "Nazwisko jest wymagane"
+    },
+    "pageTitle": "Twój profil"
+  },
+  "password": {
+    "changePassword": "Zmiana hasła",
+    "fields": {
+      "currentPassword": "Bieżące hasło",
+      "newPassword": "Nowe hasło",
+      "confirmNewPassword": "Potwierdź nowe hasło"
+    },
+    "messages": {
+      "success": {
+        "changed": "Hasło zostało zmienione pomyślnie"
+      },
+      "error": {
+        "mismatch": "Nowe hasła nie są zgodne",
+        "tooShort": "Hasło musi mieć co najmniej 8 znaków",
+        "changeFailed": "Wystąpił błąd podczas zmiany hasła"
+      }
+    }
+  },
+  "orgChart": {
+    "emptyState": "Brak dostępnych użytkowników.",
+    "roles": {
+      "client": "Użytkownik klienta",
+      "internal": "Użytkownik wewnętrzny"
+    },
+    "badge": {
+      "inactive": "Nieaktywny"
+    }
+  }
+}

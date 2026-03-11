@@ -6,8 +6,10 @@ import { useSearchParams } from 'next/navigation';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import InteractionTypesSettings from './InteractionTypeSettings';
 import InteractionStatusSettings from './InteractionStatusSettings';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const InteractionSettings = (): React.JSX.Element => {
+  const { t } = useTranslation('msp/settings');
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section');
 
@@ -20,7 +22,7 @@ const InteractionSettings = (): React.JSX.Element => {
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
     const initialLabel = sectionParam ? sectionToLabelMap[sectionParam.toLowerCase()] : undefined;
-    return initialLabel || 'Interaction Types'; // Default to 'Interaction Types'
+    return initialLabel || 'Interaction Types';
   });
 
   // Update active tab when URL parameter changes
@@ -71,7 +73,7 @@ const InteractionSettings = (): React.JSX.Element => {
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
-      <h2 className="text-xl font-bold mb-4 text-gray-800">Interaction Settings</h2>
+      <h2 className="text-xl font-bold mb-4 text-gray-800">{t('interactions.title')}</h2>
       <CustomTabs
         tabs={tabs}
         defaultTab={activeTab}

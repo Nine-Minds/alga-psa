@@ -76,6 +76,13 @@
     "responseSource": {
       "clientPortal": "Recibido vía Portal de Cliente",
       "inboundEmail": "Recibido vía correo electrónico"
+    },
+    "origin": {
+      "internal": "Creado internamente",
+      "clientPortal": "Creado a través del portal del cliente",
+      "inboundEmail": "Creado a través de correo entrante",
+      "api": "Creado a través de API",
+      "other": "Creado a través de otro"
     }
   },
   "errors": {
@@ -470,16 +477,7 @@
       }
     }
   },
-  "notifications": {
-    "viewAll": "Ver todas las notificaciones",
-    "categories": {
-      "Authentication": "Autenticación",
-      "Invoices": "Facturas",
-      "Projects": "Proyectos",
-      "Tickets": "Tickets",
-      "Time Entries": "Entradas de tiempo"
-    }
-  },
+  "notifications": {},
   "surveys": {
     "common": {
       "loading": "Cargando..."
@@ -572,7 +570,8 @@
           "boards": "Tableros",
           "statuses": "Estados",
           "priorities": "Prioridades",
-          "any": "Cualquiera"
+          "any": "Cualquiera",
+          "unrestricted": "Se aplica a cada ticket y proyecto"
         },
         "status": {
           "enabled": "Activo",
@@ -623,26 +622,24 @@
         },
         "noTemplates": "Crea una plantilla de encuesta antes de agregar desencadenadores.",
         "prioritiesMixed": "Los tableros seleccionados usan diferentes tipos de prioridad. Se muestran todas las prioridades."
-      },
-      "response": {
-        "invalidTitle": "Encuesta no disponible",
-        "invalidMessage": "Este enlace de comentarios ya no es válido o ya se ha utilizado.",
-        "ratingPrompt": "¿Cómo fue tu experiencia?",
-        "ratingAssistive": "Selecciona una puntuación del 1 al {{scale}}",
-        "commentLabel": "Comentarios adicionales (opcional)",
-        "submitButton": "Enviar comentarios",
-        "submitting": "Enviando comentarios…",
-        "submittedTitle": "¡Gracias por tu respuesta!",
-        "submittedMessage": "{{thankYouText}}",
-        "retryButton": "Intentar de nuevo",
-        "ratingSubmitted": "Comentarios enviados",
-        "errorMessage": "No pudimos registrar tus comentarios. Inténtalo de nuevo.",
-        "selectRatingError": "Selecciona una puntuación antes de enviar.",
-        "supportMessage": "Si tienes preguntas, ponte en contacto con tu técnico."
       }
     },
     "response": {
-      "pageTitle": "Encuesta de satisfacción del cliente"
+      "pageTitle": "Encuesta de satisfacción del cliente",
+      "invalidTitle": "Encuesta no disponible",
+      "invalidMessage": "Este enlace de comentarios ya no es válido o ya se ha utilizado.",
+      "ratingPrompt": "¿Cómo fue tu experiencia?",
+      "ratingAssistive": "Selecciona una puntuación del 1 al {{scale}}",
+      "commentLabel": "Comentarios adicionales (opcional)",
+      "submitButton": "Enviar comentarios",
+      "submitting": "Enviando comentarios…",
+      "submittedTitle": "¡Gracias por tu respuesta!",
+      "submittedMessage": "{{thankYouText}}",
+      "retryButton": "Intentar de nuevo",
+      "ratingSubmitted": "Comentarios enviados",
+      "errorMessage": "No pudimos registrar tus comentarios. Inténtalo de nuevo.",
+      "selectRatingError": "Selecciona una puntuación antes de enviar.",
+      "supportMessage": "Si tienes preguntas, ponte en contacto con tu técnico."
     }
   },
   "availability": {
@@ -875,6 +872,8 @@
     "required": "Obligatorio",
     "optional": "Opcional",
     "notSpecified": "No especificado",
-    "unknown": "Desconocido"
+    "unknown": "Desconocido",
+    "uploading": "Subiendo...",
+    "submitting": "Enviando..."
   }
 }

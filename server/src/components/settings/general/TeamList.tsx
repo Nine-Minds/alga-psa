@@ -12,6 +12,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface TeamListProps {
   teams: ITeam[];
@@ -19,6 +20,7 @@ interface TeamListProps {
 }
 
 const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
+  const { t } = useTranslation('msp/settings');
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
   const [selectedManagerId, setSelectedManagerId] = useState<string>('');
@@ -59,7 +61,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
       setAllUsers(users);
     } catch (err) {
       console.error('Error fetching users:', err);
-      setError('Failed to fetch users');
+      setError(t('teams.messages.error.fetchUsers'));
     }
   };
 
@@ -79,7 +81,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
         setShowAddForm(false);
         setError(null);
       } catch (err: unknown) {
-        setError(`Failed to create team: ${err instanceof Error ? err.message : String(err)}`);
+        setError(t('teams.messages.error.createFailed', { error: err instanceof Error ? err.message : String(err) }));
         console.error('Error creating team:', err);
       }
     }
@@ -130,7 +132,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
       setError(null);
       resetDeleteState();
     } catch (err: unknown) {
-      setError('Failed to delete team');
+      setError(t('teams.messages.error.deleteFailed'));
       console.error('Error deleting team:', err);
     } finally {
       setIsDeleteProcessing(false);
@@ -146,7 +148,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
           onClick={() => setShowAddForm(true)}
           className="w-auto mb-4"
         >
-          Add New Team
+          {t('teams.list.addNewTeam')}
         </Button>
       ) : (
         <div className="mb-4 space-y-2">
@@ -154,7 +156,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
             type="text"
             value={newTeamName}
             onChange={(e) => setNewTeamName(e.target.value)}
-            placeholder="Enter new team name"
+            placeholder={t('teams.list.placeholder')}
           />
           <UserPicker
             value={selectedManagerId}
@@ -163,7 +165,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
             getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
             buttonWidth="full"
             size="sm"
-            placeholder="Select a manager"
+            placeholder={t('teams.list.selectManager')}
           />
           <div className="flex gap-2">
             <Button
@@ -172,7 +174,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
               disabled={!newTeamName.trim() || !selectedManagerId}
               className="flex-1"
             >
-              Create Team
+              {t('teams.list.createTeam')}
             </Button>
             <Button
               id="cancel-create-team-btn"
@@ -183,12 +185,12 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
                 setSelectedManagerId('');
               }}
             >
-              Cancel
+              {t('teams.list.cancel')}
             </Button>
           </div>
         </div>
       )}
-      <h3 className="text-lg font-semibold mb-2 text-text-800">Teams</h3>
+      <h3 className="text-lg font-semibold mb-2 text-text-800">{t('teams.list.title')}</h3>
       <ul className="space-y-1">
         {teams.map((team: ITeam): React.ReactNode => (
           <li key={team.team_id} className="flex items-center justify-between gap-2 p-2 rounded hover:bg-border-50 min-w-0">
@@ -212,7 +214,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
               onClick={() => handleDeleteTeam(team)}
               className="text-destructive hover:text-destructive flex-shrink-0"
             >
-              Delete
+              {t('teams.list.delete')}
             </Button>
           </li>
         ))}

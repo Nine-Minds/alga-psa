@@ -24,12 +24,14 @@ import { StatusDialog } from '@alga-psa/reference-data/components';
 import { StatusImportDialog } from '@alga-psa/ui/components/settings/dialogs/StatusImportDialog';
 import { ConflictResolutionDialog } from '@alga-psa/reference-data/components';
 import { DeleteConfirmationDialog } from '@alga-psa/ui/components/settings/dialogs/DeleteConfirmationDialog';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 /**
  * InteractionStatusSettings - Manages interaction statuses
  * This is for interaction statuses only
  */
 const InteractionStatusSettings = (): React.JSX.Element => {
+  const { t } = useTranslation('msp/settings');
   const STATUS_TYPE = 'interaction'; // Fixed to interaction type
 
   const [statuses, setStatuses] = useState<IStatus[]>([]);
@@ -90,7 +92,7 @@ const InteractionStatusSettings = (): React.JSX.Element => {
         s.status_id !== updatedStatus.status_id && s.is_closed
       );
       if (otherClosedStatuses.length === 0) {
-        toast.error('At least one status must remain marked as closed');
+        toast.error(t('interactions.statuses.messages.error.lastClosed'));
         return;
       }
     }
@@ -100,7 +102,7 @@ const InteractionStatusSettings = (): React.JSX.Element => {
       setStatuses(statuses.map((status): IStatus =>
         status.status_id === updatedStatus.status_id ? updatedStatus : status
       ));
-      toast.success('Status updated successfully');
+      toast.success(t('interactions.statuses.messages.success.updated'));
     } catch (error) {
       handleError(error, 'Failed to update status');
     }
@@ -114,7 +116,7 @@ const InteractionStatusSettings = (): React.JSX.Element => {
           s.status_id !== statusId && s.is_closed && s.status_type === status.status_type
         );
         if (otherClosedStatuses.length === 0) {
-          toast.error('Cannot delete the last closed status for this type.');
+          toast.error(t('interactions.statuses.messages.error.deleteLastClosed'));
           return;
         }
       }
@@ -129,7 +131,7 @@ const InteractionStatusSettings = (): React.JSX.Element => {
     try {
       await deleteStatus(statusToDelete.status_id);
       setStatuses(statuses.filter(s => s.status_id !== statusToDelete.status_id));
-      toast.success('Status deleted successfully');
+      toast.success(t('interactions.statuses.messages.success.deleted'));
     } catch (error) {
       handleError(error, 'Failed to delete status');
     } finally {
@@ -169,7 +171,7 @@ const InteractionStatusSettings = (): React.JSX.Element => {
         );
 
         if (result.imported.length > 0) {
-          toast.success(`Successfully imported ${result.imported.length} statuses`);
+          toast.success(t('interactions.statuses.messages.success.imported', { count: result.imported.length }));
           await fetchStatuses();
         }
 
@@ -195,7 +197,7 @@ const InteractionStatusSettings = (): React.JSX.Element => {
       );
 
       if (result.imported.length > 0) {
-        toast.success(`Successfully imported ${result.imported.length} statuses`);
+        toast.success(t('interactions.statuses.messages.success.imported', { count: result.imported.length }));
         await fetchStatuses();
         setSelectedImportStatuses([]);
       }
@@ -218,18 +220,18 @@ const InteractionStatusSettings = (): React.JSX.Element => {
 
   const statusColumns: ColumnDefinition<IStatus>[] = [
     {
-      title: 'Name',
+      title: t('interactions.statuses.table.name'),
       dataIndex: 'name',
       width: '30%',
     },
     {
-      title: 'Status',
+      title: t('interactions.statuses.table.status'),
       dataIndex: 'is_closed',
       width: '40%',
       render: (value, record) => (
         <div className="flex items-center space-x-2 text-gray-500">
           <span className="text-sm mr-2">
-            {record.is_closed ? 'Closed' : 'Open'}
+            {record.is_closed ? t('ticketing.statuses.statusLabels.closed') : t('ticketing.statuses.statusLabels.open')}
           </span>
           <Switch
             checked={record.is_closed}
@@ -238,21 +240,21 @@ const InteractionStatusSettings = (): React.JSX.Element => {
           />
           <span className="text-xs text-gray-400 ml-2">
             {record.is_closed
-              ? 'Interactions with this status will be marked as closed'
-              : 'Interactions with this status will remain open'
+              ? t('interactions.statuses.statusLabels.closedHelp')
+              : t('interactions.statuses.statusLabels.openHelp')
             }
           </span>
         </div>
       ),
     },
     {
-      title: 'Order',
+      title: t('interactions.statuses.table.order'),
       dataIndex: 'order_number',
       width: '10%',
       render: (value) => value || 0,
     },
     {
-      title: 'Actions',
+      title: t('interactions.statuses.table.actions'),
       dataIndex: 'action',
       width: '10%',
       render: (_, item) => (
@@ -277,7 +279,7 @@ const InteractionStatusSettings = (): React.JSX.Element => {
                 setShowStatusDialog(true);
               }}
             >
-              Edit
+              {t('interactions.statuses.actions.edit')}
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`delete-interaction-status-${item.status_id}`}
@@ -287,7 +289,7 @@ const InteractionStatusSettings = (): React.JSX.Element => {
                 handleDeleteStatusRequest(item.status_id);
               }}
             >
-              Delete
+              {t('interactions.statuses.actions.delete')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -299,12 +301,11 @@ const InteractionStatusSettings = (): React.JSX.Element => {
     <div className="bg-white p-6 rounded-lg shadow-sm">
       <Alert variant="info" className="mb-4">
         <AlertDescription>
-          <strong>Interaction Statuses:</strong> Track the state of customer interactions
-          such as calls, emails, and meetings.
+          {t('interactions.statuses.alert')}
         </AlertDescription>
       </Alert>
 
-      <h3 className="text-lg font-semibold mb-4 text-gray-800">Interaction Statuses</h3>
+      <h3 className="text-lg font-semibold mb-4 text-gray-800">{t('interactions.statuses.title')}</h3>
 
       <DataTable
         id="interaction-statuses-table"
@@ -326,14 +327,14 @@ const InteractionStatusSettings = (): React.JSX.Element => {
           }}
           className="bg-primary-500 text-white hover:bg-primary-600"
         >
-          <Plus className="h-4 w-4 mr-2" /> Add Status
+          <Plus className="h-4 w-4 mr-2" /> {t('interactions.statuses.actions.addStatus')}
         </Button>
         <Button
           id='import-interaction-statuses-button'
           onClick={handleImportStatuses}
           variant="outline"
         >
-          Import from Standard
+          {t('interactions.statuses.actions.importStandard')}
         </Button>
       </div>
 

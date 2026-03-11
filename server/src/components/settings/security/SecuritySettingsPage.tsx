@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 import CustomTabs, { TabContent } from "@alga-psa/ui/components/CustomTabs";
 import { useSearchParams } from 'next/navigation';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Dynamic imports for heavy settings components
 const RoleManagement = dynamic(() => import('@alga-psa/auth/components/settings/policy/RoleManagement'), {
@@ -54,6 +55,7 @@ const AdminSessionManagement = dynamic(() => import('./AdminSessionManagement'),
 });
 
 const SecuritySettingsPage = (): React.JSX.Element => {
+  const { t } = useTranslation('msp/settings');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
 
@@ -71,7 +73,7 @@ const SecuritySettingsPage = (): React.JSX.Element => {
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = React.useState<string>(() => {
     const initialLabel = tabParam ? slugToLabelMap[tabParam.toLowerCase()] : undefined;
-    return initialLabel || 'Roles'; // Default to 'Roles' if param is missing or invalid
+    return initialLabel || 'Roles';
   });
 
   // Update active tab when URL parameter changes
@@ -88,7 +90,7 @@ const SecuritySettingsPage = (): React.JSX.Element => {
     {
       label: "Roles",
       content: (
-        <Suspense fallback={<SettingsTabSkeleton title="Role Management" description="Loading role configuration..." />}>
+        <Suspense fallback={<SettingsTabSkeleton title="Roles" description="Loading role configuration..." />}>
           <RoleManagement />
         </Suspense>
       ),
@@ -96,7 +98,7 @@ const SecuritySettingsPage = (): React.JSX.Element => {
     {
       label: "Sessions",
       content: (
-        <Suspense fallback={<SettingsTabSkeleton title="Active Sessions" description="Loading active sessions..." />}>
+        <Suspense fallback={<SettingsTabSkeleton title="Sessions" description="Loading active sessions..." />}>
           <AdminSessionManagement />
         </Suspense>
       ),
@@ -112,7 +114,7 @@ const SecuritySettingsPage = (): React.JSX.Element => {
     {
       label: "Permissions",
       content: (
-        <Suspense fallback={<SettingsTabSkeleton title="Permissions Matrix" description="Loading permissions configuration..." />}>
+        <Suspense fallback={<SettingsTabSkeleton title="Permissions" description="Loading permissions configuration..." />}>
           <PermissionsMatrix />
         </Suspense>
       ),
@@ -120,7 +122,7 @@ const SecuritySettingsPage = (): React.JSX.Element => {
     {
       label: "User Roles",
       content: (
-        <Suspense fallback={<SettingsTabSkeleton title="User Role Assignment" description="Loading user role configuration..." />}>
+        <Suspense fallback={<SettingsTabSkeleton title="User Roles" description="Loading user role configuration..." />}>
           <UserRoleAssignment />
         </Suspense>
       ),
@@ -128,7 +130,7 @@ const SecuritySettingsPage = (): React.JSX.Element => {
     {
       label: "Policies",
       content: (
-        <Suspense fallback={<SettingsTabSkeleton title="Policy Management" description="Loading policy configuration..." />}>
+        <Suspense fallback={<SettingsTabSkeleton title="Policies" description="Loading policy configuration..." />}>
           <PolicyManagement />
         </Suspense>
       ),
@@ -168,7 +170,7 @@ const SecuritySettingsPage = (): React.JSX.Element => {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6">Security Settings</h1>
+      <h1 className="text-3xl font-bold mb-6">{t('security.title')}</h1>
       <CustomTabs 
         tabs={tabContent}
         defaultTab={activeTab}

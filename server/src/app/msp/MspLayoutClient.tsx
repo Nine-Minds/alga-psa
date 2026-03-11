@@ -69,12 +69,12 @@ export function MspLayoutClient({
     </AppSessionProvider>
   );
 
-  if (!i18nEnabled) {
-    return content;
-  }
-
   return (
-    <I18nWrapper portal="msp" initialLocale={initialLocale || undefined} showPseudoLocales={i18nEnabled}>
+    <I18nWrapper
+      portal="msp"
+      initialLocale={i18nEnabled ? (initialLocale || undefined) : 'en'}
+      showPseudoLocales={i18nEnabled}
+    >
       {content}
     </I18nWrapper>
   );

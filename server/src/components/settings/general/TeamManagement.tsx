@@ -7,8 +7,10 @@ import { getTeams } from '@alga-psa/teams/actions';
 import { ITeam } from '@alga-psa/types';
 import { Card } from '@alga-psa/ui/components/Card';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const TeamManagement: React.FC = () => {
+  const { t } = useTranslation('msp/settings');
   const [teams, setTeams] = useState<ITeam[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<ITeam | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,7 +28,7 @@ const TeamManagement: React.FC = () => {
       setTeams(fetchedTeams);
     } catch (err) {
       console.error('Failed to fetch teams:', err);
-      setError('Failed to load teams. Please try again.');
+      setError(t('teams.messages.error.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -59,7 +61,7 @@ const TeamManagement: React.FC = () => {
       <div className="flex items-center justify-center py-8">
         <LoadingIndicator 
           layout="stacked" 
-          text="Loading teams..."
+          text={t('teams.loading')}
           spinnerProps={{ size: 'md' }}
         />
       </div>
@@ -74,7 +76,7 @@ const TeamManagement: React.FC = () => {
           onClick={fetchTeams} 
           className="bg-primary-500 text-white px-4 py-2 rounded hover:bg-primary-600 transition-colors"
         >
-          Retry
+          {t('experimentalFeatures.actions.retry')}
         </button>
       </div>
     );
@@ -90,7 +92,7 @@ const TeamManagement: React.FC = () => {
           <TeamDetails teamId={selectedTeam.team_id} onUpdate={handleTeamUpdate} />
         ) : (
           <Card className="flex items-center justify-center h-full min-h-[400px] p-8">
-            <p className="text-lg text-text-500 text-center">Please select a team to manage members</p>
+            <p className="text-lg text-text-500 text-center">{t('teams.emptyState')}</p>
           </Card>
         )}
       </div>
