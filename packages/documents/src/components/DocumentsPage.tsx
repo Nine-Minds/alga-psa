@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import type { DocumentFilters as DocumentFilterType } from '@alga-psa/types';
 import Documents from './Documents';
 import { Card } from '@alga-psa/ui/components/Card';
+import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import { UnsavedChangesProvider } from '@alga-psa/ui/context';
 import { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { getDistinctEntityTypes } from '../actions/documentActions';
@@ -14,7 +15,7 @@ import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import DocumentFilters from './DocumentFilters';
 import DocumentsPageSkeleton from './DocumentsPageSkeleton';
 import { DocumentTemplatesSettings } from './settings';
-import { ChevronLeft, ChevronRight, Filter, Settings2 } from 'lucide-react';
+import { ChevronRight, Settings2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
@@ -280,14 +281,14 @@ export default function DocumentsPage() {
           {/* Collapsed Filters Button */}
           {isFiltersPaneCollapsed && (
             <div className="flex-shrink-0">
-              <button
+              <CollapseToggleButton
+                id="documents-show-filters-button"
+                isCollapsed={true}
+                collapsedLabel="Show filters"
+                expandedLabel="Collapse filters"
+                expandDirection="right"
                 onClick={() => setIsFiltersPaneCollapsed(false)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] flex items-center gap-2"
-                title="Show filters"
-              >
-                <Filter className="w-4 h-4" />
-                <ChevronRight className="w-4 h-4" />
-              </button>
+              />
             </div>
           )}
 
@@ -295,13 +296,14 @@ export default function DocumentsPage() {
           {!isFiltersPaneCollapsed && (
             <div className="w-80 relative">
               <div className="absolute top-2 right-2 z-10">
-                <button
+                <CollapseToggleButton
+                  id="documents-collapse-filters-button"
+                  isCollapsed={false}
+                  collapsedLabel="Show filters"
+                  expandedLabel="Collapse filters"
+                  expandDirection="right"
                   onClick={() => setIsFiltersPaneCollapsed(true)}
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] rounded"
-                  title="Collapse filters"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
+                />
               </div>
               <DocumentFilters
                 filters={filterInputs}

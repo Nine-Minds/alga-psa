@@ -3,11 +3,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { IFolderNode } from '@alga-psa/types';
 import { getFolderTree, deleteFolder, toggleFolderVisibilityByPath } from '../actions/documentActions';
-import { ChevronRight, ChevronDown, Folder, FolderOpen, Trash2, ChevronLeft } from 'lucide-react';
+import { ChevronRight, ChevronDown, Folder, FolderOpen, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import VisibilityToggle from './VisibilityToggle';
 
 interface FolderTreeViewProps {
@@ -240,13 +241,14 @@ export default function FolderTreeView({
           {t('documents.folders.title', 'Folders')}
         </h3>
         {onToggleCollapse && (
-          <button
+          <CollapseToggleButton
+            id="documents-collapse-folders-button"
+            isCollapsed={false}
+            collapsedLabel={t('documents.folders.expand', 'Show folders')}
+            expandedLabel={t('documents.folders.collapse', 'Collapse folders')}
+            expandDirection="right"
             onClick={onToggleCollapse}
-            className="p-1 hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] rounded"
-            title={t('documents.folders.collapse', 'Collapse folders')}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
+          />
         )}
       </div>
       <div className="flex-1 overflow-y-auto">

@@ -18,6 +18,7 @@ import { useTagPermissions } from '@alga-psa/tags/hooks';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import { Button } from '@alga-psa/ui/components/Button';
+import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
@@ -38,7 +39,7 @@ import KanbanZoomControl, { calculateColumnWidth } from './KanbanZoomControl';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
 import { IClient } from '@alga-psa/types';
-import { ChevronRight, HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, CheckSquare, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3, Plus } from 'lucide-react';
+import { HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, CheckSquare, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3, Plus } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
@@ -2452,16 +2453,14 @@ export default function ProjectDetail({
           {viewMode === 'kanban' && (
             <div className={`${styles.phasesContainer} ${isPhasesPanelVisible ? styles.phasesContainerExpanded : styles.phasesContainerCollapsed}`}>
               {/* Toggle button */}
-              <Button
+              <CollapseToggleButton
                 id="toggle-phases-panel"
-                variant="default"
-                size="icon"
+                isCollapsed={!isPhasesPanelVisible}
+                collapsedLabel="Show phases panel"
+                expandedLabel="Hide phases panel"
                 className={styles.phasesPanelToggle}
                 onClick={() => setIsPhasesPanelVisible(!isPhasesPanelVisible)}
-                aria-label={isPhasesPanelVisible ? 'Hide phases panel' : 'Show phases panel'}
-              >
-                <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${isPhasesPanelVisible ? 'rotate-180' : ''}`} />
-              </Button>
+              />
 
               {/* Phases panel content */}
               <div className={`${styles.phasesList} ${isPhasesPanelVisible ? styles.phasesListVisible : styles.phasesListHidden}`}>

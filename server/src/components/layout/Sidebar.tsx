@@ -2,9 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import * as Tooltip from '@radix-ui/react-tooltip';
-import { ChevronLeft, ChevronRight, ExternalLink, Search } from 'lucide-react';
+import { ChevronLeft, ExternalLink, Search } from 'lucide-react';
 import { getAppVersion } from '@alga-psa/core';
-import { Button } from '@alga-psa/ui/components/Button';
+import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import { DynamicNavigationSlot } from '@alga-psa/ui/components/extensions/DynamicNavigationSlot';
 import {
   menuItems as defaultMenuItems,
@@ -433,16 +433,14 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      <Button
+      <CollapseToggleButton
         id="sidebar-toggle-button"
-        variant="default"
-        size="icon"
+        isCollapsed={!sidebarOpen}
+        collapsedLabel="Expand sidebar"
+        expandedLabel="Collapse sidebar"
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="absolute -right-3 top-12 z-10 transform w-6 h-6 rounded-full flex items-center justify-center"
-        aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-      >
-        <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${sidebarOpen ? 'transform rotate-180' : ''}`} />
-      </Button>
+        className="absolute -right-3 top-12 z-10"
+      />
     </aside>
   );
 };
