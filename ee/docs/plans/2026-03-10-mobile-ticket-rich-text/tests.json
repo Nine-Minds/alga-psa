@@ -248,7 +248,7 @@
   {
     "id": "T042",
     "description": "Integration: development-only bridge diagnostics log editor ready timing and request timeout failures without enabling noisy production logging.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {

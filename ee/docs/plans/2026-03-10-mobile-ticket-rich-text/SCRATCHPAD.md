@@ -105,6 +105,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd ee/mobile && npx vitest run src/features/ticketRichText/TicketRichTextEditor.test.ts src/screens/TicketDetailScreen.richTextSections.test.ts --config vitest.config.ts`
 - (2026-03-10) Validation note:
   - The section tests mock `TicketRichTextEditor`, `Badge`, and `PrimaryButton` so they verify the ticket screen’s read/edit/compose wiring without retesting the WebView runtime internals.
+- (2026-03-10) Validation note:
+  - `TicketRichTextEditor.test.ts` now also covers the dev-only diagnostics path by asserting ready-timing and request-timeout logs appear when `__DEV__` is true and stay silent when `__DEV__` is false.
 
 ## Links / References
 

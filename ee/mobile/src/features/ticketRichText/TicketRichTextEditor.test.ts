@@ -48,6 +48,15 @@ function emitLoadEnd(): void {
   });
 }
 
+function emitLoadStart(): void {
+  const props = __getLastWebViewProps();
+  expect(props).not.toBeNull();
+
+  act(() => {
+    (props?.onLoadStart as (() => void) | undefined)?.();
+  });
+}
+
 function emitRuntimeMessage(message: unknown): void {
   const props = __getLastWebViewProps();
   expect(props).not.toBeNull();
@@ -244,5 +253,63 @@ describe("TicketRichTextEditor", () => {
         code: "external-navigation-blocked",
       }),
     );
+  });
+
+  it("logs ready timing and request timeout failures only in development", async () => {
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const testGlobals = globalThis as typeof globalThis & { __DEV__?: boolean };
+    const previousDev = testGlobals.__DEV__;
+    testGlobals.__DEV__ = true;
+
+    try {
+      const { ref } = renderEditor({
+        requestTimeoutMs: 1,
+      });
+
+      emitLoadStart();
+      emitLoadEnd();
+      emitRuntimeMessage({
+        type: "editor-ready",
+        payload: {
+          format: "blocknote",
+          editable: true,
+        },
+      });
+
+      expect(infoSpy).toHaveBeenCalledWith(expect.stringContaining("[TicketRichTextEditor] ready in"));
+
+      await expect(ref.current?.getHTML()).rejects.toThrow("timed out");
+      expect(warnSpy).toHaveBeenCalledWith(
+        "[TicketRichTextEditor]",
+        "request-failed",
+        expect.stringContaining("timed out"),
+      );
+
+      infoSpy.mockClear();
+      warnSpy.mockClear();
+      testGlobals.__DEV__ = false;
+
+      const productionRender = renderEditor({
+        requestTimeoutMs: 1,
+      });
+      emitLoadStart();
+      emitLoadEnd();
+      emitRuntimeMessage({
+        type: "editor-ready",
+        payload: {
+          format: "blocknote",
+          editable: true,
+        },
+      });
+
+      await expect(productionRender.ref.current?.getHTML()).rejects.toThrow("timed out");
+      expect(infoSpy).not.toHaveBeenCalled();
+      expect(warnSpy).not.toHaveBeenCalled();
+    } finally {
+      testGlobals.__DEV__ = previousDev;
+      infoSpy.mockRestore();
+      warnSpy.mockRestore();
+    }
   });
 });

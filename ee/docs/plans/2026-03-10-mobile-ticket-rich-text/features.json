@@ -140,7 +140,7 @@
   {
     "id": "F024",
     "description": "Add development-friendly bridge diagnostics for editor ready timing, request timeouts, and unknown message types without enabling verbose production logging.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Observability"]
   },
   {
