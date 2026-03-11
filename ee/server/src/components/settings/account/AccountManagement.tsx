@@ -24,6 +24,8 @@ import {
   getIntervalSwitchPreviewAction,
   sendPremiumTrialRequestAction,
   startSelfServicePremiumTrialAction,
+  confirmPremiumTrialAction,
+  revertPremiumTrialAction,
 } from 'ee/server/src/lib/actions/license-actions';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
 import { useRouter } from 'next/navigation';
@@ -52,7 +54,7 @@ export default function AccountManagement() {
   const [showReduceModal, setShowReduceModal] = useState(false);
   const [showCancellationFeedback, setShowCancellationFeedback] = useState(false);
   const [scheduledChanges, setScheduledChanges] = useState<IScheduledLicenseChange | null>(null);
-  const { tier, isMisconfigured, isPro, refreshTier, isTrialing, trialDaysLeft, trialEndDate, isPaymentFailed, subscriptionStatus } = useTier();
+  const { tier, isMisconfigured, isPro, refreshTier, isTrialing, trialDaysLeft, trialEndDate, isPaymentFailed, subscriptionStatus, isPremiumTrial, premiumTrialEndDate, premiumTrialDaysLeft, isPremiumTrialConfirmed, premiumTrialEffectiveDate } = useTier();
   const upgradeFlowFlag = useFeatureFlag('tier-upgrade-flow');
   const showUpgradeFlow = isPro && (typeof upgradeFlowFlag === 'boolean' ? upgradeFlowFlag : upgradeFlowFlag?.enabled ?? false);
 
@@ -337,6 +339,23 @@ export default function AccountManagement() {
   const [startingSelfServiceTrial, setStartingSelfServiceTrial] = useState(false);
   const [showTrialConfirm, setShowTrialConfirm] = useState(false);
 
+  // Premium trial confirmation state (for users already on a Premium trial)
+  const [confirmingPremium, setConfirmingPremium] = useState(false);
+  const [showConfirmPremiumDialog, setShowConfirmPremiumDialog] = useState(false);
+  const [confirmPremiumPreview, setConfirmPremiumPreview] = useState<{
+    newBasePrice?: number;
+    newUserPrice?: number;
+    newMonthly?: number;
+    userCount?: number;
+    currency?: string;
+    annualAvailable?: boolean;
+    annualBasePrice?: number;
+    annualUserPrice?: number;
+    annualTotal?: number;
+  } | null>(null);
+  const [loadingConfirmPreview, setLoadingConfirmPreview] = useState(false);
+  const [revertingTrial, setRevertingTrial] = useState(false);
+
   const handleSendTrialRequest = async () => {
     if (!trialRequestMessage.trim()) {
       toast.error('Please enter a message describing why you want to try Premium');
@@ -366,7 +385,7 @@ export default function AccountManagement() {
     try {
       const result = await startSelfServicePremiumTrialAction();
       if (result.success) {
-        toast.success('Premium trial started! You have 30 days to explore Premium features.');
+        toast.success('Premium trial started! You have 30 days to explore Premium features. Your billing stays the same until you confirm.');
         setShowTrialConfirm(false);
         await refreshTier();
       } else {
@@ -377,6 +396,64 @@ export default function AccountManagement() {
       toast.error('Failed to start Premium trial');
     } finally {
       setStartingSelfServiceTrial(false);
+    }
+  };
+
+  const handleConfirmPremiumClick = async () => {
+    setLoadingConfirmPreview(true);
+    try {
+      const preview = await getUpgradePreviewAction('premium');
+      if (!preview.success) {
+        toast.error(preview.error || 'Failed to get Premium pricing');
+        return;
+      }
+      setConfirmPremiumPreview(preview);
+      setShowConfirmPremiumDialog(true);
+    } catch (error) {
+      console.error('Error fetching Premium pricing:', error);
+      toast.error('Failed to get Premium pricing');
+    } finally {
+      setLoadingConfirmPreview(false);
+    }
+  };
+
+  const handleConfirmPremiumTrial = async () => {
+    setConfirmingPremium(true);
+    try {
+      const result = await confirmPremiumTrialAction('month');
+      if (result.success) {
+        const effectiveDateStr = result.effectiveDate
+          ? ` Premium billing starts ${new Date(result.effectiveDate).toLocaleDateString()}.`
+          : '';
+        toast.success(`Premium confirmed!${effectiveDateStr} You'll stay on Pro pricing until then.`);
+        setShowConfirmPremiumDialog(false);
+        await refreshTier();
+      } else {
+        toast.error(result.error || 'Failed to confirm Premium');
+      }
+    } catch (error) {
+      console.error('Error confirming Premium:', error);
+      toast.error('Failed to confirm Premium');
+    } finally {
+      setConfirmingPremium(false);
+    }
+  };
+
+  const handleRevertPremiumTrial = async () => {
+    setRevertingTrial(true);
+    try {
+      const result = await revertPremiumTrialAction();
+      if (result.success) {
+        toast.success('Premium trial ended. You\'re back on Pro.');
+        await refreshTier();
+      } else {
+        toast.error(result.error || 'Failed to cancel Premium trial');
+      }
+    } catch (error) {
+      console.error('Error reverting Premium trial:', error);
+      toast.error('Failed to cancel Premium trial');
+    } finally {
+      setRevertingTrial(false);
     }
   };
 
@@ -513,8 +590,88 @@ export default function AccountManagement() {
         </Alert>
       )}
 
-      {/* Trial Status Card */}
-      {isTrialing && trialEndDate && (
+      {/* Premium Trial Status Card */}
+      {isPremiumTrial && premiumTrialEndDate && (
+        <Card className="border-blue-200 dark:border-blue-800">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Clock className="h-5 w-5 text-blue-600" />
+                <CardTitle>Premium Trial</CardTitle>
+              </div>
+              <Badge variant={premiumTrialDaysLeft <= 3 ? 'error' : 'default'}>
+                {premiumTrialDaysLeft} {premiumTrialDaysLeft === 1 ? 'day' : 'days'} remaining
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Progress bar */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Trial started</span>
+                <span>Trial ends {new Date(premiumTrialEndDate).toLocaleDateString()}</span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all ${
+                    premiumTrialDaysLeft <= 3 ? 'bg-red-500' : 'bg-blue-500'
+                  }`}
+                  style={{ width: `${Math.max(5, 100 - (premiumTrialDaysLeft / 30) * 100)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Premium trial info + actions */}
+            <div className="rounded-lg border p-3 bg-muted/50 space-y-3">
+              {isPremiumTrialConfirmed ? (
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <p className="text-sm font-medium">Premium confirmed</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Premium billing is scheduled to start on {premiumTrialEffectiveDate ? new Date(premiumTrialEffectiveDate).toLocaleDateString() : 'your next billing date'}.
+                    You&apos;ll continue on Pro pricing until then.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <p className="text-sm font-medium">Premium features are active</p>
+                    <p className="text-sm text-muted-foreground">
+                      Your billing has not changed — you&apos;re still on Pro pricing.
+                      To keep Premium after the trial, you must confirm the switch before {new Date(premiumTrialEndDate).toLocaleDateString()}.
+                      If you don&apos;t confirm, you&apos;ll automatically return to Pro.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      id="confirm-premium-switch-btn"
+                      size="sm"
+                      onClick={handleConfirmPremiumClick}
+                      disabled={loadingConfirmPreview}
+                    >
+                      {loadingConfirmPreview ? 'Loading pricing...' : 'Confirm Switch to Premium'}
+                    </Button>
+                    <Button
+                      id="cancel-premium-trial-btn"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRevertPremiumTrial}
+                      disabled={revertingTrial}
+                    >
+                      {revertingTrial ? 'Reverting...' : 'End Trial & Return to Pro'}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Stripe Trial Status Card (7-day Pro trial etc.) */}
+      {isTrialing && trialEndDate && !isPremiumTrial && (
         <Card className="border-blue-200 dark:border-blue-800">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -546,34 +703,13 @@ export default function AccountManagement() {
 
             {/* Trial CTA */}
             <div className="rounded-lg border p-3 bg-muted/50">
-              {tier === 'premium' ? (
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">Premium Trial</p>
-                    <p className="text-sm text-muted-foreground">
-                      Your card will be charged for Premium on {new Date(trialEndDate).toLocaleDateString()}.
-                      Cancel anytime before then to revert to your Pro plan.
-                    </p>
-                  </div>
-                  <Button
-                    id="cancel-premium-trial-btn"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCancelSubscription}
-                    className="ml-4 shrink-0"
-                  >
-                    Cancel Trial
-                  </Button>
-                </div>
-              ) : (
-                <div>
-                  <p className="text-sm font-medium">Pro Trial</p>
-                  <p className="text-sm text-muted-foreground">
-                    Your card will be charged on {new Date(trialEndDate).toLocaleDateString()}.
-                    Cancel anytime before then.
-                  </p>
-                </div>
-              )}
+              <div>
+                <p className="text-sm font-medium">Pro Trial</p>
+                <p className="text-sm text-muted-foreground">
+                  Your card will be charged on {new Date(trialEndDate).toLocaleDateString()}.
+                  Cancel anytime before then.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -663,12 +799,13 @@ export default function AccountManagement() {
               )}
 
               {/* Premium Trial — self-service for paying Pro, manual request for trialing Pro */}
-              {isPro && !isTrialing && (
+              {/* Hide if already on a Premium trial (they manage it from the trial card above) */}
+              {isPro && !isTrialing && !isPremiumTrial && (
                 <div className="mt-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
                   <h4 className="font-semibold mb-1">Try Premium Free for 30 Days</h4>
                   <p className="text-sm text-muted-foreground mb-3">
-                    Start a 30-day Premium trial to explore advanced features like the Visual Invoice Designer.
-                    After the trial, your subscription will automatically convert to Premium pricing.
+                    Start a 30-day Premium trial to explore advanced features.
+                    Your billing stays the same during the trial — no charge until you explicitly confirm the switch.
                   </p>
                   <Button
                     id="start-premium-trial-btn"
@@ -679,11 +816,11 @@ export default function AccountManagement() {
                   </Button>
                 </div>
               )}
-              {isPro && isTrialing && (
+              {isPro && isTrialing && !isPremiumTrial && (
                 <div className="mt-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
                   <h4 className="font-semibold mb-1">Try Premium Free for 30 Days</h4>
                   <p className="text-sm text-muted-foreground mb-3">
-                    Request a 30-day Premium trial to explore advanced features like the Visual Invoice Designer.
+                    Request a 30-day Premium trial to explore advanced features.
                     Your current Pro subscription continues — no interruption.
                   </p>
                   {trialRequestSent ? (
@@ -1194,21 +1331,68 @@ export default function AccountManagement() {
             <div className="rounded-lg border p-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Trial period</span>
-                <span>30 days — no charge</span>
+                <span>30 days</span>
+              </div>
+              <div className="flex justify-between text-sm pt-2 border-t">
+                <span className="text-muted-foreground">Billing during trial</span>
+                <span>No change — stays at Pro pricing</span>
               </div>
               <div className="flex justify-between text-sm pt-2 border-t">
                 <span className="text-muted-foreground">After trial ends</span>
-                <span>Converts to Premium pricing automatically</span>
+                <span>Reverts to Pro unless you confirm</span>
               </div>
             </div>
 
-            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20 p-3">
-              <p className="text-sm text-amber-800 dark:text-amber-200">
-                After the 30-day trial, your subscription will automatically convert to Premium pricing.
-                You can cancel or downgrade back to Pro at any time before the trial ends.
+            <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20 p-3">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                During the trial you&apos;ll have full access to Premium features while continuing to pay your current Pro price.
+                Before the trial ends, you&apos;ll see the exact Premium pricing and can choose to confirm the switch.
+                If you don&apos;t confirm, you&apos;ll automatically go back to Pro — no surprise charges.
               </p>
             </div>
           </div>
+        }
+      />
+
+      {/* Confirm Premium switch dialog — shown during an active Premium trial */}
+      <ConfirmationDialog
+        id="confirm-premium-switch-dialog"
+        isOpen={showConfirmPremiumDialog}
+        onClose={() => setShowConfirmPremiumDialog(false)}
+        onConfirm={handleConfirmPremiumTrial}
+        title="Confirm Switch to Premium"
+        confirmLabel={confirmingPremium ? 'Switching...' : 'Confirm & Switch to Premium'}
+        isConfirming={confirmingPremium}
+        message={
+          confirmPremiumPreview ? (
+            <div className="space-y-4">
+              <p>You&apos;re confirming the switch from Pro to Premium. Here&apos;s what you&apos;ll be charged going forward:</p>
+
+              <div className="rounded-lg border p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Base fee</span>
+                  <span>${((confirmPremiumPreview.newBasePrice || 0) / 100).toFixed(2)}/mo</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Per user ({confirmPremiumPreview.userCount} users)</span>
+                  <span>${((confirmPremiumPreview.newUserPrice || 0) / 100).toFixed(2)}/user/mo</span>
+                </div>
+                <div className="flex justify-between text-sm font-semibold pt-2 border-t">
+                  <span>New monthly total</span>
+                  <span>${((confirmPremiumPreview.newMonthly || 0) / 100).toFixed(2)}/mo</span>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20 p-3">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  Premium billing will start at the end of your current pay period.
+                  You&apos;ll continue paying your current Pro price until then.
+                </p>
+              </div>
+            </div>
+          ) : (
+            'Loading pricing details...'
+          )
         }
       />
     </div>

@@ -69,6 +69,9 @@ interface TenantSubscriptionInfo {
     plan?: string;
     trial_end?: string | null;
     subscription_status?: string | null;
+    premium_trial_end?: string | null;
+    premium_trial_confirmed?: boolean;
+    premium_trial_effective_date?: string | null;
 }
 
 async function fetchTenantPlan(tenantId: string): Promise<string | undefined> {
@@ -90,13 +93,16 @@ async function fetchTenantSubscriptionInfo(tenantId: string): Promise<TenantSubs
     // Use a single query to minimize DB load (this runs on every JWT refresh)
     let trialEnd: string | null = null;
     let subscriptionStatus: string | null = null;
+    let premiumTrialEnd: string | null = null;
+    let premiumTrialConfirmed = false;
+    let premiumTrialEffectiveDate: string | null = null;
 
     try {
         const subscription = await knex('stripe_subscriptions')
             .where({ tenant: tenantId })
             .whereIn('status', ['active', 'trialing', 'past_due', 'unpaid'])
             .orderByRaw("CASE WHEN status = 'trialing' THEN 0 WHEN status = 'active' THEN 1 ELSE 2 END")
-            .select('status', 'current_period_end')
+            .select('status', 'current_period_end', 'metadata')
             .first();
 
         if (subscription) {
@@ -105,6 +111,17 @@ async function fetchTenantSubscriptionInfo(tenantId: string): Promise<TenantSubs
             // For trialing subscriptions, current_period_end is the trial end date
             if (subscription.status === 'trialing' && subscription.current_period_end) {
                 trialEnd = new Date(subscription.current_period_end).toISOString();
+            }
+
+            // Check for active or confirmed Premium trial (stored in metadata)
+            const metadata = subscription.metadata || {};
+            if (metadata.premium_trial === 'true' && metadata.premium_trial_end) {
+                premiumTrialEnd = metadata.premium_trial_end;
+            } else if (metadata.premium_trial === 'confirmed') {
+                premiumTrialConfirmed = true;
+                premiumTrialEffectiveDate = metadata.premium_trial_effective_date || null;
+                // Use effective date so the UI shows when Premium billing starts
+                premiumTrialEnd = premiumTrialEffectiveDate;
             }
         }
     } catch {
@@ -115,6 +132,9 @@ async function fetchTenantSubscriptionInfo(tenantId: string): Promise<TenantSubs
         plan: tenantRecord?.plan ?? undefined,
         trial_end: trialEnd,
         subscription_status: subscriptionStatus,
+        premium_trial_end: premiumTrialEnd,
+        premium_trial_confirmed: premiumTrialConfirmed,
+        premium_trial_effective_date: premiumTrialEffectiveDate,
     };
 }
 
@@ -1597,6 +1617,9 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                         token.plan = subInfo.plan;
                         token.trial_end = subInfo.trial_end;
                         token.subscription_status = subInfo.subscription_status;
+                        token.premium_trial_end = subInfo.premium_trial_end;
+                        token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
+                        token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
                         token.last_plan_check = Date.now();
                     } catch (error) {
                         console.error('[auth] Failed to fetch tenant subscription info:', error);
@@ -1705,6 +1728,9 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                         token.plan = subInfo.plan;
                         token.trial_end = subInfo.trial_end;
                         token.subscription_status = subInfo.subscription_status;
+                        token.premium_trial_end = subInfo.premium_trial_end;
+                        token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
+                        token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
                         token.last_plan_check = now;
                     } catch (error) {
                         console.error('[auth] Failed to refresh tenant subscription info:', error);
@@ -1768,6 +1794,9 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 user.plan = token.plan as string | undefined;
                 (user as any).trial_end = token.trial_end ?? null;
                 (user as any).subscription_status = token.subscription_status ?? null;
+                (user as any).premium_trial_end = token.premium_trial_end ?? null;
+                (user as any).premium_trial_confirmed = token.premium_trial_confirmed ?? false;
+                (user as any).premium_trial_effective_date = token.premium_trial_effective_date ?? null;
             }
             logger.trace("Session Object:", session);
             console.log('Session callback - final session.user:', {
@@ -2320,6 +2349,9 @@ export const options: NextAuthConfig = {
                         token.plan = subInfo.plan;
                         token.trial_end = subInfo.trial_end;
                         token.subscription_status = subInfo.subscription_status;
+                        token.premium_trial_end = subInfo.premium_trial_end;
+                        token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
+                        token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
                         token.last_plan_check = Date.now();
                     } catch (error) {
                         console.error('[auth] Failed to fetch tenant subscription info:', error);
@@ -2428,6 +2460,9 @@ export const options: NextAuthConfig = {
                         token.plan = subInfo.plan;
                         token.trial_end = subInfo.trial_end;
                         token.subscription_status = subInfo.subscription_status;
+                        token.premium_trial_end = subInfo.premium_trial_end;
+                        token.premium_trial_confirmed = subInfo.premium_trial_confirmed;
+                        token.premium_trial_effective_date = subInfo.premium_trial_effective_date;
                         token.last_plan_check = now;
                     } catch (error) {
                         console.error('[auth] Failed to refresh tenant subscription info:', error);
@@ -2490,6 +2525,9 @@ export const options: NextAuthConfig = {
                 user.plan = token.plan as string | undefined;
                 (user as any).trial_end = token.trial_end ?? null;
                 (user as any).subscription_status = token.subscription_status ?? null;
+                (user as any).premium_trial_end = token.premium_trial_end ?? null;
+                (user as any).premium_trial_confirmed = token.premium_trial_confirmed ?? false;
+                (user as any).premium_trial_effective_date = token.premium_trial_effective_date ?? null;
             }
             logger.trace("Session Object:", session);
             console.log('Session callback - final session.user:', {

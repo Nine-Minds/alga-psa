@@ -32,6 +32,18 @@ interface TierContextValue {
   /** ISO date string of when trial ends (null if not trialing) */
   trialEndDate: string | null;
 
+  // Premium trial state (30-day trial where Pro prices stay, Premium features unlocked)
+  /** True if tenant is on a Premium trial (still paying Pro prices) */
+  isPremiumTrial: boolean;
+  /** ISO date string of when Premium trial ends (null if not on Premium trial) */
+  premiumTrialEndDate: string | null;
+  /** Number of days remaining in Premium trial (0 if not on Premium trial) */
+  premiumTrialDaysLeft: number;
+  /** True if user confirmed the switch to Premium (billing scheduled for period end) */
+  isPremiumTrialConfirmed: boolean;
+  /** ISO date when Premium billing takes effect (null if not confirmed) */
+  premiumTrialEffectiveDate: string | null;
+
   // Subscription status
   /** Raw subscription status from Stripe */
   subscriptionStatus: string | null;
@@ -93,6 +105,21 @@ export function TierProvider({ children }: TierProviderProps) {
     return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
   }, [isTrialing, trialEndDate]);
 
+  // Premium trial state (30-day trial: Pro prices on Stripe, Premium features via DB)
+  const premiumTrialEndDate = session?.user?.premium_trial_end ?? null;
+  const isPremiumTrialConfirmed = session?.user?.premium_trial_confirmed ?? false;
+  const premiumTrialEffectiveDate = session?.user?.premium_trial_effective_date ?? null;
+  // isPremiumTrial is true for both pending and confirmed trials (Premium features stay active)
+  const isPremiumTrial = !!premiumTrialEndDate;
+
+  const premiumTrialDaysLeft = useMemo(() => {
+    if (!premiumTrialEndDate) return 0;
+    const now = new Date();
+    const end = new Date(premiumTrialEndDate);
+    const diffMs = end.getTime() - now.getTime();
+    return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+  }, [premiumTrialEndDate]);
+
   const value = useMemo<TierContextValue>(
     () => ({
       tier,
@@ -105,10 +132,15 @@ export function TierProvider({ children }: TierProviderProps) {
       isTrialing,
       trialDaysLeft,
       trialEndDate,
+      isPremiumTrial,
+      premiumTrialEndDate,
+      premiumTrialDaysLeft,
+      isPremiumTrialConfirmed,
+      premiumTrialEffectiveDate,
       subscriptionStatus,
       isPaymentFailed,
     }),
-    [tier, isMisconfigured, isPro, isPremium, hasFeature, refreshTier, isLoading, isTrialing, trialDaysLeft, trialEndDate, subscriptionStatus, isPaymentFailed]
+    [tier, isMisconfigured, isPro, isPremium, hasFeature, refreshTier, isLoading, isTrialing, trialDaysLeft, trialEndDate, isPremiumTrial, premiumTrialEndDate, premiumTrialDaysLeft, isPremiumTrialConfirmed, premiumTrialEffectiveDate, subscriptionStatus, isPaymentFailed]
   );
 
   return <TierContext.Provider value={value}>{children}</TierContext.Provider>;

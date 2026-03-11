@@ -1219,6 +1219,9 @@ export async function startPremiumTrialAction(
  * Self-service Premium trial for paying Pro customers.
  * Unlike startPremiumTrialAction (admin-only), this lets the tenant start their own trial.
  * Only allowed for tenants with an active (non-trialing) Pro subscription.
+ *
+ * The trial keeps Pro prices on Stripe — no billing change during the 30 days.
+ * User must explicitly confirm conversion to Premium before trial ends.
  */
 export async function startSelfServicePremiumTrialAction(): Promise<{ success: boolean; error?: string }> {
   try {
@@ -1252,12 +1255,83 @@ export async function startSelfServicePremiumTrialAction(): Promise<{ success: b
       return { success: false, error: 'Cannot self-start a Premium trial while on a Pro trial. Please contact support.' };
     }
 
+    // Check if already on a Premium trial
+    const metadata = subscription.metadata || {};
+    if (metadata.premium_trial === 'true') {
+      return { success: false, error: 'A Premium trial is already active' };
+    }
+
     return await stripeService.startPremiumTrial(session.user.tenant);
   } catch (error) {
     logger.error('[startSelfServicePremiumTrialAction] Error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to start Premium trial',
+    };
+  }
+}
+
+/**
+ * Confirm conversion to Premium after a 30-day trial.
+ * The user has seen the pricing and explicitly agrees to switch.
+ * This swaps Stripe subscription items from Pro to Premium prices.
+ */
+export async function confirmPremiumTrialAction(
+  interval: 'month' | 'year' = 'month'
+): Promise<{ success: boolean; error?: string; effectiveDate?: string }> {
+  try {
+    const session = await getSession();
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const hasPermission = await checkAccountManagementPermission(session);
+    if (!hasPermission) {
+      return { success: false, error: 'You do not have permission to manage the subscription' };
+    }
+
+    const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return { success: false, error: 'Stripe billing is not configured' };
+    }
+
+    return await stripeService.confirmPremiumTrial(session.user.tenant, interval);
+  } catch (error) {
+    logger.error('[confirmPremiumTrialAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to confirm Premium upgrade',
+    };
+  }
+}
+
+/**
+ * Cancel/revert a Premium trial. Flips tenant back to Pro.
+ * Since Pro prices were kept on Stripe during trial, no Stripe item changes needed.
+ */
+export async function revertPremiumTrialAction(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const session = await getSession();
+    if (!session?.user?.tenant) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    const hasPermission = await checkAccountManagementPermission(session);
+    if (!hasPermission) {
+      return { success: false, error: 'You do not have permission to manage the subscription' };
+    }
+
+    const stripeService = getStripeService();
+    if (!(await stripeService.isConfigured())) {
+      return { success: false, error: 'Stripe billing is not configured' };
+    }
+
+    return await stripeService.revertPremiumTrial(session.user.tenant);
+  } catch (error) {
+    logger.error('[revertPremiumTrialAction] Error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to cancel Premium trial',
     };
   }
 }

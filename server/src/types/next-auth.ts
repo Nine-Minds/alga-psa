@@ -40,6 +40,9 @@ declare module "next-auth" {
             plan?: string;
             trial_end?: string | null;
             subscription_status?: string | null;
+            premium_trial_end?: string | null;
+            premium_trial_confirmed?: boolean;
+            premium_trial_effective_date?: string | null;
         };
     }
 
@@ -58,6 +61,9 @@ declare module "next-auth" {
         plan?: string;
         trial_end?: string | null;
         subscription_status?: string | null;
+        premium_trial_end?: string | null;
+        premium_trial_confirmed?: boolean;
+        premium_trial_effective_date?: string | null;
         session_id?: string;
         login_method?: string;
         last_activity_check?: number;
