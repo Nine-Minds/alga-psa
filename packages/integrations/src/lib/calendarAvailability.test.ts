@@ -11,10 +11,10 @@ import {
 
 describe('calendarAvailability', () => {
   it('treats only enterprise editions as calendar-enabled', () => {
-    expect(isCalendarEnterpriseEdition({ EDITION: 'ee' } as NodeJS.ProcessEnv)).toBe(true);
-    expect(isCalendarEnterpriseEdition({ EDITION: 'enterprise' } as NodeJS.ProcessEnv)).toBe(true);
-    expect(isCalendarEnterpriseEdition({ NEXT_PUBLIC_EDITION: 'enterprise' } as NodeJS.ProcessEnv)).toBe(true);
-    expect(isCalendarEnterpriseEdition({ EDITION: 'ce', NEXT_PUBLIC_EDITION: 'community' } as NodeJS.ProcessEnv)).toBe(false);
+    expect(isCalendarEnterpriseEdition({ EDITION: 'ee' } as unknown as NodeJS.ProcessEnv)).toBe(true);
+    expect(isCalendarEnterpriseEdition({ EDITION: 'enterprise' } as unknown as NodeJS.ProcessEnv)).toBe(true);
+    expect(isCalendarEnterpriseEdition({ NEXT_PUBLIC_EDITION: 'enterprise' } as unknown as NodeJS.ProcessEnv)).toBe(true);
+    expect(isCalendarEnterpriseEdition({ EDITION: 'ce', NEXT_PUBLIC_EDITION: 'community' } as unknown as NodeJS.ProcessEnv)).toBe(false);
   });
 
   it('omits Calendar from visible settings categories in CE and keeps it in EE', () => {

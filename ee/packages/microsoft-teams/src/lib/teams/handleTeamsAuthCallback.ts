@@ -161,7 +161,7 @@ export async function handleTeamsAuthCallback(
   const expectedTenantId = getExpectedTenantId(request);
   if (expectedTenantId) {
     const availability = await getTeamsAvailability({ tenantId: expectedTenantId });
-    if (!availability.enabled) {
+    if (availability.enabled === false) {
       return new NextResponse(
         renderCallbackHtml(
           buildAvailabilityPayload(surface, {
@@ -195,7 +195,7 @@ export async function handleTeamsAuthCallback(
     tenantId: state.tenantId || expectedTenantId || undefined,
     userId: state.status === 'ready' ? state.userId : undefined,
   });
-  if (!availability.enabled) {
+  if (availability.enabled === false) {
     return new NextResponse(
       renderCallbackHtml(
         buildAvailabilityPayload(surface, {

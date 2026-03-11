@@ -309,7 +309,7 @@ export const getTeamsIntegrationStatus = withAuth(async (
     tenantId: tenant,
     userId: (user as any)?.user_id,
   });
-  if (!availability.enabled) {
+  if (availability.enabled === false) {
     return { success: false, error: availability.message };
   }
 
@@ -331,7 +331,7 @@ export const saveTeamsIntegrationSettings = withAuth(async (
     tenantId: tenant,
     userId: (user as any)?.user_id,
   });
-  if (!availability.enabled) {
+  if (availability.enabled === false) {
     return { success: false, error: availability.message };
   }
 

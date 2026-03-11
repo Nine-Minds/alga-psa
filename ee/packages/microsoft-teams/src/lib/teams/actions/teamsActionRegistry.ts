@@ -129,6 +129,7 @@ export interface TeamsActionSuccessResult {
   actionId: TeamsActionId;
   surface: TeamsActionSurface;
   operation: TeamsActionOperation;
+  error?: undefined;
   summary: {
     title: string;
     text: string;
@@ -288,6 +289,10 @@ const entityReferenceSchema = z.discriminatedUnion('entityType', [
   z.object({ entityType: z.literal('contact'), contactId: nonEmptyString, clientId: nonEmptyString.optional() }),
 ]);
 
+function parseEntityReference(value: unknown): TeamsActionEntityReference {
+  return entityReferenceSchema.parse(value) as TeamsActionEntityReference;
+}
+
 const assignTicketInputSchema = z.object({
   ticketId: nonEmptyString,
   assigneeId: nonEmptyString,
@@ -412,28 +417,30 @@ function requireTargetReference(request: TeamsActionRequest): TeamsActionEntityR
   const payload = buildPayloadFromRequest(request);
 
   if (typeof payload.entityType === 'string') {
-    return entityReferenceSchema.parse(payload);
+    return parseEntityReference(payload);
   }
 
   if (typeof payload.ticketId === 'string') {
-    return entityReferenceSchema.parse({ entityType: 'ticket', ticketId: payload.ticketId });
+    return parseEntityReference({ entityType: 'ticket', ticketId: payload.ticketId });
   }
 
   if (typeof payload.targetEntityType === 'string' && typeof payload.targetId === 'string') {
-    return payload.targetEntityType === 'project_task'
-      ? entityReferenceSchema.parse({
-          entityType: 'project_task',
-          taskId: payload.targetId,
-          projectId: payload.projectId,
-        })
-      : entityReferenceSchema.parse({
-          entityType: 'ticket',
-          ticketId: payload.targetId,
-        });
+    if (payload.targetEntityType === 'project_task') {
+      return parseEntityReference({
+        entityType: 'project_task',
+        taskId: payload.targetId,
+        projectId: payload.projectId,
+      });
+    }
+
+    return parseEntityReference({
+      entityType: 'ticket',
+      ticketId: payload.targetId,
+    });
   }
 
   if (typeof payload.taskId === 'string') {
-    return entityReferenceSchema.parse({
+    return parseEntityReference({
       entityType: 'project_task',
       taskId: payload.taskId,
       projectId: payload.projectId,
@@ -441,15 +448,15 @@ function requireTargetReference(request: TeamsActionRequest): TeamsActionEntityR
   }
 
   if (typeof payload.approvalId === 'string') {
-    return entityReferenceSchema.parse({ entityType: 'approval', approvalId: payload.approvalId });
+    return parseEntityReference({ entityType: 'approval', approvalId: payload.approvalId });
   }
 
   if (typeof payload.entryId === 'string') {
-    return entityReferenceSchema.parse({ entityType: 'time_entry', entryId: payload.entryId });
+    return parseEntityReference({ entityType: 'time_entry', entryId: payload.entryId });
   }
 
   if (typeof payload.contactId === 'string') {
-    return entityReferenceSchema.parse({
+    return parseEntityReference({
       entityType: 'contact',
       contactId: payload.contactId,
       clientId: payload.clientId,

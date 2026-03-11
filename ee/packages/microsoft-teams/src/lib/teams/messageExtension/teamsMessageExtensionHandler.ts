@@ -202,7 +202,7 @@ function parseQueryOption(value: number | string | null | undefined): number | n
 }
 
 function getQueryPagination(activity: TeamsMessageExtensionActivity):
-  | { success: true; skip: number; count: number }
+  | { success: true; skip: number; count: number; message?: undefined }
   | { success: false; message: string } {
   const rawSkip = parseQueryOption(activity.value?.queryOptions?.skip);
   const rawCount = parseQueryOption(activity.value?.queryOptions?.count);
@@ -526,7 +526,7 @@ async function loadCreateTicketFormOptions(tenantId: string): Promise<TeamsCreat
 }
 
 function buildTaskActionsFromTeamsResult(result: TeamsActionResult): TeamsAdaptiveCardAction[] {
-  if (!result.success) {
+  if (result.success === false) {
     return [];
   }
 
@@ -542,7 +542,7 @@ function buildTaskResponseFromTeamsActionResult(params: {
   result: TeamsActionResult;
   fallbackText?: string;
 }): TeamsMessageExtensionResponse {
-  if (!params.result.success) {
+  if (params.result.success === false) {
     return buildTaskMessageResponse(
       [params.result.error.message, params.result.error.remediation].filter(Boolean).join(' ').trim()
     );
@@ -825,7 +825,7 @@ function buildAttachmentFromActionResult(
   result: TeamsActionResult,
   quickActionTitles: string[] = []
 ): TeamsMessageExtensionAttachment | null {
-  if (!result.success) {
+  if (result.success === false) {
     return null;
   }
 
@@ -1017,7 +1017,7 @@ async function resolveInvokingUser(params: {
   activity: TeamsMessageExtensionActivity;
   tenantId: string;
 }): Promise<
-  | { success: true; user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>> }
+  | { success: true; user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>; message?: undefined }
   | { success: false; message: string }
 > {
   const linkedUser = await resolveTeamsLinkedUser({
@@ -1066,7 +1066,7 @@ async function handleQueryRequest(
   }
 
   const pagination = getQueryPagination(activity);
-  if (!pagination.success) {
+  if (pagination.success === false) {
     return buildMessageResponse(pagination.message);
   }
 
@@ -1074,7 +1074,7 @@ async function handleQueryRequest(
     activity,
     tenantId,
   });
-  if (!invokingUser.success) {
+  if (invokingUser.success === false) {
     return buildMessageResponse(invokingUser.message);
   }
 
@@ -1251,7 +1251,7 @@ async function handleActionRequest(
     activity,
     tenantId,
   });
-  if (!invokingUser.success) {
+  if (invokingUser.success === false) {
     return buildTaskMessageResponse(invokingUser.message);
   }
 
@@ -1376,7 +1376,7 @@ export async function handleTeamsMessageExtensionRequest(request: Request): Prom
     microsoftTenantId: getTeamsTenantId(activity),
     requiredCapability: 'message_extension',
   });
-  if (availability && !availability.enabled) {
+  if (availability && availability.enabled === false) {
     return buildTeamsAvailabilityJsonResponse(availability);
   }
 

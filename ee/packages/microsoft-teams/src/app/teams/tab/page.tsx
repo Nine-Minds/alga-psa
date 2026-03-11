@@ -154,7 +154,7 @@ export default async function TeamsTabPage({ searchParams }: TeamsTabPageProps) 
 
   if (expectedTenantId) {
     const availability = await getTeamsAvailability({ tenantId: expectedTenantId });
-    if (!availability.enabled) {
+    if (availability.enabled === false) {
       return renderAvailabilityCard(availability);
     }
   }
@@ -172,7 +172,7 @@ export default async function TeamsTabPage({ searchParams }: TeamsTabPageProps) 
     tenantId: state.tenantId || expectedTenantId || undefined,
     userId: state.status === 'ready' ? state.userId : undefined,
   });
-  if (!availability.enabled) {
+  if (availability.enabled === false) {
     return renderAvailabilityCard(availability);
   }
 

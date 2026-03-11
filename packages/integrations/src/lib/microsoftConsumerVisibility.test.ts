@@ -7,17 +7,17 @@ import {
 
 describe('microsoftConsumerVisibility', () => {
   it('treats only enterprise editions as multi-consumer Microsoft environments', () => {
-    expect(isMicrosoftConsumerEnterpriseEdition({ EDITION: 'ee' } as NodeJS.ProcessEnv)).toBe(true);
+    expect(isMicrosoftConsumerEnterpriseEdition({ EDITION: 'ee' } as unknown as NodeJS.ProcessEnv)).toBe(true);
     expect(
       isMicrosoftConsumerEnterpriseEdition({
         NEXT_PUBLIC_EDITION: 'enterprise',
-      } as NodeJS.ProcessEnv)
+      } as unknown as NodeJS.ProcessEnv)
     ).toBe(true);
     expect(
       isMicrosoftConsumerEnterpriseEdition({
         EDITION: 'ce',
         NEXT_PUBLIC_EDITION: 'community',
-      } as NodeJS.ProcessEnv)
+      } as unknown as NodeJS.ProcessEnv)
     ).toBe(false);
   });
 

@@ -146,7 +146,7 @@ export async function getGoogleAuthUrl(params: {
   isPopup?: boolean;
 } = {}): Promise<string> {
   const result = await initiateCalendarOAuth({ provider: 'google', ...params });
-  if (!result.success) {
+  if (result.success === false) {
     throw new Error(result.error);
   }
   return result.authUrl;
@@ -158,7 +158,7 @@ export async function getMicrosoftAuthUrl(params: {
   isPopup?: boolean;
 } = {}): Promise<string> {
   const result = await initiateCalendarOAuth({ provider: 'microsoft', ...params });
-  if (!result.success) {
+  if (result.success === false) {
     throw new Error(result.error);
   }
   return result.authUrl;

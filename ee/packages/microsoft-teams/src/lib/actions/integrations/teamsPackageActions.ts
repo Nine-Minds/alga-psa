@@ -406,7 +406,7 @@ export const getTeamsAppPackageStatus = withAuth(async (
     tenantId: tenant,
     userId: (user as any)?.user_id,
   });
-  if (!availability.enabled) {
+  if (availability.enabled === false) {
     return { success: false, error: availability.message };
   }
 

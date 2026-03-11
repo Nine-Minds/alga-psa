@@ -12,6 +12,7 @@ export type TeamsAvailability =
       enabled: true;
       reason: 'enabled';
       flagKey: typeof TEAMS_INTEGRATION_UI_FLAG;
+      message?: undefined;
     }
   | {
       enabled: false;

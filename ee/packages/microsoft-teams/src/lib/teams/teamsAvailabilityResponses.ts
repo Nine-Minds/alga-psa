@@ -6,9 +6,10 @@ export function getTeamsAvailabilityHttpStatus(availability: TeamsAvailability):
 }
 
 export function buildTeamsAvailabilityJsonResponse(availability: TeamsAvailability): NextResponse {
-  const errorMessage = availability.enabled
-    ? 'Microsoft Teams integration is unavailable.'
-    : availability.message;
+  const errorMessage =
+    availability.enabled === false
+      ? availability.message
+      : 'Microsoft Teams integration is unavailable.';
 
   return NextResponse.json(
     {

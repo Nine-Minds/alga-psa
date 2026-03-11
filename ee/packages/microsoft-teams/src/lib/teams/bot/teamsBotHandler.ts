@@ -485,7 +485,7 @@ async function renderActionResult(
     metadata: TeamsBotResponseActivity['metadata'];
   }
 ): Promise<TeamsBotResponseActivity> {
-  if (!result.success) {
+  if (result.success === false) {
     return buildMessageResponse(result.error.message, {
       attachments: [
         buildCard('Teams bot request unavailable', `${result.error.message}\n${result.error.remediation || ''}`.trim()),
@@ -571,7 +571,7 @@ async function buildGuidedHandoffResponse(params: {
     target: params.target,
   });
 
-  if (!targetResult.success) {
+  if (targetResult.success === false) {
     return renderActionResult(targetResult, params);
   }
 
@@ -643,7 +643,7 @@ async function handleAssignTicketCommand(params: {
     },
   });
 
-  if (!result.success) {
+  if (result.success === false) {
     return renderActionResult(result, {
       tenantId: params.tenantId,
       user: params.user,
@@ -1138,7 +1138,7 @@ export async function handleTeamsBotActivityRequest(
     microsoftTenantId: getTeamsTenantId(activity),
     requiredCapability: 'personal_bot',
   });
-  if (availability && !availability.enabled) {
+  if (availability && availability.enabled === false) {
     return buildTeamsAvailabilityJsonResponse(availability);
   }
 

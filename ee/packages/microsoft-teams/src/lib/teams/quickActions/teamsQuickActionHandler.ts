@@ -220,7 +220,7 @@ function buildTaskResponse(title: string, body: Array<Record<string, unknown>>, 
 }
 
 function buildTaskActionsFromTeamsResult(result: TeamsActionResult): TeamsAdaptiveCardAction[] {
-  if (!result.success) {
+  if (result.success === false) {
     return [];
   }
 
@@ -236,7 +236,7 @@ function buildTaskResponseFromTeamsActionResult(params: {
   result: TeamsActionResult;
   fallbackText?: string;
 }): TeamsQuickActionResponse {
-  if (!params.result.success) {
+  if (params.result.success === false) {
     return buildTaskMessageResponse(
       [params.result.error.message, params.result.error.remediation].filter(Boolean).join(' ').trim()
     );
@@ -327,7 +327,7 @@ async function resolveInvokingUser(params: {
   activity: TeamsQuickActionActivity;
   tenantId: string;
 }): Promise<
-  | { success: true; user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>> }
+  | { success: true; user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>; message?: undefined }
   | { success: false; message: string }
 > {
   const linkedUser = await resolveTeamsLinkedUser({
@@ -755,7 +755,7 @@ export async function handleTeamsQuickActionActivity(
     activity,
     tenantId: tenantContext.tenantId,
   });
-  if (!invokingUser.success) {
+  if (invokingUser.success === false) {
     return buildTaskMessageResponse(invokingUser.message);
   }
 
@@ -810,7 +810,7 @@ export async function handleTeamsQuickActionRequest(request: Request): Promise<N
     microsoftTenantId: getTeamsTenantId(activity),
     requiredCapability: 'message_extension',
   });
-  if (availability && !availability.enabled) {
+  if (availability && availability.enabled === false) {
     return buildTeamsAvailabilityJsonResponse(availability);
   }
 
