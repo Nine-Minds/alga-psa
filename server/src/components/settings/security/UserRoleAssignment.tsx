@@ -15,15 +15,20 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type ViewMode = 'msp' | 'client';
 
-const viewOptions: ViewSwitcherOption<ViewMode>[] = [
-  { value: 'msp', label: 'MSP' },
-  { value: 'client', label: 'Client Portal' },
-];
+// viewOptions is defined inside the component to access translations
 
 export default function UserRoleAssignment() {
+  const { t } = useTranslation('msp/settings');
+
+  const viewOptions: ViewSwitcherOption<ViewMode>[] = [
+    { value: 'msp', label: t('security.userRoles.viewSwitcher.msp') },
+    { value: 'client', label: t('security.userRoles.viewSwitcher.clientPortal') },
+  ];
+
   const [users, setUsers] = useState<IUserWithRoles[]>([]);
   const [roles, setRoles] = useState<IRole[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>('');
@@ -115,7 +120,7 @@ export default function UserRoleAssignment() {
 
   const columns: ColumnDefinition<IUserWithRoles>[] = [
     {
-      title: 'User',
+      title: t('security.userRoles.table.user'),
       dataIndex: 'username',
       render: (_, record) => {
         const displayName = `${record.first_name || ''} ${record.last_name || ''}`.trim() || record.username || 'Unnamed User';
@@ -123,26 +128,26 @@ export default function UserRoleAssignment() {
           <div className="flex items-center gap-2">
             <span>{displayName}</span>
             {record.is_inactive && (
-              <span className="text-xs text-gray-500">(Inactive)</span>
+              <span className="text-xs text-gray-500">{t('security.userRoles.inactiveTag')}</span>
             )}
           </div>
         );
       },
     },
     {
-      title: 'Email',
+      title: t('security.userRoles.table.email'),
       dataIndex: 'email',
     },
     {
-      title: 'Roles',
+      title: t('security.userRoles.table.roles'),
       dataIndex: 'user_id',
       render: (userId) => {
         const roles = getFilteredUserRoles(userId);
-        return roles.map(role => role.role_name).join(', ') || 'No roles assigned';
+        return roles.map(role => role.role_name).join(', ') || t('security.userRoles.noRolesAssigned');
       },
     },
     {
-      title: 'Actions',
+      title: t('security.userRoles.table.actions'),
       dataIndex: 'user_id',
       width: '20%',
       render: (userId) => {
@@ -150,14 +155,14 @@ export default function UserRoleAssignment() {
         return (
           <Flex gap="2" wrap="wrap">
             {roles.map((role) => (
-              <Button 
+              <Button
                 id={`remove-role-${userId}-${role.role_id}-btn`}
-                key={role.role_id} 
+                key={role.role_id}
                 variant="destructive"
                 size="sm"
                 onClick={() => handleRemoveRole(userId, role.role_id)}
               >
-                Remove {role.role_name}
+                {t('security.userRoles.removeRole', { role: role.role_name })}
               </Button>
             ))}
           </Flex>
@@ -176,14 +181,14 @@ export default function UserRoleAssignment() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Assign Roles to Users</CardTitle>
+            <CardTitle>{t('security.userRoles.title')}</CardTitle>
             <CardDescription>
-              Manage user role assignments for {viewMode === 'msp' ? 'MSP' : 'Client Portal'} users
+              {viewMode === 'msp' ? t('security.userRoles.description.msp') : t('security.userRoles.description.client')}
             </CardDescription>
           </div>
           <div className="flex items-center gap-4">
             <SwitchWithLabel
-              label="Show Inactive Users"
+              label={t('security.userRoles.showInactive')}
               checked={showInactiveUsers}
               onCheckedChange={setShowInactiveUsers}
             />
@@ -203,17 +208,17 @@ export default function UserRoleAssignment() {
               onValueChange={setSelectedUser}
               users={filteredUsers}
               getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-              label="Select User"
+              label={t('security.userRoles.fields.selectUser')}
               buttonWidth="fit"
               userTypeFilter={viewMode === 'client' ? 'client' : 'internal'}
             />
             <div>
-              <h5 className="font-bold mb-1">Select Role</h5>
+              <h5 className="font-bold mb-1">{t('security.userRoles.fields.selectRole')}</h5>
               <CustomSelect
                 value={selectedRole}
                 onValueChange={setSelectedRole}
                 options={roleOptions}
-                placeholder="Select Role"
+                placeholder={t('security.userRoles.fields.selectRole')}
               />
             </div>
             <Button 
@@ -221,14 +226,14 @@ export default function UserRoleAssignment() {
               onClick={handleAssignRole}
               disabled={!selectedUser || !selectedRole}
             >
-              Assign Role
+              {t('security.userRoles.actions.assignRole')}
             </Button>
           </div>
 
           {filteredUsers.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              No {viewMode === 'msp' ? 'MSP' : 'Client Portal'} users found
-              {!showInactiveUsers && ' (inactive users hidden)'}
+              {t('security.userRoles.emptyState.noUsers', { type: viewMode === 'msp' ? 'MSP' : 'Client Portal' })}
+              {!showInactiveUsers && ` ${t('security.userRoles.emptyState.inactiveHidden')}`}
             </div>
           ) : (
             <DataTable

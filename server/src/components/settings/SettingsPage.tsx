@@ -15,6 +15,7 @@ import MspLanguageSettings from './general/MspLanguageSettings';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { UnsavedChangesProvider } from "@alga-psa/ui";
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Dynamic imports for heavy settings components
 const TicketingSettings = dynamic(() => import('./general/TicketingSettings'), {
@@ -57,10 +58,11 @@ type SettingsPageProps = {
 };
 
 const SettingsPage = ({ initialTabParam }: SettingsPageProps): React.JSX.Element => {
+  const { t } = useTranslation('msp/settings');
   return (
     <UnsavedChangesProvider
-      dialogTitle="Unsaved Changes"
-      dialogMessage="You have unsaved changes. Are you sure you want to leave? Your changes will be lost."
+      dialogTitle={t('unsavedChanges.title')}
+      dialogMessage={t('unsavedChanges.message')}
     >
       <SettingsPageContent initialTabParam={initialTabParam} />
     </UnsavedChangesProvider>
@@ -69,6 +71,7 @@ const SettingsPage = ({ initialTabParam }: SettingsPageProps): React.JSX.Element
 
 // Main content component
 const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.Element =>  {
+  const { t } = useTranslation('msp/settings');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab') ?? initialTabParam;
   // Extensions are conditionally available based on edition
@@ -127,9 +130,9 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>General Settings</CardTitle>
+            <CardTitle>{t('general.title')}</CardTitle>
             <CardDescription>
-              Manage your organization name and default client. The default client is used for configuration purposes and represents your MSP.
+              {t('general.description')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -171,8 +174,8 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>Team Management</CardTitle>
-            <CardDescription>Create and manage teams, assign team leads, and organize members across your organization</CardDescription>
+            <CardTitle>{t('teams.title')}</CardTitle>
+            <CardDescription>{t('teams.description')}</CardDescription>
           </CardHeader>
           <CardContent className="overflow-visible">
             <Suspense fallback={<SettingsTabSkeleton title="Team Management" description="Loading team configuration..." showTabs={false} />}>
@@ -222,8 +225,8 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>Time Entry Settings</CardTitle>
-            <CardDescription>Manage your time entry settings and time periods</CardDescription>
+            <CardTitle>{t('timeEntry.title')}</CardTitle>
+            <CardDescription>{t('timeEntry.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <TimeEntrySettings />
@@ -237,8 +240,8 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>Billing Settings</CardTitle>
-            <CardDescription>Manage your billing and subscription</CardDescription>
+            <CardTitle>{t('billing.title')}</CardTitle>
+            <CardDescription>{t('billing.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <BillingSettings />
@@ -252,9 +255,9 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>Secrets Management</CardTitle>
+            <CardTitle>{t('secrets.title')}</CardTitle>
             <CardDescription>
-              Manage encrypted secrets for use in workflows. Secrets can be referenced in workflow actions using the $secret syntax.
+              {t('secrets.description')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -274,8 +277,8 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>Email Configuration</CardTitle>
-            <CardDescription>Configure email providers, domains, and settings</CardDescription>
+            <CardTitle>{t('email.title')}</CardTitle>
+            <CardDescription>{t('email.description')}</CardDescription>
           </CardHeader>
           <CardContent>
             <EmailSettings />
@@ -306,7 +309,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
 
   return (
     <div className="h-full overflow-y-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">Admin Settings</h1>
+      <h1 className="text-3xl font-bold mb-6">{t('page.title')}</h1>
       {activeTabContent?.content}
     </div>
   );

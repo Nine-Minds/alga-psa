@@ -35,8 +35,10 @@ import {
   Filter,
   XCircle,
 } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export default function AdminSessionManagement() {
+  const { t } = useTranslation('msp/settings');
   const [sessions, setSessions] = useState<SessionWithUser[]>([]);
   const [filteredSessions, setFilteredSessions] = useState<SessionWithUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -140,7 +142,7 @@ export default function AdminSessionManagement() {
   const revokeSession = async (sessionId: string, isCurrent: boolean) => {
     if (isCurrent) {
       const confirmed = confirm(
-        'Are you sure you want to logout from this device?'
+        t('security.sessions.confirmLogout')
       );
       if (!confirmed) return;
     }
@@ -150,13 +152,13 @@ export default function AdminSessionManagement() {
       const result = await revokeSessionAction(sessionId);
 
       if (result.is_current) {
-        toast.success('Logging out...');
+        toast.success(t('security.sessions.messages.loggingOut'));
         // Redirect to login after a short delay
         setTimeout(() => {
           window.location.href = '/auth/msp/signin';
         }, 1000);
       } else {
-        toast.success('Session revoked successfully');
+        toast.success(t('security.sessions.messages.revoked'));
         await fetchSessions();
       }
     } catch (error) {
@@ -181,10 +183,10 @@ export default function AdminSessionManagement() {
     if (!method) return null;
 
     const variants: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
-      credentials: { label: 'Password', variant: 'default' },
-      google: { label: 'Google OAuth', variant: 'secondary' },
-      microsoft: { label: 'Microsoft OAuth', variant: 'secondary' },
-      keycloak: { label: 'Keycloak', variant: 'outline' },
+      credentials: { label: t('security.sessions.loginMethods.password'), variant: 'default' },
+      google: { label: t('security.sessions.loginMethods.google'), variant: 'secondary' },
+      microsoft: { label: t('security.sessions.loginMethods.microsoft'), variant: 'secondary' },
+      keycloak: { label: t('security.sessions.loginMethods.keycloak'), variant: 'outline' },
     };
 
     const config = variants[method] || { label: method, variant: 'outline' as const };
@@ -200,7 +202,7 @@ export default function AdminSessionManagement() {
     const isInternal = userType === 'internal';
     return (
       <Badge variant={isInternal ? 'default' : 'secondary'} className="text-xs">
-        {isInternal ? 'Internal' : 'Client'}
+        {isInternal ? t('security.sessions.userTypes.internal') : t('security.sessions.userTypes.client')}
       </Badge>
     );
   };
@@ -209,11 +211,11 @@ export default function AdminSessionManagement() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>All User Sessions</CardTitle>
+          <CardTitle>{t('security.sessions.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-muted-foreground">
-            Loading sessions...
+            {t('security.sessions.emptyState.loading')}
           </div>
         </CardContent>
       </Card>
@@ -227,9 +229,11 @@ export default function AdminSessionManagement() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>All User Sessions</CardTitle>
+            <CardTitle>{t('security.sessions.title')}</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
-              {sessions.length} active session{sessions.length !== 1 ? 's' : ''} across {totalUsers} user{totalUsers !== 1 ? 's' : ''}
+              {sessions.length === 1 && totalUsers === 1
+                ? t('security.sessions.subtitle', { sessionCount: sessions.length, userCount: totalUsers })
+                : t('security.sessions.subtitle_plural', { sessionCount: sessions.length, userCount: totalUsers })}
             </p>
           </div>
         </div>
@@ -241,14 +245,14 @@ export default function AdminSessionManagement() {
             {/* Search Input - First */}
             <div className="flex-1 min-w-[200px]">
               <label htmlFor="session-search" className="text-sm font-medium mb-1 block">
-                Search
+                {t('security.sessions.filters.search')}
               </label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="session-search"
                   type="text"
-                  placeholder="Search by name, email, device, or IP..."
+                  placeholder={t('security.sessions.filters.searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -260,13 +264,13 @@ export default function AdminSessionManagement() {
             <div className="w-auto">
               <UserPicker
                 id="user-filter"
-                label="User"
+                label={t('security.sessions.filters.user')}
                 value={selectedUser}
                 onValueChange={setSelectedUser}
                 users={users}
                 getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                 buttonWidth="fit"
-                placeholder="All Users"
+                placeholder={t('security.sessions.filters.allUsers')}
                 userTypeFilter={null}
                 labelStyle="medium"
               />
@@ -275,20 +279,20 @@ export default function AdminSessionManagement() {
             {/* Login Method Filter */}
             <div className="w-auto min-w-[180px]">
               <label htmlFor="login-method-filter" className="text-sm font-medium mb-1 block">
-                Login Method
+                {t('security.sessions.filters.loginMethod')}
               </label>
               <CustomSelect
                 id="login-method-filter"
                 value={selectedLoginMethod}
                 onValueChange={setSelectedLoginMethod}
                 options={[
-                  { value: '', label: 'All Methods' },
+                  { value: '', label: t('security.sessions.filters.allMethods') },
                   ...uniqueLoginMethods.map(method => ({
                     value: method,
-                    label: method === 'credentials' ? 'Password' :
-                           method === 'google' ? 'Google OAuth' :
-                           method === 'microsoft' ? 'Microsoft OAuth' :
-                           method === 'keycloak' ? 'Keycloak' : method
+                    label: method === 'credentials' ? t('security.sessions.loginMethods.password') :
+                           method === 'google' ? t('security.sessions.loginMethods.google') :
+                           method === 'microsoft' ? t('security.sessions.loginMethods.microsoft') :
+                           method === 'keycloak' ? t('security.sessions.loginMethods.keycloak') : method
                   }))
                 ]}
               />
@@ -297,16 +301,16 @@ export default function AdminSessionManagement() {
             {/* User Type Filter */}
             <div className="w-auto min-w-[140px]">
               <label htmlFor="user-type-filter" className="text-sm font-medium mb-1 block">
-                User Type
+                {t('security.sessions.filters.userType')}
               </label>
               <CustomSelect
                 id="user-type-filter"
                 value={selectedUserType}
                 onValueChange={setSelectedUserType}
                 options={[
-                  { value: '', label: 'All Types' },
-                  { value: 'internal', label: 'Internal' },
-                  { value: 'client', label: 'Client' }
+                  { value: '', label: t('security.sessions.filters.allTypes') },
+                  { value: 'internal', label: t('security.sessions.userTypes.internal') },
+                  { value: 'client', label: t('security.sessions.userTypes.client') }
                 ]}
               />
             </div>
@@ -314,13 +318,13 @@ export default function AdminSessionManagement() {
             {/* Date From Filter */}
             <div className="w-auto min-w-[140px]">
               <label className="text-sm font-medium mb-1 block">
-                From
+                {t('security.sessions.filters.from')}
               </label>
               <DatePicker
                 id="date-from"
                 value={dateFrom}
                 onChange={setDateFrom}
-                placeholder="Select date"
+                placeholder={t('security.sessions.filters.selectDate')}
                 clearable
               />
             </div>
@@ -328,13 +332,13 @@ export default function AdminSessionManagement() {
             {/* Date To Filter */}
             <div className="w-auto min-w-[140px]">
               <label className="text-sm font-medium mb-1 block">
-                To
+                {t('security.sessions.filters.to')}
               </label>
               <DatePicker
                 id="date-to"
                 value={dateTo}
                 onChange={setDateTo}
-                placeholder="Select date"
+                placeholder={t('security.sessions.filters.selectDate')}
                 clearable
               />
             </div>
@@ -350,7 +354,7 @@ export default function AdminSessionManagement() {
                   className="h-10"
                 >
                   <XCircle className="h-4 w-4 mr-2" />
-                  Reset
+                  {t('security.sessions.filters.reset')}
                 </Button>
               </div>
             )}
@@ -359,7 +363,7 @@ export default function AdminSessionManagement() {
 
         {filteredSessions.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            {searchTerm ? 'No sessions match your search' : 'No active sessions found'}
+            {searchTerm ? t('security.sessions.emptyState.noMatch') : t('security.sessions.emptyState.noSessions')}
           </div>
         ) : (
           <div className="space-y-4">
@@ -384,7 +388,7 @@ export default function AdminSessionManagement() {
                           {getUserTypeBadge(session.user_type)}
                           {session.is_current && (
                             <Badge variant="default" className="text-xs">
-                              Your Session
+                              {t('security.sessions.session.yourSession')}
                             </Badge>
                           )}
                         </div>
@@ -397,7 +401,7 @@ export default function AdminSessionManagement() {
                       {/* Device information */}
                       <div className="flex items-center gap-2 flex-wrap mb-2">
                         <h4 className="font-medium">
-                          {session.device_name || 'Unknown Device'}
+                          {session.device_name || t('security.sessions.session.unknownDevice')}
                         </h4>
                         {getLoginMethodBadge(session.login_method)}
                       </div>
@@ -424,9 +428,8 @@ export default function AdminSessionManagement() {
                         <div className="flex items-center gap-2">
                           <Clock className="h-3.5 w-3.5" />
                           <span>
-                            Last active{' '}
-                            {formatDistanceToNow(new Date(session.last_activity_at), {
-                              addSuffix: true,
+                            {t('security.sessions.session.lastActive', {
+                              time: formatDistanceToNow(new Date(session.last_activity_at)),
                             })}
                           </span>
                         </div>
@@ -436,7 +439,7 @@ export default function AdminSessionManagement() {
                         <div className="mt-2 flex items-start gap-2 text-xs text-amber-600">
                           <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
                           <span>
-                            Revoking this session will not revoke {session.login_method === 'google' ? 'Google' : 'Microsoft'} OAuth access. Revoke access from your {session.login_method === 'google' ? 'Google' : 'Microsoft'} account settings.
+                            {t('security.sessions.oauthWarning', { provider: session.login_method === 'google' ? 'Google' : 'Microsoft' })}
                           </span>
                         </div>
                       )}
@@ -452,10 +455,10 @@ export default function AdminSessionManagement() {
                   >
                     <LogOut className="h-4 w-4 mr-2" />
                     {revoking === session.session_id
-                      ? 'Revoking...'
+                      ? t('security.sessions.session.revoking')
                       : session.is_current
-                      ? 'Logout'
-                      : 'Revoke'}
+                      ? t('security.sessions.session.logout')
+                      : t('security.sessions.session.revoke')}
                   </Button>
                 </div>
               </div>

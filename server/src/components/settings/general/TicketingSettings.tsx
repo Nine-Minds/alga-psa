@@ -9,8 +9,10 @@ import StatusSettings from './StatusSettings';
 import { CategoriesSettings } from '@alga-psa/tickets/components';
 import { DisplaySettings } from '@alga-psa/tickets/components';
 import { NumberingSettings, PrioritySettings } from '@alga-psa/reference-data/components';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const TicketingSettingsRefactored = (): React.JSX.Element => {
+  const { t } = useTranslation('msp/settings');
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section');
   const typeParam = searchParams?.get('type');
@@ -28,7 +30,7 @@ const TicketingSettingsRefactored = (): React.JSX.Element => {
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
     const initialLabel = sectionParam ? sectionToLabelMap[sectionParam.toLowerCase()] : undefined;
-    return initialLabel || 'Display'; // Default to 'Display'
+    return initialLabel || 'Display';
   });
 
   // Update active tab when URL parameter changes
@@ -95,7 +97,7 @@ const TicketingSettingsRefactored = (): React.JSX.Element => {
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
-      <h2 className="text-xl font-bold mb-4 text-gray-800">Ticket Settings</h2>
+      <h2 className="text-xl font-bold mb-4 text-gray-800">{t('ticketing.title')}</h2>
       <CustomTabs 
         tabs={tabs} 
         defaultTab={activeTab}

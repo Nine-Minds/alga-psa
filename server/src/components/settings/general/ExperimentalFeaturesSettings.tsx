@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { canEnableAiAssistant, getExperimentalFeatures, updateExperimentalFeatures } from '@alga-psa/tenancy/actions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type ExperimentalFeatureKey = 'aiAssistant' | 'workflowAutomation';
 
@@ -18,19 +19,6 @@ type ExperimentalFeatureDefinition = {
   description: string;
 };
 
-const experimentalFeatureDefinitions: ExperimentalFeatureDefinition[] = [
-  {
-    key: 'aiAssistant',
-    name: 'AI Assistant',
-    description: 'Enable AI-powered Quick Ask and Chat sidebar.',
-  },
-  {
-    key: 'workflowAutomation',
-    name: 'Workflow Automation',
-    description: 'Enable experimental workflow automation features in the workflow control panel and editor.',
-  },
-];
-
 type ExperimentalFeatureState = Record<ExperimentalFeatureKey, boolean>;
 
 const defaultExperimentalFeatureState: ExperimentalFeatureState = {
@@ -39,6 +27,20 @@ const defaultExperimentalFeatureState: ExperimentalFeatureState = {
 };
 
 export default function ExperimentalFeaturesSettings(): React.JSX.Element {
+  const { t } = useTranslation('msp/settings');
+
+  const experimentalFeatureDefinitions = useMemo<ExperimentalFeatureDefinition[]>(() => [
+    {
+      key: 'aiAssistant',
+      name: t('experimentalFeatures.features.aiAssistant.name'),
+      description: t('experimentalFeatures.features.aiAssistant.description'),
+    },
+    {
+      key: 'workflowAutomation',
+      name: t('experimentalFeatures.features.workflowAutomation.name'),
+      description: t('experimentalFeatures.features.workflowAutomation.description'),
+    },
+  ], [t]);
   const [features, setFeatures] = useState<ExperimentalFeatureState>(defaultExperimentalFeatureState);
   const [savedFeatures, setSavedFeatures] = useState<ExperimentalFeatureState>(defaultExperimentalFeatureState);
   const [loading, setLoading] = useState(true);
@@ -60,12 +62,12 @@ export default function ExperimentalFeaturesSettings(): React.JSX.Element {
       setSavedFeatures(loaded);
       setAiAssistantAllowed(aiAllowed);
     } catch (error) {
-      setLoadError('Failed to load experimental feature settings.');
-      handleError(error, 'Failed to load experimental feature settings');
+      setLoadError(t('experimentalFeatures.messages.error.loadFailed'));
+      handleError(error, t('experimentalFeatures.messages.error.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -87,18 +89,18 @@ export default function ExperimentalFeaturesSettings(): React.JSX.Element {
       setSaving(true);
       await updateExperimentalFeatures(features);
       setSavedFeatures(features);
-      toast.success('Experimental feature settings saved. Reload the page to apply changes.');
+      toast.success(t('experimentalFeatures.messages.success.saved'));
     } catch (error) {
-      handleError(error, 'Failed to save experimental feature settings');
+      handleError(error, t('experimentalFeatures.messages.error.saveFailed'));
     } finally {
       setSaving(false);
     }
-  }, [features]);
+  }, [features, t]);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <LoadingIndicator layout="stacked" text="Loading experimental features..." spinnerProps={{ size: 'md' }} />
+        <LoadingIndicator layout="stacked" text={t('experimentalFeatures.loading')} spinnerProps={{ size: 'md' }} />
       </div>
     );
   }
@@ -108,7 +110,7 @@ export default function ExperimentalFeaturesSettings(): React.JSX.Element {
       <div className="space-y-3">
         <p className="text-accent-500">{loadError}</p>
         <Button id="retry-load-experimental-features" onClick={load}>
-          Retry
+          {t('experimentalFeatures.actions.retry')}
         </Button>
       </div>
     );
@@ -117,13 +119,13 @@ export default function ExperimentalFeaturesSettings(): React.JSX.Element {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Experimental Features</CardTitle>
-        <CardDescription>Enable or disable experimental features for your tenant.</CardDescription>
+        <CardTitle>{t('experimentalFeatures.title')}</CardTitle>
+        <CardDescription>{t('experimentalFeatures.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <Alert variant="warning">
-          <AlertTitle>Experimental</AlertTitle>
-          <AlertDescription>Experimental features may change or be removed without notice.</AlertDescription>
+          <AlertTitle>{t('experimentalFeatures.alert.title')}</AlertTitle>
+          <AlertDescription>{t('experimentalFeatures.alert.description')}</AlertDescription>
         </Alert>
         {experimentalFeatureDefinitions.map((feature) => (
           <div
@@ -135,7 +137,7 @@ export default function ExperimentalFeaturesSettings(): React.JSX.Element {
               <div className="text-sm text-gray-600">{feature.description}</div>
               {feature.key === 'aiAssistant' && !aiAssistantAllowed && (
                 <div className="text-xs text-gray-500">
-                  Only available for the master billing tenant.
+                  {t('experimentalFeatures.features.aiAssistant.restriction')}
                 </div>
               )}
             </div>
@@ -153,7 +155,7 @@ export default function ExperimentalFeaturesSettings(): React.JSX.Element {
             onClick={handleSave}
             disabled={!hasChanges || saving}
           >
-            {saving ? 'Saving...' : 'Save'}
+            {saving ? t('experimentalFeatures.actions.saving') : t('experimentalFeatures.actions.save')}
           </Button>
         </div>
       </CardContent>

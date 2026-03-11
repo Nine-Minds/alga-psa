@@ -38,8 +38,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const BoardsSettings: React.FC = () => {
+  const { t } = useTranslation('msp/settings');
   const [boards, setBoards] = useState<IBoard[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
   const [teams, setTeams] = useState<ITeam[]>([]);
@@ -167,7 +169,7 @@ const BoardsSettings: React.FC = () => {
       setBoards(allBoards);
     } catch (error) {
       console.error('Error fetching boards:', error);
-      setError('Failed to fetch boards');
+      setError(t('ticketing.boards.messages.error.fetchFailed'));
     }
   };
 
@@ -234,7 +236,7 @@ const BoardsSettings: React.FC = () => {
       const result = await deleteBoard(deleteDialog.boardId, force, cleanupItil);
 
       if (result.success) {
-        toast.success(result.message || 'Board deleted successfully');
+        toast.success(result.message || t('ticketing.boards.messages.success.deleted'));
         setDeleteDialog({ isOpen: false, boardId: '', boardName: '' });
         await fetchBoards();
         return;
@@ -292,7 +294,7 @@ const BoardsSettings: React.FC = () => {
   const handleSaveBoard = async () => {
     try {
       if (!formData.board_name.trim()) {
-        setError('Board name is required');
+        setError(t('ticketing.boards.messages.error.nameRequired'));
         return;
       }
 
@@ -314,7 +316,7 @@ const BoardsSettings: React.FC = () => {
           manager_user_id: formData.manager_user_id || null,
           sla_policy_id: formData.sla_policy_id || null
         });
-        toast.success('Board updated successfully');
+        toast.success(t('ticketing.boards.messages.success.updated'));
       } else {
         await createBoard({
           board_name: formData.board_name,
@@ -329,7 +331,7 @@ const BoardsSettings: React.FC = () => {
           manager_user_id: formData.manager_user_id || null,
           sla_policy_id: formData.sla_policy_id || null
         });
-        toast.success('Board created successfully');
+        toast.success(t('ticketing.boards.messages.success.created'));
       }
 
       setShowAddEditDialog(false);
@@ -338,7 +340,7 @@ const BoardsSettings: React.FC = () => {
       await fetchBoards();
     } catch (error) {
       console.error('Error saving board:', error);
-      setError(error instanceof Error ? error.message : 'Failed to save board');
+      setError(error instanceof Error ? error.message : t('ticketing.boards.messages.error.saveFailed'));
     }
   };
 
@@ -411,7 +413,7 @@ const BoardsSettings: React.FC = () => {
         }
       }
 
-      toast.success('Boards imported successfully');
+      toast.success(t('ticketing.boards.messages.success.imported'));
       setShowImportDialog(false);
       setSelectedImportBoards([]);
       setImportBoardItilSettings({});
@@ -425,26 +427,26 @@ const BoardsSettings: React.FC = () => {
 
   const columns: ColumnDefinition<IBoard>[] = [
     {
-      title: 'Name',
+      title: t('ticketing.boards.table.name'),
       dataIndex: 'board_name',
       render: (value: string) => (
         <span className="text-gray-700 font-medium">{value}</span>
       ),
     },
     {
-      title: 'Description',
+      title: t('ticketing.boards.table.description'),
       dataIndex: 'description',
       render: (value: string | null) => (
         <span className="text-gray-600">{value || '-'}</span>
       ),
     },
     {
-      title: 'Status',
+      title: t('ticketing.boards.table.status'),
       dataIndex: 'is_inactive',
       render: (value: boolean, record: IBoard) => (
         <div className="flex items-center space-x-2">
           <span className="text-sm text-gray-600">
-            {value ? 'Inactive' : 'Active'}
+            {value ? t('ticketing.boards.statusLabels.inactive') : t('ticketing.boards.statusLabels.active')}
           </span>
           <Switch
             checked={!value}
@@ -464,7 +466,7 @@ const BoardsSettings: React.FC = () => {
       ),
     },
     {
-      title: 'Default',
+      title: t('ticketing.boards.table.default'),
       dataIndex: 'is_default',
       render: (value: boolean, record: IBoard) => (
         <div className="flex items-center space-x-2">
@@ -474,7 +476,7 @@ const BoardsSettings: React.FC = () => {
               try {
                 // Prevent unchecking if this is the only default board
                 if (!checked && value) {
-                  toast.error('At least one board must be set as default for client portal tickets');
+                  toast.error(t('ticketing.boards.messages.error.lastDefault'));
                   return;
                 }
 
@@ -493,7 +495,7 @@ const BoardsSettings: React.FC = () => {
       ),
     },
     {
-      title: 'Default Agent',
+      title: t('ticketing.boards.table.defaultAgent'),
       dataIndex: 'default_assigned_to',
       render: (value: string | null, record: IBoard) => {
         const team = record.default_assigned_team_id
@@ -511,7 +513,7 @@ const BoardsSettings: React.FC = () => {
       },
     },
     {
-      title: 'Default Priority',
+      title: t('ticketing.boards.table.defaultPriority'),
       dataIndex: 'default_priority_id',
       render: (value: string | null) => {
         if (!value) return <span className="text-gray-400">-</span>;
@@ -523,7 +525,7 @@ const BoardsSettings: React.FC = () => {
       },
     },
     {
-      title: 'Board Manager',
+      title: t('ticketing.boards.table.boardManager'),
       dataIndex: 'manager_user_id',
       render: (value: string | null) => {
         if (!value) return <span className="text-gray-400">-</span>;
@@ -536,14 +538,14 @@ const BoardsSettings: React.FC = () => {
       },
     },
     {
-      title: 'Order',
+      title: t('ticketing.boards.table.order'),
       dataIndex: 'display_order',
       render: (value: number) => (
         <span className="text-gray-600">{value}</span>
       ),
     },
     {
-      title: 'ITIL Board',
+      title: t('ticketing.boards.table.itilBoard'),
       dataIndex: 'category_type',
       render: (_, record: IBoard) => (
         record.category_type === 'itil' && record.priority_type === 'itil' ? (
@@ -556,7 +558,7 @@ const BoardsSettings: React.FC = () => {
       ),
     },
     {
-      title: 'Actions',
+      title: t('ticketing.boards.table.actions'),
       dataIndex: 'board_id',
       width: '10%',
       render: (value: string, record: IBoard) => (
@@ -568,10 +570,10 @@ const BoardsSettings: React.FC = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={() => startEditing(record)}>
-              Edit
+              {t('ticketing.boards.actions.edit')}
             </DropdownMenuItem>
             {!record.is_default && (
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => setDeleteDialog({
                   isOpen: true,
                   boardId: value,
@@ -579,7 +581,7 @@ const BoardsSettings: React.FC = () => {
                 })}
                 className="text-destructive"
               >
-                Delete
+                {t('ticketing.boards.actions.delete')}
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>
@@ -591,12 +593,10 @@ const BoardsSettings: React.FC = () => {
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm">
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-gray-800">Boards</h3>
+        <h3 className="text-lg font-semibold mb-4 text-gray-800">{t('ticketing.boards.title')}</h3>
         <Alert variant="info" className="mb-4">
           <AlertDescription>
-            <strong>Default Board:</strong> When clients create tickets through the client portal,
-            they will automatically be assigned to the board marked as default. Only one board can
-            be set as default at a time. Boards help organize tickets by department, team, or workflow type.
+            {t('ticketing.boards.alert')}
           </AlertDescription>
         </Alert>
         {error && (
@@ -624,7 +624,7 @@ const BoardsSettings: React.FC = () => {
             }}
             className="bg-primary-500 text-white hover:bg-primary-600"
           >
-            <Plus className="h-4 w-4 mr-2" /> Add Board
+            <Plus className="h-4 w-4 mr-2" /> {t('ticketing.boards.actions.addBoard')}
           </Button>
           <Button 
             id="import-boards-button"
@@ -636,11 +636,11 @@ const BoardsSettings: React.FC = () => {
                 setSelectedImportBoards([]);
                 setShowImportDialog(true);
               } catch (error) {
-                handleError(error, 'Failed to fetch available boards for import');
+                handleError(error, t('ticketing.boards.messages.error.fetchAvailableFailed'));
               }
             }}
           >
-            Import from Standard Boards
+            {t('ticketing.boards.actions.importStandard')}
           </Button>
         </div>
       </div>
@@ -669,20 +669,20 @@ const BoardsSettings: React.FC = () => {
         }}
         title={
           deleteDialog.confirmCleanupItil
-            ? "Cleanup ITIL Data?"
-            : "Delete Board and Categories"
+            ? t('ticketing.boards.dialog.cleanupItilTitle')
+            : t('ticketing.boards.dialog.deleteBoardTitle')
         }
         message={
           deleteDialog.confirmCleanupItil
-            ? `${deleteDialog.message}\n\nClick "Delete & Cleanup" to remove unused ITIL data, or "Delete Only" to keep ITIL priorities/categories for other boards.`
-            : `${deleteDialog.message} This will permanently delete the board and all its categories.`
+            ? `${deleteDialog.message}\n\n${t('ticketing.boards.dialog.cleanupItilMessage')}`
+            : `${deleteDialog.message} ${t('ticketing.boards.dialog.deleteBoardMessage')}`
         }
         confirmLabel={
           deleteDialog.confirmCleanupItil
-            ? "Delete & Cleanup"
-            : "Delete All"
+            ? t('ticketing.boards.dialog.deleteAndCleanup')
+            : t('ticketing.boards.dialog.deleteAll')
         }
-        thirdButtonLabel={deleteDialog.confirmCleanupItil && !deleteDialog.blockingError ? "Delete Only" : undefined}
+        thirdButtonLabel={deleteDialog.confirmCleanupItil && !deleteDialog.blockingError ? t('ticketing.boards.dialog.deleteOnly') : undefined}
         onCancel={deleteDialog.confirmCleanupItil && !deleteDialog.blockingError ? () => {
           // Skip ITIL cleanup but still delete the board
           handleDeleteBoard(deleteDialog.confirmForce || false, false);
@@ -698,7 +698,7 @@ const BoardsSettings: React.FC = () => {
           setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_assigned_team_id: '', default_priority_id: '', manager_user_id: '', sla_policy_id: '' });
           setError(null);
         }}
-        title={editingBoard ? "Edit Board" : "Add Board"}
+        title={editingBoard ? t('ticketing.boards.dialog.editBoard') : t('ticketing.boards.dialog.addBoard')}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -708,38 +708,38 @@ const BoardsSettings: React.FC = () => {
               </Alert>
             )}
             <div>
-              <Label htmlFor="board_name">Board Name *</Label>
+              <Label htmlFor="board_name">{t('ticketing.boards.fields.boardName.label')}</Label>
               <Input
                 id="board_name"
                 value={formData.board_name}
                 onChange={(e) => setFormData({ ...formData, board_name: e.target.value })}
-                placeholder="Enter board name"
+                placeholder={t('ticketing.boards.fields.boardName.placeholder')}
               />
             </div>
             <div>
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">{t('ticketing.boards.fields.description.label')}</Label>
               <Input
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Enter description"
+                placeholder={t('ticketing.boards.fields.description.placeholder')}
               />
             </div>
             <div>
-              <Label htmlFor="display_order">Display Order</Label>
+              <Label htmlFor="display_order">{t('ticketing.boards.fields.displayOrder.label')}</Label>
               <Input
                 id="display_order"
                 type="number"
                 value={formData.display_order}
                 onChange={(e) => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })}
-                placeholder="Enter display order"
+                placeholder={t('ticketing.boards.fields.displayOrder.placeholder')}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Controls the order in which boards appear in dropdown menus throughout the platform. Lower numbers appear first.
+                {t('ticketing.boards.fields.displayOrder.help')}
               </p>
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="is_inactive">Inactive</Label>
+              <Label htmlFor="is_inactive">{t('ticketing.boards.fields.inactive')}</Label>
               <Switch
                 id="is_inactive"
                 checked={formData.is_inactive}
@@ -747,7 +747,7 @@ const BoardsSettings: React.FC = () => {
               />
             </div>
             <div>
-              <Label htmlFor="default-assigned-agent-picker">Default Assigned Agent</Label>
+              <Label htmlFor="default-assigned-agent-picker">{t('ticketing.boards.fields.defaultAssignedAgent.label')}</Label>
               {teamsV2Enabled ? (
                 <UserAndTeamPicker
                   id="default-assigned-agent-picker"
@@ -765,7 +765,7 @@ const BoardsSettings: React.FC = () => {
                   teams={teams}
                   getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                   getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
-                  placeholder="None (manual assignment required)"
+                  placeholder={t('ticketing.boards.fields.defaultAssignedAgent.placeholder')}
                   buttonWidth="full"
                   labelStyle="none"
                 />
@@ -777,53 +777,53 @@ const BoardsSettings: React.FC = () => {
                   users={users}
                   getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                   userTypeFilter="internal"
-                  placeholder="None (manual assignment required)"
+                  placeholder={t('ticketing.boards.fields.defaultAssignedAgent.placeholder')}
                   buttonWidth="full"
                   labelStyle="none"
                 />
               )}
               <p className="text-xs text-muted-foreground mt-1">
-                When set, new tickets on this board will be automatically assigned to this agent{teamsV2Enabled ? ' or team' : ''}. For tickets created via the client portal or email, assignment is automatic. For MSP users, this pre-fills the assigned agent field if empty.
+                {t('ticketing.boards.fields.defaultAssignedAgent.help')}
               </p>
             </div>
             <div>
-              <Label htmlFor="sla-policy-picker">SLA Policy</Label>
+              <Label htmlFor="sla-policy-picker">{t('ticketing.boards.fields.slaPolicy.label')}</Label>
               <CustomSelect
                 id="sla-policy-picker"
                 value={formData.sla_policy_id}
                 onValueChange={(value) => setFormData({ ...formData, sla_policy_id: value })}
                 options={[
-                  { value: '', label: 'None' },
+                  { value: '', label: t('ticketing.boards.fields.slaPolicy.none') },
                   ...slaPolicies.map((policy): SelectOption => ({
                     value: policy.sla_policy_id,
                     label: policy.policy_name + (policy.is_default ? ' (Default)' : '')
                   }))
                 ]}
-                placeholder="Select SLA policy"
+                placeholder={t('ticketing.boards.fields.slaPolicy.placeholder')}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                When set, tickets on this board will use this SLA policy for response and resolution time tracking, unless the client has a specific SLA policy assigned.
+                {t('ticketing.boards.fields.slaPolicy.help')}
               </p>
             </div>
             <div>
-              <Label htmlFor="board-manager-picker">Board Manager</Label>
+              <Label htmlFor="board-manager-picker">{t('ticketing.boards.fields.boardManager.label')}</Label>
               <UserPicker
                 id="board-manager-picker"
                 value={formData.manager_user_id}
                 onValueChange={(value) => setFormData({ ...formData, manager_user_id: value })}
                 users={users}
                 userTypeFilter="internal"
-                placeholder="None (no escalation manager)"
+                placeholder={t('ticketing.boards.fields.boardManager.placeholder')}
                 buttonWidth="full"
                 labelStyle="none"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                When set, this user will be notified of SLA breaches and escalations for tickets on this board.
+                {t('ticketing.boards.fields.boardManager.help')}
               </p>
             </div>
 
             <div>
-              <Label htmlFor="default-priority-select">Default Priority</Label>
+              <Label htmlFor="default-priority-select">{t('ticketing.boards.fields.defaultPriority.label')}</Label>
               <CustomSelect
                 id="default-priority-select"
                 label=""
@@ -841,34 +841,34 @@ const BoardsSettings: React.FC = () => {
                   });
 
                   return [
-                    { value: '', label: 'None (use system default)' },
+                    { value: '', label: t('ticketing.boards.fields.defaultPriority.none') },
                     ...allowed
                       .slice()
                       .sort((a, b) => (a.order_number - b.order_number) || a.priority_name.localeCompare(b.priority_name))
                       .map(p => ({ value: p.priority_id, label: p.priority_name }))
                   ];
                 })()}
-                placeholder="Select default priority"
+                placeholder={t('ticketing.boards.fields.defaultPriority.placeholder')}
                 data-automation-id="board-default-priority-select"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Used to preselect the Priority field when adding a ticket for this board (for example in Quick Add).
+                {t('ticketing.boards.fields.defaultPriority.help')}
               </p>
             </div>
 
             {/* ITIL Configuration - Only show for new boards */}
             {!editingBoard && (
               <div className="border-t pt-4 space-y-4">
-                <h4 className="font-medium text-gray-800">Board Configuration</h4>
+                <h4 className="font-medium text-gray-800">{t('ticketing.boards.fields.boardConfiguration')}</h4>
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Label htmlFor="is_itil_compliant">Make this board ITIL compliant</Label>
+                    <Label htmlFor="is_itil_compliant">{t('ticketing.boards.fields.itilCompliant')}</Label>
                     <button
                       type="button"
                       onClick={() => setShowItilInfoModal(true)}
                       className="text-gray-400 hover:text-gray-600 transition-colors"
-                      title="View ITIL categories and priority matrix"
+                      title={t('ticketing.boards.itilInfo.tooltip')}
                     >
                       <HelpCircle className="w-4 h-4" />
                     </button>
@@ -895,10 +895,10 @@ const BoardsSettings: React.FC = () => {
               setError(null);
             }}
           >
-            Cancel
+            {t('ticketing.boards.actions.cancel')}
           </Button>
           <Button id="save-board-button" onClick={handleSaveBoard}>
-            {editingBoard ? 'Update' : 'Create'}
+            {editingBoard ? t('ticketing.boards.actions.update') : t('ticketing.boards.actions.create')}
           </Button>
         </DialogFooter>
       </Dialog>
@@ -910,16 +910,16 @@ const BoardsSettings: React.FC = () => {
           setShowImportDialog(false);
           setSelectedImportBoards([]);
         }} 
-        title="Import Standard Boards"
+        title={t('ticketing.boards.dialog.importTitle')}
       >
         <DialogContent>
           <div className="space-y-4">
             {!availableReferenceBoards || availableReferenceBoards.length === 0 ? (
-              <p className="text-muted-foreground">No standard boards available to import.</p>
+              <p className="text-muted-foreground">{t('ticketing.boards.dialog.importEmpty')}</p>
             ) : (
               <>
                 <p className="text-sm text-muted-foreground">
-                  Select standard boards to import into your organization:
+                  {t('ticketing.boards.dialog.importDescription')}
                 </p>
                 <div className="border rounded-md">
                   <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
@@ -936,10 +936,10 @@ const BoardsSettings: React.FC = () => {
                         }}
                       />
                     </div>
-                    <div className="flex-1">Name</div>
-                    <div className="flex-1">Description</div>
-                    <div className="w-20 text-center">Active</div>
-                    <div className="w-20 text-center">Default</div>
+                    <div className="flex-1">{t('ticketing.boards.table.name')}</div>
+                    <div className="flex-1">{t('ticketing.boards.table.description')}</div>
+                    <div className="w-20 text-center">{t('ticketing.boards.importTable.active')}</div>
+                    <div className="w-20 text-center">{t('ticketing.boards.table.default')}</div>
                     <div className="w-24 text-center">
                       <div className="flex items-center justify-center gap-1">
                         ITIL
@@ -947,13 +947,13 @@ const BoardsSettings: React.FC = () => {
                           type="button"
                           onClick={() => setShowItilInfoModal(true)}
                           className="text-gray-400 hover:text-gray-600 transition-colors"
-                          title="View ITIL categories and priority matrix"
+                          title={t('ticketing.boards.itilInfo.tooltip')}
                         >
                           <HelpCircle className="w-3 h-3" />
                         </button>
                       </div>
                     </div>
-                    <div className="w-16 text-center">Order</div>
+                    <div className="w-16 text-center">{t('ticketing.boards.table.order')}</div>
                   </div>
                   <div className="max-h-[300px] overflow-y-auto">
                     {availableReferenceBoards.map((board) => (
@@ -1016,23 +1016,23 @@ const BoardsSettings: React.FC = () => {
           </div>
         </DialogContent>
         <DialogFooter>
-          <Button 
+          <Button
             id="cancel-import-dialog"
-            variant="outline" 
+            variant="outline"
             onClick={() => {
               setShowImportDialog(false);
               setSelectedImportBoards([]);
               setImportBoardItilSettings({});
             }}
           >
-            Cancel
+            {t('ticketing.boards.actions.cancel')}
           </Button>
-          <Button 
+          <Button
             id="import-selected-boards"
-            onClick={handleImport} 
+            onClick={handleImport}
             disabled={selectedImportBoards.length === 0}
           >
-            Import Selected
+            {t('ticketing.boards.actions.importSelected')}
           </Button>
         </DialogFooter>
       </Dialog>
@@ -1044,12 +1044,12 @@ const BoardsSettings: React.FC = () => {
           setImportConflicts([]);
           setConflictResolutions({});
         }} 
-        title="Resolve Import Conflicts"
+        title={t('ticketing.boards.dialog.conflictsTitle')}
       >
         <DialogContent>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              The following items have conflicts. Choose how to resolve each:
+              {t('ticketing.boards.dialog.conflictsDescription')}
             </p>
             <div className="space-y-4 max-h-[400px] overflow-y-auto">
               {importConflicts.map((conflict) => {
@@ -1063,7 +1063,7 @@ const BoardsSettings: React.FC = () => {
                     {conflict.conflictType === 'name' && (
                       <div className="space-y-2">
                         <p className="text-sm text-muted-foreground">
-                          A board with this name already exists.
+                          {t('ticketing.boards.dialog.nameConflict')}
                         </p>
                         <div className="space-y-2">
                           <label className="flex items-center space-x-2">
@@ -1076,7 +1076,7 @@ const BoardsSettings: React.FC = () => {
                                 [itemId]: { action: 'skip' }
                               })}
                             />
-                            <span>Skip this item</span>
+                            <span>{t('ticketing.boards.dialog.skipItem')}</span>
                           </label>
                           <label className="flex items-center space-x-2">
                             <input
@@ -1088,7 +1088,7 @@ const BoardsSettings: React.FC = () => {
                                 [itemId]: { action: 'rename', newName: conflict.referenceItem.board_name + ' (2)' }
                               })}
                             />
-                            <span>Import with new name:</span>
+                            <span>{t('ticketing.boards.dialog.importNewName')}</span>
                           </label>
                           {resolution?.action === 'rename' && (
                             <Input
@@ -1107,7 +1107,7 @@ const BoardsSettings: React.FC = () => {
                     {conflict.conflictType === 'order' && (
                       <div className="space-y-2">
                         <p className="text-sm text-muted-foreground">
-                          Display order {conflict.referenceItem.display_order} is already in use.
+                          {t('ticketing.boards.dialog.orderConflict', { order: conflict.referenceItem.display_order })}
                         </p>
                         <label className="flex items-center space-x-2">
                           <input
@@ -1119,7 +1119,7 @@ const BoardsSettings: React.FC = () => {
                               [itemId]: { action: 'reorder', newOrder: conflict.suggestedOrder }
                             })}
                           />
-                          <span>Import with order {conflict.suggestedOrder}</span>
+                          <span>{t('ticketing.boards.dialog.importWithOrder', { order: conflict.suggestedOrder })}</span>
                         </label>
                       </div>
                     )}
@@ -1130,18 +1130,18 @@ const BoardsSettings: React.FC = () => {
           </div>
         </DialogContent>
         <DialogFooter>
-          <Button 
+          <Button
             id="cancel-conflict-dialog"
-            variant="outline" 
+            variant="outline"
             onClick={() => {
               setImportConflicts([]);
               setConflictResolutions({});
             }}
           >
-            Cancel
+            {t('ticketing.boards.actions.cancel')}
           </Button>
           <Button id="import-with-resolutions" onClick={handleImport}>
-            Import with Resolutions
+            {t('ticketing.boards.dialog.importWithResolutions')}
           </Button>
         </DialogFooter>
       </Dialog>
@@ -1150,13 +1150,13 @@ const BoardsSettings: React.FC = () => {
       <Dialog
         isOpen={showItilInfoModal}
         onClose={() => setShowItilInfoModal(false)}
-        title="ITIL Standards Reference"
+        title={t('ticketing.boards.itilInfo.title')}
       >
         <DialogContent className="max-w-4xl">
           <div className="space-y-6">
             {/* ITIL Categories Section */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">ITIL Standard Categories and Subcategories</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">{t('ticketing.boards.itilInfo.categoriesTitle')}</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                 {/* Hardware */}
@@ -1232,7 +1232,7 @@ const BoardsSettings: React.FC = () => {
 
             {/* ITIL Priority Matrix Section */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">ITIL Priority Matrix (Impact × Urgency)</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">{t('ticketing.boards.itilInfo.priorityMatrixTitle')}</h3>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-xs border border-gray-500/30">
                   <thead>
@@ -1290,16 +1290,16 @@ const BoardsSettings: React.FC = () => {
                 </table>
               </div>
               <div className="mt-4 text-sm text-gray-600 space-y-1">
-                <p><strong>Impact:</strong> How many users/business functions are affected?</p>
-                <p><strong>Urgency:</strong> How quickly does this need to be resolved?</p>
-                <p><strong>Priority:</strong> Automatically calculated based on Impact × Urgency matrix above.</p>
+                <p>{t('ticketing.boards.itilInfo.impactDescription')}</p>
+                <p>{t('ticketing.boards.itilInfo.urgencyDescription')}</p>
+                <p>{t('ticketing.boards.itilInfo.priorityDescription')}</p>
               </div>
             </div>
           </div>
         </DialogContent>
         <DialogFooter>
           <Button id="close-itil-info" onClick={() => setShowItilInfoModal(false)}>
-            Close
+            {t('ticketing.boards.actions.close')}
           </Button>
         </DialogFooter>
       </Dialog>

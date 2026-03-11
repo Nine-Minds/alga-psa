@@ -6,13 +6,6 @@ on:
       - 'server/public/locales/**'
       - 'scripts/validate-translations.cjs'
       - 'scripts/generate-pseudo-locales.cjs'
-  push:
-    branches:
-      - main
-    paths:
-      - 'server/public/locales/**'
-      - 'scripts/validate-translations.cjs'
-      - 'scripts/generate-pseudo-locales.cjs'
 
 jobs:
   validate:

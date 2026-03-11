@@ -14,8 +14,10 @@ import {
   getTenantMspLocaleSettingsAction,
   updateTenantMspLocaleSettingsAction,
 } from '@alga-psa/tenancy/actions';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const MspLanguageSettings = () => {
+  const { t } = useTranslation('msp/settings');
   const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
   const visibleLocales = useMemo(
     () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales, !!isMspI18nEnabled),
@@ -99,12 +101,11 @@ const MspLanguageSettings = () => {
         <CardTitle>
           <div className="flex items-center gap-2">
             <Globe className="h-5 w-5" />
-            Language
+            {t('mspLanguage.title')}
           </div>
         </CardTitle>
         <CardDescription>
-          Configure the default language settings for the MSP portal. These settings
-          apply to all MSP users unless overridden by individual preferences.
+          {t('mspLanguage.description')}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -112,7 +113,7 @@ const MspLanguageSettings = () => {
           <div className="space-y-2">
             <CustomSelect
               id="msp-default-language"
-              label="Default Language"
+              label={t('mspLanguage.fields.defaultLanguage')}
               options={languageOptions}
               value={defaultLocale}
               onValueChange={handleDefaultLanguageChange}
@@ -121,17 +122,16 @@ const MspLanguageSettings = () => {
               data-automation-id="msp-default-language-select"
             />
             <p className="text-sm text-gray-500">
-              This will be the default language for all MSP portal users unless overridden
-              by their personal preference.
+              {t('mspLanguage.help.defaultLanguage')}
             </p>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Available Languages
+              {t('mspLanguage.fields.availableLanguages')}
             </label>
             <p className="text-sm text-gray-500 mb-2">
-              Select which languages are available for MSP users to choose from
+              {t('mspLanguage.help.availableLanguages')}
             </p>
             <div className="space-y-2">
               {visibleLocales.map((locale) => (
@@ -156,11 +156,11 @@ const MspLanguageSettings = () => {
 
           <Alert variant="info">
             <AlertDescription>
-              <h4 className="font-medium mb-2">Language Preference Hierarchy</h4>
+              <h4 className="font-medium mb-2">{t('mspLanguage.hierarchy.title')}</h4>
               <ol className="space-y-1 list-decimal list-inside">
-                <li>Individual user preference (highest priority)</li>
-                <li>Organization default (configured here)</li>
-                <li>System default (English)</li>
+                <li>{t('mspLanguage.hierarchy.userPreference')}</li>
+                <li>{t('mspLanguage.hierarchy.orgDefault')}</li>
+                <li>{t('mspLanguage.hierarchy.systemDefault')}</li>
               </ol>
             </AlertDescription>
           </Alert>
