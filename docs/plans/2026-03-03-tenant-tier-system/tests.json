@@ -1,0 +1,398 @@
+[
+  {
+    "id": "T001",
+    "description": "TENANT_TIERS contains exactly ['pro', 'premium']",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "TenantTier type only accepts 'pro' | 'premium'",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T003",
+    "description": "TIER_LABELS maps pro→'Pro', premium→'Premium'",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T004",
+    "description": "isValidTier returns true for 'pro', 'premium'",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T005",
+    "description": "isValidTier returns false for null, undefined, '', 'invalid', 'basic', 'test'",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T006",
+    "description": "resolveTier('pro') returns { tier: 'pro', isMisconfigured: false }",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T007",
+    "description": "resolveTier('premium') returns { tier: 'premium', isMisconfigured: false }",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T008",
+    "description": "resolveTier(null) returns { tier: 'pro', isMisconfigured: true }",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T009",
+    "description": "resolveTier(undefined) returns { tier: 'pro', isMisconfigured: true }",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T010",
+    "description": "resolveTier('invalid') returns { tier: 'pro', isMisconfigured: true }",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T011",
+    "description": "resolveTier('basic') returns { tier: 'pro', isMisconfigured: true }",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T012",
+    "description": "TIER_FEATURES enum contains INVOICE_DESIGNER",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T013",
+    "description": "TIER_FEATURE_MAP: pro tier has no gated features (empty array)",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T014",
+    "description": "TIER_FEATURE_MAP: premium tier includes INVOICE_DESIGNER",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T015",
+    "description": "tierHasFeature('premium', INVOICE_DESIGNER) returns true",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T016",
+    "description": "tierHasFeature('pro', INVOICE_DESIGNER) returns false",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T017",
+    "description": "FEATURE_MINIMUM_TIER maps INVOICE_DESIGNER→'premium'",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T018",
+    "description": "Tier types, functions, and add-on utilities are exported from @alga-psa/types",
+    "implemented": true,
+    "featureIds": ["F005", "F010"]
+  },
+  {
+    "id": "T019",
+    "description": "ITenant.plan accepts TenantTier values and addons accepts string array",
+    "implemented": true,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T020",
+    "description": "Test data factory creates tenants with plan='pro'",
+    "implemented": true,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T021",
+    "description": "STRIPE_PRODUCT_TIER_MAP maps 'alga-psa-preview' → 'pro'",
+    "implemented": true,
+    "featureIds": ["F031"]
+  },
+  {
+    "id": "T022",
+    "description": "STRIPE_PRODUCT_TIER_MAP maps future products: alga-psa-pro→pro, alga-psa-premium→premium",
+    "implemented": true,
+    "featureIds": ["F031"]
+  },
+  {
+    "id": "T023",
+    "description": "tierFromStripeProduct('alga-psa-preview') returns 'pro'",
+    "implemented": true,
+    "featureIds": ["F032"]
+  },
+  {
+    "id": "T024",
+    "description": "tierFromStripeProduct('unknown-product') returns 'pro' (default)",
+    "implemented": true,
+    "featureIds": ["F032"]
+  },
+  {
+    "id": "T025",
+    "description": "assertTierAccess throws TierAccessError for pro tenant accessing INVOICE_DESIGNER",
+    "implemented": true,
+    "featureIds": ["F039"]
+  },
+  {
+    "id": "T026",
+    "description": "assertTierAccess does not throw for premium tenant accessing INVOICE_DESIGNER",
+    "implemented": true,
+    "featureIds": ["F039"]
+  },
+  {
+    "id": "T027",
+    "description": "assertTierAccess throws for NULL plan tenant (misconfigured → pro, but still no INVOICE_DESIGNER)",
+    "implemented": true,
+    "featureIds": ["F039"]
+  },
+  {
+    "id": "T028",
+    "description": "ITenant.plan accepts TenantTier values in server duplicate interface",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T029",
+    "description": "CE self-registration creates tenant with plan='pro' (first insert path)",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T030",
+    "description": "CE self-registration creates tenant with plan='pro' (second insert path)",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T031",
+    "description": "Backfill migration sets plan='pro' for tenants with NULL plan",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T032",
+    "description": "Backfill migration sets plan='pro' for tenants with empty string plan",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T033",
+    "description": "Backfill migration does not modify tenants that already have a valid plan",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T034",
+    "description": "tenant_addons table is created with correct schema (tenant, addon_key PK)",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T035",
+    "description": "JWT contains plan field after login",
+    "implemented": false,
+    "featureIds": ["F018", "F019", "F020", "F022"]
+  },
+  {
+    "id": "T036",
+    "description": "Session.user contains plan field",
+    "implemented": false,
+    "featureIds": ["F019", "F026"]
+  },
+  {
+    "id": "T037",
+    "description": "JWT plan is fetched from tenants table on initial sign-in (first auth path)",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T038",
+    "description": "JWT plan is fetched from tenants table on initial sign-in (second auth path)",
+    "implemented": false,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T039",
+    "description": "JWT plan refreshes after 5 minutes on subsequent requests",
+    "implemented": false,
+    "featureIds": ["F024", "F025"]
+  },
+  {
+    "id": "T040",
+    "description": "JWT plan does NOT refresh before 5 minutes have elapsed",
+    "implemented": false,
+    "featureIds": ["F024", "F025"]
+  },
+  {
+    "id": "T041",
+    "description": "TierProvider reads tier from session and provides it via context",
+    "implemented": false,
+    "featureIds": ["F028"]
+  },
+  {
+    "id": "T042",
+    "description": "useTier() returns correct tier value for pro tenant",
+    "implemented": false,
+    "featureIds": ["F029"]
+  },
+  {
+    "id": "T043",
+    "description": "useTier().isMisconfigured is false for valid plan, true for NULL/invalid",
+    "implemented": false,
+    "featureIds": ["F029"]
+  },
+  {
+    "id": "T044",
+    "description": "useTier().hasFeature(INVOICE_DESIGNER) returns false for pro, true for premium",
+    "implemented": false,
+    "featureIds": ["F029"]
+  },
+  {
+    "id": "T045",
+    "description": "refreshTier() triggers session update for instant plan propagation",
+    "implemented": false,
+    "featureIds": ["F029"]
+  },
+  {
+    "id": "T046",
+    "description": "TierProvider is mounted inside AppSessionProvider in MspLayoutClient",
+    "implemented": false,
+    "featureIds": ["F030"]
+  },
+  {
+    "id": "T047",
+    "description": "createTenantInDB sets plan from Stripe product when stripePriceId is provided",
+    "implemented": false,
+    "featureIds": ["F033"]
+  },
+  {
+    "id": "T048",
+    "description": "handleCheckoutCompleted resolves product to tier and updates tenants.plan",
+    "implemented": false,
+    "featureIds": ["F034"]
+  },
+  {
+    "id": "T049",
+    "description": "handleSubscriptionUpdated resolves product to tier and updates tenants.plan",
+    "implemented": false,
+    "featureIds": ["F035"]
+  },
+  {
+    "id": "T050",
+    "description": "UpsellPlaceholder renders icon, heading with feature name and tier label",
+    "implemented": false,
+    "featureIds": ["F036"]
+  },
+  {
+    "id": "T051",
+    "description": "UpsellPlaceholder CTA button links to /msp/account",
+    "implemented": false,
+    "featureIds": ["F036"]
+  },
+  {
+    "id": "T052",
+    "description": "TierGate renders children when tenant has required feature",
+    "implemented": false,
+    "featureIds": ["F037"]
+  },
+  {
+    "id": "T053",
+    "description": "TierGate renders UpsellPlaceholder when tenant lacks required feature",
+    "implemented": false,
+    "featureIds": ["F037"]
+  },
+  {
+    "id": "T054",
+    "description": "ServerTierGate renders children when tenant has required feature",
+    "implemented": false,
+    "featureIds": ["F038"]
+  },
+  {
+    "id": "T055",
+    "description": "ServerTierGate bypasses gating in CE edition",
+    "implemented": false,
+    "featureIds": ["F038"]
+  },
+  {
+    "id": "T056",
+    "description": "Invoice Designer visual tab shows UpsellPlaceholder for pro tenant",
+    "implemented": false,
+    "featureIds": ["F040"]
+  },
+  {
+    "id": "T057",
+    "description": "Invoice Designer visual tab works normally for premium tenant",
+    "implemented": false,
+    "featureIds": ["F040"]
+  },
+  {
+    "id": "T058",
+    "description": "Save button disabled for pro tenant in InvoiceTemplateEditor",
+    "implemented": false,
+    "featureIds": ["F040"]
+  },
+  {
+    "id": "T059",
+    "description": "saveInvoiceTemplate server action rejects pro tenant with TierAccessError",
+    "implemented": false,
+    "featureIds": ["F043"]
+  },
+  {
+    "id": "T060",
+    "description": "deleteInvoiceTemplate server action rejects pro tenant with TierAccessError",
+    "implemented": false,
+    "featureIds": ["F044"]
+  },
+  {
+    "id": "T061",
+    "description": "Account page shows actual tier name with badge",
+    "implemented": false,
+    "featureIds": ["F045"]
+  },
+  {
+    "id": "T062",
+    "description": "Account page shows misconfiguration alert when plan is NULL",
+    "implemented": false,
+    "featureIds": ["F046"]
+  },
+  {
+    "id": "T063",
+    "description": "Account page shows tier features list from TIER_FEATURE_MAP",
+    "implemented": false,
+    "featureIds": ["F047"]
+  },
+  {
+    "id": "T064",
+    "description": "E2E: Pro tenant sees Invoice Designer as UpsellPlaceholder, premium tenant sees designer",
+    "implemented": false,
+    "featureIds": ["F040", "F041"]
+  },
+  {
+    "id": "T065",
+    "description": "E2E: Changing plan from pro to premium unlocks Invoice Designer after session refresh",
+    "implemented": false,
+    "featureIds": ["F024", "F040"]
+  },
+  {
+    "id": "T066",
+    "description": "E2E: NULL plan shows warning banner and defaults to pro features",
+    "implemented": false,
+    "featureIds": ["F004", "F029"]
+  }
+]
