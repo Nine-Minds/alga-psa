@@ -202,6 +202,17 @@ export async function createTenantInDB(
         });
       }
 
+      // Insert add-ons if provided
+      if (input.addons && input.addons.length > 0) {
+        await trx('tenant_addons')
+          .insert(input.addons.map(addon => ({
+            tenant: tenantId,
+            addon_key: addon,
+            activated_at: knex.fn.now(),
+          })));
+        log.info('Tenant add-ons activated', { tenantId, addons: input.addons });
+      }
+
       // Create client if name is provided (now with tenant ID)
       let clientId: string | undefined;
 
@@ -500,6 +511,9 @@ export async function rollbackTenantInDB(tenantId: string): Promise<void> {
 
       // Delete tenant_settings (references tenant)
       await trx('tenant_settings').where({ tenant: tenantId }).delete();
+
+      // Delete tenant add-ons
+      await trx('tenant_addons').where({ tenant: tenantId }).delete();
 
       // Delete tenant notification settings
       await trx('tenant_notification_category_settings').where({ tenant: tenantId }).delete();
