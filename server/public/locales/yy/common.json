@@ -1,0 +1,878 @@
+{
+  "nav": {
+    "dashboard": "55555",
+    "tickets": "55555",
+    "clients": "55555",
+    "projects": "55555",
+    "billing": "55555",
+    "reports": "55555",
+    "settings": "55555",
+    "profile": "55555",
+    "logout": "55555",
+    "help": "55555"
+  },
+  "actions": {
+    "save": "55555",
+    "cancel": "55555",
+    "delete": "55555",
+    "edit": "55555",
+    "create": "55555",
+    "update": "55555",
+    "submit": "55555",
+    "back": "55555",
+    "next": "55555",
+    "previous": "55555",
+    "search": "55555",
+    "filter": "55555",
+    "export": "55555",
+    "import": "55555",
+    "download": "55555",
+    "upload": "55555",
+    "refresh": "55555",
+    "close": "55555",
+    "confirm": "55555",
+    "add": "55555",
+    "remove": "55555",
+    "clear": "55555",
+    "reset": "55555",
+    "view": "55555",
+    "copy": "55555",
+    "duplicate": "55555",
+    "openMenu": "55555",
+    "confirmDeletion": "55555",
+    "saving": "55555"
+  },
+  "status": {
+    "loading": "55555",
+    "saving": "55555",
+    "processing": "55555",
+    "success": "55555",
+    "error": "55555",
+    "warning": "55555",
+    "info": "55555",
+    "pending": "55555",
+    "active": "55555",
+    "inactive": "55555",
+    "completed": "55555",
+    "cancelled": "55555"
+  },
+  "messages": {
+    "welcome": "55555",
+    "confirmDelete": "55555",
+    "confirmDeletion": "55555",
+    "saveSuccess": "55555",
+    "saveError": "55555",
+    "loadError": "55555",
+    "noData": "55555",
+    "required": "55555",
+    "invalidEmail": "55555",
+    "invalidPassword": "55555",
+    "passwordMismatch": "55555"
+  },
+  "errors": {
+    "auth": {
+      "notAuthenticated": "55555",
+      "accessDenied": "55555",
+      "clientPortalOnly": "55555",
+      "insufficientPermissions": "55555",
+      "userIdNotFound": "55555",
+      "tenantNotFound": "55555",
+      "userNotFound": "55555",
+      "contactNotFound": "55555",
+      "clientNotFound": "55555"
+    },
+    "permissions": {
+      "tickets": {
+        "read": "55555",
+        "readDetails": "55555",
+        "create": "55555",
+        "update": "55555",
+        "updateStatus": "55555",
+        "addComments": "55555",
+        "updateComments": "55555",
+        "deleteComments": "55555"
+      }
+    }
+  },
+  "fields": {
+    "notes": "55555"
+  },
+  "tickets": {
+    "origin": {
+      "internal": "55555",
+      "clientPortal": "55555",
+      "inboundEmail": "55555",
+      "api": "55555",
+      "other": "55555"
+    },
+    "responseSource": {
+      "clientPortal": "55555",
+      "inboundEmail": "55555"
+    }
+  },
+  "time": {
+    "today": "55555",
+    "yesterday": "55555",
+    "tomorrow": "55555",
+    "thisWeek": "55555",
+    "lastWeek": "55555",
+    "thisMonth": "55555",
+    "lastMonth": "55555",
+    "thisYear": "55555",
+    "lastYear": "55555",
+    "seconds": "55555",
+    "minutes": "55555",
+    "hours": "55555",
+    "days": "55555",
+    "weeks": "55555",
+    "months": "55555",
+    "years": "55555"
+  },
+  "language": {
+    "selectLanguage": "55555",
+    "changeLanguage": "55555",
+    "currentLanguage": "55555",
+    "preference": {
+      "label": "55555",
+      "helper": "55555",
+      "placeholder": "55555",
+      "cleared": "55555",
+      "updating": "55555",
+      "notSet": "55555",
+      "notSetWithSource": "55555 {{source}} 55555 {{languageName}} 55555 {{locale}} 55555",
+      "source": {
+        "client": "55555",
+        "tenant": "55555",
+        "system": "55555"
+      }
+    }
+  },
+  "yes": "55555",
+  "no": "55555",
+  "clients": {
+    "locations": {
+      "sectionTitle": "55555",
+      "manageButton": "55555",
+      "dialogTitle": "55555 {{client}} 55555",
+      "managerLabel": "55555",
+      "listTitle": "55555",
+      "buttons": {
+        "add": "55555",
+        "save": "55555"
+      },
+      "card": {
+        "unnamed": "55555",
+        "setDefault": "55555",
+        "edit": "55555",
+        "delete": "55555",
+        "addressLabel": "55555",
+        "addressHelper": "55555",
+        "phoneLabel": "55555",
+        "phoneHelper": "55555",
+        "phoneValue": "55555 {{phone}} 55555",
+        "emailLabel": "55555",
+        "emailHelper": "55555",
+        "emailValue": "55555 {{email}} 55555",
+        "billingTag": "55555",
+        "shippingTag": "55555",
+        "notesLabel": "55555",
+        "notesHelper": "55555"
+      },
+      "form": {
+        "locationName": "55555",
+        "locationNameHelper": "55555",
+        "addressLine1": "55555",
+        "addressLine1Helper": "55555",
+        "addressLine2": "55555",
+        "addressLine2Helper": "55555",
+        "addressLine3": "55555",
+        "city": "55555",
+        "cityHelper": "55555",
+        "stateProvince": "55555",
+        "stateProvinceHelper": "55555",
+        "postalCode": "55555",
+        "postalCodeHelper": "55555",
+        "country": "55555",
+        "countryHelper": "55555",
+        "phone": "55555",
+        "phoneHelper": "55555",
+        "email": "55555",
+        "emailHelper": "55555",
+        "taxRegion": "55555",
+        "taxRegionHelper": "55555",
+        "notes": "55555",
+        "notesHelper": "55555",
+        "defaultLocation": "55555",
+        "defaultLocationHelper": "55555",
+        "billingAddress": "55555",
+        "billingAddressHelper": "55555",
+        "shippingAddress": "55555",
+        "shippingAddressHelper": "55555",
+        "placeholder": {
+          "locationName": "55555",
+          "addressLine1": "55555",
+          "city": "55555",
+          "country": "55555",
+          "loadingCountries": "55555",
+          "taxRegionOption": "55555",
+          "taxRegion": "55555"
+        }
+      },
+      "validation": {
+        "title": "55555"
+      },
+      "errors": {
+        "loadTaxRegions": "55555",
+        "loadCountries": "55555",
+        "loadLocations": "55555",
+        "save": "55555",
+        "delete": "55555",
+        "setDefault": "55555"
+      },
+      "success": {
+        "create": "55555",
+        "update": "55555",
+        "delete": "55555",
+        "setDefault": "55555"
+      },
+      "dialog": {
+        "addTitle": "55555",
+        "editTitle": "55555",
+        "deleteTitle": "55555",
+        "deleteMessage": "55555 {{name}} 55555"
+      },
+      "empty": {
+        "title": "55555",
+        "description": "55555"
+      }
+    }
+  },
+  "pagination": {
+    "previous": "55555",
+    "next": "55555",
+    "pageInfo": "55555 {{current}} 55555 {{total}} 55555 {{count}} 55555",
+    "page": "55555",
+    "of": "55555",
+    "showing": "55555 {{from}} 55555 {{to}} 55555 {{total}} 55555",
+    "rowsPerPage": "55555",
+    "first": "55555",
+    "last": "55555",
+    "itemsLabel": "55555",
+    "itemsPerPageOption": "55555 {{count}} 55555",
+    "itemsPerPagePlaceholder": "55555",
+    "reflectionLabel": "55555",
+    "range": "55555 {{from}} 55555 {{to}} 55555 {{total}} 55555 {{itemLabel}} 55555",
+    "ariaLabel": "55555",
+    "totalItems": "55555 {{count}} 55555 {{itemLabel}} 55555",
+    "totalRecordsInline": "55555 {{count}} 55555",
+    "pageOf": "55555 {{current}} 55555 {{total}} 55555"
+  },
+  "documents": {
+    "title": "55555",
+    "noDocuments": "55555",
+    "upload": "55555",
+    "download": "55555",
+    "remove": "55555",
+    "detach": "55555",
+    "preview": "55555",
+    "linkDocuments": "55555",
+    "editDocument": "55555",
+    "viewDocument": "55555",
+    "downloadToPlay": "55555",
+    "delete": "55555",
+    "deletePermanently": "55555",
+    "previewUnavailable": "55555",
+    "newDocument": "55555",
+    "uploadFile": "55555",
+    "deleteTitle": "55555",
+    "deleteMessage": "55555 {{name}} 55555",
+    "deleteVideoTitle": "55555",
+    "deleteVideoMessage": "55555 {{name}} 55555",
+    "removeTitle": "55555",
+    "removeMessage": "55555 {{name}} 55555",
+    "removeVideoTitle": "55555",
+    "removeVideoMessage": "55555 {{name}} 55555",
+    "downloadFile": "55555",
+    "videoUnsupported": "55555 {{mimeType}} 55555",
+    "videoTagUnsupported": "55555",
+    "unnamed": "55555",
+    "videoDownloadInfo": "55555",
+    "previewUnavailableNoId": "55555",
+    "previewLoadFailed": "55555",
+    "videoCodecWarning": "55555",
+    "messages": {
+      "fetchFailed": "55555",
+      "folderCreated": "55555 {{name}} 55555",
+      "folderCreateFailed": "55555",
+      "moveDocumentsSuccess_one": "55555 {{count}} 55555 {{destination}} 55555",
+      "moveDocumentsSuccess_other": "55555 {{count}} 55555 {{destination}} 55555",
+      "moveDocumentsFailed": "55555",
+      "deleteSuccess": "55555 {{name}} 55555",
+      "deleteFailed": "55555",
+      "removeAssociationFailed": "55555",
+      "moveDocumentSuccess": "55555 {{name}} 55555",
+      "moveDocumentFailed": "55555",
+      "createFailed": "55555",
+      "saveFailed": "55555",
+      "loadContentFailed": "55555",
+      "downloadFailed": "55555",
+      "bulkDeleteFailed": "55555",
+      "bulkDeleteSuccess_one": "55555 {{count}} 55555",
+      "bulkDeleteSuccess_other": "55555 {{count}} 55555"
+    },
+    "empty": {
+      "default": "55555",
+      "folder": "55555"
+    },
+    "validation": {
+      "nameRequired": "55555"
+    },
+    "bulkActions": {
+      "selected_one": "55555 {{count}} 55555",
+      "selected_other": "55555 {{count}} 55555",
+      "moveToFolder": "55555",
+      "deleteSelected": "55555",
+      "clearSelection": "55555"
+    },
+    "prompts": {
+      "confirmBulkDelete_one": "55555 {{count}} 55555",
+      "confirmBulkDelete_other": "55555 {{count}} 55555"
+    },
+    "pagination": {
+      "perPage": "55555 {{count}} 55555"
+    },
+    "folderSelector": {
+      "defaultTitle": "55555",
+      "defaultDescription": "55555",
+      "singleDescription": "55555 {{fileName}} 55555",
+      "multipleDescription": "55555 {{count}} 55555",
+      "newDocumentTitle": "55555",
+      "newDocumentDescription": "55555",
+      "moveTitle": "55555",
+      "moveDescriptionWithName": "55555 {{name}} 55555",
+      "moveDescription": "55555",
+      "bulkMoveTitle": "55555",
+      "bulkMoveDescription_one": "55555 {{count}} 55555",
+      "bulkMoveDescription_other": "55555 {{count}} 55555",
+      "errors": {
+        "nameRequired": "55555",
+        "invalidCharacters": "55555",
+        "createFailed": "55555"
+      },
+      "creating": "55555",
+      "createButton": "55555",
+      "newFolderButton": "55555",
+      "parentLabel": "55555 {{folder}} 55555",
+      "rootLabel": "55555",
+      "namePlaceholder": "55555",
+      "loading": "55555",
+      "rootOption": "55555",
+      "empty": "55555"
+    },
+    "filters": {
+      "searchLabel": "55555",
+      "searchPlaceholder": "55555",
+      "typeLabel": "55555",
+      "entityTypeLabel": "55555",
+      "uploadedByLabel": "55555",
+      "uploadedByPlaceholder": "55555",
+      "updatedStartLabel": "55555",
+      "updatedEndLabel": "55555",
+      "startDatePlaceholder": "55555",
+      "endDatePlaceholder": "55555",
+      "sortByLabel": "55555",
+      "clear": "55555",
+      "showAllDocuments": "55555",
+      "typeOptions": {
+        "all": "55555",
+        "pdf": "55555",
+        "image": "55555",
+        "text": "55555",
+        "video": "55555",
+        "other": "55555"
+      },
+      "sortOptions": {
+        "updated_at": "55555",
+        "document_name": "55555",
+        "file_size": "55555",
+        "created_by_full_name": "55555"
+      },
+      "sortOrder": {
+        "default": {
+          "asc": "55555",
+          "desc": "55555"
+        },
+        "document_name": {
+          "asc": "55555",
+          "desc": "55555"
+        },
+        "updated_at": {
+          "asc": "55555",
+          "desc": "55555"
+        },
+        "file_size": {
+          "asc": "55555",
+          "desc": "55555"
+        },
+        "created_by_full_name": {
+          "asc": "55555",
+          "desc": "55555"
+        }
+      }
+    },
+    "selector": {
+      "title": "55555",
+      "reflectionLabel": "55555",
+      "searchPlaceholder": "55555",
+      "foldersLabel": "55555",
+      "folderHint": "55555 {{folder}} 55555",
+      "saving": "55555",
+      "selectDocument": "55555",
+      "associateSelected": "55555",
+      "errors": {
+        "configuration": "55555",
+        "invalidData": "55555",
+        "load": "55555",
+        "save": "55555"
+      },
+      "configErrorTitle": "55555",
+      "configErrorMessage": "55555"
+    },
+    "uploadSection": {
+      "reflectionLabel": "55555",
+      "dragDrop": "55555",
+      "browse": "55555",
+      "uploading": "55555",
+      "uploadingProgress": "55555 {{current}} 55555 {{total}} 55555",
+      "pending": "55555",
+      "error": "55555",
+      "fileError": "55555"
+    },
+    "folders": {
+      "root": "55555",
+      "loadFailed": "55555",
+      "deleteConfirm": "55555 {{name}} 55555",
+      "deleteSuccess": "55555 {{name}} 55555",
+      "deleteFailed": "55555",
+      "deleteAction": "55555",
+      "loading": "55555",
+      "title": "55555",
+      "collapse": "55555",
+      "allDocuments": "55555"
+    },
+    "folderManager": {
+      "title": "55555",
+      "nameLabel": "55555",
+      "namePlaceholder": "55555",
+      "willCreateIn": "55555 {{folder}} 55555"
+    },
+    "notifications": {
+      "viewAll": "55555",
+      "categories": {
+        "Authentication": "55555",
+        "Invoices": "55555",
+        "Projects": "55555",
+        "Tickets": "55555",
+        "Time Entries": "55555"
+      }
+    }
+  },
+  "surveys": {
+    "common": {
+      "loading": "55555"
+    },
+    "settings": {
+      "tabLabel": "55555",
+      "title": "55555",
+      "subtitle": "55555",
+      "tabs": {
+        "templates": "55555",
+        "triggers": "55555"
+      },
+      "templateList": {
+        "title": "55555",
+        "description": "55555",
+        "createButton": "55555",
+        "emptyTitle": "55555",
+        "emptyDescription": "55555",
+        "table": {
+          "name": "55555",
+          "rating": "55555",
+          "status": "55555",
+          "updated": "55555",
+          "actions": "55555"
+        },
+        "defaultBadge": "55555",
+        "status": {
+          "enabled": "55555",
+          "disabled": "55555"
+        },
+        "toasts": {
+          "created": "55555",
+          "updated": "55555",
+          "deleted": "55555",
+          "setDefault": "55555",
+          "error": "55555",
+          "deleteError": "55555"
+        },
+        "errors": {
+          "load": "55555"
+        },
+        "deleteConfirm": "55555"
+      },
+      "templateForm": {
+        "titleCreate": "55555",
+        "titleEdit": "55555",
+        "labels": {
+          "name": "55555",
+          "ratingType": "55555",
+          "ratingScale": "55555",
+          "ratingLabels": "55555",
+          "promptText": "55555",
+          "commentPrompt": "55555",
+          "thankYouText": "55555",
+          "isDefault": "55555",
+          "enabled": "55555"
+        },
+        "placeholders": {
+          "ratingLabels": "55555"
+        },
+        "help": {
+          "ratingLabels": "55555"
+        },
+        "ratingTypes": {
+          "stars": "55555",
+          "numbers": "55555",
+          "emojis": "55555"
+        },
+        "actions": {
+          "create": "55555",
+          "save": "55555",
+          "delete": "55555"
+        }
+      },
+      "triggerList": {
+        "title": "55555",
+        "description": "55555",
+        "createButton": "55555",
+        "emptyTitle": "55555",
+        "emptyDescription": "55555",
+        "table": {
+          "template": "55555",
+          "type": "55555",
+          "conditions": "55555",
+          "status": "55555",
+          "updated": "55555",
+          "actions": "55555"
+        },
+        "conditions": {
+          "boards": "55555",
+          "statuses": "55555",
+          "priorities": "55555",
+          "any": "55555",
+          "unrestricted": "55555"
+        },
+        "status": {
+          "enabled": "55555",
+          "disabled": "55555"
+        },
+        "toasts": {
+          "created": "55555",
+          "updated": "55555",
+          "deleted": "55555",
+          "error": "55555",
+          "deleteError": "55555"
+        },
+        "errors": {
+          "load": "55555"
+        },
+        "deleteConfirm": "55555"
+      },
+      "triggerForm": {
+        "titleCreate": "55555",
+        "titleEdit": "55555",
+        "labels": {
+          "template": "55555",
+          "triggerType": "55555",
+          "boardIds": "55555",
+          "statusIds": "55555",
+          "priorities": "55555",
+          "enabled": "55555"
+        },
+        "placeholders": {
+          "boardIds": "55555",
+          "statusIds": "55555",
+          "priorities": "55555"
+        },
+        "help": {
+          "conditions": "55555"
+        },
+        "actions": {
+          "create": "55555",
+          "save": "55555",
+          "delete": "55555"
+        },
+        "triggerTypes": {
+          "ticket_closed": "55555",
+          "project_completed": "55555"
+        },
+        "errors": {
+          "reference": "55555"
+        },
+        "noTemplates": "55555",
+        "prioritiesMixed": "55555"
+      }
+    },
+    "response": {
+      "pageTitle": "55555",
+      "invalidTitle": "55555",
+      "invalidMessage": "55555",
+      "ratingPrompt": "55555",
+      "ratingAssistive": "55555 {{scale}} 55555",
+      "commentLabel": "55555",
+      "submitButton": "55555",
+      "submitting": "55555",
+      "submittedTitle": "55555",
+      "submittedMessage": "55555 {{thankYouText}} 55555",
+      "retryButton": "55555",
+      "ratingSubmitted": "55555",
+      "errorMessage": "55555",
+      "selectRatingError": "55555",
+      "supportMessage": "55555"
+    }
+  },
+  "availability": {
+    "settings": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "tabs": {
+      "general": "55555",
+      "userHours": "55555",
+      "serviceRules": "55555",
+      "exceptions": "55555"
+    },
+    "general": {
+      "advanceBookingDays": "55555",
+      "advanceBookingDaysHelper": "55555",
+      "minimumNoticeHours": "55555",
+      "minimumNoticeHoursHelper": "55555",
+      "defaultBufferBefore": "55555",
+      "defaultBufferAfter": "55555",
+      "bufferHelper": "55555"
+    },
+    "userHours": {
+      "selectUser": "55555",
+      "dayOfWeek": "55555",
+      "startTime": "55555",
+      "endTime": "55555",
+      "available": "55555",
+      "cloneSettings": "55555",
+      "maxAppointmentsPerDay": "55555"
+    },
+    "serviceRules": {
+      "selectService": "55555",
+      "allowWithoutContract": "55555",
+      "advanceBooking": "55555",
+      "maxAppointments": "55555"
+    },
+    "exceptions": {
+      "addException": "55555",
+      "date": "55555",
+      "reason": "55555",
+      "userSpecific": "55555",
+      "companyWide": "55555"
+    },
+    "messages": {
+      "saveSuccess": "55555",
+      "saveFailed": "55555",
+      "loadFailed": "55555"
+    }
+  },
+  "appointments": {
+    "requests": {
+      "title": "55555",
+      "viewAll": "55555",
+      "approve": "55555",
+      "decline": "55555",
+      "assignTech": "55555",
+      "internalNotes": "55555",
+      "pendingCount": "55555 {{count}} 55555",
+      "filterByStatus": "55555",
+      "filterByService": "55555",
+      "filterByDate": "55555"
+    },
+    "panel": {
+      "title": "55555",
+      "description": "55555",
+      "noRequests": "55555",
+      "loadingRequests": "55555"
+    },
+    "card": {
+      "requesterName": "55555",
+      "companyName": "55555",
+      "service": "55555",
+      "requestedDateTime": "55555",
+      "duration": "55555",
+      "preferredTechnician": "55555",
+      "linkedTicket": "55555",
+      "actions": "55555"
+    },
+    "approvalModal": {
+      "title": "55555",
+      "confirmDateTime": "55555",
+      "modifyDateTime": "55555",
+      "assignedUser": "55555",
+      "linkToTicket": "55555",
+      "internalNotes": "55555",
+      "approve": "55555",
+      "approving": "55555"
+    },
+    "declineModal": {
+      "title": "55555",
+      "reason": "55555",
+      "reasonRequired": "55555",
+      "reasonPlaceholder": "55555",
+      "decline": "55555",
+      "declining": "55555"
+    },
+    "detailsModal": {
+      "title": "55555",
+      "requesterInfo": "55555",
+      "requestInfo": "55555",
+      "status": "55555",
+      "createdAt": "55555",
+      "approvedAt": "55555",
+      "approvedBy": "55555",
+      "declinedReason": "55555"
+    },
+    "status": {
+      "pending": "55555",
+      "approved": "55555",
+      "declined": "55555",
+      "cancelled": "55555"
+    },
+    "messages": {
+      "approveSuccess": "55555",
+      "approveFailed": "55555",
+      "declineSuccess": "55555",
+      "declineFailed": "55555",
+      "loadFailed": "55555",
+      "scheduleEntryCreated": "55555"
+    }
+  },
+  "common": {
+    "actions": "55555",
+    "active": "55555",
+    "inactive": "55555",
+    "loading": "55555",
+    "uploading": "55555",
+    "error": "55555",
+    "save": "55555",
+    "cancel": "55555",
+    "delete": "55555",
+    "edit": "55555",
+    "close": "55555",
+    "confirm": "55555",
+    "yes": "55555",
+    "no": "55555",
+    "search": "55555",
+    "filter": "55555",
+    "resetFilters": "55555",
+    "sort": "55555",
+    "refresh": "55555",
+    "export": "55555",
+    "import": "55555",
+    "download": "55555",
+    "upload": "55555",
+    "selectAll": "55555",
+    "clearSelection": "55555",
+    "view": "55555",
+    "back": "55555",
+    "next": "55555",
+    "previous": "55555",
+    "submit": "55555",
+    "submitting": "55555",
+    "reset": "55555",
+    "noData": "55555",
+    "required": "55555",
+    "optional": "55555",
+    "notSpecified": "55555",
+    "unknown": "55555"
+  },
+  "sessionManagement": {
+    "title": "55555",
+    "description": "55555",
+    "states": {
+      "loading": "55555",
+      "noSessions": "55555"
+    },
+    "labels": {
+      "unknownDevice": "55555",
+      "currentSession": "55555",
+      "yourSession": "55555",
+      "lastActive": "55555"
+    },
+    "loginMethods": {
+      "password": "55555",
+      "googleOAuth": "55555",
+      "microsoftOAuth": "55555",
+      "keycloak": "55555"
+    },
+    "userTypes": {
+      "internal": "55555",
+      "client": "55555"
+    },
+    "actions": {
+      "logout": "55555",
+      "revoke": "55555",
+      "revoking": "55555",
+      "loggingOut": "55555",
+      "logoutFromOther": "55555 {{count}} 55555 {{count, plural, one {} other {s}} 55555"
+    },
+    "confirmations": {
+      "logoutCurrent": "55555",
+      "logoutAllOther": "55555"
+    },
+    "prompts": {
+      "enter2FA": "55555"
+    },
+    "messages": {
+      "loggingOut": "55555",
+      "sessionRevoked": "55555"
+    },
+    "warnings": {
+      "oauthLogout": "55555 {{provider}} 55555"
+    },
+    "errors": {
+      "fetchFailed": "55555",
+      "loadFailed": "55555",
+      "revokeFailed": "55555",
+      "revokeAllFailed": "55555",
+      "logoutAllFailed": "55555",
+      "adminAccessRequired": "55555"
+    },
+    "admin": {
+      "title": "55555",
+      "description": "55555 {{sessionCount}} 55555 {{userCount}} 55555",
+      "searchPlaceholder": "55555",
+      "noResults": "55555"
+    }
+  },
+  "projects": {
+    "task": {
+      "comments": {
+        "title": "55555",
+        "internal_only": "55555",
+        "placeholder": "55555",
+        "add_comment": "55555",
+        "no_comments": "55555",
+        "edited": "55555",
+        "error_creating": "55555",
+        "error_updating": "55555",
+        "error_deleting": "55555",
+        "confirm_delete": "55555"
+      }
+    }
+  }
+}
