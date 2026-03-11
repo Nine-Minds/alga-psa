@@ -224,7 +224,7 @@
   {
     "id": "T038",
     "description": "DB-backed integration happy path: updating a ticket description from mobile persists a serialized rich-text string into `ticket.attributes.description` and the value round-trips on refetch.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015", "F021"]
   },
   {
@@ -236,7 +236,7 @@
   {
     "id": "T040",
     "description": "DB-backed integration happy path: creating a mobile ticket comment persists the serialized rich-text string through the ticket comments API and returns render-friendly content on refetch.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017", "F019", "F020"]
   },
   {

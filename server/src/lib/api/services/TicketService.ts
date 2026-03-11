@@ -1153,6 +1153,10 @@ export class TicketService extends BaseService<ITicket> {
    * Safely publish events
    */
   private async safePublishEvent(eventType: string, event: any): Promise<void> {
+    if (process.env.E2E_SKIP_APP_INIT === 'true') {
+      return;
+    }
+
     try {
       await getEventBus().publish(
         {

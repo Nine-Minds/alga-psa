@@ -28,6 +28,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-10) Use the same `TicketRichTextEditor` wrapper for both read-only and editable ticket surfaces in v1. Read mode passes the saved serialized content string through the read-only runtime, while edit/compose mode turns on the native toolbar and saves back serialized ProseMirror JSON.
 - (2026-03-11) Let ticket screen read-only surfaces provide the external-link callback to the wrapper, and have the wrapper fall back to `Linking.openURL` only when the screen does not supply one. This keeps external navigation blocked inside the WebView while making link handling testable at the screen layer.
 - (2026-03-11) Use Tiptap's `Image` extension in the mobile runtime so BlockNote image blocks converted to HTML are preserved in read-only rendering without adding mobile-side image authoring.
+- (2026-03-11) When the focused ticket rich-text e2e server runs with `E2E_SKIP_APP_INIT=true`, skip `TicketService.safePublishEvent()` so comment creation can exercise DB-backed API round trips without requiring Redis/event-bus infrastructure in the local harness.
 
 ## Discoveries / Constraints
 
@@ -55,6 +56,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-11) After installing `@tiptap/extension-image`, the lockfile refreshed Tiptap to `3.20.x`; `@tiptap/starter-kit` now includes `link` and `underline`, so the runtime must configure those through `StarterKit.configure(...)` instead of registering duplicate standalone extensions.
 - (2026-03-11) Explicit malformed-content detection in `ee/mobile/src/features/ticketRichText/helpers.ts` now keeps JSON-looking but unparsable payloads on a plain-text fallback path instead of mounting the WebView editor.
 - (2026-03-11) Export `TicketDetailBody` for behavior-focused tests so mobile ticket save/draft/send coverage can exercise the actual screen state machine with mocked APIs/storage instead of reimplementing it through isolated section tests.
+- (2026-03-11) Docker is not usable in this environment right now, but local PostgreSQL 14 binaries are installed; a host-run database on `127.0.0.1:5438` is enough to execute focused Next-backed ticket API round-trip tests.
+- (2026-03-11) `ee/mobile` currently only has `.env.example`; without a real `.env` containing `EXPO_PUBLIC_ALGA_BASE_URL`, the Expo app cannot reach an authenticated ticket environment for manual iOS/Android QA.
+- (2026-03-11) `xcrun simctl` lists iOS simulators on this machine, but `adb devices` reports no attached Android device or running emulator, so Android manual QA cannot be executed here yet.
 
 ## Commands / Runbooks
 
@@ -125,6 +129,13 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd ee/mobile && npx vitest run src/screens/TicketDetailScreen.richTextSections.test.ts src/screens/TicketDetailScreen.richTextBehaviors.test.ts --config vitest.config.ts`
   - `cd ee/mobile && npx tsc --noEmit`
   - `cd server && npx vitest run src/test/e2e/api/tickets.e2e.test.ts`
+- (2026-03-11) Focused DB-backed round-trip coverage checkpoint:
+  - `PGDATA=/tmp/alga-pg-test-5438; if [ ! -d "$PGDATA" ]; then initdb -D "$PGDATA" --auth=trust >/tmp/alga-initdb.log; fi; pg_ctl -D "$PGDATA" -l /tmp/alga-pg-test-5438.log -o "-p 5438" start`
+  - `createuser -h 127.0.0.1 -p 5438 -U roberisaacs -s postgres || true`
+  - `cd server && npx vitest run src/test/e2e/api/ticketRichTextRoundTrip.e2e.test.ts --config vitest.config.ts`
+  - `cd ee/mobile && npx tsc --noEmit`
+- (2026-03-11) Validation note:
+  - The focused ticket rich-text e2e runs a real Next server and full test DB setup, so it emits a large amount of migration/bootstrap logging before the two assertions complete successfully.
 
 ## Links / References
 
@@ -158,6 +169,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `server/src/test/unit/api/ticketRichRender.responseSchema.test.ts`
   - `server/src/test/unit/api/ticketRichRender.helper.test.ts`
   - `server/src/test/unit/api/ticketService.richRender.contract.test.ts`
+  - `server/src/test/e2e/api/ticketRichTextRoundTrip.e2e.test.ts`
+  - `server/src/test/e2e/utils/e2eTestSetup.ts`
 - Related plan:
   - `ee/docs/plans/2026-03-09-ticket-description-rich-text-cutover/PRD.md`
 - External references used during research:
@@ -179,7 +192,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-11) Completed `F025` by adding behavior-level screen tests for description save/cancel plus comment draft persistence/send flows on top of the existing helper, bridge, runtime, wrapper, and section coverage.
 - (2026-03-11) Completed `T025`, `T026`, `T031`, and `T032` in `ee/mobile/src/screens/TicketDetailScreen.richTextBehaviors.test.ts`.
 - (2026-03-11) Completed `T039` and `T041` with legacy-content guard coverage at the mobile screen layer: plain-text descriptions still seed the editor and save back serialized JSON, while plain-text comments remain viewable through the read-only wrapper path.
+- (2026-03-11) Completed `T038` and `T040` with a new focused Next-backed e2e that updates rich descriptions and creates rich comments against a real test database, plus harness fixes for admin-only schema normalization and comment cleanup ordering.
 
 ## Current Blockers
 
-- (2026-03-11) `server/src/test/e2e/api/tickets.e2e.test.ts` is currently skipped wholesale by the existing local server/e2e harness in this environment, so the new DB-backed API round-trip assertions for serialized rich descriptions/comments compile but do not execute here. `T038` and `T040` remain blocked pending a runnable server e2e environment.
+- (2026-03-11) `T043` and `T045` are blocked until `ee/mobile/.env` points at a reachable authenticated Alga environment; the Expo app currently has no `EXPO_PUBLIC_ALGA_BASE_URL` configured in this worktree.
+- (2026-03-11) `T044` is additionally blocked by the absence of any attached Android device or running emulator in `adb devices`.
