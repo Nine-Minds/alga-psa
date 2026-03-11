@@ -9,6 +9,7 @@ import type {
 } from '../types/workflow-types.js';
 import { updateSubscriptionMetadata } from '../services/stripe-service.js';
 import { getSecret } from '@alga-psa/core/secrets';
+import { tierFromStripeProduct } from '@ee/lib/stripe/stripeTierMapping.js';
 
 const logger = () => Context.current().log;
 
@@ -37,22 +38,61 @@ export async function createTenantInDB(
         created_at: knex.fn.now(),
         updated_at: knex.fn.now()
       };
-      
+
       // Add license count if provided
       if (input.licenseCount !== undefined) {
         tenantData.licensed_user_count = input.licenseCount;
         tenantData.last_license_update = knex.fn.now();
         tenantData.stripe_event_id = `temporal_${Date.now()}`; // Track that this came from Temporal
       }
-      
+
+      // Resolve plan from Stripe price → product → tier
+      if (input.stripePriceId) {
+        try {
+          const MASTER_TENANT_ID = await getSecret('master_billing_tenant_id', 'MASTER_BILLING_TENANT_ID');
+          if (MASTER_TENANT_ID) {
+            // Join stripe_prices → stripe_products to get product name
+            const priceWithProduct = await trx('stripe_prices as p')
+              .join('stripe_products as prod', function() {
+                this.on('p.stripe_product_id', '=', 'prod.stripe_product_id')
+                    .andOn('p.tenant', '=', 'prod.tenant');
+              })
+              .where({
+                'p.stripe_price_external_id': input.stripePriceId,
+                'p.tenant': MASTER_TENANT_ID
+              })
+              .select('prod.name as product_name')
+              .first();
+
+            if (priceWithProduct?.product_name) {
+              tenantData.plan = tierFromStripeProduct(priceWithProduct.product_name);
+              log.info('Resolved tenant tier from Stripe product', {
+                productName: priceWithProduct.product_name,
+                plan: tenantData.plan
+              });
+            } else {
+              log.warn('Could not resolve product name for price, plan will be NULL', {
+                stripePriceId: input.stripePriceId
+              });
+            }
+          }
+        } catch (error) {
+          log.warn('Failed to resolve tier from Stripe price, plan will be NULL', {
+            stripePriceId: input.stripePriceId,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+
       const tenantResult = await trx('tenants')
         .insert(tenantData)
         .returning('tenant');
-      
+
       const tenantId = tenantResult[0].tenant;
       log.info('Tenant created successfully', {
         tenantId,
-        licenseCount: input.licenseCount
+        licenseCount: input.licenseCount,
+        plan: tenantData.plan
       });
 
       // Insert Stripe customer and subscription if provided
@@ -112,12 +152,11 @@ export async function createTenantInDB(
               quantity: input.licenseCount || 1
             });
 
-            await trx('stripe_subscriptions')
-              .insert({
+            const subscriptionData: any = {
                 tenant: tenantId,
                 stripe_subscription_id: trx.raw('gen_random_uuid()'), // Internal UUID
                 stripe_subscription_external_id: input.stripeSubscriptionId, // Stripe's ID (sub_...)
-                stripe_subscription_item_id: input.stripeSubscriptionItemId, // For quantity updates
+                stripe_subscription_item_id: input.stripeSubscriptionItemId, // Per-user item for quantity updates
                 stripe_customer_id: stripeCustomer.stripe_customer_id, // FK to our stripe_customers
                 stripe_price_id: price.stripe_price_id, // FK to our stripe_prices
                 status: 'active',
@@ -126,7 +165,30 @@ export async function createTenantInDB(
                 current_period_end: trx.raw(`NOW() + INTERVAL '1 month'`),
                 created_at: knex.fn.now(),
                 updated_at: knex.fn.now(),
-              })
+              };
+
+            // Add base item/price for multi-item subscriptions
+            if (input.stripeBaseItemId) {
+              subscriptionData.stripe_base_item_id = input.stripeBaseItemId;
+
+              if (input.stripeBasePriceId) {
+                const basePrice = await trx('stripe_prices')
+                  .where({
+                    stripe_price_external_id: input.stripeBasePriceId,
+                    tenant: MASTER_TENANT_ID
+                  })
+                  .first();
+
+                if (basePrice) {
+                  subscriptionData.stripe_base_price_id = basePrice.stripe_price_id;
+                } else {
+                  log.warn(`Base price ${input.stripeBasePriceId} not found in database`);
+                }
+              }
+            }
+
+            await trx('stripe_subscriptions')
+              .insert(subscriptionData)
               .returning('*');
 
             log.info('Stripe subscription created successfully', {
@@ -138,6 +200,17 @@ export async function createTenantInDB(
         log.info('No Stripe customer ID provided, skipping Stripe integration', {
           tenantId
         });
+      }
+
+      // Insert add-ons if provided
+      if (input.addons && input.addons.length > 0) {
+        await trx('tenant_addons')
+          .insert(input.addons.map(addon => ({
+            tenant: tenantId,
+            addon_key: addon,
+            activated_at: knex.fn.now(),
+          })));
+        log.info('Tenant add-ons activated', { tenantId, addons: input.addons });
       }
 
       // Create client if name is provided (now with tenant ID)
@@ -438,6 +511,9 @@ export async function rollbackTenantInDB(tenantId: string): Promise<void> {
 
       // Delete tenant_settings (references tenant)
       await trx('tenant_settings').where({ tenant: tenantId }).delete();
+
+      // Delete tenant add-ons
+      await trx('tenant_addons').where({ tenant: tenantId }).delete();
 
       // Delete tenant notification settings
       await trx('tenant_notification_category_settings').where({ tenant: tenantId }).delete();

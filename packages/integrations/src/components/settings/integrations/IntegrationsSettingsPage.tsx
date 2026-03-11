@@ -58,6 +58,7 @@ const StripeConnectionSettings = dynamic(
 );
 
 import { EntraIntegrationSettings } from '@alga-psa/integrations/entra/components/entry';
+import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
 
 // Integration category definitions
 interface IntegrationCategory {
@@ -76,7 +77,20 @@ interface IntegrationItem {
   isEE?: boolean;
 }
 
-const IntegrationsSettingsPage: React.FC = () => {
+interface IntegrationsSettingsPageProps {
+  /** Whether the user can use Entra sync (premium feature) */
+  canUseEntraSync?: boolean;
+  /** Whether the user can use CIPP (premium feature) */
+  canUseCipp?: boolean;
+  /** Whether the user can use Teams integration (premium feature) */
+  canUseTeams?: boolean;
+}
+
+const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
+  canUseEntraSync = true,
+  canUseCipp = true,
+  canUseTeams = true,
+}) => {
   const isEEAvailable = isCalendarEnterpriseEdition();
   const entraUiFlag = useFeatureFlag('entra-integration-ui', { defaultValue: false });
   const isEntraUiEnabled = isEEAvailable && entraUiFlag.enabled;
@@ -153,7 +167,15 @@ const IntegrationsSettingsPage: React.FC = () => {
           id: 'teams',
           name: 'Microsoft Teams',
           description: 'Configure Teams collaboration surfaces for MSP technicians',
-          component: TeamsEnterpriseIntegrationSettings,
+          component: canUseTeams
+            ? TeamsEnterpriseIntegrationSettings
+            : () => (
+                <FeatureUpgradeNotice
+                  featureName="Microsoft Teams"
+                  requiredTier="premium"
+                  description="Configure Microsoft Teams collaboration surfaces for MSP technicians. Upgrade to Premium to unlock this feature."
+                />
+              ),
           isEE: true,
         },
       ],
@@ -216,7 +238,15 @@ const IntegrationsSettingsPage: React.FC = () => {
           id: 'entra',
           name: 'Microsoft Entra',
           description: 'Discover managed Microsoft tenants and sync users to contacts',
-          component: EntraIntegrationSettings,
+          component: canUseEntraSync
+            ? () => <EntraIntegrationSettings canUseCipp={canUseCipp} />
+            : () => (
+                <FeatureUpgradeNotice
+                  featureName="Entra Sync"
+                  requiredTier="premium"
+                  description="Discover managed Microsoft Entra tenants and sync users to contacts. Upgrade to Premium to unlock this feature."
+                />
+              ),
           isEE: true,
         }] : []),
       ],

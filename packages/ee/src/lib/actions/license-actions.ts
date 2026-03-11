@@ -207,3 +207,172 @@ export async function getScheduledLicenseChangesAction(): Promise<{
     error: 'This feature is only available in Enterprise Edition',
   };
 }
+
+/**
+ * CE Stub - Not available in Community Edition
+ */
+export async function upgradeTierAction(
+  _targetTier: 'pro' | 'premium',
+  _interval: 'month' | 'year' = 'month'
+): Promise<{ success: boolean; error?: string }> {
+  logger.warn('[CE] upgradeTierAction called but Stripe integration is EE-only');
+  return {
+    success: false,
+    error: 'Plan upgrades are only available in Enterprise Edition',
+  };
+}
+
+/**
+ * CE Stub - Not available in Community Edition
+ */
+export async function getUpgradePreviewAction(
+  _targetTier: 'pro' | 'premium',
+  _interval: 'month' | 'year' = 'month'
+): Promise<{
+  success: boolean;
+  error?: string;
+  currentMonthly?: number;
+  newBasePrice?: number;
+  newUserPrice?: number;
+  newMonthly?: number;
+  userCount?: number;
+  currency?: string;
+  prorationAmount?: number;
+  annualAvailable?: boolean;
+  annualBasePrice?: number;
+  annualUserPrice?: number;
+  annualTotal?: number;
+}> {
+  logger.warn('[CE] getUpgradePreviewAction called but Stripe integration is EE-only');
+  return {
+    success: false,
+    error: 'Plan upgrades are only available in Enterprise Edition',
+  };
+}
+
+/**
+ * CE Stub - Not available in Community Edition
+ */
+export async function switchBillingIntervalAction(
+  _newInterval: 'month' | 'year'
+): Promise<{ success: boolean; error?: string; effectiveDate?: string }> {
+  logger.warn('[CE] switchBillingIntervalAction called but Stripe integration is EE-only');
+  return {
+    success: false,
+    error: 'Billing interval switching is only available in Enterprise Edition',
+  };
+}
+
+/**
+ * CE Stub - Not available in Community Edition
+ */
+export async function getIntervalSwitchPreviewAction(
+  _newInterval: 'month' | 'year'
+): Promise<{
+  success: boolean;
+  error?: string;
+  currentInterval?: 'month' | 'year';
+  currentTotal?: number;
+  newTotal?: number;
+  newBasePrice?: number;
+  newUserPrice?: number;
+  userCount?: number;
+  effectiveDate?: string;
+  savingsPercent?: number;
+}> {
+  logger.warn('[CE] getIntervalSwitchPreviewAction called but Stripe integration is EE-only');
+  return {
+    success: false,
+    error: 'Billing interval switching is only available in Enterprise Edition',
+  };
+}
+
+/**
+ * CE Stub - Not available in Community Edition
+ */
+export async function startPremiumTrialAction(
+  _targetTenantId: string
+): Promise<{ success: boolean; error?: string }> {
+  logger.warn('[CE] startPremiumTrialAction called but Stripe integration is EE-only');
+  return {
+    success: false,
+    error: 'Premium trials are only available in Enterprise Edition',
+  };
+}
+
+/**
+ * CE Stub - Not available in Community Edition
+ */
+export async function startSelfServicePremiumTrialAction(): Promise<{ success: boolean; error?: string }> {
+  logger.warn('[CE] startSelfServicePremiumTrialAction called but Stripe integration is EE-only');
+  return {
+    success: false,
+    error: 'Premium trials are only available in Enterprise Edition',
+  };
+}
+
+/**
+ * CE Stub - Not available in Community Edition
+ */
+export async function sendPremiumTrialRequestAction(
+  _message: string
+): Promise<{ success: boolean; error?: string }> {
+  logger.warn('[CE] sendPremiumTrialRequestAction called but Stripe integration is EE-only');
+  return {
+    success: false,
+    error: 'Premium trials are only available in Enterprise Edition',
+  };
+}
+
+/**
+ * CE Stub - Not available in Community Edition
+ */
+export async function confirmPremiumTrialAction(
+  _interval: 'month' | 'year' = 'month'
+): Promise<{ success: boolean; error?: string; effectiveDate?: string }> {
+  logger.warn('[CE] confirmPremiumTrialAction called but Stripe integration is EE-only');
+  return {
+    success: false,
+    error: 'Premium trials are only available in Enterprise Edition',
+  };
+}
+
+/**
+ * CE Stub - Not available in Community Edition
+ */
+export async function revertPremiumTrialAction(): Promise<{ success: boolean; error?: string }> {
+  logger.warn('[CE] revertPremiumTrialAction called but Stripe integration is EE-only');
+  return {
+    success: false,
+    error: 'Premium trials are only available in Enterprise Edition',
+  };
+}
+
+/**
+ * CE Stub - getLicenseUsageAction
+ */
+export async function getLicenseUsageAction(): Promise<{
+  success: boolean;
+  data?: { active_licenses: number; total_licenses: number; price_per_license: number };
+  error?: string;
+}> {
+  logger.warn('[CE] getLicenseUsageAction called but Stripe integration is EE-only');
+  return {
+    success: false,
+    error: 'This feature is only available in Enterprise Edition',
+  };
+}
+
+/**
+ * CE Stub - sendCancellationFeedbackAction
+ */
+export async function sendCancellationFeedbackAction(
+  _reasonText: string,
+  _reasonCategory?: string
+): Promise<{ success: boolean; error?: string }> {
+  logger.warn('[CE] sendCancellationFeedbackAction called but Stripe integration is EE-only');
+  return {
+    success: false,
+    error: 'This feature is only available in Enterprise Edition',
+  };
+}

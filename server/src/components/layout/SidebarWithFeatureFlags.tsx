@@ -7,7 +7,7 @@ import {
   bottomMenuItems,
   menuItems as legacyMenuItems,
   navigationSections as originalSections,
-  type NavigationSection
+  type NavigationSection,
 } from '@/config/menuConfig';
 import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
 

@@ -17,6 +17,7 @@ import {
 import type { InvoiceTemplateAst, WasmInvoiceViewModel, RenderOutput } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { withAuth } from '@alga-psa/auth';
+
 import { evaluateInvoiceTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { renderEvaluatedInvoiceTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { deleteEntityWithValidation } from '@alga-psa/core';
