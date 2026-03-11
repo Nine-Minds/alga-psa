@@ -19,7 +19,6 @@ In Community Edition (CE), all features are unlocked regardless of tier.
 ```ts
 // packages/types/src/constants/tierFeatures.ts
 export enum TIER_FEATURES {
-  INVOICE_DESIGNER = 'INVOICE_DESIGNER',
   ENTRA_SYNC = 'ENTRA_SYNC',
   CIPP = 'CIPP',
   YOUR_NEW_FEATURE = 'YOUR_NEW_FEATURE',  // ← add here
@@ -35,7 +34,6 @@ Map which tiers get the feature:
 export const TIER_FEATURE_MAP: Record<TenantTier, TIER_FEATURES[]> = {
   pro: [],
   premium: [
-    TIER_FEATURES.INVOICE_DESIGNER,
     TIER_FEATURES.ENTRA_SYNC,
     TIER_FEATURES.CIPP,
     TIER_FEATURES.YOUR_NEW_FEATURE,  // ← add here
@@ -48,7 +46,6 @@ export const TIER_FEATURE_MAP: Record<TenantTier, TIER_FEATURES[]> = {
 ```ts
 // packages/types/src/constants/tierFeatures.ts
 export const FEATURE_MINIMUM_TIER: Record<TIER_FEATURES, TenantTier> = {
-  [TIER_FEATURES.INVOICE_DESIGNER]: 'premium',
   [TIER_FEATURES.ENTRA_SYNC]: 'premium',
   [TIER_FEATURES.CIPP]: 'premium',
   [TIER_FEATURES.YOUR_NEW_FEATURE]: 'premium',  // ← add here
@@ -111,7 +108,6 @@ export async function yourProtectedAction() {
 ```ts
 // ee/server/src/components/settings/account/AccountManagement.tsx
 const FEATURE_DISPLAY_NAMES: Record<TIER_FEATURES, string> = {
-  [TIER_FEATURES.INVOICE_DESIGNER]: 'Visual Invoice Designer — ...',
   [TIER_FEATURES.ENTRA_SYNC]: 'Microsoft Entra Sync — ...',
   [TIER_FEATURES.CIPP]: 'CIPP Integration — ...',
   [TIER_FEATURES.YOUR_NEW_FEATURE]: 'Your Feature — description here',  // ← add

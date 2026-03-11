@@ -77,6 +77,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
   const canUseEntraSync = useTierFeature(TIER_FEATURES.ENTRA_SYNC);
   const canUseCipp = useTierFeature(TIER_FEATURES.CIPP);
+  const canUseTeams = useTierFeature(TIER_FEATURES.TEAMS_INTEGRATION);
 
   // Extensions dynamic imports moved to ExtensionManagement shared component
 
@@ -286,7 +287,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       // Integrations tab with category-based organization
       label: "Integrations",
       icon: Plug,
-      content: <IntegrationsSettingsPage canUseEntraSync={canUseEntraSync} canUseCipp={canUseCipp} />,
+      content: <IntegrationsSettingsPage canUseEntraSync={canUseEntraSync} canUseCipp={canUseCipp} canUseTeams={canUseTeams} />,
     }
   ];
 

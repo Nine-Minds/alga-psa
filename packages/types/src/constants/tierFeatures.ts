@@ -14,6 +14,7 @@ import { TenantTier } from './tenantTiers';
 export enum TIER_FEATURES {
   ENTRA_SYNC = 'ENTRA_SYNC',
   CIPP = 'CIPP',
+  TEAMS_INTEGRATION = 'TEAMS_INTEGRATION',
 }
 
 /**
@@ -31,6 +32,7 @@ export const TIER_FEATURE_MAP: Record<TenantTier, readonly TIER_FEATURES[]> = {
   premium: [
     TIER_FEATURES.ENTRA_SYNC,
     TIER_FEATURES.CIPP,
+    TIER_FEATURES.TEAMS_INTEGRATION,
   ],
 } as const;
 
@@ -40,6 +42,7 @@ export const TIER_FEATURE_MAP: Record<TenantTier, readonly TIER_FEATURES[]> = {
 export const FEATURE_MINIMUM_TIER: Record<TIER_FEATURES, TenantTier> = {
   [TIER_FEATURES.ENTRA_SYNC]: 'premium',
   [TIER_FEATURES.CIPP]: 'premium',
+  [TIER_FEATURES.TEAMS_INTEGRATION]: 'premium',
 } as const;
 
 /**

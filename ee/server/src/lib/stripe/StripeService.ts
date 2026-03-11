@@ -59,6 +59,12 @@ async function getStripeConfig() {
   const premiumBaseAnnualPriceId = process.env.STRIPE_PREMIUM_BASE_ANNUAL_PRICE_ID || null;
   const premiumUserAnnualPriceId = process.env.STRIPE_PREMIUM_USER_ANNUAL_PRICE_ID || null;
 
+  // Early adopters prices (grandfathered customers migrated from preview)
+  const earlyAdoptersBasePriceId = process.env.STRIPE_EARLY_ADOPTERS_BASE_PRICE_ID || null;
+  const earlyAdoptersUserPriceId = process.env.STRIPE_EARLY_ADOPTERS_USER_PRICE_ID || null;
+  const earlyAdoptersBaseAnnualPriceId = process.env.STRIPE_EARLY_ADOPTERS_BASE_ANNUAL_PRICE_ID || null;
+  const earlyAdoptersUserAnnualPriceId = process.env.STRIPE_EARLY_ADOPTERS_USER_ANNUAL_PRICE_ID || null;
+
   if (!secretKey) {
     throw new Error('STRIPE_SECRET_KEY not found in secrets or environment');
   }
@@ -90,6 +96,10 @@ async function getStripeConfig() {
     proUserAnnualPriceId,
     premiumBaseAnnualPriceId,
     premiumUserAnnualPriceId,
+    earlyAdoptersBasePriceId,
+    earlyAdoptersUserPriceId,
+    earlyAdoptersBaseAnnualPriceId,
+    earlyAdoptersUserAnnualPriceId,
   };
 }
 
@@ -694,9 +704,11 @@ export class StripeService {
         }
 
         // Build phase items — include base fee item if this is a multi-item subscription
-        // Resolve price IDs based on the tenant's actual tier to avoid mismatched pricing
+        // Resolve price IDs based on the subscription's actual pricing level to preserve
+        // early adopters pricing. Falls back to standard tier pricing if not on early adopters.
         const tenantRecord = await knex('tenants').where('tenant', tenantId).select('plan').first();
-        const tenantTierPrices = tenantRecord?.plan ? this.getTierPriceIds(tenantRecord.plan) : null;
+        const tenantTierPrices = this.getSubscriptionPriceIds(existingSubscription)
+          || (tenantRecord?.plan ? this.getTierPriceIds(tenantRecord.plan) : null);
 
         const userPriceId = existingSubscription.stripe_base_item_id
           ? (tenantTierPrices?.userPriceId || this.config.licensePriceId!)
@@ -793,9 +805,30 @@ export class StripeService {
     // Get or import customer
     const customer = await this.getOrImportCustomer(tenantId);
 
-    // Validate that we have price configured
-    if (!this.config.licensePriceId) {
-      throw new Error('STRIPE_LICENSE_PRICE_ID environment variable is not configured');
+    // Resolve line items: use tier-specific base+user pricing if configured,
+    // otherwise fall back to legacy single per-user price
+    const knex = await getConnection(tenantId);
+    const tenant = await knex('tenants').where('tenant', tenantId).select('plan').first();
+    const tierPrices = tenant?.plan ? this.getTierPriceIds(tenant.plan, interval) : null;
+
+    let line_items: Stripe.Checkout.SessionCreateParams.LineItem[];
+
+    if (tierPrices) {
+      // Multi-item: base fee + per-user
+      line_items = [
+        { price: tierPrices.basePriceId, quantity: 1 },
+        { price: tierPrices.userPriceId, quantity },
+      ];
+      logger.info(`[StripeService] Using multi-item checkout (tier: ${tenant.plan}, interval: ${interval})`);
+    } else {
+      // Legacy single-item: per-user only
+      if (!this.config.licensePriceId) {
+        throw new Error('STRIPE_LICENSE_PRICE_ID environment variable is not configured');
+      }
+      line_items = [
+        { price: this.config.licensePriceId, quantity },
+      ];
+      logger.info(`[StripeService] Using legacy single-item checkout`);
     }
 
     // Create checkout session in embedded mode
@@ -803,12 +836,7 @@ export class StripeService {
       customer: customer.stripe_customer_external_id,
       ui_mode: 'embedded', // IMPORTANT: Embedded mode, not redirect
       mode: 'subscription',
-      line_items: [
-        {
-          price: this.config.licensePriceId,
-          quantity,
-        },
-      ],
+      line_items,
       subscription_data: {
         ...(trialDays ? { trial_period_days: trialDays } : {}),
         metadata: {
@@ -1305,6 +1333,10 @@ export class StripeService {
   /**
    * Get the price IDs for a given tier and billing interval.
    * Returns null if tier-specific pricing is not configured (legacy mode).
+   *
+   * NOTE: This returns STANDARD tier prices. For operations that should preserve
+   * a subscription's current pricing level (e.g. early adopters), use
+   * getSubscriptionPriceIds() instead.
    */
   private getTierPriceIds(
     tier: TenantTier,
@@ -1329,6 +1361,50 @@ export class StripeService {
   }
 
   /**
+   * Get the price IDs that match a subscription's current pricing level.
+   *
+   * Checks if the subscription is on early adopters pricing (via metadata)
+   * first, then falls back to standard tier pricing. This ensures operations
+   * like quantity changes and interval switches preserve the subscriber's
+   * pricing level.
+   *
+   * For upgrades/downgrades (changing tier), use getTierPriceIds() directly —
+   * those intentionally move to standard pricing.
+   */
+  private getSubscriptionPriceIds(
+    subscription: StripeSubscription,
+    interval: 'month' | 'year' = 'month'
+  ): { basePriceId: string; userPriceId: string } | null {
+    if (this.isEarlyAdoptersSubscription(subscription)) {
+      return this.getEarlyAdoptersPriceIds(interval);
+    }
+    return null;
+  }
+
+  /**
+   * Get early adopters price IDs for a given interval.
+   */
+  private getEarlyAdoptersPriceIds(
+    interval: 'month' | 'year' = 'month'
+  ): { basePriceId: string; userPriceId: string } | null {
+    if (interval === 'year' && this.config.earlyAdoptersBaseAnnualPriceId && this.config.earlyAdoptersUserAnnualPriceId) {
+      return { basePriceId: this.config.earlyAdoptersBaseAnnualPriceId, userPriceId: this.config.earlyAdoptersUserAnnualPriceId };
+    }
+    if (this.config.earlyAdoptersBasePriceId && this.config.earlyAdoptersUserPriceId) {
+      return { basePriceId: this.config.earlyAdoptersBasePriceId, userPriceId: this.config.earlyAdoptersUserPriceId };
+    }
+    return null;
+  }
+
+  /**
+   * Check if a subscription is an early adopters subscription by looking
+   * at the `grandfathered` metadata flag set during migration.
+   */
+  private isEarlyAdoptersSubscription(subscription: StripeSubscription): boolean {
+    return subscription.metadata?.grandfathered === 'true';
+  }
+
+  /**
    * Check whether this subscription uses multi-item (base + per-user) billing.
    */
   private isMultiItemSubscription(sub: StripeSubscription): boolean {
@@ -1343,6 +1419,8 @@ export class StripeService {
     if (this.config.licensePriceId) ids.push(this.config.licensePriceId);
     if (this.config.proUserPriceId) ids.push(this.config.proUserPriceId);
     if (this.config.premiumUserPriceId) ids.push(this.config.premiumUserPriceId);
+    if (this.config.earlyAdoptersUserPriceId) ids.push(this.config.earlyAdoptersUserPriceId);
+    if (this.config.earlyAdoptersUserAnnualPriceId) ids.push(this.config.earlyAdoptersUserAnnualPriceId);
     return ids;
   }
 
@@ -1666,10 +1744,11 @@ export class StripeService {
       return { success: false, error: `Subscription is already billed ${newInterval}ly` };
     }
 
-    // Resolve the tenant's current tier to get the target interval's price IDs
+    // Resolve the target interval's price IDs, preserving early adopters pricing
     const tenantRecord = await knex('tenants').where('tenant', tenantId).select('plan').first();
     const currentTier: TenantTier = tenantRecord?.plan || 'pro';
-    const newPrices = this.getTierPriceIds(currentTier, newInterval);
+    const newPrices = this.getSubscriptionPriceIds(existingSubscription, newInterval)
+      || this.getTierPriceIds(currentTier, newInterval);
     if (!newPrices) {
       return { success: false, error: `${newInterval === 'year' ? 'Annual' : 'Monthly'} pricing not configured for ${currentTier} tier` };
     }
@@ -1765,7 +1844,8 @@ export class StripeService {
 
     const tenantRecord = await knex('tenants').where('tenant', tenantId).select('plan').first();
     const currentTier: TenantTier = tenantRecord?.plan || 'pro';
-    const newPrices = this.getTierPriceIds(currentTier, newInterval);
+    const newPrices = this.getSubscriptionPriceIds(existingSubscription, newInterval)
+      || this.getTierPriceIds(currentTier, newInterval);
     if (!newPrices) {
       return { success: false, error: `${newInterval === 'year' ? 'Annual' : 'Monthly'} pricing not configured for ${currentTier} tier` };
     }

@@ -76,11 +76,14 @@ interface IntegrationsSettingsPageProps {
   canUseEntraSync?: boolean;
   /** Whether the user can use CIPP (premium feature) */
   canUseCipp?: boolean;
+  /** Whether the user can use Teams integration (premium feature) */
+  canUseTeams?: boolean;
 }
 
 const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
   canUseEntraSync = true,
   canUseCipp = true,
+  canUseTeams = true,
 }) => {
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
   const entraUiFlag = useFeatureFlag('entra-integration-ui', { defaultValue: false });

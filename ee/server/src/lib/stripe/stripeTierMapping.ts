@@ -16,6 +16,9 @@ export const STRIPE_PRODUCT_TIER_MAP: Record<string, TenantTier> = {
   // Current product (preview/beta customers)
   'alga-psa-preview': 'pro',
 
+  // Early adopters (grandfathered customers migrated from preview pricing)
+  'alga-psa-early-adopters': 'pro',
+
   // Future products (pre-mapped for when they're created in Stripe)
   'alga-psa-pro': 'pro',
   'alga-psa-premium': 'premium',
