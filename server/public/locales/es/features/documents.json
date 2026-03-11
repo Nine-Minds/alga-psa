@@ -185,5 +185,31 @@
     "nameLabel": "Nombre de la carpeta",
     "namePlaceholder": "Ingresa el nombre de la carpeta",
     "willCreateIn": "Se creará en: {{folder}}"
+  },
+  "portal": {
+    "subtitle": "Vea y descargue sus documentos compartidos",
+    "searchPlaceholder": "Buscar documentos...",
+    "showing": "{{count}} documentos",
+    "loadError": "Error al cargar los documentos. Inténtelo de nuevo."
+  },
+  "kb": {
+    "title": "Base de conocimientos",
+    "subtitle": "Encuentre respuestas a preguntas frecuentes y guías prácticas",
+    "categories": "Categorías",
+    "allArticles": "Todos los artículos",
+    "searchPlaceholder": "Buscar artículos...",
+    "articleCount": "{{count}} artículos",
+    "noArticles": "No se encontraron artículos",
+    "loadError": "Error al cargar los artículos. Inténtelo de nuevo.",
+    "noContent": "Sin contenido disponible",
+    "articleNotFound": "Artículo no encontrado",
+    "backToArticles": "Volver a los artículos",
+    "views": "vistas",
+    "wasHelpful": "¿Le resultó útil este artículo?",
+    "yes": "Sí",
+    "no": "No",
+    "feedbackThanks": "¡Gracias por sus comentarios!",
+    "feedbackError": "Error al enviar los comentarios",
+    "filterByTags": "Filtrar por etiquetas..."
   }
 }

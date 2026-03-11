@@ -12,7 +12,9 @@
     "signOut": "Afmelden",
     "clientPortal": "Klantenportaal",
     "portal": "Portal",
-    "notifications": "Meldingen"
+    "notifications": "Meldingen",
+    "documents": "Documenten",
+    "knowledgeBase": "Kennisbank"
   },
   "dashboard": {
     "title": "Dashboard",

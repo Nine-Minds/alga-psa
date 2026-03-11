@@ -7,7 +7,7 @@ import {
   bottomMenuItems,
   menuItems as legacyMenuItems,
   navigationSections as originalSections,
-  type NavigationSection
+  type NavigationSection,
 } from '@/config/menuConfig';
 import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
 
@@ -17,6 +17,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const navigationFlag = useFeatureFlag('ui-navigation-v2', { defaultValue: true });
   const useNavigationSections =
     typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
+  const { enabled: knowledgeBaseEnabled } = useFeatureFlag('knowledge-base', { defaultValue: false });
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
 
   useEffect(() => {
@@ -60,22 +61,30 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     return baseSections.map((section) => ({
       ...section,
       items: section.items.map((item) => {
-        if (item.name !== 'Workflows') {
-          return item;
+        if (item.name === 'Workflows') {
+          const filteredSubItems = item.subItems?.filter((subItem) => {
+            if (subItem.name !== 'Dead Letter') return true;
+            return canWorkflowAdmin;
+          });
+          return { ...item, subItems: filteredSubItems };
         }
 
-        const filteredSubItems = item.subItems?.filter((subItem) => {
-          if (subItem.name !== 'Dead Letter') return true;
-          return canWorkflowAdmin;
-        });
+        if (item.name === 'Documents') {
+          const filteredSubItems = item.subItems?.filter((subItem) => {
+            if (subItem.name === 'Knowledge Base') return knowledgeBaseEnabled;
+            return true;
+          });
+          // If only one sub-item remains, flatten to direct link
+          if (filteredSubItems?.length === 1) {
+            return { ...item, href: filteredSubItems[0].href, subItems: undefined };
+          }
+          return { ...item, subItems: filteredSubItems };
+        }
 
-        return {
-          ...item,
-          subItems: filteredSubItems
-        };
+        return item;
       })
     }));
-  }, [canWorkflowAdmin, useNavigationSections]);
+  }, [canWorkflowAdmin, useNavigationSections, knowledgeBaseEnabled]);
 
   return (
     <Sidebar

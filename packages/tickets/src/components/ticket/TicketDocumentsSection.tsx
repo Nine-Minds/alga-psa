@@ -17,13 +17,16 @@ interface TicketDocumentsSectionProps {
   ticketId: string;
   initialDocuments?: IDocument[];
   onDocumentCreated?: () => Promise<void>;
+  /** Override the default folder-fetching function (e.g. for client portal) */
+  getFoldersFn?: () => Promise<string[]>;
 }
 
 const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
   id = 'ticket-documents-section',
   ticketId,
   initialDocuments = [],
-  onDocumentCreated
+  onDocumentCreated,
+  getFoldersFn
 }) => {
   const router = useRouter();
   const { t } = useTranslation('features/documents');
@@ -100,6 +103,7 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
             onDocumentCreated={handleDocumentCreated}
             uploadFormRef={uploadFormRef}
             namespace="features/documents"
+            getFoldersFn={getFoldersFn}
           />
         </div>
       </div>

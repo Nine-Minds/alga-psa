@@ -48,11 +48,18 @@ export type SubscriptionStatus = 'active' | 'canceled' | 'past_due' | 'trialing'
 export interface IStripeSubscription extends TenantEntity {
   stripe_subscription_id: string;
   stripe_subscription_external_id: string;
+  /** Per-user subscription item ID (the item whose quantity tracks licensed users) */
   stripe_subscription_item_id: string | null;
   stripe_customer_id: string;
+  /** Per-user price ID */
   stripe_price_id: string;
   status: SubscriptionStatus;
+  /** Per-user item quantity (licensed user count) */
   quantity: number;
+  /** Base fee subscription item ID (null for legacy single-item subscriptions) */
+  stripe_base_item_id: string | null;
+  /** Base fee price ID (null for legacy single-item subscriptions) */
+  stripe_base_price_id: string | null;
   current_period_start: ISO8601String | null;
   current_period_end: ISO8601String | null;
   cancel_at: ISO8601String | null;

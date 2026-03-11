@@ -9,7 +9,7 @@ import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions
 import { IUser } from '@alga-psa/types';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
-import { ArrowDown, ArrowUp } from 'lucide-react';
+import { ArrowDown, ArrowUp, Eye } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -50,6 +50,15 @@ export default function DocumentFilters({
       { value: 'text', label: t('documents.filters.typeOptions.text', 'Documents') },
       { value: 'video', label: t('documents.filters.typeOptions.video', 'Video') },
       { value: 'application', label: t('documents.filters.typeOptions.other', 'Other') }
+    ],
+    [t]
+  );
+
+  const clientVisibilityOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: 'all', label: t('documents.filters.clientVisibility.all', 'All') },
+      { value: 'visible', label: t('documents.filters.clientVisibility.visible', 'Client Visible') },
+      { value: 'hidden', label: t('documents.filters.clientVisibility.hidden', 'Internal Only') },
     ],
     [t]
   );
@@ -145,6 +154,28 @@ export default function DocumentFilters({
           />
         </div>
         
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            <span className="flex items-center gap-1.5">
+              <Eye className="w-3.5 h-3.5" />
+              {t('documents.filters.clientVisibilityLabel', 'Client Visibility')}
+            </span>
+          </label>
+          <CustomSelect
+            options={clientVisibilityOptions}
+            value={filters.clientVisibility || 'all'}
+            onValueChange={(value: string) => {
+              if (value === 'all') {
+                const newFilters = { ...filters };
+                delete newFilters.clientVisibility;
+                onFiltersChange(newFilters);
+              } else {
+                onFiltersChange({ ...filters, clientVisibility: value as 'visible' | 'hidden' });
+              }
+            }}
+          />
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             {t('documents.filters.updatedStartLabel', 'Updated Date Start')}

@@ -2045,7 +2045,40 @@ export const uploadDocument = withAuth(async (
       if ('permissionError' in typeResult) return typeResult;
       const { typeId, isShared } = typeResult;
 
+      // Auto-file into entity folder if folder_path not set and entity context exists
+      // Best-effort: never fails the upload, wraps in try/catch
+      let resolvedFolderPath: string | undefined = options.folder_path || undefined;
+      if (!resolvedFolderPath) {
+        try {
+          const primaryEntity = options.ticketId ? { id: options.ticketId, type: 'ticket' }
+            : options.projectTaskId ? { id: options.projectTaskId, type: 'project_task' }
+            : options.contractId ? { id: options.contractId, type: 'contract' }
+            : options.clientId ? { id: options.clientId, type: 'client' }
+            : options.assetId ? { id: options.assetId, type: 'asset' }
+            : null;
+
+          if (primaryEntity) {
+            // Find any entity-scoped folder for this entity
+            const entityFolder = await knex('document_folders')
+              .where('tenant', tenant)
+              .andWhere('entity_id', primaryEntity.id)
+              .andWhere('entity_type', primaryEntity.type)
+              .orderBy('folder_path', 'asc')
+              .select('folder_path')
+              .first();
+
+            if (entityFolder) {
+              resolvedFolderPath = entityFolder.folder_path;
+            }
+          }
+        } catch {
+          // Silent failure — best-effort, never fails the upload
+        }
+      }
+
       // Create document record
+      // Documents uploaded by client users are automatically client-visible
+      const isClientVisible = user.user_type === 'client';
       const document: IDocument = {
         document_id: uuidv4(),
         document_name: fileData.name,
@@ -2059,7 +2092,8 @@ export const uploadDocument = withAuth(async (
         storage_path: uploadResult.storage_path,
         mime_type: fileData.type,
         file_size: fileData.size,
-        folder_path: options.folder_path || undefined
+        folder_path: resolvedFolderPath,
+        is_client_visible: isClientVisible,
       };
 
       // Use transaction for document creation and associations
@@ -2402,28 +2436,70 @@ export const getDistinctEntityTypes = withAuth(async (user, { tenant }): Promise
  *
  * @returns Promise<IFolderNode[]> - Root level folders with nested children
  */
-export const getFolderTree = withAuth(async (user, { tenant }): Promise<IFolderNode[] | ActionPermissionError> => {
-  if (!(await hasPermission(user, 'document', 'read'))) {
-    return permissionError('Permission denied');
-  }
-
-  const { knex } = await createTenantKnex();
+/**
+ * Internal helper for building a folder tree. Not wrapped in withAuth —
+ * intended to be called from already-authenticated contexts.
+ */
+async function _getFolderTreeInternal(
+  knex: Knex,
+  tenant: string,
+  entityId?: string | null,
+  entityType?: string | null
+): Promise<IFolderNode[]> {
+  const hasEntityScope = Boolean(entityId && entityType);
 
   // Get explicit folders from document_folders table
-  const explicitFolders = await knex('document_folders')
-    .select('folder_path')
-    .where('tenant', tenant)
-    .orderBy('folder_path', 'asc');
+  const explicitFolderQuery = knex('document_folders')
+    .select('folder_path', 'entity_id', 'entity_type', 'is_client_visible')
+    .where('tenant', tenant);
+
+  if (hasEntityScope) {
+    explicitFolderQuery
+      .andWhere('entity_id', entityId)
+      .andWhere('entity_type', entityType);
+  }
+  // When no entity scope, show ALL folders (unscoped + entity-scoped) so the
+  // global Documents page remains a complete view of every document.
+
+  const explicitFolders = await explicitFolderQuery.orderBy('folder_path', 'asc');
 
   const explicitPaths = explicitFolders.map((row: any) => row.folder_path);
+  const explicitFolderMetadata = new Map<string, Pick<IFolderNode, 'entity_id' | 'entity_type' | 'is_client_visible'>>();
+
+  for (const folder of explicitFolders as Array<{
+    folder_path: string;
+    entity_id?: string | null;
+    entity_type?: string | null;
+    is_client_visible?: boolean;
+  }>) {
+    explicitFolderMetadata.set(folder.folder_path, {
+      entity_id: folder.entity_id ?? null,
+      entity_type: folder.entity_type ?? null,
+      is_client_visible: Boolean(folder.is_client_visible),
+    });
+  }
 
   // Get implicit folder paths from documents
-  const implicitFolders = await knex('documents')
+  const implicitFoldersQuery = knex('documents')
     .select('folder_path')
     .where('tenant', tenant)
     .whereNotNull('folder_path')
-    .andWhere('folder_path', '!=', '')
-    .groupBy('folder_path');
+    .andWhere('folder_path', '!=', '');
+
+  if (hasEntityScope) {
+    implicitFoldersQuery.whereExists(function() {
+      this.select('*')
+        .from('document_associations as da')
+        .whereRaw('da.document_id = documents.document_id')
+        .andWhere('da.tenant', tenant)
+        .andWhere('da.entity_id', entityId)
+        .andWhere('da.entity_type', entityType);
+    });
+  }
+  // When no entity scope, don't filter — include all documents' folder paths
+  // so the global Documents page shows everything.
+
+  const implicitFolders = await implicitFoldersQuery.groupBy('folder_path');
 
   const implicitPaths = implicitFolders.map((row: any) => row.folder_path);
 
@@ -2431,41 +2507,83 @@ export const getFolderTree = withAuth(async (user, { tenant }): Promise<IFolderN
   const allPaths = Array.from(new Set([...explicitPaths, ...implicitPaths]));
 
   // Build tree structure
-  const tree = buildFolderTreeFromPaths(allPaths);
+  const tree = buildFolderTreeFromPaths(allPaths, explicitFolderMetadata);
 
   // Get document counts for each folder (single query)
-  await enrichFolderTreeWithCounts(tree, knex, tenant);
+  await enrichFolderTreeWithCounts(tree, knex, tenant, entityId, entityType);
 
   return tree;
-});
+}
 
-/**
- * Get list of all folder paths (for folder selector)
- * @returns Promise<string[]> - Array of folder paths
- */
-export const getFolders = withAuth(async (user, { tenant }): Promise<string[] | ActionPermissionError> => {
+export const getFolderTree = withAuth(async (
+  user,
+  { tenant },
+  entityId?: string | null,
+  entityType?: string | null
+): Promise<IFolderNode[] | ActionPermissionError> => {
   if (!(await hasPermission(user, 'document', 'read'))) {
     return permissionError('Permission denied');
   }
 
   const { knex } = await createTenantKnex();
 
-  // Get explicit folders from document_folders table
-  const explicitFolders = await knex('document_folders')
-    .select('folder_path')
-    .where('tenant', tenant)
-    .orderBy('folder_path', 'asc');
+  return _getFolderTreeInternal(knex, tenant, entityId, entityType);
+});
 
+/**
+ * Get list of all folder paths (for folder selector)
+ * @returns Promise<string[]> - Array of folder paths
+ */
+export const getFolders = withAuth(async (
+  user,
+  { tenant },
+  entityId?: string | null,
+  entityType?: string | null
+): Promise<string[] | ActionPermissionError> => {
+  if (!(await hasPermission(user, 'document', 'read'))) {
+    return permissionError('Permission denied');
+  }
+
+  const { knex } = await createTenantKnex();
+  const hasEntityScope = Boolean(entityId && entityType);
+
+  // Get explicit folders from document_folders table
+  const explicitFolderQuery = knex('document_folders')
+    .select('folder_path')
+    .where('tenant', tenant);
+
+  if (hasEntityScope) {
+    // Entity context: show ONLY this entity's folders
+    explicitFolderQuery
+      .where('entity_id', entityId)
+      .andWhere('entity_type', entityType);
+  }
+  // No entity scope: show all folders
+
+  const explicitFolders = await explicitFolderQuery.orderBy('folder_path', 'asc');
   const explicitPaths = explicitFolders.map((row: any) => row.folder_path);
 
   // Get implicit folder paths from documents
-  const implicitFolders = await knex('documents')
+  const implicitFoldersQuery = knex('documents')
     .select('folder_path')
     .where('tenant', tenant)
     .whereNotNull('folder_path')
-    .andWhere('folder_path', '!=', '')
-    .groupBy('folder_path');
+    .andWhere('folder_path', '!=', '');
 
+  if (hasEntityScope) {
+    // Entity context: show folders only from this entity's docs
+    implicitFoldersQuery.whereExists(function() {
+      this.select('*')
+        .from('document_associations as da')
+        .whereRaw('da.document_id = documents.document_id')
+        .andWhere('da.tenant', tenant)
+        .andWhere('da.entity_id', entityId)
+        .andWhere('da.entity_type', entityType);
+    });
+  }
+  // No entity scope: show all documents' folder paths
+
+  const implicitFolders = await implicitFoldersQuery.groupBy('folder_path');
   const implicitPaths = implicitFolders.map((row: any) => row.folder_path);
 
   // Merge both lists (remove duplicates) and sort
@@ -2490,7 +2608,9 @@ export const getDocumentsByFolder = withAuth(async (
   includeSubfolders: boolean = false,
   page: number = 1,
   limit: number = 15,
-  filters?: DocumentFilters
+  filters?: DocumentFilters,
+  entityId?: string | null,
+  entityType?: string | null
 ): Promise<{ documents: IDocument[]; total: number } | ActionPermissionError> => {
   if (!(await hasPermission(user, 'document', 'read'))) {
     return permissionError('Permission denied');
@@ -2500,19 +2620,31 @@ export const getDocumentsByFolder = withAuth(async (
   const allowedEntityTypes = await getEntityTypesForUser(user);
 
   const { knex } = await createTenantKnex();
+  const hasEntityScope = Boolean(entityId && entityType);
 
   // Build base query with permission filtering at DB level
   let query = knex('documents as d')
-    .where('d.tenant', tenant)
-    .where(function() {
-      // Option 1: Document has no associations (tenant-level doc)
+    .where('d.tenant', tenant);
+
+  if (hasEntityScope) {
+    query = query.whereExists(function() {
+      this.select('*')
+        .from('document_associations as da')
+        .whereRaw('da.document_id = d.document_id')
+        .andWhere('da.tenant', tenant)
+        .andWhere('da.entity_id', entityId)
+        .andWhere('da.entity_type', entityType)
+        .whereIn('da.entity_type', allowedEntityTypes);
+    });
+  } else {
+    // Global view: show documents with no associations OR associations the user has permission for
+    query = query.where(function() {
       this.whereNotExists(function() {
         this.select('*')
           .from('document_associations as da')
           .whereRaw('da.document_id = d.document_id')
           .andWhere('da.tenant', tenant);
       })
-      // Option 2: Document has associations user has permission for
       .orWhereExists(function() {
         this.select('*')
           .from('document_associations as da')
@@ -2521,6 +2653,7 @@ export const getDocumentsByFolder = withAuth(async (
           .whereIn('da.entity_type', allowedEntityTypes);
       });
     });
+  }
 
   // Add folder filtering
   if (folderPath) {
@@ -2633,6 +2766,14 @@ export const getDocumentsByFolder = withAuth(async (
         })
         .where('da.entity_type', filters.entityType);
     }
+
+    if (filters.clientVisibility === 'visible') {
+      query = query.where('d.is_client_visible', true);
+    } else if (filters.clientVisibility === 'hidden') {
+      query = query.where(function() {
+        this.where('d.is_client_visible', false).orWhereNull('d.is_client_visible');
+      });
+    }
   }
 
   // Get total count
@@ -2725,6 +2866,248 @@ export const moveDocumentsToFolder = withAuth(async (
 });
 
 /**
+ * Bulk toggle client visibility for documents
+ *
+ * @param documentIds - Array of document IDs to update
+ * @param isClientVisible - Target client visibility state
+ * @returns Promise<number> - Number of affected rows
+ */
+export const toggleDocumentVisibility = withAuth(async (
+  user,
+  { tenant },
+  documentIds: string[],
+  isClientVisible: boolean
+): Promise<number | ActionPermissionError> => {
+  if (!(await hasPermission(user, 'document', 'update'))) {
+    return permissionError('Permission denied');
+  }
+
+  if (!Array.isArray(documentIds) || documentIds.length === 0) {
+    return 0;
+  }
+
+  const { knex } = await createTenantKnex();
+
+  const updatedCount = await knex('documents')
+    .where('tenant', tenant)
+    .whereIn('document_id', documentIds)
+    .update({
+      is_client_visible: isClientVisible,
+      updated_at: new Date(),
+    });
+
+  return Number(updatedCount || 0);
+});
+
+/**
+ * Toggle client visibility for a folder and optionally cascade to contained documents
+ *
+ * @param folderId - Folder ID to update
+ * @param isClientVisible - Target client visibility state
+ * @param cascade - Whether to cascade visibility to documents in folder/subfolders
+ * @returns Promise with folder/document update counts
+ */
+export const toggleFolderVisibility = withAuth(async (
+  user,
+  { tenant },
+  folderId: string,
+  isClientVisible: boolean,
+  cascade: boolean = false
+): Promise<{ folderUpdated: boolean; updatedDocuments: number } | ActionPermissionError> => {
+  if (!(await hasPermission(user, 'document', 'update'))) {
+    return permissionError('Permission denied');
+  }
+
+  const { knex } = await createTenantKnex();
+
+  const folder = await knex('document_folders')
+    .select('folder_id', 'folder_path', 'entity_id', 'entity_type')
+    .where('tenant', tenant)
+    .andWhere('folder_id', folderId)
+    .first();
+
+  if (!folder) {
+    throw new Error('Folder not found');
+  }
+
+  const folderUpdatedCount = await knex('document_folders')
+    .where('tenant', tenant)
+    .andWhere('folder_id', folderId)
+    .update({
+      is_client_visible: isClientVisible,
+    });
+
+  let updatedDocuments = 0;
+
+  if (cascade) {
+    // Escape SQL LIKE wildcards in folder path before using in pattern
+    const escapedPath = folder.folder_path.replace(/%/g, '\\%').replace(/_/g, '\\_');
+    let documentsQuery = knex('documents as d')
+      .where('d.tenant', tenant)
+      .where(function() {
+        this.where('d.folder_path', folder.folder_path)
+          .orWhere('d.folder_path', 'like', `${escapedPath}/%`);
+      });
+
+    if (folder.entity_id && folder.entity_type) {
+      documentsQuery = documentsQuery.whereExists(function() {
+        this.select('*')
+          .from('document_associations as da')
+          .whereRaw('da.document_id = d.document_id')
+          .andWhere('da.tenant', tenant)
+          .andWhere('da.entity_id', folder.entity_id)
+          .andWhere('da.entity_type', folder.entity_type);
+      });
+    } else {
+      documentsQuery = documentsQuery.whereNotExists(function() {
+        this.select('*')
+          .from('document_associations as da')
+          .whereRaw('da.document_id = d.document_id')
+          .andWhere('da.tenant', tenant);
+      });
+    }
+
+    const documentUpdatedCount = await documentsQuery.update({
+      is_client_visible: isClientVisible,
+      updated_at: new Date(),
+    });
+
+    updatedDocuments = Number(documentUpdatedCount || 0);
+  }
+
+  return {
+    folderUpdated: Number(folderUpdatedCount || 0) > 0,
+    updatedDocuments,
+  };
+});
+
+/**
+ * Toggle client visibility for a folder by path (used by FolderTreeView which has paths, not IDs).
+ */
+export const toggleFolderVisibilityByPath = withAuth(async (
+  user,
+  { tenant },
+  folderPath: string,
+  isClientVisible: boolean,
+  entityId?: string | null,
+  entityType?: string | null
+): Promise<{ folderUpdated: boolean; updatedDocuments: number } | ActionPermissionError> => {
+  if (!(await hasPermission(user, 'document', 'update'))) {
+    return permissionError('Permission denied');
+  }
+
+  const { knex } = await createTenantKnex();
+
+  const query = knex('document_folders')
+    .select('folder_id', 'folder_path', 'entity_id', 'entity_type')
+    .where('tenant', tenant)
+    .andWhere('folder_path', folderPath);
+
+  if (entityId && entityType) {
+    query.andWhere('entity_id', entityId).andWhere('entity_type', entityType);
+  }
+
+  const folder = await query.first();
+
+  if (!folder) {
+    throw new Error('Folder not found');
+  }
+
+  const folderUpdatedCount = await knex('document_folders')
+    .where('tenant', tenant)
+    .andWhere('folder_id', folder.folder_id)
+    .update({
+      is_client_visible: isClientVisible,
+    });
+
+  return {
+    folderUpdated: Number(folderUpdatedCount || 0) > 0,
+    updatedDocuments: 0,
+  };
+});
+
+/**
+ * Ensure entity-scoped folders are initialized.
+ *
+ * On first access, applies the default folder template for the given entity type
+ * (if one exists), then records initialization so subsequent calls are no-ops.
+ * Idempotent: skips folders that already exist.
+ *
+ * @param entityId - Target entity ID
+ * @param entityType - Target entity type
+ * @returns Promise<IFolderNode[]> - The folder tree for this entity
+ */
+export const ensureEntityFolders = withAuth(async (
+  user,
+  { tenant },
+  entityId: string,
+  entityType: string
+): Promise<IFolderNode[] | ActionPermissionError> => {
+  if (!(await hasPermission(user, 'document', 'read'))) {
+    return permissionError('Permission denied');
+  }
+
+  if (!entityId || !entityType) {
+    throw new Error('Both entityId and entityType are required');
+  }
+
+  const { knex } = await createTenantKnex();
+
+  // Get existing entity folders
+  const existingFolders = await knex('document_folders')
+    .where('tenant', tenant)
+    .andWhere('entity_id', entityId)
+    .andWhere('entity_type', entityType)
+    .select('folder_path', 'folder_id');
+
+  const existingPaths = new Set(existingFolders.map((f: { folder_path: string }) => f.folder_path));
+
+  // Fetch default folders for this entity type
+  const defaults = await knex('document_default_folders')
+    .where('tenant', tenant)
+    .andWhere('entity_type', entityType)
+    .select('folder_name', 'folder_path', 'is_client_visible', 'sort_order')
+    .orderBy('sort_order', 'asc')
+    .orderBy('folder_path', 'asc');
+
+  // Build a map of existing + new folder IDs for parent resolution
+  const pathToFolderId = new Map<string, string>();
+  for (const f of existingFolders as Array<{ folder_path: string; folder_id: string }>) {
+    pathToFolderId.set(f.folder_path, f.folder_id);
+  }
+
+  // Only insert defaults that don't already exist
+  const foldersToInsert = defaults
+    .filter((item: { folder_path: string }) => !existingPaths.has(item.folder_path))
+    .map((item: { folder_name: string; folder_path: string; is_client_visible: boolean }) => {
+      const folderId = uuidv4();
+      pathToFolderId.set(item.folder_path, folderId);
+
+      const segments = item.folder_path.split('/').filter(Boolean);
+      const parentPath = segments.length > 1 ? '/' + segments.slice(0, -1).join('/') : null;
+
+      return {
+        tenant,
+        folder_id: folderId,
+        folder_path: item.folder_path,
+        folder_name: item.folder_name,
+        parent_folder_id: parentPath ? pathToFolderId.get(parentPath) ?? null : null,
+        entity_id: entityId,
+        entity_type: entityType,
+        is_client_visible: item.is_client_visible,
+        created_by: user.user_id,
+      };
+    });
+
+  if (foldersToInsert.length > 0) {
+    await knex('document_folders').insert(foldersToInsert);
+  }
+
+  // Return current folder tree
+  return _getFolderTreeInternal(knex, tenant, entityId, entityType);
+});
+
+/**
  * Get folder statistics (document count, total size)
  *
  * @param folderPath - Path to folder
@@ -2758,9 +3141,19 @@ export const getFolderStats = withAuth(async (
  * Create a new folder explicitly
  *
  * @param folderPath - Full path to the folder (e.g., '/Legal/Contracts')
+ * @param entityId - Optional entity scope ID for entity-specific folders
+ * @param entityType - Optional entity scope type for entity-specific folders
+ * @param isClientVisible - Optional visibility flag for client portal
  * @returns Promise<void>
  */
-export const createFolder = withAuth(async (user, { tenant }, folderPath: string): Promise<void | ActionPermissionError> => {
+export const createFolder = withAuth(async (
+  user,
+  { tenant },
+  folderPath: string,
+  entityId?: string | null,
+  entityType?: string | null,
+  isClientVisible: boolean = false
+): Promise<void | ActionPermissionError> => {
   if (!(await hasPermission(user, 'document', 'create'))) {
     return permissionError('Permission denied');
   }
@@ -2771,6 +3164,12 @@ export const createFolder = withAuth(async (user, { tenant }, folderPath: string
   if (!folderPath || !folderPath.startsWith('/')) {
     throw new Error('Folder path must start with /');
   }
+
+  if ((entityId && !entityType) || (!entityId && entityType)) {
+    throw new Error('Both entityId and entityType are required when scoping a folder to an entity');
+  }
+
+  const hasEntityScope = Boolean(entityId && entityType);
 
   // Extract folder name from path
   const parts = folderPath.split('/').filter(p => p.length > 0);
@@ -2787,10 +3186,21 @@ export const createFolder = withAuth(async (user, { tenant }, folderPath: string
   // Get parent folder ID if exists
   let parentFolderId = null;
   if (parentPath) {
-    const parentFolder = await knex('document_folders')
+    const parentFolderQuery = knex('document_folders')
       .where('tenant', tenant)
-      .where('folder_path', parentPath)
-      .first();
+      .where('folder_path', parentPath);
+
+    if (hasEntityScope) {
+      parentFolderQuery
+        .andWhere('entity_id', entityId)
+        .andWhere('entity_type', entityType);
+    } else {
+      parentFolderQuery
+        .whereNull('entity_id')
+        .whereNull('entity_type');
+    }
+
+    const parentFolder = await parentFolderQuery.first();
 
     if (parentFolder) {
       parentFolderId = parentFolder.folder_id;
@@ -2798,10 +3208,21 @@ export const createFolder = withAuth(async (user, { tenant }, folderPath: string
   }
 
   // Check if folder already exists
-  const existingFolder = await knex('document_folders')
+  const existingFolderQuery = knex('document_folders')
     .where('tenant', tenant)
-    .where('folder_path', folderPath)
-    .first();
+    .where('folder_path', folderPath);
+
+  if (hasEntityScope) {
+    existingFolderQuery
+      .andWhere('entity_id', entityId)
+      .andWhere('entity_type', entityType);
+  } else {
+    existingFolderQuery
+      .whereNull('entity_id')
+      .whereNull('entity_type');
+  }
+
+  const existingFolder = await existingFolderQuery.first();
 
   if (existingFolder) {
     // Folder already exists, that's fine
@@ -2814,6 +3235,9 @@ export const createFolder = withAuth(async (user, { tenant }, folderPath: string
     folder_path: folderPath,
     folder_name: folderName,
     parent_folder_id: parentFolderId,
+    entity_id: hasEntityScope ? entityId : null,
+    entity_type: hasEntityScope ? entityType : null,
+    is_client_visible: isClientVisible,
     created_by: user.user_id,
   });
 });
@@ -2861,7 +3285,10 @@ export const deleteFolder = withAuth(async (user, { tenant }, folderPath: string
 });
 
 // Helper functions
-function buildFolderTreeFromPaths(paths: string[]): IFolderNode[] {
+function buildFolderTreeFromPaths(
+  paths: string[],
+  explicitFolderMetadata: Map<string, Pick<IFolderNode, 'entity_id' | 'entity_type' | 'is_client_visible'>> = new Map()
+): IFolderNode[] {
   const root: IFolderNode[] = [];
 
   for (const path of paths) {
@@ -2874,13 +3301,22 @@ function buildFolderTreeFromPaths(paths: string[]): IFolderNode[] {
 
       let node = currentLevel.find(n => n.name === part);
       if (!node) {
+        const folderMetadata = explicitFolderMetadata.get(currentPath);
         node = {
           path: currentPath,
           name: part,
           children: [],
           documentCount: 0,
+          ...(folderMetadata ?? {}),
         };
         currentLevel.push(node);
+      }
+
+      const folderMetadata = explicitFolderMetadata.get(currentPath);
+      if (folderMetadata) {
+        node.entity_id = folderMetadata.entity_id ?? null;
+        node.entity_type = folderMetadata.entity_type ?? null;
+        node.is_client_visible = folderMetadata.is_client_visible;
       }
 
       currentLevel = node.children;
@@ -2893,7 +3329,9 @@ function buildFolderTreeFromPaths(paths: string[]): IFolderNode[] {
 async function enrichFolderTreeWithCounts(
   nodes: IFolderNode[],
   knex: Knex,
-  tenant: string
+  tenant: string,
+  entityId?: string | null,
+  entityType?: string | null
 ): Promise<void> {
   // Collect all folder paths in the tree (including nested)
   const allPaths: string[] = [];
@@ -2916,10 +3354,23 @@ async function enrichFolderTreeWithCounts(
   const allowedEntityTypes = ['ticket', 'client', 'contact', 'asset', 'project_task', 'contract'];
 
   // Single query to get counts for ALL folders at once - with same permission filtering as getDocumentsByFolder
-  const counts = await knex('documents as d')
+  const countsQuery = knex('documents as d')
     .where('d.tenant', tenant)
-    .whereIn('d.folder_path', allPaths)
-    .where(function() {
+    .whereIn('d.folder_path', allPaths);
+
+  if (entityId && entityType) {
+    // Entity-scoped: only count documents associated with this specific entity
+    countsQuery.whereExists(function() {
+      this.select('*')
+        .from('document_associations as da')
+        .whereRaw('da.document_id = d.document_id')
+        .andWhere('da.tenant', tenant)
+        .andWhere('da.entity_id', entityId)
+        .andWhere('da.entity_type', entityType);
+    });
+  } else {
+    // Tenant-level: count unassociated docs + docs with allowed entity types
+    countsQuery.where(function() {
       // Option 1: Document has no associations (tenant-level doc)
       this.whereNotExists(function() {
         this.select('*')
@@ -2935,7 +3386,10 @@ async function enrichFolderTreeWithCounts(
           .andWhere('da.tenant', tenant)
           .whereIn('da.entity_type', allowedEntityTypes);
       });
-    })
+    });
+  }
+
+  const counts = await countsQuery
     .groupBy('d.folder_path')
     .select('d.folder_path')
     .count('* as count');

@@ -20,6 +20,7 @@ export * from "./entra-sync-activities";
 export * from "./tenant-deletion-activities";
 export * from "./tenant-export-activities";
 export * from "./sla-activities";
+export * from "./premium-trial-activities";
 // Exclude generateTemporaryPassword and sendWelcomeEmail to avoid duplicates with email-activities
 export {
   getTenant,

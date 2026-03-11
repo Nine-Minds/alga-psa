@@ -12,7 +12,9 @@
     "signOut": "Disconnetti",
     "clientPortal": "Portale clienti",
     "portal": "Portal",
-    "notifications": "Notifiche"
+    "notifications": "Notifiche",
+    "documents": "Documenti",
+    "knowledgeBase": "Base di conoscenza"
   },
   "dashboard": {
     "title": "Dashboard",

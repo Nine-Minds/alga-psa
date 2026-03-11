@@ -1,3 +1,12 @@
+/**
+ * Gets the share URL for a given token.
+ * This is a pure utility (not a server action), so it lives here.
+ */
+export function getShareUrl(token: string, baseUrl?: string): string {
+  const base = baseUrl || process.env.NEXT_PUBLIC_APP_URL || '';
+  return `${base}/share/${token}`;
+}
+
 export function getDocumentDownloadUrl(file_id: string): string {
     if (!file_id) return '#';
     return `/api/documents/download/${file_id}`;

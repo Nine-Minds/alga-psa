@@ -1,0 +1,317 @@
+[
+  {
+    "id": "T001",
+    "description": "Integration: Entity-scoped folder CRUD — create folders for two different clients with same path, verify both exist and are isolated",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F001", "F002", "F012"]
+  },
+  {
+    "id": "T002",
+    "description": "Integration: Unique constraint rejects duplicate folder_path for same entity_id + entity_type",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T003",
+    "description": "Integration: getFolderTree(entityId, entityType) returns only that entity's folders; getFolderTree() without params returns only global folders",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F009", "F010"]
+  },
+  {
+    "id": "T004",
+    "description": "Integration: toggleDocumentVisibility() bulk-toggles is_client_visible for multiple document IDs in both directions",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T005",
+    "description": "Integration: toggleFolderVisibility() with cascade=true propagates visibility to contained documents; cascade=false leaves documents unchanged",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T006",
+    "description": "Integration: Existing global folders (entity_id IS NULL) continue working after migration — CRUD, document listing, tree rendering",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F009", "F010"]
+  },
+  {
+    "id": "T007",
+    "description": "Component: Documents component in entity mode renders FolderTreeView sidebar with visibility indicators",
+    "implemented": true,
+    "tier": "component",
+    "featureIds": ["F016", "F017", "F021"]
+  },
+  {
+    "id": "T008",
+    "description": "Component: Visibility toggle (eye icon) renders in MSP context, hidden in client portal context",
+    "implemented": true,
+    "tier": "component",
+    "featureIds": ["F018", "F019", "F020"]
+  },
+  {
+    "id": "T009",
+    "description": "Integration: Folder template CRUD lifecycle — create template with items, get with items, update, delete (cascade deletes items)",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F028", "F029", "F030", "F031", "F032"]
+  },
+  {
+    "id": "T010",
+    "description": "Integration: setDefaultTemplate() marks template as default, unsets previous default for same entity type; partial unique index prevents two defaults",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F026", "F033"]
+  },
+  {
+    "id": "T011",
+    "description": "Integration: ensureEntityFolders() applies default template on first access, creates entity-scoped folders with correct visibility; idempotent on second call (no duplicate folders)",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F034", "F035", "F036"]
+  },
+  {
+    "id": "T012",
+    "description": "Integration: ensureEntityFolders() is a no-op when no default template exists for entity type",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F035"]
+  },
+  {
+    "id": "T013",
+    "description": "Integration: uploadDocument() auto-files ticket attachment into matching entity folder; succeeds with folder_path=null if no matching folder exists",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F037"]
+  },
+  {
+    "id": "T014",
+    "description": "Component: FolderTemplateEditor renders tree with add/remove folders, drag-and-drop reorder, per-folder visibility toggles",
+    "implemented": true,
+    "tier": "component",
+    "featureIds": ["F038", "F039"]
+  },
+  {
+    "id": "T015",
+    "description": "Integration: getClientDocuments() returns only documents with is_client_visible=true associated with authenticated client; excludes non-visible and other clients' docs",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F043", "F046"]
+  },
+  {
+    "id": "T016",
+    "description": "Integration: getClientDocuments() aggregates documents across direct client associations, client's tickets, client's project tasks, and client's contracts",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F043"]
+  },
+  {
+    "id": "T017",
+    "description": "Security: Client A's getClientDocuments() never returns client B's documents — verified with two test clients sharing a tenant",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F043", "F046"]
+  },
+  {
+    "id": "T018",
+    "description": "Integration: downloadClientDocument() returns 403 for non-visible document and for document belonging to different client",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F045"]
+  },
+  {
+    "id": "T019",
+    "description": "Integration: File view API route returns 403 for client user accessing document with is_client_visible=false; allows access to visible contract-associated docs",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F047", "F048"]
+  },
+  {
+    "id": "T020",
+    "description": "E2E: Ticket detail page inline documents section shows all attached documents regardless of is_client_visible flag (regression)",
+    "implemented": true,
+    "tier": "e2e",
+    "featureIds": ["F055"]
+  },
+  {
+    "id": "T021",
+    "description": "Component: ClientDocumentsPage renders folder tree (read-only), document cards (view/download only, no edit/delete), and filter bar",
+    "implemented": true,
+    "tier": "component",
+    "featureIds": ["F049", "F051", "F052", "F053", "F054"]
+  },
+  {
+    "id": "T022",
+    "description": "Integration: createShareLink() generates unique 256-bit token, hashes password for password_protected type, stores expiry and max_downloads",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F059"]
+  },
+  {
+    "id": "T023",
+    "description": "Integration: validateShareToken() returns document data for valid token; rejects revoked, expired, and over-limit tokens with appropriate errors",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F062"]
+  },
+  {
+    "id": "T024",
+    "description": "Integration: GET /api/share/[token] serves file without auth for valid public share; returns 404 for invalid token",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F063"]
+  },
+  {
+    "id": "T025",
+    "description": "Integration: Password-protected share route rejects wrong password (401), serves file with correct password",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F064"]
+  },
+  {
+    "id": "T026",
+    "description": "Integration: Portal-authenticated share route returns 401 without session; serves file with valid portal session that has client access",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F065"]
+  },
+  {
+    "id": "T027",
+    "description": "Integration: Share route increments download_count and creates access log entry with IP and user_agent on each successful access",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F066"]
+  },
+  {
+    "id": "T028",
+    "description": "Integration: revokeShareLink() soft-revokes link; subsequent validateShareToken() rejects it; GET /api/share/[token] returns 410",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F061"]
+  },
+  {
+    "id": "T029",
+    "description": "Component: ShareLinkDialog renders share type selector, password input, expiry picker; generates URL with copy button; lists existing links with revoke action",
+    "implemented": true,
+    "tier": "component",
+    "featureIds": ["F071", "F072"]
+  },
+  {
+    "id": "T030",
+    "description": "Component: Public share landing page renders document info and download button; shows password input for password-protected links",
+    "implemented": true,
+    "tier": "component",
+    "featureIds": ["F069", "F070"]
+  },
+  {
+    "id": "T031",
+    "description": "Integration: createArticle() creates both document and kb_articles record in transaction; rolls back both if either insert fails",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F081"]
+  },
+  {
+    "id": "T032",
+    "description": "Integration: publishArticle() with audience='client' sets is_client_visible=true on parent document; audience='internal' does NOT set it",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F083"]
+  },
+  {
+    "id": "T033",
+    "description": "Integration: archiveArticle() sets status='archived' and clears is_client_visible on parent document",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F084"]
+  },
+  {
+    "id": "T034",
+    "description": "Integration: Full publishing workflow — draft → submitForReview → completeReview(approved) → publish → archive — all state transitions verified",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F083", "F084", "F085", "F086"]
+  },
+  {
+    "id": "T035",
+    "description": "Integration: getArticles() correctly filters by audience, status, and article_type independently and combined",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F087"]
+  },
+  {
+    "id": "T036",
+    "description": "Integration: getStaleArticles() returns only published articles where next_review_due < NOW(); excludes draft/archived",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F089"]
+  },
+  {
+    "id": "T037",
+    "description": "Integration: recordArticleView() increments view_count; recordArticleFeedback() increments helpful_count or not_helpful_count correctly",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F090", "F091"]
+  },
+  {
+    "id": "T038",
+    "description": "Security: Client portal KB query returns only published client-audience articles; excludes internal, draft, and in_review articles",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F100"]
+  },
+  {
+    "id": "T039",
+    "description": "Security: Tenant A cannot see tenant B's KB articles (RLS enforced)",
+    "implemented": true,
+    "tier": "integration",
+    "featureIds": ["F080"]
+  },
+  {
+    "id": "T040",
+    "description": "Component: KBArticleEditor wraps DocumentEditor with KB metadata sidebar (audience, type, category, review cycle)",
+    "implemented": true,
+    "tier": "component",
+    "featureIds": ["F095"]
+  },
+  {
+    "id": "T041",
+    "description": "Component: KBPublishingControls renders correct transition buttons based on current article status",
+    "implemented": true,
+    "tier": "component",
+    "featureIds": ["F096"]
+  },
+  {
+    "id": "T042",
+    "description": "E2E: Create entity-scoped folders for a client, upload a document, toggle visibility, verify document appears in client portal Documents hub",
+    "implemented": true,
+    "tier": "e2e",
+    "featureIds": ["F001", "F012", "F013", "F049"]
+  },
+  {
+    "id": "T043",
+    "description": "E2E: Generate a public share link for a document, open in incognito browser, verify download works without auth",
+    "implemented": true,
+    "tier": "e2e",
+    "featureIds": ["F059", "F063", "F069"]
+  },
+  {
+    "id": "T044",
+    "description": "E2E: Create KB article from template, publish with audience='client', verify it appears in client portal KB section with feedback buttons",
+    "implemented": true,
+    "tier": "e2e",
+    "featureIds": ["F081", "F083", "F100", "F101"]
+  },
+  {
+    "id": "T045",
+    "description": "E2E: Configure folder template as default, open new client Documents tab, verify folders auto-created from template",
+    "implemented": true,
+    "tier": "e2e",
+    "featureIds": ["F030", "F033", "F035", "F041"]
+  }
+]

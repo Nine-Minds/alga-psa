@@ -962,6 +962,8 @@ export default function TaskDocumentsSimple({
         onSelectFolder={handleFolderSelected}
         title="Select Folder for New Document"
         description="Choose where to save this new document"
+        entityId={isPendingMode ? undefined : taskId}
+        entityType={isPendingMode ? undefined : "project_task"}
       />
 
       {/* Delete confirmation dialog */}

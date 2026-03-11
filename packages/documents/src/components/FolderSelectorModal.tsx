@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@alga-psa/ui/components/Button';
 import { getFolders, createFolder } from '../actions/documentActions';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import { Folder, Home, ChevronRight, FolderPlus, X } from 'lucide-react';
+import { Folder, Home, ChevronRight, FolderPlus, X, FolderOpen } from 'lucide-react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -16,6 +16,10 @@ interface FolderSelectorModalProps {
   title?: string;
   description?: string;
   namespace?: 'common' | 'features/documents';
+  entityId?: string;
+  entityType?: string;
+  /** Override the default folder-fetching function (e.g. for client portal) */
+  getFoldersFn?: () => Promise<string[]>;
 }
 
 export default function FolderSelectorModal({
@@ -24,7 +28,10 @@ export default function FolderSelectorModal({
   onSelectFolder,
   title: titleProp,
   description: descriptionProp,
-  namespace = 'common'
+  namespace = 'common',
+  entityId,
+  entityType,
+  getFoldersFn
 }: FolderSelectorModalProps) {
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [folders, setFolders] = useState<string[]>([]);
@@ -47,33 +54,59 @@ export default function FolderSelectorModal({
   const [newFolderParent, setNewFolderParent] = useState<string | null>(null);
   const [creatingFolder, setCreatingFolder] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showAllFolders, setShowAllFolders] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      loadFolders();
+      setShowAllFolders(false);
+      loadFolders(false);
       // Reset new folder state when modal opens
       setShowNewFolderInput(false);
       setNewFolderName('');
       setNewFolderParent(null);
       setError(null);
+      // In entity mode, don't default to null (root) — wait for folders to load
+      if (!entityId) {
+        setSelectedFolder(null);
+      }
     }
   }, [isOpen]);
 
-  const loadFolders = async () => {
+  const loadFolders = async (allFolders?: boolean) => {
     setLoading(true);
     try {
-      const folderList = await getFolders();
-      if (isActionPermissionError(folderList)) {
-        handleError(folderList.permissionError);
-        setFolders([]);
-        return;
+      let folderList: string[] = [];
+      if (getFoldersFn) {
+        folderList = await getFoldersFn();
+      } else {
+        // When showAll is true, fetch without entity scope to get all folders
+        const scopedEntityId = allFolders ? undefined : entityId;
+        const scopedEntityType = allFolders ? undefined : entityType;
+        const result = await getFolders(scopedEntityId, scopedEntityType);
+        if (isActionPermissionError(result)) {
+          handleError(result.permissionError);
+          setFolders([]);
+          return;
+        }
+        folderList = result;
       }
       setFolders(folderList);
+      // In entity mode (not showing all), auto-select the first folder
+      if (entityId && !allFolders && folderList.length > 0) {
+        setSelectedFolder(folderList[0]);
+      }
     } catch (error) {
       console.error('Error loading folders:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleToggleShowAll = () => {
+    const newValue = !showAllFolders;
+    setShowAllFolders(newValue);
+    setSelectedFolder(null);
+    loadFolders(newValue);
   };
 
   const handleConfirm = () => {
@@ -102,14 +135,16 @@ export default function FolderSelectorModal({
         ? `${newFolderParent}/${newFolderName.trim()}`
         : `/${newFolderName.trim()}`;
 
-      const createResult = await createFolder(folderPath);
+      const scopedEntityId = showAllFolders ? undefined : entityId;
+      const scopedEntityType = showAllFolders ? undefined : entityType;
+      const createResult = await createFolder(folderPath, scopedEntityId, scopedEntityType);
       if (isActionPermissionError(createResult)) {
         handleError(createResult.permissionError);
         return;
       }
 
       // Reload folders to show the new one
-      await loadFolders();
+      await loadFolders(showAllFolders);
 
       // Reset the new folder form
       setShowNewFolderInput(false);
@@ -254,7 +289,26 @@ export default function FolderSelectorModal({
             </div>
           </div>
         ) : (
-          <div className="flex justify-end">
+          <div className="flex justify-between items-center">
+            {entityId && !getFoldersFn ? (
+              <button
+                type="button"
+                onClick={handleToggleShowAll}
+                disabled={loading}
+                className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded transition-colors ${
+                  showAllFolders
+                    ? 'text-purple-700 dark:text-[rgb(var(--color-primary-300))] bg-purple-50 dark:bg-[rgb(var(--color-border-100))]'
+                    : 'text-gray-500 dark:text-[rgb(var(--color-text-400))] hover:text-gray-700 dark:hover:text-[rgb(var(--color-text-600))]'
+                }`}
+              >
+                <FolderOpen className="w-3.5 h-3.5" />
+                {showAllFolders
+                  ? tDoc('folderSelector.showEntityFolders', 'Show entity folders')
+                  : tDoc('folderSelector.showAllFolders', 'Show all folders')}
+              </button>
+            ) : (
+              <div />
+            )}
             <Button
               id="new-folder-btn"
               type="button"
@@ -277,19 +331,21 @@ export default function FolderSelectorModal({
             </div>
           ) : (
             <>
-              {/* Root option */}
-              <button
-                type="button"
-                onClick={() => setSelectedFolder(null)}
-                className={`block w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${
-                  selectedFolder === null ? 'bg-purple-50 dark:bg-[rgb(var(--color-border-100))] text-purple-700 dark:text-[rgb(var(--color-primary-300))] font-medium border-l-2 border-purple-500 dark:border-[rgb(var(--color-primary-500))]' : 'text-gray-700 dark:text-[rgb(var(--color-text-400))]'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Home className="w-4 h-4" />
-                  <span>{tDoc('folderSelector.rootOption', 'Root (No folder)')}</span>
-                </div>
-              </button>
+              {/* Root option — shown when not scoped to an entity, or when "show all" is active */}
+              {(!entityId || showAllFolders) && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedFolder(null)}
+                  className={`block w-full text-left px-3 py-2 text-sm rounded hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${
+                    selectedFolder === null ? 'bg-purple-50 dark:bg-[rgb(var(--color-border-100))] text-purple-700 dark:text-[rgb(var(--color-primary-300))] font-medium border-l-2 border-purple-500 dark:border-[rgb(var(--color-primary-500))]' : 'text-gray-700 dark:text-[rgb(var(--color-text-400))]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Home className="w-4 h-4" />
+                    <span>{tDoc('folderSelector.rootOption', 'Root (No folder)')}</span>
+                  </div>
+                </button>
+              )}
 
               {/* Folder tree */}
               {folders.length > 0 ? (

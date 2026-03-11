@@ -33,6 +33,8 @@ import { getQueueMetricsAction } from '@alga-psa/jobs/actions';
 import { analytics } from '@alga-psa/analytics/client';
 import { QuickCreateDialog, QuickCreateType } from './QuickCreateDialog';
 import { ThemeToggle } from '@alga-psa/ui/components/ThemeToggle';
+import { TrialBanner } from './TrialBanner';
+import { PaymentFailedBanner } from './PaymentFailedBanner';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -378,6 +380,8 @@ export default function Header({
       </div>
 
       <div className="flex items-center gap-3">
+        <PaymentFailedBanner />
+        <TrialBanner />
         <TenantBadge tenant={userData?.tenant} />
         <QuickCreateMenu />
         <ThemeToggle />
