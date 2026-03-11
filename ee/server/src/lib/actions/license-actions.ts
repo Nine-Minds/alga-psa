@@ -1230,7 +1230,7 @@ export async function startSelfServicePremiumTrialAction(): Promise<{ success: b
       return { success: false, error: 'Not authenticated' };
     }
 
-    const hasPermission = await checkAccountManagementPermission(session);
+    const hasPermission = await checkAccountManagementPermission();
     if (!hasPermission) {
       return { success: false, error: 'You do not have permission to manage the subscription' };
     }
@@ -1285,7 +1285,7 @@ export async function confirmPremiumTrialAction(
       return { success: false, error: 'Not authenticated' };
     }
 
-    const hasPermission = await checkAccountManagementPermission(session);
+    const hasPermission = await checkAccountManagementPermission();
     if (!hasPermission) {
       return { success: false, error: 'You do not have permission to manage the subscription' };
     }
@@ -1316,7 +1316,7 @@ export async function revertPremiumTrialAction(): Promise<{ success: boolean; er
       return { success: false, error: 'Not authenticated' };
     }
 
-    const hasPermission = await checkAccountManagementPermission(session);
+    const hasPermission = await checkAccountManagementPermission();
     if (!hasPermission) {
       return { success: false, error: 'You do not have permission to manage the subscription' };
     }

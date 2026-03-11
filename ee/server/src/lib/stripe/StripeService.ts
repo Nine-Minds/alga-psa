@@ -152,10 +152,11 @@ interface StripeSubscription {
   stripe_subscription_item_id: string | null;
   stripe_customer_id: string;
   stripe_price_id: string;
-  status: 'active' | 'canceled' | 'past_due';
+  status: 'active' | 'canceled' | 'past_due' | 'trialing';
   quantity: number;
   stripe_base_item_id: string | null;
   stripe_base_price_id: string | null;
+  billing_interval: 'month' | 'year';
   current_period_start: Date | null;
   current_period_end: Date | null;
   cancel_at: Date | null;
@@ -1779,7 +1780,6 @@ export class StripeService {
               { price: newPrices.basePriceId, quantity: 1 },
               { price: newPrices.userPriceId, quantity: currentQuantity },
             ],
-            iterations: 1,
           },
         ],
         end_behavior: 'release',
@@ -1887,13 +1887,13 @@ export class StripeService {
 
       return {
         success: true,
-        currentInterval: existingSubscription.billing_interval as 'month' | 'year' || 'month',
+        currentInterval: existingSubscription.billing_interval || 'month',
         currentTotal,
         newTotal,
         newBasePrice: newBaseAmount,
         newUserPrice: newUserAmount,
         userCount,
-        effectiveDate: existingSubscription.current_period_end || undefined,
+        effectiveDate: existingSubscription.current_period_end?.toISOString(),
         savingsPercent,
       };
     } catch (error: any) {
@@ -2068,7 +2068,6 @@ export class StripeService {
               { price: premiumPrices.basePriceId, quantity: 1 },
               { price: premiumPrices.userPriceId, quantity: currentQuantity },
             ],
-            iterations: 1,
           },
         ],
         end_behavior: 'release',
