@@ -1,26 +1,51 @@
+import i18next from "i18next";
+import { initReactI18next } from "react-i18next";
 import * as Localization from "expo-localization";
+import { DEFAULT_LOCALE, DEFAULT_NS, NAMESPACES, SUPPORTED_LOCALES, type SupportedLocale } from "./config";
+import commonEn from "./locales/en/common.json";
+import authEn from "./locales/en/auth.json";
+import ticketsEn from "./locales/en/tickets.json";
+import settingsEn from "./locales/en/settings.json";
 
-type Locale = "en-US";
-
-const messages: Record<Locale, Record<string, string>> = {
-  "en-US": {
-    "app.title": "Alga PSA Mobile",
-    "auth.signIn.title": "Sign in",
-    "auth.signIn.cta": "Continue in browser",
-    "auth.signIn.opening": "Opening…",
-    "auth.callback.title": "Signing in",
-    "tickets.title": "Tickets",
-    "settings.title": "Settings",
-  },
-};
-
-function resolveLocale(): Locale {
+function resolveDeviceLocale(): SupportedLocale {
   const tag = Localization.getLocales()[0]?.languageTag;
-  return tag === "en-US" ? "en-US" : "en-US";
+  if (!tag) return DEFAULT_LOCALE;
+  const lang = tag.split("-")[0]?.toLowerCase();
+  if (lang && (SUPPORTED_LOCALES as readonly string[]).includes(lang)) {
+    return lang as SupportedLocale;
+  }
+  return DEFAULT_LOCALE;
 }
 
-const locale = resolveLocale();
+const resources = {
+  en: {
+    common: commonEn,
+    auth: authEn,
+    tickets: ticketsEn,
+    settings: settingsEn,
+  },
+} as const;
 
-export function t(key: string): string {
-  return messages[locale][key] ?? messages["en-US"][key] ?? key;
-}
+i18next.use(initReactI18next).init({
+  resources,
+  lng: resolveDeviceLocale(),
+  fallbackLng: "en",
+  defaultNS: DEFAULT_NS,
+  ns: [...NAMESPACES],
+  interpolation: {
+    escapeValue: false,
+  },
+  ...(__DEV__
+    ? {
+        missingKeyHandler: (_lngs: readonly string[], ns: string, key: string) => {
+          console.warn(`[i18n] Missing key: ${ns}:${key}`);
+        },
+        saveMissing: true,
+      }
+    : {}),
+});
+
+/** Backward-compatible t() export */
+export const t: typeof i18next.t = i18next.t.bind(i18next);
+
+export default i18next;

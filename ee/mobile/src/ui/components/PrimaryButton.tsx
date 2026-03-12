@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Pressable, Text } from "react-native";
 import { hitSlop } from "../a11y";
-import { colors, spacing, typography } from "../theme";
+import { useTheme } from "../ThemeContext";
 
 export function PrimaryButton({
   children,
@@ -16,6 +16,7 @@ export function PrimaryButton({
   accessibilityLabel?: string;
   accessibilityHint?: string;
 }) {
+  const theme = useTheme();
   return (
     <Pressable
       onPress={onPress}
@@ -25,15 +26,15 @@ export function PrimaryButton({
       accessibilityHint={accessibilityHint}
       hitSlop={hitSlop}
       style={({ pressed }) => ({
-        paddingVertical: spacing.md,
-        paddingHorizontal: spacing.lg,
-        backgroundColor: disabled ? colors.border : colors.primary,
+        paddingVertical: theme.spacing.md,
+        paddingHorizontal: theme.spacing.lg,
+        backgroundColor: disabled ? theme.colors.border : theme.colors.primary,
         borderRadius: 10,
         opacity: pressed && !disabled ? 0.9 : 1,
-        alignSelf: "flex-start",
+        alignSelf: "center",
       })}
     >
-      <Text style={{ ...typography.body, color: disabled ? colors.mutedText : colors.primaryText, fontWeight: "600" }}>
+      <Text style={{ ...theme.typography.body, color: disabled ? theme.colors.textSecondary : theme.colors.textInverse, fontWeight: "600" }}>
         {children}
       </Text>
     </Pressable>

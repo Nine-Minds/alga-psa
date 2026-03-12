@@ -1,7 +1,9 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ActivityIndicator, Alert, Linking, Modal, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import type { RootStackParamList } from "../navigation/types";
-import { colors, spacing, typography } from "../ui/theme";
+import { useTheme } from "../ui/ThemeContext";
+import type { Theme } from "../ui/themes";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";
@@ -150,7 +152,10 @@ export function TicketDetailBody({
       onAuthError: refreshSession,
     });
   }, [config, refreshSession, session]);
+  const theme = useTheme();
+  const { colors, spacing, typography } = theme;
   const { showToast } = useToast();
+  const { t } = useTranslation("tickets");
 
   const [ticket, setTicket] = useState<TicketDetail | null>(() => {
     const cached = getCachedTicketDetail(ticketId);
@@ -279,14 +284,14 @@ export function TicketDetailBody({
     if (!result.ok) {
       if (result.error.kind === "http" && result.status === 404) {
         setTicket(null);
-        setError({ title: "Ticket not found", description: "This ticket may have been deleted." });
+        setError({ title: t("detail.ticketNotFound"), description: t("detail.ticketNotFoundDescription") });
         return;
       }
       if (result.error.kind === "permission") {
-        setError({ title: "No access", description: "You don’t have permission to view this ticket." });
+        setError({ title: t("detail.noAccessTitle"), description: t("detail.noAccessDescription") });
         return;
       }
-      setError({ title: "Unable to load ticket", description: "Please try again." });
+      setError({ title: t("detail.unableToLoad"), description: t("detail.unableToLoadDescription") });
       return;
     }
     setTicket(result.data.data);
@@ -298,7 +303,7 @@ export function TicketDetailBody({
     setCommentsError(null);
     const result = await getTicketComments(client, { apiKey: session.accessToken, ticketId });
     if (!result.ok) {
-      setCommentsError("Unable to load comments.");
+      setCommentsError(t("comments.errors.loadFailed"));
       return;
     }
     setComments(result.data.data);
@@ -388,15 +393,15 @@ export function TicketDetailBody({
 
         if (!result.ok) {
           if (result.error.kind === "permission") {
-            setDescriptionError("You don’t have permission to edit this ticket description.");
+            setDescriptionError(t("description.errors.permission"));
             return false;
           }
           if (result.error.kind === "validation") {
             const msg = getApiErrorMessage(result.error.body);
-            setDescriptionError(msg ?? "Description update was rejected by the server.");
+            setDescriptionError(msg ?? t("description.errors.validation"));
             return false;
           }
-          setDescriptionError("Unable to update the ticket description. Please try again.");
+          setDescriptionError(t("description.errors.generic"));
           return false;
         }
 
@@ -406,7 +411,7 @@ export function TicketDetailBody({
         setDescriptionDraft(serializedDescription);
         setDescriptionPlainText(nextPlainText);
         setDescriptionEditing(false);
-        showToast({ message: "Description updated", tone: "success" });
+        showToast({ message: t("description.descriptionUpdated"), tone: "success" });
         return true;
       } finally {
         setDescriptionSaving(false);
@@ -435,18 +440,18 @@ export function TicketDetailBody({
 
       const trimmedText = text.trim();
       if (!trimmedText) {
-        setCommentSendError("Comment cannot be empty.");
+        setCommentSendError(t("comments.errors.empty"));
         commentSendInFlightRef.current = false;
         return false;
       }
       if (trimmedText.length > MAX_COMMENT_LENGTH) {
-        setCommentSendError(`Comment is too long (max ${MAX_COMMENT_LENGTH} characters).`);
+        setCommentSendError(t("comments.errors.tooLong", { max: MAX_COMMENT_LENGTH }));
         commentSendInFlightRef.current = false;
         return false;
       }
       if (isOffline) {
-        setCommentSendError("You’re offline. Your draft is saved and will be ready to send when you’re back online.");
-        showToast({ message: "Offline — draft saved", tone: "info" });
+        setCommentSendError(t("comments.errors.offlineSaved"));
+        showToast({ message: t("comments.offlineToast"), tone: "info" });
         commentSendInFlightRef.current = false;
         return false;
       }
@@ -481,8 +486,8 @@ export function TicketDetailBody({
             setCommentDraft(originalDraft);
             setCommentDraftPlainText(originalDraftPlainText);
             setCommentIsInternal(originalIsInternal);
-            setCommentSendError("You don’t have permission to add comments to this ticket.");
-            showToast({ message: "Comment not sent", tone: "error" });
+            setCommentSendError(t("comments.errors.permission"));
+            showToast({ message: t("comments.commentNotSent"), tone: "error" });
             return false;
           }
           if (result.error.kind === "validation") {
@@ -491,16 +496,16 @@ export function TicketDetailBody({
             setCommentDraft(originalDraft);
             setCommentDraftPlainText(originalDraftPlainText);
             setCommentIsInternal(originalIsInternal);
-            setCommentSendError(msg ?? "Comment was rejected by the server.");
-            showToast({ message: "Comment not sent", tone: "error" });
+            setCommentSendError(msg ?? t("comments.errors.validation"));
+            showToast({ message: t("comments.commentNotSent"), tone: "error" });
             return false;
           }
           setComments((prev) => prev.filter((c) => c.comment_id !== optimisticId));
           setCommentDraft(originalDraft);
           setCommentDraftPlainText(originalDraftPlainText);
           setCommentIsInternal(originalIsInternal);
-          setCommentSendError("Unable to send comment. Please try again.");
-          showToast({ message: "Comment not sent", tone: "error" });
+          setCommentSendError(t("comments.errors.generic"));
+          showToast({ message: t("comments.commentNotSent"), tone: "error" });
           return false;
         }
 
@@ -519,7 +524,7 @@ export function TicketDetailBody({
         await secureStorage.deleteItem(draftKey);
         invalidateTicketsListCache();
         await Promise.all([fetchTicket(), fetchComments()]);
-        showToast({ message: "Comment sent", tone: "success" });
+        showToast({ message: t("comments.commentSent"), tone: "success" });
         return true;
       } finally {
         setCommentSending(false);
@@ -572,13 +577,13 @@ export function TicketDetailBody({
     }
 
     if (!descriptionEditorRef.current) {
-      setDescriptionError("Editor is still loading. Please try again.");
+      setDescriptionError(t("description.editorStillLoading"));
       return;
     }
 
     const nextJson = await descriptionEditorRef.current.getJSON().catch(() => null);
     if (!nextJson) {
-      setDescriptionError("Unable to read the editor content right now. Please try again.");
+      setDescriptionError(t("description.unableToReadEditor"));
       return;
     }
 
@@ -713,14 +718,14 @@ export function TicketDetailBody({
   ]);
 
   if (!config.ok) {
-    return <ErrorState title="Configuration error" description={config.error} />;
+    return <ErrorState title={t("common:configurationError")} description={config.error} />;
   }
   if (!session) {
-    return <ErrorState title="Signed out" description="Please sign in again." />;
+    return <ErrorState title={t("common:signedOut")} description={t("common:signInAgain")} />;
   }
 
   if (initialLoading && !ticket) {
-    return <LoadingState message="Loading ticket…" />;
+    return <LoadingState message={t("detail.loadingTicket")} />;
   }
 
   if (error && !ticket) {
@@ -728,14 +733,14 @@ export function TicketDetailBody({
   }
 
   if (!ticket) {
-    return <ErrorState title="Ticket not found" description="This ticket is unavailable." />;
+    return <ErrorState title={t("detail.ticketNotFound")} description={t("detail.ticketUnavailable")} />;
   }
 
   const statusLabel = pendingStatusId
     ? (statusOptions.find((s) => s.status_id === pendingStatusId)?.name ??
       ticket.status_name ??
-      "Unknown")
-    : (ticket.status_name ?? "Unknown");
+      t("common:unknown"))
+    : (ticket.status_name ?? t("common:unknown"));
 
   const meUserId = session.user?.id;
   const isWatching = meUserId ? getWatcherUserIds(ticket).includes(meUserId) : false;
@@ -760,15 +765,15 @@ export function TicketDetailBody({
       if (!res.ok) {
         if (res.error.kind === "http" && res.status === 409) {
           setPendingStatusId(null);
-          setStatusUpdateError("Ticket changed elsewhere. Refresh and try again.");
-          showToast({ message: "Ticket updated elsewhere", tone: "info" });
+          setStatusUpdateError(t("detail.errors.statusConflict"));
+          showToast({ message: t("detail.errors.statusConflictTitle"), tone: "info" });
           Alert.alert(
-            "Ticket updated elsewhere",
-            "This ticket changed on the server. Refresh and try your update again.",
+            t("detail.errors.statusConflictTitle"),
+            t("detail.errors.statusConflictDescription"),
             [
-              { text: "Cancel", style: "cancel" },
+              { text: t("common:cancel"), style: "cancel" },
               {
-                text: "Refresh",
+                text: t("common:refresh"),
                 onPress: () => {
                   void fetchTicket();
                 },
@@ -779,27 +784,27 @@ export function TicketDetailBody({
         }
         if (res.error.kind === "permission") {
           setPendingStatusId(null);
-          setStatusUpdateError("You don’t have permission to change this ticket’s status.");
-          showToast({ message: "Status not changed", tone: "error" });
+          setStatusUpdateError(t("detail.errors.statusPermission"));
+          showToast({ message: t("detail.errors.statusGeneric"), tone: "error" });
           return;
         }
         if (res.error.kind === "validation") {
           const msg = getApiErrorMessage(res.error.body);
           setPendingStatusId(null);
-          setStatusUpdateError(msg ?? "Status change was rejected by the server.");
-          showToast({ message: "Status not changed", tone: "error" });
+          setStatusUpdateError(msg ?? t("detail.errors.statusValidation"));
+          showToast({ message: t("detail.errors.statusGeneric"), tone: "error" });
           return;
         }
         setPendingStatusId(null);
-        setStatusUpdateError("Unable to change status. Please try again.");
-        showToast({ message: "Status not changed", tone: "error" });
+        setStatusUpdateError(t("detail.errors.statusGeneric"));
+        showToast({ message: t("detail.errors.statusGeneric"), tone: "error" });
         return;
       }
       invalidateTicketsListCache();
       await fetchTicket();
       setPendingStatusId(null);
       setStatusPickerOpen(false);
-      showToast({ message: "Status updated", tone: "success" });
+      showToast({ message: t("detail.changeStatus"), tone: "success" });
     } finally {
       setStatusUpdating(false);
       statusUpdateInFlightRef.current = false;
@@ -821,15 +826,15 @@ export function TicketDetailBody({
       });
       if (!res.ok) {
         if (res.error.kind === "permission") {
-          setPriorityUpdateError("You don’t have permission to change this ticket’s priority.");
+          setPriorityUpdateError(t("detail.errors.priorityPermission"));
           return;
         }
         if (res.error.kind === "validation") {
           const msg = getApiErrorMessage(res.error.body);
-          setPriorityUpdateError(msg ?? "Priority change was rejected by the server.");
+          setPriorityUpdateError(msg ?? t("detail.errors.priorityValidation"));
           return;
         }
-        setPriorityUpdateError("Unable to change priority. Please try again.");
+        setPriorityUpdateError(t("detail.errors.priorityGeneric"));
         return;
       }
       invalidateTicketsListCache();
@@ -856,15 +861,15 @@ export function TicketDetailBody({
       });
       if (!res.ok) {
         if (res.error.kind === "permission") {
-          setAssignmentError("You don’t have permission to update this ticket’s assignment.");
+          setAssignmentError(t("detail.errors.assignmentPermission"));
           return;
         }
         if (res.error.kind === "validation") {
           const msg = getApiErrorMessage(res.error.body);
-          setAssignmentError(msg ?? "Assignment was rejected by the server.");
+          setAssignmentError(msg ?? t("detail.errors.assignmentValidation"));
           return;
         }
-        setAssignmentError("Unable to update assignment. Please try again.");
+        setAssignmentError(t("detail.errors.assignmentGeneric"));
         return;
       }
       invalidateTicketsListCache();
@@ -879,7 +884,7 @@ export function TicketDetailBody({
     if (!session) return;
     const me = session.user?.id;
     if (!me) {
-      setAssignmentError("Unable to determine current user. Please sign in again.");
+      setAssignmentError(t("detail.errors.assignmentNoUser"));
       return;
     }
     await updateAssignment(me, "assign");
@@ -914,15 +919,15 @@ export function TicketDetailBody({
       });
       if (!res.ok) {
         if (res.error.kind === "permission") {
-          setDueDateError("You don’t have permission to change this ticket’s due date.");
+          setDueDateError(t("detail.errors.dueDatePermission"));
           return;
         }
         if (res.error.kind === "validation") {
           const msg = getApiErrorMessage(res.error.body);
-          setDueDateError(msg ?? "Due date change was rejected by the server.");
+          setDueDateError(msg ?? t("detail.errors.dueDateValidation"));
           return;
         }
-        setDueDateError("Unable to update due date. Please try again.");
+        setDueDateError(t("detail.errors.dueDateGeneric"));
         return;
       }
       invalidateTicketsListCache();
@@ -941,7 +946,7 @@ export function TicketDetailBody({
     }
     const iso = dateInputToIso(trimmed);
     if (!iso) {
-      setDueDateError("Enter a date as YYYY-MM-DD.");
+      setDueDateError(t("detail.errors.dueDateFormat"));
       return;
     }
     await submitDueDateIso(iso);
@@ -959,7 +964,7 @@ export function TicketDetailBody({
     if (watchUpdating) return;
     const me = session.user?.id;
     if (!me) {
-      setWatchError("Unable to determine current user. Please sign in again.");
+      setWatchError(t("detail.errors.watchNoUser"));
       return;
     }
 
@@ -989,15 +994,15 @@ export function TicketDetailBody({
 
       if (!res.ok) {
         if (res.error.kind === "permission") {
-          setWatchError("You don’t have permission to update watchers on this ticket.");
+          setWatchError(t("detail.errors.watchPermission"));
           return;
         }
         if (res.error.kind === "validation") {
           const msg = getApiErrorMessage(res.error.body);
-          setWatchError(msg ?? "Watchers update was rejected by the server.");
+          setWatchError(msg ?? t("detail.errors.watchValidation"));
           return;
         }
-        setWatchError("Unable to update watchers. Please try again.");
+        setWatchError(t("detail.errors.watchGeneric"));
         return;
       }
 
@@ -1021,7 +1026,7 @@ export function TicketDetailBody({
 
     const duration = Number(timeEntryDurationMin.trim());
     if (!Number.isFinite(duration) || duration <= 0) {
-      setTimeEntryError("Enter a valid duration in minutes.");
+      setTimeEntryError(t("timeEntry.errors.invalidDuration"));
       return;
     }
 
@@ -1045,20 +1050,20 @@ export function TicketDetailBody({
 
       if (!res.ok) {
         if (res.error.kind === "permission") {
-          setTimeEntryError("You don’t have permission to create time entries.");
+          setTimeEntryError(t("timeEntry.errors.permission"));
           return;
         }
         if (res.error.kind === "validation") {
           const msg = getApiErrorMessage(res.error.body);
-          setTimeEntryError(msg ?? "Time entry was rejected by the server.");
+          setTimeEntryError(msg ?? t("timeEntry.errors.validation"));
           return;
         }
-        setTimeEntryError("Unable to create time entry. Please try again.");
+        setTimeEntryError(t("timeEntry.errors.generic"));
         return;
       }
 
       setTimeEntryOpen(false);
-      Alert.alert("Time entry created", `Added ${Math.round(duration)} minutes.`);
+      Alert.alert(t("timeEntry.created"), t("timeEntry.createdMessage", { minutes: Math.round(duration) }));
     } finally {
       setTimeEntryUpdating(false);
     }
@@ -1077,14 +1082,14 @@ export function TicketDetailBody({
             style={{
               padding: spacing.md,
               borderRadius: 12,
-              backgroundColor: "#FEF3C7",
+              backgroundColor: colors.badge.warning.bg,
               borderWidth: 1,
-              borderColor: "#F59E0B",
+              borderColor: colors.warning,
               marginBottom: spacing.md,
             }}
           >
-            <Text style={{ ...typography.caption, color: "#7C2D12", fontWeight: "700" }}>{error.title}</Text>
-            <Text style={{ ...typography.caption, color: "#7C2D12", marginTop: 2 }}>{error.description}</Text>
+            <Text style={{ ...typography.caption, color: colors.badge.warning.text, fontWeight: "700" }}>{error.title}</Text>
+            <Text style={{ ...typography.caption, color: colors.badge.warning.text, marginTop: 2 }}>{error.description}</Text>
           </View>
         ) : null}
         {qaStatus ? (
@@ -1094,17 +1099,17 @@ export function TicketDetailBody({
               borderRadius: 12,
               backgroundColor:
                 qaStatus.state === "failed"
-                  ? "#FEE2E2"
+                  ? colors.badge.danger.bg
                   : qaStatus.state === "passed"
-                    ? "#DCFCE7"
-                    : "#DBEAFE",
+                    ? colors.badge.success.bg
+                    : colors.badge.info.bg,
               borderWidth: 1,
               borderColor:
                 qaStatus.state === "failed"
-                  ? "#DC2626"
+                  ? colors.danger
                   : qaStatus.state === "passed"
-                    ? "#16A34A"
-                    : "#2563EB",
+                    ? colors.success
+                    : colors.info,
               marginBottom: spacing.md,
             }}
           >
@@ -1115,14 +1120,14 @@ export function TicketDetailBody({
               {qaStatus.state.toUpperCase()} - {qaStatus.step}
             </Text>
             {qaStatus.detail ? (
-              <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: 2 }}>
+              <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 2 }}>
                 {qaStatus.detail}
               </Text>
             ) : null}
           </View>
         ) : null}
 
-        <Text style={{ ...typography.caption, color: colors.mutedText }}>
+        <Text style={{ ...typography.caption, color: colors.textSecondary }}>
           {ticket.ticket_number}
           {ticket.client_name ? ` • ${ticket.client_name}` : ""}
           {ticket.contact_name ? ` • ${ticket.contact_name}` : ""}
@@ -1139,7 +1144,7 @@ export function TicketDetailBody({
 
         <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
 	          <ActionChip
-	            label="Change status"
+	            label={t("detail.changeStatus")}
 	            onPress={() => {
 	              void (async () => {
 	                if (!client || !session) return;
@@ -1156,7 +1161,7 @@ export function TicketDetailBody({
 	                try {
 	                  const res = await getTicketStatuses(client, { apiKey: session.accessToken });
 	                  if (!res.ok) {
-	                    setStatusOptionsError("Unable to load statuses.");
+	                    setStatusOptionsError(t("detail.errors.unableToLoadStatuses"));
 	                    return;
 	                  }
 	                  setStatusOptions(res.data.data);
@@ -1169,7 +1174,7 @@ export function TicketDetailBody({
 	          />
           <View style={{ width: spacing.sm }} />
           <ActionChip
-            label="Change priority"
+            label={t("detail.changePriority")}
             onPress={() => {
               void (async () => {
                 if (!client || !session) return;
@@ -1180,7 +1185,7 @@ export function TicketDetailBody({
                 try {
                   const res = await getTicketPriorities(client, { apiKey: session.accessToken });
                   if (!res.ok) {
-                    setPriorityOptionsError("Unable to load priorities.");
+                    setPriorityOptionsError(t("detail.errors.unableToLoadPriorities"));
                     return;
                   }
                   setPriorityOptions(res.data.data);
@@ -1192,7 +1197,7 @@ export function TicketDetailBody({
           />
           <View style={{ width: spacing.sm }} />
           <ActionChip
-            label="Due date"
+            label={t("detail.dueDate")}
             onPress={() => {
               setDueDateError(null);
               setDueDateDraft(isoToDateInput(getDueDateIso(ticket)) ?? "");
@@ -1201,7 +1206,7 @@ export function TicketDetailBody({
           />
           <View style={{ width: spacing.sm }} />
           <ActionChip
-            label={isWatching ? "Unwatch" : "Watch"}
+            label={isWatching ? t("detail.unwatch") : t("detail.watch")}
             loading={watchUpdating}
             disabled={!meUserId}
             onPress={() => {
@@ -1210,7 +1215,7 @@ export function TicketDetailBody({
           />
           <View style={{ width: spacing.sm }} />
           <ActionChip
-            label="Add time"
+            label={t("detail.addTime")}
             onPress={() => {
               openTimeEntryModal();
             }}
@@ -1219,10 +1224,10 @@ export function TicketDetailBody({
           <ActionChip
             label={
               assignmentUpdating && assignmentAction === "assign"
-                ? "Assigning…"
+                ? t("detail.assigning")
                 : isAssignedToMe
-                  ? "Assigned to me"
-                  : "Assign to me"
+                  ? t("detail.assignedToMe")
+                  : t("detail.assignToMe")
             }
             loading={assignmentUpdating && assignmentAction === "assign"}
             disabled={assignmentUpdating || isAssignedToMe}
@@ -1234,7 +1239,7 @@ export function TicketDetailBody({
             <>
               <View style={{ width: spacing.sm }} />
               <ActionChip
-                label={assignmentUpdating && assignmentAction === "unassign" ? "Unassigning…" : "Unassign"}
+                label={assignmentUpdating && assignmentAction === "unassign" ? t("detail.unassigning") : t("detail.unassign")}
                 loading={assignmentUpdating && assignmentAction === "unassign"}
                 disabled={assignmentUpdating}
                 onPress={() => {
@@ -1265,18 +1270,18 @@ export function TicketDetailBody({
 
         {ticket.assigned_to_name ? (
           <Text style={{ ...typography.body, marginTop: spacing.md, color: colors.text }}>
-            Assigned to {ticket.assigned_to_name}
+            {t("detail.assignedTo", { name: ticket.assigned_to_name })}
           </Text>
         ) : (
-          <Text style={{ ...typography.body, marginTop: spacing.md, color: colors.mutedText }}>
-            Unassigned
+          <Text style={{ ...typography.body, marginTop: spacing.md, color: colors.textSecondary }}>
+            {t("detail.unassigned")}
           </Text>
         )}
 
         <View style={{ marginTop: spacing.lg }}>
-          <KeyValue label="Requester" value={stringOrDash(ticket.contact_name)} />
+          <KeyValue label={t("detail.requester")} value={stringOrDash(ticket.contact_name)} />
           <View style={{ height: spacing.sm }} />
-          <KeyValue label="Client" value={stringOrDash(ticket.client_name)} />
+          <KeyValue label={t("detail.client")} value={stringOrDash(ticket.client_name)} />
           <View style={{ height: spacing.sm }} />
           <DescriptionSection
             ticket={ticket}
@@ -1323,15 +1328,15 @@ export function TicketDetailBody({
             }}
           />
           <View style={{ height: spacing.sm }} />
-          <KeyValue label="Created" value={formatDateTimeWithRelative(ticket.entered_at)} />
+          <KeyValue label={t("detail.created")} value={formatDateTimeWithRelative(ticket.entered_at)} />
           <View style={{ height: spacing.sm }} />
-          <KeyValue label="Updated" value={formatDateTimeWithRelative(ticket.updated_at)} />
+          <KeyValue label={t("detail.updated")} value={formatDateTimeWithRelative(ticket.updated_at)} />
           <View style={{ height: spacing.sm }} />
-          <KeyValue label="Due" value={formatDateTimeWithRelative(getDueDateIso(ticket))} />
+          <KeyValue label={t("detail.due")} value={formatDateTimeWithRelative(getDueDateIso(ticket))} />
           <View style={{ height: spacing.sm }} />
-          <KeyValue label="Closed" value={formatDateTimeWithRelative(ticket.closed_at)} />
+          <KeyValue label={t("detail.closed")} value={formatDateTimeWithRelative(ticket.closed_at)} />
           <View style={{ height: spacing.sm }} />
-          <KeyValue label="Ticket ID" value={ticket.ticket_id} />
+          <KeyValue label={t("detail.ticketId")} value={ticket.ticket_id} />
         </View>
       </ScrollView>
 
@@ -1410,19 +1415,21 @@ function DueDateModal({
   onSetInDays: (days: number) => void;
   onClose: () => void;
 }) {
+  const { colors, spacing, typography } = useTheme();
+  const { t } = useTranslation("tickets");
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.lg }}>
-        <Text style={{ ...typography.title, color: colors.text }}>Due date</Text>
-        <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.mutedText }}>
-          Current: {formatDateTimeWithRelative(currentDueDateIso)}
+        <Text style={{ ...typography.title, color: colors.text }}>{t("dueDateModal.title")}</Text>
+        <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.textSecondary }}>
+          {t("dueDateModal.current", { date: formatDateTimeWithRelative(currentDueDateIso) })}
         </Text>
 
         {updating ? (
           <View style={{ marginTop: spacing.lg, alignItems: "center" }}>
             <ActivityIndicator />
-            <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.mutedText }}>
-              Saving…
+            <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.textSecondary }}>
+              {t("common:saving")}
             </Text>
           </View>
         ) : null}
@@ -1434,11 +1441,11 @@ function DueDateModal({
         ) : null}
 
         <View style={{ marginTop: spacing.lg }}>
-          <Text style={{ ...typography.caption, color: colors.mutedText }}>Set a date (YYYY-MM-DD)</Text>
+          <Text style={{ ...typography.caption, color: colors.textSecondary }}>{t("dueDateModal.setDateLabel")}</Text>
           <TextInput
             value={draft}
             onChangeText={onChangeDraft}
-            placeholder="2026-02-03"
+            placeholder={t("dueDateModal.datePlaceholder")}
             autoCapitalize="none"
             autoCorrect={false}
             editable={!updating}
@@ -1457,19 +1464,19 @@ function DueDateModal({
 
         <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.lg }}>
           <ActionChip
-            label="Today"
+            label={t("dueDateModal.today")}
             disabled={updating}
             onPress={() => onSetInDays(0)}
           />
           <View style={{ width: spacing.sm }} />
           <ActionChip
-            label="Tomorrow"
+            label={t("dueDateModal.tomorrow")}
             disabled={updating}
             onPress={() => onSetInDays(1)}
           />
           <View style={{ width: spacing.sm }} />
           <ActionChip
-            label="+7 days"
+            label={t("dueDateModal.plus7Days")}
             disabled={updating}
             onPress={() => onSetInDays(7)}
           />
@@ -1483,7 +1490,7 @@ function DueDateModal({
               onPress={onClear}
               disabled={updating}
             >
-              Clear
+              {t("common:clear")}
             </PrimaryButton>
           </View>
           <View style={{ width: spacing.sm }} />
@@ -1492,7 +1499,7 @@ function DueDateModal({
               onPress={onSave}
               disabled={updating}
             >
-              Save
+              {t("common:save")}
             </PrimaryButton>
           </View>
         </View>
@@ -1500,13 +1507,13 @@ function DueDateModal({
         <View style={{ marginTop: spacing.sm }}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Close due date editor"
+            accessibilityLabel={t("dueDateModal.closeAccessibility")}
             onPress={onClose}
             disabled={updating}
             style={({ pressed }) => ({ opacity: updating ? 0.5 : pressed ? 0.85 : 1, marginTop: spacing.sm })}
           >
-            <Text style={{ ...typography.caption, color: colors.mutedText, textAlign: "center" }}>
-              Close
+            <Text style={{ ...typography.caption, color: colors.textSecondary, textAlign: "center" }}>
+              {t("common:close")}
             </Text>
           </Pressable>
         </View>
@@ -1536,18 +1543,20 @@ function TimeEntryModal({
   onSubmit: () => void;
   onClose: () => void;
 }) {
+  const { colors, spacing, typography } = useTheme();
+  const { t } = useTranslation("tickets");
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.lg }}>
-        <Text style={{ ...typography.title, color: colors.text }}>Add time entry</Text>
-        <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.mutedText }}>
-          Duration (minutes)
+        <Text style={{ ...typography.title, color: colors.text }}>{t("timeEntry.title")}</Text>
+        <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.textSecondary }}>
+          {t("timeEntry.durationLabel")}
         </Text>
         <TextInput
           value={durationMin}
           onChangeText={onChangeDurationMin}
           keyboardType="number-pad"
-          placeholder="15"
+          placeholder={t("timeEntry.durationPlaceholder")}
           editable={!updating}
           style={{
             marginTop: spacing.sm,
@@ -1561,14 +1570,14 @@ function TimeEntryModal({
           }}
         />
 
-        <Text style={{ ...typography.caption, marginTop: spacing.lg, color: colors.mutedText }}>
-          Notes (optional)
+        <Text style={{ ...typography.caption, marginTop: spacing.lg, color: colors.textSecondary }}>
+          {t("timeEntry.notesLabel")}
         </Text>
         <TextInput
           value={notes}
           onChangeText={onChangeNotes}
           multiline
-          placeholder="What did you do?"
+          placeholder={t("timeEntry.notesPlaceholder")}
           editable={!updating}
           style={{
             marginTop: spacing.sm,
@@ -1586,8 +1595,8 @@ function TimeEntryModal({
         {updating ? (
           <View style={{ marginTop: spacing.lg, alignItems: "center" }}>
             <ActivityIndicator />
-            <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.mutedText }}>
-              Saving…
+            <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.textSecondary }}>
+              {t("common:saving")}
             </Text>
           </View>
         ) : null}
@@ -1600,11 +1609,11 @@ function TimeEntryModal({
 
         <View style={{ flex: 1 }} />
         <PrimaryButton onPress={onSubmit} disabled={updating}>
-          Save time entry
+          {t("timeEntry.saveTimeEntry")}
         </PrimaryButton>
         <View style={{ height: spacing.sm }} />
         <PrimaryButton onPress={onClose} disabled={updating}>
-          Cancel
+          {t("common:cancel")}
         </PrimaryButton>
       </View>
     </Modal>
@@ -1632,16 +1641,18 @@ function PriorityPickerModal({
   onSelect: (priorityId: string) => void;
   onClose: () => void;
 }) {
+  const { colors, spacing, typography } = useTheme();
+  const { t } = useTranslation("tickets");
   const busy = loading || updating;
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.lg }}>
-        <Text style={{ ...typography.title, color: colors.text }}>Select priority</Text>
+        <Text style={{ ...typography.title, color: colors.text }}>{t("priorityPicker.title")}</Text>
         {busy ? (
           <View style={{ marginTop: spacing.lg, alignItems: "center" }}>
             <ActivityIndicator />
-            <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.mutedText }}>
-              {loading ? "Loading…" : "Saving…"}
+            <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.textSecondary }}>
+              {loading ? t("common:loading") : t("common:saving")}
             </Text>
           </View>
         ) : null}
@@ -1664,7 +1675,7 @@ function PriorityPickerModal({
               <Pressable
                 key={p.priority_id}
                 accessibilityRole="button"
-                accessibilityLabel={`Set priority ${p.priority_name}`}
+                accessibilityLabel={t("priorityPicker.setPriority", { name: p.priority_name })}
                 disabled={disabled}
                 onPress={() => {
                   onSelect(p.priority_id);
@@ -1690,7 +1701,7 @@ function PriorityPickerModal({
         </View>
 
         <View style={{ flex: 1 }} />
-        <PrimaryButton onPress={onClose}>Done</PrimaryButton>
+        <PrimaryButton onPress={onClose}>{t("common:done")}</PrimaryButton>
       </View>
     </Modal>
   );
@@ -1717,16 +1728,18 @@ function StatusPickerModal({
   onSelect: (statusId: string) => void;
   onClose: () => void;
 }) {
+  const { colors, spacing, typography } = useTheme();
+  const { t } = useTranslation("tickets");
   const busy = loading || updating;
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.lg }}>
-        <Text style={{ ...typography.title, color: colors.text }}>Select status</Text>
+        <Text style={{ ...typography.title, color: colors.text }}>{t("statusPicker.title")}</Text>
         {busy ? (
           <View style={{ marginTop: spacing.lg, alignItems: "center" }}>
             <ActivityIndicator />
-            <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.mutedText }}>
-              {loading ? "Loading…" : "Saving…"}
+            <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.textSecondary }}>
+              {loading ? t("common:loading") : t("common:saving")}
             </Text>
           </View>
         ) : null}
@@ -1746,7 +1759,7 @@ function StatusPickerModal({
             <Pressable
               key={s.status_id}
               accessibilityRole="button"
-              accessibilityLabel={`Set status ${s.name}`}
+              accessibilityLabel={t("statusPicker.setStatus", { name: s.name })}
               disabled={busy}
               onPress={() => {
                 onSelect(s.status_id);
@@ -1766,15 +1779,15 @@ function StatusPickerModal({
                 {s.name}
                 {s.status_id === currentStatusId ? " ✓" : ""}
               </Text>
-              <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: 2 }}>
-                {s.is_closed ? "Closed" : "Open"}
+              <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: 2 }}>
+                {s.is_closed ? t("statusPicker.closedLabel") : t("statusPicker.openLabel")}
               </Text>
             </Pressable>
           ))}
         </View>
 
         <View style={{ flex: 1 }} />
-        <PrimaryButton onPress={onClose}>Done</PrimaryButton>
+        <PrimaryButton onPress={onClose}>{t("common:done")}</PrimaryButton>
       </View>
     </Modal>
   );
@@ -1803,6 +1816,8 @@ export function CommentComposer({
   editorRef: RefObject<TicketRichTextEditorRef | null>;
   onDraftChange: (content: string, plainText: string) => void;
 }) {
+  const { colors, spacing, typography } = useTheme();
+  const { t } = useTranslation("tickets");
   return (
     <View
       style={{
@@ -1814,7 +1829,7 @@ export function CommentComposer({
         borderRadius: 10,
       }}
     >
-      <Text style={{ ...typography.caption, color: colors.mutedText }}>Add comment</Text>
+      <Text style={{ ...typography.caption, color: colors.textSecondary }}>{t("comments.addComment")}</Text>
       <View style={{ marginTop: spacing.sm }}>
         <TicketRichTextEditor
           ref={editorRef}
@@ -1822,7 +1837,7 @@ export function CommentComposer({
           editable={!sending}
           showToolbar
           height={180}
-          loadingLabel="Loading comment editor…"
+          loadingLabel={t("comments.loadingCommentEditor")}
           onContentChange={({ json }) => {
             onDraftChange(
               serializeRichEditorJson(json),
@@ -1835,16 +1850,16 @@ export function CommentComposer({
         style={{
           ...typography.caption,
           marginTop: spacing.sm,
-          color: draftPlainText.length > MAX_COMMENT_LENGTH ? colors.danger : colors.mutedText,
+          color: draftPlainText.length > MAX_COMMENT_LENGTH ? colors.danger : colors.textSecondary,
         }}
       >
         {draftPlainText.length}/{MAX_COMMENT_LENGTH}
       </Text>
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
-        <ActionChip label={isInternal ? "Internal ✓" : "Internal"} onPress={() => onChangeIsInternal(true)} />
+        <ActionChip label={isInternal ? t("comments.internalChecked") : t("comments.internal")} onPress={() => onChangeIsInternal(true)} />
         <View style={{ width: spacing.sm }} />
-        <ActionChip label={!isInternal ? "Public ✓" : "Public"} onPress={() => onChangeIsInternal(false)} />
+        <ActionChip label={!isInternal ? t("comments.publicChecked") : t("comments.public")} onPress={() => onChangeIsInternal(false)} />
       </View>
       {error ? (
         <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
@@ -1852,17 +1867,17 @@ export function CommentComposer({
         </Text>
       ) : null}
       {offline ? (
-        <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
-          Offline — your draft is saved. Reconnect to send.
+        <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.sm }}>
+          {t("comments.offlineDraftSaved")}
         </Text>
       ) : null}
       <View style={{ marginTop: spacing.sm }}>
         <PrimaryButton
           onPress={onSend}
           disabled={sending || offline || draftPlainText.trim().length === 0 || draftPlainText.length > MAX_COMMENT_LENGTH}
-          accessibilityLabel="Send comment"
+          accessibilityLabel={t("comments.sendComment")}
         >
-          {sending ? "Sending…" : "Send"}
+          {sending ? t("comments.sending") : t("comments.send")}
         </PrimaryButton>
       </View>
     </View>
@@ -1878,26 +1893,28 @@ function TicketActions({
   ticketId: string;
   ticketNumber: string;
 }) {
+  const { spacing } = useTheme();
+  const { t } = useTranslation("tickets");
   const openInWebUrl = baseUrl ? buildTicketWebUrl(baseUrl, ticketId) : null;
 
   return (
     <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.md }}>
       <ActionChip
-        label="Copy #"
+        label={t("detail.copyNumber")}
         onPress={() => {
           void (async () => {
             const res = await copyToClipboard("ticket_number", ticketNumber);
-            Alert.alert("Copied", res.copiedText);
+            Alert.alert(t("common:copied"), res.copiedText);
           })();
         }}
       />
       <View style={{ width: spacing.sm }} />
       <ActionChip
-        label="Copy ID"
+        label={t("detail.copyId")}
         onPress={() => {
           void (async () => {
             const res = await copyToClipboard("ticket_id", ticketId);
-            Alert.alert("Copied", res.copiedText);
+            Alert.alert(t("common:copied"), res.copiedText);
           })();
         }}
       />
@@ -1905,11 +1922,11 @@ function TicketActions({
         <>
           <View style={{ width: spacing.sm }} />
           <ActionChip
-            label="Open in web"
+            label={t("detail.openInWeb")}
             onPress={() => {
-              Alert.alert("Open in web?", openInWebUrl, [
-                { text: "Cancel", style: "cancel" },
-                { text: "Open", onPress: () => void Linking.openURL(openInWebUrl) },
+              Alert.alert(t("detail.openInWebConfirm"), openInWebUrl, [
+                { text: t("common:cancel"), style: "cancel" },
+                { text: t("common:open"), onPress: () => void Linking.openURL(openInWebUrl) },
               ]);
             }}
           />
@@ -1930,6 +1947,7 @@ function ActionChip({
   disabled?: boolean;
   loading?: boolean;
 }) {
+  const { colors, spacing, typography } = useTheme();
   const isDisabled = Boolean(disabled || loading);
   return (
     <Pressable
@@ -1948,7 +1966,7 @@ function ActionChip({
       })}
     >
       <View style={{ flexDirection: "row", alignItems: "center" }}>
-        {loading ? <ActivityIndicator size="small" color={colors.mutedText} /> : null}
+        {loading ? <ActivityIndicator size="small" color={colors.textSecondary} /> : null}
         <Text style={{ ...typography.caption, color: colors.text, fontWeight: "600", marginLeft: loading ? spacing.sm : 0 }}>
           {label}
         </Text>
@@ -1974,6 +1992,8 @@ export function CommentsSection({
   error: string | null;
   onLinkPress?: (url: string) => void;
 }) {
+  const { colors, spacing, typography } = useTheme();
+  const { t } = useTranslation("tickets");
   const startIndex = Math.max(0, comments.length - visibleCount);
   const visible = comments.slice(startIndex);
 
@@ -1989,8 +2009,8 @@ export function CommentsSection({
       }}
     >
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <Text accessibilityRole="header" style={{ ...typography.caption, color: colors.mutedText }}>
-          Comments
+        <Text accessibilityRole="header" style={{ ...typography.caption, color: colors.textSecondary }}>
+          {t("comments.label")}
         </Text>
         {comments.length > 0 ? (
           <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -1999,10 +2019,10 @@ export function CommentsSection({
                 <Pressable
                   onPress={onJumpToTop}
                   accessibilityRole="button"
-                  accessibilityLabel="Jump to top"
+                  accessibilityLabel={t("comments.jumpToTop")}
                   style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
                 >
-                  <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>Top</Text>
+                  <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>{t("comments.top")}</Text>
                 </Pressable>
                 <View style={{ width: spacing.md }} />
               </>
@@ -2010,10 +2030,10 @@ export function CommentsSection({
             <Pressable
               onPress={onJumpToLatest}
               accessibilityRole="button"
-              accessibilityLabel="Jump to latest comment"
+              accessibilityLabel={t("comments.jumpToLatest")}
               style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
             >
-              <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>Latest</Text>
+              <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>{t("comments.latest")}</Text>
             </Pressable>
           </View>
         ) : null}
@@ -2024,7 +2044,7 @@ export function CommentsSection({
       ) : null}
 
       {comments.length === 0 ? (
-        <Text style={{ ...typography.body, marginTop: spacing.sm, color: colors.mutedText }}>No comments.</Text>
+        <Text style={{ ...typography.body, marginTop: spacing.sm, color: colors.textSecondary }}>{t("comments.noComments")}</Text>
       ) : (
         <View style={{ marginTop: spacing.sm }}>
           {visible.map((c, idx) => {
@@ -2034,9 +2054,9 @@ export function CommentsSection({
             const isOptimistic = Boolean((c as any).optimistic);
             const commentPlainText = extractPlainTextFromSerializedRichEditorContent(c.comment_text);
             const eventText = ((c as any).event_text as string | undefined) ?? (eventType ? `${eventType}: ${commentPlainText}` : commentPlainText);
-            const badgeLabel = isSystemEvent ? "Event" : isOptimistic ? "Sending" : c.is_internal ? "Internal" : "Public";
-            const accessibilityLabel = `${badgeLabel}. ${c.created_by_name ?? "Unknown"}. ${formatDateTimeWithRelative(c.created_at)}. ${
-              isSystemEvent ? eventText : commentPlainText || "Rich comment"
+            const badgeLabel = isSystemEvent ? t("comments.event") : isOptimistic ? t("comments.sending") : c.is_internal ? t("comments.internal") : t("comments.public");
+            const accessibilityLabel = `${badgeLabel}. ${c.created_by_name ?? t("common:unknown")}. ${formatDateTimeWithRelative(c.created_at)}. ${
+              isSystemEvent ? eventText : commentPlainText || t("comments.richComment")
             }`;
 
             return (
@@ -2047,16 +2067,16 @@ export function CommentsSection({
                 style={{ marginTop: idx === 0 ? 0 : spacing.md, opacity: isOptimistic ? 0.75 : 1 }}
               >
                 <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center" }}>
-                  <Text style={{ ...typography.caption, color: colors.mutedText }}>
-                    {c.created_by_name ?? "Unknown"} • {formatDateTimeWithRelative(c.created_at)}
+                  <Text style={{ ...typography.caption, color: colors.textSecondary }}>
+                    {c.created_by_name ?? t("common:unknown")} • {formatDateTimeWithRelative(c.created_at)}
                   </Text>
                   <View style={{ width: spacing.sm }} />
                   {isSystemEvent ? (
-                    <Badge label="Event" tone="neutral" />
+                    <Badge label={t("comments.event")} tone="neutral" />
                   ) : isOptimistic ? (
-                    <Badge label="Sending…" tone="neutral" />
+                    <Badge label={t("comments.sending")} tone="neutral" />
                   ) : (
-                    <Badge label={c.is_internal ? "Internal" : "Public"} tone={c.is_internal ? "warning" : "info"} />
+                    <Badge label={c.is_internal ? t("comments.internal") : t("comments.public")} tone={c.is_internal ? "warning" : "info"} />
                   )}
                 </View>
                 {isSystemEvent ? (
@@ -2074,7 +2094,7 @@ export function CommentsSection({
                         content={c.comment_text}
                         editable={false}
                         height={96}
-                        loadingLabel="Loading comment…"
+                        loadingLabel={t("comments.loadingComment")}
                         onLinkPress={onLinkPress}
                       />
                     </View>
@@ -2089,11 +2109,11 @@ export function CommentsSection({
               <Pressable
                 onPress={onLoadMore}
                 accessibilityRole="button"
-                accessibilityLabel="Load more comments"
+                accessibilityLabel={t("comments.loadMoreAccessibility")}
                 style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
               >
                 <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>
-                  Load more ({startIndex} remaining)
+                  {t("comments.loadMore", { count: startIndex })}
                 </Text>
               </Pressable>
             </View>
@@ -2133,6 +2153,8 @@ export function DescriptionSection({
   onSave: () => void;
   onDraftChange: (content: string, plainText: string) => void;
 }) {
+  const { colors, spacing, typography } = useTheme();
+  const { t } = useTranslation("tickets");
   const description = extractDescription(ticket);
 
   return (
@@ -2146,8 +2168,8 @@ export function DescriptionSection({
         borderRadius: 10,
       }}
     >
-      <Text accessibilityRole="header" style={{ ...typography.caption, color: colors.mutedText }}>
-        Description
+      <Text accessibilityRole="header" style={{ ...typography.caption, color: colors.textSecondary }}>
+        {t("description.label")}
       </Text>
       <View style={{ marginTop: spacing.sm }}>
         {isEditing ? (
@@ -2158,7 +2180,7 @@ export function DescriptionSection({
               editable={!saving}
               showToolbar
               height={220}
-              loadingLabel="Loading description editor…"
+              loadingLabel={t("description.loadingEditor")}
               onContentChange={({ json }) => {
                 onDraftChange(
                   serializeRichEditorJson(json),
@@ -2166,8 +2188,8 @@ export function DescriptionSection({
                 );
               }}
             />
-            <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
-              {draftPlainText.length} characters
+            <Text style={{ ...typography.caption, color: colors.textSecondary, marginTop: spacing.sm }}>
+              {t("description.characters", { count: draftPlainText.length })}
             </Text>
             {error ? (
               <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
@@ -2175,9 +2197,9 @@ export function DescriptionSection({
               </Text>
             ) : null}
             <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm }}>
-              <ActionChip label="Cancel" onPress={onCancelEditing} disabled={saving} />
+              <ActionChip label={t("common:cancel")} onPress={onCancelEditing} disabled={saving} />
               <View style={{ width: spacing.sm }} />
-              <ActionChip label={saving ? "Saving…" : "Save"} onPress={onSave} disabled={saving} loading={saving} />
+              <ActionChip label={saving ? t("common:saving") : t("common:save")} onPress={onSave} disabled={saving} loading={saving} />
             </View>
           </>
         ) : description && !isMalformedRichEditorContent(description) ? (
@@ -2186,12 +2208,12 @@ export function DescriptionSection({
               content={description}
               editable={false}
               height={140}
-              loadingLabel="Loading description…"
+              loadingLabel={t("description.loadingDescription")}
               onLinkPress={onLinkPress}
               qaAutoPressFirstLink={qaAutoPressFirstLink}
             />
             <View style={{ marginTop: spacing.sm }}>
-              <ActionChip label="Edit description" onPress={onStartEditing} />
+              <ActionChip label={t("description.edit")} onPress={onStartEditing} />
             </View>
           </>
         ) : (
@@ -2200,7 +2222,7 @@ export function DescriptionSection({
               {description ? extractPlainTextFromSerializedRichEditorContent(description) : draftPlainText || "—"}
             </Text>
             <View style={{ marginTop: spacing.sm }}>
-              <ActionChip label="Add description" onPress={onStartEditing} />
+              <ActionChip label={t("description.add")} onPress={onStartEditing} />
             </View>
           </>
         )}
@@ -2210,6 +2232,7 @@ export function DescriptionSection({
 }
 
 function KeyValue({ label, value }: { label: string; value: string }) {
+  const { colors, spacing, typography } = useTheme();
   return (
     <View
       style={{
@@ -2221,7 +2244,7 @@ function KeyValue({ label, value }: { label: string; value: string }) {
         borderRadius: 10,
       }}
     >
-      <Text style={{ ...typography.caption, color: colors.mutedText }}>{label}</Text>
+      <Text style={{ ...typography.caption, color: colors.textSecondary }}>{label}</Text>
       <Text style={{ ...typography.body, color: colors.text, marginTop: 2 }}>{value}</Text>
     </View>
   );

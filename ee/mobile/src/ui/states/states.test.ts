@@ -7,8 +7,16 @@ vi.mock("react-native", () => {
     Text: Stub,
     ActivityIndicator: Stub,
     Pressable: Stub,
+    Platform: { OS: "ios" },
+    useColorScheme: () => "light",
   };
 });
+
+vi.mock("expo-secure-store", () => ({
+  getItemAsync: vi.fn().mockResolvedValue(null),
+  setItemAsync: vi.fn().mockResolvedValue(undefined),
+  deleteItemAsync: vi.fn().mockResolvedValue(undefined),
+}));
 
 describe("ui states", () => {
   it("exports standard empty/loading/error state components", async () => {
@@ -18,4 +26,3 @@ describe("ui states", () => {
     expect(typeof mod.ErrorState).toBe("function");
   });
 });
-

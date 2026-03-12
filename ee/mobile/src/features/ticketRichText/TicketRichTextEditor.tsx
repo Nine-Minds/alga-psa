@@ -8,7 +8,7 @@ import type {
   TicketMobileEditorCommand,
   TicketMobileEditorStatePayload,
 } from "./types";
-import { colors, spacing, typography } from "../../ui/theme";
+import { useTheme } from "../../ui/ThemeContext";
 import {
   createTicketRichTextInjectionScript,
   getTicketRichTextNavigationDecision,
@@ -82,7 +82,7 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
       debounceMs,
       showToolbar = false,
       requestTimeoutMs,
-      loadingLabel = "Loading editor…",
+      loadingLabel = "Loading editor...",
       onReadyChange,
       onStateChange,
       onContentChange,
@@ -92,6 +92,7 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
     },
     ref,
   ) {
+    const theme = useTheme();
     const webViewRef = useRef<WebView>(null);
     const bridgeRef = useRef<TicketMobileEditorBridgeClient | null>(null);
     const hasLoadedRef = useRef(false);
@@ -300,6 +301,7 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
     };
 
     const toolbarEditable = ready && state.editable;
+    const overlayBg = theme.mode === "dark" ? "rgba(0,0,0,0.72)" : "rgba(255,255,255,0.72)";
 
     return (
       <View>
@@ -317,10 +319,10 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
           style={{
             minHeight: height,
             borderWidth: 1,
-            borderColor: colors.border,
+            borderColor: theme.colors.border,
             borderRadius: 10,
             overflow: "hidden",
-            backgroundColor: colors.card,
+            backgroundColor: theme.colors.card,
             position: "relative",
           }}
         >
@@ -352,11 +354,11 @@ export const TicketRichTextEditor = forwardRef<TicketRichTextEditorRef, TicketRi
                 inset: 0,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: "rgba(255,255,255,0.72)",
+                backgroundColor: overlayBg,
               }}
             >
-              <ActivityIndicator color={colors.primary} />
-              <Text style={{ ...typography.caption, color: colors.mutedText, marginTop: spacing.sm }}>
+              <ActivityIndicator color={theme.colors.primary} />
+              <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.sm }}>
                 {loadingLabel}
               </Text>
             </View>
