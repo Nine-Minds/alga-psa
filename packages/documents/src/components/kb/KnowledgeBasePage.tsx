@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -37,6 +37,8 @@ interface KnowledgeBasePageProps {
 
 export default function KnowledgeBasePage({ activeTab = 'articles' }: KnowledgeBasePageProps) {
   const { t } = useTranslation('features/documents');
+  const tRef = useRef(t);
+  tRef.current = t;
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -80,7 +82,7 @@ export default function KnowledgeBasePage({ activeTab = 'articles' }: KnowledgeB
     try {
       const result = await getArticlesWithTags(currentPage, pageSize, filters);
       if (typeof result === 'object' && 'code' in result) {
-        toast.error(t('kb.loadError', 'Failed to load articles'));
+        toast.error(tRef.current('kb.loadError', 'Failed to load articles'));
         return;
       }
       const data = result as {
@@ -96,11 +98,11 @@ export default function KnowledgeBasePage({ activeTab = 'articles' }: KnowledgeB
       setArticleTags(data.articleTags);
       setAvailableTags(data.availableTags);
     } catch (error) {
-      handleError(error, t('kb.loadError', 'Failed to load articles'));
+      handleError(error, tRef.current('kb.loadError', 'Failed to load articles'));
     } finally {
       setIsLoadingArticles(false);
     }
-  }, [currentPage, pageSize, filters, t]);
+  }, [currentPage, pageSize, filters]);
 
   useEffect(() => {
     fetchArticles();
