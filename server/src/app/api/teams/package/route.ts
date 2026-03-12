@@ -1,7 +1,8 @@
-import { dynamic, runtime, eeUnavailable } from '../_ceStub';
+import { eeUnavailable } from '../_ceStub';
 import { loadTeamsEeRoute, teamsOptionsResponse } from '../_eeDelegator';
 
-export { dynamic, runtime };
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 type EeRouteModule = {
   GET?: (req: Request) => Promise<Response>;

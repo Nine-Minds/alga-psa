@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { XeroAdapter } from '@alga-psa/billing/services';
 import { AccountingExportAdapterContext } from '@alga-psa/types';
 import { AccountingMappingResolver } from '@alga-psa/billing';
-import { XeroClientService } from 'server/src/lib/xero/xeroClientService';
+import { XeroClientService } from '@alga-psa/integrations/lib/xero/xeroClientService';
 import * as dbModule from 'server/src/lib/db';
 
 /**

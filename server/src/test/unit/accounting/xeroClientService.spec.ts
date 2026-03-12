@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { AxiosRequestConfig } from 'axios';
 import axios from 'axios';
 
-import { XeroClientService } from 'server/src/lib/xero/xeroClientService';
-import type { XeroInvoicePayload } from 'server/src/lib/xero/xeroClientService';
+import { XeroClientService } from '@alga-psa/integrations/lib/xero/xeroClientService';
+import type { XeroInvoicePayload } from '@alga-psa/integrations/lib/xero/xeroClientService';
 
 /**
  * Spec references:
