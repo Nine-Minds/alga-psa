@@ -31,13 +31,13 @@ import { fetchBundleChildrenForMaster } from '../actions/optimizedTicketActions'
 import { XCircle, Clock } from 'lucide-react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { useIntervalTracking, useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useIntervalTracking } from '@alga-psa/ui/hooks';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { createTicketColumns } from '@alga-psa/tickets/lib';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+
 import QuickAddCategory from './QuickAddCategory';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
@@ -127,12 +127,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const router = useRouter();
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['ticket']);
-  const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
-  // Ref to avoid teamsV2Enabled as a dep of the filter useEffect.
-  // The flag loads async (~200ms) from PostHog, and including it in deps
-  // causes a spurious fetch on every mount when the flag resolves.
-  const teamsV2EnabledRef = useRef(teamsV2Enabled);
-  teamsV2EnabledRef.current = teamsV2Enabled;
 
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
   const [selectedTicketIds, setSelectedTicketIds] = useState<Set<string>>(new Set());
@@ -198,13 +192,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
-  // Teams are now provided via initialTeams from server-side fetch
-  useEffect(() => {
-    if (!teamsV2Enabled) {
-      setTeams([]);
-      setSelectedTeams([]);
-    }
-  }, [teamsV2Enabled]);
 
   // Tag-related state
   const [selectedTags, setSelectedTags] = useState<string[]>(initialFilterValues.tags || []);
@@ -267,7 +254,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setTeamAvatarUrls(initialTeamAvatarUrls);
   }, [initialTeamAvatarUrls]);
 
-  const shouldSkipNextFilterEmitRef = useRef(false);
+  // Counter-based skip: sync effect increments, filter-emit decrements.
+  // This covers BOTH the same-render and next-render filter-emit invocations
+  // that result from the sync effect's batched state updates.
+  const skipFilterEmitCountRef = useRef(0);
   const prevInitialFilterValuesRef = useRef(initialFilterValues);
 
   // Keep local filter controls in sync with URL-derived props (for back/forward restoration).
@@ -302,7 +292,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       return;
     }
 
-    shouldSkipNextFilterEmitRef.current = true;
+    // Skip the next 2 filter-emit invocations: the sync effect's setState calls
+    // create new array refs (e.g. []) that trigger the filter-emit effect twice —
+    // once in the same commit and once in the subsequent batched-update render.
+    skipFilterEmitCountRef.current = 2;
     setSelectedBoard(next.boardId ?? null);
     setSelectedClient(next.clientId ?? null);
     setSelectedStatus(next.statusId ?? 'open');
@@ -312,7 +305,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setBoardFilterState(next.boardFilterState ?? 'active');
     setSelectedTags(next.tags ?? []);
     setSelectedAssignees(next.assignedToIds ?? []);
-    setSelectedTeams(teamsV2EnabledRef.current ? (next.assignedTeamIds ?? []) : []);
+    setSelectedTeams(next.assignedTeamIds ?? []);
     setIncludeUnassigned(next.includeUnassigned ?? false);
     setSelectedDueDateFilter(next.dueDateFilter ?? 'all');
     setDueDateFilterValue((() => {
@@ -324,7 +317,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setBundleView(next.bundleView ?? 'bundled');
   }, [
     initialFilterValues
-    // teamsV2Enabled read via ref — async PostHog resolution should not re-trigger this sync effect
   ]);
 
   // Ticket tags are now provided via initialTicketTags from server-side consolidated fetch
@@ -413,7 +405,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (selectedAssignees.length > 0) {
       params.set('assignedToIds', selectedAssignees.join(','));
     }
-    if (teamsV2Enabled && selectedTeams.length > 0) {
+    if (selectedTeams.length > 0) {
       params.set('assignedTeamIds', selectedTeams.join(','));
     }
     if (includeUnassigned) {
@@ -453,7 +445,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (pageSize !== 10) params.set('pageSize', String(pageSize));
 
     return params.toString();
-  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, dueDateFilterValue, bundleView, selectedResponseState, selectedTags, sortBy, sortDirection, currentPage, pageSize, teamsV2Enabled]);
+  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, dueDateFilterValue, bundleView, selectedResponseState, selectedTags, sortBy, sortDirection, currentPage, pageSize]);
 
   const isFirstRender = useRef(true);
 
@@ -465,8 +457,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       isFirstRender.current = false;
       return;
     }
-    if (shouldSkipNextFilterEmitRef.current) {
-      shouldSkipNextFilterEmitRef.current = false;
+    if (skipFilterEmitCountRef.current > 0) {
+      skipFilterEmitCountRef.current--;
       return;
     }
 
@@ -481,8 +473,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       showOpenOnly: selectedStatus === 'open',
       tags: selectedTags.length > 0 ? selectedTags : undefined,
       assignedToIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
-      assignedTeamIds: teamsV2EnabledRef.current && selectedTeams.length > 0 ? selectedTeams : undefined,
-      includeUnassigned: includeUnassigned || undefined,
+      assignedTeamIds: selectedTeams.length > 0 ? selectedTeams : undefined,
+      includeUnassigned: includeUnassigned || false,
       dueDateFilter: selectedDueDateFilter !== 'all' ? selectedDueDateFilter as ITicketListFilters['dueDateFilter'] : undefined,
       dueDateFrom: selectedDueDateFilter === 'after' && dueDateFilterValue ? dueDateFilterValue.toISOString() : undefined,
       dueDateTo: selectedDueDateFilter === 'before' && dueDateFilterValue ? dueDateFilterValue.toISOString() : undefined,
@@ -511,7 +503,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     dueDateFilterValue,
     selectedResponseState,
     selectedSlaStatus
-    // teamsV2Enabled intentionally omitted — read via ref to avoid spurious fetch on mount when PostHog resolves async
     // onFiltersChanged intentionally omitted — we want to trigger only when filter values change, not when the callback changes
   ]);
 
@@ -1343,8 +1334,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   onClientTypeFilterChange={handleClientTypeFilterChange}
                   fitContent={true}
                 />
-                {teamsV2Enabled ? (
-                  <MultiUserAndTeamPicker
+                <MultiUserAndTeamPicker
                     id={`${id}-assignee-filter`}
                     users={initialUsers}
                     values={selectedAssignees}
@@ -1361,21 +1351,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     showSearch={true}
                     compactDisplay={true}
                   />
-                ) : (
-                  <MultiUserPicker
-                    id={`${id}-assignee-filter`}
-                    users={initialUsers}
-                    values={selectedAssignees}
-                    onValuesChange={setSelectedAssignees}
-                    getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                    filterMode={true}
-                    includeUnassigned={includeUnassigned}
-                    onUnassignedChange={setIncludeUnassigned}
-                    placeholder="All Assignees"
-                    showSearch={true}
-                    compactDisplay={true}
-                  />
-                )}
                 <CustomSelect
                   data-automation-id={`${id}-status-select`}
                   options={statusOptions}

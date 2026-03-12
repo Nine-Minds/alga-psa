@@ -3,7 +3,7 @@
  * This is a pure utility (not a server action), so it lives here.
  */
 export function getShareUrl(token: string, baseUrl?: string): string {
-  const base = baseUrl || process.env.NEXT_PUBLIC_APP_URL || '';
+  const base = baseUrl || process.env.NEXT_PUBLIC_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : '');
   return `${base}/share/${token}`;
 }
 
