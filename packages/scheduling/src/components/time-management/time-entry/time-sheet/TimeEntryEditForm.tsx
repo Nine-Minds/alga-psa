@@ -47,7 +47,9 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   onUpdateTimeInputs,
   lastNoteInputRef,
   date,
-  isNewEntry = false
+  isNewEntry = false,
+  isSaving = false,
+  disableSave = false
 }: TimeEntryFormProps) {
   // Use work item times for ad-hoc entries - only update if values actually changed
   useEffect(() => {
@@ -600,8 +602,9 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               variant="default"
               size="default"
               className="w-32"
+              disabled={disableSave}
             >
-              Save
+              {isSaving ? 'Saving...' : 'Save'}
             </Button>
           </div>
         </div>

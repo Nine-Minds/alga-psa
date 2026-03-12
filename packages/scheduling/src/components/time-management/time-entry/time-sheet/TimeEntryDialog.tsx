@@ -91,6 +91,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     index: null
   });
   const [closeConfirmation, setCloseConfirmation] = useState(false);
+  const [activeSave, setActiveSave] = useState<{ source: 'dialog' | 'entry'; index: number } | null>(null);
 
   // Initialize entries when dialog opens
   useEffect(() => {
@@ -169,8 +170,9 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     setShouldFocusNotes(true);
   }, [isEditable, date, entries, workItem, defaultTaxRegion, updateEntry, setEditingIndex]);
 
-  const handleSaveEntry = useCallback(async (index: number) => {
+  const handleSaveEntry = useCallback(async (index: number, source: 'dialog' | 'entry' = 'entry') => {
     if (!isEditable) return;
+    if (activeSave) return;
   
     const entry = entries[index];
     const shouldKeepDialogOpen = entries.length > 1;
@@ -210,6 +212,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     const loadingToast = toast.loading('Saving time entry...');
 
     try {
+      setActiveSave({ source, index });
       const { isNew, isDirty, tempId, ...cleanedEntry } = entry;
 
       // Calculate actual duration for validation purposes
@@ -287,8 +290,10 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     } catch (error) {
       toast.dismiss(loadingToast);
       handleError(error, 'Failed to save time entry. Please try again.');
+    } finally {
+      setActiveSave(null);
     }
-  }, [isEditable, timeSheetId, entries, services, workItem, onSave, onTimeEntriesUpdate, onClose, initializeEntries, date, defaultTaxRegion, setEditingIndex]);
+  }, [activeSave, isEditable, timeSheetId, entries, services, workItem, onSave, onTimeEntriesUpdate, onClose, initializeEntries, date, defaultTaxRegion, setEditingIndex]);
 
   const deleteTimeEntryAtIndex = async (index: number) => {
     try {
@@ -368,15 +373,16 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       onClose();
       return;
     }
+    if (activeSave) return;
 
     // Find the first entry that needs to be saved
     const entryToSave = entries.findIndex(entry => entry.isDirty || entry.isNew);
     if (entryToSave !== -1) {
-      await handleSaveEntry(entryToSave);
+      await handleSaveEntry(entryToSave, 'dialog');
     } else {
       onClose();
     }
-  }, [entries, handleSaveEntry, isEditable, onClose]);
+  }, [activeSave, entries, handleSaveEntry, isEditable, onClose]);
 
   const hasExistingEntries = Boolean(existingEntries && existingEntries.length > 0);
   const title = hasExistingEntries
@@ -406,6 +412,8 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
             onUpdateTimeInputs={updateTimeInputs}
             onAddEntry={handleAddEntry}
             date={date}
+            savingEntryIndex={activeSave?.source === 'entry' ? activeSave.index : null}
+            disableSaveActions={activeSave !== null}
           />
         ) : (
           <div className="mt-2">
@@ -440,8 +448,9 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
               id={`${id}-save-dialog-btn`}
               onClick={handleSaveAll}
               variant="default"
+              disabled={activeSave !== null}
             >
-              Save
+              {activeSave?.source === 'dialog' ? 'Saving...' : 'Save'}
             </Button>
           )}
         </DialogFooter>
