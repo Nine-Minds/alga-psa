@@ -1004,7 +1004,19 @@ const nextConfig = {
   },
   // Externalize Node.js-only packages with native dependencies from server bundles.
   // This prevents Turbopack from bundling them with mangled names.
-  serverExternalPackages: ['puppeteer', 'sharp'],
+  serverExternalPackages: [
+    'puppeteer',
+    'sharp',
+    '@opentelemetry/sdk-node',
+    '@opentelemetry/auto-instrumentations-node',
+    '@opentelemetry/exporter-trace-otlp-grpc',
+    '@opentelemetry/exporter-metrics-otlp-grpc',
+    '@opentelemetry/sdk-metrics',
+    '@opentelemetry/sdk-trace-base',
+    '@opentelemetry/resources',
+    '@opentelemetry/semantic-conventions',
+    '@opentelemetry/api',
+  ],
   // Note: output: 'standalone' was removed due to static page generation issues
   generateBuildId: async () => {
     return 'build-' + Date.now();
