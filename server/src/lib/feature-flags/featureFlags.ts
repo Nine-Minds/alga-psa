@@ -12,6 +12,7 @@ const DEFAULT_BOOLEAN_FLAGS: Record<string, boolean> = {
   'enable_billing': true,
   'enable_reporting': true,
   'email-configuration': false, // Email configuration feature flag (disabled by default)
+  'ai-assistant-activation': false,
   
   // New features (disabled by default)
   'new_ticket_ui': false,
@@ -76,6 +77,7 @@ export interface FeatureFlagVariant {
 export class FeatureFlags {
   private client: PostHog | null = null;
   private flagCache: Map<string, { value: boolean | string; timestamp: number }> = new Map();
+  private manualOverrides: Map<string, boolean | string> = new Map();
   private readonly CACHE_TTL = 60000; // 1 minute cache
   private anonymizeUserIds: boolean;
 
@@ -108,8 +110,15 @@ export class FeatureFlags {
       return true;
     }
 
+    const override = this.manualOverrides.get(flagKey);
+    if (typeof override === 'boolean') {
+      return override;
+    }
+
+    const cacheKey = this.getCacheKey(flagKey, context);
+
     // Check cache first
-    const cached = this.getCachedValue(flagKey);
+    const cached = this.getCachedValue(cacheKey);
     if (cached !== null && typeof cached === 'boolean') {
       return cached;
     }
@@ -133,7 +142,7 @@ export class FeatureFlags {
       );
 
       // Cache the result
-      this.setCachedValue(flagKey, isEnabled || false);
+      this.setCachedValue(cacheKey, isEnabled || false);
 
       // Track feature flag evaluation
       if (context.userId) {
@@ -161,8 +170,15 @@ export class FeatureFlags {
     flagKey: string,
     context: FeatureFlagContext = {}
   ): Promise<string | null> {
+    const override = this.manualOverrides.get(flagKey);
+    if (typeof override === 'string') {
+      return override;
+    }
+
+    const cacheKey = this.getCacheKey(flagKey, context);
+
     // Check cache first
-    const cached = this.getCachedValue(flagKey);
+    const cached = this.getCachedValue(cacheKey);
     if (cached !== null && typeof cached === 'string') {
       return cached;
     }
@@ -192,7 +208,7 @@ export class FeatureFlags {
       
       // Cache the result
       if (variantValue) {
-        this.setCachedValue(flagKey, variantValue);
+        this.setCachedValue(cacheKey, variantValue);
       }
 
       // Track variant assignment
@@ -249,14 +265,14 @@ export class FeatureFlags {
    * Manually override a feature flag (useful for testing)
    */
   setOverride(flagKey: string, value: boolean | string): void {
-    this.setCachedValue(flagKey, value, Infinity); // Never expire overrides
+    this.manualOverrides.set(flagKey, value);
   }
 
   /**
    * Clear a manual override
    */
   clearOverride(flagKey: string): void {
-    this.flagCache.delete(flagKey);
+    this.manualOverrides.delete(flagKey);
   }
 
   /**
@@ -264,6 +280,34 @@ export class FeatureFlags {
    */
   clearCache(): void {
     this.flagCache.clear();
+  }
+
+  private getCacheKey(flagKey: string, context: FeatureFlagContext): string {
+    return JSON.stringify({
+      flagKey,
+      userId: context.userId ?? null,
+      tenantId: context.tenantId ?? null,
+      userRole: context.userRole ?? null,
+      companySize: context.companySize ?? null,
+      subscriptionPlan: context.subscriptionPlan ?? null,
+      customProperties: this.normalizeForCache(context.customProperties),
+    });
+  }
+
+  private normalizeForCache(value: unknown): unknown {
+    if (Array.isArray(value)) {
+      return value.map((item) => this.normalizeForCache(item));
+    }
+
+    if (value && typeof value === 'object') {
+      return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>)
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([key, nested]) => [key, this.normalizeForCache(nested)])
+      );
+    }
+
+    return value ?? null;
   }
 
   /**
@@ -350,8 +394,8 @@ export class FeatureFlags {
   /**
    * Helper: Set cached value
    */
-  private setCachedValue(flagKey: string, value: boolean | string, ttl?: number): void {
-    this.flagCache.set(flagKey, {
+  private setCachedValue(cacheKey: string, value: boolean | string): void {
+    this.flagCache.set(cacheKey, {
       value,
       timestamp: Date.now(),
     });
