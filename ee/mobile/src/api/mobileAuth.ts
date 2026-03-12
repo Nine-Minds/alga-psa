@@ -17,7 +17,7 @@ export type ExchangeOttResponse = {
   refreshToken: string;
   expiresInSec: number;
   tenantId?: string;
-  user?: { id: string; email?: string; name?: string };
+  user?: { id: string; email?: string; name?: string; avatarUrl?: string };
 };
 
 export function exchangeOtt(

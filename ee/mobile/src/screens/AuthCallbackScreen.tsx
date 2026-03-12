@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Platform, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import * as Application from "expo-application";
+import { useTranslation } from "react-i18next";
 import type { RootStackParamList } from "../navigation/types";
 import { ErrorState, LoadingState } from "../ui/states";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
@@ -19,23 +20,24 @@ import { decodeQaSession, parseTicketRichTextQaScenario } from "../qa/ticketRich
 
 type Props = NativeStackScreenProps<RootStackParamList, "AuthCallback">;
 
-function mapAuthCallbackError(code: string): string {
+function mapAuthCallbackError(code: string, t: (key: string) => string): string {
   const normalized = code.trim().toLowerCase();
   switch (normalized) {
     case "invalid_redirect":
-      return "Sign-in is misconfigured for this app. Please contact your administrator and try again.";
+      return t("callback.errors.invalidRedirect");
     case "rate_limited":
-      return "Too many sign-in attempts. Please wait a moment and try again.";
+      return t("callback.errors.rateLimited");
     case "client_not_allowed":
-      return "Client portal users can’t sign in to the mobile app. Please use an internal account.";
+      return t("callback.errors.clientNotAllowed");
     case "host_not_allowlisted":
-      return "This server domain is not allowed for mobile sign-in.";
+      return t("callback.errors.hostNotAllowlisted");
     default:
       return code;
   }
 }
 
 export function AuthCallbackScreen({ navigation, route }: Props) {
+  const { t } = useTranslation("auth");
   const [error, setError] = useState<string | null>(null);
   const { setSession } = useAuth();
   const exchangeInFlight = useRef(false);
@@ -59,7 +61,7 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
 
         if (callbackError) {
           analytics.trackEvent(MobileAnalyticsEvents.authCallbackFailed, { reason: callbackError });
-          setError(mapAuthCallbackError(callbackError));
+          setError(mapAuthCallbackError(callbackError, t));
           return;
         }
 
@@ -93,7 +95,7 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
 
         if (!ott || !state) {
           analytics.trackEvent(MobileAnalyticsEvents.authCallbackFailed, { reason: "missing_params" });
-          setError("Missing required sign-in parameters.");
+          setError(t("callback.errors.missingParams"));
           return;
         }
 
@@ -101,7 +103,7 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
           const pending = await getPendingMobileAuth();
           if (!pending || pending.state !== state) {
             analytics.trackEvent(MobileAnalyticsEvents.authCallbackFailed, { reason: "state_mismatch" });
-            setError("This sign-in link is not valid for the current session. Please try again.");
+            setError(t("callback.errors.stateMismatch"));
             return;
           }
 
@@ -159,7 +161,7 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
             status: ticketCheck.status ?? null,
           });
           await Promise.allSettled([clearPendingMobileAuth(), clearReceivedOtt()]);
-          setError("Your account does not have permission to view tickets. Please contact your administrator.");
+          setError(t("callback.errors.noPermission"));
           return;
         }
 
@@ -175,7 +177,7 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
         await clearReceivedOtt();
       } catch (e) {
         logger.error("Failed to handle auth callback", { error: e });
-        if (!canceled) setError("Failed to complete sign-in. Please try again.");
+        if (!canceled) setError(t("callback.errors.failedComplete"));
       } finally {
         exchangeInFlight.current = false;
       }
@@ -201,11 +203,11 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
   if (error) {
     return (
       <ErrorState
-        title="Sign-in failed"
+        title={t("callback.failed")}
         description={error}
         action={
           <PrimaryButton onPress={() => navigation.reset({ index: 0, routes: [{ name: "SignIn" }] })}>
-            Back to sign-in
+            {t("callback.backToSignIn")}
           </PrimaryButton>
         }
       />
@@ -214,7 +216,7 @@ export function AuthCallbackScreen({ navigation, route }: Props) {
 
   return (
     <View style={{ flex: 1 }}>
-      <LoadingState message="Completing sign-in…" />
+      <LoadingState message={t("callback.completing")} />
     </View>
   );
 }

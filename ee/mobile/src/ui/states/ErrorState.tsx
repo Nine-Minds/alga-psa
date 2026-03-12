@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Text, View } from "react-native";
-import { colors, spacing, typography } from "../theme";
+import { useTheme } from "../ThemeContext";
 
 export function ErrorState({
   title = "Something went wrong",
@@ -11,24 +11,24 @@ export function ErrorState({
   description?: string;
   action?: ReactNode;
 }) {
+  const theme = useTheme();
   return (
     <View
       style={{
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
-        padding: spacing.xl,
-        backgroundColor: colors.background,
+        padding: theme.spacing.xl,
+        backgroundColor: theme.colors.background,
       }}
     >
-      <Text style={{ ...typography.title, textAlign: "center", color: colors.danger }}>{title}</Text>
+      <Text style={{ ...theme.typography.title, textAlign: "center", color: theme.colors.danger }}>{title}</Text>
       {description ? (
-        <Text style={{ ...typography.body, marginTop: spacing.md, textAlign: "center", color: colors.mutedText }}>
+        <Text style={{ ...theme.typography.body, marginTop: theme.spacing.md, textAlign: "center", color: theme.colors.textSecondary }}>
           {description}
         </Text>
       ) : null}
-      {action ? <View style={{ marginTop: spacing.lg }}>{action}</View> : null}
+      {action ? <View style={{ marginTop: theme.spacing.lg }}>{action}</View> : null}
     </View>
   );
 }
-
