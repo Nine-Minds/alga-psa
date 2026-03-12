@@ -1128,6 +1128,7 @@ function ReportsList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedReport, setSelectedReport] = useState<PlatformReport | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
 
   useEffect(() => {
     fetchReports();
@@ -1161,6 +1162,18 @@ function ReportsList() {
           Retry
         </Button>
       </div>
+    );
+  }
+
+  if (showCreate) {
+    return (
+      <CreateReport
+        onBack={() => setShowCreate(false)}
+        onCreated={() => {
+          setShowCreate(false);
+          fetchReports();
+        }}
+      />
     );
   }
 
@@ -1233,15 +1246,20 @@ function ReportsList() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2 style={{ margin: 0 }}>Platform Reports</h2>
-        <Button variant="outline" onClick={fetchReports}>
-          Refresh
-        </Button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <Button variant="outline" onClick={fetchReports}>
+            Refresh
+          </Button>
+          <Button onClick={() => setShowCreate(true)}>
+            + Add New
+          </Button>
+        </div>
       </div>
 
       {reports.length === 0 ? (
         <Card>
           <Text tone="muted">
-            No reports found. Create your first report using the "Create Report" tab.
+            No reports found. Click "Add New" to create your first report.
           </Text>
         </Card>
       ) : (
@@ -1436,7 +1454,7 @@ const LABEL_TONE_OPTIONS: SelectOption[] = [
   { value: 'info', label: 'Info (Blue)' },
 ];
 
-function CreateReport() {
+function CreateReport({ onBack, onCreated }: { onBack?: () => void; onCreated?: () => void } = {}) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
@@ -1646,11 +1664,15 @@ function CreateReport() {
     });
 
     if (result.success) {
-      setSuccess(true);
-      setName('');
-      setDescription('');
-      setCategory('');
-      setMetrics([]);
+      if (onCreated) {
+        onCreated();
+      } else {
+        setSuccess(true);
+        setName('');
+        setDescription('');
+        setCategory('');
+        setMetrics([]);
+      }
     } else {
       setError(result.error || 'Failed to create report');
     }
@@ -1716,6 +1738,15 @@ function CreateReport() {
 
   return (
     <div>
+      {onBack && (
+        <Button
+          variant="ghost"
+          style={{ marginBottom: '20px' }}
+          onClick={onBack}
+        >
+          ← Back to Reports
+        </Button>
+      )}
       <h2 style={{ marginTop: 0 }}>Create New Report</h2>
 
       <form onSubmit={handleSubmit}>
@@ -2354,7 +2385,7 @@ function CreateReport() {
 
         {success && (
           <Alert tone="info" style={{ marginBottom: '16px' }}>
-            Report created successfully! View it in the "Reports" tab.
+            Report created successfully!
           </Alert>
         )}
 
@@ -2511,7 +2542,22 @@ function ExecuteReport() {
       tenantParamsInReport.forEach(p => {
         parsedParams[p] = '';
       });
-      parsedParams[selectedFilterParam] = selectedFilterValue;
+      // When filtering by email or client_name, resolve to tenant UUID instead
+      // to avoid matching client portal users in the master tenant
+      if (selectedFilterParam === 'email' || selectedFilterParam === 'client_name') {
+        const matchedTenant = tenants.find(t =>
+          selectedFilterParam === 'email'
+            ? t.email === selectedFilterValue
+            : t.client_name === selectedFilterValue
+        );
+        if (matchedTenant && tenantParamsInReport.includes('tenant')) {
+          parsedParams['tenant'] = matchedTenant.tenant;
+        } else {
+          parsedParams[selectedFilterParam] = selectedFilterValue;
+        }
+      } else {
+        parsedParams[selectedFilterParam] = selectedFilterValue;
+      }
     } else {
       // Parse from JSON
       try {
@@ -2660,7 +2706,20 @@ function ExecuteReport() {
 
               {selectedFilterValue && (
                 <Text tone="muted" style={{ display: 'block', fontSize: '0.75rem', marginTop: '8px' }}>
-                  Will execute with: <code>{selectedFilterParam}={selectedFilterValue}</code>
+                  Will execute with: <code>{
+                    (selectedFilterParam === 'email' || selectedFilterParam === 'client_name')
+                      ? (() => {
+                          const matched = tenants.find(t =>
+                            selectedFilterParam === 'email'
+                              ? t.email === selectedFilterValue
+                              : t.client_name === selectedFilterValue
+                          );
+                          return matched && tenantParamsInReport.includes('tenant')
+                            ? `tenant=${matched.tenant}`
+                            : `${selectedFilterParam}=${selectedFilterValue}`;
+                        })()
+                      : `${selectedFilterParam}=${selectedFilterValue}`
+                  }</code>
                 </Text>
               )}
             </>
@@ -6157,7 +6216,7 @@ function FeatureFlagDetail({
 }
 
 // Main App
-type View = 'execute' | 'reports' | 'create' | 'tenants' | 'feature-flags' | 'audit';
+type View = 'execute' | 'reports' | 'tenants' | 'feature-flags' | 'audit';
 
 function App() {
   const [currentView, setCurrentView] = useState<View>('execute');
@@ -6186,7 +6245,6 @@ function App() {
   const tabItems: TabItem[] = [
     { key: 'execute', label: 'Execute', content: <ExecuteReport /> },
     { key: 'reports', label: 'Reports', content: <ReportsList /> },
-    { key: 'create', label: 'Create Report', content: <CreateReport /> },
     { key: 'tenants', label: 'Tenant Management', content: <TenantManagementView /> },
     { key: 'feature-flags', label: 'Feature Flags', content: <FeatureFlagsView /> },
     { key: 'audit', label: 'Audit Logs', content: <AuditLogs /> },
