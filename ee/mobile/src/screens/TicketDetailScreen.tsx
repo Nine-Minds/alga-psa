@@ -13,6 +13,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState, type RefObjec
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { getCachedTicketDetail, invalidateTicketsListCache, setCachedTicketDetail } from "../cache/ticketsCache";
 import { getCachedTicketStatuses, setCachedTicketStatuses } from "../cache/referenceDataCache";
+import { Avatar } from "../ui/components/Avatar";
 import { Badge } from "../ui/components/Badge";
 import { PrimaryButton } from "../ui/components/PrimaryButton";
 import { getSecureJson, secureStorage, setSecureJson } from "../storage/secureStorage";
@@ -1310,6 +1311,7 @@ export function TicketDetailBody({
             onJumpToTop={scrollToTop}
             error={commentsError}
             onLinkPress={handleRichTextLinkPress}
+            baseUrl={config.ok ? config.baseUrl : null}
           />
           <View style={{ height: spacing.sm }} />
           <CommentComposer
@@ -1983,6 +1985,7 @@ export function CommentsSection({
   onJumpToTop,
   error,
   onLinkPress,
+  baseUrl,
 }: {
   comments: TicketComment[];
   visibleCount: number;
@@ -1991,6 +1994,7 @@ export function CommentsSection({
   onJumpToTop: () => void;
   error: string | null;
   onLinkPress?: (url: string) => void;
+  baseUrl?: string | null;
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
@@ -2066,18 +2070,27 @@ export function CommentsSection({
                 accessibilityLabel={accessibilityLabel}
                 style={{ marginTop: idx === 0 ? 0 : spacing.md, opacity: isOptimistic ? 0.75 : 1 }}
               >
-                <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center" }}>
-                  <Text style={{ ...typography.caption, color: colors.textSecondary }}>
-                    {c.created_by_name ?? t("common:unknown")} • {formatDateTimeWithRelative(c.created_at)}
-                  </Text>
-                  <View style={{ width: spacing.sm }} />
-                  {isSystemEvent ? (
-                    <Badge label={t("comments.event")} tone="neutral" />
-                  ) : isOptimistic ? (
-                    <Badge label={t("comments.sending")} tone="neutral" />
-                  ) : (
-                    <Badge label={c.is_internal ? t("comments.internal") : t("comments.public")} tone={c.is_internal ? "warning" : "info"} />
-                  )}
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  {!isSystemEvent ? (
+                    <Avatar
+                      name={c.created_by_name ?? undefined}
+                      imageUri={c.created_by_avatar_url && baseUrl ? `${baseUrl}${c.created_by_avatar_url}` : undefined}
+                      size="sm"
+                    />
+                  ) : null}
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", flex: 1, marginLeft: isSystemEvent ? 0 : spacing.sm }}>
+                    <Text style={{ ...typography.caption, color: colors.textSecondary }}>
+                      {c.created_by_name ?? t("common:unknown")} • {formatDateTimeWithRelative(c.created_at)}
+                    </Text>
+                    <View style={{ width: spacing.sm }} />
+                    {isSystemEvent ? (
+                      <Badge label={t("comments.event")} tone="neutral" />
+                    ) : isOptimistic ? (
+                      <Badge label={t("comments.sending")} tone="neutral" />
+                    ) : (
+                      <Badge label={c.is_internal ? t("comments.internal") : t("comments.public")} tone={c.is_internal ? "warning" : "info"} />
+                    )}
+                  </View>
                 </View>
                 {isSystemEvent ? (
                   <Text style={{ ...typography.body, color: colors.text, marginTop: 2, fontStyle: "italic" }}>

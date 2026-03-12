@@ -17,6 +17,7 @@
     "signOut": "Sign out",
     "signOutConfirmTitle": "Sign out?",
     "signOutConfirmMessage": "You will need to sign in again to access tickets.",
+    "signingOut": "Signing out…",
     "signOutFailed": "Logout failed",
     "signOutFailedMessage": "Unable to sign out. Please try again."
   },

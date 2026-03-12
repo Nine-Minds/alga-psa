@@ -7,6 +7,7 @@ import { useTheme } from "../ui/ThemeContext";
 import { authenticateForUnlock, canUseBiometrics, getBiometricGateEnabled, setBiometricGateEnabled } from "../auth/biometricGate";
 import { useAuth } from "../auth/AuthContext";
 import { clearTicketsCache } from "../cache/ticketsCache";
+import { Avatar } from "../ui/components/Avatar";
 import { tryBuildHostedPathUrl } from "../urls/hostedUrls";
 import { getHideSensitiveNotificationsEnabled, setHideSensitiveNotificationsEnabled } from "../settings/privacyPreferences";
 import { formatAppVersion } from "./settingsDiagnostics";
@@ -89,17 +90,29 @@ export function SettingsScreen() {
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginBottom: theme.spacing.sm }}>
           {t("sections.account")}
         </Text>
-        <Row theme={theme} label={t("account.status")} value={session ? t("account.signedIn") : t("account.signedOut")} />
-        <View style={{ height: theme.spacing.sm }} />
-        <Row theme={theme} label={t("account.user")} value={session?.user?.email ?? session?.user?.name ?? session?.user?.id ?? "—"} />
-        <View style={{ height: theme.spacing.sm }} />
-        <Row theme={theme} label={t("account.tenant")} value={session?.tenantId ?? "—"} />
-        <View style={{ height: theme.spacing.sm }} />
-        <ToggleRow
-          theme={theme}
-          label={t("account.logout")}
-          value={t("account.signOut")}
-          disabled={logoutBusy || !session}
+        {session ? (
+          <View style={{ flexDirection: "row", alignItems: "center", marginBottom: theme.spacing.md }}>
+            <Avatar
+              name={session.user?.name ?? session.user?.email ?? undefined}
+              imageUri={session.user?.avatarUrl && config.ok ? `${config.baseUrl}${session.user.avatarUrl}` : undefined}
+              size="lg"
+            />
+            <View style={{ marginLeft: theme.spacing.md, flex: 1 }}>
+              <Text style={{ ...theme.typography.subtitle, color: theme.colors.text }}>
+                {session.user?.name ?? session.user?.email ?? "—"}
+              </Text>
+              {session.user?.name && session.user?.email ? (
+                <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }}>
+                  {session.user.email}
+                </Text>
+              ) : null}
+              <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }}>
+                {session.tenantId ?? "—"}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+        <Pressable
           onPress={() => {
             Alert.alert(t("account.signOutConfirmTitle"), t("account.signOutConfirmMessage"), [
               { text: t("common:cancel"), style: "cancel" },
@@ -122,7 +135,24 @@ export function SettingsScreen() {
               },
             ]);
           }}
-        />
+          disabled={logoutBusy || !session}
+          accessibilityRole="button"
+          accessibilityLabel={t("account.signOut")}
+          style={({ pressed }) => ({
+            paddingVertical: theme.spacing.sm,
+            paddingHorizontal: theme.spacing.md,
+            backgroundColor: theme.colors.card,
+            borderWidth: 1,
+            borderColor: theme.colors.border,
+            borderRadius: theme.borderRadius.md,
+            alignItems: "center",
+            opacity: pressed ? 0.9 : logoutBusy || !session ? 0.5 : 1,
+          })}
+        >
+          <Text style={{ ...theme.typography.body, color: theme.colors.text, fontWeight: "600" }}>
+            {logoutBusy ? t("account.signingOut") : t("account.signOut")}
+          </Text>
+        </Pressable>
       </View>
 
       <View style={{ marginTop: theme.spacing.lg }}>

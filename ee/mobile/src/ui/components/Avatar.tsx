@@ -1,4 +1,5 @@
-import { Text, View } from "react-native";
+import { Image, Text, View } from "react-native";
+import { useState } from "react";
 import { useTheme } from "../ThemeContext";
 
 const SIZES = { sm: 28, md: 36, lg: 48 } as const;
@@ -31,10 +32,13 @@ function getInitials(name: string): string {
 
 export function Avatar({
   name,
+  imageUri,
   size = "md",
   accessibilityLabel,
 }: {
   name?: string;
+  /** Remote image URL for the avatar. Falls back to initials on load failure. */
+  imageUri?: string | null;
   size?: "sm" | "md" | "lg";
   accessibilityLabel?: string;
 }) {
@@ -44,6 +48,9 @@ export function Avatar({
   const bgColor = AVATAR_COLORS[hashName(displayName) % AVATAR_COLORS.length];
   const initials = name ? getInitials(name) : "?";
   const fontSize = dim * 0.4;
+  const [imgFailed, setImgFailed] = useState(false);
+
+  const showImage = Boolean(imageUri) && !imgFailed;
 
   return (
     <View
@@ -56,18 +63,27 @@ export function Avatar({
         backgroundColor: bgColor,
         alignItems: "center",
         justifyContent: "center",
+        overflow: "hidden",
       }}
     >
-      <Text
-        style={{
-          color: "#FFFFFF",
-          fontSize,
-          fontWeight: "600",
-          lineHeight: fontSize * 1.2,
-        }}
-      >
-        {initials}
-      </Text>
+      {showImage ? (
+        <Image
+          source={{ uri: imageUri! }}
+          style={{ width: dim, height: dim }}
+          onError={() => setImgFailed(true)}
+        />
+      ) : (
+        <Text
+          style={{
+            color: "#FFFFFF",
+            fontSize,
+            fontWeight: "600",
+            lineHeight: fontSize * 1.2,
+          }}
+        >
+          {initials}
+        </Text>
+      )}
     </View>
   );
 }

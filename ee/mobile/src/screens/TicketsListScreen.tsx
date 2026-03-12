@@ -432,13 +432,102 @@ export function TicketsListScreen({ navigation }: Props) {
     );
   }
 
-  if (!error && items.length === 0) {
+  const hasActiveFilters =
+    filters.status !== DEFAULT_FILTERS.status ||
+    filters.statusIds.length > 0 ||
+    filters.assignee !== DEFAULT_FILTERS.assignee ||
+    filters.priorityName.trim() !== "" ||
+    filters.updatedSinceDays !== DEFAULT_FILTERS.updatedSinceDays ||
+    filters.updatedSinceDate.trim() !== "" ||
+    filters.sortField !== DEFAULT_FILTERS.sortField ||
+    filters.sortOrder !== DEFAULT_FILTERS.sortOrder ||
+    search.trim() !== "";
+
+  if (!error && items.length === 0 && !hasActiveFilters) {
     return (
       <EmptyState
         title={t("list.noTickets")}
         description={t("list.noTicketsDescription")}
         action={<PrimaryButton onPress={() => void refresh()}>{t("common:refresh")}</PrimaryButton>}
       />
+    );
+  }
+
+  if (!error && items.length === 0 && hasActiveFilters) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        <View style={{ padding: theme.spacing.lg }}>
+          <View style={{ flexDirection: "row" }}>
+            <View style={{ flex: 1 }}>
+              <TextInput
+                value={searchInput}
+                onChangeText={setSearchInput}
+                placeholder={t("list.searchPlaceholder")}
+                placeholderTextColor={theme.colors.placeholder}
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={{
+                  paddingVertical: theme.spacing.sm,
+                  paddingHorizontal: theme.spacing.md,
+                  borderRadius: theme.borderRadius.lg,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  backgroundColor: theme.colors.background,
+                  color: theme.colors.text,
+                }}
+              />
+            </View>
+            <View style={{ width: theme.spacing.sm }} />
+            <Pressable
+              onPress={() => setFiltersOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel={t("list.openFilters")}
+              style={({ pressed }) => ({
+                paddingHorizontal: theme.spacing.md,
+                borderRadius: theme.borderRadius.lg,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+                backgroundColor: theme.colors.card,
+                justifyContent: "center",
+                opacity: pressed ? 0.95 : 1,
+              })}
+            >
+              <Text style={{ ...theme.typography.caption, color: theme.colors.text, fontWeight: "600" }}>{t("list.filtersButton")}</Text>
+            </Pressable>
+          </View>
+          <FilterChipBar
+            theme={theme}
+            filters={filters}
+            onPress={() => setFiltersOpen(true)}
+            onClearAll={() => {
+              setFilters({ ...DEFAULT_FILTERS });
+              setSearchInput("");
+            }}
+          />
+        </View>
+        <EmptyState
+          title={t("list.noTickets")}
+          description={t("list.noTicketsDescription")}
+          action={
+            <PrimaryButton onPress={() => {
+              setFilters({ ...DEFAULT_FILTERS });
+              setSearchInput("");
+            }}>
+              {t("filters.clearAll")}
+            </PrimaryButton>
+          }
+        />
+        <FiltersModal
+          theme={theme}
+          visible={filtersOpen}
+          client={client}
+          apiKey={session.accessToken}
+          filters={filters}
+          setFilters={setFilters}
+          canFilterMe={Boolean(session?.user?.id)}
+          onClose={() => setFiltersOpen(false)}
+        />
+      </View>
     );
   }
 
