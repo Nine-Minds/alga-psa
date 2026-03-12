@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { Pressable, Text, View } from "react-native";
-import { hitSlop } from "../a11y";
 import { useTheme } from "../ThemeContext";
 
 export function ListRow({

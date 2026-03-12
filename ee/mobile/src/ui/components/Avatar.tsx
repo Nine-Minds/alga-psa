@@ -1,6 +1,5 @@
+import React, { useState } from "react";
 import { Image, Text, View } from "react-native";
-import { useState } from "react";
-import { useTheme } from "../ThemeContext";
 
 const SIZES = { sm: 28, md: 36, lg: 48 } as const;
 
@@ -42,7 +41,6 @@ export function Avatar({
   size?: "sm" | "md" | "lg";
   accessibilityLabel?: string;
 }) {
-  const theme = useTheme();
   const dim = SIZES[size];
   const displayName = name ?? "?";
   const bgColor = AVATAR_COLORS[hashName(displayName) % AVATAR_COLORS.length];

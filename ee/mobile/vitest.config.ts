@@ -10,6 +10,8 @@ export default defineConfig({
     alias: {
       "react-native": path.resolve(__dirname, "test/mocks/react-native.ts"),
       "react-native-webview": path.resolve(__dirname, "test/mocks/react-native-webview.ts"),
+      "expo-modules-core": path.resolve(__dirname, "test/mocks/expo-modules-core.ts"),
+      "expo-localization": path.resolve(__dirname, "test/mocks/expo-localization.ts"),
     },
   },
   test: {

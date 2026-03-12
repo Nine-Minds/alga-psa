@@ -3,7 +3,6 @@ import { ActivityIndicator, Alert, Linking, Modal, Pressable, RefreshControl, Sc
 import { useTranslation } from "react-i18next";
 import type { RootStackParamList } from "../navigation/types";
 import { useTheme } from "../ui/ThemeContext";
-import type { Theme } from "../ui/themes";
 import { useAuth } from "../auth/AuthContext";
 import { getAppConfig } from "../config/appConfig";
 import { createApiClient } from "../api";

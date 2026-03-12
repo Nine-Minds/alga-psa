@@ -30,8 +30,6 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const systemScheme = useColorScheme(); // "light" | "dark" | null
   const [preference, setPreferenceState] = useState<ThemePreference>("system");
-  const [loaded, setLoaded] = useState(false);
-
   // Load saved preference on mount
   useEffect(() => {
     let canceled = false;
@@ -41,7 +39,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       if (stored === "light" || stored === "dark" || stored === "system") {
         setPreferenceState(stored);
       }
-      setLoaded(true);
     };
     void load();
     return () => {
