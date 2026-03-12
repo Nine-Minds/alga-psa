@@ -4,14 +4,13 @@ set -euo pipefail
 SITE_ID="site01"
 PROFILE="talos-single-node"
 KUBECONFIG_PATH="${KUBECONFIG:-}"
-IMAGE_TAG=""
 ALGA_CORE_TAG=""
 WORKFLOW_WORKER_TAG=""
 EMAIL_SERVICE_TAG=""
 TEMPORAL_WORKER_TAG=""
 ALGA_AUTH_KEY_VALUE=""
-DEFAULT_IMAGE_TAG="latest"
 TEMP_PROFILE_DIR=""
+TEMP_WORK_DIR=""
 REPO_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)"
 
 usage() {
@@ -23,7 +22,6 @@ Options:
   --site-id <id>                 Logical site identifier (default: site01)
   --profile <name>               Appliance profile name (default: talos-single-node)
   --kubeconfig <path>            Kubeconfig path
-  --image-tag <tag>              Default tag for all Alga application images
   --alga-core-tag <tag>          Tag for alga-core server/setup image
   --workflow-worker-tag <tag>    Tag for workflow-worker image
   --email-service-tag <tag>      Tag for email-service image
@@ -95,8 +93,8 @@ PY
 }
 
 cleanup() {
-  if [ -n "$TEMP_PROFILE_DIR" ] && [ -d "$TEMP_PROFILE_DIR" ]; then
-    rm -rf "$TEMP_PROFILE_DIR"
+  if [ -n "$TEMP_WORK_DIR" ] && [ -d "$TEMP_WORK_DIR" ]; then
+    rm -rf "$TEMP_WORK_DIR"
   fi
 }
 
@@ -182,45 +180,48 @@ PY
 }
 
 resolve_image_tags() {
-  if [ -z "$IMAGE_TAG" ] && \
-     [ -z "$ALGA_CORE_TAG" ] && \
-     [ -z "$WORKFLOW_WORKER_TAG" ] && \
-     [ -z "$EMAIL_SERVICE_TAG" ] && \
-     [ -z "$TEMPORAL_WORKER_TAG" ] && \
-     is_interactive; then
-    IMAGE_TAG="$(prompt_value "Application image tag for all Alga services" "$DEFAULT_IMAGE_TAG")"
+  if [ -z "$ALGA_CORE_TAG" ] && is_interactive; then
+    ALGA_CORE_TAG="$(prompt_value "Tag for alga-core")"
   fi
 
-  if [ -n "$IMAGE_TAG" ]; then
-    : "${ALGA_CORE_TAG:=$IMAGE_TAG}"
-    : "${WORKFLOW_WORKER_TAG:=$IMAGE_TAG}"
-    : "${EMAIL_SERVICE_TAG:=$IMAGE_TAG}"
-    : "${TEMPORAL_WORKER_TAG:=$IMAGE_TAG}"
+  if [ -z "$WORKFLOW_WORKER_TAG" ] && is_interactive; then
+    WORKFLOW_WORKER_TAG="$(prompt_value "Tag for workflow-worker")"
+  fi
+
+  if [ -z "$EMAIL_SERVICE_TAG" ] && is_interactive; then
+    EMAIL_SERVICE_TAG="$(prompt_value "Tag for email-service")"
+  fi
+
+  if [ -z "$TEMPORAL_WORKER_TAG" ] && is_interactive; then
+    TEMPORAL_WORKER_TAG="$(prompt_value "Tag for temporal-worker")"
+  fi
+
+  if [ -z "$ALGA_CORE_TAG" ] || \
+     [ -z "$WORKFLOW_WORKER_TAG" ] || \
+     [ -z "$EMAIL_SERVICE_TAG" ] || \
+     [ -z "$TEMPORAL_WORKER_TAG" ]; then
+    echo "All four image tags are required: --alga-core-tag, --workflow-worker-tag, --email-service-tag, and --temporal-worker-tag." >&2
+    exit 1
   fi
 }
 
 create_profile_override_dir() {
-  local base_profile_dir="$REPO_ROOT/ee/appliance/flux/profiles/$PROFILE"
+  local source_flux_dir="$REPO_ROOT/ee/appliance/flux"
+  local temp_flux_dir=""
 
-  TEMP_PROFILE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/alga-appliance-profile.XXXXXX")"
-  cp -R "$base_profile_dir"/. "$TEMP_PROFILE_DIR"/
+  TEMP_WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/alga-appliance-profile.XXXXXX")"
+  temp_flux_dir="$TEMP_WORK_DIR/flux"
+  mkdir -p "$temp_flux_dir/profiles"
+  cp -R "$source_flux_dir/base" "$temp_flux_dir/base"
+  cp -R "$source_flux_dir/profiles/$PROFILE" "$temp_flux_dir/profiles/$PROFILE"
 
-  if [ -n "$ALGA_CORE_TAG" ]; then
-    set_yaml_value "$(profile_values_file "alga-core")" "setup.image.tag" "$ALGA_CORE_TAG"
-    set_yaml_value "$(profile_values_file "alga-core")" "server.image.tag" "$ALGA_CORE_TAG"
-  fi
+  TEMP_PROFILE_DIR="$temp_flux_dir/profiles/$PROFILE"
 
-  if [ -n "$WORKFLOW_WORKER_TAG" ]; then
-    set_yaml_value "$(profile_values_file "workflow-worker")" "image.tag" "$WORKFLOW_WORKER_TAG"
-  fi
-
-  if [ -n "$EMAIL_SERVICE_TAG" ]; then
-    set_yaml_value "$(profile_values_file "email-service")" "image.tag" "$EMAIL_SERVICE_TAG"
-  fi
-
-  if [ -n "$TEMPORAL_WORKER_TAG" ]; then
-    set_yaml_value "$(profile_values_file "temporal-worker")" "image.tag" "$TEMPORAL_WORKER_TAG"
-  fi
+  set_yaml_value "$(profile_values_file "alga-core")" "setup.image.tag" "$ALGA_CORE_TAG"
+  set_yaml_value "$(profile_values_file "alga-core")" "server.image.tag" "$ALGA_CORE_TAG"
+  set_yaml_value "$(profile_values_file "workflow-worker")" "image.tag" "$WORKFLOW_WORKER_TAG"
+  set_yaml_value "$(profile_values_file "email-service")" "image.tag" "$EMAIL_SERVICE_TAG"
+  set_yaml_value "$(profile_values_file "temporal-worker")" "image.tag" "$TEMPORAL_WORKER_TAG"
 }
 
 trap cleanup EXIT
@@ -237,10 +238,6 @@ while [ "$#" -gt 0 ]; do
       ;;
     --kubeconfig)
       KUBECONFIG_PATH="$2"
-      shift 2
-      ;;
-    --image-tag)
-      IMAGE_TAG="$2"
       shift 2
       ;;
     --alga-core-tag)
@@ -301,24 +298,13 @@ resolve_image_tags
 ensure_namespace "msp"
 ensure_alga_auth_secret
 
-if [ -n "$ALGA_CORE_TAG" ] || \
-   [ -n "$WORKFLOW_WORKER_TAG" ] || \
-   [ -n "$EMAIL_SERVICE_TAG" ] || \
-   [ -n "$TEMPORAL_WORKER_TAG" ]; then
-  create_profile_override_dir
-fi
+create_profile_override_dir
 
 echo "Bootstrapping Alga appliance site '$SITE_ID' with profile '$PROFILE'..."
-if [ -n "$TEMP_PROFILE_DIR" ]; then
-  "$REPO_ROOT/ee/appliance/scripts/deploy-app.sh" \
-    --profile "$PROFILE" \
-    --profile-dir "$TEMP_PROFILE_DIR" \
-    --kubeconfig "$KUBECONFIG_PATH"
-else
-  "$REPO_ROOT/ee/appliance/scripts/deploy-app.sh" \
-    --profile "$PROFILE" \
-    --kubeconfig "$KUBECONFIG_PATH"
-fi
+"$REPO_ROOT/ee/appliance/scripts/deploy-app.sh" \
+  --profile "$PROFILE" \
+  --profile-dir "$TEMP_PROFILE_DIR" \
+  --kubeconfig "$KUBECONFIG_PATH"
 
 cat <<EOF
 Apply submitted.
