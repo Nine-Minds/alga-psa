@@ -3,9 +3,9 @@
 import React, { useState, useCallback } from 'react';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Download, FileSpreadsheet, Check } from 'lucide-react';
-import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { exportTicketsToCSV } from '../actions/ticketExportActions';
 import type { ITicketListFilters } from '@alga-psa/types';
@@ -37,6 +37,8 @@ const EXPORT_FIELDS = [
   { key: 'response_state', label: 'Response State' },
 ];
 
+const ALL_FIELD_KEYS = EXPORT_FIELDS.map(f => f.key);
+
 const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
   isOpen,
   onClose,
@@ -44,23 +46,48 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
   totalCount,
 }) => {
   const [step, setStep] = useState<ExportStep>('configure');
+  const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set(ALL_FIELD_KEYS));
   const [exportedCount, setExportedCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  const allSelected = selectedFields.size === EXPORT_FIELDS.length;
+  const noneSelected = selectedFields.size === 0;
 
   const handleClose = useCallback(() => {
     if (step === 'exporting') return;
     setStep('configure');
+    setSelectedFields(new Set(ALL_FIELD_KEYS));
     setExportedCount(0);
     setError(null);
     onClose();
   }, [step, onClose]);
+
+  const toggleField = useCallback((key: string) => {
+    setSelectedFields(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleAll = useCallback(() => {
+    setSelectedFields(prev =>
+      prev.size === EXPORT_FIELDS.length ? new Set() : new Set(ALL_FIELD_KEYS)
+    );
+  }, []);
 
   const handleExport = useCallback(async () => {
     setStep('exporting');
     setError(null);
 
     try {
-      const { csv, count } = await exportTicketsToCSV(filters);
+      // Preserve the field order from EXPORT_FIELDS
+      const orderedFields = ALL_FIELD_KEYS.filter(k => selectedFields.has(k));
+      const { csv, count } = await exportTicketsToCSV(filters, orderedFields);
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -80,7 +107,7 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
       setStep('configure');
       handleError(err, 'Failed to export tickets');
     }
-  }, [filters]);
+  }, [filters, selectedFields]);
 
   return (
     <Dialog
@@ -110,19 +137,37 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
             </div>
 
             <div className="mt-4">
-              <h3 className="text-sm font-medium text-gray-700 dark:text-[rgb(var(--color-text-200))] mb-2">
-                Fields included in export
-              </h3>
-              <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))] max-h-48 overflow-y-auto">
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 p-3">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-[rgb(var(--color-text-200))]">
+                  Fields to export
+                </h3>
+                <button
+                  type="button"
+                  onClick={toggleAll}
+                  className="text-xs text-primary-600 hover:text-primary-700 dark:text-[rgb(var(--color-primary-400))] dark:hover:text-[rgb(var(--color-primary-300))]"
+                >
+                  {allSelected ? 'Deselect all' : 'Select all'}
+                </button>
+              </div>
+              <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))] max-h-52 overflow-y-auto">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 p-3">
                   {EXPORT_FIELDS.map((field) => (
-                    <div key={field.key} className="flex items-center gap-2 text-sm text-gray-600 dark:text-[rgb(var(--color-text-300))]">
-                      <Check className="h-3 w-3 text-green-500 shrink-0" />
-                      {field.label}
-                    </div>
+                    <Checkbox
+                      key={field.key}
+                      id={`export-field-${field.key}`}
+                      label={field.label}
+                      checked={selectedFields.has(field.key)}
+                      onChange={() => toggleField(field.key)}
+                      size="sm"
+                      containerClassName="mb-0"
+                      skipRegistration
+                    />
                   ))}
                 </div>
               </div>
+              <p className="mt-1.5 text-xs text-gray-500 dark:text-[rgb(var(--color-text-500))]">
+                {selectedFields.size} of {EXPORT_FIELDS.length} fields selected
+              </p>
             </div>
 
             <DialogFooter>
@@ -136,7 +181,7 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
               <Button
                 id="export-tickets-btn"
                 onClick={() => void handleExport()}
-                disabled={totalCount === 0}
+                disabled={totalCount === 0 || noneSelected}
                 className="flex items-center gap-2"
               >
                 <Download className="h-4 w-4" />

@@ -78,12 +78,21 @@ function ticketToRow(ticket: ITicketListItem): Record<string, string> {
 }
 
 export async function exportTicketsToCSV(
-  filters: ITicketListFilters
+  filters: ITicketListFilters,
+  selectedFields?: string[]
 ): Promise<{ csv: string; count: number }> {
   const result = await getTicketsForList(filters, 1, MAX_EXPORT_ROWS);
   const rows = result.tickets.map(ticketToRow);
 
-  const fields = [...CSV_FIELDS] as string[];
+  // Use selected fields if provided, otherwise all fields
+  const allFieldKeys = CSV_FIELDS as readonly string[];
+  const fields = selectedFields
+    ? selectedFields.filter(f => allFieldKeys.includes(f))
+    : [...CSV_FIELDS] as string[];
+
+  if (fields.length === 0) {
+    return { csv: '', count: 0 };
+  }
 
   // Build header row using friendly names
   const headerRow = fields.map(f => CSV_HEADERS[f] || f);
