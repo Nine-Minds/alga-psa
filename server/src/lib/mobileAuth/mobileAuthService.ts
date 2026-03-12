@@ -232,7 +232,7 @@ export type ExchangeOttResult = {
   refreshToken: string;
   expiresInSec: number;
   tenantId: string;
-  user?: { id: string; email?: string; name?: string };
+  user?: { id: string; email?: string; name?: string; avatarUrl?: string };
 };
 
 export async function exchangeOttForSession(input: z.infer<typeof exchangeOttSchema>): Promise<ExchangeOttResult> {
