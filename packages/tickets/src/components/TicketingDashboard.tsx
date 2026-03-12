@@ -28,7 +28,8 @@ import { ColumnDefinition } from '@alga-psa/types';
 import { deleteTicket, deleteTickets } from '../actions/ticketActions';
 import { bundleTicketsAction } from '../actions/ticketBundleActions';
 import { fetchBundleChildrenForMaster } from '../actions/optimizedTicketActions';
-import { XCircle, Clock } from 'lucide-react';
+import TicketExportDialog from './TicketExportDialog';
+import { XCircle, Clock, Download } from 'lucide-react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useIntervalTracking } from '@alga-psa/ui/hooks';
@@ -148,6 +149,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [bundleSyncUpdates, setBundleSyncUpdates] = useState(true);
   const [bundleError, setBundleError] = useState<string | null>(null);
   const [isMultiClientBundleConfirmOpen, setIsMultiClientBundleConfirmOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
 
   const [boards] = useState<IBoard[]>(initialBoards);
   const [clients] = useState<IClient[]>(initialClients);
@@ -1118,6 +1120,31 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     void performBundleTickets();
   }, [isSelectedBundleMultiClient, performBundleTickets]);
 
+  const exportFilters = useMemo((): ITicketListFilters => ({
+    boardId: selectedBoard ?? undefined,
+    statusId: selectedStatus,
+    priorityId: selectedPriority,
+    categoryId: selectedCategories.length > 0 ? selectedCategories[0] : undefined,
+    clientId: selectedClient ?? undefined,
+    searchQuery: debouncedSearchQuery,
+    boardFilterState: boardFilterState,
+    showOpenOnly: selectedStatus === 'open',
+    tags: selectedTags.length > 0 ? selectedTags : undefined,
+    assignedToIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
+    assignedTeamIds: selectedTeams.length > 0 ? selectedTeams : undefined,
+    includeUnassigned: includeUnassigned || undefined,
+    dueDateFilter: selectedDueDateFilter !== 'all' ? selectedDueDateFilter as ITicketListFilters['dueDateFilter'] : undefined,
+    responseState: selectedResponseState !== 'all' ? selectedResponseState : undefined,
+    slaStatusFilter: selectedSlaStatus !== 'all' ? selectedSlaStatus as ITicketListFilters['slaStatusFilter'] : undefined,
+    sortBy,
+    sortDirection,
+    bundleView,
+  }), [
+    selectedBoard, selectedStatus, selectedPriority, selectedCategories,
+    selectedClient, debouncedSearchQuery, boardFilterState, selectedTags,
+    selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
+    selectedResponseState, selectedSlaStatus, sortBy, sortDirection, bundleView,
+  ]);
 
   const handleTicketAdded = useCallback((newTicket: ITicket) => {
     // Store tags for the new ticket if provided
@@ -1305,6 +1332,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               Bundle Tickets
             </Button>
           )}
+          <Button
+            id={`${id}-export-csv-button`}
+            variant="outline"
+            onClick={() => setIsExportDialogOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </Button>
           <Button id="add-ticket-button" onClick={() => setIsQuickAddOpen(true)}>Add Ticket</Button>
         </div>
       </div>
@@ -1769,6 +1805,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           </Button>
         </DialogFooter>
       </Dialog>
+      <TicketExportDialog
+        isOpen={isExportDialogOpen}
+        onClose={() => setIsExportDialogOpen(false)}
+        filters={exportFilters}
+        totalCount={totalCount}
+      />
     </ReflectionContainer>
   );
 };
