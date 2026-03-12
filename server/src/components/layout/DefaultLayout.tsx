@@ -13,7 +13,7 @@ import { savePreference } from '@alga-psa/ui/lib';
 import QuickAskOverlay from 'server/src/components/chat/QuickAskOverlay';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
 import { MspSchedulingProvider } from '@alga-psa/msp-composition/scheduling';
-import { MspTicketIntegrationProvider } from '@alga-psa/msp-composition/projects';
+import { MspTicketIntegrationProvider, MspClientIntegrationProvider } from '@alga-psa/msp-composition/projects';
 import { MspClientDrawerProvider, MspQuickAddClientProvider, MspClientCrossFeatureProvider } from '@alga-psa/msp-composition/clients';
 import { MspAssetCrossFeatureProvider } from '@alga-psa/msp-composition/assets';
 
@@ -241,6 +241,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
     <MspSchedulingProvider>
     <DrawerProvider>
     <MspTicketIntegrationProvider>
+    <MspClientIntegrationProvider>
       <ActivityDrawerProvider>
       <MspClientDrawerProvider>
       <MspClientCrossFeatureProvider>
@@ -309,6 +310,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
       </MspClientCrossFeatureProvider>
       </MspClientDrawerProvider>
       </ActivityDrawerProvider>
+    </MspClientIntegrationProvider>
     </MspTicketIntegrationProvider>
     </DrawerProvider>
     </MspSchedulingProvider>

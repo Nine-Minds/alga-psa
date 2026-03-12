@@ -11,7 +11,6 @@ import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import ProjectQuickAdd from './ProjectQuickAdd';
 import { deleteProject } from '../actions/projectActions';
-import { getContactByContactNameId } from '@alga-psa/clients/actions';
 import { findUserById } from '@alga-psa/user-composition/actions';
 import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
 import { TagFilter } from '@alga-psa/ui/components';
@@ -33,12 +32,10 @@ import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { DeadlineFilter, DeadlineFilterValue } from './DeadlineFilter';
 import { IContact } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
-import { getAllContacts } from '@alga-psa/clients/actions';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import Drawer from '@alga-psa/ui/components/Drawer';
-import ClientDetails from '@alga-psa/clients/components/clients/ClientDetails';
 import { ApplyTemplateDialog } from './project-templates/ApplyTemplateDialog';
-import { QuickAddContact } from '@alga-psa/clients/components';
+import { useClientIntegration } from '../context/ClientIntegrationContext';
 
 interface ProjectsProps {
   initialProjects: IProject[];
@@ -46,6 +43,7 @@ interface ProjectsProps {
 }
 
 export default function Projects({ initialProjects, clients }: ProjectsProps) {
+  const { getAllContacts, getContactByContactNameId, renderQuickAddContact, renderClientDetails } = useClientIntegration();
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['project']);
   
@@ -624,10 +622,10 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
             buttonWidth="fit"
             onAddNew={() => setIsQuickAddContactOpen(true)}
           />
-          <QuickAddContact
-            isOpen={isQuickAddContactOpen}
-            onClose={() => setIsQuickAddContactOpen(false)}
-            onContactAdded={(newContact) => {
+          {renderQuickAddContact({
+            isOpen: isQuickAddContactOpen,
+            onClose: () => setIsQuickAddContactOpen(false),
+            onContactAdded: (newContact) => {
               setContacts((prevContacts) => {
                 const existingIndex = prevContacts.findIndex((contact) => contact.contact_name_id === newContact.contact_name_id);
                 if (existingIndex >= 0) {
@@ -639,10 +637,10 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
               });
               setFilterContactId(newContact.contact_name_id);
               setIsQuickAddContactOpen(false);
-            }}
-            clients={clients}
-            selectedClientId={filterClientId || undefined}
-          />
+            },
+            clients,
+            selectedClientId: filterClientId || undefined,
+          })}
 
           {/* Project Manager filter */}
           <UserPicker
@@ -754,13 +752,11 @@ export default function Projects({ initialProjects, clients }: ProjectsProps) {
           setQuickViewClient(null);
         }}
       >
-        {quickViewClient && (
-          <ClientDetails
-            client={quickViewClient}
-            isInDrawer={true}
-            quickView={true}
-          />
-        )}
+        {quickViewClient && renderClientDetails({
+            client: quickViewClient,
+            isInDrawer: true,
+            quickView: true,
+          })}
       </Drawer>
     </div>
   );
