@@ -27,10 +27,11 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ColumnDefinition } from '@alga-psa/types';
 import { deleteTicket, deleteTickets } from '../actions/ticketActions';
 import { bundleTicketsAction } from '../actions/ticketBundleActions';
-import { fetchBundleChildrenForMaster } from '../actions/optimizedTicketActions';
+import { fetchBundleChildrenForMaster, getAllMatchingTicketIds } from '../actions/optimizedTicketActions';
 import TicketExportDialog from './TicketExportDialog';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { XCircle, Clock, Download } from 'lucide-react';
+import { XCircle, Clock, Download, ChevronDown } from 'lucide-react';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useIntervalTracking } from '@alga-psa/ui/hooks';
@@ -132,6 +133,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
   const [selectedTicketIds, setSelectedTicketIds] = useState<Set<string>>(new Set());
+  const [allMatchingMode, setAllMatchingMode] = useState(false);
   const [visibleTicketIds, setVisibleTicketIds] = useState<string[]>([]);
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
   const [ticketToDeleteName, setTicketToDeleteName] = useState<string | null>(null);
@@ -488,6 +490,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
     console.log('[Dashboard] Calling onFiltersChanged with:', currentFilters);
     onFiltersChanged(currentFilters);
+    setAllMatchingMode(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     selectedBoard,
@@ -775,6 +778,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, [selectableTicketIds]);
 
   const handleTicketSelectionChange = useCallback((ticketId: string, isChecked: boolean) => {
+    if (!isChecked) {
+      setAllMatchingMode(false);
+    }
     setSelectedTicketIds(prev => {
       const alreadySelected = prev.has(ticketId);
 
@@ -799,6 +805,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, []);
 
   const handleSelectAllVisibleTickets = useCallback((shouldSelect: boolean) => {
+    if (!shouldSelect) {
+      setAllMatchingMode(false);
+    }
     const visibleIds = visibleTicketIds.filter((id): id is string => !!id);
 
     setSelectedTicketIds(prev => {
@@ -829,17 +838,45 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     });
   }, [visibleTicketIds]);
 
-  const handleSelectAllMatchingTickets = useCallback(() => {
-    // For now, only select current page tickets
-    // TODO: Implement server-side select all for all matching tickets
-    if (selectableTicketIds.length === 0) {
-      return;
+  const handleSelectAllMatchingTickets = useCallback(async () => {
+    try {
+      const filters: ITicketListFilters = {
+        boardId: selectedBoard ?? undefined,
+        statusId: selectedStatus,
+        priorityId: selectedPriority,
+        categoryId: selectedCategories.length > 0 ? selectedCategories[0] : undefined,
+        clientId: selectedClient ?? undefined,
+        searchQuery: debouncedSearchQuery,
+        boardFilterState: boardFilterState,
+        showOpenOnly: selectedStatus === 'open',
+        tags: selectedTags.length > 0 ? selectedTags : undefined,
+        assignedToIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
+        assignedTeamIds: selectedTeams.length > 0 ? selectedTeams : undefined,
+        includeUnassigned: includeUnassigned || undefined,
+        dueDateFilter: selectedDueDateFilter !== 'all' ? selectedDueDateFilter as ITicketListFilters['dueDateFilter'] : undefined,
+        responseState: selectedResponseState !== 'all' ? selectedResponseState : undefined,
+        slaStatusFilter: selectedSlaStatus !== 'all' ? selectedSlaStatus as ITicketListFilters['slaStatusFilter'] : undefined,
+        bundleView,
+      };
+      const allIds = await getAllMatchingTicketIds(filters);
+      setSelectedTicketIds(new Set(allIds));
+      setAllMatchingMode(true);
+    } catch (error) {
+      console.error('Failed to fetch all matching ticket IDs:', error);
+      // Fall back to selecting current page only
+      setSelectedTicketIds(new Set(selectableTicketIds));
+      setAllMatchingMode(true);
     }
-    setSelectedTicketIds(new Set(selectableTicketIds));
-  }, [selectableTicketIds]);
+  }, [
+    selectedBoard, selectedStatus, selectedPriority, selectedCategories,
+    selectedClient, debouncedSearchQuery, boardFilterState, selectedTags,
+    selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
+    selectedResponseState, selectedSlaStatus, bundleView, selectableTicketIds,
+  ]);
 
   const clearSelection = useCallback(() => {
     setSelectedTicketIds(prev => (prev.size === 0 ? prev : new Set<string>()));
+    setAllMatchingMode(false);
   }, []);
 
   const visibleTicketIdSet = useMemo(() => new Set(visibleTicketIds.filter((id): id is string => !!id)), [visibleTicketIds]);
@@ -849,8 +886,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     () => selectedTicketIdsArray.some(id => !visibleTicketIdSet.has(id)),
     [selectedTicketIdsArray, visibleTicketIdSet]
   );
-  // For server-side pagination, we show "select all on page" vs "select all matching filters"
-  const allCurrentPageSelected = selectableTicketIds.length > 0 && selectableTicketIds.every(id => selectedTicketIds.has(id));
   const isSelectionIndeterminate = selectedTicketIds.size > 0 && !allVisibleTicketsSelected;
   const selectedTicketDetails = useMemo(() => {
     if (selectedTicketIds.size === 0) {
@@ -889,8 +924,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, [selectedTicketDetails]);
 
   const hasSelection = selectedTicketIds.size > 0;
-  const showSelectAllBanner = allVisibleTicketsSelected && !hasHiddenSelections && totalCount > visibleTicketIds.length && visibleTicketIds.length > 0;
-  const showAllSelectedBanner = false; // Disable "all selected" banner for now until we implement server-side select all
+  const showSelectAllBanner = allVisibleTicketsSelected && !hasHiddenSelections && !allMatchingMode && totalCount > visibleTicketIds.length && visibleTicketIds.length > 0;
 
   const handleVisibleRowsChange = useCallback((rows: ITicketListItem[]) => {
     const ids = rows
@@ -925,7 +959,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     const selectionColumn: ColumnDefinition<ITicketListItem> = {
       title: (
         <div
-          className="flex justify-center"
+          className="flex items-center justify-center gap-0"
           onClick={(event) => event.stopPropagation()}
           onMouseDown={(event) => event.stopPropagation()}
         >
@@ -935,12 +969,34 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             indeterminate={isSelectionIndeterminate}
             onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
               event.stopPropagation();
-              handleSelectAllVisibleTickets(event.target.checked);
+              if (!event.target.checked && allMatchingMode) {
+                clearSelection();
+              } else {
+                handleSelectAllVisibleTickets(event.target.checked);
+              }
             }}
             containerClassName="mb-0"
             className="m-0"
             skipRegistration
           />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="flex items-center p-0 ml-0.5 text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))] focus:outline-none"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <ChevronDown className="h-3 w-3" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[6rem]">
+              <DropdownMenuItem onSelect={() => void handleSelectAllMatchingTickets()}>
+                All
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={clearSelection}>
+                None
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       ),
       dataIndex: 'selection',
@@ -994,6 +1050,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     handleSelectAllVisibleTickets,
     handleTicketSelectionChange,
     selectedTicketIds,
+    clearSelection,
+    handleSelectAllMatchingTickets,
+    allMatchingMode,
     additionalAgentAvatarUrls,
     teamAvatarUrls,
     isBundleExpanded,
@@ -1579,25 +1638,30 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           <Spinner size="md" className="h-32 w-full" />
         ) : (
           <>
-            {showSelectAllBanner && (
+            {(showSelectAllBanner || allMatchingMode) && (
               <Alert variant="info" className="mb-3">
-                <AlertDescription className="flex items-center justify-between w-full">
-                  <span>
-                    All {visibleTicketIds.length} ticket{visibleTicketIds.length === 1 ? '' : 's'} on this page are selected.
-                  </span>
-                  <div className="flex items-center gap-2">
+                <AlertDescription className="flex items-center w-full">
+                  {allMatchingMode ? (
                     <span className="text-sm">
-                      {totalCount} total ticket{totalCount === 1 ? '' : 's'} match your filters
+                      All {totalCount} ticket{totalCount === 1 ? '' : 's'} matching your filters are selected.{' '}
+                      <button
+                        onClick={clearSelection}
+                        className="font-semibold text-primary-600 hover:text-primary-700 hover:underline cursor-pointer bg-transparent border-none p-0"
+                      >
+                        Clear selection
+                      </button>
                     </span>
-                    <Button
-                      id={`${id}-clear-visible-selection`}
-                      variant="link"
-                      onClick={clearSelection}
-                      className="p-0"
-                    >
-                      Clear selection
-                    </Button>
-                  </div>
+                  ) : (
+                    <span className="text-sm">
+                      All {visibleTicketIds.length} ticket{visibleTicketIds.length === 1 ? '' : 's'} on this page are selected.{' '}
+                      <button
+                        onClick={handleSelectAllMatchingTickets}
+                        className="font-semibold text-primary-600 hover:text-primary-700 hover:underline cursor-pointer bg-transparent border-none p-0"
+                      >
+                        Select all {totalCount} ticket{totalCount === 1 ? '' : 's'} matching your filters
+                      </button>
+                    </span>
+                  )}
                 </AlertDescription>
               </Alert>
             )}
