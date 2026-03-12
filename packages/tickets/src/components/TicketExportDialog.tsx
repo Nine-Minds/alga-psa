@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { Download, FileSpreadsheet, Check } from 'lucide-react';
+import { Download, Check, FileSpreadsheet } from 'lucide-react';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { exportTicketsToCSV } from '../actions/ticketExportActions';
 import type { ITicketListFilters } from '@alga-psa/types';
@@ -22,19 +22,27 @@ type ExportStep = 'configure' | 'exporting' | 'complete';
 const EXPORT_FIELDS = [
   { key: 'ticket_number', label: 'Ticket Number' },
   { key: 'title', label: 'Title' },
+  { key: 'url', label: 'URL' },
   { key: 'status', label: 'Status' },
+  { key: 'is_closed', label: 'Is Closed' },
   { key: 'priority', label: 'Priority' },
   { key: 'board', label: 'Board' },
   { key: 'category', label: 'Category' },
+  { key: 'subcategory', label: 'Subcategory' },
   { key: 'client', label: 'Client' },
+  { key: 'contact', label: 'Contact' },
   { key: 'assigned_to', label: 'Assigned To' },
   { key: 'assigned_team', label: 'Assigned Team' },
   { key: 'entered_by', label: 'Entered By' },
+  { key: 'updated_by', label: 'Updated By' },
+  { key: 'closed_by', label: 'Closed By' },
   { key: 'entered_at', label: 'Entered At' },
   { key: 'updated_at', label: 'Updated At' },
   { key: 'closed_at', label: 'Closed At' },
   { key: 'due_date', label: 'Due Date' },
   { key: 'response_state', label: 'Response State' },
+  { key: 'ticket_origin', label: 'Ticket Origin' },
+  { key: 'tags', label: 'Tags' },
 ];
 
 const ALL_FIELD_KEYS = EXPORT_FIELDS.map(f => f.key);
@@ -126,17 +134,16 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
         {/* Step 1: Configure */}
         {step === 'configure' && (
           <div>
-            <div className="text-center p-6 border-2 border-dashed border-gray-300 dark:border-[rgb(var(--color-border-200))] rounded-lg">
-              <FileSpreadsheet className="mx-auto h-12 w-12 text-gray-400" />
-              <p className="mt-2 text-sm text-gray-600 dark:text-[rgb(var(--color-text-400))]">
-                Export your tickets to a CSV file
-              </p>
-              <p className="mt-1 text-xs text-gray-500 dark:text-[rgb(var(--color-text-500))]">
-                {totalCount} ticket{totalCount === 1 ? '' : 's'} match your current filters
-              </p>
-            </div>
+            <Alert variant="info" className="mb-4" showIcon={false}>
+              <AlertDescription className="flex items-center gap-2">
+                <FileSpreadsheet className="h-4 w-4 shrink-0" />
+                <span>
+                  <strong>{totalCount}</strong> ticket{totalCount === 1 ? '' : 's'} match{totalCount === 1 ? 'es' : ''} your current filters
+                </span>
+              </AlertDescription>
+            </Alert>
 
-            <div className="mt-4">
+            <div>
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-medium text-gray-700 dark:text-[rgb(var(--color-text-200))]">
                   Fields to export
@@ -149,7 +156,7 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
                   {allSelected ? 'Deselect all' : 'Select all'}
                 </button>
               </div>
-              <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))] max-h-52 overflow-y-auto">
+              <div className="border rounded-lg dark:border-[rgb(var(--color-border-200))]">
                 <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 p-3">
                   {EXPORT_FIELDS.map((field) => (
                     <Checkbox
