@@ -3,12 +3,12 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 let mockTenantContext: string | null = null;
 let allowTenantKnex = false;
 let tenantSettingsRow: any = null;
-const originalMasterBillingTenantId = process.env.MASTER_BILLING_TENANT_ID;
 
 const knexWhereMock = vi.fn();
 const knexFromMock = vi.fn();
 const knexSelectMock = vi.fn();
 const createTenantKnexMock = vi.fn();
+const featureFlagIsEnabledMock = vi.fn();
 
 const getCurrentUserMock = vi.fn();
 const getCurrentUserPermissionsMock = vi.fn();
@@ -34,14 +34,21 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
 }));
 
-vi.mock('@alga-psa/users/actions', () => ({
+vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: getCurrentUserMock,
   getCurrentUserPermissions: getCurrentUserPermissionsMock,
 }));
 
+vi.mock('@alga-psa/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/core')>();
+  return {
+    ...actual,
+    isFeatureFlagEnabled: featureFlagIsEnabledMock,
+  };
+});
+
 describe('tenantSettingsActions.getExperimentalFeatures', () => {
   beforeEach(() => {
-    process.env.MASTER_BILLING_TENANT_ID = 'tenant-test';
     mockTenantContext = null;
     allowTenantKnex = true;
     tenantSettingsRow = null;
@@ -58,6 +65,8 @@ describe('tenantSettingsActions.getExperimentalFeatures', () => {
     knexFromMock.mockReset();
     knexSelectMock.mockReset();
     createTenantKnexMock.mockReset();
+    featureFlagIsEnabledMock.mockReset();
+    featureFlagIsEnabledMock.mockResolvedValue(true);
 
     knexWhereMock.mockImplementation(() => ({
       first: vi.fn(async () => tenantSettingsRow),
@@ -112,10 +121,14 @@ describe('tenantSettingsActions.getExperimentalFeatures', () => {
 
     await expect(getExperimentalFeatures()).resolves.toEqual({ aiAssistant: true, workflowAutomation: true });
     expect(knexWhereMock).toHaveBeenCalledWith({ tenant: 'tenant-test' });
+    expect(featureFlagIsEnabledMock).toHaveBeenCalledWith('ai-assistant-activation', {
+      tenantId: 'tenant-test',
+      userId: 'user-test',
+    });
   });
 
-  it('forces aiAssistant off when tenant is not the master billing tenant', async () => {
-    process.env.MASTER_BILLING_TENANT_ID = 'some-other-tenant';
+  it('forces aiAssistant off when tenant is not whitelisted by the feature flag', async () => {
+    featureFlagIsEnabledMock.mockResolvedValue(false);
     tenantSettingsRow = {
       settings: {
         experimentalFeatures: {
@@ -135,7 +148,6 @@ describe('tenantSettingsActions.getExperimentalFeatures', () => {
 
 describe('tenantSettingsActions.updateExperimentalFeatures', () => {
   beforeEach(() => {
-    process.env.MASTER_BILLING_TENANT_ID = 'tenant-test';
     allowTenantKnex = true;
     tenantSettingsRow = null;
 
@@ -151,6 +163,8 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
     knexFromMock.mockReset();
     knexSelectMock.mockReset();
     createTenantKnexMock.mockReset();
+    featureFlagIsEnabledMock.mockReset();
+    featureFlagIsEnabledMock.mockResolvedValue(true);
 
     getCurrentUserMock.mockResolvedValue({
       id: 'user-test',
@@ -288,8 +302,8 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
     expect(tenantKnexTableMock).not.toHaveBeenCalled();
   });
 
-  it('rejects enabling aiAssistant when tenant is not the master billing tenant', async () => {
-    process.env.MASTER_BILLING_TENANT_ID = 'some-other-tenant';
+  it('rejects enabling aiAssistant when tenant is not whitelisted by the feature flag', async () => {
+    featureFlagIsEnabledMock.mockResolvedValue(false);
     allowTenantKnex = false;
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -310,9 +324,38 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
   });
 });
 
+describe('tenantSettingsActions.canEnableAiAssistant', () => {
+  beforeEach(() => {
+    featureFlagIsEnabledMock.mockReset();
+  });
+
+  it('returns true when the tenant is whitelisted by the feature flag', async () => {
+    featureFlagIsEnabledMock.mockResolvedValue(true);
+
+    const { canEnableAiAssistant } = await import(
+      '../../../../packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions'
+    );
+
+    await expect(canEnableAiAssistant()).resolves.toBe(true);
+    expect(featureFlagIsEnabledMock).toHaveBeenCalledWith('ai-assistant-activation', {
+      tenantId: 'tenant-test',
+      userId: 'user-test',
+    });
+  });
+
+  it('returns false when the tenant is not whitelisted by the feature flag', async () => {
+    featureFlagIsEnabledMock.mockResolvedValue(false);
+
+    const { canEnableAiAssistant } = await import(
+      '../../../../packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions'
+    );
+
+    await expect(canEnableAiAssistant()).resolves.toBe(false);
+  });
+});
+
 describe('tenantSettingsActions.isExperimentalFeatureEnabled', () => {
   beforeEach(() => {
-    process.env.MASTER_BILLING_TENANT_ID = 'tenant-test';
     allowTenantKnex = true;
     tenantSettingsRow = null;
 
@@ -328,6 +371,8 @@ describe('tenantSettingsActions.isExperimentalFeatureEnabled', () => {
     knexFromMock.mockReset();
     knexSelectMock.mockReset();
     createTenantKnexMock.mockReset();
+    featureFlagIsEnabledMock.mockReset();
+    featureFlagIsEnabledMock.mockResolvedValue(true);
 
     knexWhereMock.mockImplementation(() => ({
       first: vi.fn(async () => tenantSettingsRow),
@@ -403,5 +448,5 @@ describe('tenantSettingsActions.isExperimentalFeatureEnabled', () => {
 });
 
 afterAll(() => {
-  process.env.MASTER_BILLING_TENANT_ID = originalMasterBillingTenantId;
+  vi.restoreAllMocks();
 });
