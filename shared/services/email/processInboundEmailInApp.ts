@@ -477,6 +477,7 @@ export async function processInboundEmailInApp(
         });
         const serializedBlocks = JSON.stringify(blocks);
         const matchedSenderContact = await resolveSenderContact({ ticketId: match.ticketId });
+        const matchedSenderIsInternalUser = matchedSenderContact?.user_type === 'internal';
         const watchListRecipients = mergeTicketWatchListRecipients(
           inboundWatchListRecipients,
           buildUnmatchedSenderWatchListRecipients(matchedSenderContact?.contact_id ?? null)
@@ -486,9 +487,9 @@ export async function processInboundEmailInApp(
             ticket_id: match.ticketId,
             content: serializedBlocks,
             source: 'email',
-            author_type: 'contact',
+            author_type: matchedSenderIsInternalUser ? 'internal' : 'contact',
             author_id: matchedSenderContact?.user_id,
-            contact_id: matchedSenderContact?.contact_id,
+            contact_id: matchedSenderIsInternalUser ? undefined : matchedSenderContact?.contact_id,
             metadata: {
               email: buildCommentEmailMetadata(),
               parser: {
@@ -594,6 +595,7 @@ export async function processInboundEmailInApp(
     });
     const serializedBlocks = JSON.stringify(blocks);
     const matchedSenderContact = await resolveSenderContact({ ticketId: threadedTicketId });
+    const matchedSenderIsInternalUser = matchedSenderContact?.user_type === 'internal';
     const watchListRecipients = mergeTicketWatchListRecipients(
       inboundWatchListRecipients,
       buildUnmatchedSenderWatchListRecipients(matchedSenderContact?.contact_id ?? null)
@@ -603,9 +605,9 @@ export async function processInboundEmailInApp(
         ticket_id: threadedTicketId,
         content: serializedBlocks,
         source: 'email',
-        author_type: 'contact',
+        author_type: matchedSenderIsInternalUser ? 'internal' : 'contact',
         author_id: matchedSenderContact?.user_id,
-        contact_id: matchedSenderContact?.contact_id,
+        contact_id: matchedSenderIsInternalUser ? undefined : matchedSenderContact?.contact_id,
         metadata: {
           email: buildCommentEmailMetadata(),
           parser: {
@@ -720,8 +722,10 @@ export async function processInboundEmailInApp(
   }
 
   // Only treat the email as authored by a contact when we have an exact sender email match.
-  const commentAuthorContactId = matchedSenderContact?.contact_id;
+  const matchedSenderIsInternalUser = matchedSenderContact?.user_type === 'internal';
+  const commentAuthorContactId = matchedSenderIsInternalUser ? undefined : matchedSenderContact?.contact_id;
   const commentAuthorUserId = matchedSenderContact?.user_id ?? null;
+  const commentAuthorType = matchedSenderIsInternalUser ? 'internal' : 'contact';
 
   // Ticket creation requires a client. If neither defaults nor sender/domain matching
   // can resolve one, skip without failing the webhook.
@@ -797,7 +801,7 @@ export async function processInboundEmailInApp(
       source: 'email',
       // Unmatched inbound senders are still customer-originated replies even
       // when we cannot resolve them to an existing contact record.
-      author_type: 'contact',
+      author_type: commentAuthorType,
       author_id: commentAuthorUserId ?? undefined,
       contact_id: commentAuthorContactId ?? undefined,
       metadata: {

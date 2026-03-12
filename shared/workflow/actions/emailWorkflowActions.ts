@@ -91,12 +91,13 @@ function sanitizeCommentContentForIndexRetry(content: string): string {
 // =============================================================================
 
 export interface FindContactByEmailOutput {
-  contact_id: string;
+  contact_id?: string;
   name: string;
   email: string;
-  client_id: string;
+  client_id?: string;
   user_id?: string;
-  client_name: string;
+  user_type?: 'internal' | 'client';
+  client_name?: string;
   phone?: string;
   title?: string;
 }
@@ -248,6 +249,28 @@ export async function findContactByEmail(
   }
 
   const contact = await withAdminTransaction(async (trx: Knex.Transaction) => {
+      const internalUser = await trx('users')
+        .select(
+          'user_id',
+          'first_name',
+          'last_name',
+          'email'
+        )
+        .where({ tenant, user_type: 'internal' })
+        .andWhereRaw('lower(email) = ?', [normalizedEmail])
+        .orderBy('created_at', 'asc')
+        .first();
+
+      if (internalUser) {
+        const displayName = `${internalUser.first_name || ''} ${internalUser.last_name || ''}`.trim();
+        return {
+          name: displayName || normalizedEmail,
+          email: normalizeEmailAddress(internalUser.email) ?? normalizedEmail,
+          user_id: internalUser.user_id,
+          user_type: 'internal',
+        };
+      }
+
       const candidates = await trx('contacts')
         .select(
           'contacts.contact_name_id',
@@ -292,6 +315,7 @@ export async function findContactByEmail(
           ...candidate,
           phone: getDefaultPhoneNumber(hydrated),
           user_id: candidate?.user_id ?? undefined,
+          user_type: candidate?.user_id ? 'client' : undefined,
         };
       };
 
