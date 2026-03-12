@@ -70,6 +70,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
   const [formProduct, setFormProduct] = useState<Partial<IService>>(getInitialProductState());
   const [formPrices, setFormPrices] = useState<PriceDraft[]>([{ currency_code: 'USD', rate: 0 }]);
   const [priceInput, setPriceInput] = useState<string>('');
+  const [costInput, setCostInput] = useState<string>('');
 
   // Initialize form when product changes (edit mode) or dialog opens
   useEffect(() => {
@@ -81,10 +82,12 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
       setFormPrices(prices);
       const primaryRate = prices.length > 0 ? prices[0].rate : product.default_rate ?? 0;
       setPriceInput((primaryRate / 100).toFixed(2));
+      setCostInput(product.cost != null ? (product.cost / 100).toFixed(2) : '');
     } else if (isOpen && !product) {
       setFormProduct(getInitialProductState());
       setFormPrices([{ currency_code: 'USD', rate: 0 }]);
       setPriceInput('');
+      setCostInput('');
     }
   }, [isOpen, product]);
 
@@ -166,6 +169,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
     setFormProduct(getInitialProductState());
     setFormPrices([{ currency_code: 'USD', rate: 0 }]);
     setPriceInput('');
+    setCostInput('');
     setError(null);
   };
 
@@ -470,14 +474,22 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                     id="quick-add-product-cost"
                     type="text"
                     inputMode="decimal"
-                    value={formProduct.cost != null ? (formProduct.cost / 100).toFixed(2) : ''}
+                    value={costInput}
                     onChange={(e) => {
                       const value = e.target.value.replace(/[^0-9.]/g, '');
                       const decimalCount = (value.match(/\./g) || []).length;
                       if (decimalCount > 1) return;
-                      const dollars = parseFloat(value) || 0;
+                      setCostInput(value);
+                    }}
+                    onBlur={() => {
+                      if (costInput.trim() === '') {
+                        setFormProduct({ ...formProduct, cost: null });
+                        return;
+                      }
+                      const dollars = parseFloat(costInput) || 0;
                       const cents = Math.round(dollars * 100);
-                      setFormProduct({ ...formProduct, cost: value === '' ? null : cents });
+                      setFormProduct({ ...formProduct, cost: cents });
+                      setCostInput((cents / 100).toFixed(2));
                     }}
                     placeholder="0.00"
                     className="pl-8"
