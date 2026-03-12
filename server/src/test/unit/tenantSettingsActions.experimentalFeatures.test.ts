@@ -39,11 +39,13 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUserPermissions: getCurrentUserPermissionsMock,
 }));
 
-vi.mock('server/src/lib/feature-flags/featureFlags', () => ({
-  featureFlags: {
-    isEnabled: featureFlagIsEnabledMock,
-  },
-}));
+vi.mock('@alga-psa/core', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/core')>();
+  return {
+    ...actual,
+    isFeatureFlagEnabled: featureFlagIsEnabledMock,
+  };
+});
 
 describe('tenantSettingsActions.getExperimentalFeatures', () => {
   beforeEach(() => {
@@ -122,7 +124,6 @@ describe('tenantSettingsActions.getExperimentalFeatures', () => {
     expect(featureFlagIsEnabledMock).toHaveBeenCalledWith('ai-assistant-activation', {
       tenantId: 'tenant-test',
       userId: 'user-test',
-      userRole: undefined,
     });
   });
 
@@ -339,7 +340,6 @@ describe('tenantSettingsActions.canEnableAiAssistant', () => {
     expect(featureFlagIsEnabledMock).toHaveBeenCalledWith('ai-assistant-activation', {
       tenantId: 'tenant-test',
       userId: 'user-test',
-      userRole: undefined,
     });
   });
 
