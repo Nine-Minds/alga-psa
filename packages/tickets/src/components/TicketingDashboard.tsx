@@ -29,6 +29,7 @@ import { deleteTicket, deleteTickets } from '../actions/ticketActions';
 import { bundleTicketsAction } from '../actions/ticketBundleActions';
 import { fetchBundleChildrenForMaster } from '../actions/optimizedTicketActions';
 import TicketExportDialog from './TicketExportDialog';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { XCircle, Clock, Download } from 'lucide-react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -1332,15 +1333,23 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               Bundle Tickets
             </Button>
           )}
-          <Button
-            id={`${id}-export-csv-button`}
-            variant="outline"
-            onClick={() => setIsExportDialogOpen(true)}
-            className="flex items-center gap-2"
-          >
-            <Download className="h-4 w-4" />
-            Export CSV
-          </Button>
+          <Tooltip content={hasSelection
+            ? `Export ${selectedTicketIds.size} selected ticket${selectedTicketIds.size === 1 ? '' : 's'} to CSV`
+            : 'Select ticket(s) to export'
+          }>
+            <span>
+              <Button
+                id={`${id}-export-csv-button`}
+                variant="outline"
+                onClick={() => setIsExportDialogOpen(true)}
+                disabled={!hasSelection}
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Export CSV
+              </Button>
+            </span>
+          </Tooltip>
           <Button id="add-ticket-button" onClick={() => setIsQuickAddOpen(true)}>Add Ticket</Button>
         </div>
       </div>
@@ -1810,6 +1819,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         onClose={() => setIsExportDialogOpen(false)}
         filters={exportFilters}
         totalCount={totalCount}
+        selectedTicketIds={selectedTicketIdsArray}
       />
     </ReflectionContainer>
   );

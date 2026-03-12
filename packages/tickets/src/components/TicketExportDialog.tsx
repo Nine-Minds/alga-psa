@@ -15,6 +15,7 @@ interface TicketExportDialogProps {
   onClose: () => void;
   filters: ITicketListFilters;
   totalCount: number;
+  selectedTicketIds: string[];
 }
 
 type ExportStep = 'configure' | 'exporting' | 'complete';
@@ -22,7 +23,6 @@ type ExportStep = 'configure' | 'exporting' | 'complete';
 const EXPORT_FIELDS = [
   { key: 'ticket_number', label: 'Ticket Number' },
   { key: 'title', label: 'Title' },
-  { key: 'url', label: 'URL' },
   { key: 'status', label: 'Status' },
   { key: 'is_closed', label: 'Is Closed' },
   { key: 'priority', label: 'Priority' },
@@ -52,12 +52,14 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
   onClose,
   filters,
   totalCount,
+  selectedTicketIds,
 }) => {
   const [step, setStep] = useState<ExportStep>('configure');
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set(ALL_FIELD_KEYS));
   const [exportedCount, setExportedCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
+  const exportCount = selectedTicketIds.length;
   const allSelected = selectedFields.size === EXPORT_FIELDS.length;
   const noneSelected = selectedFields.size === 0;
 
@@ -93,9 +95,12 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
     setError(null);
 
     try {
-      // Preserve the field order from EXPORT_FIELDS
       const orderedFields = ALL_FIELD_KEYS.filter(k => selectedFields.has(k));
-      const { csv, count } = await exportTicketsToCSV(filters, orderedFields);
+      const { csv, count } = await exportTicketsToCSV(
+        filters,
+        orderedFields,
+        selectedTicketIds,
+      );
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
@@ -115,7 +120,7 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
       setStep('configure');
       handleError(err, 'Failed to export tickets');
     }
-  }, [filters, selectedFields]);
+  }, [filters, selectedFields, selectedTicketIds]);
 
   return (
     <Dialog
@@ -138,7 +143,11 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
               <AlertDescription className="flex items-center gap-2">
                 <FileSpreadsheet className="h-4 w-4 shrink-0" />
                 <span>
-                  <strong>{totalCount}</strong> ticket{totalCount === 1 ? '' : 's'} match{totalCount === 1 ? 'es' : ''} your current filters
+                  Exporting <strong>{exportCount}</strong> selected ticket{exportCount === 1 ? '' : 's'}
+                  {' '}
+                  <span className="text-xs opacity-75">
+                    (of {totalCount} ticket{totalCount === 1 ? '' : 's'} matching applied filters)
+                  </span>
                 </span>
               </AlertDescription>
             </Alert>
@@ -188,11 +197,11 @@ const TicketExportDialog: React.FC<TicketExportDialogProps> = ({
               <Button
                 id="export-tickets-btn"
                 onClick={() => void handleExport()}
-                disabled={totalCount === 0 || noneSelected}
+                disabled={exportCount === 0 || noneSelected}
                 className="flex items-center gap-2"
               >
                 <Download className="h-4 w-4" />
-                Export {totalCount} Ticket{totalCount === 1 ? '' : 's'}
+                Export {exportCount} Ticket{exportCount === 1 ? '' : 's'}
               </Button>
             </DialogFooter>
           </div>

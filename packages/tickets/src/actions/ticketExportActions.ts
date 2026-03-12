@@ -9,7 +9,6 @@ const MAX_EXPORT_ROWS = 10000;
 const CSV_FIELDS = [
   'ticket_number',
   'title',
-  'url',
   'status',
   'is_closed',
   'priority',
@@ -35,7 +34,6 @@ const CSV_FIELDS = [
 const CSV_HEADERS: Record<string, string> = {
   ticket_number: 'Ticket Number',
   title: 'Title',
-  url: 'URL',
   status: 'Status',
   is_closed: 'Is Closed',
   priority: 'Priority',
@@ -119,7 +117,6 @@ function ticketToRow(
   return {
     ticket_number: ticket.ticket_number || '',
     title: ticket.title || '',
-    url: ticket.url || '',
     status: ticket.status_name || '',
     is_closed: (ticket as any).is_closed ? 'Yes' : 'No',
     priority: ticket.priority_name || '',
@@ -199,15 +196,21 @@ async function resolveNameLookups(tickets: ITicketListItem[]): Promise<NameLooku
 
 export async function exportTicketsToCSV(
   filters: ITicketListFilters,
-  selectedFields?: string[]
+  selectedFields?: string[],
+  ticketIds?: string[]
 ): Promise<{ csv: string; count: number }> {
   const result = await getTicketsForList(filters, 1, MAX_EXPORT_ROWS);
 
+  // Filter to only selected tickets if IDs are provided
+  const tickets = ticketIds && ticketIds.length > 0
+    ? result.tickets.filter(t => t.ticket_id && ticketIds.includes(t.ticket_id))
+    : result.tickets;
+
   // Resolve names that aren't part of the standard list query
-  const lookups = await resolveNameLookups(result.tickets);
+  const lookups = await resolveNameLookups(tickets);
   const ticketTags = result.metadata?.ticketTags || {};
 
-  const rows = result.tickets.map(t => ticketToRow(t, lookups, ticketTags));
+  const rows = tickets.map(t => ticketToRow(t, lookups, ticketTags));
 
   // Use selected fields if provided, otherwise all fields
   const allFieldKeys = CSV_FIELDS as readonly string[];
@@ -238,5 +241,5 @@ export async function exportTicketsToCSV(
     ...dataRows.map(row => row.map(escapeField).join(','))
   ];
 
-  return { csv: csvLines.join('\n'), count: result.tickets.length };
+  return { csv: csvLines.join('\n'), count: tickets.length };
 }
