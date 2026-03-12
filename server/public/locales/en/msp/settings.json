@@ -83,7 +83,7 @@
       "aiAssistant": {
         "name": "AI Assistant",
         "description": "Enable AI-powered Quick Ask and Chat sidebar.",
-        "restriction": "Only available for the master billing tenant."
+        "restriction": "Only available for whitelisted tenants."
       },
       "workflowAutomation": {
         "name": "Workflow Automation",
