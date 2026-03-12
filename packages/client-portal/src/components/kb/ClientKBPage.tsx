@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
+import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import { Input } from '@alga-psa/ui/components/Input';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { TagFilter } from '@alga-psa/ui/components';
@@ -285,30 +286,29 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
             <Card className="h-full">
               <CardContent className="p-2 h-full overflow-auto">
                 {isCategorySidebarCollapsed ? (
-                  <Button
+                  <CollapseToggleButton
                     id="kb-expand-categories"
-                    variant="ghost"
-                    size="sm"
+                    isCollapsed={true}
+                    collapsedLabel="Show categories"
+                    expandedLabel="Collapse categories"
+                    expandDirection="right"
                     onClick={() => setIsCategorySidebarCollapsed(false)}
-                    className="w-full"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
+                    className="mx-auto"
+                  />
                 ) : (
                   <>
                     <div className="flex items-center justify-between px-2 py-1 mb-2">
                       <span className="text-sm font-medium">
                         {t('kb.categories', 'Categories')}
                       </span>
-                      <Button
+                      <CollapseToggleButton
                         id="kb-collapse-categories"
-                        variant="ghost"
-                        size="sm"
+                        isCollapsed={false}
+                        collapsedLabel="Show categories"
+                        expandedLabel="Collapse categories"
+                        expandDirection="right"
                         onClick={() => setIsCategorySidebarCollapsed(true)}
-                        className="h-6 w-6 p-0"
-                      >
-                        <ChevronDown className="w-4 h-4 rotate-90" />
-                      </Button>
+                      />
                     </div>
                     <div
                       className={`py-1.5 px-2 cursor-pointer rounded transition-colors ${

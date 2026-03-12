@@ -3,9 +3,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
+import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import { Input } from '@alga-psa/ui/components/Input';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { Search, ChevronRight, Download, FileText, Image, File, Video, ChevronDown, ChevronUp, FolderOpen } from 'lucide-react';
+import { Search, ChevronRight, ChevronDown, Download, FileText, Image, File, Video, ChevronUp, FolderOpen } from 'lucide-react';
 import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import type { IDocument, IFolderNode } from '@alga-psa/types';
 import { getClientDocuments, getClientDocumentFolders, downloadClientDocument, ClientDocumentFilters, PaginatedClientDocuments } from '@alga-psa/client-portal/actions/client-portal-actions/client-documents';
@@ -256,28 +257,27 @@ export default function ClientDocumentsPage() {
             <Card className="h-full">
               <CardContent className="p-2 h-full overflow-auto">
                 {isFolderSidebarCollapsed ? (
-                  <Button
+                  <CollapseToggleButton
                     id="client-docs-expand-sidebar"
-                    variant="ghost"
-                    size="sm"
+                    isCollapsed={true}
+                    collapsedLabel="Show folders"
+                    expandedLabel="Collapse folders"
+                    expandDirection="right"
                     onClick={() => setIsFolderSidebarCollapsed(false)}
-                    className="w-full"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
+                    className="mx-auto"
+                  />
                 ) : (
                   <>
                     <div className="flex items-center justify-between px-2 py-1 mb-2">
                       <span className="text-sm font-medium">{t('folders.title', 'Folders')}</span>
-                      <Button
+                      <CollapseToggleButton
                         id="client-docs-collapse-sidebar"
-                        variant="ghost"
-                        size="sm"
+                        isCollapsed={false}
+                        collapsedLabel="Show folders"
+                        expandedLabel="Collapse folders"
+                        expandDirection="right"
                         onClick={() => setIsFolderSidebarCollapsed(true)}
-                        className="h-6 w-6 p-0"
-                      >
-                        <ChevronDown className="w-4 h-4 rotate-90" />
-                      </Button>
+                      />
                     </div>
                     <div
                       className={`py-1.5 px-2 cursor-pointer rounded transition-colors ${

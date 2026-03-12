@@ -17,6 +17,7 @@ export { default as ClientAvatar } from './ClientAvatar';
 export * from './ClientPicker';
 export * from './ColorPicker';
 export { default as ColorPicker } from './ColorPicker';
+export * from './CollapseToggleButton';
 export * from './ConfirmationDialog';
 export * from './ContactAvatar';
 export { default as ContactAvatar } from './ContactAvatar';

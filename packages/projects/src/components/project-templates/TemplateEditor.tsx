@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import { darkenColor } from '@alga-psa/ui/lib/colorUtils';
 import { Button } from '@alga-psa/ui/components/Button';
+import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -36,7 +37,6 @@ import {
   Pin,
   X,
   Columns3,
-  ChevronRight,
 } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import {
@@ -1206,16 +1206,14 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
             >
               {/* Collapsible Phases Panel */}
               <div className={`${styles.phasesContainer} ${isPhasesPanelVisible ? styles.phasesContainerExpanded : styles.phasesContainerCollapsed}`}>
-                <Button
+                <CollapseToggleButton
                   id="toggle-phases-panel"
-                  variant="default"
-                  size="icon"
+                  isCollapsed={!isPhasesPanelVisible}
+                  collapsedLabel="Show phases panel"
+                  expandedLabel="Hide phases panel"
                   className={styles.phasesPanelToggle}
                   onClick={() => setIsPhasesPanelVisible(!isPhasesPanelVisible)}
-                  aria-label={isPhasesPanelVisible ? 'Hide phases panel' : 'Show phases panel'}
-                >
-                  <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${isPhasesPanelVisible ? 'rotate-180' : ''}`} />
-                </Button>
+                />
                 <div className={`${styles.phasesList} ${isPhasesPanelVisible ? styles.phasesListVisible : styles.phasesListHidden}`}>
                   <div className={styles.phasesPanel}>
                     <div className={styles.phasesPanelHeader}>
