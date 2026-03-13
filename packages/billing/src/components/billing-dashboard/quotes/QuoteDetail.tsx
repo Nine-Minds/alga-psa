@@ -9,6 +9,7 @@ import type { IClient, IContact, IQuote } from '@alga-psa/types';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
 import { deleteQuote, getQuote, updateQuote } from '../../../actions/quoteActions';
 import { getAllContacts } from '@alga-psa/clients/actions';
+import QuoteStatusBadge from './QuoteStatusBadge';
 
 interface QuoteDetailProps {
   quoteId: string;
@@ -192,9 +193,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit }) =>
           <div className="space-y-1">
             <div className="text-sm text-muted-foreground">{quote.quote_number || 'Template quote'}</div>
             <h2 className="text-2xl font-semibold text-foreground">{quote.title}</h2>
-            <p className="text-sm text-muted-foreground">
-              Status: {quote.status || 'draft'}
-            </p>
+            <div>
+              <QuoteStatusBadge status={quote.status || 'draft'} />
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button id="quote-detail-back" variant="outline" onClick={onBack}>Back</Button>

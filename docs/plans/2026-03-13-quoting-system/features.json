@@ -415,7 +415,7 @@
   {
     "id": "F049",
     "description": "P1: QuoteStatusBadge component — colored badge per status value",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR18"
     ]

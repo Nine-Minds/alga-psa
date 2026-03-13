@@ -7,10 +7,11 @@ import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Ale
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
-import type { ColumnDefinition, IQuoteListItem } from '@alga-psa/types';
+import type { ColumnDefinition, IQuoteListItem, QuoteStatus } from '@alga-psa/types';
 import { listQuotes } from '../../../actions/quoteActions';
 import QuoteDetail from './QuoteDetail';
 import QuoteForm from './QuoteForm';
+import QuoteStatusBadge from './QuoteStatusBadge';
 
 function formatCurrency(minorUnits: number, currencyCode: string): string {
   return new Intl.NumberFormat('en-US', {
@@ -84,7 +85,7 @@ const QuotesTab: React.FC = () => {
     {
       title: 'Status',
       dataIndex: 'status',
-      render: (value: string | null | undefined) => value || 'draft',
+      render: (value: string | null | undefined) => <QuoteStatusBadge status={(value || 'draft') as QuoteStatus} />,
     },
     {
       title: 'Quote Date',
