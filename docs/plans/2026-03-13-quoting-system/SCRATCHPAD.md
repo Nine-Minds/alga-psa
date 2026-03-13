@@ -144,3 +144,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) T012 complete — Schema: createQuoteSchema requires client_id, title, quote_date, valid_until. Added createQuoteSchema required-field coverage.
 - (2026-03-13) T013 complete — Schema: createQuoteSchema rejects invalid dates (valid_until before quote_date). Added createQuoteSchema date ordering coverage.
 - (2026-03-13) T014 complete — Schema: createQuoteItemSchema requires description and validates quantity > 0. Added createQuoteItemSchema validation coverage.
+- (2026-03-13) T015 complete — Schema: status transition validation allows draft→sent but rejects draft→accepted. Added draft transition validation coverage.
