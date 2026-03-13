@@ -73,4 +73,40 @@ describe('workflow step properties basics', () => {
     fireEvent.click(screen.getByTitle('Copy full path'));
     expect(onCopyPath).toHaveBeenLastCalledWith('vars.tickets_create');
   });
+
+  it('T296: read-only grouped steps can still inspect step naming and transform outputs without editing them', () => {
+    const onStepNameChange = vi.fn();
+    const onSaveAsChange = vi.fn();
+    const onCopyPath = vi.fn();
+
+    render(
+      <div className="space-y-2">
+        <WorkflowStepNameField
+          stepId="readonly-step"
+          value="Transform ticket summary"
+          onChange={onStepNameChange}
+          disabled
+        />
+        <WorkflowStepSaveOutputSection
+          stepId="readonly-step"
+          actionId="transform.truncate_text"
+          saveAs="shortSummary"
+          onSaveAsChange={onSaveAsChange}
+          onCopyPath={onCopyPath}
+          generateSaveAsName={generateSaveAsName}
+          disabled
+        />
+      </div>
+    );
+
+    expect(screen.getByDisplayValue('Transform ticket summary')).toBeDisabled();
+    expect(screen.getByRole('switch')).toBeDisabled();
+    expect(screen.getByDisplayValue('shortSummary')).toBeDisabled();
+    expect(screen.getByText('vars.shortSummary')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTitle('Copy full path'));
+    expect(onCopyPath).toHaveBeenLastCalledWith('vars.shortSummary');
+    expect(onStepNameChange).not.toHaveBeenCalled();
+    expect(onSaveAsChange).not.toHaveBeenCalled();
+  });
 });

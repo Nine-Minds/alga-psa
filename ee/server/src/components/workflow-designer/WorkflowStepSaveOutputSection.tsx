@@ -21,6 +21,7 @@ export const WorkflowStepSaveOutputSection: React.FC<{
   onSaveAsChange: (value?: string) => void;
   onCopyPath: (path: string) => void;
   generateSaveAsName: (actionId: string) => string;
+  disabled?: boolean;
 }> = ({
   stepId,
   actionId,
@@ -29,6 +30,7 @@ export const WorkflowStepSaveOutputSection: React.FC<{
   onSaveAsChange,
   onCopyPath,
   generateSaveAsName,
+  disabled = false,
 }) => {
   const currentSaveAs = saveAs ?? '';
   const isSaveEnabled = currentSaveAs.length > 0;
@@ -53,6 +55,7 @@ export const WorkflowStepSaveOutputSection: React.FC<{
           id={`workflow-step-saveAs-toggle-${stepId}`}
           checked={isSaveEnabled}
           onCheckedChange={handleToggleSave}
+          disabled={disabled}
         />
       </div>
 
@@ -63,6 +66,7 @@ export const WorkflowStepSaveOutputSection: React.FC<{
               id={`workflow-step-saveAs-${stepId}`}
               placeholder="e.g., ticketDefaults"
               value={currentSaveAs}
+              disabled={disabled}
               onChange={(event) => onSaveAsChange(event.target.value.trim() || undefined)}
               className={`flex-1 ${saveAsValidation?.type === 'error' ? 'border-destructive' : saveAsValidation?.type === 'warning' ? 'border-warning' : ''}`}
             />
@@ -73,6 +77,7 @@ export const WorkflowStepSaveOutputSection: React.FC<{
               onClick={() => onCopyPath(`vars.${currentSaveAs}`)}
               title="Copy full path"
               className="flex-shrink-0"
+              disabled={!currentSaveAs}
             >
               <Copy className="h-4 w-4" />
             </Button>

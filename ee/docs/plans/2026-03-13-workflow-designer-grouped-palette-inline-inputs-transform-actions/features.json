@@ -2507,7 +2507,7 @@
   {
     "id": "F295",
     "description": "Prevent read-only workflow users from changing grouped tiles, selected actions, or inline field values",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions"
     ]
@@ -2515,7 +2515,7 @@
   {
     "id": "F296",
     "description": "Allow read-only workflow users to inspect grouped tiles, selected actions, field values, and transform outputs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions"
     ]

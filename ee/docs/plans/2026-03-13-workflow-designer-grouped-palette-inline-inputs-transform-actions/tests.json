@@ -2356,7 +2356,7 @@
   {
     "id": "T295",
     "description": "Permissions: read-only workflow users cannot change grouped tiles, selected actions, or inline field values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F295"
     ]
@@ -2364,7 +2364,7 @@
   {
     "id": "T296",
     "description": "Permissions: read-only workflow users can inspect grouped tiles, selected actions, field values, and transform outputs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F296"
     ]

@@ -146,4 +146,25 @@ describe('GroupedActionConfigSection', () => {
     expect(screen.getByText('Shorten text using explicit truncation settings.')).toBeInTheDocument();
     expect(screen.queryByText('Action required')).not.toBeInTheDocument();
   });
+
+  it('T295/T296: keeps grouped action details visible for read-only steps while disabling action changes', () => {
+    render(
+      <GroupedActionConfigSection
+        stepId="step-readonly"
+        record={transformRecord}
+        selectedActionId="transform.truncate_text"
+        selectedActionDescription="Shorten text using explicit truncation settings."
+        onActionChange={vi.fn()}
+        disabled
+      />
+    );
+
+    expect(document.getElementById('workflow-step-group-label-step-readonly')).toHaveTextContent(
+      'Transform'
+    );
+    expect(screen.getByText('Shorten text using explicit truncation settings.')).toBeInTheDocument();
+    expect(
+      document.getElementById('workflow-step-action-select-step-readonly')
+    ).toBeDisabled();
+  });
 });

@@ -3047,19 +3047,25 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
               </Card>
             )}
             {selectedStep && activeDefinition ? (
-              canManage ? (
-                <StepConfigPanel
-                  step={selectedStep}
-                  stepPath={stepPathMap[selectedStep.id]}
-                  errors={errorsByStepId.get(selectedStep.id) ?? []}
-                  nodeRegistry={nodeRegistryMap}
-                  actionRegistry={actionRegistry}
-                  designerActionCatalog={designerActionCatalog}
-                  fieldOptions={fieldOptions}
-                  payloadSchema={payloadSchema}
-                  definition={activeDefinition}
-                  onChange={(updatedStep) => handleStepUpdate(selectedStep.id, () => updatedStep)}
-                />
+              canManage || selectedStep.type === 'action.call' ? (
+                <div className="space-y-3">
+                  {!canManage && (
+                    <div className="text-sm text-gray-500">Read-only access: step editing is disabled.</div>
+                  )}
+                  <StepConfigPanel
+                    step={selectedStep}
+                    stepPath={stepPathMap[selectedStep.id]}
+                    errors={errorsByStepId.get(selectedStep.id) ?? []}
+                    nodeRegistry={nodeRegistryMap}
+                    actionRegistry={actionRegistry}
+                    designerActionCatalog={designerActionCatalog}
+                    fieldOptions={fieldOptions}
+                    payloadSchema={payloadSchema}
+                    definition={activeDefinition}
+                    editable={canManage}
+                    onChange={(updatedStep) => handleStepUpdate(selectedStep.id, () => updatedStep)}
+                  />
+                </div>
               ) : (
                 <div className="text-sm text-gray-500">Read-only access: step editing is disabled.</div>
               )
@@ -4207,8 +4213,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                       onInsertStep={(index) => handleInsertStep('root', index)}
                       onInsertAtPath={handleInsertStep}
                       nodeRegistry={nodeRegistryMap}
-                        errorMap={errorsByStepId}
-                        isRoot={true}
+                      errorMap={errorsByStepId}
+                      isRoot={true}
+                      disabled={!canManage}
                     />
                   )}
                 </div>
@@ -4534,7 +4541,7 @@ const Pipe: React.FC<{
           {/* Steps with Connectors */}
           {steps.map((step, index) => (
             <React.Fragment key={step.id}>
-              <Draggable draggableId={step.id} index={index}>
+              <Draggable draggableId={step.id} index={index} isDragDisabled={disabled}>
                 {(dragProvided) => (
                   <div
                     ref={dragProvided.innerRef}
@@ -4881,6 +4888,7 @@ const StepConfigPanel: React.FC<{
   fieldOptions: SelectOption[];
   payloadSchema: JsonSchema | null;
   definition: WorkflowDefinition;
+  editable?: boolean;
   onChange: (step: Step) => void;
 }> = ({
   step,
@@ -4892,6 +4900,7 @@ const StepConfigPanel: React.FC<{
   fieldOptions,
   payloadSchema,
   definition,
+  editable = true,
   onChange
 }) => {
   const nodeSchema = step.type.startsWith('control.') ? null : nodeRegistry[step.type]?.configSchema;
@@ -5095,6 +5104,7 @@ const StepConfigPanel: React.FC<{
         <WorkflowStepNameField
           stepId={step.id}
           value={(step as NodeStep).name ?? ''}
+          disabled={!editable}
           onChange={(value) => onChange({ ...(step as NodeStep), name: value })}
         />
       )}
@@ -5105,6 +5115,7 @@ const StepConfigPanel: React.FC<{
           record={groupedActionRecord}
           selectedActionId={selectedAction?.id}
           selectedActionDescription={selectedAction?.ui?.description}
+          disabled={!editable}
           onActionChange={handleGroupedActionChange}
         />
       )}
@@ -5121,6 +5132,7 @@ const StepConfigPanel: React.FC<{
             actionId={actionId}
             saveAs={(existingConfig?.saveAs as string) ?? undefined}
             saveAsValidation={saveAsValidation}
+            disabled={!editable}
             onSaveAsChange={(value) => {
               onChange({
                 ...nodeStep,
@@ -5268,6 +5280,7 @@ const StepConfigPanel: React.FC<{
           mappedInputFieldCount={mappedInputFieldCount}
           requiredActionInputFields={requiredActionInputFields}
           unmappedRequiredInputFieldCount={unmappedRequiredInputFieldCount}
+          disabled={!editable}
         />
       )}
 
@@ -5343,7 +5356,8 @@ const SchemaForm: React.FC<{
   stepId: string;
   excludeFields?: string[];
   expressionContext?: ExpressionContext;
-}> = ({ schema, rootSchema, value, onChange, fieldOptions, actionRegistry, stepId, excludeFields = [], expressionContext }) => {
+  disabled?: boolean;
+}> = ({ schema, rootSchema, value, onChange, fieldOptions, actionRegistry, stepId, excludeFields = [], expressionContext, disabled = false }) => {
   const resolved = resolveSchema(schema, rootSchema);
   const configValue = value ?? {};
   const allProperties = resolved.properties ?? {};
@@ -5393,6 +5407,7 @@ const SchemaForm: React.FC<{
           fieldOptions={fieldOptions}
           description={fieldDescription}
           context={expressionContext}
+          disabled={disabled}
         />
       );
     }
@@ -5406,6 +5421,7 @@ const SchemaForm: React.FC<{
             options={resolvedProp.enum.map((item) => ({ value: String(item ?? ''), label: String(item ?? '') }))}
             value={configValue[key] === undefined || configValue[key] === null ? '' : String(configValue[key])}
             onValueChange={(val) => updateValue(key, val)}
+            disabled={disabled}
           />
           {fieldDescription && <div className="text-xs text-gray-500 mt-1">{fieldDescription}</div>}
         </div>
@@ -5420,6 +5436,7 @@ const SchemaForm: React.FC<{
             id={`config-${stepId}-${key}`}
             label={meta.label}
             value={(configValue[key] as string) ?? ''}
+            disabled={disabled}
             onChange={(event) => updateValue(key, event.target.value)}
           />
           {fieldDescription && <div className="text-xs text-gray-500 mt-1">{fieldDescription}</div>}
@@ -5435,6 +5452,7 @@ const SchemaForm: React.FC<{
             label={meta.label}
             type="number"
             value={(configValue[key] as number) ?? 0}
+            disabled={disabled}
             onChange={(event) => updateValue(key, Number(event.target.value))}
           />
           {fieldDescription && <div className="text-xs text-gray-500 mt-1">{fieldDescription}</div>}
@@ -5452,6 +5470,7 @@ const SchemaForm: React.FC<{
           <Switch
             id={`config-${stepId}-${key}`}
             checked={Boolean(configValue[key])}
+            disabled={disabled}
             onCheckedChange={(checked) => updateValue(key, checked)}
           />
         </div>
@@ -5469,6 +5488,7 @@ const SchemaForm: React.FC<{
             onChange={(mapping) => updateValue(key, mapping)}
             fieldOptions={fieldOptions}
             context={expressionContext}
+            disabled={disabled}
           />
         );
       }
@@ -5481,6 +5501,7 @@ const SchemaForm: React.FC<{
             label={meta.label}
             value={configValue[key]}
             onChange={(nextValue) => updateValue(key, nextValue)}
+            disabled={disabled}
           />
         );
       }
@@ -5498,6 +5519,7 @@ const SchemaForm: React.FC<{
             actionRegistry={actionRegistry}
             stepId={`${stepId}-${key}`}
             expressionContext={expressionContext}
+            disabled={disabled}
           />
         </div>
       );
@@ -5511,6 +5533,7 @@ const SchemaForm: React.FC<{
             label={meta.label}
             value={configValue[key]}
             onChange={(nextValue) => updateValue(key, nextValue)}
+            disabled={disabled}
           />
           {fieldDescription && <div className="text-xs text-gray-500 mt-1">{fieldDescription}</div>}
         </div>
@@ -5524,6 +5547,7 @@ const SchemaForm: React.FC<{
           label={meta.label}
           value={configValue[key]}
           onChange={(nextValue) => updateValue(key, nextValue)}
+          disabled={disabled}
         />
         {fieldDescription && <div className="text-xs text-gray-500 mt-1">{fieldDescription}</div>}
       </div>
@@ -5547,6 +5571,7 @@ const SchemaForm: React.FC<{
         <div className="border-t border-gray-200 pt-3">
           <button
             type="button"
+            disabled={disabled}
             onClick={() => setShowAdvanced(!showAdvanced)}
             className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700"
           >
@@ -5572,7 +5597,8 @@ const ExpressionField: React.FC<{
   fieldOptions: SelectOption[];
   description?: string;
   context?: ExpressionContext;
-}> = ({ idPrefix, label, value, onChange, fieldOptions, description, context }) => {
+  disabled?: boolean;
+}> = ({ idPrefix, label, value, onChange, fieldOptions, description, context, disabled = false }) => {
   const [error, setError] = useState<string | null>(null);
   const editorRef = useRef<ExpressionEditorHandle>(null);
 
@@ -5606,6 +5632,7 @@ const ExpressionField: React.FC<{
           onValueChange={handleInsert}
           allowClear
           className="w-44"
+          disabled={disabled}
         />
       </div>
       <ExpressionEditor
@@ -5618,6 +5645,7 @@ const ExpressionField: React.FC<{
         placeholder="Enter expression..."
         hasError={!!error}
         ariaLabel={label}
+        readOnly={disabled}
       />
       {error && <div className="text-xs text-destructive">{error}</div>}
       {description && !error && <div className="text-xs text-gray-500">{description}</div>}
@@ -5632,7 +5660,8 @@ const MappingExprEditor: React.FC<{
   onChange: (value: Record<string, Expr>) => void;
   fieldOptions: SelectOption[];
   context?: ExpressionContext;
-}> = ({ idPrefix, label, value, onChange, fieldOptions, context }) => {
+  disabled?: boolean;
+}> = ({ idPrefix, label, value, onChange, fieldOptions, context, disabled = false }) => {
   const entries = Object.entries(value);
 
   const handleUpdate = (key: string, expr: Expr) => {
@@ -5663,7 +5692,7 @@ const MappingExprEditor: React.FC<{
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <Label>{label}</Label>
-        <Button id={`${idPrefix}-add`} variant="outline" size="sm" onClick={handleAdd}>
+        <Button id={`${idPrefix}-add`} variant="outline" size="sm" onClick={handleAdd} disabled={disabled}>
           Add
         </Button>
       </div>
@@ -5675,6 +5704,7 @@ const MappingExprEditor: React.FC<{
               <Input
                 id={`${idPrefix}-key-${index}`}
                 value={key}
+                disabled={disabled}
                 onChange={(event) => handleKeyChange(key, event.target.value)}
               />
               <Button
@@ -5682,6 +5712,7 @@ const MappingExprEditor: React.FC<{
                 variant="ghost"
                 size="sm"
                 onClick={() => handleRemove(key)}
+                disabled={disabled}
               >
                 Remove
               </Button>
@@ -5693,6 +5724,7 @@ const MappingExprEditor: React.FC<{
               onChange={(nextExpr) => handleUpdate(key, nextExpr)}
               fieldOptions={fieldOptions}
               context={context}
+              disabled={disabled}
             />
           </Card>
         ))}
@@ -5706,7 +5738,8 @@ const JsonField: React.FC<{
   label: string;
   value: unknown;
   onChange: (value: unknown) => void;
-}> = ({ idPrefix, label, value, onChange }) => {
+  disabled?: boolean;
+}> = ({ idPrefix, label, value, onChange, disabled = false }) => {
   const [text, setText] = useState(() => JSON.stringify(value ?? {}, null, 2));
   const [error, setError] = useState<string | null>(null);
 
@@ -5731,6 +5764,7 @@ const JsonField: React.FC<{
       <TextArea
         id={`${idPrefix}-json`}
         value={text}
+        disabled={disabled}
         onChange={(event) => handleChange(event.target.value)}
         rows={4}
         className={error ? 'border-destructive focus:ring-destructive focus:border-destructive' : ''}

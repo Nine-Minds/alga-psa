@@ -5,8 +5,21 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../mapping', () => ({
-  MappingPanel: ({ stepId }: { stepId: string }) => (
-    <div data-testid={`mapping-panel-${stepId}`}>mapping-panel</div>
+  MappingPanel: ({
+    stepId,
+    value,
+    disabled,
+  }: {
+    stepId: string;
+    value: Record<string, unknown>;
+    disabled?: boolean;
+  }) => (
+    <div
+      data-testid={`mapping-panel-${stepId}`}
+      data-disabled={disabled ? 'true' : 'false'}
+    >
+      {JSON.stringify(value)}
+    </div>
   ),
 }));
 
@@ -48,7 +61,7 @@ describe('WorkflowActionInputSection', () => {
     expect(screen.getByText('Action inputs')).toBeInTheDocument();
     expect(screen.getByText('0 / 2 fields configured')).toBeInTheDocument();
     expect(screen.getByText('1 required field still unmapped')).toBeInTheDocument();
-    expect(screen.getByTestId('mapping-panel-step-1')).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-panel-step-1')).toHaveTextContent('{}');
     expect(screen.queryByRole('button', { name: 'Edit mapping' })).not.toBeInTheDocument();
 
     rerender(
@@ -117,7 +130,7 @@ describe('WorkflowActionInputSection', () => {
     expect(screen.getByText('Action inputs')).toBeInTheDocument();
     expect(screen.getByText('1 / 3 fields configured')).toBeInTheDocument();
     expect(screen.getByText('1 required field still unmapped')).toBeInTheDocument();
-    expect(screen.getByTestId('mapping-panel-transform-step')).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-panel-transform-step')).toHaveTextContent('{"maxLength":24}');
   });
 
   it('T293: app grouped steps reuse the same inline field editor model when their schemas are compatible', () => {
@@ -155,6 +168,44 @@ describe('WorkflowActionInputSection', () => {
     expect(screen.getByText('Action inputs')).toBeInTheDocument();
     expect(screen.getByText('1 / 3 fields configured')).toBeInTheDocument();
     expect(screen.getByText('1 required field still unmapped')).toBeInTheDocument();
-    expect(screen.getByTestId('mapping-panel-app-step')).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-panel-app-step')).toHaveTextContent('{"channel":"ops-alerts"}');
+  });
+
+  it('T295/T296: keeps inline field state visible for read-only grouped steps while disabling edits', () => {
+    render(
+      <WorkflowActionInputSection
+        stepId="readonly-step"
+        inputMapping={{ summary: 'Existing summary' }}
+        onInputMappingChange={vi.fn()}
+        targetFields={[
+          { name: 'summary', type: 'string', required: true },
+          { name: 'details', type: 'string' },
+        ]}
+        dataContext={{
+          payload: [],
+          payloadSchema: undefined,
+          steps: [],
+          globals: {
+            env: [],
+            secrets: [],
+            meta: [],
+            error: [],
+          },
+        }}
+        fieldOptions={[]}
+        mappedInputFieldCount={1}
+        requiredActionInputFields={[{ name: 'summary', type: 'string', required: true }]}
+        unmappedRequiredInputFieldCount={0}
+        disabled
+      />
+    );
+
+    expect(screen.getByText('Action inputs')).toBeInTheDocument();
+    expect(screen.getByText('1 / 2 fields configured')).toBeInTheDocument();
+    expect(screen.getByText('All 1 required fields are mapped')).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-panel-readonly-step')).toHaveAttribute('data-disabled', 'true');
+    expect(screen.getByTestId('mapping-panel-readonly-step')).toHaveTextContent(
+      '{"summary":"Existing summary"}'
+    );
   });
 });

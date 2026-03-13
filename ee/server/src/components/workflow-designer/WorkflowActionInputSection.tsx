@@ -16,6 +16,7 @@ export const WorkflowActionInputSection: React.FC<{
   mappedInputFieldCount: number;
   requiredActionInputFields: ActionInputField[];
   unmappedRequiredInputFieldCount: number;
+  disabled?: boolean;
 }> = ({
   stepId,
   inputMapping,
@@ -26,6 +27,7 @@ export const WorkflowActionInputSection: React.FC<{
   mappedInputFieldCount,
   requiredActionInputFields,
   unmappedRequiredInputFieldCount,
+  disabled = false,
 }) => (
   <div
     id={`workflow-step-action-inputs-${stepId}`}
@@ -60,6 +62,7 @@ export const WorkflowActionInputSection: React.FC<{
       dataContext={dataContext}
       fieldOptions={fieldOptions}
       stepId={stepId}
+      disabled={disabled}
       sourceTreeMaxHeight="32rem"
     />
   </div>

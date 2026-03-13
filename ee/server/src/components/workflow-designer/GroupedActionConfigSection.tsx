@@ -28,12 +28,14 @@ export const GroupedActionConfigSection: React.FC<{
   selectedActionId?: string;
   selectedActionDescription?: string;
   onActionChange: (actionId?: string) => void;
+  disabled?: boolean;
 }> = ({
   stepId,
   record,
   selectedActionId,
   selectedActionDescription,
   onActionChange,
+  disabled = false,
 }) => {
   const actionOptions = buildGroupedActionSelectOptions(record);
   const helperText = selectedActionDescription?.trim() || record.description?.trim();
@@ -68,6 +70,7 @@ export const GroupedActionConfigSection: React.FC<{
         options={actionOptions}
         value={selectedActionId ?? ''}
         onValueChange={(value) => onActionChange(value || undefined)}
+        disabled={disabled}
         allowClear
       />
 
