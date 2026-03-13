@@ -154,3 +154,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) T022 complete — Model: getByNumber returns correct quote by human-readable number within tenant. Added getByNumber coverage.
 - (2026-03-13) T023 complete — Model: listByTenant returns paginated results with correct total count. Added listByTenant pagination coverage.
 - (2026-03-13) T024 complete — Model: listByTenant filters by status correctly. Added listByTenant status filter coverage.
+- (2026-03-13) T025 complete — Model: listByTenant filters by client_id correctly. Added listByTenant client filter coverage.
