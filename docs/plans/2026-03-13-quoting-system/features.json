@@ -479,7 +479,7 @@
   {
     "id": "F056",
     "description": "P2: Discount line items — applies_to_service_id scoping (discount on all items of a service)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2-FR2"
     ]

@@ -109,6 +109,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) F056 complete — P2: Discount recalculation now aggregates base totals by `service_id`, enabling `applies_to_service_id` discounts to price against every matching service line on the quote.
 - (2026-03-13) F055 complete — P2: Discount recalculation now honors `applies_to_item_id`, pricing percentage discounts against the targeted quote line instead of the full quote subtotal.
 - (2026-03-13) F054 complete — P2: Quote recalculation now treats `is_discount` rows specially, deriving percentage discounts from their scoped base amount and fixed discounts from the stored quantity/unit price so discount lines carry meaningful totals.
 - (2026-03-13) F053 complete — P2: Added quote-level `tax_source` support (`internal` / `external` / `pending_external`) via a new migration, shared quote typing/schema updates, and recalculation logic that skips internal tax computation when the quote delegates tax externally.
