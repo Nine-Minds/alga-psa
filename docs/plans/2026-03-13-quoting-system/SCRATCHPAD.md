@@ -33,6 +33,8 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 
 ## Discoveries / Constraints
 
+- (2026-03-13) Billing package Vitest config needed additional aliases for `@alga-psa/auth`, `@alga-psa/core`, `@alga-psa/db`, and `@alga-psa/ui` so quote action tests can import package-local server-action dependencies.
+
 - (2026-03-13) `invoice_charges.quantity` is BIGINT (integer), not decimal — changed in migration `20250225165701`.
 - (2026-03-13) All billing server actions use `withAuth()` wrapper from `packages/auth/src/lib/withAuth.ts`.
 - (2026-03-13) Invoice template AST system is data-agnostic — evaluator takes bindings + data, not invoice-specific. Reusable for quotes by defining new bindings and QuoteViewModel.
@@ -105,6 +107,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) T042 complete — Added `packages/billing/tests/quote/quoteActions.test.ts` coverage proving `createQuote` returns a permission error when `billing:create` is denied; updated `packages/billing/vitest.config.ts` alias resolution so the billing package test runner can load quote server-action dependencies.
 - (2026-03-13) F035 complete — P1: Quote item create/update actions preserve `is_recurring` and `billing_frequency`, and schema validation requires a billing frequency for recurring items so conversion-ready recurrence metadata is stored end-to-end.
 - (2026-03-13) F034 complete — P1: Quote item create/update actions preserve `is_optional`, and the quote item model persists/returns that flag so optional line items are available to downstream UI and portal flows.
 - (2026-03-13) F033 complete — P1: Quote item actions now accept the full billing method enum (`fixed`, `hourly`, `usage`, `per_unit`) through the quote item schema and preserve service-derived billing methods from the catalog.

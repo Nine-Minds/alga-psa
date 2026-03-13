@@ -341,7 +341,7 @@
   {
     "id": "T042",
     "description": "Action: createQuote requires billing:create permission",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
