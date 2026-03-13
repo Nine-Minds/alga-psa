@@ -692,19 +692,19 @@
   {
     "id": "T116",
     "description": "Playwright: field-level validation errors render inline when values are missing or invalid",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F116"]
   },
   {
     "id": "T117",
     "description": "Playwright: field-level type-compatibility hints render inline for coercible and incompatible references",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F117"]
   },
   {
     "id": "T118",
     "description": "Playwright: unset required fields appear visibly incomplete before any value mode is chosen",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F118"]
   },
   {
@@ -716,7 +716,7 @@
   {
     "id": "T120",
     "description": "Playwright: the step-level validation summary stays in sync with inline field state",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F120"]
   },
   {

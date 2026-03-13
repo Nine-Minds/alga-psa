@@ -692,19 +692,19 @@
   {
     "id": "F116",
     "description": "Render validation messaging inline on individual field rows when values are missing or invalid",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Compatibility, Save/Load, and Validation", "Requirements > Inline Field-Based Action Input Editor"]
   },
   {
     "id": "F117",
     "description": "Render type-compatibility messaging inline on individual field rows when references are coercible or incompatible",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor", "Requirements > Reference Source Model"]
   },
   {
     "id": "F118",
     "description": "Render unset required fields as visibly incomplete even before any value mode is chosen",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {
@@ -716,7 +716,7 @@
   {
     "id": "F120",
     "description": "Keep the current step-level validation summary in sync with the inline field editor state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Compatibility, Save/Load, and Validation"]
   },
   {

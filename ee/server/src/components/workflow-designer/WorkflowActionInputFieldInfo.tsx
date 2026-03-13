@@ -25,6 +25,11 @@ export const WorkflowActionInputFieldInfo: React.FC<{
         </span>
       )}
       <span className="text-xs text-gray-400">{field.type}</span>
+      {isMissingRequired && (
+        <span className="inline-flex items-center gap-1 text-[11px] text-destructive" title="Required field is missing a value">
+          Missing
+        </span>
+      )}
     </div>
     {field.description && (
       <p className="mt-0.5 text-[11px] text-gray-500">{field.description}</p>

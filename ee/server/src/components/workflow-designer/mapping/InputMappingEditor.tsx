@@ -35,6 +35,7 @@ import {
   getDisplayTypeName
 } from './typeCompatibility';
 import { WorkflowActionInputFieldInfo } from '../WorkflowActionInputFieldInfo';
+import { getWorkflowActionInputTypeHint, WorkflowActionInputTypeHint } from '../WorkflowActionInputTypeHint';
 import {
   WorkflowActionInputSourceMode,
   createWorkflowActionInputValueForMode,
@@ -593,25 +594,7 @@ const MappingFieldEditor: React.FC<{
 
     if (!sourceType || !targetType) return null;
 
-    const compatibility = getTypeCompatibility(sourceType, targetType);
-
-    if (compatibility === TypeCompatibility.COERCIBLE) {
-      return {
-        type: 'warning' as const,
-        message: `Type "${sourceType}" will be converted to "${targetType}"`,
-        compatibility
-      };
-    }
-
-    if (compatibility === TypeCompatibility.INCOMPATIBLE) {
-      return {
-        type: 'error' as const,
-        message: `Type "${sourceType}" is incompatible with expected "${targetType}"`,
-        compatibility
-      };
-    }
-
-    return null;
+    return getWorkflowActionInputTypeHint(sourceType, targetType);
   }, [valueType, value, fieldOptions, field.type, sourceTypeMap]);
 
   const compatibilityBadge = useMemo(() => {
@@ -656,12 +639,6 @@ const MappingFieldEditor: React.FC<{
             field={field}
             isMissingRequired={isMissingRequired}
           />
-          {isMissingRequired && (
-            <span className="inline-flex items-center gap-1 text-[11px] text-destructive" title="Required field is missing a value">
-              <AlertTriangle className="w-3 h-3" />
-              Missing
-            </span>
-          )}
           {compatibilityBadge && (
             <Badge
               className={`text-[10px] ${compatibilityBadge.classes.bg} ${compatibilityBadge.classes.text} ${compatibilityBadge.classes.border}`}
@@ -715,12 +692,10 @@ const MappingFieldEditor: React.FC<{
               )}
               {/* §16.2 - Type mismatch warning */}
               {!expressionError && typeMismatchWarning && (
-                <div className={`flex items-center gap-1 text-xs ${
-                  typeMismatchWarning.type === 'error' ? 'text-destructive' : 'text-warning'
-                }`}>
-                  <AlertTriangle className="w-3 h-3" />
-                  {typeMismatchWarning.message}
-                </div>
+                <WorkflowActionInputTypeHint
+                  sourceType={sourceTypeMap?.get(extractPrimaryPath((value as Expr).$expr) ?? '') ?? inferTypeFromPath(extractPrimaryPath((value as Expr).$expr) ?? '')}
+                  targetType={field.type}
+                />
               )}
             </div>
           )}

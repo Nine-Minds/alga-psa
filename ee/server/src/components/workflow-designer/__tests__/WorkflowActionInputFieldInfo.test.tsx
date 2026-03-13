@@ -1,14 +1,14 @@
 /** @vitest-environment jsdom */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { WorkflowActionInputFieldInfo } from '../WorkflowActionInputFieldInfo';
 
 describe('WorkflowActionInputFieldInfo', () => {
-  it('T101-T104: renders inline action-field labels with required, optional, and description affordances', () => {
-    const { rerender } = render(
+  it('T101-T104/T116/T118: renders inline field labels with missing-required and description affordances', () => {
+    const { rerender, container } = render(
       <WorkflowActionInputFieldInfo
         field={{
           name: 'summary',
@@ -20,9 +20,11 @@ describe('WorkflowActionInputFieldInfo', () => {
       />
     );
 
-    expect(screen.getByText('summary')).toBeInTheDocument();
-    expect(screen.getByTitle('Required field is missing a value')).toBeInTheDocument();
-    expect(screen.getByText('Ticket summary')).toBeInTheDocument();
+    const view = within(container);
+    expect(view.getByText('summary')).toBeInTheDocument();
+    expect(view.getAllByTitle('Required field is missing a value')).toHaveLength(2);
+    expect(view.getByText('Missing')).toBeInTheDocument();
+    expect(view.getByText('Ticket summary')).toBeInTheDocument();
 
     rerender(
       <WorkflowActionInputFieldInfo
@@ -34,8 +36,8 @@ describe('WorkflowActionInputFieldInfo', () => {
       />
     );
 
-    expect(screen.getByText('details')).toBeInTheDocument();
-    expect(screen.getByText('Optional')).toBeInTheDocument();
-    expect(screen.getByText('Additional ticket details')).toBeInTheDocument();
+    expect(view.getByText('details')).toBeInTheDocument();
+    expect(view.getByText('Optional')).toBeInTheDocument();
+    expect(view.getByText('Additional ticket details')).toBeInTheDocument();
   });
 });
