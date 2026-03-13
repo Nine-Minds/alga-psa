@@ -277,7 +277,7 @@
   {
     "id": "T034",
     "description": "Item model: listByQuoteId returns items ordered by display_order",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
