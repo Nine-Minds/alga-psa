@@ -290,7 +290,7 @@
   {
     "id": "F034",
     "description": "Migrate BillingConfiguration.tsx — add id to tabs (if CustomTabs is actually used)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern D"

@@ -179,3 +179,5 @@ npm run build
 - F032 — ContactDetails tabs now use ids directly and the old `findTabLabel` helper is removed.
 
 - F033 — ClientDetails now uses id-based tabs throughout and no longer resolves tabs through `findTabLabel`.
+
+- F034 — Verified `BillingConfiguration` does not render CustomTabs; removed its stale CustomTabs import so no id migration is required there.
