@@ -28,6 +28,7 @@ import {
   type PublishError
 } from '@shared/workflow/runtime';
 import { buildWorkflowDesignerActionCatalog } from '@shared/workflow/runtime/designer/actionCatalog';
+import { zodToWorkflowJsonSchema } from '@shared/workflow/runtime/jsonSchemaMetadata';
 import { verifySecretsExist } from '@shared/workflow/runtime/validation/publishValidation';
 import { createTenantSecretProvider } from '@alga-psa/shared/workflow/secrets';
 import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
@@ -2856,8 +2857,8 @@ const serializeWorkflowRegistryAction = (
   retryHint: action.retryHint ?? null,
   idempotency: action.idempotency,
   ui: action.ui,
-  inputSchema: zodToJsonSchema(action.inputSchema, { name: `${action.id}@${action.version}.input` }),
-  outputSchema: zodToJsonSchema(action.outputSchema, { name: `${action.id}@${action.version}.output` }),
+  inputSchema: zodToWorkflowJsonSchema(action.inputSchema, { name: `${action.id}@${action.version}.input` }),
+  outputSchema: zodToWorkflowJsonSchema(action.outputSchema, { name: `${action.id}@${action.version}.output` }),
   examples: action.examples ?? null
 });
 

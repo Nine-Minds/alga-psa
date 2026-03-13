@@ -920,25 +920,25 @@
   {
     "id": "T154",
     "description": "Unit: Reference mode hides unavailable source fields when no schema information exists for them",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F154"]
   },
   {
     "id": "T155",
     "description": "Integration: Reference mode refreshes immediately when an upstream action changes output schema",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F155"]
   },
   {
     "id": "T156",
     "description": "Integration: Reference mode refreshes immediately when an upstream saveAs changes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F156"]
   },
   {
     "id": "T157",
     "description": "Integration: unrelated upstream step changes do not disturb existing source path selections",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F157"]
   },
   {
@@ -956,37 +956,37 @@
   {
     "id": "T160",
     "description": "Integration: catch and loop contextual sources remain stable when grouped steps are moved within the same block",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F160"]
   },
   {
     "id": "T161",
     "description": "Unit: exported action schemas include additive picker kind annotations",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F161"]
   },
   {
     "id": "T162",
     "description": "Unit: exported action schemas include additive dependency annotations for scoped pickers",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F162"]
   },
   {
     "id": "T163",
     "description": "Unit: exported action schemas include additive fixed-value UI hints",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F163"]
   },
   {
     "id": "T164",
     "description": "Unit: picker annotations survive runtime-schema-to-designer-schema conversion",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F164"]
   },
   {
     "id": "T165",
     "description": "Unit: ActionInputField extraction preserves picker annotations",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F165"]
   },
   {

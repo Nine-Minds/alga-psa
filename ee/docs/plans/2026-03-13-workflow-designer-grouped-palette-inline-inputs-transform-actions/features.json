@@ -920,25 +920,25 @@
   {
     "id": "F154",
     "description": "Reference mode should keep hidden or unavailable source fields out of the selectable list when no schema information exists for them",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Reference Source Model"]
   },
   {
     "id": "F155",
     "description": "Reference mode should refresh step-output sources immediately when an upstream chosen action changes its output schema",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Reference Source Model", "Requirements > Grouped Action Step Model"]
   },
   {
     "id": "F156",
     "description": "Reference mode should refresh step-output sources immediately when an upstream saveAs value changes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "Requirements > Reference Source Model"]
   },
   {
     "id": "F157",
     "description": "Reference mode should preserve current path selections when unrelated upstream steps change",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Reference Source Model"]
   },
   {
@@ -956,37 +956,37 @@
   {
     "id": "F160",
     "description": "Reference mode should preserve the current catch and forEach contextual sources when grouped action steps are moved within the same block",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Reference Source Model", "Requirements > Grouped Action Step Model"]
   },
   {
     "id": "F161",
     "description": "Extend exported action-schema field metadata with an additive picker kind annotation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring", "Data / API / Integrations"]
   },
   {
     "id": "F162",
     "description": "Extend exported action-schema field metadata with an additive dependency annotation for scoped pickers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring", "Data / API / Integrations"]
   },
   {
     "id": "F163",
     "description": "Extend exported action-schema field metadata with an additive UI hint annotation for fixed-value editing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring", "Data / API / Integrations"]
   },
   {
     "id": "F164",
     "description": "Preserve additive picker annotations when converting runtime action schemas to designer JSON schema",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring", "Data / API / Integrations"]
   },
   {
     "id": "F165",
     "description": "Extract picker annotations into the designer's ActionInputField representation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {

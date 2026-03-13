@@ -212,4 +212,85 @@ describe('workflow data context', () => {
       itemType: 'any',
     });
   });
+
+  it('T160: preserves catch and loop context when grouped steps move within the same block', () => {
+    const forEachDefinition = (stepOrder: Array<'sibling' | 'target'>): WorkflowDefinition => ({
+      id: 'workflow-loop-move',
+      version: 1,
+      name: 'Loop workflow move',
+      payloadSchemaRef: 'system:default',
+      trigger: { type: 'event', eventName: 'ticket.created' },
+      steps: [
+        {
+          id: 'foreach-1',
+          type: 'control.forEach',
+          items: { $expr: 'payload.items' },
+          itemVar: 'ticketItem',
+          concurrency: 1,
+          body: stepOrder.map((kind) =>
+            kind === 'target'
+              ? {
+                  id: 'loop-step',
+                  type: 'action.call',
+                  config: {
+                    actionId: 'tickets.create',
+                    version: 1,
+                  },
+                }
+              : {
+                  id: 'sibling-step',
+                  type: 'action.call',
+                  config: {
+                    actionId: 'tickets.update_fields',
+                    version: 2,
+                  },
+                }
+          ),
+        },
+      ],
+    });
+
+    const catchDefinition = (stepOrder: Array<'sibling' | 'target'>): WorkflowDefinition => ({
+      id: 'workflow-catch-move',
+      version: 1,
+      name: 'Catch workflow move',
+      payloadSchemaRef: 'system:default',
+      trigger: { type: 'event', eventName: 'ticket.created' },
+      steps: [
+        {
+          id: 'try-catch-1',
+          type: 'control.tryCatch',
+          try: [],
+          catch: stepOrder.map((kind) =>
+            kind === 'target'
+              ? {
+                  id: 'catch-step',
+                  type: 'action.call',
+                  config: {
+                    actionId: 'tickets.create',
+                    version: 1,
+                  },
+                }
+              : {
+                  id: 'catch-sibling-step',
+                  type: 'action.call',
+                  config: {
+                    actionId: 'tickets.update_fields',
+                    version: 2,
+                  },
+                }
+          ),
+        },
+      ],
+    });
+
+    const initialLoopContext = buildDataContext(forEachDefinition(['target', 'sibling']), 'loop-step', actionRegistry, null);
+    const movedLoopContext = buildDataContext(forEachDefinition(['sibling', 'target']), 'loop-step', actionRegistry, null);
+    expect(movedLoopContext.forEach).toEqual(initialLoopContext.forEach);
+
+    const initialCatchContext = buildDataContext(catchDefinition(['target', 'sibling']), 'catch-step', actionRegistry, null);
+    const movedCatchContext = buildDataContext(catchDefinition(['sibling', 'target']), 'catch-step', actionRegistry, null);
+    expect(initialCatchContext.inCatchBlock).toBe(true);
+    expect(movedCatchContext.inCatchBlock).toBe(true);
+  });
 });

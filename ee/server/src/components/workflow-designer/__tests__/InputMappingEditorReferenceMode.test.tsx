@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import React from 'react';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@alga-psa/tenancy/actions', () => ({
@@ -45,11 +45,17 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 
 vi.mock('../expression-editor', () => ({
   ExpressionEditor: React.forwardRef(function MockExpressionEditor(
-    props: Record<string, never>,
+    props: { value?: string; onChange?: (value: string) => void },
     ref: React.ForwardedRef<HTMLTextAreaElement>
   ) {
-    void props;
-    return <textarea ref={ref} data-testid="mock-expression-editor" />;
+    return (
+      <textarea
+        ref={ref}
+        data-testid="mock-expression-editor"
+        value={props.value ?? ''}
+        onChange={(event) => props.onChange?.(event.target.value)}
+      />
+    );
   }),
 }));
 
@@ -73,34 +79,91 @@ afterEach(() => {
 });
 
 describe('InputMappingEditor reference mode', () => {
-  it('replaces the whole expression with a direct field reference when a structured source is chosen', () => {
+  it('replaces the whole expression with a direct field reference when a structured source is chosen', async () => {
     const onChange = vi.fn();
 
-    render(
-      <InputMappingEditor
-        value={{ summary: { $expr: 'payload.previous.id' } }}
-        onChange={onChange}
-        targetFields={[
-          {
-            name: 'summary',
-            type: 'string',
-            required: true,
-          },
-        ]}
-        fieldOptions={[
-          { value: 'payload.ticket.id', label: 'payload.ticket.id' },
-        ]}
-        stepId="step-1"
-        positionsHandlers={positionsHandlers}
-      />
-    );
+    await act(async () => {
+      render(
+        <InputMappingEditor
+          value={{ summary: { $expr: 'payload.previous.id' } }}
+          onChange={onChange}
+          targetFields={[
+            {
+              name: 'summary',
+              type: 'string',
+              required: true,
+            },
+          ]}
+          fieldOptions={[
+            { value: 'payload.ticket.id', label: 'payload.ticket.id' },
+          ]}
+          stepId="step-1"
+          positionsHandlers={positionsHandlers}
+        />
+      );
+    });
 
-    fireEvent.change(screen.getByTestId('mapping-step-1-summary-picker'), {
-      target: { value: 'payload.ticket.id' },
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('mapping-step-1-summary-picker'), {
+        target: { value: 'payload.ticket.id' },
+      });
     });
 
     expect(onChange).toHaveBeenCalledWith({
       summary: { $expr: 'payload.ticket.id' },
     });
+  });
+
+  it('T157: preserves the current reference expression when unrelated upstream options change', async () => {
+    const onChange = vi.fn();
+    let rerender: ReturnType<typeof render>['rerender'];
+
+    await act(async () => {
+      ({ rerender } = render(
+        <InputMappingEditor
+          value={{ summary: { $expr: 'vars.ticketResult.ticket_id' } }}
+          onChange={onChange}
+          targetFields={[
+            {
+              name: 'summary',
+              type: 'string',
+              required: true,
+            },
+          ]}
+          fieldOptions={[
+            { value: 'vars.ticketResult.ticket_id', label: 'vars.ticketResult.ticket_id' },
+          ]}
+          stepId="step-1"
+          positionsHandlers={positionsHandlers}
+        />
+      ));
+    });
+
+    expect(screen.getByTestId('mock-expression-editor')).toHaveValue('vars.ticketResult.ticket_id');
+
+    await act(async () => {
+      rerender(
+        <InputMappingEditor
+          value={{ summary: { $expr: 'vars.ticketResult.ticket_id' } }}
+          onChange={onChange}
+          targetFields={[
+            {
+              name: 'summary',
+              type: 'string',
+              required: true,
+            },
+          ]}
+          fieldOptions={[
+            { value: 'vars.ticketResult.ticket_id', label: 'vars.ticketResult.ticket_id' },
+            { value: 'vars.contactResult.email', label: 'vars.contactResult.email' },
+          ]}
+          stepId="step-1"
+          positionsHandlers={positionsHandlers}
+        />
+      );
+    });
+
+    expect(screen.getByTestId('mock-expression-editor')).toHaveValue('vars.ticketResult.ticket_id');
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

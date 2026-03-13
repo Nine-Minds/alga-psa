@@ -186,6 +186,26 @@ describe('action input editor state', () => {
     });
   });
 
+  it('T165: ActionInputField extraction preserves picker annotations from designer JSON schema fields', () => {
+    const step: NodeStep = {
+      id: 'step-picker',
+      type: 'action.call',
+      name: 'Update Ticket',
+      config: {
+        actionId: 'tickets.update_fields',
+        version: 2,
+      },
+    };
+
+    const state = buildActionInputEditorState(step, registry);
+    expect(state.actionInputFields.find((field) => field.name === 'ticket_id')?.picker).toEqual({
+      kind: 'ticket',
+      dependencies: ['board_id'],
+      fixedValueHint: 'search',
+      allowsDynamicReference: true,
+    });
+  });
+
   it('T090: choosing an action updates the required-field completion counts for the grouped editor summary', () => {
     const step: NodeStep = {
       id: 'step-2',

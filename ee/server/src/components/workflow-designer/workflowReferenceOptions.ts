@@ -104,16 +104,6 @@ export const buildWorkflowReferenceFieldOptions = (
     collectSchemaPaths(payloadSchema, payloadSchema, 'payload').forEach((path) => {
       pushUniqueOption(options, path, path);
     });
-  } else {
-    [
-      'payload.id',
-      'payload.type',
-      'payload.data',
-      'payload.timestamp',
-      'payload.tenant',
-    ].forEach((path) => {
-      pushUniqueOption(options, path, `${path} (placeholder)`);
-    });
   }
 
   dataContext?.steps.forEach((stepOutput) => {

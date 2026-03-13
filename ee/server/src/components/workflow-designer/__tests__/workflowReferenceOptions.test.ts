@@ -67,6 +67,28 @@ describe('workflow reference options', () => {
     );
   });
 
+  it('T154: hides placeholder payload children when no payload schema is available', () => {
+    const values = buildWorkflowReferenceFieldOptions(null, {
+      ...baseDataContext,
+      payloadSchema: null,
+      steps: [
+        {
+          stepId: 'step-1',
+          stepName: 'Unknown output',
+          saveAs: 'unknownResult',
+          outputSchema: {},
+          fields: [],
+        },
+      ],
+    }).map((option) => option.value);
+
+    expect(values).toContain('payload');
+    expect(values).toContain('vars.unknownResult');
+    expect(values).not.toContain('payload.id');
+    expect(values).not.toContain('payload.type');
+    expect(values).not.toContain('payload.data');
+  });
+
   it('only exposes error options when the current step is inside catch context', () => {
     const normalValues = buildWorkflowReferenceFieldOptions(payloadSchema, baseDataContext).map(
       (option) => option.value
@@ -95,5 +117,34 @@ describe('workflow reference options', () => {
 
     expect(values).toContain('ticketItem');
     expect(values).toContain('$index');
+  });
+
+  it('T155/T156: refreshes step-output reference options when upstream action schemas or saveAs names change', () => {
+    const initialValues = buildWorkflowReferenceFieldOptions(payloadSchema, baseDataContext).map(
+      (option) => option.value
+    );
+    const updatedValues = buildWorkflowReferenceFieldOptions(payloadSchema, {
+      ...baseDataContext,
+      steps: [
+        {
+          stepId: 'step-1',
+          stepName: 'Update Ticket',
+          saveAs: 'updatedTicket',
+          outputSchema: {
+            type: 'object',
+            properties: {
+              updated: { type: 'boolean' },
+            },
+          },
+          fields: [],
+        },
+      ],
+    }).map((option) => option.value);
+
+    expect(initialValues).toContain('vars.ticketResult.ticket_id');
+    expect(updatedValues).not.toContain('vars.ticketResult');
+    expect(updatedValues).not.toContain('vars.ticketResult.ticket_id');
+    expect(updatedValues).toContain('vars.updatedTicket');
+    expect(updatedValues).toContain('vars.updatedTicket.updated');
   });
 });

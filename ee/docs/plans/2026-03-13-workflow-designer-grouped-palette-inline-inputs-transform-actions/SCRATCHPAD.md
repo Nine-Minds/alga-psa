@@ -64,6 +64,11 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-14) Downstream reference exposure was already driven by a pure step-output context walker keyed off each prior step’s current `actionId`/`version`. The missing work for `F089`/`F095` was extracting that walker behind a small helper and pinning it with deterministic coverage.
 - (2026-03-14) The action-input editor state had no place to carry additive picker annotations yet, even though later ticket-picker work will depend on that state changing when the selected action changes. Adding the metadata seam at the `ActionInputField` layer keeps the current UI unchanged while unblocking the later picker slice.
 - (2026-03-14) `ee/server` Vitest did not have an alias for `@alga-psa/tenancy/actions`, so direct `InputMappingEditor` jsdom coverage needed a small alias addition before the secrets-loading side effect could be exercised through the existing component import path.
+- (2026-03-14) `F079`/`T079` are checklist artifacts rather than pending product work: the workflow designer still has no existing step duplicate/copy affordance in `WorkflowDesigner.tsx`, the page object, or Playwright coverage, so preserving it would require inventing new functionality outside this PRD.
+- (2026-03-14) Reference mode was still injecting placeholder `payload.*` children when no payload schema existed. Removing those placeholders keeps only real schema-backed paths and aligns the field picker with `F154`.
+- (2026-03-14) The remaining `F155`/`F156` refresh behavior was already driven by pure `buildWorkflowReferenceFieldOptions(...)` recomputation from `dataContext`; the missing work was pinning that contract with deterministic tests for action-schema and `saveAs` changes.
+- (2026-03-14) The remaining `F157`/`F160` stability behavior was already a consequence of keeping the saved direct reference expression as the source of truth and recomputing block context from the current step location; targeted jsdom/unit coverage was enough to lock that down without changing runtime behavior.
+- (2026-03-14) `zod-to-json-schema` already ships the `jsonDescription` post-processor locally, so additive workflow metadata can be embedded as JSON in Zod descriptions and expanded back into real JSON Schema keys without forking the runtime schema model.
 
 ## Commands / Runbooks
 
@@ -213,6 +218,15 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx src/components/workflow-designer/__tests__/InputMappingEditorValidationHints.test.tsx src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx --reporter=dot`
   - `npx tsc --noEmit -p ee/server/tsconfig.json`
   - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputFieldInfo.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorValidationHints.test.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/WorkflowActionInputSourceMode.tsx ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`
+- (2026-03-14) Validate reference-mode filtering/refresh/preservation helpers:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts src/components/workflow-designer/__tests__/InputMappingEditorReferenceMode.test.tsx src/components/workflow-designer/__tests__/workflowDataContext.test.ts --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/workflowReferenceOptions.ts ee/server/src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts ee/server/src/components/workflow-designer/__tests__/InputMappingEditorReferenceMode.test.tsx ee/server/src/components/workflow-designer/__tests__/workflowDataContext.test.ts`
+- (2026-03-14) Validate picker-metadata JSON-schema plumbing:
+  - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/__tests__/jsonSchemaMetadata.test.ts --reporter=dot`
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/actionInputEditorState.test.ts --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint shared/workflow/runtime/jsonSchemaMetadata.ts shared/workflow/runtime/__tests__/jsonSchemaMetadata.test.ts shared/workflow/runtime/registries/schemaRegistry.ts ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts ee/server/src/components/workflow-designer/__tests__/actionInputEditorState.test.ts`
 
 ## Links / References
 
@@ -408,3 +422,13 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Added `WorkflowActionInputSourceMode.tsx` so each editable field now exposes the user-facing `Reference`, `Fixed value`, and `Advanced` source-mode selector instead of raw expression/secret/literal labels.
   - Kept the existing serializer/runtime behavior underneath for now by mapping direct field-reference expressions to `Reference`, literal values to `Fixed value`, and complex expressions or secrets to `Advanced`.
   - Marked F107-F110 and T107-T110 implemented.
+- (2026-03-14) Completed the reference-source stability slice:
+  - Removed placeholder payload child paths from `workflowReferenceOptions.ts` so Reference mode only offers real schema-backed payload fields when payload schema data exists.
+  - Added focused tests proving reference options refresh immediately when upstream action output schemas or `saveAs` names change, and that saved direct reference expressions survive unrelated upstream option-list churn.
+  - Added focused context tests proving grouped steps keep their catch/forEach reference sources when moved within the same block.
+  - Marked F154-F157, F160, and T154-T157/T160 implemented.
+- (2026-03-14) Completed the picker-metadata schema plumbing slice:
+  - Added `shared/workflow/runtime/jsonSchemaMetadata.ts` so runtime schemas can embed additive workflow picker metadata in Zod descriptions and expand it back into real JSON Schema keys during export.
+  - Switched runtime schema export for action-registry and schema-registry projections onto the shared workflow-aware JSON-schema wrapper.
+  - Added focused shared coverage for picker metadata export plus an explicit designer-side test proving `ActionInputField` extraction preserves the exported picker annotations.
+  - Marked F161-F165 and T161-T165 implemented.
