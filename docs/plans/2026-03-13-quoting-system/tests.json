@@ -42,7 +42,7 @@
   {
     "id": "T006",
     "description": "Numbering: 'QUOTE' entity type generates Q-0001 on first call",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]
