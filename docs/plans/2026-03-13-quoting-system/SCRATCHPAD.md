@@ -141,3 +141,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) T009 complete — Types: IQuote interface includes all required fields with correct types. Added package-level quote type coverage.
 - (2026-03-13) T010 complete — Types: QuoteStatus includes draft, sent, accepted, rejected, expired, converted, cancelled, superseded. Added package-level QuoteStatus coverage.
 - (2026-03-13) T011 complete — Types: IQuoteListItem includes joined client name and computed display fields. Added package-level quote list item type coverage.
+- (2026-03-13) T012 complete — Schema: createQuoteSchema requires client_id, title, quote_date, valid_until. Added createQuoteSchema required-field coverage.

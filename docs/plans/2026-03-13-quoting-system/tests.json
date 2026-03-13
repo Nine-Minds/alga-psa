@@ -90,7 +90,7 @@
   {
     "id": "T012",
     "description": "Schema: createQuoteSchema requires client_id, title, quote_date, valid_until",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ]
