@@ -202,3 +202,4 @@ npm run build
 - **F047 complete** — Full build now passes with `NODE_OPTIONS=--max-old-space-size=8192 npm run build`. During build verification I fixed two TypeScript narrowing issues in `server/src/app/msp/settings/notifications/page.tsx` and `server/src/components/settings/general/NotificationsTab.tsx` by checking candidate tab ids against `readonly string[]` instead of mixed literal tuples.
 - **Build runbook update** — Added `NODE_OPTIONS='--max-old-space-size=8192'` to `server/package.json` build scripts so the checklist command `npm run build` succeeds without extra shell environment setup in this repo.
 - **T001 complete** — Added `packages/ui/src/components/CustomTabs.typecheck.ts` so `npx tsc -p packages/ui/tsconfig.json --noEmit` fails if `TabContent.id` ever becomes optional again.
+- **T002 complete** — `packages/ui/src/components/CustomTabs.test.tsx` verifies trigger buttons render the visible `label` text while internal matching still uses ids.
