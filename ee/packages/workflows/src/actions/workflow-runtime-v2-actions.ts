@@ -27,6 +27,7 @@ import {
   type WorkflowTrigger,
   type PublishError
 } from '@shared/workflow/runtime';
+import { buildWorkflowDesignerActionCatalog } from '@shared/workflow/runtime/designer/actionCatalog';
 import { verifySecretsExist } from '@shared/workflow/runtime/validation/publishValidation';
 import { createTenantSecretProvider } from '@alga-psa/shared/workflow/secrets';
 import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
@@ -2846,22 +2847,34 @@ export const listWorkflowRegistryNodesAction = withAuth(async (user, { tenant })
   }));
 });
 
+const serializeWorkflowRegistryAction = (
+  action: ReturnType<ReturnType<typeof getActionRegistryV2>['list']>[number]
+) => ({
+  id: action.id,
+  version: action.version,
+  sideEffectful: action.sideEffectful,
+  retryHint: action.retryHint ?? null,
+  idempotency: action.idempotency,
+  ui: action.ui,
+  inputSchema: zodToJsonSchema(action.inputSchema, { name: `${action.id}@${action.version}.input` }),
+  outputSchema: zodToJsonSchema(action.outputSchema, { name: `${action.id}@${action.version}.output` }),
+  examples: action.examples ?? null
+});
+
 export const listWorkflowRegistryActionsAction = withAuth(async (user, { tenant }) => {
   initializeWorkflowRuntimeV2();
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
   const registry = getActionRegistryV2();
-  return registry.list().map((action) => ({
-    id: action.id,
-    version: action.version,
-    sideEffectful: action.sideEffectful,
-    retryHint: action.retryHint ?? null,
-    idempotency: action.idempotency,
-    ui: action.ui,
-    inputSchema: zodToJsonSchema(action.inputSchema, { name: `${action.id}@${action.version}.input` }),
-    outputSchema: zodToJsonSchema(action.outputSchema, { name: `${action.id}@${action.version}.output` }),
-    examples: action.examples ?? null
-  }));
+  return registry.list().map(serializeWorkflowRegistryAction);
+});
+
+export const listWorkflowDesignerActionCatalogAction = withAuth(async (user, { tenant }) => {
+  initializeWorkflowRuntimeV2();
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+  const registry = getActionRegistryV2();
+  return buildWorkflowDesignerActionCatalog(registry.list().map(serializeWorkflowRegistryAction));
 });
 
 export const getWorkflowSchemaAction = withAuth(async (user, { tenant }, input: unknown) => {

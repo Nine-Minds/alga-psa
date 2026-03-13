@@ -58,6 +58,7 @@ import {
   createWorkflowDefinitionAction,
   getWorkflowSchemaAction,
   getWorkflowDefinitionVersionAction,
+  listWorkflowDesignerActionCatalogAction,
   listWorkflowSchemaRefsAction,
   listWorkflowSchemasMetaAction,
   listWorkflowDefinitionsAction,
@@ -68,6 +69,10 @@ import {
   updateWorkflowDefinitionDraftAction,
   updateWorkflowDefinitionMetadataAction
 } from '@alga-psa/workflows/actions';
+import {
+  buildWorkflowDesignerActionCatalog,
+  type WorkflowDesignerCatalogRecord
+} from '@shared/workflow/runtime/designer/actionCatalog';
 
 import type {
   WorkflowDefinition,
@@ -252,31 +257,6 @@ const CONTROL_BLOCKS: Array<{ id: Step['type']; label: string; category: string;
   { id: 'control.callWorkflow', label: 'Call Workflow', category: 'Control', description: 'Invoke another workflow' },
   { id: 'control.return', label: 'Return', category: 'Control', description: 'Stop execution' }
 ];
-
-// Designer-only action curation.
-// We hide legacy Email workflow-specific actions and expose only universal, domain-oriented actions.
-const DESIGNER_ACTION_CATEGORY_BY_MODULE: Record<string, string> = {
-  tickets: 'Tickets',
-  contacts: 'Contacts',
-  clients: 'Clients',
-  email: 'Communication',
-  notifications: 'Communication',
-  scheduling: 'Scheduling',
-  projects: 'Projects',
-  time: 'Time',
-  crm: 'CRM'
-};
-
-const getActionModuleName = (actionId: string): string => actionId.split('.')[0]?.trim().toLowerCase() ?? '';
-
-const isLegacyWorkflowSpecificAction = (action: ActionRegistryItem): boolean =>
-  (action.ui?.category ?? '').trim().toLowerCase() === 'email';
-
-const getDesignerActionCategory = (action: ActionRegistryItem): string | null => {
-  if (isLegacyWorkflowSpecificAction(action)) return null;
-  const moduleName = getActionModuleName(action.id);
-  return DESIGNER_ACTION_CATEGORY_BY_MODULE[moduleName] ?? null;
-};
 
 const LEGACY_WORKFLOW_NODE_IDS = new Set<string>([
   'email.parseBody',
@@ -1463,6 +1443,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const [runCountByWorkflow, setRunCountByWorkflow] = useState<Map<string, number>>(new Map());
   const [nodeRegistry, setNodeRegistry] = useState<NodeRegistryItem[]>([]);
   const [actionRegistry, setActionRegistry] = useState<ActionRegistryItem[]>([]);
+  const [designerActionCatalog, setDesignerActionCatalog] = useState<WorkflowDesignerCatalogRecord[]>([]);
   const [payloadSchema, setPayloadSchema] = useState<JsonSchema | null>(null);
   const [payloadSchemaStatus, setPayloadSchemaStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [payloadSchemaLoadedRef, setPayloadSchemaLoadedRef] = useState<string | null>(null);
@@ -2204,8 +2185,10 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         throw new Error('Failed to load workflow registries');
       }
       if (overrides?.registryNodes || overrides?.registryActions) {
+        const overrideActions = (overrides.registryActions ?? []) as ActionRegistryItem[];
         setNodeRegistry((overrides.registryNodes ?? []) as NodeRegistryItem[]);
-        setActionRegistry((overrides.registryActions ?? []) as ActionRegistryItem[]);
+        setActionRegistry(overrideActions);
+        setDesignerActionCatalog(buildWorkflowDesignerActionCatalog(overrideActions));
         try {
           const schemaList = await listWorkflowSchemaRefsAction();
           setSchemaRefs(((schemaList as { refs?: string[] } | null)?.refs ?? []) as string[]);
@@ -2224,12 +2207,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         setRegistryStatus('loaded');
         return;
       }
-      const [nodes, actions] = await Promise.all([
+      const [nodes, actions, catalog] = await Promise.all([
         listWorkflowRegistryNodesAction(),
-        listWorkflowRegistryActionsAction()
+        listWorkflowRegistryActionsAction(),
+        listWorkflowDesignerActionCatalogAction()
       ]);
       setNodeRegistry((nodes ?? []) as unknown as NodeRegistryItem[]);
       setActionRegistry((actions ?? []) as unknown as ActionRegistryItem[]);
+      setDesignerActionCatalog((catalog ?? []) as WorkflowDesignerCatalogRecord[]);
       try {
         const schemaList = await listWorkflowSchemaRefsAction();
         setSchemaRefs(((schemaList as { refs?: string[] } | null)?.refs ?? []) as string[]);
@@ -2249,6 +2234,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     } catch (error) {
       setNodeRegistry([]);
       setActionRegistry([]);
+      setDesignerActionCatalog([]);
       setSchemaRefs([]);
       setSchemaMeta(new Map());
       setRegistryError(true);
@@ -3024,8 +3010,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     // Also add action registry actions directly for better discoverability.
     // Only include curated universal actions in the designer palette.
     const actionItems = actionRegistry.flatMap((action) => {
-      const curatedCategory = getDesignerActionCategory(action);
-      if (!curatedCategory) return [];
+      const catalogRecord = designerCatalogByActionId.get(action.id);
+      if (!catalogRecord || catalogRecord.tileKind === 'app') return [];
 
       const outputFields = action.outputSchema
         ? extractSchemaFields(action.outputSchema, action.outputSchema).map(f => f.name)
@@ -3038,7 +3024,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         id: `action:${action.id}`,
         label: action.ui?.label || action.id,
         description: action.ui?.description || `Action: ${action.id}`,
-        category: curatedCategory,
+        category: catalogRecord.label,
         type: 'action.call' as Step['type'],
         actionId: action.id,
         actionVersion: action.version,
@@ -3070,7 +3056,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       item.id.toLowerCase().includes(searchTerm) ||
       item.searchableFields.includes(searchTerm)
     );
-  }, [nodeRegistry, actionRegistry, search]);
+  }, [nodeRegistry, actionRegistry, designerCatalogByActionId, search]);
 
   const groupedPaletteItems = useMemo(() => {
     const grouped = paletteItems.reduce<Record<string, typeof paletteItems>>((acc, item) => {
@@ -3086,12 +3072,12 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       'Core',
       'Transform',
       'Email',
-      'Tickets',
-      'Contacts',
-      'Clients',
+      'Ticket',
+      'Contact',
+      'Client',
       'Communication',
       'Scheduling',
-      'Projects',
+      'Project',
       'Time',
       'CRM'
     ];
@@ -3142,6 +3128,13 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     };
     return findStep(activeDefinition.steps as Step[]);
   }, [activeDefinition, selectedStepId]);
+
+  const designerCatalogByActionId = useMemo(() => {
+    const entries = designerActionCatalog.flatMap((record) =>
+      record.allowedActionIds.map((actionId) => [actionId, record] as const)
+    );
+    return new Map(entries);
+  }, [designerActionCatalog]);
 
   // PPD - Generate draggableId for palette items
   const getPaletteDraggableId = (item: typeof paletteItems[0]) => {

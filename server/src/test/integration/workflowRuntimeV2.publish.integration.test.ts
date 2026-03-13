@@ -14,6 +14,7 @@ import {
   publishWorkflowDefinitionAction,
   listWorkflowRegistryNodesAction,
   listWorkflowRegistryActionsAction,
+  listWorkflowDesignerActionCatalogAction,
   getWorkflowSchemaAction,
   startWorkflowRunAction,
   cancelWorkflowRunAction,
@@ -468,6 +469,14 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     const action = actions.find((entry) => entry.id === 'test.sideEffect');
     expect(action?.sideEffectful).toBe(true);
     expect(action).toHaveProperty('retryHint');
+  });
+
+  it('T020: workflow designer receives the grouped catalog projection from the server action. Mocks: non-target dependencies.', async () => {
+    const catalog = await listWorkflowDesignerActionCatalogAction();
+    const ticketRecord = catalog.find((entry) => entry.groupKey === 'ticket');
+    expect(ticketRecord).toBeDefined();
+    expect(ticketRecord?.tileKind).toBe('core-object');
+    expect(ticketRecord?.allowedActionIds).toContain('tickets.create');
   });
 
   it('Schema server action returns JSON schema by schemaRef (API delegates to server action). Mocks: non-target dependencies.', async () => {
