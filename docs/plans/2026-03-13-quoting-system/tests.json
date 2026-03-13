@@ -259,7 +259,7 @@
   {
     "id": "T033",
     "description": "Model: delete blocks non-draft quotes and offers archive alternative",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F049a"
