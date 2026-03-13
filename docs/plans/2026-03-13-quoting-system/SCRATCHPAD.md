@@ -107,6 +107,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) T047 complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with a billing-method matrix proving `addQuoteItem` accepts `fixed`, `hourly`, `usage`, and `per_unit` without schema rejection.
 - (2026-03-13) T046 complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with an `addQuoteItem` service-backed case asserting the action returns service-derived defaults (name, SKU, billing method, unit metadata) from the quote item creation path.
 - (2026-03-13) T045 complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with a `deleteQuote` case that propagates the model-layer archive-required error for quotes with business history, covering the action boundary for protected quote deletion.
 - (2026-03-13) T044 complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with an `updateQuote` case that surfaces the model-layer invalid status transition error, proving the action path preserves quote lifecycle enforcement.

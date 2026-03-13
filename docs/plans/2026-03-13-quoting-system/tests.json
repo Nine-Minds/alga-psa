@@ -381,7 +381,7 @@
   {
     "id": "T047",
     "description": "Action: addQuoteItem with all four billing methods (fixed, hourly, usage, per_unit)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
