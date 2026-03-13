@@ -22,7 +22,7 @@ const catalog: WorkflowDesignerCatalogRecord[] = [
     label: 'Transform',
     iconToken: 'transform',
     tileKind: 'transform',
-    allowedActionIds: [],
+    allowedActionIds: ['transform.truncate_text'],
     description: 'Transform actions',
     actions: [],
   },
@@ -73,7 +73,7 @@ describe('workflow designer grouped action step helpers', () => {
     });
   });
 
-  it('supports grouped steps with no selected action yet', () => {
+  it('T225: transform grouped steps stay on action.call even before an action is chosen', () => {
     const step = applyGroupedActionSelectionToStep(
       { id: 'step-1', type: 'action.call', name: '', config: {} },
       { groupKey: 'transform', groupLabel: 'Transform', tileKind: 'transform' }
@@ -86,6 +86,15 @@ describe('workflow designer grouped action step helpers', () => {
       designerTileKind: 'transform',
     });
     expect((step.config as Record<string, unknown>).actionId).toBeUndefined();
+  });
+
+  it('T233: legacy transform action.call steps infer the Transform group from actionId during hydration', () => {
+    expect(
+      getGroupedActionCatalogRecordForStep(
+        { type: 'action.call', config: { actionId: 'transform.truncate_text' } },
+        catalog
+      )?.groupKey
+    ).toBe('transform');
   });
 
   it('T074: legacy action.call steps infer their group from actionId during hydration', () => {

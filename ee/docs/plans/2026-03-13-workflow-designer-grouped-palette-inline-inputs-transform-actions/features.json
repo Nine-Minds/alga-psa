@@ -1346,7 +1346,7 @@
   {
     "id": "F225",
     "description": "Keep Transform grouped steps stored as action.call steps for runtime compatibility",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Rollout / Migration"]
   },
   {
@@ -1376,7 +1376,7 @@
   {
     "id": "F230",
     "description": "Allow transform actions to participate in the same validation model as business actions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Compatibility, Save/Load, and Validation"]
   },
   {
@@ -1394,7 +1394,7 @@
   {
     "id": "F233",
     "description": "Preserve transform grouped-step hydration when loading legacy drafts after transform actions are introduced",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Rollout / Migration"]
   },
   {

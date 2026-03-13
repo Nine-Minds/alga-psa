@@ -48,6 +48,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-13) Playwright still does not reliably trigger grouped palette drag-start state in the current harness, so the explicit “search while dragging grouped tile” coverage remains blocked even though click insertion and post-insertion search coverage now pass.
 - (2026-03-13) The current local Playwright harness is additionally blocked by the isolated test database being down (`ECONNREFUSED` on `localhost:5433`), so new grouped-step browser tests cannot currently bootstrap tenants in this worktree even after the worker-image build fix.
 - (2026-03-13) `createTenantComplete` wraps connection failures into an empty-message `Failed to create tenant:` error because Node surfaces the refused Postgres connection as an `AggregateError` with a blank top-level message.
+- (2026-03-13) The earlier grouped-step Playwright failures on this worktree were caused by reusing an external dev server (`PW_WEBSERVER=false`) whose matching Playwright test database was not running. The self-contained Playwright path can bootstrap its own deps, but it remains expensive because it rebuilds the workflow-worker image.
 
 ## Commands / Runbooks
 
@@ -178,3 +179,11 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Extracted the floating palette sidebar into `WorkflowDesignerPalette.tsx` so the drag-state banner, search box, and grouped tile rendering can be exercised without a full workflow-designer browser harness.
   - Added `WorkflowDesignerPalette.test.tsx` jsdom coverage that keeps the palette in grouped-drag state, filters to a matching control tile, and verifies the drag banner persists while search changes.
   - Updated the new grouped-step Playwright specs to match the current designer insertion model more closely (keyboard drag start and pipe click selection), but browser validation remains blocked here until the isolated Postgres test env on `localhost:5433` is available again.
+- (2026-03-13) Completed the transform grouped-step compatibility slice:
+  - Extended grouped-step helper coverage so transform-scoped steps explicitly remain `action.call` steps even before a transform action is chosen.
+  - Added legacy transform hydration coverage so `action.call` drafts with `transform.*` actionIds still resolve back to the `Transform` grouped catalog record without additive metadata.
+  - Marked F225/F233 and T225/T233 implemented.
+- (2026-03-13) Completed the transform validation parity slice:
+  - Added a runtime publish-validation assertion showing `transform.truncate_text` missing required inputs fails through the same `action.call` validation path used by business actions.
+  - Confirmed no transform-specific validation branch was needed because transform actions already flow through the shared action registry and `validateInputMappingSchema`.
+  - Marked F230 and T230 implemented.

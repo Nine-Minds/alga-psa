@@ -1346,7 +1346,7 @@
   {
     "id": "T225",
     "description": "Unit: Transform grouped steps still persist as action.call steps",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F225"]
   },
   {
@@ -1376,7 +1376,7 @@
   {
     "id": "T230",
     "description": "Integration: transform actions participate in the same validation model as business actions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F230"]
   },
   {
@@ -1394,7 +1394,7 @@
   {
     "id": "T233",
     "description": "Integration: saved drafts preserve transform grouped-step hydration after transform actions are introduced",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F233"]
   },
   {
