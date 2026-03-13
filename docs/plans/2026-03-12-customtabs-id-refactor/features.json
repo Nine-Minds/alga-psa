@@ -361,7 +361,7 @@
   {
     "id": "F042",
     "description": "Migrate IntegrationsSettingsPage.tsx — add id from category data, remove label-based slug generation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern E"

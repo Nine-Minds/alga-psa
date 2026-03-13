@@ -278,6 +278,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
 
   // Build tab content
   const tabContent: TabContent[] = visibleCategories.map(category => ({
+    id: category.id,
     label: category.label,
     icon: <category.icon className="w-4 h-4" />,
     content: (
@@ -331,9 +332,9 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
       {/* Category tabs */}
       <CustomTabs
         tabs={tabContent}
-        defaultTab={currentCategory?.label || 'Accounting'}
-        onTabChange={(tabLabel) => {
-          const category = visibleCategories.find(cat => cat.label === tabLabel);
+        defaultTab={currentCategory?.id ?? 'accounting'}
+        onTabChange={(tabId) => {
+          const category = visibleCategories.find(cat => cat.id === tabId);
           if (category) {
             setSelectedCategory(category.id);
             const currentSearchParams = new URLSearchParams(window.location.search);
