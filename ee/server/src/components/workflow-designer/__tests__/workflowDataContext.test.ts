@@ -60,6 +60,28 @@ const actionRegistry = [
       },
     },
   },
+  {
+    id: 'transform.truncate_text',
+    version: 1,
+    ui: {
+      label: 'Truncate Text',
+      description: 'Shorten text using explicit truncation settings.',
+    },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string' },
+        maxLength: { type: 'number' },
+      },
+      required: ['text', 'maxLength'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string' },
+      },
+    },
+  },
 ];
 
 const buildDefinition = (upstreamStep: NodeStep): WorkflowDefinition => ({
@@ -292,5 +314,54 @@ describe('workflow data context', () => {
     const movedCatchContext = buildDataContext(catchDefinition(['sibling', 'target']), 'catch-step', actionRegistry, null);
     expect(initialCatchContext.inCatchBlock).toBe(true);
     expect(movedCatchContext.inCatchBlock).toBe(true);
+  });
+
+  it('T224/T232: transform grouped steps expose saveAs-backed output schemas to downstream steps like business actions', () => {
+    const definition: WorkflowDefinition = {
+      id: 'workflow-transform',
+      version: 1,
+      name: 'Transform workflow',
+      payloadSchemaRef: 'system:default',
+      trigger: { type: 'event', eventName: 'ticket.created' },
+      steps: [
+        {
+          id: 'transform-step',
+          type: 'action.call',
+          name: 'Truncate Text',
+          config: {
+            designerGroupKey: 'transform',
+            designerTileKind: 'transform',
+            actionId: 'transform.truncate_text',
+            version: 1,
+            saveAs: 'trimmedText',
+          },
+        },
+        {
+          id: 'ticket-step',
+          type: 'action.call',
+          name: 'Create Ticket',
+          config: {
+            actionId: 'tickets.create',
+            version: 1,
+          },
+        },
+      ],
+    };
+
+    const context = buildDataContext(definition, 'ticket-step', actionRegistry, null);
+
+    expect(context.steps).toHaveLength(1);
+    expect(context.steps[0]).toMatchObject({
+      stepId: 'transform-step',
+      stepName: 'Truncate Text',
+      saveAs: 'trimmedText',
+      fields: [{ name: 'text' }],
+    });
+    expect(context.steps[0]?.outputSchema).toMatchObject({
+      type: 'object',
+      properties: {
+        text: { type: 'string' },
+      },
+    });
   });
 });

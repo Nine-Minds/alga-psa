@@ -147,4 +147,31 @@ describe('workflow reference options', () => {
     expect(updatedValues).toContain('vars.updatedTicket');
     expect(updatedValues).toContain('vars.updatedTicket.updated');
   });
+
+  it('T232: transform outputs appear in later-step reference pickers using saveAs names and typed fields', () => {
+    const options = buildWorkflowReferenceFieldOptions(payloadSchema, {
+      ...baseDataContext,
+      steps: [
+        {
+          stepId: 'transform-step',
+          stepName: 'Truncate Text',
+          saveAs: 'trimmedText',
+          outputSchema: {
+            type: 'object',
+            properties: {
+              text: { type: 'string' },
+            },
+          },
+          fields: [],
+        },
+      ],
+    });
+
+    const values = options.map((option) => option.value);
+    expect(values).toContain('vars.trimmedText');
+    expect(values).toContain('vars.trimmedText.text');
+    expect(options.find((option) => option.value === 'vars.trimmedText')?.label).toContain(
+      'Truncate Text'
+    );
+  });
 });

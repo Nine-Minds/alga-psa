@@ -1322,25 +1322,25 @@
   {
     "id": "F221",
     "description": "Expose Transform as a grouped tile that behaves like any other grouped action source in the designer",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "UX / UI Notes > Transform UX"]
   },
   {
     "id": "F222",
     "description": "Allow Transform grouped steps to choose a specific transform action from a filtered action dropdown",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "UX / UI Notes > Transform UX"]
   },
   {
     "id": "F223",
     "description": "Allow Transform grouped steps to expose schema-driven inputs through the same inline field editor used by business actions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "UX / UI Notes > Transform UX"]
   },
   {
     "id": "F224",
     "description": "Allow Transform grouped steps to expose schema-driven outputs through the same saveAs and downstream data-context model used by business actions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Reference Source Model"]
   },
   {
@@ -1382,13 +1382,13 @@
   {
     "id": "F231",
     "description": "Allow transform actions to be named and saved for downstream reference like other grouped action steps",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Users and Primary Flows"]
   },
   {
     "id": "F232",
     "description": "Allow transform actions to appear in prior-step source pickers using their output schema and saveAs name",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Reference Source Model"]
   },
   {
@@ -1412,25 +1412,25 @@
   {
     "id": "F236",
     "description": "Allow transform grouped steps to use the same Reference, Fixed, and Advanced source modes inside their own input fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Inline Field-Based Action Input Editor"]
   },
   {
     "id": "F237",
     "description": "Allow transform grouped steps to use the same type-compatibility hints inside their own input fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Inline Field-Based Action Input Editor"]
   },
   {
     "id": "F238",
     "description": "Allow transform grouped steps to use the same step-level validation summary inside the properties panel",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Compatibility, Save/Load, and Validation"]
   },
   {
     "id": "F239",
     "description": "Allow transform grouped steps to show action descriptions that explain the resulting output shape",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "UX / UI Notes > Transform UX"]
   },
   {
@@ -1550,13 +1550,13 @@
   {
     "id": "F259",
     "description": "Let text transform actions use structured source references for their source string inputs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Reference Source Model"]
   },
   {
     "id": "F260",
     "description": "Let text transform actions use fixed literal configuration for transform-specific parameters such as separator or maximum length",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Inline Field-Based Action Input Editor"]
   },
   {

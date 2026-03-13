@@ -73,6 +73,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-14) `ee/server` Vitest lacked an alias for `@alga-psa/teams/actions`, and shared Vitest lacked direct source aliases for `@alga-psa/storage`, `@alga-psa/types`, `@alga-psa/auth`, `@alga-psa/validation`, and `@alga-psa/shared`; the picker slice needed both configs widened before the reused package action loaders could run in this harness.
 - (2026-03-14) The inline mapping editor’s expression compatibility hints were assuming any truthy value was object-like. A fixed-to-advanced mode transition can briefly leave `valueType === 'expr'` while the old literal string is still present, so those guards needed an explicit object check.
 - (2026-03-14) Dependent picker invalidation cannot key off the previous option array. When an upstream fixed scope changes, the picker briefly renders with stale options from the old scope; clearing invalid selections only after the new dependency signature has finished loading avoids wiping still-valid values during that transition.
+- (2026-03-14) The transform inline-editor path already reuses the same `InputMappingEditor` module as business actions, which means transform jsdom coverage also needs the picker-side package action mocks (`@alga-psa/integrations/actions`, `@alga-psa/clients/actions`, and `@alga-psa/teams/actions`) even when the tested transform fields never render picker-backed controls.
 
 ## Commands / Runbooks
 
@@ -242,6 +243,10 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/InputMappingEditorPickerFields.test.tsx --reporter=dot`
   - `npx tsc --noEmit -p ee/server/tsconfig.json`
   - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputFixedPicker.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorPickerFields.test.tsx shared/workflow/runtime/actions/__tests__/registerTicketActionPickerMetadata.test.ts`
+- (2026-03-14) Validate transform grouped-step authoring/output seams:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/GroupedActionConfigSection.test.tsx src/components/workflow-designer/__tests__/groupedActionSelection.test.ts src/components/workflow-designer/__tests__/workflowDataContext.test.ts src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts src/components/workflow-designer/__tests__/ActionSchemaReference.test.tsx src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx src/components/workflow-designer/__tests__/TransformActionInputEditor.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/__tests__/GroupedActionConfigSection.test.tsx ee/server/src/components/workflow-designer/__tests__/groupedActionSelection.test.ts ee/server/src/components/workflow-designer/__tests__/workflowDataContext.test.ts ee/server/src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts ee/server/src/components/workflow-designer/__tests__/ActionSchemaReference.test.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx ee/server/src/components/workflow-designer/__tests__/TransformActionInputEditor.test.tsx`
 
 ## Links / References
 
@@ -272,6 +277,11 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 
 ## Progress Log
 
+- (2026-03-14) Completed the transform grouped-step authoring slice:
+  - Added transform-specific grouped-step coverage showing the existing grouped action selector treats `Transform` like any other grouped source, with a transform-only action dropdown and selected-action descriptions carried into the properties panel.
+  - Added transform-specific inline-editor coverage showing transform steps reuse the same properties-panel input section, source-mode selectors, structured reference authoring, fixed parameter authoring, and type-compatibility hints as business actions.
+  - Added downstream-context coverage showing transform steps can be named, auto-save to `saveAs`, and expose typed outputs into later-step reference options through the same data-context builder used by business actions.
+  - Marked F221-F224, F231-F232, F236-F239, F259-F260, and T221-T224/T231-T232/T236-T243/T259-T260 implemented.
 - (2026-03-14) Completed the dependent ticket-picker scope slice:
   - Reused the picker metadata from the first ticket-picker batch to narrow contact, location, category, and subcategory fixed-value options from the current fixed upstream client/board/category selections.
   - Added disabled explanatory states when those dependencies are missing or dynamic, while keeping dependent fields free to switch back to Reference mode instead of trapping the builder in Fixed mode.

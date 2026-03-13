@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../mapping', () => ({
   MappingPanel: ({ stepId }: { stepId: string }) => (
@@ -13,6 +13,10 @@ vi.mock('../mapping', () => ({
 import { WorkflowActionInputSection } from '../WorkflowActionInputSection';
 
 describe('WorkflowActionInputSection', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it('T105/T106/T120: keeps the completion summary above an inline action-input editor and updates it with field state', () => {
     const { rerender } = render(
       <WorkflowActionInputSection
@@ -76,5 +80,43 @@ describe('WorkflowActionInputSection', () => {
 
     expect(screen.getByText('1 / 2 fields configured')).toBeInTheDocument();
     expect(screen.getByText('All 1 required fields are mapped')).toBeInTheDocument();
+  });
+
+  it('T223/T238: transform grouped steps reuse the inline action-input section and validation summary', () => {
+    render(
+      <WorkflowActionInputSection
+        stepId="transform-step"
+        inputMapping={{ maxLength: 24 }}
+        onInputMappingChange={vi.fn()}
+        targetFields={[
+          { name: 'text', type: 'string', required: true },
+          { name: 'maxLength', type: 'number', required: true },
+          { name: 'strategy', type: 'string', enum: ['end', 'start', 'middle'] },
+        ]}
+        dataContext={{
+          payload: [],
+          payloadSchema: undefined,
+          steps: [],
+          globals: {
+            env: [],
+            secrets: [],
+            meta: [],
+            error: [],
+          },
+        }}
+        fieldOptions={[]}
+        mappedInputFieldCount={1}
+        requiredActionInputFields={[
+          { name: 'text', type: 'string', required: true },
+          { name: 'maxLength', type: 'number', required: true },
+        ]}
+        unmappedRequiredInputFieldCount={1}
+      />
+    );
+
+    expect(screen.getByText('Action inputs')).toBeInTheDocument();
+    expect(screen.getByText('1 / 3 fields configured')).toBeInTheDocument();
+    expect(screen.getByText('1 required field still unmapped')).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-panel-transform-step')).toBeInTheDocument();
   });
 });

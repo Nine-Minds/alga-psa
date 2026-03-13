@@ -1322,25 +1322,25 @@
   {
     "id": "T221",
     "description": "Playwright: Transform behaves like a grouped tile in the palette and properties panel",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F221"]
   },
   {
     "id": "T222",
     "description": "Playwright: Transform grouped steps can choose a specific transform action from a filtered dropdown",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F222"]
   },
   {
     "id": "T223",
     "description": "Playwright: Transform grouped steps render schema-driven inline inputs like business actions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F223"]
   },
   {
     "id": "T224",
     "description": "Playwright: Transform grouped steps expose schema-driven outputs through saveAs and downstream data context",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F224"]
   },
   {
@@ -1382,13 +1382,13 @@
   {
     "id": "T231",
     "description": "Playwright: transform steps can be named and saved for downstream reference",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F231"]
   },
   {
     "id": "T232",
     "description": "Playwright: transform outputs appear in later-step reference pickers using saveAs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F232"]
   },
   {
@@ -1412,25 +1412,25 @@
   {
     "id": "T236",
     "description": "Playwright: transform grouped steps support Reference, Fixed, and Advanced source modes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F236"]
   },
   {
     "id": "T237",
     "description": "Playwright: transform grouped steps show type-compatibility hints inside their input fields",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F237"]
   },
   {
     "id": "T238",
     "description": "Playwright: transform grouped steps show step-level validation summaries inside the properties panel",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F238"]
   },
   {
     "id": "T239",
     "description": "Playwright: transform action descriptions explain the resulting output shape",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F239"]
   },
   {
@@ -1448,13 +1448,13 @@
   {
     "id": "T242",
     "description": "Playwright: truncate-text exposes truncation length as a schema-backed fixed-value field",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F242"]
   },
   {
     "id": "T243",
     "description": "Playwright: truncate-text exposes truncation strategy as a schema-backed field",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F243"]
   },
   {
@@ -1550,13 +1550,13 @@
   {
     "id": "T259",
     "description": "Playwright: text transform source fields can be authored through structured references",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F259"]
   },
   {
     "id": "T260",
     "description": "Playwright: text transform parameters such as length and separator can be authored as fixed values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F260"]
   },
   {

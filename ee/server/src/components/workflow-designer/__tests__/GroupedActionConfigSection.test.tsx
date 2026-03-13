@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { GroupedActionConfigSection, buildGroupedActionSelectOptions } from '../GroupedActionConfigSection';
 import type { WorkflowDesignerCatalogRecord } from '@shared/workflow/runtime/designer/actionCatalog';
@@ -53,7 +53,38 @@ const slackRecord: WorkflowDesignerCatalogRecord = {
   ],
 };
 
+const transformRecord: WorkflowDesignerCatalogRecord = {
+  groupKey: 'transform',
+  label: 'Transform',
+  iconToken: 'transform',
+  tileKind: 'transform',
+  allowedActionIds: ['transform.truncate_text', 'transform.build_object'],
+  description: 'Shape data without writing expressions.',
+  actions: [
+    {
+      id: 'transform.truncate_text',
+      version: 1,
+      label: 'Truncate Text',
+      description: 'Shorten text using explicit truncation settings.',
+      inputFieldNames: ['text', 'maxLength', 'strategy'],
+      outputFieldNames: ['text'],
+    },
+    {
+      id: 'transform.build_object',
+      version: 1,
+      label: 'Build Object',
+      description: 'Construct an object from explicit named inputs.',
+      inputFieldNames: ['fields'],
+      outputFieldNames: ['object'],
+    },
+  ],
+};
+
 describe('GroupedActionConfigSection', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it('T081/T097: shows the grouped tile label and invalid state before an action is chosen', () => {
     render(
       <GroupedActionConfigSection
@@ -91,6 +122,28 @@ describe('GroupedActionConfigSection', () => {
 
     expect(document.getElementById('workflow-step-group-label-step-3')).toHaveTextContent('Slack');
     expect(screen.getByText('Send a Slack message.')).toBeInTheDocument();
+    expect(screen.queryByText('Action required')).not.toBeInTheDocument();
+  });
+
+  it('T221/T222/T239: renders Transform like any other grouped action source and limits selection to transform actions', () => {
+    render(
+      <GroupedActionConfigSection
+        stepId="step-transform"
+        record={transformRecord}
+        selectedActionId="transform.truncate_text"
+        selectedActionDescription="Shorten text using explicit truncation settings."
+        onActionChange={vi.fn()}
+      />
+    );
+
+    expect(document.getElementById('workflow-step-group-label-step-transform')).toHaveTextContent(
+      'Transform'
+    );
+    expect(buildGroupedActionSelectOptions(transformRecord)).toEqual([
+      { value: 'transform.truncate_text', label: 'Truncate Text' },
+      { value: 'transform.build_object', label: 'Build Object' },
+    ]);
+    expect(screen.getByText('Shorten text using explicit truncation settings.')).toBeInTheDocument();
     expect(screen.queryByText('Action required')).not.toBeInTheDocument();
   });
 });
