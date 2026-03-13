@@ -183,3 +183,5 @@ npm run build
 - F034 — Verified `BillingConfiguration` does not render CustomTabs; removed its stale CustomTabs import so no id migration is required there.
 
 - F035 — TicketConversation now uses stable ids (`all-comments`, `client`, `internal`, `resolution`) and controls CustomTabs by id while keeping translated labels.
+
+- F036 — Updated MSP and client-portal TicketDetails callers to pass id-based TicketConversation tabs and handle id-based tab changes.

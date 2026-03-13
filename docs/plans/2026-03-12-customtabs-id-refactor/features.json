@@ -308,7 +308,7 @@
   {
     "id": "F036",
     "description": "Update all TicketConversation parent/caller components — pass id-based activeTab, handle id-based onTabChange",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Risks"
     ]
