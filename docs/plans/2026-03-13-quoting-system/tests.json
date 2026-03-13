@@ -317,7 +317,7 @@
   {
     "id": "T039",
     "description": "Item model: reorder updates display_order for all items in batch",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
