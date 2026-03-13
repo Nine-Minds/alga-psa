@@ -2733,9 +2733,12 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   // §16.6 - Enhanced handleAddStep to accept initial config (for pre-configured action items)
   // §19.4 - Auto-generate saveAs name for action.call steps
   // IBF - Supports insert-between via pendingInsertPosition
-  const handleAddStep = (type: Step['type'], initialConfig?: Record<string, unknown>) => {
+  const handleAddStep = (type: Step['type'], initialConfig?: Record<string, unknown>, initialName?: string) => {
     if (!activeDefinition) return;
     let newStep = createStepFromPalette(type, nodeRegistryMap);
+    if (initialName && 'name' in newStep) {
+      newStep = { ...(newStep as NodeStep), name: initialName };
+    }
     // Apply initial config if provided (e.g., for action items with pre-selected actionId)
     if (initialConfig && 'config' in newStep) {
       const existingConfig = (newStep as NodeStep).config as Record<string, unknown> | undefined;
@@ -2812,6 +2815,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     type: Step['type'];
     actionId?: string;
     actionVersion?: number;
+    groupKey?: string;
+    groupLabel?: string;
+    tileKind?: 'core-object' | 'transform' | 'app';
   } | null>(null);
 
   const handleDragStart = (start: { draggableId: string; source: { droppableId: string } }) => {
@@ -2821,9 +2827,20 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     // PPD - Detect if dragging from palette
     if (start.source.droppableId === 'palette') {
       // Parse the palette item info from draggableId
-      // Format: "palette:type" or "palette:action.call:actionId:version"
+      // Format: "palette:type", "palette:action.call:actionId:version", or "palette:group:groupKey:actionId:version"
       const parts = start.draggableId.replace('palette:', '').split(':');
-      if (parts[0] === 'action.call' && parts.length >= 3) {
+      if (parts[0] === 'group' && parts.length >= 2) {
+        const groupKey = parts[1];
+        const catalogRecord = designerActionCatalog.find((record) => record.groupKey === groupKey);
+        setDraggingFromPalette({
+          type: 'action.call',
+          groupKey,
+          groupLabel: catalogRecord?.label,
+          tileKind: catalogRecord?.tileKind,
+          actionId: parts[2] || undefined,
+          actionVersion: parts[3] ? Number(parts[3]) : undefined
+        });
+      } else if (parts[0] === 'action.call' && parts.length >= 3) {
         setDraggingFromPalette({
           type: 'action.call',
           actionId: parts[1],
@@ -2902,16 +2919,18 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       let newStep = createStepFromPalette(draggingFromPalette.type, nodeRegistryMap);
 
       // Apply action config if it's an action.call from palette
-      if (draggingFromPalette.type === 'action.call' && draggingFromPalette.actionId) {
+      if (draggingFromPalette.type === 'action.call') {
         const existingConfig = (newStep as NodeStep).config as Record<string, unknown> | undefined;
-        const autoSaveAs = generateSaveAsName(draggingFromPalette.actionId);
         newStep = {
           ...newStep,
+          name: draggingFromPalette.groupLabel ?? (newStep as NodeStep).name,
           config: {
             ...existingConfig,
-            actionId: draggingFromPalette.actionId,
-            version: draggingFromPalette.actionVersion ?? 1,
-            saveAs: autoSaveAs
+            ...(draggingFromPalette.actionId ? {
+              actionId: draggingFromPalette.actionId,
+              version: draggingFromPalette.actionVersion ?? 1,
+              saveAs: generateSaveAsName(draggingFromPalette.actionId)
+            } : {})
           }
         };
       }
@@ -3000,6 +3019,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           description: node.ui?.description || node.id,
           category: node.ui?.category || 'Nodes',
           type: node.id,
+          sortOrder: 0,
           outputSummary: outputFields.length > 0
             ? `Returns: ${outputFields.slice(0, 3).join(', ')}${outputFields.length > 3 ? '...' : ''}`
             : undefined,
@@ -3007,33 +3027,52 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         };
       });
 
-    // Also add action registry actions directly for better discoverability.
-    // Only include curated universal actions in the designer palette.
-    const actionItems = actionRegistry.flatMap((action) => {
-      const catalogRecord = designerCatalogByActionId.get(action.id);
-      if (!catalogRecord || catalogRecord.tileKind === 'app') return [];
+    const groupedActionItems = designerActionCatalog
+      .filter((record) => record.actions.length > 0 || record.tileKind === 'transform')
+      .map((record, index) => {
+        const defaultAction = record.defaultActionId
+          ? actionRegistry.find((action) => action.id === record.defaultActionId)
+          : undefined;
 
-      const outputFields = action.outputSchema
-        ? extractSchemaFields(action.outputSchema, action.outputSchema).map(f => f.name)
-        : [];
-      const inputFields = action.inputSchema
-        ? extractSchemaFields(action.inputSchema, action.inputSchema).map(f => f.name)
-        : [];
+        const actionLabels = record.actions.map((action) => action.label);
+        const actionIds = record.actions.map((action) => action.id);
+        const inputFields = record.actions.flatMap((action) => action.inputFieldNames);
+        const outputFields = record.actions.flatMap((action) => action.outputFieldNames);
 
-      return [{
-        id: `action:${action.id}`,
-        label: action.ui?.label || action.id,
-        description: action.ui?.description || `Action: ${action.id}`,
-        category: catalogRecord.label,
-        type: 'action.call' as Step['type'],
-        actionId: action.id,
-        actionVersion: action.version,
-        outputSummary: outputFields.length > 0
-          ? `Returns: ${outputFields.slice(0, 3).join(', ')}${outputFields.length > 3 ? '...' : ''}`
-          : undefined,
-        searchableFields: [...outputFields, ...inputFields].join(' ').toLowerCase()
-      }];
-    });
+        return {
+          id: record.groupKey,
+          label: record.label,
+          description: record.description || `${record.label} actions`,
+          category: record.tileKind === 'core-object'
+            ? 'Core'
+            : record.tileKind === 'transform'
+              ? 'Transform'
+              : 'Apps',
+          type: 'action.call' as Step['type'],
+          groupKey: record.groupKey,
+          groupLabel: record.label,
+          iconToken: record.iconToken,
+          tileKind: record.tileKind,
+          actionId: defaultAction?.id,
+          actionVersion: defaultAction?.version,
+          sortOrder: index,
+          outputSummary: actionLabels.length > 0
+            ? `${actionLabels.slice(0, 3).join(', ')}${actionLabels.length > 3 ? '...' : ''}`
+            : 'Choose an action after adding this step',
+          searchableFields: [
+            record.groupKey,
+            record.label,
+            record.description,
+            ...actionLabels,
+            ...actionIds,
+            ...inputFields,
+            ...outputFields
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+        };
+      });
 
     const controlItems = CONTROL_BLOCKS.map((block) => ({
       id: block.id,
@@ -3041,22 +3080,23 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       description: block.description,
       category: block.category,
       type: block.id,
+      sortOrder: 0,
       outputSummary: undefined as string | undefined,
       searchableFields: ''
     }));
 
-    // Remove the generic 'action.call' node, use action items directly
-    const filteredRegistryItems = registryItems.filter(item => item.id !== 'action.call');
-    const items = [...controlItems, ...filteredRegistryItems, ...actionItems];
+    // Keep generic nodes alongside grouped business tiles for compatibility while the step model transitions.
+    const items = [...controlItems, ...groupedActionItems, ...registryItems];
 
     if (!searchTerm) return items;
     // §16.6 - Search also matches field names
     return items.filter((item) =>
       item.label.toLowerCase().includes(searchTerm) ||
       item.id.toLowerCase().includes(searchTerm) ||
+      item.description.toLowerCase().includes(searchTerm) ||
       item.searchableFields.includes(searchTerm)
     );
-  }, [nodeRegistry, actionRegistry, designerCatalogByActionId, search]);
+  }, [nodeRegistry, actionRegistry, designerActionCatalog, search]);
 
   const groupedPaletteItems = useMemo(() => {
     const grouped = paletteItems.reduce<Record<string, typeof paletteItems>>((acc, item) => {
@@ -3066,20 +3106,23 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       return acc;
     }, {});
 
+    Object.values(grouped).forEach((items) => {
+      items.sort((left, right) => {
+        if ((left.sortOrder ?? 0) !== (right.sortOrder ?? 0)) {
+          return (left.sortOrder ?? 0) - (right.sortOrder ?? 0);
+        }
+        return left.label.localeCompare(right.label);
+      });
+    });
+
     // Stable, intentional palette ordering.
     const categoryOrder = [
       'Control',
       'Core',
       'Transform',
+      'Apps',
       'Email',
-      'Ticket',
-      'Contact',
-      'Client',
-      'Communication',
-      'Scheduling',
-      'Project',
-      'Time',
-      'CRM'
+      'Nodes'
     ];
 
     // Sort categories: known categories first in order, then others alphabetically
@@ -3129,16 +3172,13 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     return findStep(activeDefinition.steps as Step[]);
   }, [activeDefinition, selectedStepId]);
 
-  const designerCatalogByActionId = useMemo(() => {
-    const entries = designerActionCatalog.flatMap((record) =>
-      record.allowedActionIds.map((actionId) => [actionId, record] as const)
-    );
-    return new Map(entries);
-  }, [designerActionCatalog]);
-
   // PPD - Generate draggableId for palette items
   const getPaletteDraggableId = (item: typeof paletteItems[0]) => {
     const itemWithAction = item as typeof item & { actionId?: string; actionVersion?: number };
+    const groupedItem = item as typeof item & { groupKey?: string };
+    if (groupedItem.groupKey) {
+      return `palette:group:${groupedItem.groupKey}:${itemWithAction.actionId ?? ''}:${itemWithAction.actionVersion ?? ''}`;
+    }
     if (itemWithAction.actionId) {
       return `palette:action.call:${itemWithAction.actionId}:${itemWithAction.actionVersion ?? 1}`;
     }
@@ -3148,7 +3188,23 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   // Dense palette icon mapping
   const getPaletteIcon = (item: typeof paletteItems[0]): React.ReactNode => {
     const iconClass = "h-5 w-5";
-    const itemWithAction = item as typeof item & { actionId?: string };
+    const itemWithAction = item as typeof item & { actionId?: string; iconToken?: string; groupKey?: string };
+
+    if (itemWithAction.groupKey || itemWithAction.iconToken) {
+      switch (itemWithAction.iconToken ?? itemWithAction.groupKey) {
+        case 'ticket': return <ClipboardList className={iconClass} />;
+        case 'contact': return <Users className={iconClass} />;
+        case 'client': return <Building className={iconClass} />;
+        case 'communication': return <Mail className={iconClass} />;
+        case 'scheduling': return <Calendar className={iconClass} />;
+        case 'project': return <SquareCheck className={iconClass} />;
+        case 'time': return <Clock className={iconClass} />;
+        case 'crm': return <StickyNote className={iconClass} />;
+        case 'transform': return <Settings className={iconClass} />;
+        case 'app': return <Box className={iconClass} />;
+        default: return <Box className={iconClass} />;
+      }
+    }
 
     // If it's an action with a specific actionId, try to match by actionId
     if (itemWithAction.actionId) {
@@ -3269,17 +3325,36 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                             key={item.id}
                             draggableId={getPaletteDraggableId(item)}
                             index={itemIndex}
+                            isDragDisabled={!canManage || registryError}
                           >
                             {(dragProvided, snapshot) => {
-                              const itemWithAction = item as typeof item & { actionId?: string; actionVersion?: number };
+                              const itemWithAction = item as typeof item & {
+                                actionId?: string;
+                                actionVersion?: number;
+                                groupKey?: string;
+                                groupLabel?: string;
+                                tileKind?: 'core-object' | 'transform' | 'app';
+                              };
                               return (
                                 <PaletteItemWithTooltip
                                   item={itemWithAction}
                                   icon={getPaletteIcon(item)}
                                   isDragging={snapshot.isDragging}
                                   provided={dragProvided}
+                                  disabled={!canManage || registryError}
                                   onClick={() => {
-                                    if (itemWithAction.actionId) {
+                                    if (itemWithAction.groupKey) {
+                                      handleAddStep(
+                                        'action.call',
+                                        itemWithAction.actionId
+                                          ? {
+                                              actionId: itemWithAction.actionId,
+                                              version: itemWithAction.actionVersion
+                                            }
+                                          : undefined,
+                                        itemWithAction.label
+                                      );
+                                    } else if (itemWithAction.actionId) {
                                       handleAddStep('action.call', {
                                         actionId: itemWithAction.actionId,
                                         version: itemWithAction.actionVersion
@@ -5831,12 +5906,23 @@ const PaletteTooltip: React.FC<{
 
 // Wrapper component for palette item with tooltip
 const PaletteItemWithTooltip: React.FC<{
-  item: { id: string; label: string; description: string; type: string; actionId?: string; actionVersion?: number };
+  item: {
+    id: string;
+    label: string;
+    description: string;
+    type: string;
+    actionId?: string;
+    actionVersion?: number;
+    groupKey?: string;
+    iconToken?: string;
+    tileKind?: 'core-object' | 'transform' | 'app';
+  };
   icon: React.ReactNode;
   isDragging: boolean;
   provided: any;
+  disabled?: boolean;
   onClick: () => void;
-}> = ({ item, icon, isDragging, provided, onClick }) => {
+}> = ({ item, icon, isDragging, provided, disabled = false, onClick }) => {
   const [isHovered, setIsHovered] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
 
@@ -5847,19 +5933,24 @@ const PaletteItemWithTooltip: React.FC<{
         (triggerRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
       }}
       {...provided.draggableProps}
-      {...provided.dragHandleProps}
+      {...(disabled ? {} : provided.dragHandleProps)}
       className={`
         group relative flex items-center justify-center
         w-10 h-10 rounded-lg border cursor-grab
         transition-all duration-150
+        ${disabled ? 'cursor-not-allowed opacity-50' : ''}
         ${isDragging
           ? 'shadow-lg ring-2 ring-primary-400 bg-primary-50 border-primary-300 z-50'
           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
         }
       `}
+      id={`workflow-designer-add-${item.id}`}
       data-testid={`palette-item-${item.id}`}
+      role="button"
+      aria-disabled={disabled}
       onClick={(e) => {
         e.stopPropagation();
+        if (disabled) return;
         onClick();
       }}
       onMouseEnter={() => setIsHovered(true)}

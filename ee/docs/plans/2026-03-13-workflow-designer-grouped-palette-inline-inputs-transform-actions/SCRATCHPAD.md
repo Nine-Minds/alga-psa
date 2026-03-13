@@ -57,6 +57,8 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `cd server && npx vitest run src/test/integration/workflowRuntimeV2.publish.integration.test.ts --config vitest.config.ts --testNamePattern="T020: workflow designer receives the grouped catalog projection from the server action" --reporter=dot`
 - (2026-03-13) Lint touched files after the catalog/projection slice:
   - `npx eslint shared/workflow/runtime/designer/actionCatalog.ts shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts ee/server/src/components/workflow-designer/WorkflowDesigner.tsx server/src/app/api/workflow/registry/designer-catalog/route.ts server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts`
+- (2026-03-13) Attempt grouped-palette Playwright validation:
+  - `npx playwright test ee/server/src/__tests__/integration/workflow-designer-basic.playwright.test.ts -g "palette renders grouped business tiles instead of one tile per business action|control blocks still render as dedicated palette entries alongside grouped tiles|transform renders as a top-level palette tile"`
 
 ## Links / References
 
@@ -92,3 +94,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Added `listWorkflowDesignerActionCatalogAction` plus `/api/workflow/registry/designer-catalog`.
   - Switched `WorkflowDesigner.tsx` off the local module-category heuristic and onto loaded catalog metadata for business-action grouping.
   - Added unit coverage for catalog construction and integration coverage for the new server projection.
+- (2026-03-13) Completed the grouped palette rendering slice:
+  - Replaced per-action business palette entries with grouped `Core`, `Transform`, and `Apps` tiles sourced from the designer catalog.
+  - Preserved control blocks and generic nodes, added grouped tile test ids/ids, and disabled drag/click interactions in read-only or registry-error states.
+  - Kept grouped tile click and drag insertion flows working by mapping grouped tiles back to `action.call` steps with default actions when available.
+- (2026-03-13) Validation blocker:
+  - The new grouped-palette Playwright tests could not complete because tenant bootstrap failed before the browser reached the designer (`Failed to create tenant` from `tenant-creation.ts`). The assertions themselves did not run, so `tests.json` remains unchanged for the new palette tests.

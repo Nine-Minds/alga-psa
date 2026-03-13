@@ -122,121 +122,121 @@
   {
     "id": "F021",
     "description": "Render grouped palette tiles instead of one tile per business action",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F022",
     "description": "Keep control blocks rendered as dedicated non-grouped palette entries",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F023",
     "description": "Render Ticket as a top-level core-object palette tile",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F024",
     "description": "Render Contact as a top-level core-object palette tile",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F025",
     "description": "Render Client as a top-level core-object palette tile",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F026",
     "description": "Render Communication as a top-level core-object palette tile",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F027",
     "description": "Render Scheduling as a top-level core-object palette tile",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F028",
     "description": "Render Project as a top-level core-object palette tile",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F029",
     "description": "Render Time as a top-level core-object palette tile",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F030",
     "description": "Render CRM as a top-level core-object palette tile",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F031",
     "description": "Render Transform as a top-level transform palette tile",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model", "Requirements > Transform Actions"]
   },
   {
     "id": "F032",
     "description": "Render app/plugin catalog records as top-level app palette tiles",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model", "Requirements > Plugin/App Support"]
   },
   {
     "id": "F033",
     "description": "Use grouped tile icons consistently in drag and click insertion flows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F034",
     "description": "Use grouped tile labels consistently in drag and click insertion flows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F035",
     "description": "Display grouped tile descriptions in hover or tooltip content",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F036",
     "description": "Keep grouped palette tiles draggable onto any valid workflow pipe target",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model", "UX / UI Notes > Palette Model"]
   },
   {
     "id": "F037",
     "description": "Keep grouped palette tiles clickable for insert-at-selected-pipe behavior",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model", "UX / UI Notes > Palette Model"]
   },
   {
     "id": "F038",
     "description": "Preserve the existing floating palette container while swapping its contents to grouped tiles",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F039",
     "description": "Preserve grouped palette usability when the action registry is temporarily unavailable",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model", "Requirements > Grouped Palette and Designer Action Catalog"]
   },
   {
     "id": "F040",
     "description": "Preserve grouped palette usability in read-only designer sessions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Security / Permissions", "UX / UI Notes > Palette Model"]
   },
   {

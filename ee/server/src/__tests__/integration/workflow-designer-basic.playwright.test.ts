@@ -565,6 +565,62 @@ test.describe('Workflow Designer UI - basic', () => {
     }
   });
 
+  test('palette renders grouped business tiles instead of one tile per business action', async ({ page }) => {
+    test.setTimeout(120000);
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    try {
+      await workflowPage.clickNewWorkflow();
+
+      await expect(workflowPage.addButtonFor('ticket')).toBeVisible();
+      await expect(workflowPage.addButtonFor('contact')).toBeVisible();
+      await expect(workflowPage.addButtonFor('client')).toBeVisible();
+      await expect(workflowPage.addButtonFor('communication')).toBeVisible();
+      await expect(workflowPage.addButtonFor('scheduling')).toBeVisible();
+      await expect(workflowPage.addButtonFor('project')).toBeVisible();
+      await expect(workflowPage.addButtonFor('time')).toBeVisible();
+      await expect(workflowPage.addButtonFor('crm')).toBeVisible();
+
+      await expect(page.getByTestId('palette-item-action:tickets.create')).toHaveCount(0);
+      await expect(page.getByTestId('palette-item-action:contacts.find')).toHaveCount(0);
+      await expect(page.getByTestId('palette-item-action:clients.find')).toHaveCount(0);
+    } finally {
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
+      await db.destroy();
+    }
+  });
+
+  test('control blocks still render as dedicated palette entries alongside grouped tiles', async ({ page }) => {
+    test.setTimeout(120000);
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    try {
+      await workflowPage.clickNewWorkflow();
+
+      await expect(workflowPage.addButtonFor('control.if')).toBeVisible();
+      await expect(workflowPage.addButtonFor('control.forEach')).toBeVisible();
+      await expect(workflowPage.addButtonFor('control.tryCatch')).toBeVisible();
+      await expect(workflowPage.addButtonFor('control.callWorkflow')).toBeVisible();
+      await expect(workflowPage.addButtonFor('control.return')).toBeVisible();
+    } finally {
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
+      await db.destroy();
+    }
+  });
+
+  test('transform renders as a top-level palette tile', async ({ page }) => {
+    test.setTimeout(120000);
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    try {
+      await workflowPage.clickNewWorkflow();
+      await expect(workflowPage.addButtonFor('transform')).toBeVisible();
+    } finally {
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
+      await db.destroy();
+    }
+  });
+
   test('adds a control.if step and shows config panel', async ({ page }) => {
     test.setTimeout(120000);
 
