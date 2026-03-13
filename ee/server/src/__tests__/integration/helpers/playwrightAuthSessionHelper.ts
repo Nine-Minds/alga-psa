@@ -258,21 +258,48 @@ export class PlaywrightAuthSessionHelper {
 
     const context = this.page.context();
     const cookies: Array<Parameters<typeof context.addCookies>[0][number]> = [];
+    const issuedAtSeconds = Math.floor(Date.now() / 1000);
+    const expiresAtSeconds = issuedAtSeconds + maxAgeSeconds;
 
-    // Playwright is strict about cookie shapes; prefer a minimal set of URL-scoped cookies
-    // to avoid invalid domain/secure combinations when running on non-standard hosts/ports.
     const parsedBaseUrl = new URL(this.baseUrl);
     parsedBaseUrl.pathname = '/';
     parsedBaseUrl.search = '';
     parsedBaseUrl.hash = '';
-    const cookieUrl = parsedBaseUrl.toString();
+    const normalizedBaseUrl = parsedBaseUrl.toString();
 
-    for (const name of this.cookieNames) {
-      cookies.push({
-        name,
-        value: token,
-        url: cookieUrl,
-      });
+    for (const url of this.cookieHosts.map((host) => {
+      const parsed = new URL(host);
+      parsed.pathname = '/';
+      parsed.search = '';
+      parsed.hash = '';
+      return parsed.toString();
+    })) {
+      for (const name of this.cookieNames) {
+        cookies.push({
+          name,
+          value: token,
+          url,
+          httpOnly: true,
+          secure: this.isHttps,
+          sameSite: 'Lax',
+          expires: expiresAtSeconds,
+        });
+      }
+    }
+
+    for (const domain of this.cookieDomains) {
+      for (const name of this.cookieNames) {
+        cookies.push({
+          name,
+          value: token,
+          domain,
+          path: '/',
+          httpOnly: true,
+          secure: this.isHttps,
+          sameSite: 'Lax',
+          expires: expiresAtSeconds,
+        });
+      }
     }
 
     try {
@@ -280,7 +307,7 @@ export class PlaywrightAuthSessionHelper {
     } catch (error) {
       console.error('[Playwright Auth] Failed to set cookies', {
         baseUrl: this.baseUrl,
-        cookieUrl,
+        cookieUrl: normalizedBaseUrl,
         cookieCount: cookies.length,
         cookies: cookies.map((cookie) => ({
           name: cookie.name,

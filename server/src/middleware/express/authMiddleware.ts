@@ -368,6 +368,13 @@ export async function sessionAuthMiddleware(
     return next();
   }
 
+  // Keep Playwright/E2E browser flows aligned with the Next.js middleware bypass.
+  // The downstream app still establishes a real session cookie, but the Express layer
+  // must not short-circuit protected route requests back to /auth/* during test runs.
+  if (process.env.E2E_AUTH_BYPASS === 'true') {
+    return next();
+  }
+
   try {
     // Get secret from provider only - the provider handles env vars and fallbacks
     const secretProvider = await getSecretProviderInstance();
@@ -484,6 +491,10 @@ export async function authorizationMiddleware(
 
     // For API routes, authentication is handled by apiKeyAuthMiddleware
     if (req.path.startsWith('/api/') && !req.path.startsWith('/api/auth/')) {
+      return next();
+    }
+
+    if (process.env.E2E_AUTH_BYPASS === 'true' && (req.path.startsWith('/msp/') || req.path.startsWith('/client-portal/'))) {
       return next();
     }
 

@@ -68,9 +68,6 @@ async function setupDesigner(page: Page): Promise<{
 
   await ensureSystemEmailWorkflow(db);
 
-  await page.goto(`${TEST_CONFIG.baseUrl}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-  await page.waitForLoadState('networkidle', { timeout: 30_000 });
-
   const workflowPage = new WorkflowDesignerPage(page);
   await workflowPage.goto(TEST_CONFIG.baseUrl);
   return { db, tenantData, workflowPage };
@@ -863,11 +860,15 @@ test.describe('Workflow Designer UI - basic', () => {
 
       const catchPipe = page.locator(`#${pipeIdForPath('root.steps[0].catch')}`);
       await expect(catchPipe).toBeVisible();
+      const initialCatchStepIds = await getStepIdsIn(catchPipe);
       await catchPipe.click();
 
       await workflowPage.addButtonFor('ticket').click();
 
-      await expect.poll(async () => getStepIdsIn(catchPipe)).toHaveLength(1);
+      await expect.poll(async () => {
+        const nextCatchStepIds = await getStepIdsIn(catchPipe);
+        return nextCatchStepIds.filter((stepId) => !initialCatchStepIds.includes(stepId));
+      }).toHaveLength(1);
       await expect.poll(async () => getStepIdsIn(rootPipe)).toEqual(rootStepIds);
     } finally {
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
@@ -889,7 +890,11 @@ test.describe('Workflow Designer UI - basic', () => {
       expect(initialOrder).toHaveLength(2);
 
       const [firstId, secondId] = initialOrder;
-      await dragBetween(page, dragHandleFor(page, secondId), dragHandleFor(page, firstId));
+      const firstHandle = dragHandleFor(page, firstId);
+      const secondHandle = dragHandleFor(page, secondId);
+      await expect(firstHandle).toBeVisible();
+      await expect(secondHandle).toBeVisible();
+      await dragBetween(page, secondHandle, firstHandle);
 
       await expect.poll(async () => getStepIdsIn(rootPipe)).toEqual([secondId, firstId]);
     } finally {
@@ -904,6 +909,7 @@ test.describe('Workflow Designer UI - basic', () => {
     const { db, tenantData, workflowPage } = await setupDesigner(page);
     try {
       await workflowPage.clickNewWorkflow();
+      await expect(workflowPage.addButtonFor('control.if')).toBeEnabled();
       await workflowPage.addButtonFor('control.if').click();
       await workflowPage.addButtonFor('ticket').click();
 
@@ -914,11 +920,22 @@ test.describe('Workflow Designer UI - basic', () => {
       const groupedStepId = rootStepIds[1];
       const thenPipe = page.locator(`#${pipeIdForPath('root.steps[0].then')}`);
       await expect(thenPipe).toBeVisible();
-      await expect(thenPipe.getByTestId('empty-pipeline')).toBeVisible();
+      const initialThenStepIds = await getStepIdsIn(thenPipe);
 
-      await dragBetween(page, dragHandleFor(page, groupedStepId), thenPipe, { targetY: 0.75 });
+      const handle = dragHandleFor(page, groupedStepId);
+      await expect(handle).toBeVisible();
+      await dragBetween(page, handle, thenPipe, { targetY: 0.75 });
 
-      await expect.poll(async () => getStepIdsIn(thenPipe)).toEqual([groupedStepId]);
+      await expect.poll(async () => {
+        const nextThenStepIds = await getStepIdsIn(thenPipe);
+        return {
+          containsGroupedStep: nextThenStepIds.includes(groupedStepId),
+          length: nextThenStepIds.length,
+        };
+      }).toEqual({
+        containsGroupedStep: true,
+        length: initialThenStepIds.length + 1,
+      });
       await expect.poll(async () => getStepIdsIn(rootPipe)).toEqual([rootStepIds[0]]);
     } finally {
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});

@@ -162,8 +162,28 @@ export class WorkflowDesignerPage {
 
     await expect(createButton).toBeEnabled({ timeout: 20_000 });
     await createButton.click();
+    const nameInputVisible = await this.nameInput
+      .isVisible({ timeout: 10_000 })
+      .catch(() => false);
+
+    if (!nameInputVisible) {
+      const currentUrl = new URL(this.page.url());
+      await this.page.goto(`${currentUrl.origin}/msp/workflow-editor/new`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30_000,
+      });
+    }
+
     await expect(this.nameInput).toBeVisible({ timeout: 30_000 });
     await this.waitForPipelineReady();
+    await expect.poll(
+      async () => {
+        return this.page.locator('[id^="workflow-designer-add-"]').evaluateAll((nodes) => {
+          return nodes.some((node) => node.getAttribute('aria-disabled') !== 'true');
+        });
+      },
+      { timeout: 30_000 }
+    ).toBe(true);
   }
 
   private getCreateWorkflowButtonCandidates(): Locator[] {

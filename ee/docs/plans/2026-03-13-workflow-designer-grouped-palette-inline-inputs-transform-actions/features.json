@@ -404,7 +404,7 @@
   {
     "id": "F068",
     "description": "A newly inserted grouped action step should initially preserve the current pipe insertion behavior",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model"]
   },
   {
@@ -452,13 +452,13 @@
   {
     "id": "F076",
     "description": "A grouped action step should remain reorderable within the pipeline like existing action.call steps",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model"]
   },
   {
     "id": "F077",
     "description": "A grouped action step should remain movable across control-block branches like existing action.call steps",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model"]
   },
   {

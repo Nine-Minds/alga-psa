@@ -404,7 +404,7 @@
   {
     "id": "T068",
     "description": "Playwright: a newly inserted grouped action step lands on the currently selected pipe like current action.call steps",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F068"]
   },
   {
@@ -452,13 +452,13 @@
   {
     "id": "T076",
     "description": "Playwright: grouped action steps remain reorderable within the pipeline",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F076"]
   },
   {
     "id": "T077",
     "description": "Playwright: grouped action steps remain movable across control-block branches",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F077"]
   },
   {
