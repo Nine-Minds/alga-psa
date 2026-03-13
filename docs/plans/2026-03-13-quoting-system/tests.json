@@ -34,7 +34,7 @@
   {
     "id": "T005",
     "description": "Migration: quote_activities table created with correct columns and FK to quotes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F003"
     ]
