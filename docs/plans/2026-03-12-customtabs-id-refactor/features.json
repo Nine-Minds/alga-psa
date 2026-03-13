@@ -370,7 +370,7 @@
   {
     "id": "F043",
     "description": "Migrate AccountingMappingManager.tsx — add id from module data, remove slugToLabelMap/toSlug() helper",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern E"
