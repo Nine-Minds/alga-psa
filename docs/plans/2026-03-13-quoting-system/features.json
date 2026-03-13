@@ -607,7 +607,7 @@
   {
     "id": "F072",
     "description": "P3: Database migration — create quote_document_template_assignments table",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P3-FR1"
     ]
