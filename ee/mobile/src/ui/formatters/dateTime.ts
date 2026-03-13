@@ -1,6 +1,16 @@
 import * as Localization from "expo-localization";
 
-const locale = Localization.getLocales()[0]?.languageTag || "en-US";
+let locale = Localization.getLocales()[0]?.languageTag || "en-US";
+
+/** Update the locale used by all date formatters. */
+export function setDateTimeLocale(nextLocale: string): void {
+  locale = nextLocale;
+}
+
+/** Return the current locale used by date formatters. */
+export function getDateTimeLocale(): string {
+  return locale;
+}
 
 type ParsedDate = { date: Date; kind: "date" | "datetime" };
 

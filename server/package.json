@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "0.16.5",
+  "version": "1.0.4-rc4",
   "private": true,
   "type": "module",
   "engines": {
@@ -92,7 +92,6 @@
     "@opentelemetry/winston-transport": "^0.13.0",
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-form": "^0.1.2",
-
     "@radix-ui/react-label": "^2.1.2",
     "@radix-ui/react-progress": "^1.1.1",
     "@radix-ui/react-select": "^2.0.0",

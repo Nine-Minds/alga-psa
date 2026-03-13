@@ -6,7 +6,7 @@ import { IInteraction, IInteractionType } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { IContact } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
-import { Filter, XCircle, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Filter, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { getAllContacts } from '@alga-psa/clients/actions';
 import { getRecentInteractions, getInteractionStatuses } from '@alga-psa/clients/actions';
@@ -22,6 +22,7 @@ import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { Button } from '@alga-psa/ui/components/Button';
+import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -297,34 +298,29 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
   return (
     <ReflectionContainer id="overall-interactions-feed" label="Overall Interactions Feed">
       {isCollapsed ? (
-        <div className="bg-white shadow rounded-lg h-full flex items-center justify-center p-2">
-          <Button
+        <div className="bg-white shadow rounded-lg h-full flex items-start justify-center p-2">
+          <CollapseToggleButton
             id="expand-interactions-button"
+            isCollapsed={true}
+            collapsedLabel="Expand Recent Interactions"
+            expandedLabel="Collapse Recent Interactions"
+            expandDirection="left"
             onClick={onToggleCollapse}
-            variant="ghost"
-            className="flex flex-col items-center gap-2 h-full min-h-[200px]"
-            aria-label="Expand Recent Interactions"
-          >
-            <ChevronLeft className="h-5 w-5" />
-            <span className="writing-mode-vertical-lr text-sm font-semibold" style={{ writingMode: 'vertical-lr' }}>
-              Recent Interactions
-            </span>
-          </Button>
+            className="mt-2"
+          />
         </div>
       ) : (
       <div className="bg-white shadow rounded-lg p-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold">Recent Interactions</h2>
-        <Button
+        <CollapseToggleButton
           id="collapse-interactions-button"
+          isCollapsed={false}
+          collapsedLabel="Expand Recent Interactions"
+          expandedLabel="Collapse Recent Interactions"
+          expandDirection="left"
           onClick={onToggleCollapse}
-          variant="ghost"
-          size="sm"
-          className="p-1"
-          aria-label="Collapse"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </Button>
+        />
       </div>
       <div className="flex flex-nowrap items-stretch gap-4 mb-4">
         <div className="flex-grow min-w-0">

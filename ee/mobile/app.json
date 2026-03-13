@@ -1,21 +1,21 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "Alga PSA",
     "slug": "mobile",
     "version": "1.0.0",
     "scheme": "alga",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#8a4dea"
     },
     "ios": {
       "bundleIdentifier": "com.alga.psa.mobile",
-      "buildNumber": "5",
+      "buildNumber": "6",
       "supportsTablet": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -26,7 +26,7 @@
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#8a4dea"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false

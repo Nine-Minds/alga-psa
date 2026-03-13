@@ -127,6 +127,17 @@ Controls access to new document features: client portal documents, folder struct
 **Behavior:**
 - When disabled: Client portal documents nav link is hidden (page shows construction placeholder if accessed directly). Folder templates config and share link UI are completely hidden.
 
+### 9. `ai-assistant-activation`
+Controls which tenants are allowed to enable the AI Assistant from Settings → Experimental Features.
+
+**Affected Areas:**
+- **MSP Portal:**
+  - Settings → Experimental Features → AI Assistant toggle
+
+**Behavior:**
+- When disabled: The AI Assistant toggle is disabled and cannot be saved on for that tenant, even if the tenant previously had the experimental setting stored.
+- When enabled: The tenant may turn on the existing `experimentalFeatures.aiAssistant` setting, which continues to gate Quick Ask, chat sidebar access, and AI chat APIs.
+
 ## Implementation Details
 
 ### User Identification
@@ -159,7 +170,7 @@ posthog.identify(anonymousId, {
 To configure these feature flags in PostHog:
 
 1. **Create Feature Flag:**
-   - Key: `billing-enabled`, `advanced-features-enabled`, or `email-configuration`
+   - Key: `billing-enabled`, `advanced-features-enabled`, `email-configuration`, or `ai-assistant-activation`
    - Type: Boolean
 
 2. **Set Rollout Conditions:**

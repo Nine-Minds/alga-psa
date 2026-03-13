@@ -61,6 +61,7 @@ export type TicketComment = {
   comment_html?: string | null;
   is_internal?: boolean;
   created_by_name?: string | null;
+  created_by_avatar_url?: string | null;
   created_at?: string | null;
   kind?: "comment" | "event";
   event_type?: string | null;

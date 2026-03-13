@@ -30,6 +30,7 @@ import { ListOptions } from '../controllers/types';
 import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
 import { renderTicketDescriptionHtml, renderTicketRichTextHtml } from './ticketRichRender';
+import { getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 // import { performanceTracker } from '../../analytics/performanceTracking';
 
 const TICKET_MOBILE_LIST_FIELDS = [
@@ -683,6 +684,19 @@ export class TicketService extends BaseService<ITicket> {
         if (options?.limit !== undefined) query.limit(options.limit);
       });
 
+    // Batch-fetch avatar URLs for all unique user IDs
+    const userIds = [...new Set(comments.map(c => c.user_id).filter(Boolean))] as string[];
+    const avatarMap: Record<string, string | null> = {};
+    await Promise.all(
+      userIds.map(async (uid) => {
+        try {
+          avatarMap[uid] = await getUserAvatarUrl(uid, context.tenant);
+        } catch {
+          avatarMap[uid] = null;
+        }
+      })
+    );
+
     // Map database fields to API response format
     return comments.map(comment => ({
       ...comment,
@@ -690,6 +704,7 @@ export class TicketService extends BaseService<ITicket> {
       comment_html: renderTicketRichTextHtml(comment.note),
       created_by: comment.user_id ?? null,
       created_by_name: comment.created_by_name || comment.author_contact_name || null,
+      created_by_avatar_url: comment.user_id ? (avatarMap[comment.user_id] ?? null) : null,
       author_contact_id: comment.author_contact_id || comment.contact_id || null,
       author_contact_name: comment.author_contact_name || null,
       author_contact_email: comment.author_contact_email || null

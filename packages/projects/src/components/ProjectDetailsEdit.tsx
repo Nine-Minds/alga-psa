@@ -16,8 +16,8 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { TagManager } from '@alga-psa/tags/components';
 import { updateProject, getProjectStatuses } from '../actions/projectActions';
-import { getContactsByClient, getAllContacts } from '@alga-psa/clients/actions';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { useClientIntegration } from '../context/ClientIntegrationContext';
 import { findTagsByEntityId } from '@alga-psa/tags/actions';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { toast } from 'react-hot-toast';
@@ -43,6 +43,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   onSave,
   onCancel,
 }) => {
+  const { getContactsByClient, getAllContacts } = useClientIntegration();
   // Initialize tag permissions for project tags
   useTagPermissions(['project']);
   

@@ -2,12 +2,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Documents from './Documents';
 import { Card } from '@alga-psa/ui/components/Card';
+import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import { getDistinctEntityTypes } from '../actions/documentActions';
 import { getCurrentUser, getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import { toast } from 'react-hot-toast';
 import DocumentFilters from './DocumentFilters';
 import DocumentsPageSkeleton from './DocumentsPageSkeleton';
-import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 const FILTERS_PANE_COLLAPSED_SETTING = 'documents_filters_pane_collapsed';
@@ -199,18 +200,13 @@ export default function DocumentsPage() {
       <div className="flex gap-6">
         {/* Collapsed Filters Button */}
         {isFiltersPaneCollapsed && (<div className="flex-shrink-0">
-            <button onClick={() => setIsFiltersPaneCollapsed(false)} className="p-2 hover:bg-gray-100 rounded border border-gray-200 flex items-center gap-2" title="Show filters">
-              <Filter className="w-4 h-4"/>
-              <ChevronRight className="w-4 h-4"/>
-            </button>
+            <CollapseToggleButton id="documents-show-filters-button" isCollapsed={true} collapsedLabel="Show filters" expandedLabel="Collapse filters" expandDirection="right" onClick={() => setIsFiltersPaneCollapsed(false)}/>
           </div>)}
 
         {/* Left Column - Filters */}
         {!isFiltersPaneCollapsed && (<div className="w-80 relative">
             <div className="absolute top-2 right-2 z-10">
-              <button onClick={() => setIsFiltersPaneCollapsed(true)} className="p-1 hover:bg-gray-100 rounded" title="Collapse filters">
-                <ChevronLeft className="w-4 h-4"/>
-              </button>
+              <CollapseToggleButton id="documents-collapse-filters-button" isCollapsed={false} collapsedLabel="Show filters" expandedLabel="Collapse filters" expandDirection="right" onClick={() => setIsFiltersPaneCollapsed(true)}/>
             </div>
             <DocumentFilters filters={filterInputs} onFiltersChange={handleFiltersChange} onClearFilters={handleClearFilters} entityTypeOptions={entityTypeOptions} allUsersData={allUsersData} onShowAllDocuments={handleShowAllDocuments} showAllDocumentsButton={true}/>
           </div>)}

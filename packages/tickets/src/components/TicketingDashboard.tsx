@@ -65,8 +65,8 @@ interface TicketingDashboardProps {
   pageSize: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
-  onFiltersChanged: (filters: Partial<ITicketListFilters>) => void;
-  initialFilterValues: Partial<ITicketListFilters>;
+  onFilterChange: (update: Partial<ITicketListFilters>) => void;
+  filterValues: Partial<ITicketListFilters>;
   isLoadingMore: boolean;
   user?: IUser;
   displaySettings?: TicketingDisplaySettings;
@@ -95,6 +95,7 @@ const useDebounce = <T,>(value: T, delay: number): T => {
 };
 
 const TICKET_LIST_DENSITY_STORAGE_KEY = 'ticket_list_density_level';
+const EMPTY_STRING_ARRAY: string[] = [];
 
 const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   id = 'ticketing-dashboard',
@@ -111,8 +112,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   pageSize,
   onPageChange,
   onPageSizeChange,
-  onFiltersChanged,
-  initialFilterValues,
+  onFilterChange,
+  filterValues,
   isLoadingMore,
   user,
   displaySettings,
@@ -160,36 +161,37 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [statusOptions] = useState<SelectOption[]>(initialStatuses);
   const [priorityOptions] = useState<SelectOption[]>(initialPriorities);
   
-  const [selectedBoard, setSelectedBoard] = useState<string | null>(initialFilterValues.boardId ?? null);
-  const [selectedClient, setSelectedClient] = useState<string | null>(initialFilterValues.clientId ?? null);
-  const [selectedStatus, setSelectedStatus] = useState<string>(initialFilterValues.statusId ?? 'open');
-  const [selectedPriority, setSelectedPriority] = useState<string>(initialFilterValues.priorityId ?? 'all');
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(
-    initialFilterValues.categoryId ? [initialFilterValues.categoryId] : []
+  // Filter values derived from props (single source of truth is Container's activeFilters)
+  const selectedBoard = filterValues.boardId ?? null;
+  const selectedClient = filterValues.clientId ?? null;
+  const selectedStatus = filterValues.statusId ?? 'open';
+  const selectedPriority = filterValues.priorityId ?? 'all';
+  const selectedCategories = useMemo(() =>
+    filterValues.categoryId ? [filterValues.categoryId] : EMPTY_STRING_ARRAY,
+    [filterValues.categoryId]
   );
   const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
   const [isQuickAddCategoryOpen, setIsQuickAddCategoryOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState<string>(initialFilterValues.searchQuery ?? '');
-  const [boardFilterState, setBoardFilterState] = useState<'active' | 'inactive' | 'all'>(initialFilterValues.boardFilterState ?? 'active');
+  const boardFilterState = filterValues.boardFilterState ?? 'active';
 
-  // Assignee filter state
-  const [selectedAssignees, setSelectedAssignees] = useState<string[]>(initialFilterValues.assignedToIds ?? []);
-  const [selectedTeams, setSelectedTeams] = useState<string[]>(initialFilterValues.assignedTeamIds ?? []);
-  const [includeUnassigned, setIncludeUnassigned] = useState<boolean>(initialFilterValues.includeUnassigned ?? false);
-  const [teams, setTeams] = useState<ITeam[]>(initialTeams);
+  // Search query needs local state for responsive typing, debounced before emitting
+  const [searchQuery, setSearchQuery] = useState<string>(filterValues.searchQuery ?? '');
 
-  // Due date filter state
-  const [selectedDueDateFilter, setSelectedDueDateFilter] = useState<string>(initialFilterValues.dueDateFilter ?? 'all');
-  const [dueDateFilterValue, setDueDateFilterValue] = useState<Date | undefined>(() => {
-    // Initialize from dueDateFrom (for 'after') or dueDateTo (for 'before') from URL
-    const dateStr = initialFilterValues.dueDateFrom || initialFilterValues.dueDateTo;
+  // Assignee filter values from props
+  const selectedAssignees = filterValues.assignedToIds ?? EMPTY_STRING_ARRAY;
+  const selectedTeams = filterValues.assignedTeamIds ?? EMPTY_STRING_ARRAY;
+  const includeUnassigned = filterValues.includeUnassigned ?? false;
+  const [teams] = useState<ITeam[]>(initialTeams);
+
+  // Due date filter values from props
+  const selectedDueDateFilter = filterValues.dueDateFilter ?? 'all';
+  const dueDateFilterValue = useMemo(() => {
+    const dateStr = filterValues.dueDateFrom || filterValues.dueDateTo;
     return dateStr ? new Date(dateStr) : undefined;
-  });
-  const [selectedResponseState, setSelectedResponseState] = useState<'awaiting_client' | 'awaiting_internal' | 'none' | 'all'>(
-    initialFilterValues.responseState ?? 'all'
-  );
-  const [selectedSlaStatus, setSelectedSlaStatus] = useState<string>(initialFilterValues.slaStatusFilter ?? 'all');
-  const [bundleView, setBundleView] = useState<'bundled' | 'individual'>(initialFilterValues.bundleView ?? 'bundled');
+  }, [filterValues.dueDateFrom, filterValues.dueDateTo]);
+  const selectedResponseState = (filterValues.responseState ?? 'all') as 'awaiting_client' | 'awaiting_internal' | 'none' | 'all';
+  const selectedSlaStatus = filterValues.slaStatusFilter ?? 'all';
+  const bundleView = (filterValues.bundleView ?? 'bundled') as 'bundled' | 'individual';
   const [ticketListDensityLevel, setTicketListDensityLevel] = useState<number>(50);
 
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
@@ -197,9 +199,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
-
-  // Tag-related state
-  const [selectedTags, setSelectedTags] = useState<string[]>(initialFilterValues.tags || []);
+  // Tag filter values from props
+  const selectedTags = filterValues.tags ?? EMPTY_STRING_ARRAY;
   const ticketTagsRef = useRef<Record<string, ITag[]>>(initialTicketTags);
   const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>(initialTags || []);
   const [tagsVersion, setTagsVersion] = useState(0); // Used to force re-render when tags are fetched
@@ -259,70 +260,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setTeamAvatarUrls(initialTeamAvatarUrls);
   }, [initialTeamAvatarUrls]);
 
-  // Counter-based skip: sync effect increments, filter-emit decrements.
-  // This covers BOTH the same-render and next-render filter-emit invocations
-  // that result from the sync effect's batched state updates.
-  const skipFilterEmitCountRef = useRef(0);
-  const prevInitialFilterValuesRef = useRef(initialFilterValues);
-
-  // Keep local filter controls in sync with URL-derived props (for back/forward restoration).
-  // Compares previous vs current initialFilterValues so that user-initiated local state
-  // changes don't trigger this effect — only actual prop changes from the parent do.
+  // Sync search query from external changes (back/forward navigation).
+  // Only fires when the container's value differs from what we last emitted.
+  const lastEmittedSearchRef = useRef(filterValues.searchQuery ?? '');
   useEffect(() => {
-    const prev = prevInitialFilterValuesRef.current;
-    const next = initialFilterValues;
-
-    const hasPropsChanged =
-      prev.boardId !== next.boardId ||
-      prev.clientId !== next.clientId ||
-      prev.statusId !== next.statusId ||
-      prev.priorityId !== next.priorityId ||
-      prev.categoryId !== next.categoryId ||
-      prev.searchQuery !== next.searchQuery ||
-      prev.boardFilterState !== next.boardFilterState ||
-      JSON.stringify(prev.tags) !== JSON.stringify(next.tags) ||
-      JSON.stringify(prev.assignedToIds) !== JSON.stringify(next.assignedToIds) ||
-      JSON.stringify(prev.assignedTeamIds) !== JSON.stringify(next.assignedTeamIds) ||
-      prev.includeUnassigned !== next.includeUnassigned ||
-      prev.dueDateFilter !== next.dueDateFilter ||
-      prev.dueDateFrom !== next.dueDateFrom ||
-      prev.dueDateTo !== next.dueDateTo ||
-      prev.responseState !== next.responseState ||
-      prev.slaStatusFilter !== next.slaStatusFilter ||
-      prev.bundleView !== next.bundleView;
-
-    prevInitialFilterValuesRef.current = next;
-
-    if (!hasPropsChanged) {
-      return;
+    const incoming = filterValues.searchQuery ?? '';
+    if (incoming !== lastEmittedSearchRef.current) {
+      lastEmittedSearchRef.current = incoming;
+      setSearchQuery(incoming);
     }
-
-    // Skip the next 2 filter-emit invocations: the sync effect's setState calls
-    // create new array refs (e.g. []) that trigger the filter-emit effect twice —
-    // once in the same commit and once in the subsequent batched-update render.
-    skipFilterEmitCountRef.current = 2;
-    setSelectedBoard(next.boardId ?? null);
-    setSelectedClient(next.clientId ?? null);
-    setSelectedStatus(next.statusId ?? 'open');
-    setSelectedPriority(next.priorityId ?? 'all');
-    setSelectedCategories(next.categoryId ? [next.categoryId] : []);
-    setSearchQuery(next.searchQuery ?? '');
-    setBoardFilterState(next.boardFilterState ?? 'active');
-    setSelectedTags(next.tags ?? []);
-    setSelectedAssignees(next.assignedToIds ?? []);
-    setSelectedTeams(next.assignedTeamIds ?? []);
-    setIncludeUnassigned(next.includeUnassigned ?? false);
-    setSelectedDueDateFilter(next.dueDateFilter ?? 'all');
-    setDueDateFilterValue((() => {
-      const dateStr = next.dueDateFrom || next.dueDateTo;
-      return dateStr ? new Date(dateStr) : undefined;
-    })());
-    setSelectedResponseState((next.responseState ?? 'all') as 'awaiting_client' | 'awaiting_internal' | 'none' | 'all');
-    setSelectedSlaStatus(next.slaStatusFilter ?? 'all');
-    setBundleView(next.bundleView ?? 'bundled');
-  }, [
-    initialFilterValues
-  ]);
+  }, [filterValues.searchQuery]);
 
   // Ticket tags are now provided via initialTicketTags from server-side consolidated fetch
   useEffect(() => {
@@ -334,18 +281,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
-  // Persist bundle view preference locally (URL params still take precedence when present)
+  // Emit debounced search query changes to the container
+  const isFirstSearchEmit = useRef(true);
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (initialFilterValues.bundleView) return;
-
-    const stored = window.localStorage.getItem(BUNDLE_VIEW_STORAGE_KEY);
-    if (stored === 'bundled' || stored === 'individual') {
-      setBundleView(stored);
+    if (isFirstSearchEmit.current) {
+      isFirstSearchEmit.current = false;
+      return;
     }
+    lastEmittedSearchRef.current = debouncedSearchQuery;
+    onFilterChange({ searchQuery: debouncedSearchQuery });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [debouncedSearchQuery]);
 
+  // Persist bundle view preference to localStorage
   useEffect(() => {
     if (typeof window === 'undefined') return;
     window.localStorage.setItem(BUNDLE_VIEW_STORAGE_KEY, bundleView);
@@ -395,50 +343,43 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   // Helper function to generate URL with current filter state
   const getCurrentFiltersQuery = useCallback(() => {
     const params = new URLSearchParams();
+    const f = filterValues;
 
     // Only add non-default/non-empty values to URL
-    if (selectedBoard) params.set('boardId', selectedBoard);
-    if (selectedClient) params.set('clientId', selectedClient);
-    if (selectedStatus && selectedStatus !== 'open') params.set('statusId', selectedStatus);
-    if (selectedPriority && selectedPriority !== 'all') params.set('priorityId', selectedPriority);
-    if (selectedCategories.length > 0) params.set('categoryId', selectedCategories[0]);
-    if (debouncedSearchQuery) params.set('searchQuery', debouncedSearchQuery);
-    if (boardFilterState && boardFilterState !== 'active') {
-      params.set('boardFilterState', boardFilterState);
+    if (f.boardId) params.set('boardId', f.boardId);
+    if (f.clientId) params.set('clientId', f.clientId);
+    if (f.statusId && f.statusId !== 'open') params.set('statusId', f.statusId);
+    if (f.priorityId && f.priorityId !== 'all') params.set('priorityId', f.priorityId);
+    if (f.categoryId) params.set('categoryId', f.categoryId);
+    if (f.searchQuery) params.set('searchQuery', f.searchQuery);
+    if (f.boardFilterState && f.boardFilterState !== 'active') {
+      params.set('boardFilterState', f.boardFilterState);
     }
-    // Include assignee filters in returnFilters for consistent back-navigation
-    if (selectedAssignees.length > 0) {
-      params.set('assignedToIds', selectedAssignees.join(','));
+    if (f.assignedToIds && f.assignedToIds.length > 0) {
+      params.set('assignedToIds', f.assignedToIds.join(','));
     }
-    if (selectedTeams.length > 0) {
-      params.set('assignedTeamIds', selectedTeams.join(','));
+    if (f.assignedTeamIds && f.assignedTeamIds.length > 0) {
+      params.set('assignedTeamIds', f.assignedTeamIds.join(','));
     }
-    if (includeUnassigned) {
+    if (f.includeUnassigned) {
       params.set('includeUnassigned', 'true');
     }
-    // Include due date filter in URL params
-    if (selectedDueDateFilter && selectedDueDateFilter !== 'all') {
-      params.set('dueDateFilter', selectedDueDateFilter);
-      // Add the date value for before/after filters
-      if (dueDateFilterValue) {
-        if (selectedDueDateFilter === 'before') {
-          params.set('dueDateTo', dueDateFilterValue.toISOString());
-        } else if (selectedDueDateFilter === 'after') {
-          params.set('dueDateFrom', dueDateFilterValue.toISOString());
-        }
-      }
+    if (f.dueDateFilter && f.dueDateFilter !== 'all') {
+      params.set('dueDateFilter', f.dueDateFilter);
+      if (f.dueDateFrom) params.set('dueDateFrom', f.dueDateFrom);
+      if (f.dueDateTo) params.set('dueDateTo', f.dueDateTo);
     }
-    if (bundleView && bundleView !== 'bundled') {
-      params.set('bundleView', bundleView);
+    if (f.bundleView && f.bundleView !== 'bundled') {
+      params.set('bundleView', f.bundleView);
     }
-    if (selectedResponseState && selectedResponseState !== 'all') {
-      params.set('responseState', selectedResponseState);
+    if (f.responseState && f.responseState !== 'all') {
+      params.set('responseState', f.responseState);
     }
-    if (selectedSlaStatus && selectedSlaStatus !== 'all') {
-      params.set('slaStatusFilter', selectedSlaStatus);
+    if (f.slaStatusFilter && f.slaStatusFilter !== 'all') {
+      params.set('slaStatusFilter', f.slaStatusFilter);
     }
-    if (selectedTags.length > 0) {
-      params.set('tags', selectedTags.join(','));
+    if (f.tags && f.tags.length > 0) {
+      params.set('tags', f.tags.join(','));
     }
     if (sortBy && sortBy !== 'entered_at') {
       params.set('sortBy', sortBy);
@@ -450,67 +391,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (pageSize !== 10) params.set('pageSize', String(pageSize));
 
     return params.toString();
-  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, dueDateFilterValue, bundleView, selectedResponseState, selectedTags, sortBy, sortDirection, currentPage, pageSize]);
-
-  const isFirstRender = useRef(true);
-
-  useEffect(() => {
-    // Always skip the effect on initial render — the RSC page already fetched
-    // tickets with the correct filters, so re-fetching is redundant and causes
-    // a cascade of state updates (especially when storedPageSize also triggers).
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-    if (skipFilterEmitCountRef.current > 0) {
-      skipFilterEmitCountRef.current--;
-      return;
-    }
-
-    const currentFilters: Partial<ITicketListFilters> = {
-      boardId: selectedBoard ?? undefined,
-      statusId: selectedStatus,
-      priorityId: selectedPriority,
-      categoryId: selectedCategories.length > 0 ? selectedCategories[0] : undefined,
-      clientId: selectedClient ?? undefined,
-      searchQuery: debouncedSearchQuery,
-      boardFilterState: boardFilterState,
-      showOpenOnly: selectedStatus === 'open',
-      tags: selectedTags.length > 0 ? selectedTags : undefined,
-      assignedToIds: selectedAssignees.length > 0 ? selectedAssignees : undefined,
-      assignedTeamIds: selectedTeams.length > 0 ? selectedTeams : undefined,
-      includeUnassigned: includeUnassigned || false,
-      dueDateFilter: selectedDueDateFilter !== 'all' ? selectedDueDateFilter as ITicketListFilters['dueDateFilter'] : undefined,
-      dueDateFrom: selectedDueDateFilter === 'after' && dueDateFilterValue ? dueDateFilterValue.toISOString() : undefined,
-      dueDateTo: selectedDueDateFilter === 'before' && dueDateFilterValue ? dueDateFilterValue.toISOString() : undefined,
-      responseState: selectedResponseState !== 'all' ? selectedResponseState : undefined,
-      slaStatusFilter: selectedSlaStatus !== 'all' ? selectedSlaStatus as ITicketListFilters['slaStatusFilter'] : undefined,
-      bundleView,
-    };
-
-    console.log('[Dashboard] Calling onFiltersChanged with:', currentFilters);
-    onFiltersChanged(currentFilters);
-    setAllMatchingMode(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    selectedBoard,
-    selectedStatus,
-    selectedPriority,
-    selectedCategories,
-    selectedClient,
-    debouncedSearchQuery,
-    boardFilterState,
-    bundleView,
-    selectedTags,
-    selectedAssignees,
-    selectedTeams,
-    includeUnassigned,
-    selectedDueDateFilter,
-    dueDateFilterValue,
-    selectedResponseState,
-    selectedSlaStatus
-    // onFiltersChanged intentionally omitted — we want to trigger only when filter values change, not when the callback changes
-  ]);
+  }, [filterValues, sortBy, sortDirection, currentPage, pageSize]);
 
   const resetDeleteState = () => {
     setTicketToDelete(null);
@@ -1138,18 +1019,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       setIsBundleDialogOpen(false);
       clearSelection();
 
-      onFiltersChanged({
-        boardId: selectedBoard ?? undefined,
-        statusId: selectedStatus,
-        priorityId: selectedPriority,
-        categoryId: selectedCategories.length > 0 ? selectedCategories[0] : undefined,
-        clientId: selectedClient ?? undefined,
-        searchQuery: debouncedSearchQuery,
-        boardFilterState: boardFilterState,
-        showOpenOnly: selectedStatus === 'open',
-        tags: selectedTags.length > 0 ? selectedTags : undefined,
-        bundleView,
-      });
+      // Re-fetch with current filters after bundling
+      onFilterChange({});
     } catch (error) {
       setBundleError(error instanceof Error ? error.message : 'Failed to bundle tickets');
       handleError(error, 'Failed to bundle tickets');
@@ -1160,16 +1031,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     bundleSyncUpdates,
     currentUser,
     clearSelection,
-    onFiltersChanged,
-    selectedBoard,
-    selectedStatus,
-    selectedPriority,
-    selectedCategories,
-    selectedClient,
-    debouncedSearchQuery,
-    boardFilterState,
-    selectedTags,
-    bundleView,
+    onFilterChange,
   ]);
 
   const handleConfirmBundleTickets = useCallback(() => {
@@ -1280,17 +1142,17 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, [statusOptions, priorityOptions, boards, categories, currentUser]);
 
   const handleBoardSelect = useCallback((boardId: string) => {
-    setSelectedBoard(boardId);
-  }, []);
+    onFilterChange({ boardId: boardId || undefined });
+  }, [onFilterChange]);
 
   const handleCategorySelect = useCallback((newSelectedCategories: string[], newExcludedCategories: string[]) => {
-    setSelectedCategories(newSelectedCategories);
     setExcludedCategories(newExcludedCategories);
-  }, []);
-  
+    onFilterChange({ categoryId: newSelectedCategories.length > 0 ? newSelectedCategories[0] : undefined });
+  }, [onFilterChange]);
+
   const handleClientSelect = useCallback((clientId: string | null) => {
-    setSelectedClient(clientId);
-  }, []);
+    onFilterChange({ clientId: clientId || undefined });
+  }, [onFilterChange]);
 
   const handleClientFilterStateChange = useCallback((state: 'active' | 'inactive' | 'all') => {
     setClientFilterState(state);
@@ -1301,62 +1163,34 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, []);
 
   const handleResetFilters = useCallback(() => {
-    // Define the true default/reset states
-    const defaultBoard: string | null = null;
-    const defaultClient: string | null = null;
-    const defaultStatus: string = 'open';
-    const defaultPriority: string = 'all';
-    const defaultCategories: string[] = [];
-    const defaultSearchQuery: string = '';
-    const defaultBoardFilterState: 'active' | 'inactive' | 'all' = 'active';
-    const defaultDueDateFilter: string = 'all';
-    const defaultResponseState: 'awaiting_client' | 'awaiting_internal' | 'none' | 'all' = 'all';
-    const defaultSlaStatus: string = 'all';
-    const defaultBundleView: 'bundled' | 'individual' = 'bundled';
-
-    setSelectedBoard(defaultBoard);
-    setSelectedClient(defaultClient);
-    setSelectedStatus(defaultStatus);
-    setSelectedPriority(defaultPriority);
-    setSelectedCategories(defaultCategories);
     setExcludedCategories([]);
-    setSearchQuery(defaultSearchQuery);
-    setBoardFilterState(defaultBoardFilterState);
-    setBundleView(defaultBundleView);
-    setSelectedTags([]);
-    setSelectedAssignees([]);
-    setSelectedTeams([]);
-    setIncludeUnassigned(false);
-    setSelectedDueDateFilter(defaultDueDateFilter);
-    setDueDateFilterValue(undefined);
-    setSelectedResponseState(defaultResponseState);
-    setSelectedSlaStatus(defaultSlaStatus);
-
+    setSearchQuery('');
+    lastEmittedSearchRef.current = '';
     setClientFilterState('active');
     setClientTypeFilter('all');
-
     clearSelection();
 
-    onFiltersChanged({
-      boardId: defaultBoard === null ? undefined : defaultBoard,
-      clientId: defaultClient === null ? undefined : defaultClient,
-      statusId: defaultStatus,
-      priorityId: defaultPriority,
-      categoryId: defaultCategories.length > 0 ? defaultCategories[0] : undefined,
-      searchQuery: defaultSearchQuery,
-      boardFilterState: defaultBoardFilterState,
-      showOpenOnly: defaultStatus === 'open',
+    onFilterChange({
+      boardId: undefined,
+      clientId: undefined,
+      statusId: 'open',
+      priorityId: 'all',
+      categoryId: undefined,
+      searchQuery: '',
+      boardFilterState: 'active',
+      showOpenOnly: true,
+      tags: undefined,
       assignedToIds: undefined,
       assignedTeamIds: undefined,
-      includeUnassigned: undefined,
+      includeUnassigned: false,
       dueDateFilter: undefined,
       dueDateFrom: undefined,
       dueDateTo: undefined,
       responseState: undefined,
       slaStatusFilter: undefined,
-      bundleView: defaultBundleView,
+      bundleView: 'bundled',
     });
-  }, [onFiltersChanged, clearSelection]);
+  }, [onFilterChange, clearSelection]);
 
   return (
     <ReflectionContainer id={id} label="Ticketing Dashboard">
@@ -1424,7 +1258,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   onSelect={handleBoardSelect}
                   selectedBoardId={selectedBoard}
                   filterState={boardFilterState}
-                  onFilterStateChange={setBoardFilterState}
+                  onFilterStateChange={(state: 'active' | 'inactive' | 'all') => onFilterChange({ boardFilterState: state })}
                 />
                 <ClientPicker
                   id='client-picker'
@@ -1442,15 +1276,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     id={`${id}-assignee-filter`}
                     users={initialUsers}
                     values={selectedAssignees}
-                    onValuesChange={setSelectedAssignees}
+                    onValuesChange={(values) => onFilterChange({ assignedToIds: values.length > 0 ? values : undefined })}
                     teams={teams}
                     teamValues={selectedTeams}
-                    onTeamValuesChange={setSelectedTeams}
+                    onTeamValuesChange={(values) => onFilterChange({ assignedTeamIds: values.length > 0 ? values : undefined })}
                     getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
                     getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
                     filterMode={true}
                     includeUnassigned={includeUnassigned}
-                    onUnassignedChange={setIncludeUnassigned}
+                    onUnassignedChange={(value) => onFilterChange({ includeUnassigned: value })}
                     placeholder="All Assignees"
                     showSearch={true}
                     compactDisplay={true}
@@ -1459,7 +1293,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   data-automation-id={`${id}-status-select`}
                   options={statusOptions}
                   value={selectedStatus}
-                  onValueChange={(value) => setSelectedStatus(value)}
+                  onValueChange={(value) => onFilterChange({ statusId: value, showOpenOnly: value === 'open' })}
                   placeholder="Select Status"
                 />
                 {displaySettings?.responseStateTrackingEnabled !== false && (
@@ -1472,7 +1306,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                       { value: 'none', label: 'No Response State' },
                     ]}
                     value={selectedResponseState}
-                    onValueChange={(value) => setSelectedResponseState(value as 'awaiting_client' | 'awaiting_internal' | 'none' | 'all')}
+                    onValueChange={(value) => onFilterChange({ responseState: value !== 'all' ? value as ITicketListFilters['responseState'] : undefined })}
                     placeholder="Response State"
                   />
                 )}
@@ -1480,7 +1314,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   id={`${id}-priority-select`}
                   options={priorityOptions}
                   value={selectedPriority}
-                  onValueChange={(value) => setSelectedPriority(value)}
+                  onValueChange={(value) => onFilterChange({ priorityId: value })}
                   placeholder="All Priorities"
                 />
                 <div className="flex items-center gap-1">
@@ -1501,10 +1335,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     ]}
                     value={selectedDueDateFilter}
                     onValueChange={(value) => {
-                      setSelectedDueDateFilter(value);
+                      const update: Partial<ITicketListFilters> = {
+                        dueDateFilter: value !== 'all' ? value as ITicketListFilters['dueDateFilter'] : undefined,
+                      };
                       if (value !== 'before' && value !== 'after') {
-                        setDueDateFilterValue(undefined);
+                        update.dueDateFrom = undefined;
+                        update.dueDateTo = undefined;
                       }
+                      onFilterChange(update);
                     }}
                     placeholder="Due Date"
                     className="w-fit min-w-[140px]"
@@ -1513,7 +1351,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     <DatePicker
                       id={`${id}-due-date-filter-value`}
                       value={dueDateFilterValue}
-                      onChange={setDueDateFilterValue}
+                      onChange={(date) => {
+                        onFilterChange({
+                          dueDateFrom: selectedDueDateFilter === 'after' && date ? date.toISOString() : undefined,
+                          dueDateTo: selectedDueDateFilter === 'before' && date ? date.toISOString() : undefined,
+                        });
+                      }}
                       placeholder="Pick date"
                     />
                   )}
@@ -1529,7 +1372,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     { value: 'paused', label: 'Paused' },
                   ]}
                   value={selectedSlaStatus}
-                  onValueChange={(value) => setSelectedSlaStatus(value)}
+                  onValueChange={(value) => onFilterChange({ slaStatusFilter: value !== 'all' ? value as ITicketListFilters['slaStatusFilter'] : undefined })}
                   placeholder="SLA Status"
                 />
               </div>
@@ -1563,7 +1406,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                       }
                       return [...prevCategories, newCategory];
                     });
-                    setSelectedCategories([newCategory.category_id]);
+                    onFilterChange({ categoryId: newCategory.category_id });
                     setExcludedCategories((prevExcluded) => prevExcluded.filter((categoryId) => categoryId !== newCategory.category_id));
                     setIsQuickAddCategoryOpen(false);
                   }}
@@ -1583,13 +1426,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   tags={allUniqueTags}
                   selectedTags={selectedTags}
                   onToggleTag={(tag: string) => {
-                    setSelectedTags(prev =>
-                      prev.includes(tag)
-                        ? prev.filter(t => t !== tag)
-                        : [...prev, tag]
-                    );
+                    const newTags = selectedTags.includes(tag)
+                      ? selectedTags.filter(t => t !== tag)
+                      : [...selectedTags, tag];
+                    onFilterChange({ tags: newTags.length > 0 ? newTags : undefined });
                   }}
-                  onClearTags={() => setSelectedTags([])}
+                  onClearTags={() => onFilterChange({ tags: undefined })}
                 />
                 <Button
                   variant="ghost"
@@ -1610,7 +1452,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   <Switch
                     id={`${id}-bundle-view-toggle`}
                     checked={bundleView === 'bundled'}
-                    onCheckedChange={(checked) => setBundleView(checked ? 'bundled' : 'individual')}
+                    onCheckedChange={(checked) => onFilterChange({ bundleView: checked ? 'bundled' : 'individual' })}
                   />
                 </div>
                 <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />

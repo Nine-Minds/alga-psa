@@ -4,7 +4,7 @@ import type {
   TicketMobileEditorCommand,
   TicketMobileEditorStatePayload,
 } from "./types";
-import { colors, spacing, typography } from "../../ui/theme";
+import { useTheme } from "../../ui/ThemeContext";
 
 type ToolbarButton = {
   label: string;
@@ -34,8 +34,9 @@ export function TicketRichTextToolbar({
   state: TicketMobileEditorStatePayload;
   onCommand: (command: TicketMobileEditorCommand) => void;
 }) {
+  const theme = useTheme();
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", marginBottom: spacing.sm }}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", marginBottom: theme.spacing.sm }}>
       {TOOLBAR_BUTTONS.map((button, index) => {
         const isHistoryDisabled = button.history === "undo"
           ? !state.canUndo
@@ -53,18 +54,18 @@ export function TicketRichTextToolbar({
             disabled={disabled}
             onPress={() => onCommand(button.command)}
             style={({ pressed }) => ({
-              marginRight: index === TOOLBAR_BUTTONS.length - 1 ? 0 : spacing.sm,
-              marginBottom: spacing.sm,
-              paddingHorizontal: spacing.md,
+              marginRight: index === TOOLBAR_BUTTONS.length - 1 ? 0 : theme.spacing.sm,
+              marginBottom: theme.spacing.sm,
+              paddingHorizontal: theme.spacing.md,
               paddingVertical: 6,
-              borderRadius: 999,
+              borderRadius: theme.borderRadius.full,
               borderWidth: 1,
-              borderColor: active ? colors.primary : colors.border,
-              backgroundColor: active ? "#D9F2EE" : colors.card,
+              borderColor: active ? theme.colors.primary : theme.colors.border,
+              backgroundColor: active ? theme.colors.primaryLight : theme.colors.card,
               opacity: disabled ? 0.45 : pressed ? 0.85 : 1,
             })}
           >
-            <Text style={{ ...typography.caption, color: colors.text, fontWeight: "600" }}>
+            <Text style={{ ...theme.typography.caption, color: theme.colors.text, fontWeight: "600" }}>
               {button.label}
             </Text>
           </Pressable>

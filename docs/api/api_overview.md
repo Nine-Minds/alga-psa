@@ -5,7 +5,7 @@
 ## 1. Introduction
 This document outlines the design and architecture of the Alga PSA APIs. Our APIs are implemented using Next.js for the backend and take a REST-ish approach, leveraging Next.js API routes along with our existing actions system.
 
-> 📝 **Note:** The Alga PSA hosted environment is available at `api.algapsa.com`. If you are running an on-premise installation, replace this with your configured domain.
+> 📝 **Note:** The Alga PSA hosted environment is available at `algapsa.com`. If you are running an on-premise installation, replace this with your configured domain.
 
 ## 2. API Editions
 
