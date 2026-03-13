@@ -148,7 +148,7 @@
   {
     "id": "F019",
     "description": "P1: Quote item model — create with service catalog lookup (denormalize name, SKU, default rate, unit_of_measure)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR6"
     ]
