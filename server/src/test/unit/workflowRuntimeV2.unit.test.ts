@@ -248,6 +248,41 @@ describe('workflow runtime v2 unit tests', () => {
     expect(result.errors[0].message).toMatch(/Unknown node type/i);
   });
 
+  it('T230: transform actions use the same publish validation path as business action.call steps. Mocks: non-target dependencies.', () => {
+    const definition = {
+      id: 'wf',
+      version: 1,
+      name: 'Transform Validation',
+      payloadSchemaRef: TEST_SCHEMA_REF,
+      steps: [
+        {
+          id: 'transform-step',
+          type: 'action.call',
+          config: {
+            actionId: 'transform.truncate_text',
+            version: 1,
+            inputMapping: {
+              text: { $expr: 'payload.foo' }
+            }
+          }
+        }
+      ]
+    } as any;
+
+    const result = validateWorkflowDefinition(definition);
+
+    expect(result.ok).toBe(false);
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          stepId: 'transform-step',
+          code: 'MISSING_REQUIRED_MAPPING',
+          message: expect.stringContaining('inputMapping.maxLength')
+        })
+      ])
+    );
+  });
+
   it('Idempotency key normalization is stable for identical inputs. Mocks: non-target dependencies.', () => {
     const key1 = generateIdempotencyKey('run', 'root.steps[0]', 'test.echo', 1, { value: 1 });
     const key2 = generateIdempotencyKey('run', 'root.steps[0]', 'test.echo', 1, { value: 1 });

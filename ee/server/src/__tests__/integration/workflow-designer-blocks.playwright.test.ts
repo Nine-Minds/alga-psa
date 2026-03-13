@@ -329,7 +329,7 @@ test.describe('Workflow Designer UI - control blocks', () => {
 
       const handle = dragHandleFor(page, stateStepId);
       await expect(handle).toBeVisible();
-      const dropHint = thenPipe.getByText('Drop steps here');
+      const dropHint = thenPipe.getByTestId('empty-pipeline');
       await expect(dropHint).toBeVisible();
       await dragBetween(page, handle, thenPipe, { targetY: 0.75 });
 

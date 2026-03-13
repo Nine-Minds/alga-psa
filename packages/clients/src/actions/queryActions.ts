@@ -130,13 +130,17 @@ function sortContacts(contacts: IContact[], sortBy: string, sortDirection: 'asc'
 export type ContactFilterStatus = 'active' | 'inactive' | 'all';
 
 export const getContactsByClient = withAuth(async (
-  _user,
+  user,
   { tenant },
   clientId: string,
   status: ContactFilterStatus = 'active',
   sortBy: string = 'full_name',
   sortDirection: 'asc' | 'desc' = 'asc'
 ): Promise<IContact[]> => {
+  if (!await hasPermissionAsync(user, 'contact', 'read')) {
+    throw new Error('Permission denied: Cannot read contacts');
+  }
+
   const { knex: db } = await createTenantKnex();
 
   try {
@@ -205,12 +209,16 @@ export const getContactsByClient = withAuth(async (
 });
 
 export const getAllContacts = withAuth(async (
-  _user,
+  user,
   { tenant },
   status: ContactFilterStatus = 'active',
   sortBy: string = 'full_name',
   sortDirection: 'asc' | 'desc' = 'asc'
 ): Promise<IContact[]> => {
+  if (!await hasPermissionAsync(user, 'contact', 'read')) {
+    throw new Error('Permission denied: Cannot read contacts');
+  }
+
   const { knex: db } = await createTenantKnex();
 
   try {

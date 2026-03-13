@@ -1,0 +1,2729 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: designer build path produces a grouped action catalog abstraction separate from the runtime action registry",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: built-in grouped palette entries serialize as core-object catalog records",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: Transform serializes as a transform catalog record",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: plugin/app grouped palette entries serialize as app catalog records",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: core-object catalog records include a stable group key",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: grouped catalog records include a display label",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: grouped catalog records include an icon token",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Unit: grouped catalog records include tile kind metadata",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Unit: grouped catalog records include allowed actionId lists",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Unit: grouped catalog records can declare a default actionId",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Unit: grouped catalog records can declare a palette description",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Unit: ticket actions are grouped into the Ticket catalog record",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Unit: contact actions are grouped into the Contact catalog record",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Unit: client actions are grouped into the Client catalog record",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Unit: communication actions are grouped into the Communication catalog record",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Unit: scheduling actions are grouped into the Scheduling catalog record",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Unit: project actions are grouped into the Project catalog record",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Unit: time actions are grouped into the Time catalog record",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Unit: CRM actions are grouped into the CRM catalog record",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "API: the workflow designer receives the grouped catalog projection",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Playwright: the palette renders grouped business tiles instead of one tile per business action",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Playwright: control blocks still render as dedicated palette entries",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Playwright: Ticket renders as a top-level grouped palette tile",
+    "implemented": true,
+    "featureIds": [
+      "F023"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Playwright: Contact renders as a top-level grouped palette tile",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Playwright: Client renders as a top-level grouped palette tile",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Playwright: Communication renders as a top-level grouped palette tile",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Playwright: Scheduling renders as a top-level grouped palette tile",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ]
+  },
+  {
+    "id": "T028",
+    "description": "Playwright: Project renders as a top-level grouped palette tile",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "Playwright: Time renders as a top-level grouped palette tile",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "Playwright: CRM renders as a top-level grouped palette tile",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "Playwright: Transform renders as a top-level grouped palette tile",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T032",
+    "description": "Playwright: app/plugin catalog records render as top-level app tiles",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T033",
+    "description": "Playwright: grouped tile icons remain consistent during drag and click insertion",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ]
+  },
+  {
+    "id": "T034",
+    "description": "Playwright: grouped tile labels remain consistent during drag and click insertion",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T035",
+    "description": "Playwright: grouped tile tooltips show the tile description",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ]
+  },
+  {
+    "id": "T036",
+    "description": "Playwright: grouped tiles can still be dragged onto valid workflow pipes",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ]
+  },
+  {
+    "id": "T037",
+    "description": "Playwright: grouped tiles can still be inserted by click-to-add",
+    "implemented": true,
+    "featureIds": [
+      "F037"
+    ]
+  },
+  {
+    "id": "T038",
+    "description": "Visual regression: the floating palette container still renders correctly with grouped tile contents",
+    "implemented": true,
+    "featureIds": [
+      "F038"
+    ]
+  },
+  {
+    "id": "T039",
+    "description": "Playwright: grouped palette enters a usable degraded state when registry data fails to load",
+    "implemented": true,
+    "featureIds": [
+      "F039"
+    ]
+  },
+  {
+    "id": "T040",
+    "description": "Playwright: grouped palette remains visible but non-editable in read-only sessions",
+    "implemented": true,
+    "featureIds": [
+      "F040"
+    ]
+  },
+  {
+    "id": "T041",
+    "description": "Playwright: palette search matches a grouped tile by contained action label",
+    "implemented": true,
+    "featureIds": [
+      "F041"
+    ]
+  },
+  {
+    "id": "T042",
+    "description": "Playwright: palette search matches a grouped tile by contained actionId",
+    "implemented": true,
+    "featureIds": [
+      "F042"
+    ]
+  },
+  {
+    "id": "T043",
+    "description": "Playwright: palette search matches a grouped tile by contained input field names",
+    "implemented": true,
+    "featureIds": [
+      "F043"
+    ]
+  },
+  {
+    "id": "T044",
+    "description": "Playwright: palette search matches a grouped tile by contained output field names",
+    "implemented": true,
+    "featureIds": [
+      "F044"
+    ]
+  },
+  {
+    "id": "T045",
+    "description": "Playwright: palette search matches a grouped tile by the group label",
+    "implemented": true,
+    "featureIds": [
+      "F045"
+    ]
+  },
+  {
+    "id": "T046",
+    "description": "Playwright: palette search matches a grouped tile by the group description",
+    "implemented": true,
+    "featureIds": [
+      "F046"
+    ]
+  },
+  {
+    "id": "T047",
+    "description": "Playwright: searching create ticket returns the Ticket tile and not duplicate hidden action rows",
+    "implemented": true,
+    "featureIds": [
+      "F047",
+      "F059"
+    ]
+  },
+  {
+    "id": "T048",
+    "description": "Playwright: searching find contact returns the Contact tile",
+    "implemented": true,
+    "featureIds": [
+      "F048"
+    ]
+  },
+  {
+    "id": "T049",
+    "description": "Playwright: searching truncate returns the Transform tile",
+    "implemented": true,
+    "featureIds": [
+      "F049"
+    ]
+  },
+  {
+    "id": "T050",
+    "description": "Playwright: control blocks still appear in search results when the query matches them",
+    "implemented": true,
+    "featureIds": [
+      "F050"
+    ]
+  },
+  {
+    "id": "T051",
+    "description": "Playwright: clearing the search box restores the full grouped palette",
+    "implemented": true,
+    "featureIds": [
+      "F051",
+      "F060"
+    ]
+  },
+  {
+    "id": "T052",
+    "description": "Unit: search results preserve stable grouped ordering",
+    "implemented": true,
+    "featureIds": [
+      "F052"
+    ]
+  },
+  {
+    "id": "T053",
+    "description": "Playwright: app/plugin tile contents participate in palette search",
+    "implemented": true,
+    "featureIds": [
+      "F053"
+    ]
+  },
+  {
+    "id": "T054",
+    "description": "Playwright: palette search remains interactive while a grouped tile is being dragged",
+    "implemented": true,
+    "featureIds": [
+      "F054"
+    ]
+  },
+  {
+    "id": "T055",
+    "description": "Playwright: palette search remains interactive after a grouped tile has been inserted",
+    "implemented": true,
+    "featureIds": [
+      "F055"
+    ]
+  },
+  {
+    "id": "T056",
+    "description": "Playwright: legacy individually rendered nodes still participate in search",
+    "implemented": true,
+    "featureIds": [
+      "F056"
+    ]
+  },
+  {
+    "id": "T057",
+    "description": "Playwright: singular and plural object labels both match the intended grouped tile",
+    "implemented": true,
+    "featureIds": [
+      "F057"
+    ]
+  },
+  {
+    "id": "T058",
+    "description": "Playwright: verb-object queries like assign ticket still match the Ticket tile",
+    "implemented": true,
+    "featureIds": [
+      "F058"
+    ]
+  },
+  {
+    "id": "T059",
+    "description": "Playwright: search never duplicates a grouped tile once per contained action",
+    "implemented": true,
+    "featureIds": [
+      "F059"
+    ]
+  },
+  {
+    "id": "T060",
+    "description": "Playwright: clearing search preserves current selection and drag target context",
+    "implemented": true,
+    "featureIds": [
+      "F060"
+    ]
+  },
+  {
+    "id": "T061",
+    "description": "Playwright: dropping a core-object tile creates an action.call step scoped to that group",
+    "implemented": true,
+    "featureIds": [
+      "F061"
+    ]
+  },
+  {
+    "id": "T062",
+    "description": "Playwright: dropping the Transform tile creates an action.call step scoped to the transform group",
+    "implemented": true,
+    "featureIds": [
+      "F062"
+    ]
+  },
+  {
+    "id": "T063",
+    "description": "Playwright: dropping an app tile creates an action.call step scoped to that app",
+    "implemented": true,
+    "featureIds": [
+      "F063"
+    ]
+  },
+  {
+    "id": "T064",
+    "description": "Playwright: clicking a core-object tile creates an action.call step scoped to that group",
+    "implemented": true,
+    "featureIds": [
+      "F064"
+    ]
+  },
+  {
+    "id": "T065",
+    "description": "Playwright: clicking the Transform tile creates an action.call step scoped to the transform group",
+    "implemented": true,
+    "featureIds": [
+      "F065"
+    ]
+  },
+  {
+    "id": "T066",
+    "description": "Playwright: clicking an app tile creates an action.call step scoped to that app",
+    "implemented": true,
+    "featureIds": [
+      "F066"
+    ]
+  },
+  {
+    "id": "T067",
+    "description": "Playwright: a newly inserted grouped action step becomes selected like current action.call steps",
+    "implemented": true,
+    "featureIds": [
+      "F067"
+    ]
+  },
+  {
+    "id": "T068",
+    "description": "Playwright: a newly inserted grouped action step lands on the currently selected pipe like current action.call steps",
+    "implemented": true,
+    "featureIds": [
+      "F068"
+    ]
+  },
+  {
+    "id": "T069",
+    "description": "Unit: grouped action steps still persist step.type as action.call",
+    "implemented": true,
+    "featureIds": [
+      "F069"
+    ]
+  },
+  {
+    "id": "T070",
+    "description": "Unit: grouped action steps still persist actionId under config.actionId",
+    "implemented": true,
+    "featureIds": [
+      "F070"
+    ]
+  },
+  {
+    "id": "T071",
+    "description": "Unit: grouped action steps still persist version under config.version",
+    "implemented": true,
+    "featureIds": [
+      "F071"
+    ]
+  },
+  {
+    "id": "T072",
+    "description": "Unit: grouped action steps may store additive group metadata without affecting runtime shape",
+    "implemented": true,
+    "featureIds": [
+      "F072"
+    ]
+  },
+  {
+    "id": "T073",
+    "description": "Unit: grouped action steps may store additive app metadata without affecting runtime shape",
+    "implemented": true,
+    "featureIds": [
+      "F073"
+    ]
+  },
+  {
+    "id": "T074",
+    "description": "Integration: legacy action.call steps infer their group from actionId during hydration",
+    "implemented": true,
+    "featureIds": [
+      "F074"
+    ]
+  },
+  {
+    "id": "T075",
+    "description": "Integration: legacy action.call app steps infer their app scope from actionId during hydration",
+    "implemented": true,
+    "featureIds": [
+      "F075"
+    ]
+  },
+  {
+    "id": "T076",
+    "description": "Playwright: grouped action steps remain reorderable within the pipeline",
+    "implemented": true,
+    "featureIds": [
+      "F076"
+    ]
+  },
+  {
+    "id": "T077",
+    "description": "Playwright: grouped action steps remain movable across control-block branches",
+    "implemented": true,
+    "featureIds": [
+      "F077"
+    ]
+  },
+  {
+    "id": "T078",
+    "description": "Playwright: grouped action steps preserve delete behavior",
+    "implemented": true,
+    "featureIds": [
+      "F078"
+    ]
+  },
+  {
+    "id": "T079",
+    "description": "Playwright: grouped action steps preserve the current absence of duplicate behavior",
+    "implemented": true,
+    "featureIds": [
+      "F079"
+    ]
+  },
+  {
+    "id": "T080",
+    "description": "Playwright: grouped action steps preserve saveAs auto-generation behavior",
+    "implemented": true,
+    "featureIds": [
+      "F080"
+    ]
+  },
+  {
+    "id": "T081",
+    "description": "Playwright: the step properties panel shows the grouped tile label before an action is chosen",
+    "implemented": true,
+    "featureIds": [
+      "F081"
+    ]
+  },
+  {
+    "id": "T082",
+    "description": "Playwright: the step properties panel shows an action dropdown limited to the selected group",
+    "implemented": true,
+    "featureIds": [
+      "F082"
+    ]
+  },
+  {
+    "id": "T083",
+    "description": "Playwright: the step properties panel shows an action dropdown limited to the selected app tile",
+    "implemented": true,
+    "featureIds": [
+      "F083"
+    ]
+  },
+  {
+    "id": "T084",
+    "description": "Playwright: a newly created grouped action step can remain action-unselected until the user chooses one",
+    "implemented": true,
+    "featureIds": [
+      "F084"
+    ]
+  },
+  {
+    "id": "T085",
+    "description": "Playwright: a grouped action step auto-selects the declared default action when configured",
+    "implemented": true,
+    "featureIds": [
+      "F085"
+    ]
+  },
+  {
+    "id": "T086",
+    "description": "Playwright: choosing an action updates the displayed step label",
+    "implemented": true,
+    "featureIds": [
+      "F086"
+    ]
+  },
+  {
+    "id": "T087",
+    "description": "Playwright: choosing an action updates the displayed step description",
+    "implemented": true,
+    "featureIds": [
+      "F087"
+    ]
+  },
+  {
+    "id": "T088",
+    "description": "Integration: choosing an action updates the step input schema used by the field editor",
+    "implemented": true,
+    "featureIds": [
+      "F088"
+    ]
+  },
+  {
+    "id": "T089",
+    "description": "Integration: choosing an action updates the output schema exposed to downstream steps",
+    "implemented": true,
+    "featureIds": [
+      "F089"
+    ]
+  },
+  {
+    "id": "T090",
+    "description": "Playwright: choosing an action updates the required-field completion summary",
+    "implemented": true,
+    "featureIds": [
+      "F090"
+    ]
+  },
+  {
+    "id": "T091",
+    "description": "Integration: choosing an action updates the picker metadata set used by the field editor",
+    "implemented": true,
+    "featureIds": [
+      "F091"
+    ]
+  },
+  {
+    "id": "T092",
+    "description": "Integration: choosing an action updates type-compatibility hints on inline fields",
+    "implemented": true,
+    "featureIds": [
+      "F092"
+    ]
+  },
+  {
+    "id": "T093",
+    "description": "Integration: changing an action preserves input mappings that still target valid fields",
+    "implemented": true,
+    "featureIds": [
+      "F093"
+    ]
+  },
+  {
+    "id": "T094",
+    "description": "Integration: changing an action isolates or clears stale mappings that no longer target valid fields",
+    "implemented": true,
+    "featureIds": [
+      "F094"
+    ]
+  },
+  {
+    "id": "T095",
+    "description": "Integration: changing an action recalculates downstream output schema exposure immediately",
+    "implemented": true,
+    "featureIds": [
+      "F095"
+    ]
+  },
+  {
+    "id": "T096",
+    "description": "Integration: changing an action recalculates saveAs suggestions when auto-generation is used",
+    "implemented": true,
+    "featureIds": [
+      "F096"
+    ]
+  },
+  {
+    "id": "T097",
+    "description": "Playwright: grouped steps surface an invalid state when no action has been chosen yet",
+    "implemented": true,
+    "featureIds": [
+      "F097"
+    ]
+  },
+  {
+    "id": "T098",
+    "description": "Playwright: grouped steps surface schema-reference details for the chosen action when present",
+    "implemented": true,
+    "featureIds": [
+      "F098"
+    ]
+  },
+  {
+    "id": "T099",
+    "description": "Playwright: step name editing remains available before and after action selection",
+    "implemented": true,
+    "featureIds": [
+      "F099"
+    ]
+  },
+  {
+    "id": "T100",
+    "description": "Playwright: save-output controls remain available before and after action selection",
+    "implemented": true,
+    "featureIds": [
+      "F100"
+    ]
+  },
+  {
+    "id": "T101",
+    "description": "Playwright: each chosen action input field renders as an inline field row or group",
+    "implemented": true,
+    "featureIds": [
+      "F101"
+    ]
+  },
+  {
+    "id": "T102",
+    "description": "Playwright: required-field indicators render on inline field rows",
+    "implemented": true,
+    "featureIds": [
+      "F102"
+    ]
+  },
+  {
+    "id": "T103",
+    "description": "Playwright: optional-field indicators render where useful on inline field rows",
+    "implemented": true,
+    "featureIds": [
+      "F103"
+    ]
+  },
+  {
+    "id": "T104",
+    "description": "Playwright: schema descriptions render in the inline field editor",
+    "implemented": true,
+    "featureIds": [
+      "F104"
+    ]
+  },
+  {
+    "id": "T105",
+    "description": "Playwright: the required-field completion summary renders above the inline editor",
+    "implemented": true,
+    "featureIds": [
+      "F105"
+    ]
+  },
+  {
+    "id": "T106",
+    "description": "Playwright: the action input editor is inline in the properties panel and not behind a modal-first workflow",
+    "implemented": true,
+    "featureIds": [
+      "F106"
+    ]
+  },
+  {
+    "id": "T107",
+    "description": "Playwright: each editable field shows a source-mode selector",
+    "implemented": true,
+    "featureIds": [
+      "F107"
+    ]
+  },
+  {
+    "id": "T108",
+    "description": "Playwright: Reference appears as a selectable field source mode",
+    "implemented": true,
+    "featureIds": [
+      "F108"
+    ]
+  },
+  {
+    "id": "T109",
+    "description": "Playwright: Fixed value appears as a selectable field source mode",
+    "implemented": true,
+    "featureIds": [
+      "F109"
+    ]
+  },
+  {
+    "id": "T110",
+    "description": "Playwright: Advanced appears as a selectable field source mode",
+    "implemented": true,
+    "featureIds": [
+      "F110"
+    ]
+  },
+  {
+    "id": "T111",
+    "description": "Playwright: new fields default to the intended structured authoring mode for their type and metadata",
+    "implemented": true,
+    "featureIds": [
+      "F111"
+    ]
+  },
+  {
+    "id": "T112",
+    "description": "Unit: Reference-mode values serialize into expression-backed inputMapping values",
+    "implemented": true,
+    "featureIds": [
+      "F112"
+    ]
+  },
+  {
+    "id": "T113",
+    "description": "Unit: Fixed-mode values serialize into literal inputMapping values",
+    "implemented": true,
+    "featureIds": [
+      "F113"
+    ]
+  },
+  {
+    "id": "T114",
+    "description": "Unit: Advanced expression values serialize into expression-backed inputMapping values",
+    "implemented": true,
+    "featureIds": [
+      "F114"
+    ]
+  },
+  {
+    "id": "T115",
+    "description": "Unit: Advanced secret values serialize into secret-backed inputMapping values",
+    "implemented": true,
+    "featureIds": [
+      "F115"
+    ]
+  },
+  {
+    "id": "T116",
+    "description": "Playwright: field-level validation errors render inline when values are missing or invalid",
+    "implemented": true,
+    "featureIds": [
+      "F116"
+    ]
+  },
+  {
+    "id": "T117",
+    "description": "Playwright: field-level type-compatibility hints render inline for coercible and incompatible references",
+    "implemented": true,
+    "featureIds": [
+      "F117"
+    ]
+  },
+  {
+    "id": "T118",
+    "description": "Playwright: unset required fields appear visibly incomplete before any value mode is chosen",
+    "implemented": true,
+    "featureIds": [
+      "F118"
+    ]
+  },
+  {
+    "id": "T119",
+    "description": "Playwright: schema defaults or examples surface in the inline field editor where provided",
+    "implemented": true,
+    "featureIds": [
+      "F119"
+    ]
+  },
+  {
+    "id": "T120",
+    "description": "Playwright: the step-level validation summary stays in sync with inline field state",
+    "implemented": true,
+    "featureIds": [
+      "F120"
+    ]
+  },
+  {
+    "id": "T121",
+    "description": "Playwright: nested object inputs render as expandable inline field groups",
+    "implemented": true,
+    "featureIds": [
+      "F121"
+    ]
+  },
+  {
+    "id": "T122",
+    "description": "Playwright: nested array object inputs render as expandable inline field groups",
+    "implemented": true,
+    "featureIds": [
+      "F122"
+    ]
+  },
+  {
+    "id": "T123",
+    "description": "Playwright: primitive array inputs get a structured fixed-value authoring affordance instead of raw JSON by default",
+    "implemented": true,
+    "featureIds": [
+      "F123"
+    ]
+  },
+  {
+    "id": "T124",
+    "description": "Playwright: nested object child fields can choose source modes independently of the parent field",
+    "implemented": true,
+    "featureIds": [
+      "F124"
+    ]
+  },
+  {
+    "id": "T125",
+    "description": "Playwright: collapsing nested object groups does not lose authored child values",
+    "implemented": true,
+    "featureIds": [
+      "F125"
+    ]
+  },
+  {
+    "id": "T126",
+    "description": "Playwright: collapsing nested array groups does not lose authored child values",
+    "implemented": true,
+    "featureIds": [
+      "F126"
+    ]
+  },
+  {
+    "id": "T127",
+    "description": "Unit: required-field completion counts nested required object fields correctly",
+    "implemented": true,
+    "featureIds": [
+      "F127"
+    ]
+  },
+  {
+    "id": "T128",
+    "description": "Unit: required-field completion counts nested required array item fields correctly",
+    "implemented": true,
+    "featureIds": [
+      "F128"
+    ]
+  },
+  {
+    "id": "T129",
+    "description": "Playwright: enum-backed fields render as structured fixed-value controls",
+    "implemented": true,
+    "featureIds": [
+      "F129"
+    ]
+  },
+  {
+    "id": "T130",
+    "description": "Playwright: boolean-backed fields render as structured fixed-value controls",
+    "implemented": true,
+    "featureIds": [
+      "F130"
+    ]
+  },
+  {
+    "id": "T131",
+    "description": "Playwright: number-backed fields render as numeric fixed-value controls",
+    "implemented": true,
+    "featureIds": [
+      "F131"
+    ]
+  },
+  {
+    "id": "T132",
+    "description": "Playwright: plain string-backed fields render as string controls when no picker or enum metadata exists",
+    "implemented": true,
+    "featureIds": [
+      "F132"
+    ]
+  },
+  {
+    "id": "T133",
+    "description": "Playwright: nullable fields allow an intentional null state where the schema permits it",
+    "implemented": true,
+    "featureIds": [
+      "F133"
+    ]
+  },
+  {
+    "id": "T134",
+    "description": "Playwright: switching a nested field from Fixed mode to Advanced mode preserves the authored value until changed",
+    "implemented": true,
+    "featureIds": [
+      "F134"
+    ]
+  },
+  {
+    "id": "T135",
+    "description": "Playwright: switching a nested field from Reference mode to Advanced mode preserves the authored value until changed",
+    "implemented": true,
+    "featureIds": [
+      "F135"
+    ]
+  },
+  {
+    "id": "T136",
+    "description": "Playwright: explicitly resetting a nested field group clears authored child values safely",
+    "implemented": true,
+    "featureIds": [
+      "F136"
+    ]
+  },
+  {
+    "id": "T137",
+    "description": "Playwright: reopening a saved draft rehydrates nested authored values correctly",
+    "implemented": true,
+    "featureIds": [
+      "F137"
+    ]
+  },
+  {
+    "id": "T138",
+    "description": "Playwright: field constraints such as format and pattern appear in inline help text",
+    "implemented": true,
+    "featureIds": [
+      "F138"
+    ]
+  },
+  {
+    "id": "T139",
+    "description": "Playwright: array field item-type hints appear in inline help text",
+    "implemented": true,
+    "featureIds": [
+      "F139"
+    ]
+  },
+  {
+    "id": "T140",
+    "description": "Playwright: schema default values appear in inline field help where provided",
+    "implemented": true,
+    "featureIds": [
+      "F140"
+    ]
+  },
+  {
+    "id": "T141",
+    "description": "Playwright: Reference mode exposes workflow payload fields as selectable sources",
+    "implemented": true,
+    "featureIds": [
+      "F141"
+    ]
+  },
+  {
+    "id": "T142",
+    "description": "Playwright: Reference mode exposes previous step outputs as selectable sources",
+    "implemented": true,
+    "featureIds": [
+      "F142"
+    ]
+  },
+  {
+    "id": "T143",
+    "description": "Playwright: Reference mode exposes workflow metadata fields as selectable sources",
+    "implemented": true,
+    "featureIds": [
+      "F143"
+    ]
+  },
+  {
+    "id": "T144",
+    "description": "Playwright: Reference mode exposes catch-block error fields inside catch context",
+    "implemented": true,
+    "featureIds": [
+      "F144"
+    ]
+  },
+  {
+    "id": "T145",
+    "description": "Playwright: Reference mode exposes forEach item and index fields inside loop context",
+    "implemented": true,
+    "featureIds": [
+      "F145"
+    ]
+  },
+  {
+    "id": "T146",
+    "description": "Playwright: previous step outputs are grouped by producer step or saveAs name in Reference mode",
+    "implemented": true,
+    "featureIds": [
+      "F146"
+    ]
+  },
+  {
+    "id": "T147",
+    "description": "Playwright: object-accepting target fields can select a step output root object directly",
+    "implemented": true,
+    "featureIds": [
+      "F147"
+    ]
+  },
+  {
+    "id": "T148",
+    "description": "Playwright: primitive-accepting target fields can select nested property paths directly",
+    "implemented": true,
+    "featureIds": [
+      "F148"
+    ]
+  },
+  {
+    "id": "T149",
+    "description": "Integration: Reference mode continues feeding the expression-editor autocomplete context",
+    "implemented": true,
+    "featureIds": [
+      "F149"
+    ]
+  },
+  {
+    "id": "T150",
+    "description": "Integration: Reference mode continues feeding type-compatibility hints",
+    "implemented": true,
+    "featureIds": [
+      "F150"
+    ]
+  },
+  {
+    "id": "T151",
+    "description": "Unit: selecting a structured reference generates a direct field-reference expression under the hood",
+    "implemented": true,
+    "featureIds": [
+      "F151"
+    ]
+  },
+  {
+    "id": "T152",
+    "description": "Integration: previously saved direct field-reference expressions rehydrate back into structured Reference mode when possible",
+    "implemented": true,
+    "featureIds": [
+      "F152"
+    ]
+  },
+  {
+    "id": "T153",
+    "description": "Integration: unrepresentable saved expressions fall back to Advanced mode instead of breaking hydration",
+    "implemented": true,
+    "featureIds": [
+      "F153"
+    ]
+  },
+  {
+    "id": "T154",
+    "description": "Unit: Reference mode hides unavailable source fields when no schema information exists for them",
+    "implemented": true,
+    "featureIds": [
+      "F154"
+    ]
+  },
+  {
+    "id": "T155",
+    "description": "Integration: Reference mode refreshes immediately when an upstream action changes output schema",
+    "implemented": true,
+    "featureIds": [
+      "F155"
+    ]
+  },
+  {
+    "id": "T156",
+    "description": "Integration: Reference mode refreshes immediately when an upstream saveAs changes",
+    "implemented": true,
+    "featureIds": [
+      "F156"
+    ]
+  },
+  {
+    "id": "T157",
+    "description": "Integration: unrelated upstream step changes do not disturb existing source path selections",
+    "implemented": true,
+    "featureIds": [
+      "F157"
+    ]
+  },
+  {
+    "id": "T158",
+    "description": "Playwright: the first action step shows no previous-step output sources when none exist yet",
+    "implemented": true,
+    "featureIds": [
+      "F158"
+    ]
+  },
+  {
+    "id": "T159",
+    "description": "Playwright: builders can inspect source groups before drilling into nested fields in Reference mode",
+    "implemented": true,
+    "featureIds": [
+      "F159"
+    ]
+  },
+  {
+    "id": "T160",
+    "description": "Integration: catch and loop contextual sources remain stable when grouped steps are moved within the same block",
+    "implemented": true,
+    "featureIds": [
+      "F160"
+    ]
+  },
+  {
+    "id": "T161",
+    "description": "Unit: exported action schemas include additive picker kind annotations",
+    "implemented": true,
+    "featureIds": [
+      "F161"
+    ]
+  },
+  {
+    "id": "T162",
+    "description": "Unit: exported action schemas include additive dependency annotations for scoped pickers",
+    "implemented": true,
+    "featureIds": [
+      "F162"
+    ]
+  },
+  {
+    "id": "T163",
+    "description": "Unit: exported action schemas include additive fixed-value UI hints",
+    "implemented": true,
+    "featureIds": [
+      "F163"
+    ]
+  },
+  {
+    "id": "T164",
+    "description": "Unit: picker annotations survive runtime-schema-to-designer-schema conversion",
+    "implemented": true,
+    "featureIds": [
+      "F164"
+    ]
+  },
+  {
+    "id": "T165",
+    "description": "Unit: ActionInputField extraction preserves picker annotations",
+    "implemented": true,
+    "featureIds": [
+      "F165"
+    ]
+  },
+  {
+    "id": "T166",
+    "description": "Playwright: picker-backed fields render using picker UI instead of primitive UI in Fixed mode",
+    "implemented": true,
+    "featureIds": [
+      "F166"
+    ]
+  },
+  {
+    "id": "T167",
+    "description": "Playwright: picker-backed fields can switch from Fixed mode back to Reference mode without losing metadata",
+    "implemented": true,
+    "featureIds": [
+      "F167"
+    ]
+  },
+  {
+    "id": "T168",
+    "description": "Playwright: picker-backed fields can switch from Fixed mode to Advanced mode without losing metadata",
+    "implemented": true,
+    "featureIds": [
+      "F168"
+    ]
+  },
+  {
+    "id": "T169",
+    "description": "Unit: board_id fields carry the board picker annotation",
+    "implemented": true,
+    "featureIds": [
+      "F169"
+    ]
+  },
+  {
+    "id": "T170",
+    "description": "Unit: client_id fields carry the client picker annotation",
+    "implemented": true,
+    "featureIds": [
+      "F170"
+    ]
+  },
+  {
+    "id": "T171",
+    "description": "Unit: contact_id fields carry the contact picker annotation",
+    "implemented": true,
+    "featureIds": [
+      "F171"
+    ]
+  },
+  {
+    "id": "T172",
+    "description": "Unit: status_id fields carry the ticket status picker annotation",
+    "implemented": true,
+    "featureIds": [
+      "F172"
+    ]
+  },
+  {
+    "id": "T173",
+    "description": "Unit: priority_id fields carry the ticket priority picker annotation",
+    "implemented": true,
+    "featureIds": [
+      "F173"
+    ]
+  },
+  {
+    "id": "T174",
+    "description": "Unit: assignee fields carry the user-or-team picker annotation",
+    "implemented": true,
+    "featureIds": [
+      "F174"
+    ]
+  },
+  {
+    "id": "T175",
+    "description": "Unit: category_id fields carry the category picker annotation",
+    "implemented": true,
+    "featureIds": [
+      "F175"
+    ]
+  },
+  {
+    "id": "T176",
+    "description": "Unit: subcategory_id fields carry the subcategory picker annotation",
+    "implemented": true,
+    "featureIds": [
+      "F176"
+    ]
+  },
+  {
+    "id": "T177",
+    "description": "Unit: location_id fields carry the client-location picker annotation",
+    "implemented": true,
+    "featureIds": [
+      "F177"
+    ]
+  },
+  {
+    "id": "T178",
+    "description": "Unit: picker-backed fields remain eligible for dynamic references when metadata says they should",
+    "implemented": true,
+    "featureIds": [
+      "F178"
+    ]
+  },
+  {
+    "id": "T179",
+    "description": "Unit: picker-backed fields preserve declared dependency metadata",
+    "implemented": true,
+    "featureIds": [
+      "F179"
+    ]
+  },
+  {
+    "id": "T180",
+    "description": "Integration: picker metadata reaches the chosen action field editor without changing the persisted inputMapping shape",
+    "implemented": true,
+    "featureIds": [
+      "F180"
+    ]
+  },
+  {
+    "id": "T181",
+    "description": "Playwright: board_id renders as a fixed-value board picker in ticket authoring",
+    "implemented": true,
+    "featureIds": [
+      "F181"
+    ]
+  },
+  {
+    "id": "T182",
+    "description": "Playwright: client_id renders as a fixed-value client picker in ticket authoring",
+    "implemented": true,
+    "featureIds": [
+      "F182"
+    ]
+  },
+  {
+    "id": "T183",
+    "description": "Playwright: contact_id renders as a fixed-value contact picker in ticket authoring",
+    "implemented": true,
+    "featureIds": [
+      "F183"
+    ]
+  },
+  {
+    "id": "T184",
+    "description": "Playwright: status_id renders as a fixed-value status picker in ticket authoring",
+    "implemented": true,
+    "featureIds": [
+      "F184"
+    ]
+  },
+  {
+    "id": "T185",
+    "description": "Playwright: priority_id renders as a fixed-value priority picker in ticket authoring",
+    "implemented": true,
+    "featureIds": [
+      "F185"
+    ]
+  },
+  {
+    "id": "T186",
+    "description": "Playwright: assigned_to renders as a fixed-value user picker when appropriate",
+    "implemented": true,
+    "featureIds": [
+      "F186"
+    ]
+  },
+  {
+    "id": "T187",
+    "description": "Playwright: assignee.id renders as a fixed-value user-or-team picker",
+    "implemented": true,
+    "featureIds": [
+      "F187"
+    ]
+  },
+  {
+    "id": "T188",
+    "description": "Playwright: category_id renders as a fixed-value category picker",
+    "implemented": true,
+    "featureIds": [
+      "F188"
+    ]
+  },
+  {
+    "id": "T189",
+    "description": "Playwright: subcategory_id renders as a fixed-value subcategory picker",
+    "implemented": true,
+    "featureIds": [
+      "F189"
+    ]
+  },
+  {
+    "id": "T190",
+    "description": "Playwright: location_id renders as a fixed-value location picker",
+    "implemented": true,
+    "featureIds": [
+      "F190"
+    ]
+  },
+  {
+    "id": "T191",
+    "description": "Playwright: board_id can be switched back to Reference mode instead of forcing a fixed board",
+    "implemented": true,
+    "featureIds": [
+      "F191"
+    ]
+  },
+  {
+    "id": "T192",
+    "description": "Playwright: client_id can be switched back to Reference mode instead of forcing a fixed client",
+    "implemented": true,
+    "featureIds": [
+      "F192"
+    ]
+  },
+  {
+    "id": "T193",
+    "description": "Playwright: contact_id can be switched back to Reference mode instead of forcing a fixed contact",
+    "implemented": true,
+    "featureIds": [
+      "F193"
+    ]
+  },
+  {
+    "id": "T194",
+    "description": "Playwright: status_id can be switched back to Reference mode instead of forcing a fixed status",
+    "implemented": true,
+    "featureIds": [
+      "F194"
+    ]
+  },
+  {
+    "id": "T195",
+    "description": "Playwright: priority_id can be switched back to Reference mode instead of forcing a fixed priority",
+    "implemented": true,
+    "featureIds": [
+      "F195"
+    ]
+  },
+  {
+    "id": "T196",
+    "description": "Playwright: assignee fields can be switched back to Reference mode instead of forcing a fixed selection",
+    "implemented": true,
+    "featureIds": [
+      "F196"
+    ]
+  },
+  {
+    "id": "T197",
+    "description": "Playwright: category_id can be switched back to Reference mode instead of forcing a fixed category",
+    "implemented": true,
+    "featureIds": [
+      "F197"
+    ]
+  },
+  {
+    "id": "T198",
+    "description": "Playwright: subcategory_id can be switched back to Reference mode instead of forcing a fixed subcategory",
+    "implemented": true,
+    "featureIds": [
+      "F198"
+    ]
+  },
+  {
+    "id": "T199",
+    "description": "Playwright: location_id can be switched back to Reference mode instead of forcing a fixed location",
+    "implemented": true,
+    "featureIds": [
+      "F199"
+    ]
+  },
+  {
+    "id": "T200",
+    "description": "Integration: fixed ticket picker selections persist as literal identifier values inside inputMapping",
+    "implemented": true,
+    "featureIds": [
+      "F200"
+    ]
+  },
+  {
+    "id": "T201",
+    "description": "Playwright: fixed contact picker options narrow by selected fixed client",
+    "implemented": true,
+    "featureIds": [
+      "F201"
+    ]
+  },
+  {
+    "id": "T202",
+    "description": "Playwright: fixed location picker options narrow by selected fixed client",
+    "implemented": true,
+    "featureIds": [
+      "F202"
+    ]
+  },
+  {
+    "id": "T203",
+    "description": "Playwright: fixed category picker options narrow by selected fixed board",
+    "implemented": true,
+    "featureIds": [
+      "F203"
+    ]
+  },
+  {
+    "id": "T204",
+    "description": "Playwright: fixed subcategory picker options narrow by selected fixed category",
+    "implemented": true,
+    "featureIds": [
+      "F204"
+    ]
+  },
+  {
+    "id": "T205",
+    "description": "Playwright: fixed subcategory picker options narrow by selected fixed board where board scoping is required",
+    "implemented": true,
+    "featureIds": [
+      "F205"
+    ]
+  },
+  {
+    "id": "T206",
+    "description": "Playwright: fixed contact picker shows a disabled explanation when required fixed client scope is missing",
+    "implemented": true,
+    "featureIds": [
+      "F206"
+    ]
+  },
+  {
+    "id": "T207",
+    "description": "Playwright: fixed location picker shows a disabled explanation when required fixed client scope is missing",
+    "implemented": true,
+    "featureIds": [
+      "F207"
+    ]
+  },
+  {
+    "id": "T208",
+    "description": "Playwright: fixed category picker shows a disabled explanation when required fixed board scope is missing",
+    "implemented": true,
+    "featureIds": [
+      "F208"
+    ]
+  },
+  {
+    "id": "T209",
+    "description": "Playwright: fixed subcategory picker shows a disabled explanation when upstream scope is missing",
+    "implemented": true,
+    "featureIds": [
+      "F209"
+    ]
+  },
+  {
+    "id": "T210",
+    "description": "Playwright: a dynamic client reference does not unlock fixed contact options",
+    "implemented": true,
+    "featureIds": [
+      "F210"
+    ]
+  },
+  {
+    "id": "T211",
+    "description": "Playwright: a dynamic client reference does not unlock fixed location options",
+    "implemented": true,
+    "featureIds": [
+      "F211"
+    ]
+  },
+  {
+    "id": "T212",
+    "description": "Playwright: a dynamic board reference does not unlock fixed category options",
+    "implemented": true,
+    "featureIds": [
+      "F212"
+    ]
+  },
+  {
+    "id": "T213",
+    "description": "Playwright: a dynamic category reference does not unlock fixed subcategory options",
+    "implemented": true,
+    "featureIds": [
+      "F213"
+    ]
+  },
+  {
+    "id": "T214",
+    "description": "Playwright: dependent picker option lists recalculate immediately when an upstream fixed value changes",
+    "implemented": true,
+    "featureIds": [
+      "F214"
+    ]
+  },
+  {
+    "id": "T215",
+    "description": "Playwright: invalid dependent picker selections clear when upstream fixed scope changes",
+    "implemented": true,
+    "featureIds": [
+      "F215"
+    ]
+  },
+  {
+    "id": "T216",
+    "description": "Playwright: valid dependent picker selections are preserved when upstream fixed scope changes without invalidating them",
+    "implemented": true,
+    "featureIds": [
+      "F216"
+    ]
+  },
+  {
+    "id": "T217",
+    "description": "Playwright: saved drafts rehydrate dependent picker selections correctly when fixed upstream values are valid",
+    "implemented": true,
+    "featureIds": [
+      "F217"
+    ]
+  },
+  {
+    "id": "T218",
+    "description": "Playwright: saved drafts rehydrate dependent picker disabled states correctly when upstream values are dynamic",
+    "implemented": true,
+    "featureIds": [
+      "F218"
+    ]
+  },
+  {
+    "id": "T219",
+    "description": "Playwright: dependent picker fields can always fall back to Reference mode when fixed narrowing is unavailable",
+    "implemented": true,
+    "featureIds": [
+      "F219"
+    ]
+  },
+  {
+    "id": "T220",
+    "description": "Unit: dependent picker behavior remains limited to ticket-core identifiers in the first implementation pass",
+    "implemented": true,
+    "featureIds": [
+      "F220"
+    ]
+  },
+  {
+    "id": "T221",
+    "description": "Playwright: Transform behaves like a grouped tile in the palette and properties panel",
+    "implemented": true,
+    "featureIds": [
+      "F221"
+    ]
+  },
+  {
+    "id": "T222",
+    "description": "Playwright: Transform grouped steps can choose a specific transform action from a filtered dropdown",
+    "implemented": true,
+    "featureIds": [
+      "F222"
+    ]
+  },
+  {
+    "id": "T223",
+    "description": "Playwright: Transform grouped steps render schema-driven inline inputs like business actions",
+    "implemented": true,
+    "featureIds": [
+      "F223"
+    ]
+  },
+  {
+    "id": "T224",
+    "description": "Playwright: Transform grouped steps expose schema-driven outputs through saveAs and downstream data context",
+    "implemented": true,
+    "featureIds": [
+      "F224"
+    ]
+  },
+  {
+    "id": "T225",
+    "description": "Unit: Transform grouped steps still persist as action.call steps",
+    "implemented": true,
+    "featureIds": [
+      "F225"
+    ]
+  },
+  {
+    "id": "T226",
+    "description": "Unit: transform actions are registered in the runtime action registry like other actions",
+    "implemented": true,
+    "featureIds": [
+      "F226"
+    ]
+  },
+  {
+    "id": "T227",
+    "description": "Unit: each transform action exposes an explicit input schema",
+    "implemented": true,
+    "featureIds": [
+      "F227"
+    ]
+  },
+  {
+    "id": "T228",
+    "description": "Unit: each transform action exposes an explicit output schema",
+    "implemented": true,
+    "featureIds": [
+      "F228"
+    ]
+  },
+  {
+    "id": "T229",
+    "description": "Playwright: transform actions participate in grouped palette search",
+    "implemented": true,
+    "featureIds": [
+      "F229"
+    ]
+  },
+  {
+    "id": "T230",
+    "description": "Integration: transform actions participate in the same validation model as business actions",
+    "implemented": true,
+    "featureIds": [
+      "F230"
+    ]
+  },
+  {
+    "id": "T231",
+    "description": "Playwright: transform steps can be named and saved for downstream reference",
+    "implemented": true,
+    "featureIds": [
+      "F231"
+    ]
+  },
+  {
+    "id": "T232",
+    "description": "Playwright: transform outputs appear in later-step reference pickers using saveAs",
+    "implemented": true,
+    "featureIds": [
+      "F232"
+    ]
+  },
+  {
+    "id": "T233",
+    "description": "Integration: saved drafts preserve transform grouped-step hydration after transform actions are introduced",
+    "implemented": true,
+    "featureIds": [
+      "F233"
+    ]
+  },
+  {
+    "id": "T234",
+    "description": "Playwright: transform grouped steps remain reorderable and movable like existing action.call steps",
+    "implemented": true,
+    "featureIds": [
+      "F234"
+    ]
+  },
+  {
+    "id": "T235",
+    "description": "Playwright: transform grouped steps remain usable inside control blocks",
+    "implemented": true,
+    "featureIds": [
+      "F235"
+    ]
+  },
+  {
+    "id": "T236",
+    "description": "Playwright: transform grouped steps support Reference, Fixed, and Advanced source modes",
+    "implemented": true,
+    "featureIds": [
+      "F236"
+    ]
+  },
+  {
+    "id": "T237",
+    "description": "Playwright: transform grouped steps show type-compatibility hints inside their input fields",
+    "implemented": true,
+    "featureIds": [
+      "F237"
+    ]
+  },
+  {
+    "id": "T238",
+    "description": "Playwright: transform grouped steps show step-level validation summaries inside the properties panel",
+    "implemented": true,
+    "featureIds": [
+      "F238"
+    ]
+  },
+  {
+    "id": "T239",
+    "description": "Playwright: transform action descriptions explain the resulting output shape",
+    "implemented": true,
+    "featureIds": [
+      "F239"
+    ]
+  },
+  {
+    "id": "T240",
+    "description": "Unit: new transform actions can be added without introducing one-off designer surfaces",
+    "implemented": true,
+    "featureIds": [
+      "F240"
+    ]
+  },
+  {
+    "id": "T241",
+    "description": "Integration: truncate-text accepts a source string and truncation settings",
+    "implemented": true,
+    "featureIds": [
+      "F241"
+    ]
+  },
+  {
+    "id": "T242",
+    "description": "Playwright: truncate-text exposes truncation length as a schema-backed fixed-value field",
+    "implemented": true,
+    "featureIds": [
+      "F242"
+    ]
+  },
+  {
+    "id": "T243",
+    "description": "Playwright: truncate-text exposes truncation strategy as a schema-backed field",
+    "implemented": true,
+    "featureIds": [
+      "F243"
+    ]
+  },
+  {
+    "id": "T244",
+    "description": "Integration: concat-text accepts multiple source values and a separator",
+    "implemented": true,
+    "featureIds": [
+      "F244"
+    ]
+  },
+  {
+    "id": "T245",
+    "description": "Integration: replace-text accepts a source string, search value, and replacement value",
+    "implemented": true,
+    "featureIds": [
+      "F245"
+    ]
+  },
+  {
+    "id": "T246",
+    "description": "Integration: split-text accepts a source string and delimiter",
+    "implemented": true,
+    "featureIds": [
+      "F246"
+    ]
+  },
+  {
+    "id": "T247",
+    "description": "Integration: join-text accepts a source array and delimiter",
+    "implemented": true,
+    "featureIds": [
+      "F247"
+    ]
+  },
+  {
+    "id": "T248",
+    "description": "Integration: lowercase-text accepts a source string",
+    "implemented": true,
+    "featureIds": [
+      "F248"
+    ]
+  },
+  {
+    "id": "T249",
+    "description": "Integration: uppercase-text accepts a source string",
+    "implemented": true,
+    "featureIds": [
+      "F249"
+    ]
+  },
+  {
+    "id": "T250",
+    "description": "Integration: trim-text accepts a source string",
+    "implemented": true,
+    "featureIds": [
+      "F250"
+    ]
+  },
+  {
+    "id": "T251",
+    "description": "Unit: truncate-text output is exposed as a typed string for downstream references",
+    "implemented": true,
+    "featureIds": [
+      "F251"
+    ]
+  },
+  {
+    "id": "T252",
+    "description": "Unit: concat-text output is exposed as a typed string for downstream references",
+    "implemented": true,
+    "featureIds": [
+      "F252"
+    ]
+  },
+  {
+    "id": "T253",
+    "description": "Unit: replace-text output is exposed as a typed string for downstream references",
+    "implemented": true,
+    "featureIds": [
+      "F253"
+    ]
+  },
+  {
+    "id": "T254",
+    "description": "Unit: split-text output is exposed as a typed array for downstream references",
+    "implemented": true,
+    "featureIds": [
+      "F254"
+    ]
+  },
+  {
+    "id": "T255",
+    "description": "Unit: join-text output is exposed as a typed string for downstream references",
+    "implemented": true,
+    "featureIds": [
+      "F255"
+    ]
+  },
+  {
+    "id": "T256",
+    "description": "Unit: lowercase-text output is exposed as a typed string for downstream references",
+    "implemented": true,
+    "featureIds": [
+      "F256"
+    ]
+  },
+  {
+    "id": "T257",
+    "description": "Unit: uppercase-text output is exposed as a typed string for downstream references",
+    "implemented": true,
+    "featureIds": [
+      "F257"
+    ]
+  },
+  {
+    "id": "T258",
+    "description": "Unit: trim-text output is exposed as a typed string for downstream references",
+    "implemented": true,
+    "featureIds": [
+      "F258"
+    ]
+  },
+  {
+    "id": "T259",
+    "description": "Playwright: text transform source fields can be authored through structured references",
+    "implemented": true,
+    "featureIds": [
+      "F259"
+    ]
+  },
+  {
+    "id": "T260",
+    "description": "Playwright: text transform parameters such as length and separator can be authored as fixed values",
+    "implemented": true,
+    "featureIds": [
+      "F260"
+    ]
+  },
+  {
+    "id": "T261",
+    "description": "Integration: coalesce-value accepts ordered candidate inputs and returns the first usable value",
+    "implemented": true,
+    "featureIds": [
+      "F261"
+    ]
+  },
+  {
+    "id": "T262",
+    "description": "Integration: build-object accepts named field inputs and returns an object",
+    "implemented": true,
+    "featureIds": [
+      "F262"
+    ]
+  },
+  {
+    "id": "T263",
+    "description": "Playwright: build-object allows user-chosen output field names without expression syntax",
+    "implemented": true,
+    "featureIds": [
+      "F263"
+    ]
+  },
+  {
+    "id": "T264",
+    "description": "Integration: pick-fields accepts an input object and a selected subset of fields",
+    "implemented": true,
+    "featureIds": [
+      "F264"
+    ]
+  },
+  {
+    "id": "T265",
+    "description": "Integration: rename-fields accepts an input object and an explicit field rename mapping",
+    "implemented": true,
+    "featureIds": [
+      "F265"
+    ]
+  },
+  {
+    "id": "T266",
+    "description": "Integration: append-array accepts an input array and appended values",
+    "implemented": true,
+    "featureIds": [
+      "F266"
+    ]
+  },
+  {
+    "id": "T267",
+    "description": "Integration: build-array accepts ordered item inputs and returns an array",
+    "implemented": true,
+    "featureIds": [
+      "F267"
+    ]
+  },
+  {
+    "id": "T268",
+    "description": "Unit: coalesce-value exposes a downstream-compatible output schema",
+    "implemented": true,
+    "featureIds": [
+      "F268"
+    ]
+  },
+  {
+    "id": "T269",
+    "description": "Unit: build-object exposes an object output schema browseable by downstream references",
+    "implemented": true,
+    "featureIds": [
+      "F269"
+    ]
+  },
+  {
+    "id": "T270",
+    "description": "Unit: pick-fields exposes an object output schema browseable by downstream references",
+    "implemented": true,
+    "featureIds": [
+      "F270"
+    ]
+  },
+  {
+    "id": "T271",
+    "description": "Unit: rename-fields exposes renamed output field names to downstream references",
+    "implemented": true,
+    "featureIds": [
+      "F271"
+    ]
+  },
+  {
+    "id": "T272",
+    "description": "Unit: append-array exposes an array output schema browseable by downstream references",
+    "implemented": true,
+    "featureIds": [
+      "F272"
+    ]
+  },
+  {
+    "id": "T273",
+    "description": "Unit: build-array exposes an array output schema browseable by downstream references",
+    "implemented": true,
+    "featureIds": [
+      "F273"
+    ]
+  },
+  {
+    "id": "T274",
+    "description": "Playwright: build-object accepts structured references for per-field source values",
+    "implemented": true,
+    "featureIds": [
+      "F274"
+    ]
+  },
+  {
+    "id": "T275",
+    "description": "Playwright: build-object accepts fixed literal values for per-field source values",
+    "implemented": true,
+    "featureIds": [
+      "F275"
+    ]
+  },
+  {
+    "id": "T276",
+    "description": "Playwright: rename-fields exposes explicit rename fields rather than requiring expressions",
+    "implemented": true,
+    "featureIds": [
+      "F276"
+    ]
+  },
+  {
+    "id": "T277",
+    "description": "Playwright: pick-fields exposes explicit fixed field-selection controls rather than requiring expressions",
+    "implemented": true,
+    "featureIds": [
+      "F277"
+    ]
+  },
+  {
+    "id": "T278",
+    "description": "Playwright: coalesce-value accepts multiple structured references without expression syntax",
+    "implemented": true,
+    "featureIds": [
+      "F278"
+    ]
+  },
+  {
+    "id": "T279",
+    "description": "Playwright: build-array accepts multiple structured references without expression syntax",
+    "implemented": true,
+    "featureIds": [
+      "F279"
+    ]
+  },
+  {
+    "id": "T280",
+    "description": "Playwright: object and value transform outputs participate in downstream picker and reference flows like business outputs",
+    "implemented": true,
+    "featureIds": [
+      "F280"
+    ]
+  },
+  {
+    "id": "T281",
+    "description": "Playwright: Advanced mode remains available for values that cannot be represented structurally",
+    "implemented": true,
+    "featureIds": [
+      "F281"
+    ]
+  },
+  {
+    "id": "T282",
+    "description": "Playwright: Advanced mode remains available for secret-backed values",
+    "implemented": true,
+    "featureIds": [
+      "F282"
+    ]
+  },
+  {
+    "id": "T283",
+    "description": "Visual regression: Advanced mode is visually de-emphasized relative to structured authoring",
+    "implemented": true,
+    "featureIds": [
+      "F283"
+    ]
+  },
+  {
+    "id": "T284",
+    "description": "Unit: expression validation behavior remains unchanged for advanced values after the refactor",
+    "implemented": true,
+    "featureIds": [
+      "F284"
+    ]
+  },
+  {
+    "id": "T285",
+    "description": "Unit: secret validation behavior remains unchanged for advanced values after the refactor",
+    "implemented": true,
+    "featureIds": [
+      "F285"
+    ]
+  },
+  {
+    "id": "T286",
+    "description": "Integration: runtime mapping resolution remains unchanged for advanced values after the refactor",
+    "implemented": true,
+    "featureIds": [
+      "F286"
+    ]
+  },
+  {
+    "id": "T287",
+    "description": "Integration: existing workflows with advanced expressions remain editable even when they cannot be restructured",
+    "implemented": true,
+    "featureIds": [
+      "F287"
+    ]
+  },
+  {
+    "id": "T288",
+    "description": "Integration: mixed workflows that use both structured values and advanced values still save, reload, and publish correctly",
+    "implemented": true,
+    "featureIds": [
+      "F288"
+    ]
+  },
+  {
+    "id": "T289",
+    "description": "Integration: grouped-step output data context remains stable after save and reload",
+    "implemented": true,
+    "featureIds": [
+      "F289"
+    ]
+  },
+  {
+    "id": "T290",
+    "description": "Integration: workflow import and export remain compatible because the runtime action.call contract is unchanged",
+    "implemented": true,
+    "featureIds": [
+      "F290"
+    ]
+  },
+  {
+    "id": "T291",
+    "description": "Integration: app/plugin grouped tiles only appear when available to the current deployment and tenant context",
+    "implemented": true,
+    "featureIds": [
+      "F291"
+    ]
+  },
+  {
+    "id": "T292",
+    "description": "Integration: app/plugin grouped steps hydrate through the same grouped-step model as built-ins",
+    "implemented": true,
+    "featureIds": [
+      "F292"
+    ]
+  },
+  {
+    "id": "T293",
+    "description": "Integration: app/plugin grouped steps use the same inline field editor model when their schemas are compatible",
+    "implemented": true,
+    "featureIds": [
+      "F293"
+    ]
+  },
+  {
+    "id": "T294",
+    "description": "Integration: app/plugin grouped steps use the same picker-metadata model when they provide annotations",
+    "implemented": true,
+    "featureIds": [
+      "F294"
+    ]
+  },
+  {
+    "id": "T295",
+    "description": "Permissions: read-only workflow users cannot change grouped tiles, selected actions, or inline field values",
+    "implemented": true,
+    "featureIds": [
+      "F295"
+    ]
+  },
+  {
+    "id": "T296",
+    "description": "Permissions: read-only workflow users can inspect grouped tiles, selected actions, field values, and transform outputs",
+    "implemented": true,
+    "featureIds": [
+      "F296"
+    ]
+  },
+  {
+    "id": "T297",
+    "description": "Permissions: fixed picker option retrieval is limited to data the authoring user can already read",
+    "implemented": true,
+    "featureIds": [
+      "F297"
+    ]
+  },
+  {
+    "id": "T298",
+    "description": "Playwright: grouped-step validation errors remain visible after save and reload",
+    "implemented": true,
+    "featureIds": [
+      "F298"
+    ]
+  },
+  {
+    "id": "T299",
+    "description": "Integration: publish validation remains consistent with the unchanged runtime contract after the refactor",
+    "implemented": true,
+    "featureIds": [
+      "F299"
+    ]
+  },
+  {
+    "id": "T300",
+    "description": "Review: the implementation stays within grouped palette, inline inputs, ticket-core pickers, and transform actions without unplanned feature creep",
+    "implemented": true,
+    "featureIds": [
+      "F300"
+    ]
+  },
+  {
+    "id": "T301",
+    "description": "E2E: builder creates a workflow by dragging Ticket, choosing Create Ticket, filling required fields through the inline editor, and saving successfully",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F061",
+      "F082",
+      "F101",
+      "F105"
+    ]
+  },
+  {
+    "id": "T302",
+    "description": "E2E: builder creates a workflow by dragging Ticket, choosing Find Ticket, and then switching to Create Ticket without losing still-valid fields",
+    "implemented": true,
+    "featureIds": [
+      "F082",
+      "F093",
+      "F094",
+      "F095"
+    ]
+  },
+  {
+    "id": "T303",
+    "description": "E2E: builder creates a workflow by dragging Transform, choosing truncate-text, saving the output, and referencing it from a later Ticket step",
+    "implemented": true,
+    "featureIds": [
+      "F031",
+      "F062",
+      "F222",
+      "F241",
+      "F251",
+      "F232"
+    ]
+  },
+  {
+    "id": "T304",
+    "description": "E2E: builder creates a workflow by dragging Transform, choosing build-object, renaming fields, and referencing the resulting object from a later action",
+    "implemented": true,
+    "featureIds": [
+      "F262",
+      "F263",
+      "F269",
+      "F274",
+      "F280"
+    ]
+  },
+  {
+    "id": "T305",
+    "description": "E2E: searching create ticket highlights the Ticket tile, not a hidden action tile, and click insertion creates the correct grouped step",
+    "implemented": true,
+    "featureIds": [
+      "F047",
+      "F064",
+      "F082"
+    ]
+  },
+  {
+    "id": "T306",
+    "description": "E2E: searching truncate highlights the Transform tile and click insertion creates the correct grouped step",
+    "implemented": true,
+    "featureIds": [
+      "F049",
+      "F065",
+      "F222"
+    ]
+  },
+  {
+    "id": "T307",
+    "description": "E2E: an existing legacy action.call workflow draft opens in the grouped-step UI without migration and can be saved again successfully",
+    "implemented": true,
+    "featureIds": [
+      "F074",
+      "F287",
+      "F289",
+      "F290"
+    ]
+  },
+  {
+    "id": "T308",
+    "description": "E2E: builder uses a fixed board picker, fixed status picker, and fixed priority picker to author a ticket action without entering raw IDs",
+    "implemented": true,
+    "featureIds": [
+      "F181",
+      "F184",
+      "F185",
+      "F200"
+    ]
+  },
+  {
+    "id": "T309",
+    "description": "E2E: builder uses a prior contacts.find output to populate contact_id through Reference mode while using fixed pickers for other ticket fields",
+    "implemented": true,
+    "featureIds": [
+      "F142",
+      "F148",
+      "F183",
+      "F193"
+    ]
+  },
+  {
+    "id": "T310",
+    "description": "E2E: builder uses a fixed client to unlock contact and location pickers, then changes the client and sees dependent choices update correctly",
+    "implemented": true,
+    "featureIds": [
+      "F201",
+      "F202",
+      "F214",
+      "F215",
+      "F216"
+    ]
+  },
+  {
+    "id": "T311",
+    "description": "E2E: builder uses a fixed board to unlock category and subcategory pickers, then changes the board and sees dependent choices update correctly",
+    "implemented": true,
+    "featureIds": [
+      "F203",
+      "F205",
+      "F214",
+      "F215",
+      "F216"
+    ]
+  },
+  {
+    "id": "T312",
+    "description": "E2E: builder uses dynamic references for client and board and sees dependent fixed pickers remain disabled with clear explanations",
+    "implemented": true,
+    "featureIds": [
+      "F210",
+      "F211",
+      "F212",
+      "F213"
+    ]
+  },
+  {
+    "id": "T313",
+    "description": "E2E: builder authors a grouped step entirely through structured references and never opens Advanced mode",
+    "implemented": true,
+    "featureIds": [
+      "F107",
+      "F108",
+      "F141",
+      "F151",
+      "F283"
+    ]
+  },
+  {
+    "id": "T314",
+    "description": "E2E: builder falls back to Advanced mode for a legacy expression and the workflow still saves, reloads, and publishes",
+    "implemented": true,
+    "featureIds": [
+      "F281",
+      "F284",
+      "F287",
+      "F288"
+    ]
+  },
+  {
+    "id": "T315",
+    "description": "E2E: builder mixes structured field authoring, fixed ticket pickers, and transform outputs in a single workflow draft and saves successfully",
+    "implemented": true,
+    "featureIds": [
+      "F101",
+      "F181",
+      "F232",
+      "F288"
+    ]
+  },
+  {
+    "id": "T316",
+    "description": "E2E: a grouped action step inside a forEach block still exposes loop item and index references in the inline field editor",
+    "implemented": true,
+    "featureIds": [
+      "F145",
+      "F160"
+    ]
+  },
+  {
+    "id": "T317",
+    "description": "E2E: a grouped action step inside a catch block still exposes error references in the inline field editor",
+    "implemented": true,
+    "featureIds": [
+      "F144",
+      "F160"
+    ]
+  },
+  {
+    "id": "T318",
+    "description": "E2E: grouped action steps remain reorderable and still preserve their selected action and authored field values",
+    "implemented": true,
+    "featureIds": [
+      "F076",
+      "F096",
+      "F137"
+    ]
+  },
+  {
+    "id": "T319",
+    "description": "E2E: grouped action steps moved across branches preserve action selection and valid field values",
+    "implemented": true,
+    "featureIds": [
+      "F077",
+      "F155",
+      "F160"
+    ]
+  },
+  {
+    "id": "T320",
+    "description": "E2E: read-only workflow users can inspect grouped steps and transform outputs but cannot edit them",
+    "implemented": true,
+    "featureIds": [
+      "F040",
+      "F295",
+      "F296"
+    ]
+  },
+  {
+    "id": "T321",
+    "description": "E2E: app/plugin tiles render when available and can create grouped steps with filtered action dropdowns",
+    "implemented": true,
+    "featureIds": [
+      "F032",
+      "F063",
+      "F083",
+      "F291",
+      "F292"
+    ]
+  },
+  {
+    "id": "T322",
+    "description": "E2E: app/plugin grouped steps can use the inline field editor when their schemas are supported",
+    "implemented": true,
+    "featureIds": [
+      "F293",
+      "F294"
+    ]
+  },
+  {
+    "id": "T323",
+    "description": "Integration: grouped-step validation continues to block publish when required fields are missing after action changes",
+    "implemented": true,
+    "featureIds": [
+      "F090",
+      "F116",
+      "F299"
+    ]
+  },
+  {
+    "id": "T324",
+    "description": "Integration: grouped-step validation errors remain attached to the correct step after save and reload",
+    "implemented": true,
+    "featureIds": [
+      "F298",
+      "F299"
+    ]
+  },
+  {
+    "id": "T325",
+    "description": "Integration: fixed picker values and structured references round-trip through draft save/load without contract drift",
+    "implemented": true,
+    "featureIds": [
+      "F112",
+      "F113",
+      "F152",
+      "F200",
+      "F288"
+    ]
+  },
+  {
+    "id": "T326",
+    "description": "Integration: transform outputs remain browseable by downstream reference pickers after draft save/load",
+    "implemented": true,
+    "featureIds": [
+      "F224",
+      "F232",
+      "F269",
+      "F280"
+    ]
+  },
+  {
+    "id": "T327",
+    "description": "Integration: build-object and rename-fields preserve output field names in downstream reference autocomplete",
+    "implemented": true,
+    "featureIds": [
+      "F263",
+      "F265",
+      "F271",
+      "F280"
+    ]
+  },
+  {
+    "id": "T328",
+    "description": "Integration: the grouped palette model does not break workflow import/export of unchanged action.call definitions",
+    "implemented": true,
+    "featureIds": [
+      "F290",
+      "F299"
+    ]
+  },
+  {
+    "id": "T329",
+    "description": "Permissions: ticket-core picker option retrieval respects the current workflow authoring user's existing data-read permissions",
+    "implemented": true,
+    "featureIds": [
+      "F297"
+    ]
+  },
+  {
+    "id": "T330",
+    "description": "Plan conformance: the shipped implementation can be mapped cleanly to the scoped feature set without unrelated workflow-editor scope expansion",
+    "implemented": true,
+    "featureIds": [
+      "F300"
+    ]
+  },
+  {
+    "id": "T331",
+    "description": "Unit: palette search remains interactive while grouped palette drag state is active",
+    "implemented": true,
+    "featureIds": [
+      "F054"
+    ]
+  }
+]

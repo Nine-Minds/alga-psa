@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { createHash } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
+import type { Knex } from 'knex';
 import { createTenantKnex } from '@alga-psa/db';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { preCheckDeletion } from '@alga-psa/auth';
@@ -27,6 +28,8 @@ import {
   type WorkflowTrigger,
   type PublishError
 } from '@shared/workflow/runtime';
+import { buildWorkflowDesignerActionCatalog } from '@shared/workflow/runtime/designer/actionCatalog';
+import { zodToWorkflowJsonSchema } from '@shared/workflow/runtime/jsonSchemaMetadata';
 import { verifySecretsExist } from '@shared/workflow/runtime/validation/publishValidation';
 import { createTenantSecretProvider } from '@alga-psa/shared/workflow/secrets';
 import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
@@ -111,6 +114,82 @@ const hashDefinition = (definition: Record<string, unknown>) => {
   } catch {
     return null;
   }
+};
+
+const normalizeInstalledAppSlug = (value: string | null | undefined): string =>
+  String(value ?? '').trim().toLowerCase();
+
+const getInstalledWorkflowDesignerAppKeys = (publisher: string | null | undefined, name: string | null | undefined): string[] => {
+  const normalizedName = normalizeInstalledAppSlug(name);
+  if (!normalizedName) return [];
+
+  const candidates = new Set<string>([`app:${normalizedName}`]);
+  const nameSegments = normalizedName.split('.').filter(Boolean);
+  const leafName = nameSegments[nameSegments.length - 1];
+  if (leafName && leafName !== normalizedName) {
+    candidates.add(`app:${leafName}`);
+  }
+
+  const normalizedPublisher = normalizeInstalledAppSlug(publisher);
+  if (normalizedPublisher) {
+    candidates.add(`app:${normalizedPublisher}.${normalizedName}`);
+  }
+
+  return Array.from(candidates);
+};
+
+const loadAvailableWorkflowDesignerAppKeys = async (
+  knex: Knex,
+  tenantId: string | null | undefined
+): Promise<Set<string>> => {
+  if (!tenantId) return new Set();
+
+  const [hasInstallTable, hasRegistryTable] = await Promise.all([
+    knex.schema.hasTable('tenant_extension_install'),
+    knex.schema.hasTable('extension_registry')
+  ]);
+  if (!hasInstallTable || !hasRegistryTable) {
+    return new Set();
+  }
+
+  const [hasInstallEnabledColumn, hasInstallStatusColumn] = await Promise.all([
+    knex.schema.hasColumn('tenant_extension_install', 'is_enabled'),
+    knex.schema.hasColumn('tenant_extension_install', 'status')
+  ]);
+
+  const rows = await knex('tenant_extension_install as install')
+    .innerJoin('extension_registry as registry', 'registry.id', 'install.registry_id')
+    .where('install.tenant_id', tenantId)
+    .modify((query) => {
+      if (hasInstallEnabledColumn && hasInstallStatusColumn) {
+        query.andWhere((builder) => {
+          builder.where('install.is_enabled', true).orWhere('install.status', 'enabled');
+        });
+        return;
+      }
+
+      if (hasInstallEnabledColumn) {
+        query.andWhere('install.is_enabled', true);
+        return;
+      }
+
+      if (hasInstallStatusColumn) {
+        query.andWhere('install.status', 'enabled');
+      }
+    })
+    .select<{ publisher: string | null; name: string | null }[]>([
+      'registry.publisher as publisher',
+      'registry.name as name'
+    ]);
+
+  const availableKeys = new Set<string>();
+  for (const row of rows) {
+    for (const appKey of getInstalledWorkflowDesignerAppKeys(row.publisher, row.name)) {
+      availableKeys.add(appKey);
+    }
+  }
+
+  return availableKeys;
 };
 
 const isEnterpriseEdition = (): boolean => {
@@ -2846,22 +2925,36 @@ export const listWorkflowRegistryNodesAction = withAuth(async (user, { tenant })
   }));
 });
 
+const serializeWorkflowRegistryAction = (
+  action: ReturnType<ReturnType<typeof getActionRegistryV2>['list']>[number]
+) => ({
+  id: action.id,
+  version: action.version,
+  sideEffectful: action.sideEffectful,
+  retryHint: action.retryHint ?? null,
+  idempotency: action.idempotency,
+  ui: action.ui,
+  inputSchema: zodToWorkflowJsonSchema(action.inputSchema, { name: `${action.id}@${action.version}.input` }),
+  outputSchema: zodToWorkflowJsonSchema(action.outputSchema, { name: `${action.id}@${action.version}.output` }),
+  examples: action.examples ?? null
+});
+
 export const listWorkflowRegistryActionsAction = withAuth(async (user, { tenant }) => {
   initializeWorkflowRuntimeV2();
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
   const registry = getActionRegistryV2();
-  return registry.list().map((action) => ({
-    id: action.id,
-    version: action.version,
-    sideEffectful: action.sideEffectful,
-    retryHint: action.retryHint ?? null,
-    idempotency: action.idempotency,
-    ui: action.ui,
-    inputSchema: zodToJsonSchema(action.inputSchema, { name: `${action.id}@${action.version}.input` }),
-    outputSchema: zodToJsonSchema(action.outputSchema, { name: `${action.id}@${action.version}.output` }),
-    examples: action.examples ?? null
-  }));
+  return registry.list().map(serializeWorkflowRegistryAction);
+});
+
+export const listWorkflowDesignerActionCatalogAction = withAuth(async (user, { tenant }) => {
+  initializeWorkflowRuntimeV2();
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+  const registry = getActionRegistryV2();
+  const catalog = buildWorkflowDesignerActionCatalog(registry.list().map(serializeWorkflowRegistryAction));
+  const availableAppKeys = await loadAvailableWorkflowDesignerAppKeys(knex, tenant);
+  return catalog.filter((record) => record.tileKind !== 'app' || availableAppKeys.has(record.groupKey));
 });
 
 export const getWorkflowSchemaAction = withAuth(async (user, { tenant }, input: unknown) => {

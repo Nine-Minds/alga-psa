@@ -1,14 +1,14 @@
 import { ZodSchema } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { zodToWorkflowJsonSchema } from '../jsonSchemaMetadata';
 
 export type JsonSchema = Record<string, unknown>;
 
 export class SchemaRegistry {
-  private schemas: Map<string, ZodSchema<any>> = new Map();
+  private schemas: Map<string, ZodSchema<unknown>> = new Map();
   private jsonSchemaCache: Map<string, JsonSchema> = new Map();
   private refsCache: string[] | null = null;
 
-  register(ref: string, schema: ZodSchema<any>): void {
+  register(ref: string, schema: ZodSchema<unknown>): void {
     if (!ref || !schema) {
       throw new Error('SchemaRegistry.register requires ref and schema');
     }
@@ -20,7 +20,7 @@ export class SchemaRegistry {
     this.refsCache = null;
   }
 
-  get(ref: string): ZodSchema<any> {
+  get(ref: string): ZodSchema<unknown> {
     const schema = this.schemas.get(ref);
     if (!schema) {
       throw new Error(`SchemaRegistry missing schema for ref "${ref}"`);
@@ -42,7 +42,7 @@ export class SchemaRegistry {
     const cached = this.jsonSchemaCache.get(ref);
     if (cached) return cached;
     const schema = this.get(ref);
-    const json = zodToJsonSchema(schema, { name: ref }) as JsonSchema;
+    const json = zodToWorkflowJsonSchema(schema, { name: ref }) as JsonSchema;
     this.jsonSchemaCache.set(ref, json);
     return json;
   }

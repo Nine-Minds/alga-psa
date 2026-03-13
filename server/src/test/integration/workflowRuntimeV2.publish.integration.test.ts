@@ -7,13 +7,14 @@ import {
   ensureWorkflowScheduleStateTable,
   resetWorkflowRuntimeTables
 } from '../helpers/workflowRuntimeV2TestUtils';
-import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { createTenantKnex, getCurrentTenantId } from '@alga-psa/db';
+import { getCurrentUser } from '@alga-psa/auth';
 import {
   createWorkflowDefinitionAction,
   publishWorkflowDefinitionAction,
   listWorkflowRegistryNodesAction,
   listWorkflowRegistryActionsAction,
+  listWorkflowDesignerActionCatalogAction,
   getWorkflowSchemaAction,
   startWorkflowRunAction,
   cancelWorkflowRunAction,
@@ -39,18 +40,58 @@ import {
   TEST_SCHEMA_REF
 } from '../helpers/workflowRuntimeV2TestHelpers';
 
-vi.mock('server/src/lib/db', () => ({
-  createTenantKnex: vi.fn(),
-  getCurrentTenantId: vi.fn()
-}));
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(),
+    getCurrentTenantId: vi.fn(),
+    auditLog: vi.fn().mockResolvedValue(undefined)
+  };
+});
 
-vi.mock('@alga-psa/users/actions', () => ({
-  getCurrentUser: vi.fn()
-}));
+vi.mock('@alga-psa/auth', () => {
+  const withAuth = (action: (user: any, ctx: { tenant: string }, ...args: any[]) => Promise<any>) =>
+    async (...args: any[]) => action(
+      {
+        user_id: userId,
+        tenant: tenantId,
+        roles: []
+      },
+      { tenant: tenantId },
+      ...args
+    );
+  const withOptionalAuth = (action: (user: any, ctx: { tenant: string }, ...args: any[]) => Promise<any>) =>
+    async (...args: any[]) => action(
+      {
+        user_id: userId,
+        tenant: tenantId,
+        roles: []
+      },
+      { tenant: tenantId },
+      ...args
+    );
+  const withAuthCheck = (action: (user: any, ...args: any[]) => Promise<any>) =>
+    async (...args: any[]) => action(
+      {
+        user_id: userId,
+        tenant: tenantId,
+        roles: []
+      },
+      ...args
+    );
 
-vi.mock('server/src/lib/auth/rbac', () => ({
-  hasPermission: vi.fn().mockResolvedValue(true)
-}));
+  return {
+    withAuth,
+    withOptionalAuth,
+    withAuthCheck,
+    AuthenticationError: class AuthenticationError extends Error {},
+    hasPermission: vi.fn().mockResolvedValue(true),
+    checkMultiplePermissions: vi.fn().mockResolvedValue(true),
+    getCurrentUser: vi.fn(),
+    preCheckDeletion: vi.fn()
+  };
+});
 
 const mockedCreateTenantKnex = vi.mocked(createTenantKnex);
 const mockedGetCurrentTenantId = vi.mocked(getCurrentTenantId);
@@ -91,20 +132,84 @@ async function publishWorkflow(workflowId: string, version: number, definition?:
   return publishWorkflowDefinitionAction({ workflowId, version, definition });
 }
 
+async function ensureExtensionAvailabilityTables(knex: Knex) {
+  const hasRegistryTable = await knex.schema.hasTable('extension_registry');
+  if (!hasRegistryTable) {
+    await knex.schema.createTable('extension_registry', (table) => {
+      table.uuid('id').primary();
+      table.string('publisher').notNullable();
+      table.string('name').notNullable();
+      table.string('display_name').nullable();
+      table.text('description').nullable();
+      table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
+      table.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
+    });
+  }
+
+  const hasInstallTable = await knex.schema.hasTable('tenant_extension_install');
+  if (!hasInstallTable) {
+    await knex.schema.createTable('tenant_extension_install', (table) => {
+      table.uuid('id').primary();
+      table.uuid('tenant_id').notNullable();
+      table.uuid('registry_id').notNullable();
+      table.uuid('version_id').nullable();
+      table.text('granted_caps').nullable();
+      table.text('config').nullable();
+      table.boolean('is_enabled').notNullable().defaultTo(true);
+      table.string('status').notNullable().defaultTo('enabled');
+      table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
+      table.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
+    });
+  }
+}
+
+async function seedAvailableExtensionForTenant(
+  knex: Knex,
+  input: { tenantId: string; publisher: string; extensionName: string }
+) {
+  const registryId = uuidv4();
+  await knex('extension_registry').insert({
+    id: registryId,
+    publisher: input.publisher,
+    name: input.extensionName,
+    display_name: input.extensionName,
+    description: `${input.extensionName} test extension`,
+    created_at: knex.fn.now(),
+    updated_at: knex.fn.now(),
+  });
+
+  await knex('tenant_extension_install').insert({
+    id: uuidv4(),
+    tenant_id: input.tenantId,
+    registry_id: registryId,
+    version_id: null,
+    granted_caps: JSON.stringify([]),
+    config: JSON.stringify({}),
+    is_enabled: true,
+    status: 'enabled',
+    created_at: knex.fn.now(),
+    updated_at: knex.fn.now(),
+  });
+}
+
 beforeAll(async () => {
   ensureWorkflowRuntimeV2TestRegistrations();
   db = await createTestDbConnection();
   await ensureWorkflowScheduleStateTable(db);
+  await ensureExtensionAvailabilityTables(db);
 });
 
 beforeEach(async () => {
   await ensureWorkflowScheduleStateTable(db);
   await resetWorkflowRuntimeTables(db);
+  await ensureExtensionAvailabilityTables(db);
   tenantId = uuidv4();
   userId = uuidv4();
   mockedCreateTenantKnex.mockResolvedValue({ knex: db, tenant: tenantId });
   mockedGetCurrentTenantId.mockReturnValue(tenantId);
-  mockedGetCurrentUser.mockResolvedValue({ user_id: userId, roles: [] } as any);
+  mockedGetCurrentUser.mockResolvedValue({ user_id: userId, tenant: tenantId, roles: [] } as any);
+  await db('tenant_extension_install').delete().catch(() => undefined);
+  await db('extension_registry').delete().catch(() => undefined);
 });
 
 afterEach(() => {
@@ -394,6 +499,42 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     expect(result.errors?.some((err: any) => err.code === 'MISSING_REQUIRED_MAPPING')).toBe(true);
   });
 
+  it('T299/T323: grouped action.call steps keep publish validation on the unchanged runtime contract after action changes leave stale mappings behind. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
+    const result = await publishWorkflow(workflowId, 1, {
+      id: workflowId,
+      version: 1,
+      name: 'Grouped action missing required mapping',
+      payloadSchemaRef: TEST_SCHEMA_REF,
+      steps: [
+        {
+          id: 'grouped-invalid-step',
+          type: 'action.call',
+          config: {
+            designerAppKey: 'app:test',
+            designerTileKind: 'app',
+            actionId: 'test.actionProvided',
+            version: 1,
+            inputMapping: {
+              value: 'leftover-from-previous-action'
+            }
+          }
+        }
+      ]
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'MISSING_REQUIRED_MAPPING',
+          stepId: 'grouped-invalid-step',
+          stepPath: 'root.steps[0]'
+        })
+      ])
+    );
+  });
+
   it('Publish fails when required workflow fields (id/name/steps) are missing. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
     const result = await publishWorkflow(workflowId, 1, { payloadSchemaRef: TEST_SCHEMA_REF });
@@ -468,6 +609,68 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     const action = actions.find((entry) => entry.id === 'test.sideEffect');
     expect(action?.sideEffectful).toBe(true);
     expect(action).toHaveProperty('retryHint');
+  });
+
+  it('T020: workflow designer receives the grouped catalog projection from the server action. Mocks: non-target dependencies.', async () => {
+    const catalog = await listWorkflowDesignerActionCatalogAction();
+    const ticketRecord = catalog.find((entry) => entry.groupKey === 'ticket');
+    const transformRecord = catalog.find((entry) => entry.groupKey === 'transform');
+    expect(ticketRecord).toBeDefined();
+    expect(ticketRecord?.tileKind).toBe('core-object');
+    expect(ticketRecord?.allowedActionIds).toContain('tickets.create');
+    expect(transformRecord?.tileKind).toBe('transform');
+    expect(transformRecord?.allowedActionIds).toContain('transform.truncate_text');
+  });
+
+  it('T291: app/plugin grouped tiles only appear when available to the current deployment and tenant context. Mocks: non-target dependencies.', async () => {
+    const actionRegistry = getActionRegistryV2();
+    const availableModule = `tenantapp${Date.now()}`;
+    const unavailableModule = `hiddenapp${Date.now()}`;
+
+    actionRegistry.register({
+      id: `${availableModule}.send_message`,
+      version: 1,
+      inputSchema: z.object({ message: z.string() }),
+      outputSchema: z.object({ ok: z.boolean() }),
+      sideEffectful: false,
+      idempotency: { mode: 'engineProvided' },
+      ui: { label: 'Send Message', category: 'Apps', icon: 'app' },
+      handler: async () => ({ ok: true }),
+    });
+    actionRegistry.register({
+      id: `${unavailableModule}.create_issue`,
+      version: 1,
+      inputSchema: z.object({ title: z.string() }),
+      outputSchema: z.object({ ok: z.boolean() }),
+      sideEffectful: false,
+      idempotency: { mode: 'engineProvided' },
+      ui: { label: 'Create Issue', category: 'Apps', icon: 'app' },
+      handler: async () => ({ ok: true }),
+    });
+
+    await seedAvailableExtensionForTenant(db, {
+      tenantId,
+      publisher: 'vitest',
+      extensionName: availableModule,
+    });
+
+    const catalog = await listWorkflowDesignerActionCatalogAction();
+    expect(catalog.find((entry) => entry.groupKey === `app:${availableModule}`)).toMatchObject({
+      tileKind: 'app',
+      allowedActionIds: [`${availableModule}.send_message`],
+    });
+    expect(catalog.find((entry) => entry.groupKey === `app:${unavailableModule}`)).toBeUndefined();
+  });
+
+  it('Transform actions are exposed through the runtime action registry projection. Mocks: non-target dependencies.', async () => {
+    const actions = await listWorkflowRegistryActionsAction();
+    const truncateAction = actions.find((entry) => entry.id === 'transform.truncate_text');
+    const splitAction = actions.find((entry) => entry.id === 'transform.split_text');
+
+    expect(truncateAction?.ui?.category).toBe('Transform');
+    expect(truncateAction?.inputSchema).toBeDefined();
+    expect(truncateAction?.outputSchema).toBeDefined();
+    expect(splitAction?.outputSchema).toBeDefined();
   });
 
   it('Schema server action returns JSON schema by schemaRef (API delegates to server action). Mocks: non-target dependencies.', async () => {
