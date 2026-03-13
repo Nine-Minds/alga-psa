@@ -42,7 +42,7 @@
   {
     "id": "F006",
     "description": "P1: TypeScript view models — IQuoteWithClient, IQuoteListItem for list/detail views",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR3"
     ]
