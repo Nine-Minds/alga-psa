@@ -57,6 +57,64 @@ async function loadSharp() {
   }
 }
 
+async function ensureEntityFoldersInitializedInternal(
+  knex: Knex,
+  tenant: string,
+  entityId: string,
+  entityType: string,
+  createdBy: string | null | undefined
+) {
+  const existingFolders = await knex('document_folders')
+    .where('tenant', tenant)
+    .andWhere('entity_id', entityId)
+    .andWhere('entity_type', entityType)
+    .select('folder_path', 'folder_id');
+
+  const existingPaths = new Set(existingFolders.map((folder: { folder_path: string }) => folder.folder_path));
+
+  const defaults = await knex('document_default_folders')
+    .where('tenant', tenant)
+    .andWhere('entity_type', entityType)
+    .select('folder_name', 'folder_path', 'is_client_visible', 'sort_order')
+    .orderBy('sort_order', 'asc')
+    .orderBy('folder_path', 'asc');
+
+  if (defaults.length === 0) {
+    return;
+  }
+
+  const pathToFolderId = new Map<string, string>();
+  for (const folder of existingFolders as Array<{ folder_path: string; folder_id: string }>) {
+    pathToFolderId.set(folder.folder_path, folder.folder_id);
+  }
+
+  const foldersToInsert = defaults
+    .filter((item: { folder_path: string }) => !existingPaths.has(item.folder_path))
+    .map((item: { folder_name: string; folder_path: string; is_client_visible: boolean }) => {
+      const folderId = uuidv4();
+      pathToFolderId.set(item.folder_path, folderId);
+
+      const segments = item.folder_path.split('/').filter(Boolean);
+      const parentPath = segments.length > 1 ? '/' + segments.slice(0, -1).join('/') : null;
+
+      return {
+        tenant,
+        folder_id: folderId,
+        folder_path: item.folder_path,
+        folder_name: item.folder_name,
+        parent_folder_id: parentPath ? pathToFolderId.get(parentPath) ?? null : null,
+        entity_id: entityId,
+        entity_type: entityType,
+        is_client_visible: item.is_client_visible,
+        created_by: createdBy ?? null,
+      };
+    });
+
+  if (foldersToInsert.length > 0) {
+    await knex('document_folders').insert(foldersToInsert);
+  }
+}
+
 // Add new document
 export const addDocument = withAuth(async (user, { tenant }, data: DocumentInput) => {
   try {
@@ -2058,17 +2116,41 @@ export const uploadDocument = withAuth(async (
             : null;
 
           if (primaryEntity) {
-            // Find any entity-scoped folder for this entity
-            const entityFolder = await knex('document_folders')
-              .where('tenant', tenant)
-              .andWhere('entity_id', primaryEntity.id)
-              .andWhere('entity_type', primaryEntity.type)
-              .orderBy('folder_path', 'asc')
-              .select('folder_path')
-              .first();
+            await ensureEntityFoldersInitializedInternal(
+              knex,
+              tenant,
+              primaryEntity.id,
+              primaryEntity.type,
+              authenticatedUserId
+            );
 
-            if (entityFolder) {
-              resolvedFolderPath = entityFolder.folder_path;
+            const entityFolderQuery = () =>
+              knex('document_folders')
+                .where('tenant', tenant)
+                .andWhere('entity_id', primaryEntity.id)
+                .andWhere('entity_type', primaryEntity.type);
+
+            if (primaryEntity.type === 'ticket') {
+              const attachmentsFolder = await entityFolderQuery()
+                .andWhere('folder_path', '/Tickets/Attachments')
+                .select('folder_path')
+                .first();
+
+              if (attachmentsFolder) {
+                resolvedFolderPath = attachmentsFolder.folder_path;
+              }
+            }
+
+            if (!resolvedFolderPath) {
+              // Fall back to the first entity-scoped folder for older setups.
+              const entityFolder = await entityFolderQuery()
+                .orderBy('folder_path', 'asc')
+                .select('folder_path')
+                .first();
+
+              if (entityFolder) {
+                resolvedFolderPath = entityFolder.folder_path;
+              }
             }
           }
         } catch {
@@ -3052,56 +3134,7 @@ export const ensureEntityFolders = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-
-  // Get existing entity folders
-  const existingFolders = await knex('document_folders')
-    .where('tenant', tenant)
-    .andWhere('entity_id', entityId)
-    .andWhere('entity_type', entityType)
-    .select('folder_path', 'folder_id');
-
-  const existingPaths = new Set(existingFolders.map((f: { folder_path: string }) => f.folder_path));
-
-  // Fetch default folders for this entity type
-  const defaults = await knex('document_default_folders')
-    .where('tenant', tenant)
-    .andWhere('entity_type', entityType)
-    .select('folder_name', 'folder_path', 'is_client_visible', 'sort_order')
-    .orderBy('sort_order', 'asc')
-    .orderBy('folder_path', 'asc');
-
-  // Build a map of existing + new folder IDs for parent resolution
-  const pathToFolderId = new Map<string, string>();
-  for (const f of existingFolders as Array<{ folder_path: string; folder_id: string }>) {
-    pathToFolderId.set(f.folder_path, f.folder_id);
-  }
-
-  // Only insert defaults that don't already exist
-  const foldersToInsert = defaults
-    .filter((item: { folder_path: string }) => !existingPaths.has(item.folder_path))
-    .map((item: { folder_name: string; folder_path: string; is_client_visible: boolean }) => {
-      const folderId = uuidv4();
-      pathToFolderId.set(item.folder_path, folderId);
-
-      const segments = item.folder_path.split('/').filter(Boolean);
-      const parentPath = segments.length > 1 ? '/' + segments.slice(0, -1).join('/') : null;
-
-      return {
-        tenant,
-        folder_id: folderId,
-        folder_path: item.folder_path,
-        folder_name: item.folder_name,
-        parent_folder_id: parentPath ? pathToFolderId.get(parentPath) ?? null : null,
-        entity_id: entityId,
-        entity_type: entityType,
-        is_client_visible: item.is_client_visible,
-        created_by: user.user_id,
-      };
-    });
-
-  if (foldersToInsert.length > 0) {
-    await knex('document_folders').insert(foldersToInsert);
-  }
+  await ensureEntityFoldersInitializedInternal(knex, tenant, entityId, entityType, user.user_id);
 
   // Return current folder tree
   return _getFolderTreeInternal(knex, tenant, entityId, entityType);

@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     // Initialize Stripe service (EE-only)
     let stripeServiceFactory: (() => any) | null = null;
     try {
-      const mod = await import('@alga-psa/ee-stubs/lib/stripe/StripeService');
+      const mod = await import('@enterprise/lib/stripe/StripeService');
       stripeServiceFactory = (mod as any).getStripeService ?? null;
     } catch (error) {
       logger.error('[Stripe Webhook] StripeService import failed', { error });

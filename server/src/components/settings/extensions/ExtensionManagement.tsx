@@ -60,6 +60,7 @@ export default function ExtensionManagement() {
             <CustomTabs
               tabs={[
                 {
+                  id: 'manage',
                   label: "Manage",
                   content: (
                     <div className="py-2 space-y-3">
@@ -80,6 +81,7 @@ export default function ExtensionManagement() {
                   )
                 },
                 {
+                  id: 'install',
                   label: "Install",
                   content: (
                     <div className="py-2">
@@ -88,7 +90,7 @@ export default function ExtensionManagement() {
                   )
                 }
               ] as TabContent[]}
-              defaultTab="Manage"
+              defaultTab="manage"
             />
           </div>
         ) : (

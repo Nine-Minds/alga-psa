@@ -7,6 +7,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QuickAddTicket } from '../QuickAddTicket';
 
 const addTicketMock = vi.fn();
+const updateTicketMock = vi.fn();
+const uploadDocumentMock = vi.fn();
 const getTicketFormDataMock = vi.fn();
 const getContactsByClientMock = vi.fn();
 const getClientLocationsMock = vi.fn();
@@ -47,7 +49,8 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('../../actions/ticketActions', () => ({
-  addTicket: (...args: unknown[]) => addTicketMock(...args)
+  addTicket: (...args: unknown[]) => addTicketMock(...args),
+  updateTicket: (...args: unknown[]) => updateTicketMock(...args)
 }));
 
 vi.mock('../../actions/ticketResourceActions', () => ({
@@ -241,7 +244,106 @@ vi.mock('@alga-psa/reference-data/actions', () => ({
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: vi.fn().mockResolvedValue({ user_id: 'user-1' }),
-  getUserAvatarUrlsBatchAction: vi.fn()
+  getUserAvatarUrlsBatchAction: vi.fn(),
+  searchUsersForMentions: vi.fn().mockResolvedValue([])
+}));
+
+vi.mock('@alga-psa/documents/actions/documentActions', () => ({
+  uploadDocument: (...args: unknown[]) => uploadDocumentMock(...args)
+}));
+
+vi.mock('@alga-psa/ui/lib/errorHandling', async () => {
+  const actual = await vi.importActual<typeof import('@alga-psa/ui/lib/errorHandling')>('@alga-psa/ui/lib/errorHandling');
+  return {
+    ...actual,
+    isActionPermissionError: vi.fn(() => false),
+  };
+});
+
+vi.mock('@alga-psa/ui/editor', async () => {
+  const React = await vi.importActual<typeof import('react')>('react');
+
+  const paragraphBlock = (text: string) => [{
+    type: 'paragraph',
+    props: {
+      textAlignment: 'left',
+      backgroundColor: 'default',
+      textColor: 'default',
+    },
+    content: [{
+      type: 'text',
+      text,
+      styles: {},
+    }],
+  }];
+
+  const withImageBlock = (text: string, imageUrl?: string) => {
+    const blocks: any[] = paragraphBlock(text);
+    if (imageUrl) {
+      blocks.push({
+        type: 'image',
+        props: {
+          url: imageUrl,
+          name: 'clipboard-image.png',
+          caption: '',
+        },
+      });
+    }
+    return blocks;
+  };
+
+  return {
+    TextEditor: ({ id, initialContent, onContentChange, uploadFile, placeholder }: any) => {
+      const [text, setText] = React.useState(() => {
+        if (Array.isArray(initialContent) && Array.isArray(initialContent[0]?.content)) {
+          return initialContent[0].content.map((item: any) => item?.text || '').join('');
+        }
+        return '';
+      });
+
+      return (
+        <div>
+          <textarea
+            aria-label={placeholder || 'Description'}
+            data-testid={`${id}-mock-editor`}
+            value={text}
+            onChange={(event) => {
+              const nextText = event.target.value;
+              setText(nextText);
+              onContentChange?.(paragraphBlock(nextText));
+            }}
+          />
+          <button
+            type="button"
+            onClick={async () => {
+              const imageUrl = await uploadFile?.(
+                new File(['image-bytes'], 'clipboard-image.png', { type: 'image/png' })
+              );
+              onContentChange?.(withImageBlock(text, imageUrl));
+            }}
+          >
+            Paste Image
+          </button>
+        </div>
+      );
+    },
+    RichTextViewer: () => null,
+  };
+});
+
+vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
+  ConfirmationDialog: ({ isOpen, onConfirm, onClose, confirmLabel = 'Confirm', cancelLabel = 'Cancel' }: any) => {
+    if (!isOpen) {
+      return null;
+    }
+
+    return (
+      <div data-testid="confirmation-dialog">
+        <button type="button" onClick={onClose}>{cancelLabel}</button>
+        <button type="button" onClick={() => onConfirm()}>{confirmLabel}</button>
+      </div>
+    );
+  }
 }));
 
 vi.mock('@alga-psa/tags/components', () => ({
@@ -274,6 +376,8 @@ vi.mock('@alga-psa/ui/hooks', () => ({
 describe('QuickAddTicket prefills', () => {
   beforeEach(() => {
     pushMock.mockReset();
+    updateTicketMock.mockReset();
+    uploadDocumentMock.mockReset();
     getContactsByClientMock.mockResolvedValue([]);
     getClientLocationsMock.mockResolvedValue([]);
     getTicketFormDataMock.mockResolvedValue({
@@ -284,7 +388,15 @@ describe('QuickAddTicket prefills', () => {
       statuses: [{ status_id: 'status-1', name: 'Open' }],
       selectedClient: { client_id: 'client-1', client_type: 'company' }
     });
-    addTicketMock.mockResolvedValue({ ticket_id: 'ticket-1' });
+    addTicketMock.mockResolvedValue({ ticket_id: 'ticket-1', attributes: {} });
+    updateTicketMock.mockResolvedValue({});
+    uploadDocumentMock.mockResolvedValue({
+      success: true,
+      document: {
+        document_id: 'doc-1',
+        file_id: 'file-1',
+      },
+    });
   });
 
   it('initializes title input from prefilledTitle', async () => {
@@ -448,6 +560,93 @@ describe('QuickAddTicket prefills', () => {
 
     expect(screen.getByTestId('quick-add-category-dialog')).toBeInTheDocument();
     expect(screen.getByTestId('quick-add-category-board')).toHaveTextContent('board-1');
+  });
+
+  it('serializes the quick-add description as rich text when creating a ticket', async () => {
+    render(
+      <QuickAddTicket
+        open={true}
+        onOpenChange={() => undefined}
+        onTicketAdded={() => undefined}
+      />
+    );
+
+    await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
+
+    fireEvent.change(screen.getByPlaceholderText('Ticket Title *'), {
+      target: { value: 'Rich text quick add' }
+    });
+    fireEvent.change(screen.getByLabelText('Description'), {
+      target: { value: 'Pasted markdown replacement' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Ticket' }));
+
+    await waitFor(() => expect(addTicketMock).toHaveBeenCalled());
+    const submittedFormData = addTicketMock.mock.calls[0][0] as FormData;
+    const serializedDescription = submittedFormData.get('description');
+
+    expect(typeof serializedDescription).toBe('string');
+    expect(serializedDescription).toContain('Pasted markdown replacement');
+    expect(JSON.parse(serializedDescription as string)).toEqual([
+      expect.objectContaining({
+        type: 'paragraph',
+      }),
+    ]);
+  });
+
+  it('shows a discard dialog when closing quick add with staged pasted images', async () => {
+    const onOpenChange = vi.fn();
+
+    render(
+      <QuickAddTicket
+        open={true}
+        onOpenChange={onOpenChange}
+        onTicketAdded={() => undefined}
+      />
+    );
+
+    await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Paste Image' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(await screen.findByTestId('confirmation-dialog')).toBeInTheDocument();
+    expect(onOpenChange).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Images' }));
+
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+  });
+
+  it('uploads staged clipboard images after ticket creation and persists the final description', async () => {
+    render(
+      <QuickAddTicket
+        open={true}
+        onOpenChange={() => undefined}
+        onTicketAdded={() => undefined}
+      />
+    );
+
+    await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
+
+    fireEvent.change(screen.getByPlaceholderText('Ticket Title *'), {
+      target: { value: 'Ticket with pasted image' }
+    });
+    fireEvent.change(screen.getByLabelText('Description'), {
+      target: { value: 'Ticket body' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Paste Image' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save Ticket' }));
+
+    await waitFor(() => expect(uploadDocumentMock).toHaveBeenCalled());
+    await waitFor(() => expect(updateTicketMock).toHaveBeenCalledWith(
+      'ticket-1',
+      expect.objectContaining({
+        attributes: expect.objectContaining({
+          description: expect.stringContaining('/api/documents/view/file-1'),
+        }),
+      })
+    ));
   });
 
 });

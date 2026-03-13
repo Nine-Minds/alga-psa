@@ -64,7 +64,7 @@ export function TicketDetails({
   const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<{ id: string; name?: string | null; email?: string | null; avatarUrl?: string | null } | null>(null);
-  const [activeTab, setActiveTab] = useState(t('messages.comments', 'Comments'));
+  const [activeTab, setActiveTab] = useState('all-comments');
   const [isEditing, setIsEditing] = useState(false);
   const [currentComment, setCurrentComment] = useState<IComment | null>(null);
   const [editorKey, setEditorKey] = useState(0);
@@ -720,7 +720,7 @@ export function TicketDetails({
                 userMap={ticket.userMap || {}}
                 contactMap={ticket.contactMap || {}}
                 currentUser={currentUser}
-                activeTab={activeTab === 'Internal' ? t('messages.comments', 'Comments') : activeTab}
+                activeTab={activeTab === 'internal' ? 'all-comments' : activeTab}
                 hideInternalTab={true}
                 isEditing={isEditing}
                 currentComment={currentComment}
@@ -728,7 +728,7 @@ export function TicketDetails({
                 onNewCommentContentChange={handleNewCommentContentChange}
                 onAddNewComment={handleAddNewComment}
                 onTabChange={(tab) => {
-                  if (tab !== 'Internal') {
+                  if (tab !== 'internal') {
                     setActiveTab(tab);
                   }
                 }}

@@ -8,27 +8,28 @@ import InteractionTypesSettings from './InteractionTypeSettings';
 import InteractionStatusSettings from './InteractionStatusSettings';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
+const INTERACTION_TAB_IDS = ['interaction-types', 'interaction-statuses'] as const;
+const DEFAULT_INTERACTION_TAB = 'interaction-types';
+
 const InteractionSettings = (): React.JSX.Element => {
   const { t } = useTranslation('msp/settings');
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section');
 
-  // Map URL slugs to tab labels
-  const sectionToLabelMap: Record<string, string> = {
-    'interaction-types': 'Interaction Types',
-    'interaction-statuses': 'Interaction Statuses'
-  };
-
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
-    const initialLabel = sectionParam ? sectionToLabelMap[sectionParam.toLowerCase()] : undefined;
-    return initialLabel || 'Interaction Types';
+    const requestedTab = sectionParam?.toLowerCase();
+    return requestedTab && INTERACTION_TAB_IDS.includes(requestedTab as typeof INTERACTION_TAB_IDS[number])
+      ? requestedTab
+      : DEFAULT_INTERACTION_TAB;
   });
 
   // Update active tab when URL parameter changes
   useEffect(() => {
-    const currentLabel = sectionParam ? sectionToLabelMap[sectionParam.toLowerCase()] : undefined;
-    const targetTab = currentLabel || 'Interaction Types';
+    const requestedTab = sectionParam?.toLowerCase();
+    const targetTab = requestedTab && INTERACTION_TAB_IDS.includes(requestedTab as typeof INTERACTION_TAB_IDS[number])
+      ? requestedTab
+      : DEFAULT_INTERACTION_TAB;
     if (targetTab !== activeTab) {
       setActiveTab(targetTab);
     }
@@ -36,29 +37,23 @@ const InteractionSettings = (): React.JSX.Element => {
 
   const tabs = [
     {
+      id: 'interaction-types',
       label: "Interaction Types",
       content: <InteractionTypesSettings />
     },
     {
+      id: 'interaction-statuses',
       label: "Interaction Statuses",
       content: <InteractionStatusSettings />
     }
   ];
 
-  const updateURL = (tabLabel: string) => {
-    // Map tab labels back to URL slugs
-    const labelToSlugMap: Record<string, string> = Object.entries(sectionToLabelMap).reduce((acc, [slug, label]) => {
-      acc[label] = slug;
-      return acc;
-    }, {} as Record<string, string>);
-
-    const urlSlug = labelToSlugMap[tabLabel];
-
+  const updateURL = (tabId: string) => {
     // Build new URL with tab and section parameters
     const currentSearchParams = new URLSearchParams(window.location.search);
 
-    if (urlSlug && urlSlug !== 'interaction-types') {
-      currentSearchParams.set('section', urlSlug);
+    if (tabId !== DEFAULT_INTERACTION_TAB) {
+      currentSearchParams.set('section', tabId);
     } else {
       currentSearchParams.delete('section');
     }
@@ -77,9 +72,9 @@ const InteractionSettings = (): React.JSX.Element => {
       <CustomTabs
         tabs={tabs}
         defaultTab={activeTab}
-        onTabChange={(tab) => {
-          setActiveTab(tab);
-          updateURL(tab);
+        onTabChange={(tabId) => {
+          setActiveTab(tabId);
+          updateURL(tabId);
         }}
       />
     </div>

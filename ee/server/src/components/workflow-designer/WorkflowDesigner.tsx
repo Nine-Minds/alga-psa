@@ -283,22 +283,22 @@ type WorkflowDesignerProps = {
   isNew?: boolean;
 };
 
-type ControlPanelTab = 'Schedules' | 'Runs' | 'Events' | 'Event Catalog' | 'Dead Letter';
+type ControlPanelTab = 'schedules' | 'runs' | 'events' | 'event-catalog' | 'dead-letter';
 
 const mapSectionToControlPanelTab = (section: string | null, canAdmin: boolean): ControlPanelTab => {
   const raw = (section ?? '').trim().toLowerCase();
-  if (raw === 'schedules') return 'Schedules';
-  if (raw === 'events') return 'Events';
-  if (raw === 'event-catalog' || raw === 'events-catalog' || raw === 'event_catalog') return 'Event Catalog';
-  if ((raw === 'dead-letter' || raw === 'deadletter' || raw === 'dead_letter') && canAdmin) return 'Dead Letter';
-  return 'Runs';
+  if (raw === 'schedules') return 'schedules';
+  if (raw === 'events') return 'events';
+  if (raw === 'event-catalog' || raw === 'events-catalog' || raw === 'event_catalog') return 'event-catalog';
+  if ((raw === 'dead-letter' || raw === 'deadletter' || raw === 'dead_letter') && canAdmin) return 'dead-letter';
+  return 'runs';
 };
 
 const mapControlPanelTabToSection = (tab: string): string => {
-  if (tab === 'Schedules') return 'schedules';
-  if (tab === 'Events') return 'events';
-  if (tab === 'Event Catalog') return 'event-catalog';
-  if (tab === 'Dead Letter') return 'dead-letter';
+  if (tab === 'schedules') return 'schedules';
+  if (tab === 'events') return 'events';
+  if (tab === 'event-catalog') return 'event-catalog';
+  if (tab === 'dead-letter') return 'dead-letter';
   return 'runs';
 };
 
@@ -1608,12 +1608,12 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     }
   }, [designerFloatAnchorRect, isDesignerSidebarResizing, stopDesignerSidebarResize]);
 
-  const handleControlPanelTabChange = useCallback((nextTabLabel: string) => {
-    setActiveTab(nextTabLabel);
+  const handleControlPanelTabChange = useCallback((nextTabId: string) => {
+    setActiveTab(nextTabId);
 
     if (mode !== 'control-panel') return;
 
-    const section = mapControlPanelTabToSection(nextTabLabel);
+    const section = mapControlPanelTabToSection(nextTabId);
     const params = new URLSearchParams(searchParamsString);
     if (section === 'runs') {
       params.delete('section');
@@ -4328,7 +4328,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       }))}
       workflowStatusById={runStatusByWorkflow}
       workflowRunCountById={runCountByWorkflow}
-      isActive={activeTab === 'Runs'}
+      isActive={activeTab === 'runs'}
       canAdmin={canAdmin}
       canManage={canManage}
     />
@@ -4336,14 +4336,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
   const eventListContent = (
     <WorkflowEventList
-      isActive={activeTab === 'Events'}
+      isActive={activeTab === 'events'}
       canAdmin={canAdmin}
     />
   );
 
   const deadLetterContent = (
     <WorkflowDeadLetterQueue
-      isActive={activeTab === 'Dead Letter'}
+      isActive={activeTab === 'dead-letter'}
       canAdmin={canAdmin}
     />
   );
@@ -4378,11 +4378,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const isEditorDesignerMode = mode === 'editor-designer';
 
   const controlPanelTabs = [
-    { label: 'Schedules', content: schedulesContent },
-    { label: 'Runs', content: runListContent },
-    { label: 'Events', content: eventListContent },
-    { label: 'Event Catalog', content: eventCatalogContent },
-    ...(canAdmin ? [{ label: 'Dead Letter', content: deadLetterContent }] : [])
+    { id: 'schedules', label: 'Schedules', content: schedulesContent },
+    { id: 'runs', label: 'Runs', content: runListContent },
+    { id: 'events', label: 'Events', content: eventListContent },
+    { id: 'event-catalog', label: 'Event Catalog', content: eventCatalogContent },
+    ...(canAdmin ? [{ id: 'dead-letter', label: 'Dead Letter', content: deadLetterContent }] : [])
   ];
 
   const pageTitle =

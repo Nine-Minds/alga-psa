@@ -1037,6 +1037,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
   const tabContent = useMemo(() => [
     {
+      id: 'details',
       label: "Details",
       content: (
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
@@ -1346,6 +1347,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       )
     },
     {
+      id: 'tickets',
       label: "Tickets",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -1369,10 +1371,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       )
     },
     {
+      id: 'assets',
       label: "Assets",
       content: renderClientAssets({ clientId: client.client_id }),
     },
     {
+      id: 'billing',
       label: "Billing",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -1385,6 +1389,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       )
     },
     {
+      id: 'billing-dashboard',
       label: "Billing Dashboard",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -1393,6 +1398,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       )
     },
     {
+      id: 'contacts',
       label: "Contacts",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -1404,6 +1410,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       )
     },
     {
+      id: 'documents',
       label: "Documents",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -1426,6 +1433,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       )
     },
     {
+      id: 'tax-settings',
       label: "Tax Settings",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -1436,6 +1444,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       )
     },
     {
+      id: 'additional-info',
       label: "Additional Info",
       content: (
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
@@ -1498,6 +1507,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       )
     },
     {
+      id: 'notes',
       label: "Notes",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -1509,6 +1519,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       )
     },
     {
+      id: 'interactions',
       label: "Interactions",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -1552,16 +1563,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     memoizedRouter,
     interactions
   ]);
-
-  // Find the matching tab label case-insensitively
-  const findTabLabel = useCallback((urlTab: string | null | undefined): string => {
-    if (!urlTab) return 'Details';
-    
-    const matchingTab = tabContent.find(
-      tab => tab.label.toLowerCase() === urlTab.toLowerCase()
-    );
-    return matchingTab?.label || 'Details';
-  }, [tabContent]);
 
   return (
     <ReflectionContainer id={id} label="Client Details">
@@ -1660,9 +1661,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       <div>
         <CustomTabs
           tabs={quickView ? [tabContent[0]] : tabContent}
-          // In quick view we only render the Details tab. Force default to Details
+          // In quick view we only render the Details tab. Force default to details
           // to avoid a mismatch with the current page's ?tab= query (e.g. "Tickets").
-          defaultTab={quickView ? 'Details' : findTabLabel(searchParams?.get('tab'))}
+          defaultTab={quickView ? 'details' : searchParams?.get('tab')?.toLowerCase() || 'details'}
           onTabChange={handleTabChange}
         />
 

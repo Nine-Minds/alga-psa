@@ -17,26 +17,12 @@ import type { ImportJobDetails, ImportJobItemRecord, ImportJobRecord } from '@/t
 import { useImportActions } from './hooks/useImportActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
-// URL slug keys for section mapping (labels are resolved inside the component via i18n)
 const SECTION_SLUGS = ['asset-import', 'asset-export', 'templates-automation'] as const;
 
 const ImportExportSettings = (): React.JSX.Element => {
   const { t } = useTranslation('msp/settings');
   const searchParams = useSearchParams();
 
-  // Map URL slugs to tab labels
-  const sectionToLabelMap: Record<string, string> = {
-    'asset-import': 'Asset Import',
-    'asset-export': 'Asset Export',
-    'templates-automation': 'Templates & Automation',
-  };
-
-  // Map tab labels back to URL slugs
-  const labelToSlugMap: Record<string, string> = {
-    'Asset Import': 'asset-import',
-    'Asset Export': 'asset-export',
-    'Templates & Automation': 'templates-automation',
-  };
   const sectionParam = searchParams?.get('section');
 
   const {
@@ -64,27 +50,29 @@ const ImportExportSettings = (): React.JSX.Element => {
 
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
-    const initialLabel = sectionParam ? sectionToLabelMap[sectionParam.toLowerCase()] : undefined;
-    return initialLabel || 'Asset Import';
+    const requestedTab = sectionParam?.toLowerCase();
+    return requestedTab && SECTION_SLUGS.includes(requestedTab as typeof SECTION_SLUGS[number])
+      ? requestedTab
+      : SECTION_SLUGS[0];
   });
 
   // Update active tab when URL parameter changes
   useEffect(() => {
-    const currentLabel = sectionParam ? sectionToLabelMap[sectionParam.toLowerCase()] : undefined;
-    const targetTab = currentLabel || 'Asset Import';
+    const requestedTab = sectionParam?.toLowerCase();
+    const targetTab = requestedTab && SECTION_SLUGS.includes(requestedTab as typeof SECTION_SLUGS[number])
+      ? requestedTab
+      : SECTION_SLUGS[0];
     if (targetTab !== activeTab) {
       setActiveTab(targetTab);
     }
   }, [sectionParam, activeTab]);
 
-  const updateURL = useCallback((tabLabel: string) => {
-    const urlSlug = labelToSlugMap[tabLabel];
-
+  const updateURL = useCallback((tabId: string) => {
     // Build new URL preserving existing parameters
     const currentSearchParams = new URLSearchParams(window.location.search);
 
-    if (urlSlug && urlSlug !== 'asset-import') {
-      currentSearchParams.set('section', urlSlug);
+    if (tabId !== SECTION_SLUGS[0]) {
+      currentSearchParams.set('section', tabId);
     } else {
       currentSearchParams.delete('section');
     }
@@ -98,9 +86,9 @@ const ImportExportSettings = (): React.JSX.Element => {
     window.history.pushState({}, '', newUrl);
   }, []);
 
-  const handleTabChange = useCallback((tab: string) => {
-    setActiveTab(tab);
-    updateURL(tab);
+  const handleTabChange = useCallback((tabId: string) => {
+    setActiveTab(tabId);
+    updateURL(tabId);
   }, [updateURL]);
 
   const [file, setFile] = useState<File | null>(null);
@@ -205,6 +193,7 @@ const ImportExportSettings = (): React.JSX.Element => {
 
   const tabs: TabContent[] = useMemo(() => [
     {
+      id: 'asset-import',
       label: "Asset Import",
       content: (
         <div className="space-y-6">
@@ -393,6 +382,7 @@ const ImportExportSettings = (): React.JSX.Element => {
       ),
     },
     {
+      id: 'asset-export',
       label: "Asset Export",
       content: (
         <div className="space-y-4">
@@ -405,6 +395,7 @@ const ImportExportSettings = (): React.JSX.Element => {
       ),
     },
     {
+      id: 'templates-automation',
       label: "Templates & Automation",
       content: (
         <div className="space-y-4">
@@ -597,6 +588,7 @@ const ImportJobDetailsView = ({ details }: { details: ImportJobDetails }) => {
   const detailTabs: TabContent[] = useMemo(
     () => [
       {
+        id: 'summary',
         label: "Summary",
         content: (
           <div className="space-y-4">
@@ -621,16 +613,19 @@ const ImportJobDetailsView = ({ details }: { details: ImportJobDetails }) => {
         )
       },
       {
+        id: 'records',
         label: `Records (${allItems.length})`,
         content: (
           <JobRecordsTable items={records} hasMore={hasMoreRecords} />
         )
       },
       {
+        id: 'errors',
         label: `Errors (${errorItems.length})`,
         content: <JobErrorsTable items={errorItems} />
       },
       {
+        id: 'duplicates',
         label: `Duplicates (${duplicateItems.length})`,
         content: <JobDuplicatesTable items={duplicateItems} />
       }

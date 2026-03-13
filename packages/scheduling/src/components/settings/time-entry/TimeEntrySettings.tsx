@@ -7,46 +7,32 @@ import CustomTabs, { TabContent } from "@alga-psa/ui/components/CustomTabs";
 import TimePeriodSettings from './TimePeriodSettings';
 import TimePeriodList from './TimePeriodList';
 
+const DEFAULT_TAB = 'time-period-settings';
+
 const TimeEntrySettings: React.FC = () => {
   const searchParams = useSearchParams();
-
-  // Map URL slugs to tab labels
-  const subtabToLabelMap: Record<string, string> = {
-    'time-period-settings': 'Time Period Settings',
-    'time-periods': 'Time Periods'
-  };
 
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
     const subtab = searchParams?.get('subtab');
-    const initialLabel = subtab ? subtabToLabelMap[subtab.toLowerCase()] : undefined;
-    return initialLabel || 'Time Period Settings';
+    return subtab?.toLowerCase() || DEFAULT_TAB;
   });
 
   // Update active tab when URL parameter changes
   useEffect(() => {
     const subtab = searchParams?.get('subtab');
-    const currentLabel = subtab ? subtabToLabelMap[subtab.toLowerCase()] : undefined;
-    const targetTab = currentLabel || 'Time Period Settings';
+    const targetTab = subtab?.toLowerCase() || DEFAULT_TAB;
     if (targetTab !== activeTab) {
       setActiveTab(targetTab);
     }
   }, [searchParams, activeTab]);
 
-  const updateURL = (tabLabel: string) => {
-    // Map tab labels back to URL slugs
-    const labelToSlugMap: Record<string, string> = Object.entries(subtabToLabelMap).reduce((acc, [slug, label]) => {
-      acc[label] = slug;
-      return acc;
-    }, {} as Record<string, string>);
-
-    const urlSlug = labelToSlugMap[tabLabel];
-
+  const updateURL = (tabId: string) => {
     // Build new URL with tab and subtab parameters
     const currentSearchParams = new URLSearchParams(window.location.search);
 
-    if (urlSlug && urlSlug !== 'time-period-settings') {
-      currentSearchParams.set('subtab', urlSlug);
+    if (tabId !== DEFAULT_TAB) {
+      currentSearchParams.set('subtab', tabId);
     } else {
       currentSearchParams.delete('subtab');
     }
@@ -62,11 +48,13 @@ const TimeEntrySettings: React.FC = () => {
 
   const tabContent: TabContent[] = [
     {
+      id: 'time-period-settings',
       label: "Time Period Settings",
       icon: <Settings className="w-4 h-4" />,
       content: <TimePeriodSettings />,
     },
     {
+      id: 'time-periods',
       label: "Time Periods",
       icon: <Calendar className="w-4 h-4" />,
       content: <TimePeriodList />,

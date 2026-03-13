@@ -1114,14 +1114,17 @@ export default function TaskForm({
 
   const handleAddAgent = async (userId: string) => {
     try {
-      if (task?.task_id && assignedUser) {
-        // Existing task with a primary agent: save immediately
+      const primaryChanged = task?.assigned_to !== assignedUser;
+      if (task?.task_id && assignedUser && !primaryChanged) {
+        // Existing task with unchanged primary agent: save immediately
         await addTaskResourceAction(task.task_id, userId);
         const updatedResources = await getTaskResourcesAction(task.task_id);
         setTaskResources(updatedResources);
         toast.success('Agent added successfully');
       } else {
-        // New task OR existing task without primary agent: store temporarily
+        // New task, no primary agent, or primary has changed: store temporarily
+        // When primary has changed, we must defer saving to avoid CHECK constraint
+        // violation (assigned_to != additional_user_id) since DB still has old primary
         const selectedUser = users.find(u => u.user_id === userId);
         if (selectedUser) {
           const tempResource = {

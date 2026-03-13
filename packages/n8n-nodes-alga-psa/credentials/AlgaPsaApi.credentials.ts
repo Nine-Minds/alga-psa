@@ -14,7 +14,7 @@ export class AlgaPsaApi implements ICredentialType {
       type: 'string',
       default: '',
       required: true,
-      placeholder: 'https://api.algapsa.com',
+      placeholder: 'https://algapsa.com',
       description: 'Base URL for your Alga PSA instance',
     },
     {

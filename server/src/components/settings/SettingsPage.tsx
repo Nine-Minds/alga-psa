@@ -6,7 +6,7 @@
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle, KeyRound, FlaskConical } from 'lucide-react';
-import CustomTabs, { TabContent } from "@alga-psa/ui/components/CustomTabs";
+import type { TabContent } from "@alga-psa/ui/components/CustomTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 import GeneralSettings from './general/GeneralSettings';
 import UserManagement from './general/UserManagement';
@@ -43,7 +43,6 @@ import ImportExportSettings from '@/components/settings/import-export/ImportExpo
 import ExtensionManagement from '@/components/settings/extensions/ExtensionManagement';
 // Extensions are only available in Enterprise Edition
 import { EmailSettings } from '@alga-psa/integrations/email/settings/entry';
-import Link from 'next/link';
 // Removed import: import { getCurrentUser } from '@alga-psa/users/actions';
 import { ProjectSettings } from '@alga-psa/projects/components';
 
@@ -82,49 +81,9 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   const canUseCipp = useTierFeature(TIER_FEATURES.CIPP);
   const canUseTeams = useTierFeature(TIER_FEATURES.TEAMS_INTEGRATION);
 
-  // Extensions dynamic imports moved to ExtensionManagement shared component
-
-  // Map URL slugs (kebab-case) to Tab Labels
-  const slugToLabelMap = useMemo<Record<string, string>>(() => ({
-    general: 'General',
-    'experimental-features': 'Experimental Features',
-    'client-portal': 'Client Portal',
-    users: 'Users',
-    teams: 'Teams',
-    ...(isMspI18nEnabled && { language: 'Language' }),
-    ticketing: 'Ticketing',
-    projects: 'Projects',
-
-    interactions: 'Interactions',
-    notifications: 'Notifications',
-    'time-entry': 'Time Entry',
-    billing: 'Billing',
-    secrets: 'Secrets',
-    'import-export': 'Import/Export',
-    email: 'Email',
-    integrations: 'Integrations',
-    ...(isEEAvailable && { extensions: 'Extensions' }) // Only add if EE is available
-  }), [isEEAvailable, isMspI18nEnabled]);
-
-  const initialTabLabel = useMemo(() => {
-    const mappedLabel = tabParam
-      ? slugToLabelMap[tabParam.toLowerCase()]
-      : undefined;
-
-    return mappedLabel ?? 'General';
-  }, [tabParam, slugToLabelMap]);
-
-  // Initialize with URL-aware default so hydration stays aligned
-  const [activeTab, setActiveTab] = useState<string>(initialTabLabel);
-
-  useEffect(() => {
-    const targetLabel = initialTabLabel;
-
-    setActiveTab((prev) => (prev === targetLabel ? prev : targetLabel));
-  }, [initialTabLabel]);
-
   const baseTabContent: TabContent[] = [
     {
+      id: 'general',
       label: "General",
       icon: Settings,
       content: (
@@ -142,6 +101,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       ),
     },
     {
+      id: 'experimental-features',
       label: "Experimental Features",
       icon: FlaskConical,
       content: (
@@ -159,16 +119,19 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       ),
     },
     {
+      id: 'client-portal',
       label: "Client Portal",
       icon: Globe,
       content: <ClientPortalSettings />,
     },
     {
+      id: 'users',
       label: "Users",
       icon: UserCog,
       content: <UserManagement />,
     },
     {
+      id: 'teams',
       label: "Teams",
       icon: Users,
       content: (
@@ -186,11 +149,13 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       ),
     },
     ...(isMspI18nEnabled ? [{
+      id: 'language',
       label: "Language",
       icon: Globe,
       content: <MspLanguageSettings />,
     }] : []),
     {
+      id: 'ticketing',
       label: "Ticketing",
       icon: MessageSquare,
       content: (
@@ -200,12 +165,14 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       ),
     },
     {
+      id: 'projects',
       label: "Projects",
       icon: Layers,
       content: <ProjectSettings />,
     },
 
     {
+      id: 'interactions',
       label: "Interactions",
       icon: Handshake,
       content: (
@@ -215,11 +182,13 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       ),
     },
     {
+      id: 'notifications',
       label: "Notifications",
       icon: Bell,
       content: <NotificationsTab />,
     },
     {
+      id: 'time-entry',
       label: "Time Entry",
       icon: Clock,
       content: (
@@ -235,6 +204,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       ),
     },
     {
+      id: 'billing',
       label: "Billing",
       icon: CreditCard,
       content: (
@@ -250,6 +220,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       ),
     },
     {
+      id: 'secrets',
       label: "Secrets",
       icon: KeyRound,
       content: (
@@ -267,11 +238,13 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       ),
     },
     {
+      id: 'import-export',
       label: "Import/Export",
       icon: Download,
       content: <ImportExportSettings />,
     },
     {
+      id: 'email',
       label: "Email",
       icon: Mail,
       content: (
@@ -288,6 +261,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     },
     {
       // Integrations tab with category-based organization
+      id: 'integrations',
       label: "Integrations",
       icon: Plug,
       content: <IntegrationsSettingsPage canUseEntraSync={canUseEntraSync} canUseCipp={canUseCipp} canUseTeams={canUseTeams} />,
@@ -298,14 +272,32 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   // - EE: full Manage + Install sub-tabs
   // - OSS: enterprise-only stub
   const extensionsTab: TabContent = {
+    id: 'extensions',
     label: "Extensions",
     icon: Puzzle,
     content: <ExtensionManagement />,
   };
 
   // Create a map of tab content by label for easy lookup
-  const allTabs = [...baseTabContent, extensionsTab];
-  const activeTabContent = allTabs.find(tab => tab.label === activeTab);
+  const allTabs = useMemo(() => [...baseTabContent, extensionsTab], [baseTabContent, extensionsTab]);
+
+  const initialTabId = useMemo(() => {
+    const requestedTab = tabParam?.toLowerCase();
+
+    if (requestedTab && allTabs.some(tab => tab.id === requestedTab)) {
+      return requestedTab;
+    }
+
+    return 'general';
+  }, [allTabs, tabParam]);
+
+  const [activeTab, setActiveTab] = useState<string>(initialTabId);
+
+  useEffect(() => {
+    setActiveTab((prev) => (prev === initialTabId ? prev : initialTabId));
+  }, [initialTabId]);
+
+  const activeTabContent = allTabs.find(tab => tab.id === activeTab);
 
   return (
     <div className="h-full overflow-y-auto p-6">

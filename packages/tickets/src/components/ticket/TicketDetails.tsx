@@ -300,7 +300,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             styles: {}
         }]
     }]);
-    const [activeTab, setActiveTab] = useState('Comments');
+    const [activeTab, setActiveTab] = useState('all-comments');
     const [isEditing, setIsEditing] = useState(false);
     const [currentComment, setCurrentComment] = useState<IComment | null>(null);
 

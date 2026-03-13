@@ -14,40 +14,29 @@ interface InvoicingHubProps {
 
 type InvoicingSubTab = 'generate' | 'drafts' | 'finalized';
 
+const INVOICING_SUBTABS: readonly InvoicingSubTab[] = ['generate', 'drafts', 'finalized'];
+
 const InvoicingHub: React.FC<InvoicingHubProps> = ({ initialServices }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   // Get active sub-tab from URL or default to 'generate'
-  const activeSubTab = (searchParams?.get('subtab') as InvoicingSubTab) || 'generate';
-
-  // Map URL subtab values to CustomTabs label values
-  const subtabToLabel: Record<InvoicingSubTab, string> = {
-    'generate': 'Generate',
-    'drafts': 'Drafts',
-    'finalized': 'Finalized'
-  };
-
-  const labelToSubtab: Record<string, InvoicingSubTab> = {
-    'Generate': 'generate',
-    'Drafts': 'drafts',
-    'Finalized': 'finalized'
-  };
+  const requestedSubtab = searchParams?.get('subtab');
+  const activeSubTab = requestedSubtab && INVOICING_SUBTABS.includes(requestedSubtab as InvoicingSubTab)
+    ? (requestedSubtab as InvoicingSubTab)
+    : 'generate';
 
   // Trigger for refreshing data across tabs
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const handleTabChange = (value: string) => {
-    const targetSubtab = labelToSubtab[value] || value.toLowerCase();
-
-    if (targetSubtab === activeSubTab) {
+  const handleTabChange = (tabId: string) => {
+    if (tabId === activeSubTab) {
       return;
     }
 
     const params = new URLSearchParams(searchParams?.toString() ?? '');
     params.set('tab', 'invoicing');
-    // Convert label back to URL format
-    params.set('subtab', targetSubtab);
+    params.set('subtab', tabId);
     router.push(`/msp/billing?${params.toString()}`);
   };
 
@@ -64,6 +53,7 @@ const InvoicingHub: React.FC<InvoicingHubProps> = ({ initialServices }) => {
       <CustomTabs
         tabs={[
           {
+            id: 'generate',
             label: 'Generate',
             content: (
               <GenerateTab
@@ -74,6 +64,7 @@ const InvoicingHub: React.FC<InvoicingHubProps> = ({ initialServices }) => {
             )
           },
           {
+            id: 'drafts',
             label: 'Drafts',
             content: (
               <DraftsTab
@@ -83,6 +74,7 @@ const InvoicingHub: React.FC<InvoicingHubProps> = ({ initialServices }) => {
             )
           },
           {
+            id: 'finalized',
             label: 'Finalized',
             content: (
               <FinalizedTab
@@ -92,7 +84,7 @@ const InvoicingHub: React.FC<InvoicingHubProps> = ({ initialServices }) => {
             )
           }
         ]}
-        defaultTab={subtabToLabel[activeSubTab]}
+        defaultTab={activeSubTab}
         onTabChange={handleTabChange}
       />
     </div>

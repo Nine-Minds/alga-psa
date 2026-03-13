@@ -34,8 +34,8 @@ describe('calendarAvailability', () => {
   });
 
   it('falls back CE profile tab requests while preserving the Calendar tab in EE', () => {
-    expect(resolveUserProfileTab(CALENDAR_PROFILE_TAB, false)).toBe('Profile');
+    expect(resolveUserProfileTab(CALENDAR_PROFILE_TAB, false)).toBe('profile');
     expect(resolveUserProfileTab(CALENDAR_PROFILE_TAB, true)).toBe(CALENDAR_PROFILE_TAB);
-    expect(resolveUserProfileTab('Notifications', false)).toBe('Notifications');
+    expect(resolveUserProfileTab('notifications', false)).toBe('notifications');
   });
 });

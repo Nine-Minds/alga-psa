@@ -14,8 +14,8 @@
       "backgroundColor": "#8a4dea"
     },
     "ios": {
-      "bundleIdentifier": "com.alga.psa.mobile",
-      "buildNumber": "5",
+      "bundleIdentifier": "com.nineminds.algapsa",
+      "buildNumber": "6",
       "supportsTablet": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false

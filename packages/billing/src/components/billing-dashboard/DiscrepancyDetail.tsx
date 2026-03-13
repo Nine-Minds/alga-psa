@@ -336,6 +336,7 @@ const DiscrepancyDetail: React.FC = () => {
   // Prepare tabs content
   const tabsContent: TabContent[] = [
     {
+      id: 'transactions',
       label: 'Transaction History',
       content: (
         <Card>
@@ -446,6 +447,7 @@ const DiscrepancyDetail: React.FC = () => {
       )
     },
     {
+      id: 'credit-tracking',
       label: 'Credit Tracking Entries',
       content: (
         <Card>
@@ -575,6 +577,7 @@ const DiscrepancyDetail: React.FC = () => {
   // Add issue details tab if this is a credit tracking issue
   if (isCreditTrackingIssue) {
     tabsContent.push({
+      id: 'issue-details',
       label: 'Issue Details',
       content: (
         <Card>
@@ -908,7 +911,7 @@ const DiscrepancyDetail: React.FC = () => {
       
       <CustomTabs
         tabs={tabsContent}
-        defaultTab={tabsContent[0].label}
+        defaultTab={tabsContent[0].id}
         onTabChange={(tab) => setActiveTab(tab)}
       />
     </div>

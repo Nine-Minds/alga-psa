@@ -17,19 +17,8 @@ import { useDrawer } from '@alga-psa/ui';
 import { ClientNotificationCard } from './ClientNotificationCard';
 import { ClientNotificationFiltersDialog } from './ClientNotificationFiltersDialog';
 
-// Map URL slugs to tab keys (language-independent)
-const TAB_SLUG_MAP: Record<string, string> = {
-  'unread': 'unread',
-  'all': 'all',
-  'read': 'read'
-};
-
-// Map tab keys to URL slugs
-const TAB_KEY_TO_SLUG: Record<string, string> = {
-  'unread': 'unread',
-  'all': 'all',
-  'read': 'read'
-};
+const NOTIFICATION_TAB_IDS = ['unread', 'all', 'read'] as const;
+const DEFAULT_NOTIFICATION_TAB = 'unread';
 
 export function ClientNotificationsList() {
   const { t: tProfile } = useTranslation('client-portal');
@@ -42,30 +31,14 @@ export function ClientNotificationsList() {
   const allTabLabel = tProfile('notifications.tabs.all', 'All');
   const readTabLabel = tProfile('notifications.tabs.read', 'Read');
 
-  // Map tab keys to translated labels
-  const tabKeyToLabel: Record<string, string> = useMemo(() => ({
-    'unread': unreadTabLabel,
-    'all': allTabLabel,
-    'read': readTabLabel
-  }), [unreadTabLabel, allTabLabel, readTabLabel]);
-
-  // Map translated labels to tab keys
-  const labelToTabKey: Record<string, string> = useMemo(() => ({
-    [unreadTabLabel]: 'unread',
-    [allTabLabel]: 'all',
-    [readTabLabel]: 'read'
-  }), [unreadTabLabel, allTabLabel, readTabLabel]);
-
   // Determine initial tab from URL or default to "unread"
   const initialTab = useMemo(() => {
-    if (tabParam) {
-      const tabKey = TAB_SLUG_MAP[tabParam.toLowerCase()];
-      if (tabKey && tabKeyToLabel[tabKey]) {
-        return tabKeyToLabel[tabKey];
-      }
+    const requestedTab = tabParam?.toLowerCase();
+    if (requestedTab && NOTIFICATION_TAB_IDS.includes(requestedTab as typeof NOTIFICATION_TAB_IDS[number])) {
+      return requestedTab;
     }
-    return unreadTabLabel; // Default to Unread
-  }, [tabParam, tabKeyToLabel, unreadTabLabel]);
+    return DEFAULT_NOTIFICATION_TAB;
+  }, [tabParam]);
 
   const [activities, setActivities] = useState<NotificationActivity[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,13 +48,12 @@ export function ClientNotificationsList() {
   const [activeTab, setActiveTab] = useState<string>(initialTab);
   const [notificationFilters, setNotificationFilters] = useState<Partial<ActivityFilters>>(() => {
     // Set initial filters based on URL tab parameter
-    if (tabParam) {
-      const tabKey = TAB_SLUG_MAP[tabParam.toLowerCase()];
-      if (tabKey === 'read') {
+    const requestedTab = tabParam?.toLowerCase();
+    if (requestedTab === 'read') {
         return { isClosed: true };
-      } else if (tabKey === 'all') {
+    }
+    if (requestedTab === 'all') {
         return {};
-      }
     }
     return { isClosed: false }; // Default: show unread only
   });
@@ -89,27 +61,25 @@ export function ClientNotificationsList() {
 
   // Update active tab when URL parameter changes
   useEffect(() => {
-    if (tabParam) {
-      const tabKey = TAB_SLUG_MAP[tabParam.toLowerCase()];
-      if (tabKey && tabKeyToLabel[tabKey]) {
-        const targetTab = tabKeyToLabel[tabKey];
-        if (targetTab !== activeTab) {
-          setActiveTab(targetTab);
-          // Also update filters based on the tab
-          if (tabKey === 'read') {
-            setNotificationFilters(prev => ({ ...prev, isClosed: true }));
-          } else if (tabKey === 'all') {
-            setNotificationFilters(prev => {
-              const { isClosed, ...rest } = prev;
-              return rest;
-            });
-          } else {
-            setNotificationFilters(prev => ({ ...prev, isClosed: false }));
-          }
-        }
+    const requestedTab = tabParam?.toLowerCase();
+    const targetTab = requestedTab && NOTIFICATION_TAB_IDS.includes(requestedTab as typeof NOTIFICATION_TAB_IDS[number])
+      ? requestedTab
+      : DEFAULT_NOTIFICATION_TAB;
+
+    if (targetTab !== activeTab) {
+      setActiveTab(targetTab);
+      if (targetTab === 'read') {
+        setNotificationFilters(prev => ({ ...prev, isClosed: true }));
+      } else if (targetTab === 'all') {
+        setNotificationFilters(prev => {
+          const { isClosed, ...rest } = prev;
+          return rest;
+        });
+      } else {
+        setNotificationFilters(prev => ({ ...prev, isClosed: false }));
       }
     }
-  }, [tabParam, tabKeyToLabel, activeTab]);
+  }, [tabParam, activeTab]);
 
   // Fetch initial activities
   const loadActivities = useCallback(async (filters: Partial<ActivityFilters>) => {
@@ -197,17 +167,17 @@ export function ClientNotificationsList() {
   };
 
   // Handle tab change to update filters and URL
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
 
     // Update filters based on tab
-    if (tab === unreadTabLabel) {
+    if (tabId === 'unread') {
       // Show unread notifications
       setNotificationFilters(prev => ({ ...prev, isClosed: false }));
-    } else if (tab === readTabLabel) {
+    } else if (tabId === 'read') {
       // Show read notifications
       setNotificationFilters(prev => ({ ...prev, isClosed: true }));
-    } else if (tab === allTabLabel) {
+    } else if (tabId === 'all') {
       // Show all notifications
       const { isClosed, ...rest } = notificationFilters;
       setNotificationFilters(rest);
@@ -215,14 +185,13 @@ export function ClientNotificationsList() {
 
     // Update URL with the new tab
     if (typeof window !== 'undefined') {
-      const tabKey = labelToTabKey[tab];
       const params = new URLSearchParams(window.location.search);
 
-      if (tabKey === 'unread') {
+      if (tabId === DEFAULT_NOTIFICATION_TAB) {
         // Default tab - remove from URL
         params.delete('tab');
-      } else if (tabKey) {
-        params.set('tab', TAB_KEY_TO_SLUG[tabKey]);
+      } else {
+        params.set('tab', tabId);
       }
 
       const basePath = window.location.pathname;
@@ -275,14 +244,17 @@ export function ClientNotificationsList() {
 
   const tabContent = [
     {
+      id: 'unread',
       label: unreadTabLabel,
       content: renderNotifications()
     },
     {
+      id: 'all',
       label: allTabLabel,
       content: renderNotifications()
     },
     {
+      id: 'read',
       label: readTabLabel,
       content: renderNotifications()
     }

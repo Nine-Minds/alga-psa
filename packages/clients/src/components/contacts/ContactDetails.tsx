@@ -671,6 +671,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
 
   const tabContent = [
     {
+      id: 'details',
       label: "Details",
       content: (
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
@@ -821,6 +822,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       )
     },
     {
+      id: 'tickets',
       label: "Tickets",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -846,6 +848,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       )
     },
     {
+      id: 'documents',
       label: "Documents",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -866,6 +869,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       )
     },
     {
+      id: 'interactions',
       label: "Interactions",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -880,6 +884,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       )
     },
     {
+      id: 'notes',
       label: "Notes",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -891,6 +896,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       )
     },
     {
+      id: 'portal',
       label: "Portal",
       content: (
         <ContactPortalTab
@@ -900,16 +906,6 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       )
     }
   ];
-
-  // Find the matching tab label case-insensitively
-  const findTabLabel = (urlTab: string | null | undefined): string => {
-    if (!urlTab) return 'Details';
-    
-    const matchingTab = tabContent.find(
-      tab => tab.label.toLowerCase() === urlTab.toLowerCase()
-    );
-    return matchingTab?.label || 'Details';
-  };
 
   return (
     <ReflectionContainer id={id} label="Contact Details">
@@ -966,7 +962,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       <div>
         <CustomTabs
           tabs={quickView ? [tabContent[0]] : tabContent}
-          defaultTab={findTabLabel(searchParams?.get('tab'))}
+          defaultTab={searchParams?.get('tab')?.toLowerCase() || 'details'}
           onTabChange={handleTabChange}
         />
       </div>
