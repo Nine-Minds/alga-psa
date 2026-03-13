@@ -109,6 +109,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) F067 complete — P2: Added dedicated totals sections to both `QuoteForm.tsx` and `QuoteDetail.tsx`, surfacing subtotal, discounts, tax, and grand total with consistent currency formatting.
 - (2026-03-13) F066 complete — P2: `QuoteDetail.tsx` now loads `listQuoteVersions()` and renders version buttons for the whole revision chain, letting users hop between quote versions directly from the detail screen.
 - (2026-03-13) F065 complete — P2: Added `Quote.listVersions()` and `listQuoteVersions()` to resolve every quote revision in a root-based version chain ordered by `version`, ready for upcoming history UI work.
 - (2026-03-13) F064 complete — P2: Quote revisions now retain the original `quote_number`, while `listByTenant()` and `QuoteDetail.tsx` format versioned displays as `Q-XXXX vN` when `version > 1`.

@@ -567,7 +567,7 @@
   {
     "id": "F067",
     "description": "P2: Totals display — subtotal, discounts, tax, total in quote form and detail views",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2-FR6"
     ]
