@@ -2,745 +2,998 @@
   {
     "id": "F001",
     "description": "P1: Database migration — create `quotes` table with all fields including is_template boolean, indexes, and Citus-compatible composite keys",
-    "implemented": false,
-    "prdRefs": ["P1-FR1"]
+    "implemented": true,
+    "prdRefs": [
+      "P1-FR1"
+    ]
   },
   {
     "id": "F002",
     "description": "P1: Database migration — create `quote_items` table modeled on invoice_charges with is_optional, is_selected, is_recurring, phase fields",
     "implemented": false,
-    "prdRefs": ["P1-FR1"]
+    "prdRefs": [
+      "P1-FR1"
+    ]
   },
   {
     "id": "F003",
     "description": "P1: Database migration — create `quote_activities` table for audit trail",
     "implemented": false,
-    "prdRefs": ["P1-FR1"]
+    "prdRefs": [
+      "P1-FR1"
+    ]
   },
   {
     "id": "F004",
     "description": "P1: Add 'QUOTE' entity type to SharedNumberingService and seed next_number table with prefix='Q-', padding_length=4",
     "implemented": false,
-    "prdRefs": ["P1-FR2"]
+    "prdRefs": [
+      "P1-FR2"
+    ]
   },
   {
     "id": "F005",
     "description": "P1: TypeScript interfaces — IQuote, IQuoteItem, IQuoteActivity, QuoteStatus in packages/types/src/interfaces/quote.interfaces.ts",
     "implemented": false,
-    "prdRefs": ["P1-FR3"]
+    "prdRefs": [
+      "P1-FR3"
+    ]
   },
   {
     "id": "F006",
     "description": "P1: TypeScript view models — IQuoteWithClient, IQuoteListItem for list/detail views",
     "implemented": false,
-    "prdRefs": ["P1-FR3"]
+    "prdRefs": [
+      "P1-FR3"
+    ]
   },
   {
     "id": "F007",
     "description": "P1: Zod schemas — createQuoteSchema and updateQuoteSchema with field validation",
     "implemented": false,
-    "prdRefs": ["P1-FR4"]
+    "prdRefs": [
+      "P1-FR4"
+    ]
   },
   {
     "id": "F008",
     "description": "P1: Zod schemas — createQuoteItemSchema and updateQuoteItemSchema",
     "implemented": false,
-    "prdRefs": ["P1-FR4"]
+    "prdRefs": [
+      "P1-FR4"
+    ]
   },
   {
     "id": "F009",
     "description": "P1: Zod schema — status transition validation (only allow valid next statuses)",
     "implemented": false,
-    "prdRefs": ["P1-FR4", "P1-FR9"]
+    "prdRefs": [
+      "P1-FR4",
+      "P1-FR9"
+    ]
   },
   {
     "id": "F010",
     "description": "P1: Quote model — getById with tenant isolation and auto-expiration check",
     "implemented": false,
-    "prdRefs": ["P1-FR5"]
+    "prdRefs": [
+      "P1-FR5"
+    ]
   },
   {
     "id": "F011",
     "description": "P1: Quote model — getByNumber (for human-readable lookup)",
     "implemented": false,
-    "prdRefs": ["P1-FR5"]
+    "prdRefs": [
+      "P1-FR5"
+    ]
   },
   {
     "id": "F012",
     "description": "P1: Quote model — listByTenant with pagination, sorting, and status/client filtering",
     "implemented": false,
-    "prdRefs": ["P1-FR5"]
+    "prdRefs": [
+      "P1-FR5"
+    ]
   },
   {
     "id": "F013",
     "description": "P1: Quote model — listByClient for client-specific quote listing",
     "implemented": false,
-    "prdRefs": ["P1-FR5"]
+    "prdRefs": [
+      "P1-FR5"
+    ]
   },
   {
     "id": "F014",
     "description": "P1: Quote model — create (inserts quote row, generates quote_number, logs activity)",
     "implemented": false,
-    "prdRefs": ["P1-FR5"]
+    "prdRefs": [
+      "P1-FR5"
+    ]
   },
   {
     "id": "F015",
     "description": "P1: Quote model — update (validates status transition, updates fields, logs activity)",
     "implemented": false,
-    "prdRefs": ["P1-FR5"]
+    "prdRefs": [
+      "P1-FR5"
+    ]
   },
   {
     "id": "F016",
     "description": "P1: Quote model — delete via deleteEntityWithValidation: hard delete drafts with no business history, archive for others",
     "implemented": false,
-    "prdRefs": ["P1-FR5", "P1-FR19"]
+    "prdRefs": [
+      "P1-FR5",
+      "P1-FR19"
+    ]
   },
   {
     "id": "F017",
     "description": "P1: Quote model — auto-expiration: if valid_until < today and status is 'sent', set to 'expired' on read",
     "implemented": false,
-    "prdRefs": ["P1-FR5"]
+    "prdRefs": [
+      "P1-FR5"
+    ]
   },
   {
     "id": "F018",
     "description": "P1: Quote item model — listByQuoteId ordered by display_order",
     "implemented": false,
-    "prdRefs": ["P1-FR6"]
+    "prdRefs": [
+      "P1-FR6"
+    ]
   },
   {
     "id": "F019",
     "description": "P1: Quote item model — create with service catalog lookup (denormalize name, SKU, default rate, unit_of_measure)",
     "implemented": false,
-    "prdRefs": ["P1-FR6"]
+    "prdRefs": [
+      "P1-FR6"
+    ]
   },
   {
     "id": "F020",
     "description": "P1: Quote item model — update (rate override, quantity, description, flags)",
     "implemented": false,
-    "prdRefs": ["P1-FR6"]
+    "prdRefs": [
+      "P1-FR6"
+    ]
   },
   {
     "id": "F021",
     "description": "P1: Quote item model — delete item and recalculate display_order",
     "implemented": false,
-    "prdRefs": ["P1-FR6"]
+    "prdRefs": [
+      "P1-FR6"
+    ]
   },
   {
     "id": "F022",
     "description": "P1: Quote item model — reorder items (update display_order batch)",
     "implemented": false,
-    "prdRefs": ["P1-FR6"]
+    "prdRefs": [
+      "P1-FR6"
+    ]
   },
   {
     "id": "F023",
     "description": "P1: Quote activity model — create activity entry with type, description, performed_by, metadata",
     "implemented": false,
-    "prdRefs": ["P1-FR7"]
+    "prdRefs": [
+      "P1-FR7"
+    ]
   },
   {
     "id": "F024",
     "description": "P1: Quote activity model — listByQuoteId for audit trail display",
     "implemented": false,
-    "prdRefs": ["P1-FR7"]
+    "prdRefs": [
+      "P1-FR7"
+    ]
   },
   {
     "id": "F025",
     "description": "P1: Server action — createQuote with withAuth(), permission check, number generation",
     "implemented": false,
-    "prdRefs": ["P1-FR8"]
+    "prdRefs": [
+      "P1-FR8"
+    ]
   },
   {
     "id": "F026",
     "description": "P1: Server action — updateQuote with status transition validation",
     "implemented": false,
-    "prdRefs": ["P1-FR8"]
+    "prdRefs": [
+      "P1-FR8"
+    ]
   },
   {
     "id": "F027",
     "description": "P1: Server action — getQuote (single) and listQuotes (paginated list)",
     "implemented": false,
-    "prdRefs": ["P1-FR8"]
+    "prdRefs": [
+      "P1-FR8"
+    ]
   },
   {
     "id": "F028",
     "description": "P1: Server action — deleteQuote via deleteEntityWithValidation (drafts hard delete, others archive)",
     "implemented": false,
-    "prdRefs": ["P1-FR8", "P1-FR19"]
+    "prdRefs": [
+      "P1-FR8",
+      "P1-FR19"
+    ]
   },
   {
     "id": "F029",
     "description": "P1: Server action — addQuoteItem with service catalog integration",
     "implemented": false,
-    "prdRefs": ["P1-FR8"]
+    "prdRefs": [
+      "P1-FR8"
+    ]
   },
   {
     "id": "F030",
     "description": "P1: Server action — updateQuoteItem, removeQuoteItem, reorderQuoteItems",
     "implemented": false,
-    "prdRefs": ["P1-FR8"]
+    "prdRefs": [
+      "P1-FR8"
+    ]
   },
   {
     "id": "F031",
     "description": "P1: Service catalog integration — search/pick service, populate item with defaults",
     "implemented": false,
-    "prdRefs": ["P1-FR10"]
+    "prdRefs": [
+      "P1-FR10"
+    ]
   },
   {
     "id": "F032",
     "description": "P1: Service catalog integration — rate override on quote item (custom pricing)",
     "implemented": false,
-    "prdRefs": ["P1-FR10"]
+    "prdRefs": [
+      "P1-FR10"
+    ]
   },
   {
     "id": "F033",
     "description": "P1: Service catalog integration — support all billing methods (fixed, hourly, usage, per_unit)",
     "implemented": false,
-    "prdRefs": ["P1-FR10"]
+    "prdRefs": [
+      "P1-FR10"
+    ]
   },
   {
     "id": "F034",
     "description": "P1: Optional line items — is_optional flag stored and returned in item data",
     "implemented": false,
-    "prdRefs": ["P1-FR11"]
+    "prdRefs": [
+      "P1-FR11"
+    ]
   },
   {
     "id": "F035",
     "description": "P1: Recurring/one-time — is_recurring and billing_frequency stored and returned",
     "implemented": false,
-    "prdRefs": ["P1-FR12"]
+    "prdRefs": [
+      "P1-FR12"
+    ]
   },
   {
     "id": "F036",
     "description": "P1: Quote business templates — is_template flag on quotes, template CRUD with wizard + quick create (matching contract template pattern)",
     "implemented": false,
-    "prdRefs": ["P1-FR13"]
+    "prdRefs": [
+      "P1-FR13"
+    ]
   },
   {
     "id": "F036a",
     "description": "P1: Server action — createQuoteFromTemplate: copy template items into new draft quote",
     "implemented": false,
-    "prdRefs": ["P1-FR8", "P1-FR13"]
+    "prdRefs": [
+      "P1-FR8",
+      "P1-FR13"
+    ]
   },
   {
     "id": "F036b",
     "description": "P1: Quote template list UI — separate view for templates (filtered by is_template=true)",
     "implemented": false,
-    "prdRefs": ["P1-FR13", "P1-FR15"]
+    "prdRefs": [
+      "P1-FR13",
+      "P1-FR15"
+    ]
   },
   {
     "id": "F037",
     "description": "P1: Add 'Quotes' tab to billingTabsConfig.ts with appropriate icon and route",
     "implemented": false,
-    "prdRefs": ["P1-FR14"]
+    "prdRefs": [
+      "P1-FR14"
+    ]
   },
   {
     "id": "F038",
     "description": "P1: QuoteList component — DataTable with columns, sorting, pagination",
     "implemented": false,
-    "prdRefs": ["P1-FR15"]
+    "prdRefs": [
+      "P1-FR15"
+    ]
   },
   {
     "id": "F038a",
     "description": "P1: QuoteList — status filter dropdown (All/Drafts/Sent/Accepted/Rejected/Expired/Converted/Cancelled/Archived) and client filter",
     "implemented": false,
-    "prdRefs": ["P1-FR15"]
+    "prdRefs": [
+      "P1-FR15"
+    ]
   },
   {
     "id": "F039",
     "description": "P1: QuoteForm component — create mode with client/contact pickers, 'Create from Template' option",
     "implemented": false,
-    "prdRefs": ["P1-FR16"]
+    "prdRefs": [
+      "P1-FR16"
+    ]
   },
   {
     "id": "F040",
     "description": "P1: QuoteForm component — edit mode (load existing quote, update fields)",
     "implemented": false,
-    "prdRefs": ["P1-FR15"]
+    "prdRefs": [
+      "P1-FR15"
+    ]
   },
   {
     "id": "F041",
     "description": "P1: QuoteLineItems editor — add items from service catalog search",
     "implemented": false,
-    "prdRefs": ["P1-FR15"]
+    "prdRefs": [
+      "P1-FR15"
+    ]
   },
   {
     "id": "F042",
     "description": "P1: QuoteLineItems editor — add custom/manual line items",
     "implemented": false,
-    "prdRefs": ["P1-FR15"]
+    "prdRefs": [
+      "P1-FR15"
+    ]
   },
   {
     "id": "F043",
     "description": "P1: QuoteLineItems editor — edit item fields inline (quantity, price, description)",
     "implemented": false,
-    "prdRefs": ["P1-FR15"]
+    "prdRefs": [
+      "P1-FR15"
+    ]
   },
   {
     "id": "F044",
     "description": "P1: QuoteLineItems editor — toggle is_optional and is_recurring per item",
     "implemented": false,
-    "prdRefs": ["P1-FR15"]
+    "prdRefs": [
+      "P1-FR15"
+    ]
   },
   {
     "id": "F045",
     "description": "P1: QuoteLineItems editor — remove items and reorder via drag",
     "implemented": false,
-    "prdRefs": ["P1-FR15"]
+    "prdRefs": [
+      "P1-FR15"
+    ]
   },
   {
     "id": "F046",
     "description": "P1: QuoteDetail component — read-only view with all sections",
     "implemented": false,
-    "prdRefs": ["P1-FR16"]
+    "prdRefs": [
+      "P1-FR16"
+    ]
   },
   {
     "id": "F047",
     "description": "P1: QuoteDetail — action buttons based on status (Edit, Send, Delete, Cancel)",
     "implemented": false,
-    "prdRefs": ["P1-FR16"]
+    "prdRefs": [
+      "P1-FR16"
+    ]
   },
   {
     "id": "F048",
     "description": "P1: QuoteDetail — activity log display",
     "implemented": false,
-    "prdRefs": ["P1-FR16"]
+    "prdRefs": [
+      "P1-FR16"
+    ]
   },
   {
     "id": "F049",
     "description": "P1: QuoteStatusBadge component — colored badge per status value",
     "implemented": false,
-    "prdRefs": ["P1-FR18"]
+    "prdRefs": [
+      "P1-FR18"
+    ]
   },
   {
     "id": "F049a",
     "description": "P1: Register quote entity in deleteEntityWithValidation config with supportsArchive: true and dependency checks",
     "implemented": false,
-    "prdRefs": ["P1-FR19"]
+    "prdRefs": [
+      "P1-FR19"
+    ]
   },
   {
     "id": "F050",
     "description": "P2: Tax calculation — integrate taxService.calculateTax() per quote line item",
     "implemented": false,
-    "prdRefs": ["P2-FR1"]
+    "prdRefs": [
+      "P2-FR1"
+    ]
   },
   {
     "id": "F051",
     "description": "P2: Tax calculation — respect is_taxable flag, tax exemption, and reverse charge",
     "implemented": false,
-    "prdRefs": ["P2-FR1"]
+    "prdRefs": [
+      "P2-FR1"
+    ]
   },
   {
     "id": "F052",
     "description": "P2: Tax calculation — per-item tax_region and tax_rate population",
     "implemented": false,
-    "prdRefs": ["P2-FR1"]
+    "prdRefs": [
+      "P2-FR1"
+    ]
   },
   {
     "id": "F053",
     "description": "P2: Tax calculation — support tax_source (internal/external/pending_external)",
     "implemented": false,
-    "prdRefs": ["P2-FR1"]
+    "prdRefs": [
+      "P2-FR1"
+    ]
   },
   {
     "id": "F054",
     "description": "P2: Discount line items — create discount item with type (percentage/fixed) and target",
     "implemented": false,
-    "prdRefs": ["P2-FR2"]
+    "prdRefs": [
+      "P2-FR2"
+    ]
   },
   {
     "id": "F055",
     "description": "P2: Discount line items — applies_to_item_id scoping (discount on specific item)",
     "implemented": false,
-    "prdRefs": ["P2-FR2"]
+    "prdRefs": [
+      "P2-FR2"
+    ]
   },
   {
     "id": "F056",
     "description": "P2: Discount line items — applies_to_service_id scoping (discount on all items of a service)",
     "implemented": false,
-    "prdRefs": ["P2-FR2"]
+    "prdRefs": [
+      "P2-FR2"
+    ]
   },
   {
     "id": "F057",
     "description": "P2: Discount line items — quote-level discount as unscoped discount line",
     "implemented": false,
-    "prdRefs": ["P2-FR2"]
+    "prdRefs": [
+      "P2-FR2"
+    ]
   },
   {
     "id": "F058",
     "description": "P2: Totals calculation — subtotal, discount_total, tax, total_amount computed from items",
     "implemented": false,
-    "prdRefs": ["P2-FR3"]
+    "prdRefs": [
+      "P2-FR3"
+    ]
   },
   {
     "id": "F059",
     "description": "P2: Totals calculation — recalculate on item add/update/remove",
     "implemented": false,
-    "prdRefs": ["P2-FR3"]
+    "prdRefs": [
+      "P2-FR3"
+    ]
   },
   {
     "id": "F060",
     "description": "P2: Totals calculation — optional items excluded from totals when toggled off",
     "implemented": false,
-    "prdRefs": ["P2-FR3"]
+    "prdRefs": [
+      "P2-FR3"
+    ]
   },
   {
     "id": "F061",
     "description": "P2: Versioning — 'Revise' action creates new quote row with incremented version and parent link",
     "implemented": false,
-    "prdRefs": ["P2-FR4"]
+    "prdRefs": [
+      "P2-FR4"
+    ]
   },
   {
     "id": "F062",
     "description": "P2: Versioning — copy all quote_items to new version",
     "implemented": false,
-    "prdRefs": ["P2-FR4"]
+    "prdRefs": [
+      "P2-FR4"
+    ]
   },
   {
     "id": "F063",
     "description": "P2: Versioning — set old version status to 'superseded'",
     "implemented": false,
-    "prdRefs": ["P2-FR4"]
+    "prdRefs": [
+      "P2-FR4"
+    ]
   },
   {
     "id": "F064",
     "description": "P2: Versioning — quote_number consistent across versions, display with version suffix",
     "implemented": false,
-    "prdRefs": ["P2-FR4"]
+    "prdRefs": [
+      "P2-FR4"
+    ]
   },
   {
     "id": "F065",
     "description": "P2: Version history — query all versions by parent_quote_id chain",
     "implemented": false,
-    "prdRefs": ["P2-FR5"]
+    "prdRefs": [
+      "P2-FR5"
+    ]
   },
   {
     "id": "F066",
     "description": "P2: Version history — UI sidebar/dropdown to navigate between versions",
     "implemented": false,
-    "prdRefs": ["P2-FR5"]
+    "prdRefs": [
+      "P2-FR5"
+    ]
   },
   {
     "id": "F067",
     "description": "P2: Totals display — subtotal, discounts, tax, total in quote form and detail views",
     "implemented": false,
-    "prdRefs": ["P2-FR6"]
+    "prdRefs": [
+      "P2-FR6"
+    ]
   },
   {
     "id": "F068",
     "description": "P2: Totals display — live recalculation as items are edited in the form",
     "implemented": false,
-    "prdRefs": ["P2-FR6"]
+    "prdRefs": [
+      "P2-FR6"
+    ]
   },
   {
     "id": "F069",
     "description": "P2: Discount UI — add discount line with type selector, amount/percentage input, target picker",
     "implemented": false,
-    "prdRefs": ["P2-FR2"]
+    "prdRefs": [
+      "P2-FR2"
+    ]
   },
   {
     "id": "F070",
     "description": "P3: Database migration — create quote_document_templates table (parallel to invoice_templates)",
     "implemented": false,
-    "prdRefs": ["P3-FR1"]
+    "prdRefs": [
+      "P3-FR1"
+    ]
   },
   {
     "id": "F071",
     "description": "P3: Database migration — create standard_quote_document_templates table with system-wide defaults",
     "implemented": false,
-    "prdRefs": ["P3-FR1"]
+    "prdRefs": [
+      "P3-FR1"
+    ]
   },
   {
     "id": "F072",
     "description": "P3: Database migration — create quote_document_template_assignments table",
     "implemented": false,
-    "prdRefs": ["P3-FR1"]
+    "prdRefs": [
+      "P3-FR1"
+    ]
   },
   {
     "id": "F073",
     "description": "P3: QuoteViewModel interface in packages/types/",
     "implemented": false,
-    "prdRefs": ["P3-FR2"]
+    "prdRefs": [
+      "P3-FR2"
+    ]
   },
   {
     "id": "F074",
     "description": "P3: Quote-specific AST bindings — quoteNumber, quoteDate, validUntil, scope, termsAndConditions, clientNotes",
     "implemented": false,
-    "prdRefs": ["P3-FR3"]
+    "prdRefs": [
+      "P3-FR3"
+    ]
   },
   {
     "id": "F075",
     "description": "P3: Quote-specific AST collection bindings — lineItems with optional/recurring/phase metadata",
     "implemented": false,
-    "prdRefs": ["P3-FR3"]
+    "prdRefs": [
+      "P3-FR3"
+    ]
   },
   {
     "id": "F076",
     "description": "P3: Standard quote template — 'standard-quote-default' AST with scope, items, totals, validity, T&C",
     "implemented": false,
-    "prdRefs": ["P3-FR4"]
+    "prdRefs": [
+      "P3-FR4"
+    ]
   },
   {
     "id": "F077",
     "description": "P3: Standard quote template — 'standard-quote-detailed' AST with branding, phase grouping, optional/recurring sections",
     "implemented": false,
-    "prdRefs": ["P3-FR4"]
+    "prdRefs": [
+      "P3-FR4"
+    ]
   },
   {
     "id": "F078",
     "description": "P3: mapDbQuoteToViewModel adapter — fetch and map quote + items + client + contact + tenant data",
     "implemented": false,
-    "prdRefs": ["P3-FR5"]
+    "prdRefs": [
+      "P3-FR5"
+    ]
   },
   {
     "id": "F079",
     "description": "P3: PDF generation — extend or create service for quote PDFs using Puppeteer pipeline",
     "implemented": false,
-    "prdRefs": ["P3-FR6"]
+    "prdRefs": [
+      "P3-FR6"
+    ]
   },
   {
     "id": "F080",
     "description": "P3: PDF generation — store generated PDF in file storage system",
     "implemented": false,
-    "prdRefs": ["P3-FR6"]
+    "prdRefs": [
+      "P3-FR6"
+    ]
   },
   {
     "id": "F081",
     "description": "P3: Quote preview — in-browser rendering using AST evaluator + React renderer",
     "implemented": false,
-    "prdRefs": ["P3-FR7"]
+    "prdRefs": [
+      "P3-FR7"
+    ]
   },
   {
     "id": "F082",
     "description": "P3: Template selection — per-quote template_id override, tenant default, standard fallback",
     "implemented": false,
-    "prdRefs": ["P3-FR8"]
+    "prdRefs": [
+      "P3-FR8"
+    ]
   },
   {
     "id": "F083",
     "description": "P3: Quote document template model — getTemplates, getStandardTemplates, getAllTemplates, saveTemplate",
     "implemented": false,
-    "prdRefs": ["P3-FR1"]
+    "prdRefs": [
+      "P3-FR1"
+    ]
   },
   {
     "id": "F084",
     "description": "P4: Server action — sendQuote: validate state, generate PDF, send email to multiple addresses (array), update sent_at and status",
     "implemented": false,
-    "prdRefs": ["P4-FR1"]
+    "prdRefs": [
+      "P4-FR1"
+    ]
   },
   {
     "id": "F085",
     "description": "P4: Quote email template — 'Quote Sent' with summary, PDF attachment, portal link",
     "implemented": false,
-    "prdRefs": ["P4-FR2"]
+    "prdRefs": [
+      "P4-FR2"
+    ]
   },
   {
     "id": "F086",
     "description": "P4: Quote email template — 'Quote Reminder' for approaching expiration",
     "implemented": false,
-    "prdRefs": ["P4-FR2"]
+    "prdRefs": [
+      "P4-FR2"
+    ]
   },
   {
     "id": "F087",
     "description": "P4: Quote email template — 'Quote Accepted Confirmation' sent to MSP on client acceptance",
     "implemented": false,
-    "prdRefs": ["P4-FR2"]
+    "prdRefs": [
+      "P4-FR2"
+    ]
   },
   {
     "id": "F088",
     "description": "P4: Email logging — log sent quote emails in email_sending_logs with entity_type='quote'",
     "implemented": false,
-    "prdRefs": ["P4-FR3"]
+    "prdRefs": [
+      "P4-FR3"
+    ]
   },
   {
     "id": "F089",
     "description": "P4: Client portal — add 'Quotes' tab to BillingOverview.tsx (lazy loaded), accessible to all users with billing permissions",
     "implemented": false,
-    "prdRefs": ["P4-FR4"]
+    "prdRefs": [
+      "P4-FR4"
+    ]
   },
   {
     "id": "F090",
     "description": "P4: Client portal — QuotesTab with DataTable listing client's quotes (all portal users with billing perms, not just primary contact)",
     "implemented": false,
-    "prdRefs": ["P4-FR4"]
+    "prdRefs": [
+      "P4-FR4"
+    ]
   },
   {
     "id": "F091",
     "description": "P4: Client portal — QuoteDetail view with full line items, totals, T&C",
     "implemented": false,
-    "prdRefs": ["P4-FR5"]
+    "prdRefs": [
+      "P4-FR5"
+    ]
   },
   {
     "id": "F092",
     "description": "P4: Client portal — optional item toggle switches with client-side total recalculation and server-side persistence of selections (is_selected)",
     "implemented": false,
-    "prdRefs": ["P4-FR5"]
+    "prdRefs": [
+      "P4-FR5"
+    ]
   },
   {
     "id": "F093",
     "description": "P4: Client portal — Accept action: persists optional item selections, sets accepted_at/accepted_by, status → accepted (sends config to MSP for review)",
     "implemented": false,
-    "prdRefs": ["P4-FR6"]
+    "prdRefs": [
+      "P4-FR6"
+    ]
   },
   {
     "id": "F093a",
     "description": "P4: MSP quote detail — highlight client's optional item selections on accepted quotes for MSP review before conversion",
     "implemented": false,
-    "prdRefs": ["P4-FR6"]
+    "prdRefs": [
+      "P4-FR6"
+    ]
   },
   {
     "id": "F094",
     "description": "P4: Client portal — Reject action with comment field: sets rejected_at, rejection_reason, status → rejected",
     "implemented": false,
-    "prdRefs": ["P4-FR6"]
+    "prdRefs": [
+      "P4-FR6"
+    ]
   },
   {
     "id": "F096",
     "description": "P4: Viewed tracking — set viewed_at on first client portal access, log activity",
     "implemented": false,
-    "prdRefs": ["P4-FR7"]
+    "prdRefs": [
+      "P4-FR7"
+    ]
   },
   {
     "id": "F097",
     "description": "P4: Resend action on sent quotes and send reminder for approaching expiration",
     "implemented": false,
-    "prdRefs": ["P4-FR8"]
+    "prdRefs": [
+      "P4-FR8"
+    ]
   },
   {
     "id": "F098",
     "description": "P5: Quote → Contract conversion — create draft contract from recurring quote items",
     "implemented": false,
-    "prdRefs": ["P5-FR1"]
+    "prdRefs": [
+      "P5-FR1"
+    ]
   },
   {
     "id": "F099",
     "description": "P5: Quote → Contract — create contract_lines with correct billing method per item",
     "implemented": false,
-    "prdRefs": ["P5-FR1"]
+    "prdRefs": [
+      "P5-FR1"
+    ]
   },
   {
     "id": "F100",
     "description": "P5: Quote → Contract — create service configurations (_fixed_config, _hourly_config, _usage_config) per contract line",
     "implemented": false,
-    "prdRefs": ["P5-FR1"]
+    "prdRefs": [
+      "P5-FR1"
+    ]
   },
   {
     "id": "F101",
     "description": "P5: Quote → Contract — create client_contracts assignment with start_date",
     "implemented": false,
-    "prdRefs": ["P5-FR1"]
+    "prdRefs": [
+      "P5-FR1"
+    ]
   },
   {
     "id": "F102",
     "description": "P5: Quote → Contract — set converted_contract_id on quote, wrap in transaction",
     "implemented": false,
-    "prdRefs": ["P5-FR1"]
+    "prdRefs": [
+      "P5-FR1"
+    ]
   },
   {
     "id": "F103",
     "description": "P5: Quote → Invoice conversion — create draft invoice (is_manual=true) from one-time items",
     "implemented": false,
-    "prdRefs": ["P5-FR2"]
+    "prdRefs": [
+      "P5-FR2"
+    ]
   },
   {
     "id": "F104",
     "description": "P5: Quote → Invoice — create invoice_charges from quote_items with tax/discount data",
     "implemented": false,
-    "prdRefs": ["P5-FR2"]
+    "prdRefs": [
+      "P5-FR2"
+    ]
   },
   {
     "id": "F105",
     "description": "P5: Quote → Invoice — set converted_invoice_id, wrap in transaction",
     "implemented": false,
-    "prdRefs": ["P5-FR2"]
+    "prdRefs": [
+      "P5-FR2"
+    ]
   },
   {
     "id": "F106",
     "description": "P5: Combined conversion — contract for recurring + invoice for one-time in single transaction",
     "implemented": false,
-    "prdRefs": ["P5-FR3"]
+    "prdRefs": [
+      "P5-FR3"
+    ]
   },
   {
     "id": "F107",
     "description": "P5: Conversion preview — show mapping of items to contract lines vs invoice charges before converting",
     "implemented": false,
-    "prdRefs": ["P5-FR4"]
+    "prdRefs": [
+      "P5-FR4"
+    ]
   },
   {
     "id": "F108",
     "description": "P5: Conversion UI — dialog with 'To Contract'/'To Invoice'/'To Both' options and confirm",
     "implemented": false,
-    "prdRefs": ["P5-FR5"]
+    "prdRefs": [
+      "P5-FR5"
+    ]
   },
   {
     "id": "F109",
     "description": "P5: Post-conversion links — quote detail links to converted contract/invoice, and vice versa",
     "implemented": false,
-    "prdRefs": ["P5-FR6"]
+    "prdRefs": [
+      "P5-FR6"
+    ]
   },
   {
     "id": "F110",
     "description": "P6: Internal approval — 'pending_approval' and 'approved' statuses added to QuoteStatus",
     "implemented": false,
-    "prdRefs": ["P6-FR1"]
+    "prdRefs": [
+      "P6-FR1"
+    ]
   },
   {
     "id": "F111",
     "description": "P6: Internal approval — 'Submit for Approval' action on draft quotes",
     "implemented": false,
-    "prdRefs": ["P6-FR1"]
+    "prdRefs": [
+      "P6-FR1"
+    ]
   },
   {
     "id": "F112",
     "description": "P6: Internal approval — approval dashboard following ManagerApprovalDashboard pattern",
     "implemented": false,
-    "prdRefs": ["P6-FR1"]
+    "prdRefs": [
+      "P6-FR1"
+    ]
   },
   {
     "id": "F113",
     "description": "P6: Internal approval — approve/reject with comment, configurable per tenant",
     "implemented": false,
-    "prdRefs": ["P6-FR1"]
+    "prdRefs": [
+      "P6-FR1"
+    ]
   },
   {
     "id": "F114",
     "description": "P6: quotes:approve permission — separate from billing:update",
     "implemented": false,
-    "prdRefs": ["P6-FR2"]
+    "prdRefs": [
+      "P6-FR2"
+    ]
   },
   {
     "id": "F115",
     "description": "P6: CRM/opportunity linking — opportunity_id field on quotes, display on detail",
     "implemented": false,
-    "prdRefs": ["P6-FR3"]
+    "prdRefs": [
+      "P6-FR3"
+    ]
   },
   {
     "id": "F116",
     "description": "P6: Phase/section grouping UI — visual section headers, drag between sections, collapsible",
     "implemented": false,
-    "prdRefs": ["P6-FR4"]
+    "prdRefs": [
+      "P6-FR4"
+    ]
   },
   {
     "id": "F117",
     "description": "P6: Quote document template editor — adapt invoice template designer for quote document templates",
     "implemented": false,
-    "prdRefs": ["P6-FR5"]
+    "prdRefs": [
+      "P6-FR5"
+    ]
   },
   {
     "id": "F118",
     "description": "P6: Auto-expiration background job — scheduled bulk expiration + notification",
     "implemented": false,
-    "prdRefs": ["P6-FR6"]
+    "prdRefs": [
+      "P6-FR6"
+    ]
   },
   {
     "id": "F119",
     "description": "P6: Quote duplication — create new draft quote from existing, copy items, generate new number",
     "implemented": false,
-    "prdRefs": ["P6-FR7"]
+    "prdRefs": [
+      "P6-FR7"
+    ]
   },
   {
     "id": "F120",
     "description": "P6: 'Save as Template' action — create a business template from an existing quote",
     "implemented": false,
-    "prdRefs": ["P6-FR7"]
+    "prdRefs": [
+      "P6-FR7"
+    ]
   }
 ]

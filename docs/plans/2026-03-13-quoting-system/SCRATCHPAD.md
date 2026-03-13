@@ -103,3 +103,6 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - Contract template system: `packages/billing/src/models/contractTemplate.ts` — reference for quote business template implementation.
 - ~~Quote business template wizard~~ RESOLVED: Both wizard + quick create (matching contract pattern). "Save as Template" for existing quotes in Phase 6.
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
+
+## Delivery Log
+- (2026-03-13) F001 complete — P1: Database migration — create `quotes` table with all fields including is_template boolean, indexes, and Citus-compatible composite keys. Implemented via the quote foundation migration.
