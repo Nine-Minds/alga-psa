@@ -5,7 +5,7 @@ import React from 'react';
 import type { ActionInputField } from './mapping';
 
 export const WorkflowActionInputFieldInfo: React.FC<{
-  field: Pick<ActionInputField, 'name' | 'type' | 'description' | 'required'>;
+  field: Pick<ActionInputField, 'name' | 'type' | 'description' | 'required' | 'default' | 'examples'>;
   isMissingRequired?: boolean;
 }> = ({ field, isMissingRequired = false }) => (
   <div className="min-w-0 flex-1">
@@ -33,6 +33,16 @@ export const WorkflowActionInputFieldInfo: React.FC<{
     </div>
     {field.description && (
       <p className="mt-0.5 text-[11px] text-gray-500">{field.description}</p>
+    )}
+    {field.default !== undefined && (
+      <p className="mt-0.5 text-[11px] text-gray-500">
+        Default: <code className="rounded bg-gray-100 px-1 py-0.5 text-gray-700">{String(field.default)}</code>
+      </p>
+    )}
+    {field.examples && field.examples.length > 0 && (
+      <p className="mt-0.5 text-[11px] text-gray-500">
+        Example: <code className="rounded bg-gray-100 px-1 py-0.5 text-gray-700">{String(field.examples[0])}</code>
+      </p>
     )}
   </div>
 );

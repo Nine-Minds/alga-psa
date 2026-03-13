@@ -30,7 +30,11 @@ const registry: WorkflowDesignerActionRegistryItem[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        summary: { type: 'string' },
+        summary: {
+          type: 'string',
+          default: 'Default ticket summary',
+          examples: ['Escalate printer issue'],
+        },
         board_id: { type: 'string' },
       },
       required: ['summary', 'board_id'],
@@ -176,5 +180,25 @@ describe('action input editor state', () => {
     expect(nextState.requiredActionInputFields.map((field) => field.name)).toEqual(['ticket_id']);
     expect(nextState.mappedRequiredInputFieldCount).toBe(0);
     expect(nextState.unmappedRequiredInputFieldCount).toBe(1);
+  });
+
+  it('T119: action input fields preserve schema defaults and examples for inline help', () => {
+    const step: NodeStep = {
+      id: 'step-4',
+      type: 'action.call',
+      name: 'Ticket',
+      config: {
+        designerGroupKey: 'ticket',
+        designerTileKind: 'core-object',
+        actionId: 'tickets.create',
+        version: 1,
+      },
+    };
+
+    const state = buildActionInputEditorState(step, registry);
+    expect(state.actionInputFields.find((field) => field.name === 'summary')).toMatchObject({
+      default: 'Default ticket summary',
+      examples: ['Escalate printer issue'],
+    });
   });
 });

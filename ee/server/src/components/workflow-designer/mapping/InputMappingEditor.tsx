@@ -365,6 +365,7 @@ export interface ActionInputField {
   type: string;
   description?: string;
   required?: boolean;
+  examples?: unknown[];
   picker?: {
     kind: string;
     dependencies?: string[];

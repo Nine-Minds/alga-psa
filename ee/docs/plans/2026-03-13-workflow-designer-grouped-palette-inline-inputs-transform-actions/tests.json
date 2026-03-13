@@ -710,7 +710,7 @@
   {
     "id": "T119",
     "description": "Playwright: schema defaults or examples surface in the inline field editor where provided",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F119"]
   },
   {

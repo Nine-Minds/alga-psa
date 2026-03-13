@@ -6,6 +6,7 @@ type JsonSchema = {
   type?: string | string[];
   title?: string;
   description?: string;
+  examples?: unknown[];
   properties?: Record<string, JsonSchema>;
   required?: string[];
   enum?: Array<string | number | boolean | null>;
@@ -160,6 +161,7 @@ const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSch
       type,
       description: resolvedProp.description,
       required: isFieldRequired,
+      examples: Array.isArray(resolvedProp.examples) ? resolvedProp.examples : undefined,
       picker,
       enum: resolvedProp.enum,
       default: resolvedProp.default,

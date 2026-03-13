@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { render, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import { WorkflowActionInputFieldInfo } from '../WorkflowActionInputFieldInfo';
@@ -15,6 +15,8 @@ describe('WorkflowActionInputFieldInfo', () => {
           type: 'string',
           required: true,
           description: 'Ticket summary',
+          default: 'Default summary',
+          examples: ['Escalate printer issue'],
         }}
         isMissingRequired
       />
@@ -25,6 +27,8 @@ describe('WorkflowActionInputFieldInfo', () => {
     expect(view.getAllByTitle('Required field is missing a value')).toHaveLength(2);
     expect(view.getByText('Missing')).toBeInTheDocument();
     expect(view.getByText('Ticket summary')).toBeInTheDocument();
+    expect(view.getByText('Default summary')).toBeInTheDocument();
+    expect(view.getByText('Escalate printer issue')).toBeInTheDocument();
 
     rerender(
       <WorkflowActionInputFieldInfo

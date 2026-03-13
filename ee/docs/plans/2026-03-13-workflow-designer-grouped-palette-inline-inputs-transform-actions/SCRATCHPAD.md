@@ -106,6 +106,14 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx --reporter=dot`
   - `npx tsc --noEmit -p ee/server/tsconfig.json`
   - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputSourceMode.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx`
+- (2026-03-14) Validate inline field validation-hint seams:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx src/components/workflow-designer/__tests__/WorkflowActionInputTypeHint.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputFieldInfo.tsx ee/server/src/components/workflow-designer/WorkflowActionInputTypeHint.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputTypeHint.test.tsx`
+- (2026-03-14) Validate inline field default/example help:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/actionInputEditorState.test.ts src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/actionInputEditorState.ts ee/server/src/components/workflow-designer/WorkflowActionInputFieldInfo.tsx ee/server/src/components/workflow-designer/__tests__/actionInputEditorState.test.ts ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx`
 - (2026-03-13) Validate text transform action registration and catalog/search coverage:
   - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/actions/__tests__/registerTransformActions.test.ts shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts --reporter=dot`
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/paletteSearch.test.ts --reporter=dot`
@@ -320,6 +328,10 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Moved the inline missing-required affordance into `WorkflowActionInputFieldInfo` so row-level validation state stays co-located with the field label/type metadata used across mapped and unmapped states.
   - Added focused jsdom coverage for missing-required row messaging, incompatible reference hints, and step-level summary transitions from incomplete to complete.
   - Marked F116-F118, F120, and T116-T118/T120 implemented; F119 remains open because defaults/examples are still used for value initialization rather than explicit field help.
+- (2026-03-14) Completed the inline field default/example help slice:
+  - Extended `actionInputEditorState` to carry schema `examples` through the action-field extraction path so inline help remains schema-driven.
+  - Updated `WorkflowActionInputFieldInfo` to show schema defaults and the first example alongside field descriptions when those hints are available.
+  - Marked F119 and T119 implemented.
 - (2026-03-14) Completed the source-mode vocabulary slice:
   - Added `WorkflowActionInputSourceMode.tsx` so each editable field now exposes the user-facing `Reference`, `Fixed value`, and `Advanced` source-mode selector instead of raw expression/secret/literal labels.
   - Kept the existing serializer/runtime behavior underneath for now by mapping direct field-reference expressions to `Reference`, literal values to `Fixed value`, and complex expressions or secrets to `Advanced`.

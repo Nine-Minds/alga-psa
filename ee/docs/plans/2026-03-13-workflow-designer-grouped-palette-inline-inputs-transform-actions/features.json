@@ -710,7 +710,7 @@
   {
     "id": "F119",
     "description": "Render the chosen action's example or schema defaults where they improve field authoring clarity",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {
