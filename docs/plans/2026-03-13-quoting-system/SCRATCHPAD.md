@@ -106,3 +106,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 
 ## Delivery Log
 - (2026-03-13) F001 complete — P1: Database migration — create `quotes` table with all fields including is_template boolean, indexes, and Citus-compatible composite keys. Implemented via the quote foundation migration.
+- (2026-03-13) F002 complete — P1: Database migration — create `quote_items` table modeled on invoice_charges with is_optional, is_selected, is_recurring, phase fields. Implemented via the same quote foundation migration for consistent rollout.

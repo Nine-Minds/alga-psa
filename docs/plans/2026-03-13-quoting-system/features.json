@@ -10,7 +10,7 @@
   {
     "id": "F002",
     "description": "P1: Database migration — create `quote_items` table modeled on invoice_charges with is_optional, is_selected, is_recurring, phase fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR1"
     ]
