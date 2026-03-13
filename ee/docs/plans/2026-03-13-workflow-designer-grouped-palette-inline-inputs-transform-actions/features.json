@@ -638,25 +638,25 @@
   {
     "id": "F107",
     "description": "Render a source-mode selector on each editable field",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor", "UX / UI Notes > Field Authoring Model"]
   },
   {
     "id": "F108",
     "description": "Support Reference as an explicit per-field source mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor", "Requirements > Reference Source Model"]
   },
   {
     "id": "F109",
     "description": "Support Fixed value as an explicit per-field source mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor", "Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F110",
     "description": "Support Advanced as an explicit per-field source mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor", "Requirements > Advanced Expressions"]
   },
   {

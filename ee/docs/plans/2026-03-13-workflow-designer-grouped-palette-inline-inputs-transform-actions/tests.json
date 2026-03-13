@@ -638,25 +638,25 @@
   {
     "id": "T107",
     "description": "Playwright: each editable field shows a source-mode selector",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F107"]
   },
   {
     "id": "T108",
     "description": "Playwright: Reference appears as a selectable field source mode",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F108"]
   },
   {
     "id": "T109",
     "description": "Playwright: Fixed value appears as a selectable field source mode",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F109"]
   },
   {
     "id": "T110",
     "description": "Playwright: Advanced appears as a selectable field source mode",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F110"]
   },
   {

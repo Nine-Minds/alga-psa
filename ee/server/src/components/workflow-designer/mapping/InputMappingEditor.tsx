@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { ChevronRight, ChevronDown, Plus, Trash2, Code, Key, Type, AlertTriangle, Wand2, Sparkles, RotateCcw, LinkIcon } from 'lucide-react';
+import { ChevronRight, ChevronDown, Plus, Trash2, AlertTriangle, Wand2, Sparkles, RotateCcw, LinkIcon } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -35,6 +35,12 @@ import {
   getDisplayTypeName
 } from './typeCompatibility';
 import { WorkflowActionInputFieldInfo } from '../WorkflowActionInputFieldInfo';
+import {
+  WorkflowActionInputSourceMode,
+  isSimpleFieldReferenceExpression,
+  type WorkflowActionInputAdvancedModeValue,
+  type WorkflowActionInputSourceModeValue,
+} from '../WorkflowActionInputSourceMode';
 
 /**
  * Extended select option with type information for compatibility filtering
@@ -517,25 +523,70 @@ const MappingFieldEditor: React.FC<{
     setValueType(getMappingValueType(value));
   }, [value]);
 
-  const handleValueTypeChange = useCallback((newType: string) => {
-    const type = newType as ValueType;
-    setValueType(type);
+  const buildDefaultLiteralValue = useCallback((): MappingValue => {
+    if (field.type === 'boolean') return false;
+    if (field.type === 'number' || field.type === 'integer') return 0;
+    if (field.type === 'array') return [];
+    if (field.type === 'object') return {};
+    return '';
+  }, [field.type]);
+
+  const handleSourceModeChange = useCallback((nextMode: WorkflowActionInputSourceModeValue) => {
     setExpressionError(null);
 
-    // Convert to new type with appropriate default
-    if (type === 'expr') {
+    if (nextMode === 'reference') {
+      setValueType('expr');
+      if (value && typeof value === 'object' && '$expr' in value && isSimpleFieldReferenceExpression((value as Expr).$expr)) {
+        onChange(value);
+        return;
+      }
       onChange({ $expr: '' });
-    } else if (type === 'secret') {
-      onChange({ $secret: '' });
-    } else {
-      // Literal - set appropriate default based on field type
-      if (field.type === 'boolean') onChange(false);
-      else if (field.type === 'number' || field.type === 'integer') onChange(0);
-      else if (field.type === 'array') onChange([]);
-      else if (field.type === 'object') onChange({});
-      else onChange('');
+      return;
     }
-  }, [field.type, onChange]);
+
+    if (nextMode === 'advanced') {
+      if (valueType === 'secret' && value && typeof value === 'object' && '$secret' in value) {
+        onChange(value);
+        return;
+      }
+
+      setValueType('expr');
+      if (value && typeof value === 'object' && '$expr' in value) {
+        onChange(value);
+        return;
+      }
+      onChange({ $expr: '' });
+      return;
+    }
+
+    setValueType('literal');
+    if (value !== undefined && (typeof value !== 'object' || value === null || (!('$expr' in value) && !('$secret' in value)))) {
+      onChange(value);
+      return;
+    }
+    onChange(buildDefaultLiteralValue());
+  }, [buildDefaultLiteralValue, onChange, value, valueType]);
+
+  const handleAdvancedModeChange = useCallback((nextMode: WorkflowActionInputAdvancedModeValue) => {
+    setExpressionError(null);
+
+    if (nextMode === 'secret') {
+      setValueType('secret');
+      if (value && typeof value === 'object' && '$secret' in value) {
+        onChange(value);
+        return;
+      }
+      onChange({ $secret: '' });
+      return;
+    }
+
+    setValueType('expr');
+    if (value && typeof value === 'object' && '$expr' in value) {
+      onChange(value);
+      return;
+    }
+    onChange({ $expr: '' });
+  }, [onChange, value]);
 
   const handleExpressionChange = useCallback((expr: string) => {
     try {
@@ -573,12 +624,6 @@ const MappingFieldEditor: React.FC<{
   const handleValidationChange = useCallback((errors: string[]) => {
     setValidationErrors(errors);
   }, []);
-
-  const typeOptions: SelectOption[] = [
-    { value: 'expr', label: 'Expression' },
-    { value: 'secret', label: 'Secret' },
-    { value: 'literal', label: 'Literal' },
-  ];
 
   // §16.2 - Type mismatch warning for expression mappings
   const typeMismatchWarning = useMemo(() => {
@@ -647,10 +692,6 @@ const MappingFieldEditor: React.FC<{
     ...(s.description && { description: s.description })
   }));
 
-  const typeIcon = valueType === 'expr' ? <Code className="w-3.5 h-3.5" /> :
-    valueType === 'secret' ? <Key className="w-3.5 h-3.5" /> :
-    <Type className="w-3.5 h-3.5" />;
-
   return (
     <Card className="p-3 space-y-2">
       <div className="flex items-center justify-between">
@@ -679,17 +720,13 @@ const MappingFieldEditor: React.FC<{
             </Badge>
           )}
         </button>
-        <div className="flex items-center gap-2">
-          {typeIcon}
-          <CustomSelect
-            id={`${idPrefix}-type`}
-            options={typeOptions}
-            value={valueType}
-            onValueChange={handleValueTypeChange}
-            disabled={disabled}
-            className="w-28"
-          />
-        </div>
+        <WorkflowActionInputSourceMode
+          idPrefix={idPrefix}
+          value={value}
+          onModeChange={handleSourceModeChange}
+          onAdvancedModeChange={handleAdvancedModeChange}
+          disabled={disabled}
+        />
       </div>
 
       {expanded && (
