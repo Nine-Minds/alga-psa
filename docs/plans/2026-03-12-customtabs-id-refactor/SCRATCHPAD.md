@@ -163,3 +163,5 @@ npm run build
 - F024 — CreditManagement now stores and routes `creditTab` as ids (`active-credits`, `expired-credits`, `all-credits`).
 
 - F025 — The contracts dashboard now uses `templates`, `client-contracts`, and `drafts` ids directly in its main CustomTabs instance.
+
+- F026 — CreditsTabs and its CreditsPage caller now use stable ids (`active`, `all`, `expired`) instead of label slug maps.

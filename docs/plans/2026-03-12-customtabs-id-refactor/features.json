@@ -218,7 +218,7 @@
   {
     "id": "F026",
     "description": "Migrate CreditsTabs.tsx — add id to 3 tabs, remove TAB_SLUG_TO_LABEL/TAB_LABEL_TO_SLUG maps",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern A"
