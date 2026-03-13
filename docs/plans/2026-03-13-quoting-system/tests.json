@@ -293,7 +293,7 @@
   {
     "id": "T036",
     "description": "Item model: create without service_id allows custom item entry",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]

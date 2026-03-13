@@ -166,3 +166,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) T033a complete — Model: delete blocks drafts that have business history (emails sent, etc.) and offers archive. Added draft-with-history delete blocking coverage.
 - (2026-03-13) T034 complete — Item model: listByQuoteId returns items ordered by display_order. Added ordered quote-item listing coverage.
 - (2026-03-13) T035 complete — Item model: create with service_id populates service_name, service_sku, unit_price from catalog. Added service-backed quote-item creation coverage.
+- (2026-03-13) T036 complete — Item model: create without service_id allows custom item entry. Added manual quote-item creation coverage.
