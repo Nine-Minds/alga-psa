@@ -524,7 +524,7 @@
   {
     "id": "T088",
     "description": "Integration: choosing an action updates the step input schema used by the field editor",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F088"]
   },
   {
@@ -536,7 +536,7 @@
   {
     "id": "T090",
     "description": "Playwright: choosing an action updates the required-field completion summary",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F090"]
   },
   {

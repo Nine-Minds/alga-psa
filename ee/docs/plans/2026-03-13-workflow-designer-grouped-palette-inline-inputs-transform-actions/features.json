@@ -524,7 +524,7 @@
   {
     "id": "F088",
     "description": "Choosing an action should update the step input schema used by the properties panel",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model", "Requirements > Inline Field-Based Action Input Editor"]
   },
   {
@@ -536,7 +536,7 @@
   {
     "id": "F090",
     "description": "Choosing an action should update the step required-field completion count",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model", "Requirements > Inline Field-Based Action Input Editor"]
   },
   {

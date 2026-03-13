@@ -86,6 +86,7 @@ import {
 import { GroupedActionConfigSection } from './GroupedActionConfigSection';
 import { applyCatalogActionChoiceToStep } from './groupedActionSelection';
 import { WorkflowDesignerPalette } from './WorkflowDesignerPalette';
+import { buildActionInputEditorState } from './actionInputEditorState';
 
 import type {
   WorkflowDefinition,
@@ -99,8 +100,7 @@ import type {
   ReturnStep,
   Expr,
   PublishError,
-  InputMapping,
-  MappingValue
+  InputMapping
 } from '@shared/workflow/runtime/client';
 import { WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF } from '@shared/workflow/runtime/client';
 import { validateExpressionSource } from '@shared/workflow/runtime/expressionEngine';
@@ -231,27 +231,6 @@ const stableSerialize = (value: unknown): string =>
   });
 
 const areStructurallyEqual = (left: unknown, right: unknown): boolean => stableSerialize(left) === stableSerialize(right);
-
-const isInputMappingValueSet = (value: MappingValue | undefined, fieldType?: string): boolean => {
-  if (value === undefined) return false;
-  if (value === null) return true;
-
-  if (typeof value === 'object') {
-    if ('$expr' in value) {
-      return Boolean((value as Expr).$expr?.trim());
-    }
-    if ('$secret' in value) {
-      return Boolean((value as { $secret: string }).$secret?.trim());
-    }
-    return true;
-  }
-
-  if (typeof value === 'string') {
-    return fieldType === 'string' ? value.trim().length > 0 : true;
-  }
-
-  return true;
-};
 
 type PipeSegment = {
   index: number;
@@ -790,16 +769,6 @@ const buildDataContext = (
   return context;
 };
 
-// Get action by ID and version from registry
-const getActionFromRegistry = (
-  actionId: string | undefined,
-  version: number | undefined,
-  actionRegistry: ActionRegistryItem[]
-): ActionRegistryItem | undefined => {
-  if (!actionId) return undefined;
-  return actionRegistry.find(a => a.id === actionId && (version === undefined || a.version === version));
-};
-
 const buildActionInputMappingStatusByStepId = (
   steps: Step[],
   actionRegistry: ActionRegistryItem[]
@@ -809,26 +778,13 @@ const buildActionInputMappingStatusByStepId = (
   const visit = (pipeSteps: Step[]) => {
     pipeSteps.forEach((step) => {
       if (step.type === 'action.call') {
-        const config = (step as NodeStep).config as {
-          actionId?: string;
-          version?: number;
-          inputMapping?: InputMapping;
-        } | undefined;
-
-        const action = getActionFromRegistry(config?.actionId, config?.version, actionRegistry);
-        if (action?.inputSchema) {
-          const requiredFields = extractActionInputFields(action.inputSchema, action.inputSchema).filter((field) => Boolean(field.required));
-          if (requiredFields.length > 0) {
-            const inputMapping = config?.inputMapping ?? {};
-            const mappedRequiredCount = requiredFields.filter((field) =>
-              isInputMappingValueSet(inputMapping[field.name], field.type)
-            ).length;
-            statusByStepId.set(step.id, {
-              requiredCount: requiredFields.length,
-              mappedRequiredCount,
-              unmappedRequiredCount: requiredFields.length - mappedRequiredCount
-            });
-          }
+        const inputEditorState = buildActionInputEditorState(step, actionRegistry);
+        if (inputEditorState.requiredActionInputFields.length > 0) {
+          statusByStepId.set(step.id, {
+            requiredCount: inputEditorState.requiredActionInputFields.length,
+            mappedRequiredCount: inputEditorState.mappedRequiredInputFieldCount,
+            unmappedRequiredCount: inputEditorState.unmappedRequiredInputFieldCount
+          });
         }
       }
 
@@ -5259,11 +5215,11 @@ const StepConfigPanel: React.FC<{
   );
 
   // For action.call steps, get the selected action
-  const selectedAction = useMemo(() => {
-    if (step.type !== 'action.call') return undefined;
-    const config = (step as NodeStep).config as { actionId?: string; version?: number } | undefined;
-    return getActionFromRegistry(config?.actionId, config?.version, actionRegistry);
-  }, [step, actionRegistry]);
+  const actionInputEditorState = useMemo(
+    () => buildActionInputEditorState(step, actionRegistry),
+    [step, actionRegistry]
+  );
+  const selectedAction = actionInputEditorState.selectedAction;
   const groupedActionRecord = useMemo(
     () => getGroupedActionCatalogRecordForStep(step, designerActionCatalog),
     [step, designerActionCatalog]
@@ -5274,37 +5230,11 @@ const StepConfigPanel: React.FC<{
     : undefined;
 
   // §17 - Extract action input fields for InputMappingEditor
-  const actionInputFields = useMemo(() => {
-    if (!selectedAction?.inputSchema) return [];
-    return extractActionInputFields(selectedAction.inputSchema, selectedAction.inputSchema);
-  }, [selectedAction]);
-
-  // §17 - Get current input mapping from config
-  const inputMapping = useMemo(() => {
-    if (step.type !== 'action.call') return {};
-    const config = (step as NodeStep).config as { inputMapping?: InputMapping } | undefined;
-    return config?.inputMapping ?? {};
-  }, [step]);
-
-  const requiredActionInputFields = useMemo(
-    () => actionInputFields.filter((field) => Boolean(field.required)),
-    [actionInputFields]
-  );
-
-  const mappedInputFieldCount = useMemo(() => Object.keys(inputMapping).length, [inputMapping]);
-
-  const mappedRequiredInputFieldCount = useMemo(
-    () =>
-      requiredActionInputFields.filter((field) =>
-        isInputMappingValueSet(inputMapping[field.name], field.type)
-      ).length,
-    [requiredActionInputFields, inputMapping]
-  );
-
-  const unmappedRequiredInputFieldCount = useMemo(
-    () => requiredActionInputFields.length - mappedRequiredInputFieldCount,
-    [requiredActionInputFields.length, mappedRequiredInputFieldCount]
-  );
+  const actionInputFields = actionInputEditorState.actionInputFields;
+  const inputMapping = actionInputEditorState.inputMapping;
+  const requiredActionInputFields = actionInputEditorState.requiredActionInputFields;
+  const mappedInputFieldCount = actionInputEditorState.mappedInputFieldCount;
+  const unmappedRequiredInputFieldCount = actionInputEditorState.unmappedRequiredInputFieldCount;
 
   // §17 - Handle input mapping changes
   const handleInputMappingChange = useCallback((mapping: InputMapping) => {

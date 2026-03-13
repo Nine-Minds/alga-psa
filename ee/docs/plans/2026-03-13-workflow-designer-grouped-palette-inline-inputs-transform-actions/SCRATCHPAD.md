@@ -56,6 +56,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-13) Grouped-step reorder and branch-move behavior still matches the existing `action.call` drag model; the remaining failures were test harness timing issues around palette readiness and seeded branch contents, not grouped-step regressions.
 - (2026-03-13) The next checklist item (`F079` / `T079`) is now verified as a true scope blocker: `WorkflowDesigner.tsx` only supports add/update/delete/reorder flows, and the page object plus Playwright coverage expose no step duplication affordance to preserve. Implementing `F079` would require inventing a new feature outside the current PRD rather than maintaining parity.
 - (2026-03-14) The default `npx playwright test` path for workflow-designer specs still cold-boots Docker deps, reruns the full migration/seed pipeline, and rebuilds the workflow-worker image before hitting assertions. Small grouped-step state checks are therefore safer to validate through deterministic grouped-step helpers in this worktree unless the branch is already running a warm local harness.
+- (2026-03-14) The selected-action schema state and required-field counts were being recomputed in multiple places inside `WorkflowDesigner.tsx` (step properties panel and pipeline badges). Extracting that state into a shared helper reduces drift and gives the grouped action-change path a deterministic test seam for schema/summary updates.
 
 ## Commands / Runbooks
 
@@ -125,6 +126,10 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `npx tsc --noEmit -p ee/server/tsconfig.json`
 - (2026-03-14) Abort the equivalent grouped-step browser run after confirming the default webserver path still performs a full cold Playwright stack bootstrap before the tests reach assertions:
   - `cd ee/server && npx playwright test src/__tests__/integration/workflow-designer-basic.playwright.test.ts -g "a newly created grouped action step can remain action-unselected until the user chooses one|a grouped action step auto-selects the declared default action when configured|step name editing remains available before and after action selection|save-output controls remain available before and after action selection" --reporter=line`
+- (2026-03-14) Validate grouped action-input schema state helper:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/actionInputEditorState.test.ts src/components/workflow-designer/__tests__/groupedActionSelection.test.ts src/components/workflow-designer/__tests__/groupedActionStep.test.ts --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/actionInputEditorState.ts ee/server/src/components/workflow-designer/__tests__/actionInputEditorState.test.ts ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`
 
 ## Links / References
 
@@ -241,3 +246,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Added grouped-step helper coverage proving transform-scoped steps can persist only additive grouped metadata until the builder explicitly chooses an action.
   - Added grouped-step helper coverage proving grouped records with a declared default action can still insert the existing `actionId`/`version`/auto-saveAs runtime config without changing the `action.call` contract.
   - Marked F084, F085, T084, and T085 implemented via deterministic helper coverage because the equivalent Playwright seam still incurs a full cold stack bootstrap on this branch.
+- (2026-03-14) Completed the grouped-step action-schema summary slice:
+  - Extracted shared grouped action-input editor state so the selected action, derived input fields, and required-field completion counts come from one pure helper used by both the properties panel and the pipeline mapping-status badges.
+  - Added focused tests that change a grouped step from `tickets.create` to `tickets.update_fields` and assert that the visible input fields and required-field completion counts recalculate immediately from the new action schema.
+  - Marked F088, F090, T088, and T090 implemented.
