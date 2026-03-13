@@ -18,7 +18,7 @@
   {
     "id": "F003",
     "description": "P1: Database migration — create `quote_activities` table for audit trail",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR1"
     ]
