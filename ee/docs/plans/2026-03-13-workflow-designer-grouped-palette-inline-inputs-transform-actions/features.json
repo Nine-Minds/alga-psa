@@ -584,19 +584,19 @@
   {
     "id": "F098",
     "description": "The step properties panel should surface action-level schema references for the chosen action when available",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model", "Data / API / Integrations"]
   },
   {
     "id": "F099",
     "description": "The step properties panel should keep step name editing available regardless of whether an action has been chosen",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Step Properties Model"]
   },
   {
     "id": "F100",
     "description": "The step properties panel should keep save-output controls available regardless of whether an action has been chosen",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "UX / UI Notes > Step Properties Model"]
   },
   {

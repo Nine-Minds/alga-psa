@@ -7,7 +7,7 @@ import { toast } from 'react-hot-toast';
 import { createPortal } from 'react-dom';
 import {
   Plus, ChevronRight, ChevronDown, AlertTriangle, Copy, Info, HelpCircle,
-  FileJson, Code, Check, Eye, EyeOff, Play, Trash2,
+  Check, Play, Trash2,
   // Dense palette icons
   GitBranch, Repeat, Shield, CornerDownRight, ArrowRight, Clock, User, Settings,
   Zap, Database, Link, Workflow, Mail, Send, Inbox, MailOpen,
@@ -78,6 +78,7 @@ import {
   groupPaletteItemsByCategory,
   matchesPaletteSearchQuery,
 } from './paletteSearch';
+import { ActionSchemaReference } from './ActionSchemaReference';
 import { buildDataContext } from './workflowDataContext';
 import {
   applyGroupedActionSelectionToStep,
@@ -89,6 +90,8 @@ import { applyCatalogActionChoiceToStep } from './groupedActionSelection';
 import { WorkflowDesignerPalette } from './WorkflowDesignerPalette';
 import { buildActionInputEditorState } from './actionInputEditorState';
 import { PaletteItemWithTooltip } from './PaletteItemWithTooltip';
+import { WorkflowStepNameField } from './WorkflowStepNameField';
+import { WorkflowStepSaveOutputSection } from './WorkflowStepSaveOutputSection';
 
 import type {
   WorkflowDefinition,
@@ -5166,11 +5169,10 @@ const StepConfigPanel: React.FC<{
       )}
 
       {!step.type.startsWith('control.') && (
-        <Input
-          id={`workflow-step-name-${step.id}`}
-          label="Step name"
+        <WorkflowStepNameField
+          stepId={step.id}
           value={(step as NodeStep).name ?? ''}
-          onChange={(event) => onChange({ ...(step as NodeStep), name: event.target.value })}
+          onChange={(value) => onChange({ ...(step as NodeStep), name: value })}
         />
       )}
 
@@ -5188,90 +5190,23 @@ const StepConfigPanel: React.FC<{
       {!step.type.startsWith('control.') && (() => {
         const nodeStep = step as NodeStep;
         const existingConfig = nodeStep.config as Record<string, unknown> | undefined;
-        const currentSaveAs = (existingConfig?.saveAs as string) ?? '';
-        const isSaveEnabled = !!currentSaveAs;
         const actionId = (existingConfig?.actionId as string) ?? '';
 
-        const handleToggleSave = (enabled: boolean) => {
-          if (enabled) {
-            // Auto-generate name from actionId if available
-            const autoName = actionId ? generateSaveAsName(actionId) : 'result';
-            onChange({
-              ...nodeStep,
-              config: { ...existingConfig, saveAs: autoName }
-            });
-          } else {
-            onChange({
-              ...nodeStep,
-              config: { ...existingConfig, saveAs: undefined }
-            });
-          }
-        };
-
-        const handleSaveAsChange = (value: string) => {
-          onChange({
-            ...nodeStep,
-            config: { ...existingConfig, saveAs: value.trim() || undefined }
-          });
-        };
-
         return (
-          <div className="space-y-2">
-            {/* Toggle row */}
-            <div className="flex items-center justify-between">
-              <Label htmlFor={`workflow-step-saveAs-toggle-${step.id}`} className="text-sm font-medium">
-                Save output
-              </Label>
-              <Switch
-                id={`workflow-step-saveAs-toggle-${step.id}`}
-                checked={isSaveEnabled}
-                onCheckedChange={handleToggleSave}
-              />
-            </div>
-
-            {/* Input and copy button when enabled */}
-            {isSaveEnabled && (
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <Input
-                    id={`workflow-step-saveAs-${step.id}`}
-                    placeholder="e.g., ticketDefaults"
-                    value={currentSaveAs}
-                    onChange={(event) => handleSaveAsChange(event.target.value)}
-                    className={`flex-1 ${saveAsValidation?.type === 'error' ? 'border-destructive' : saveAsValidation?.type === 'warning' ? 'border-warning' : ''}`}
-                  />
-                  <Button
-                    id={`workflow-step-saveAs-copy-${step.id}`}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleCopyPath(`vars.${currentSaveAs}`)}
-                    title="Copy full path"
-                    className="flex-shrink-0"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {/* Path preview */}
-                <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <span>Accessible as:</span>
-                  <code className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-700 font-mono">
-                    vars.{currentSaveAs}
-                  </code>
-                </div>
-
-                {/* §16.1 - saveAs conflict validation warning */}
-                {saveAsValidation && (
-                  <div className={`flex items-center gap-1 text-xs ${
-                    saveAsValidation.type === 'error' ? 'text-destructive' : 'text-warning'
-                  }`}>
-                    <AlertTriangle className="w-3 h-3" />
-                    {saveAsValidation.message}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <WorkflowStepSaveOutputSection
+            stepId={step.id}
+            actionId={actionId}
+            saveAs={(existingConfig?.saveAs as string) ?? undefined}
+            saveAsValidation={saveAsValidation}
+            onSaveAsChange={(value) => {
+              onChange({
+                ...nodeStep,
+                config: { ...existingConfig, saveAs: value }
+              });
+            }}
+            onCopyPath={handleCopyPath}
+            generateSaveAsName={generateSaveAsName}
+          />
         );
       })()}
 
@@ -6154,143 +6089,6 @@ const SchemaReferenceSection: React.FC<{
             </>
           )}
         </div>
-      )}
-    </div>
-  );
-};
-
-// §16.1 - Action Schema Reference (shows input/output for action.call steps)
-const ActionSchemaReference: React.FC<{
-  action: ActionRegistryItem | undefined;
-  saveAs?: string;
-  onCopyPath?: (path: string) => void;
-}> = ({ action, saveAs, onCopyPath }) => {
-  const [showSchemaDetails, setShowSchemaDetails] = useState(false);
-  const [showRawSchema, setShowRawSchema] = useState(false);
-
-  useEffect(() => {
-    if (!showSchemaDetails) {
-      setShowRawSchema(false);
-    }
-  }, [showSchemaDetails]);
-
-  if (!action) {
-    return (
-      <div className="text-xs text-gray-400 p-3 border border-dashed border-gray-200 rounded-md text-center">
-        Select an action to see its input/output schema
-      </div>
-    );
-  }
-
-  const inputFields = extractSchemaFields(action.inputSchema, action.inputSchema);
-  const outputFields = extractSchemaFields(action.outputSchema, action.outputSchema);
-
-  return (
-    <div className="space-y-3">
-      {/* Action description */}
-      {action.ui?.description && (
-        <div className="text-xs text-gray-600 bg-blue-500/10 p-2 rounded-md flex items-start gap-2">
-          <Info className="w-3.5 h-3.5 text-blue-500 mt-0.5 flex-shrink-0" />
-          <span>{action.ui.description}</span>
-        </div>
-      )}
-
-      <div className="flex items-center justify-end">
-        <button
-          id={`workflow-step-schema-details-toggle-${action.id}`}
-          onClick={() => setShowSchemaDetails((prev) => !prev)}
-          className="text-[11px] text-gray-500 hover:text-gray-700 flex items-center gap-1"
-        >
-          {showSchemaDetails ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-          {showSchemaDetails ? 'Hide schema details' : 'View schema details'}
-        </button>
-      </div>
-
-      {showSchemaDetails && (
-        <>
-          {/* Input Schema */}
-          <SchemaReferenceSection
-            title="Input Schema"
-            icon={<Code className="w-3.5 h-3.5 text-gray-500" />}
-            fields={inputFields}
-            pathPrefix="input"
-            defaultExpanded={false}
-            emptyMessage="No input parameters"
-            onCopyPath={onCopyPath}
-          />
-
-          {/* Output Schema */}
-          <SchemaReferenceSection
-            title="Output Schema"
-            icon={<FileJson className="w-3.5 h-3.5 text-gray-500" />}
-            fields={outputFields}
-            pathPrefix={saveAs ? `vars.${saveAs}` : 'output'}
-            defaultExpanded={false}
-            emptyMessage="No output fields"
-            onCopyPath={onCopyPath}
-            headerExtra={
-              saveAs && (
-                <span className="text-[10px] text-gray-500 font-normal">
-                  → vars.{saveAs}
-                </span>
-              )
-            }
-          />
-
-          {/* SaveAs preview */}
-          {saveAs && (
-            <div className="text-xs bg-success/10 border border-success/30 rounded-md p-2 flex items-center gap-2">
-              <Check className="w-3.5 h-3.5 text-success" />
-              <span className="text-success">
-                Output available at <code className="bg-success/15 px-1 rounded">${`{vars.${saveAs}}`}</code>
-              </span>
-            </div>
-          )}
-
-          {/* Raw schema toggle and export */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowRawSchema(!showRawSchema)}
-              className="text-[10px] text-gray-500 hover:text-gray-700 flex items-center gap-1"
-            >
-              {showRawSchema ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-              {showRawSchema ? 'Hide' : 'Show'} raw JSON Schema
-            </button>
-
-            {/* §16.7 - Export schema as JSON */}
-            <button
-              onClick={() => {
-                const schema = {
-                  actionId: action.id,
-                  version: action.version,
-                  inputSchema: action.inputSchema,
-                  outputSchema: action.outputSchema
-                };
-                const blob = new Blob([JSON.stringify(schema, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${action.id}-schema.json`;
-                a.click();
-                URL.revokeObjectURL(url);
-              }}
-              className="text-[10px] text-blue-500 hover:text-blue-700 flex items-center gap-1"
-              title="Download schema as JSON file"
-            >
-              <FileJson className="w-3 h-3" />
-              Export schema
-            </button>
-          </div>
-
-          {showRawSchema && (
-            <div className="text-[10px] font-mono bg-gray-900 text-gray-100 p-2 rounded-md overflow-x-auto">
-              <div className="text-gray-400 mb-1">// Input Schema</div>
-              <pre>{JSON.stringify(action.inputSchema, null, 2)}</pre>
-              <div className="text-gray-400 mt-2 mb-1">// Output Schema</div>
-              <pre>{JSON.stringify(action.outputSchema, null, 2)}</pre>
-            </div>
-          )}
-        </>
       )}
     </div>
   );

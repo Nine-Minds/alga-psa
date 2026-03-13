@@ -92,6 +92,10 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `npx tsc --noEmit -p ee/server/tsconfig.json`
 - (2026-03-13) Validate grouped action step helpers:
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/groupedActionStep.test.ts src/components/workflow-designer/__tests__/paletteSearch.test.ts`
+- (2026-03-14) Validate grouped step-properties schema-reference and basics seams:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/ActionSchemaReference.test.tsx src/components/workflow-designer/__tests__/WorkflowStepPropertiesBasics.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/ActionSchemaReference.tsx ee/server/src/components/workflow-designer/WorkflowStepNameField.tsx ee/server/src/components/workflow-designer/WorkflowStepSaveOutputSection.tsx ee/server/src/components/workflow-designer/__tests__/ActionSchemaReference.test.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowStepPropertiesBasics.test.tsx ee/server/src/components/workflow-designer/workflowDataContext.ts ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`
 - (2026-03-13) Validate text transform action registration and catalog/search coverage:
   - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/actions/__tests__/registerTransformActions.test.ts shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts --reporter=dot`
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/paletteSearch.test.ts --reporter=dot`
@@ -274,5 +278,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Marked F089, F095, T089, and T095 implemented.
 - (2026-03-14) Completed the grouped-step picker/type metadata slice:
   - Extended `ActionInputField` and `actionInputEditorState` to preserve additive workflow picker annotations from action schemas without changing the current mapping UI.
+- (2026-03-14) Completed the grouped-step schema reference and basics slice:
+  - Extracted the chosen-action schema reference card into `ActionSchemaReference.tsx` so the properties panel can show action description plus input/output schema details through a focused jsdom seam.
+  - Extracted the step-name and save-output controls into dedicated properties-panel components so grouped steps keep those controls available both before and after action selection without relying on a full browser harness.
+  - Marked F098-F100 and T098-T100 implemented.
   - Added focused coverage that changing the selected action swaps both the picker metadata and the target field type used by compatibility hinting.
   - Marked F091, F092, T091, and T092 implemented.

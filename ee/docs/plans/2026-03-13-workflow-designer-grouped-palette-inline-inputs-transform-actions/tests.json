@@ -584,19 +584,19 @@
   {
     "id": "T098",
     "description": "Playwright: grouped steps surface schema-reference details for the chosen action when present",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F098"]
   },
   {
     "id": "T099",
     "description": "Playwright: step name editing remains available before and after action selection",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F099"]
   },
   {
     "id": "T100",
     "description": "Playwright: save-output controls remain available before and after action selection",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F100"]
   },
   {

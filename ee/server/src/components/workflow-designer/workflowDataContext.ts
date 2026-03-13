@@ -118,7 +118,7 @@ const normalizeSchemaType = (schema?: JsonSchema): string | undefined => {
   return schema.type;
 };
 
-const extractSchemaFields = (schema: JsonSchema, root?: JsonSchema): SchemaField[] => {
+export const extractSchemaFields = (schema: JsonSchema, root?: JsonSchema): SchemaField[] => {
   const resolved = schema ? resolveSchema(schema, root) : schema;
   if (!resolved?.properties) return [];
 
