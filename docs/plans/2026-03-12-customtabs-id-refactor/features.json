@@ -18,7 +18,7 @@
   {
     "id": "F003",
     "description": "CustomTabs uses `tab.id` as React `key` prop for triggers and content panels",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Internal Component Changes"
     ]

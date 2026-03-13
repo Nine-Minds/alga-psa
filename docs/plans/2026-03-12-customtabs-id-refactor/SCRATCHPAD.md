@@ -117,3 +117,5 @@ npm run build
 - F001 — Added required `TabContent.id` in `packages/ui/src/components/CustomTabs.tsx` so ids are now the stable tab contract.
 
 - F002 — Switched Radix trigger/content `value` props to `tab.id`, with runtime and source-contract coverage in the new CustomTabs tests.
+
+- F003 — Updated CustomTabs trigger and content React keys to `tab.id` to avoid label-coupled identity.
