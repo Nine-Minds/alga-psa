@@ -105,6 +105,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) F030 complete — P1: Added `updateQuoteItem`, `removeQuoteItem`, and `reorderQuoteItems` server actions in `packages/billing/src/actions/quoteActions.ts`, all wrapped with `withAuth()`, enforcing `billing:update`, validating item updates with `updateQuoteItemSchema`, and delegating mutation/reorder behavior to the tenant-scoped quote item model.
 - (2026-03-13) F029 complete — P1: Added `addQuoteItem` server action in `packages/billing/src/actions/quoteActions.ts`, wrapped with `withAuth()`, enforcing `billing:update`, validating with `createQuoteItemSchema`, and delegating service catalog denormalization/default pricing to the quote item model.
 - (2026-03-13) F028 complete — P1: Added `deleteQuote` server action in `packages/billing/src/actions/quoteActions.ts`, wrapped with `withAuth()`, enforcing `billing:delete`, and delegating deletion/archive behavior to the existing quote deletion validation in the model layer.
 - (2026-03-13) F027 complete — P1: Added `getQuote` and `listQuotes` server actions in `packages/billing/src/actions/quoteActions.ts`, both wrapped with `withAuth()`, enforcing `billing:read`, and delegating to the tenant-scoped quote model for single-record and paginated list retrieval.

@@ -8,7 +8,7 @@ import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { IQuote, IQuoteItem, IQuoteListItem, PaginatedResult } from '@alga-psa/types';
 import Quote, { type QuoteListOptions } from '../models/quote';
 import QuoteItem from '../models/quoteItem';
-import { createQuoteItemSchema, createQuoteSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
+import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
 
 type CreateQuoteInput = Omit<
   IQuote,
@@ -34,6 +34,8 @@ type CreateQuoteItemInput = Omit<
   | 'created_at'
   | 'updated_at'
 > & Partial<Pick<IQuoteItem, 'display_order'>>;
+
+type UpdateQuoteItemInput = Partial<IQuoteItem>;
 
 const requireBillingCreatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing', 'create')) {
@@ -172,4 +174,53 @@ export const addQuoteItem = withAuth(async (
   });
 
   return await QuoteItem.create(knex, tenant, parsedInput);
+});
+
+export const updateQuoteItem = withAuth(async (
+  user,
+  { tenant },
+  quoteItemId: string,
+  input: UpdateQuoteItemInput
+): Promise<IQuoteItem | ActionPermissionError> => {
+  const denied = await requireBillingUpdatePermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  const parsedInput = updateQuoteItemSchema.parse({
+    ...input,
+    updated_by: input.updated_by ?? getActorUserId(user),
+  });
+
+  return await QuoteItem.update(knex, tenant, quoteItemId, parsedInput);
+});
+
+export const removeQuoteItem = withAuth(async (
+  user,
+  { tenant },
+  quoteItemId: string
+): Promise<boolean | ActionPermissionError> => {
+  const denied = await requireBillingUpdatePermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  return await QuoteItem.delete(knex, tenant, quoteItemId);
+});
+
+export const reorderQuoteItems = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string,
+  orderedQuoteItemIds: string[]
+): Promise<IQuoteItem[] | ActionPermissionError> => {
+  const denied = await requireBillingUpdatePermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  return await QuoteItem.reorder(knex, tenant, quoteId, orderedQuoteItemIds);
 });

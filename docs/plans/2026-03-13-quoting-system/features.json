@@ -237,7 +237,7 @@
   {
     "id": "F030",
     "description": "P1: Server action — updateQuoteItem, removeQuoteItem, reorderQuoteItems",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR8"
     ]
