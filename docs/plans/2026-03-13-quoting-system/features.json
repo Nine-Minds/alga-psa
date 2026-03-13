@@ -50,7 +50,7 @@
   {
     "id": "F007",
     "description": "P1: Zod schemas — createQuoteSchema and updateQuoteSchema with field validation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR4"
     ]

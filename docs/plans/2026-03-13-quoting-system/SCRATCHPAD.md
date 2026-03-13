@@ -111,3 +111,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) F004 complete — P1: Add 'QUOTE' entity type to SharedNumberingService and seed next_number table with prefix='Q-', padding_length=4. Added QUOTE numbering support in the migration seed and shared numbering service.
 - (2026-03-13) F005 complete — P1: TypeScript interfaces — IQuote, IQuoteItem, IQuoteActivity, QuoteStatus in packages/types/src/interfaces/quote.interfaces.ts. Added shared quote interfaces in packages/types for billing-side reuse.
 - (2026-03-13) F006 complete — P1: TypeScript view models — IQuoteWithClient, IQuoteListItem for list/detail views. Added list/detail quote view types alongside the core quote interfaces.
+- (2026-03-13) F007 complete — P1: Zod schemas — createQuoteSchema and updateQuoteSchema with field validation. Added quote create/update validation schemas in the billing package.
