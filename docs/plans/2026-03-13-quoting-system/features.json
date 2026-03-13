@@ -463,7 +463,7 @@
   {
     "id": "F054",
     "description": "P2: Discount line items — create discount item with type (percentage/fixed) and target",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2-FR2"
     ]

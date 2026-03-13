@@ -12,9 +12,14 @@ interface QuoteCalculationContext {
 
 interface QuoteItemRow {
   quote_item_id: string;
+  service_id?: string | null;
   quantity: number | string;
   unit_price: number | string;
   is_discount?: boolean | null;
+  discount_type?: 'percentage' | 'fixed' | null;
+  discount_percentage?: number | string | null;
+  applies_to_item_id?: string | null;
+  applies_to_service_id?: string | null;
   is_optional?: boolean | null;
   is_selected?: boolean | null;
   is_taxable?: boolean | null;
@@ -36,6 +41,18 @@ function toQuoteDate(value?: string | null): string {
 
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+}
+
+function isItemIncluded(item: QuoteItemRow): boolean {
+  return !item.is_optional || item.is_selected !== false;
+}
+
+function calculateDiscountAmount(item: QuoteItemRow, baseAmount: number): number {
+  if (item.discount_type === 'percentage') {
+    return Math.round(baseAmount * (toNumber(item.discount_percentage) / 100));
+  }
+
+  return toNumber(item.quantity || 1) * toNumber(item.unit_price);
 }
 
 export async function recalculateQuoteFinancials(
@@ -67,6 +84,21 @@ export async function recalculateQuoteFinancials(
   const quoteDate = toQuoteDate(quote.quote_date);
   const currencyCode = quote.currency_code ?? 'USD';
   const taxSource = quote.tax_source ?? 'internal';
+  const includedBaseItems = items.filter((item) => !item.is_discount && isItemIncluded(item));
+  const baseSubtotal = includedBaseItems.reduce((sum, item) => sum + (toNumber(item.quantity) * toNumber(item.unit_price)), 0);
+  const baseItemTotals = new Map(includedBaseItems.map((item) => [item.quote_item_id, toNumber(item.quantity) * toNumber(item.unit_price)]));
+  const baseServiceTotals = new Map<string, number>();
+
+  for (const item of includedBaseItems) {
+    if (!item.service_id) {
+      continue;
+    }
+
+    baseServiceTotals.set(
+      item.service_id,
+      (baseServiceTotals.get(item.service_id) ?? 0) + (toNumber(item.quantity) * toNumber(item.unit_price))
+    );
+  }
 
   let subtotal = 0;
   let discountTotal = 0;
@@ -74,18 +106,25 @@ export async function recalculateQuoteFinancials(
 
   for (const item of items) {
     const totalPrice = toNumber(item.quantity) * toNumber(item.unit_price);
-    const isIncludedInTotals = !item.is_optional || item.is_selected !== false;
+    const isIncludedInTotals = isItemIncluded(item);
     const isDiscount = item.is_discount === true;
     const taxRegion = item.tax_region ?? client?.region_code ?? null;
 
-    let netAmount = isIncludedInTotals ? totalPrice : 0;
+    const scopedBaseAmount = item.applies_to_item_id
+      ? (baseItemTotals.get(item.applies_to_item_id) ?? 0)
+      : item.applies_to_service_id
+        ? (baseServiceTotals.get(item.applies_to_service_id) ?? 0)
+        : baseSubtotal;
+    const resolvedTotalPrice = isDiscount ? calculateDiscountAmount(item, scopedBaseAmount) : totalPrice;
+
+    let netAmount = isIncludedInTotals ? resolvedTotalPrice : 0;
     let taxAmount = 0;
     let taxRate = isIncludedInTotals ? toNumber(item.tax_rate) : 0;
 
     if (isDiscount) {
-      discountTotal += isIncludedInTotals ? totalPrice : 0;
+      discountTotal += isIncludedInTotals ? resolvedTotalPrice : 0;
     } else {
-      subtotal += isIncludedInTotals ? totalPrice : 0;
+      subtotal += isIncludedInTotals ? resolvedTotalPrice : 0;
 
       if (isIncludedInTotals && quote.client_id && taxService && taxSource === 'internal') {
         const taxResult = await runWithTenant(tenant, async () => {
@@ -112,7 +151,7 @@ export async function recalculateQuoteFinancials(
     await knexOrTrx('quote_items')
       .where({ tenant, quote_item_id: item.quote_item_id })
       .update({
-        total_price: totalPrice,
+        total_price: resolvedTotalPrice,
         net_amount: netAmount,
         tax_amount: taxAmount,
         tax_region: taxRegion,
