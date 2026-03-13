@@ -399,7 +399,7 @@
   {
     "id": "F047",
     "description": "P1: QuoteDetail — action buttons based on status (Edit, Send, Delete, Cancel)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR16"
     ]

@@ -7,7 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import type { IClient, IContact, IQuote } from '@alga-psa/types';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
-import { getQuote } from '../../../actions/quoteActions';
+import { deleteQuote, getQuote, updateQuote } from '../../../actions/quoteActions';
 import { getAllContacts } from '@alga-psa/clients/actions';
 
 interface QuoteDetailProps {
@@ -36,6 +36,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit }) =>
   const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isWorking, setIsWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -69,6 +70,90 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit }) =>
 
   const client = useMemo(() => clients.find((entry) => entry.client_id === quote?.client_id) ?? null, [clients, quote?.client_id]);
   const contact = useMemo(() => contacts.find((entry) => entry.contact_name_id === quote?.contact_id) ?? null, [contacts, quote?.contact_id]);
+
+  const handleDelete = async () => {
+    if (!quote) {
+      return;
+    }
+
+    try {
+      setIsWorking(true);
+      setError(null);
+      const result = await deleteQuote(quote.quote_id);
+
+      if ('permissionError' in result) {
+        throw new Error(result.permissionError);
+      }
+
+      if (!result.deleted) {
+        throw new Error(result.message || 'Quote could not be deleted');
+      }
+
+      onBack();
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : 'Failed to delete quote');
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  const handleCancelQuote = async () => {
+    if (!quote) {
+      return;
+    }
+
+    try {
+      setIsWorking(true);
+      setError(null);
+      const result = await updateQuote(quote.quote_id, { status: 'cancelled' });
+
+      if ('permissionError' in result) {
+        throw new Error(result.permissionError);
+      }
+
+      setQuote(result);
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : 'Failed to cancel quote');
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  const renderPrimaryActions = () => {
+    if (!quote) {
+      return null;
+    }
+
+    const status = quote.status || 'draft';
+
+    switch (status) {
+      case 'draft':
+        return (
+          <>
+            {onEdit ? <Button id="quote-detail-edit" onClick={onEdit} disabled={isWorking}>Edit</Button> : null}
+            <Button id="quote-detail-send" disabled>Send</Button>
+            <Button id="quote-detail-delete" variant="outline" onClick={() => void handleDelete()} disabled={isWorking}>Delete</Button>
+          </>
+        );
+      case 'sent':
+        return (
+          <>
+            <Button id="quote-detail-revise" disabled>Revise</Button>
+            <Button id="quote-detail-cancel" variant="outline" onClick={() => void handleCancelQuote()} disabled={isWorking}>Cancel</Button>
+          </>
+        );
+      case 'accepted':
+        return (
+          <>
+            <Button id="quote-detail-convert-contract" disabled>Convert to Contract</Button>
+            <Button id="quote-detail-convert-invoice" disabled>Convert to Invoice</Button>
+            <Button id="quote-detail-convert-both" disabled>Convert to Both</Button>
+          </>
+        );
+      default:
+        return onEdit ? <Button id="quote-detail-edit" onClick={onEdit} disabled={isWorking}>Edit</Button> : null;
+    }
+  };
 
   if (isLoading) {
     return (
@@ -111,9 +196,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit }) =>
               Status: {quote.status || 'draft'}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button id="quote-detail-back" variant="outline" onClick={onBack}>Back</Button>
-            {onEdit ? <Button id="quote-detail-edit" onClick={onEdit}>Edit</Button> : null}
+            {renderPrimaryActions()}
+            <Button id="quote-detail-view-pdf" variant="outline" disabled>View PDF</Button>
+            <Button id="quote-detail-view-history" variant="outline" disabled>View History</Button>
           </div>
         </div>
 
@@ -215,4 +302,3 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit }) =>
 };
 
 export default QuoteDetail;
-
