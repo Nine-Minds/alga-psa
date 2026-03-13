@@ -106,7 +106,7 @@
   {
     "id": "T014",
     "description": "Schema: createQuoteItemSchema requires description and validates quantity > 0",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
