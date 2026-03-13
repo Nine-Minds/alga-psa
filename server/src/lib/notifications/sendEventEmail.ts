@@ -381,7 +381,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     const subjectTemplate = Handlebars.compile(emailSubject);
 
     let html = htmlTemplate(params.context);
-    let subject = subjectTemplate(params.context);
+    let subject = subjectTemplate(params.context).replace(/[\r\n]+/g, ' ').trim();
 
     logger.debug('[SendEventEmail] Template rendered with Handlebars:', {
       originalContentLength: templateContent.length,

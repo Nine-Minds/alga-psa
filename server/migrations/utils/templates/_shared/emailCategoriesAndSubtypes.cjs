@@ -40,6 +40,7 @@ const SUBTYPES = [
   { category: 'Projects', name: 'Project Assigned', description: 'When a project is assigned to a user' },
   { category: 'Projects', name: 'Project Task Assigned', description: 'When a project task is assigned to a user' },
   { category: 'Projects', name: 'Task Updated', description: 'When a project task is updated' },
+  { category: 'Projects', name: 'Task Comment Added', description: 'When a comment is added to a project task' },
   { category: 'Projects', name: 'Milestone Completed', description: 'When a project milestone is completed' },
   // Time Entries
   { category: 'Time Entries', name: 'Time Entry Submitted', description: 'When time entries are submitted for approval' },
