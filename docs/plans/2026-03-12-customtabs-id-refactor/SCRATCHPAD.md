@@ -207,3 +207,4 @@ npm run build
 - **T004 complete** — The contract test asserts tab content panels use `value={tab.id}`, covering Radix content matching by id.
 - **T005 complete** — The source contract test locks in `key={tab.id}` for trigger and content rendering paths.
 - **T006 complete** — The UI interaction test confirms clicking a tab calls `onTabChange` with the stable tab id ().
+- **T007 complete** — The render test covers `defaultTab="general"` selecting the matching tab by id.
