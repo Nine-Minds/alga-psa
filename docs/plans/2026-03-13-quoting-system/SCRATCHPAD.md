@@ -109,6 +109,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) F061 complete — P2: Added `Quote.createRevision()` plus `createQuoteRevision()` action support, creating a new draft quote revision with `version + 1` and a stable root `parent_quote_id` when revising sent or rejected quotes.
 - (2026-03-13) F060 complete — P2: Quote recalculation now treats `is_selected=false` optional items as excluded from subtotal/discount/tax/total calculations, giving Phase 4’s client selections a backend-ready totals model.
 - (2026-03-13) F059 complete — P2: `QuoteItem.create()`, `update()`, `delete()`, `reorder()`, and `Quote.update()` now all invoke `recalculateQuoteFinancials`, so quote totals and tax stay synchronized whenever items or key quote metadata change.
 - (2026-03-13) F058 complete — P2: Quote recalculation now writes `subtotal`, `discount_total`, `tax`, and `total_amount` back to the parent quote using the planned formula: subtotal of non-discount lines, minus discount lines, plus accumulated tax.

@@ -32,6 +32,11 @@ function formatDate(value?: string | null): string {
   return new Date(value).toLocaleDateString();
 }
 
+function formatQuoteNumber(quote: IQuote): string {
+  const baseNumber = quote.quote_number || 'Template quote';
+  return quote.version > 1 ? `${baseNumber} v${quote.version}` : baseNumber;
+}
+
 const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit }) => {
   const [quote, setQuote] = useState<IQuote | null>(null);
   const [clients, setClients] = useState<IClient[]>([]);
@@ -191,7 +196,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit }) =>
       <Box p="4" className="space-y-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="space-y-1">
-            <div className="text-sm text-muted-foreground">{quote.quote_number || 'Template quote'}</div>
+            <div className="text-sm text-muted-foreground">{formatQuoteNumber(quote)}</div>
             <h2 className="text-2xl font-semibold text-foreground">{quote.title}</h2>
             <div>
               <QuoteStatusBadge status={quote.status || 'draft'} />

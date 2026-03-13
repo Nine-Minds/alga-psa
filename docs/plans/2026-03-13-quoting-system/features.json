@@ -519,7 +519,7 @@
   {
     "id": "F061",
     "description": "P2: Versioning — 'Revise' action creates new quote row with incremented version and parent link",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2-FR4"
     ]

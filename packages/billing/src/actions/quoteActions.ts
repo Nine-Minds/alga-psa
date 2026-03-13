@@ -338,3 +338,31 @@ export const createQuoteFromTemplate = withAuth(async (
     return await Quote.getById(trx, tenant, createdQuote.quote_id) as IQuote;
   });
 });
+
+export const createQuoteRevision = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string
+): Promise<IQuote | ActionPermissionError> => {
+  const denied = await requireBillingUpdatePermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  return await knex.transaction((trx) => Quote.createRevision(trx, tenant, quoteId, getActorUserId(user)));
+});
+
+export const listQuoteVersions = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string
+): Promise<IQuote[] | ActionPermissionError> => {
+  const denied = await requireBillingReadPermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  return await Quote.listVersions(knex, tenant, quoteId);
+});
