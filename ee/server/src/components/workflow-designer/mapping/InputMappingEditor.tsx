@@ -1176,6 +1176,19 @@ const LiteralValueEditor: React.FC<{
         <StructuredLiteralGroup
           id={`${idPrefix}-literal-object`}
           title="Object fields"
+          actions={
+            <Button
+              id={`${idPrefix}-literal-object-reset`}
+              variant="ghost"
+              size="sm"
+              type="button"
+              onClick={() => onChange(buildDefaultLiteralValue(field))}
+              disabled={disabled}
+              className="h-7 px-2 text-gray-500 hover:text-gray-900"
+            >
+              Reset
+            </Button>
+          }
         >
           {fieldChildren?.map((child) => (
             <MappingFieldEditor
@@ -1205,15 +1218,18 @@ const LiteralValueEditor: React.FC<{
       const rows = Array.isArray(value)
         ? value.map((item) => (isRecordLiteral(item) ? item : {}))
         : [];
-
-      const addRow = () => {
+      const buildEmptyRow = () => {
         const newRow: Record<string, MappingValue> = {};
         for (const child of fieldChildren ?? []) {
           if (child.required || child.default !== undefined) {
             newRow[child.name] = buildDefaultLiteralValue(child);
           }
         }
-        onChange([...rows, newRow]);
+        return newRow;
+      };
+
+      const addRow = () => {
+        onChange([...rows, buildEmptyRow()]);
       };
 
       return (
@@ -1224,17 +1240,34 @@ const LiteralValueEditor: React.FC<{
               id={`${idPrefix}-literal-row-${rowIndex}`}
               title={`Item ${rowIndex + 1}`}
               actions={
-                <Button
-                  id={`${idPrefix}-literal-row-remove-${rowIndex}`}
-                  variant="ghost"
-                  size="sm"
-                  type="button"
-                  onClick={() => onChange(rows.filter((_, idx) => idx !== rowIndex))}
-                  disabled={disabled}
-                  className="h-7 px-2 text-gray-500 hover:text-destructive"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    id={`${idPrefix}-literal-row-reset-${rowIndex}`}
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    onClick={() => {
+                      const nextRows = [...rows];
+                      nextRows[rowIndex] = buildEmptyRow();
+                      onChange(nextRows);
+                    }}
+                    disabled={disabled}
+                    className="h-7 px-2 text-gray-500 hover:text-gray-900"
+                  >
+                    Reset
+                  </Button>
+                  <Button
+                    id={`${idPrefix}-literal-row-remove-${rowIndex}`}
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    onClick={() => onChange(rows.filter((_, idx) => idx !== rowIndex))}
+                    disabled={disabled}
+                    className="h-7 px-2 text-gray-500 hover:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               }
             >
               {fieldChildren?.map((child) => (

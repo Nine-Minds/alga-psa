@@ -812,31 +812,31 @@
   {
     "id": "T136",
     "description": "Playwright: explicitly resetting a nested field group clears authored child values safely",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F136"]
   },
   {
     "id": "T137",
     "description": "Playwright: reopening a saved draft rehydrates nested authored values correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F137"]
   },
   {
     "id": "T138",
     "description": "Playwright: field constraints such as format and pattern appear in inline help text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F138"]
   },
   {
     "id": "T139",
     "description": "Playwright: array field item-type hints appear in inline help text",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F139"]
   },
   {
     "id": "T140",
     "description": "Playwright: schema default values appear in inline field help where provided",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F140"]
   },
   {

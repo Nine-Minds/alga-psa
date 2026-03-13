@@ -130,6 +130,10 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx --reporter=dot`
   - `npx tsc --noEmit -p ee/server/tsconfig.json`
   - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputSourceMode.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx`
+- (2026-03-14) Validate nested reset/rehydration and field-help constraint hints:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputFieldInfo.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx`
 - (2026-03-13) Validate text transform action registration and catalog/search coverage:
   - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/actions/__tests__/registerTransformActions.test.ts shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts --reporter=dot`
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/paletteSearch.test.ts --reporter=dot`
@@ -366,6 +370,11 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Added a mode-transition helper that preserves previously authored fixed literals and direct reference expressions while builders move fields into and back out of Advanced mode.
   - Wired `MappingFieldEditor` to retain those preserved values locally so nested object fields can round-trip between Fixed/Reference and Advanced without discarding their prior authoring state.
   - Marked F134-F135 and T134-T135 implemented.
+- (2026-03-14) Completed the nested reset and field-help metadata slice:
+  - Added explicit reset actions for structured object groups and object-array rows so builders can clear nested child authoring without deleting the entire parent field.
+  - Verified nested object values survive a draft reopen by re-rendering the saved mapping state back into the inline editor.
+  - Extended `WorkflowActionInputFieldInfo` to surface constraint and item-type hints inline, and treated the already-shipped schema default help as the completion point for the separate default-metadata checklist item.
+  - Marked F136-F140 and T136-T140 implemented.
 - (2026-03-14) Completed the source-mode vocabulary slice:
   - Added `WorkflowActionInputSourceMode.tsx` so each editable field now exposes the user-facing `Reference`, `Fixed value`, and `Advanced` source-mode selector instead of raw expression/secret/literal labels.
   - Kept the existing serializer/runtime behavior underneath for now by mapping direct field-reference expressions to `Reference`, literal values to `Fixed value`, and complex expressions or secrets to `Advanced`.

@@ -812,31 +812,31 @@
   {
     "id": "F136",
     "description": "Safely clear authored child values when a builder explicitly resets a nested field group",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {
     "id": "F137",
     "description": "Safely rehydrate nested authored values when reopening a saved workflow draft",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Compatibility, Save/Load, and Validation"]
   },
   {
     "id": "F138",
     "description": "Expose field constraints such as format, minLength, maxLength, and pattern in inline field help",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {
     "id": "F139",
     "description": "Expose item-type hints for array fields in inline field help",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {
     "id": "F140",
     "description": "Expose default values from schema metadata where that helps builders understand unconfigured fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {

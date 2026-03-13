@@ -15,6 +15,13 @@ describe('WorkflowActionInputFieldInfo', () => {
           type: 'string',
           required: true,
           description: 'Ticket summary',
+          constraints: {
+            format: 'email',
+            minLength: 5,
+            maxLength: 120,
+            pattern: '^[a-z]+$',
+            itemType: 'string',
+          },
           default: 'Default summary',
           examples: ['Escalate printer issue'],
         }}
@@ -27,6 +34,10 @@ describe('WorkflowActionInputFieldInfo', () => {
     expect(view.getAllByTitle('Required field is missing a value')).toHaveLength(2);
     expect(view.getByText('Missing')).toBeInTheDocument();
     expect(view.getByText('Ticket summary')).toBeInTheDocument();
+    expect(view.getByText('Format: email')).toBeInTheDocument();
+    expect(view.getByText('Items: string')).toBeInTheDocument();
+    expect(view.getByText('Length: 5 - 120')).toBeInTheDocument();
+    expect(view.getByText('Pattern: ^[a-z]+$')).toBeInTheDocument();
     expect(view.getByText('Default summary')).toBeInTheDocument();
     expect(view.getByText('Escalate printer issue')).toBeInTheDocument();
 

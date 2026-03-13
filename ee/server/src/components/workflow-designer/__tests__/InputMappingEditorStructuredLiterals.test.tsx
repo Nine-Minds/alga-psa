@@ -261,4 +261,89 @@ describe('InputMappingEditor structured literals', () => {
       document.getElementById('mapping-step-nullable-due_at-literal-str')
     ).not.toBeInTheDocument();
   });
+
+  it('T136: resetting a nested object group clears authored child values safely', () => {
+    const Harness = () => {
+      const [value, setValue] = React.useState({
+        requester: {
+          name: 'Alex',
+          email: 'alex@example.com',
+        },
+      });
+
+      return (
+        <InputMappingEditor
+          value={value}
+          onChange={(nextValue) => setValue(nextValue as typeof value)}
+          targetFields={[
+            {
+              name: 'requester',
+              type: 'object',
+              children: [
+                { name: 'name', type: 'string', required: true },
+                { name: 'email', type: 'string' },
+              ],
+            },
+          ]}
+          fieldOptions={[]}
+          stepId="step-reset"
+          positionsHandlers={positionsHandlers}
+        />
+      );
+    };
+
+    render(
+      <Harness />
+    );
+
+    fireEvent.click(
+      document.getElementById('mapping-step-reset-requester-literal-object-reset') as HTMLElement
+    );
+
+    const nameInput = document.getElementById(
+      'mapping-step-reset-requester.name-literal-str'
+    ) as HTMLInputElement | null;
+    const emailInput = document.getElementById(
+      'mapping-step-reset-requester.email-literal-str'
+    ) as HTMLInputElement | null;
+
+    expect(nameInput?.value).toBe('');
+    expect(emailInput?.value).toBe('');
+    expect(screen.queryByDisplayValue('Alex')).not.toBeInTheDocument();
+    expect(screen.queryByDisplayValue('alex@example.com')).not.toBeInTheDocument();
+  });
+
+  it('T137: reopening a saved draft rehydrates nested authored values correctly', () => {
+    const props = {
+      value: {
+        requester: {
+          name: 'Alex',
+          email: 'alex@example.com',
+        },
+      },
+      onChange: vi.fn(),
+      targetFields: [
+        {
+          name: 'requester',
+          type: 'object',
+          children: [
+            { name: 'name', type: 'string', required: true },
+            { name: 'email', type: 'string' },
+          ],
+        },
+      ],
+      fieldOptions: [],
+      stepId: 'step-rehydrate',
+      positionsHandlers,
+    };
+
+    const view = render(<InputMappingEditor {...props} />);
+    expect(screen.getByDisplayValue('Alex')).toBeInTheDocument();
+
+    view.unmount();
+    render(<InputMappingEditor {...props} />);
+
+    expect(screen.getByDisplayValue('Alex')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('alex@example.com')).toBeInTheDocument();
+  });
 });
