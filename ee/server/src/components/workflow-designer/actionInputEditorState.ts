@@ -88,6 +88,82 @@ const normalizeSchemaType = (schema?: JsonSchema): string | undefined => {
   return schema.type;
 };
 
+const flattenRequiredActionInputFields = (
+  fields: ActionInputField[],
+  mappingValue: unknown,
+  prefix = ''
+): {
+  requiredFields: ActionInputField[];
+  mappedRequiredFieldCount: number;
+} => {
+  const requiredFields: ActionInputField[] = [];
+  let mappedRequiredFieldCount = 0;
+
+  fields.forEach((field) => {
+    const fieldPath = prefix ? `${prefix}.${field.name}` : field.name;
+    const currentValue =
+      mappingValue && typeof mappingValue === 'object' && !Array.isArray(mappingValue)
+        ? (mappingValue as Record<string, unknown>)[field.name]
+        : undefined;
+
+    const hasObjectChildren = field.type === 'object' && (field.children?.length ?? 0) > 0;
+    const hasArrayObjectChildren = field.type === 'array' && (field.children?.length ?? 0) > 0;
+    const isWholeObjectMapping =
+      currentValue &&
+      typeof currentValue === 'object' &&
+      !Array.isArray(currentValue) &&
+      ('$expr' in currentValue || '$secret' in currentValue);
+
+    if (
+      hasObjectChildren &&
+      (field.required || isInputMappingValueSet(currentValue as MappingValue | undefined, field.type))
+    ) {
+      const childStats = flattenRequiredActionInputFields(
+        field.children ?? [],
+        currentValue,
+        fieldPath
+      );
+
+      if (childStats.requiredFields.length > 0) {
+        requiredFields.push(...childStats.requiredFields);
+        mappedRequiredFieldCount += isWholeObjectMapping
+          ? childStats.requiredFields.length
+          : childStats.mappedRequiredFieldCount;
+        return;
+      }
+    }
+
+    if (hasArrayObjectChildren && Array.isArray(currentValue) && currentValue.length > 0) {
+      currentValue.forEach((item, index) => {
+        const childStats = flattenRequiredActionInputFields(
+          field.children ?? [],
+          item,
+          `${fieldPath}[${index}]`
+        );
+        requiredFields.push(...childStats.requiredFields);
+        mappedRequiredFieldCount += childStats.mappedRequiredFieldCount;
+      });
+      return;
+    }
+
+    if (field.required) {
+      requiredFields.push({
+        ...field,
+        name: fieldPath,
+      });
+
+      if (isInputMappingValueSet(currentValue as MappingValue | undefined, field.type)) {
+        mappedRequiredFieldCount += 1;
+      }
+    }
+  });
+
+  return {
+    requiredFields,
+    mappedRequiredFieldCount,
+  };
+};
+
 const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSchema): ActionInputField[] => {
   if (!schema) return [];
   const resolved = resolveSchema(schema, root);
@@ -214,11 +290,11 @@ export const buildActionInputEditorState = (
     ? extractActionInputFields(selectedAction.inputSchema, selectedAction.inputSchema)
     : [];
   const inputMapping = (asRecord(config?.inputMapping) as InputMapping | undefined) ?? {};
-  const requiredActionInputFields = actionInputFields.filter((field) => Boolean(field.required));
+  const {
+    requiredFields: requiredActionInputFields,
+    mappedRequiredFieldCount,
+  } = flattenRequiredActionInputFields(actionInputFields, inputMapping);
   const mappedInputFieldCount = Object.keys(inputMapping).length;
-  const mappedRequiredInputFieldCount = requiredActionInputFields.filter((field) =>
-    isInputMappingValueSet(inputMapping[field.name], field.type)
-  ).length;
 
   return {
     selectedAction,
@@ -226,7 +302,7 @@ export const buildActionInputEditorState = (
     requiredActionInputFields,
     inputMapping,
     mappedInputFieldCount,
-    mappedRequiredInputFieldCount,
-    unmappedRequiredInputFieldCount: requiredActionInputFields.length - mappedRequiredInputFieldCount,
+    mappedRequiredInputFieldCount: mappedRequiredFieldCount,
+    unmappedRequiredInputFieldCount: requiredActionInputFields.length - mappedRequiredFieldCount,
   };
 };

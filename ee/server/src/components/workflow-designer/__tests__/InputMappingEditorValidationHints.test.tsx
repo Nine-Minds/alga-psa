@@ -8,7 +8,7 @@ import { InputMappingEditor } from '../mapping/InputMappingEditor';
 import type { MappingPositionsHandlers } from '../mapping/useMappingPositions';
 
 vi.mock('@alga-psa/tenancy/actions', () => ({
-  listTenantSecrets: vi.fn().mockResolvedValue([]),
+  listTenantSecrets: vi.fn(() => new Promise(() => {})),
 }));
 
 const positionsHandlers: MappingPositionsHandlers = {

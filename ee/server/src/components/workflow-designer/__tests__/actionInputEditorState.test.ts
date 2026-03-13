@@ -75,6 +75,45 @@ const registry: WorkflowDesignerActionRegistryItem[] = [
       },
     },
   },
+  {
+    id: 'tickets.create_nested',
+    version: 1,
+    ui: {
+      label: 'Create Nested Ticket',
+      description: 'Create a ticket with nested inputs.',
+    },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        requester: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            email: { type: 'string' },
+          },
+          required: ['name', 'email'],
+        },
+        notes: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              line1: { type: 'string' },
+              line2: { type: 'string' },
+            },
+            required: ['line1'],
+          },
+        },
+      },
+      required: ['requester'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ticket_id: { type: 'string' },
+      },
+    },
+  },
 ];
 
 describe('action input editor state', () => {
@@ -200,5 +239,68 @@ describe('action input editor state', () => {
       default: 'Default ticket summary',
       examples: ['Escalate printer issue'],
     });
+  });
+
+  it('T127: required-field completion counts nested required object fields correctly', () => {
+    const step: NodeStep = {
+      id: 'step-5',
+      type: 'action.call',
+      name: 'Nested Ticket',
+      config: {
+        designerGroupKey: 'ticket',
+        designerTileKind: 'core-object',
+        actionId: 'tickets.create_nested',
+        version: 1,
+        inputMapping: {
+          requester: {
+            name: 'Alex',
+          },
+        },
+      },
+    };
+
+    const state = buildActionInputEditorState(step, registry);
+    expect(state.requiredActionInputFields.map((field) => field.name)).toEqual([
+      'requester.name',
+      'requester.email',
+    ]);
+    expect(state.mappedRequiredInputFieldCount).toBe(1);
+    expect(state.unmappedRequiredInputFieldCount).toBe(1);
+  });
+
+  it('T128: required-field completion counts nested required array item fields correctly', () => {
+    const step: NodeStep = {
+      id: 'step-6',
+      type: 'action.call',
+      name: 'Nested Ticket',
+      config: {
+        designerGroupKey: 'ticket',
+        designerTileKind: 'core-object',
+        actionId: 'tickets.create_nested',
+        version: 1,
+        inputMapping: {
+          requester: {
+            name: 'Alex',
+            email: 'alex@example.com',
+          },
+          notes: [
+            {
+              line1: 'First note',
+            },
+            {},
+          ],
+        },
+      },
+    };
+
+    const state = buildActionInputEditorState(step, registry);
+    expect(state.requiredActionInputFields.map((field) => field.name)).toEqual([
+      'requester.name',
+      'requester.email',
+      'notes[0].line1',
+      'notes[1].line1',
+    ]);
+    expect(state.mappedRequiredInputFieldCount).toBe(3);
+    expect(state.unmappedRequiredInputFieldCount).toBe(1);
   });
 });

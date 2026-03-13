@@ -722,19 +722,19 @@
   {
     "id": "T121",
     "description": "Playwright: nested object inputs render as expandable inline field groups",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F121"]
   },
   {
     "id": "T122",
     "description": "Playwright: nested array object inputs render as expandable inline field groups",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F122"]
   },
   {
     "id": "T123",
     "description": "Playwright: primitive array inputs get a structured fixed-value authoring affordance instead of raw JSON by default",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F123"]
   },
   {
@@ -746,25 +746,25 @@
   {
     "id": "T125",
     "description": "Playwright: collapsing nested object groups does not lose authored child values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F125"]
   },
   {
     "id": "T126",
     "description": "Playwright: collapsing nested array groups does not lose authored child values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F126"]
   },
   {
     "id": "T127",
     "description": "Unit: required-field completion counts nested required object fields correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F127"]
   },
   {
     "id": "T128",
     "description": "Unit: required-field completion counts nested required array item fields correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F128"]
   },
   {

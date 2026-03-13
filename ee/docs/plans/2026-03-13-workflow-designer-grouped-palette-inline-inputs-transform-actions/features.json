@@ -722,19 +722,19 @@
   {
     "id": "F121",
     "description": "Render nested object inputs as expandable inline field groups",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor", "UX / UI Notes > Field Authoring Model"]
   },
   {
     "id": "F122",
     "description": "Render nested array inputs as expandable inline field groups when the item schema is object-like",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {
     "id": "F123",
     "description": "Render primitive array inputs with an inline fixed-value authoring affordance that does not require raw JSON entry by default",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {
@@ -746,25 +746,25 @@
   {
     "id": "F125",
     "description": "Allow nested object groups to collapse without losing authored child values",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {
     "id": "F126",
     "description": "Allow nested array groups to collapse without losing authored child values",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {
     "id": "F127",
     "description": "Calculate required-field completion correctly for nested required object fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {
     "id": "F128",
     "description": "Calculate required-field completion correctly for nested required array item fields when item objects are authored inline",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {

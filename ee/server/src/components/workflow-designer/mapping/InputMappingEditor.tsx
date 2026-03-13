@@ -785,6 +785,48 @@ const buildDefaultLiteralValue = (field: ActionInputField): MappingValue => {
   return '';
 };
 
+const StructuredLiteralGroup: React.FC<{
+  id: string;
+  title: string;
+  defaultExpanded?: boolean;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}> = ({
+  id,
+  title,
+  defaultExpanded = true,
+  actions,
+  children,
+}) => {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+
+  return (
+    <div className="rounded-md border border-gray-200">
+      <div className="flex items-center justify-between gap-2 border-b border-gray-200 bg-gray-50 px-3 py-2">
+        <button
+          id={`${id}-toggle`}
+          type="button"
+          onClick={() => setExpanded(!expanded)}
+          aria-expanded={expanded}
+          aria-controls={`${id}-content`}
+          aria-label={`${expanded ? 'Collapse' : 'Expand'} ${title}`}
+          className="flex items-center gap-2 text-xs font-medium text-gray-700 hover:text-gray-900"
+        >
+          {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+          <span>{title}</span>
+        </button>
+        {actions}
+      </div>
+
+      {expanded && (
+        <div id={`${id}-content`} className="space-y-3 p-3">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const looksLikeEmail = (value: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
 const formatPrimitiveList = (value: MappingValue | undefined): string => {
@@ -1038,7 +1080,10 @@ const LiteralValueEditor: React.FC<{
     const renderStructuredObjectEditor = () => {
       const nextValue = isRecordLiteral(value) ? value : {};
       return (
-        <div className="space-y-3 rounded-md border border-gray-200 p-3">
+        <StructuredLiteralGroup
+          id={`${idPrefix}-literal-object`}
+          title="Object fields"
+        >
           {fieldChildren?.map((child) => (
             <div key={child.name} className="space-y-1.5">
               <div className="flex items-center gap-1 text-xs font-medium text-gray-700">
@@ -1065,7 +1110,7 @@ const LiteralValueEditor: React.FC<{
               )}
             </div>
           ))}
-        </div>
+        </StructuredLiteralGroup>
       );
     };
 
@@ -1087,55 +1132,58 @@ const LiteralValueEditor: React.FC<{
       return (
         <div className="space-y-3">
           {rows.map((row, rowIndex) => (
-            <div key={`${idPrefix}-row-${rowIndex}`} className="rounded-md border border-gray-200 p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <div className="text-xs font-medium text-gray-600">Item {rowIndex + 1}</div>
+            <StructuredLiteralGroup
+              key={`${idPrefix}-row-${rowIndex}`}
+              id={`${idPrefix}-literal-row-${rowIndex}`}
+              title={`Item ${rowIndex + 1}`}
+              actions={
                 <Button
                   id={`${idPrefix}-literal-row-remove-${rowIndex}`}
                   variant="ghost"
                   size="sm"
+                  type="button"
                   onClick={() => onChange(rows.filter((_, idx) => idx !== rowIndex))}
                   disabled={disabled}
                   className="h-7 px-2 text-gray-500 hover:text-destructive"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
-              </div>
-              <div className="space-y-3">
-                {fieldChildren?.map((child) => (
-                  <div key={`${idPrefix}-row-${rowIndex}-${child.name}`} className="space-y-1.5">
-                    <div className="flex items-center gap-1 text-xs font-medium text-gray-700">
-                      <span>{child.name}</span>
-                      {child.required && <span className="text-gray-500">*</span>}
-                    </div>
-                    <LiteralValueEditor
-                      value={row[child.name] as MappingValue | undefined}
-                      onChange={(childValue) => {
-                        const nextRows = [...rows];
-                        const nextRow = { ...row, [child.name]: childValue };
-                        nextRows[rowIndex] = nextRow;
-                        onChange(nextRows);
-                      }}
-                      fieldType={child.type}
-                      fieldEnum={child.enum}
-                      fieldChildren={child.children}
-                      fieldConstraints={child.constraints}
-                      idPrefix={`${idPrefix}-literal-row-${rowIndex}-${child.name}`}
-                      disabled={disabled}
-                    />
-                    {child.description && (
-                      <p className="text-[11px] text-gray-500">{child.description}</p>
-                    )}
+              }
+            >
+              {fieldChildren?.map((child) => (
+                <div key={`${idPrefix}-row-${rowIndex}-${child.name}`} className="space-y-1.5">
+                  <div className="flex items-center gap-1 text-xs font-medium text-gray-700">
+                    <span>{child.name}</span>
+                    {child.required && <span className="text-gray-500">*</span>}
                   </div>
-                ))}
-              </div>
-            </div>
+                  <LiteralValueEditor
+                    value={row[child.name] as MappingValue | undefined}
+                    onChange={(childValue) => {
+                      const nextRows = [...rows];
+                      const nextRow = { ...row, [child.name]: childValue };
+                      nextRows[rowIndex] = nextRow;
+                      onChange(nextRows);
+                    }}
+                    fieldType={child.type}
+                    fieldEnum={child.enum}
+                    fieldChildren={child.children}
+                    fieldConstraints={child.constraints}
+                    idPrefix={`${idPrefix}-literal-row-${rowIndex}-${child.name}`}
+                    disabled={disabled}
+                  />
+                  {child.description && (
+                    <p className="text-[11px] text-gray-500">{child.description}</p>
+                  )}
+                </div>
+              ))}
+            </StructuredLiteralGroup>
           ))}
 
           <Button
             id={`${idPrefix}-literal-array-add`}
             variant="outline"
             size="sm"
+            type="button"
             onClick={addRow}
             disabled={disabled}
             className="w-full justify-center"

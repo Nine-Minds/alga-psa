@@ -114,6 +114,10 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/actionInputEditorState.test.ts src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx --reporter=dot`
   - `npx tsc --noEmit -p ee/server/tsconfig.json`
   - `npx eslint ee/server/src/components/workflow-designer/actionInputEditorState.ts ee/server/src/components/workflow-designer/WorkflowActionInputFieldInfo.tsx ee/server/src/components/workflow-designer/__tests__/actionInputEditorState.test.ts ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx`
+- (2026-03-14) Validate nested inline literal groups and required-count recursion:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/actionInputEditorState.test.ts src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx src/components/workflow-designer/__tests__/InputMappingEditorValidationHints.test.tsx src/components/workflow-designer/__tests__/WorkflowActionInputTypeHint.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/actionInputEditorState.ts ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/WorkflowActionInputTypeHint.tsx ee/server/src/components/workflow-designer/__tests__/actionInputEditorState.test.ts ee/server/src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorValidationHints.test.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputTypeHint.test.tsx`
 - (2026-03-13) Validate text transform action registration and catalog/search coverage:
   - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/actions/__tests__/registerTransformActions.test.ts shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts --reporter=dot`
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/paletteSearch.test.ts --reporter=dot`
@@ -332,6 +336,12 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Extended `actionInputEditorState` to carry schema `examples` through the action-field extraction path so inline help remains schema-driven.
   - Updated `WorkflowActionInputFieldInfo` to show schema defaults and the first example alongside field descriptions when those hints are available.
   - Marked F119 and T119 implemented.
+- (2026-03-14) Completed the nested inline literal group slice:
+  - Added collapsible structured literal groups for nested object fields and object-array rows so fixed-value nested editors now behave like explicit inline field groups instead of always-expanded blobs.
+  - Kept primitive arrays on the structured list editor by default and added direct jsdom coverage so this behavior is now anchored in the checklist rather than incidental.
+  - Updated `actionInputEditorState` to count nested required object fields and authored object-array item fields in the required-field summary instead of treating any non-empty object/array as fully complete.
+  - Backfilled the previously untracked `WorkflowActionInputTypeHint` seam and its tests into the branch so the inline validation-hint imports are now actually committed with the rest of the editor code.
+  - Marked F121-F123, F125-F128, and T121-T123/T125-T128 implemented.
 - (2026-03-14) Completed the source-mode vocabulary slice:
   - Added `WorkflowActionInputSourceMode.tsx` so each editable field now exposes the user-facing `Reference`, `Fixed value`, and `Advanced` source-mode selector instead of raw expression/secret/literal labels.
   - Kept the existing serializer/runtime behavior underneath for now by mapping direct field-reference expressions to `Reference`, literal values to `Fixed value`, and complex expressions or secrets to `Advanced`.
