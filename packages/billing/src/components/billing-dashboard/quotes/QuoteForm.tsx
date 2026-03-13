@@ -292,7 +292,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
           <div>
             <h2 className="text-xl font-semibold">{isEditMode ? 'Edit Quote' : 'New Quote'}</h2>
             <p className="text-sm text-muted-foreground">
-              Save the quote header now; line item editing follows in the next UI slice.
+              Capture quote details, line items, and notes before saving the draft.
             </p>
           </div>
           <div className="flex gap-2">

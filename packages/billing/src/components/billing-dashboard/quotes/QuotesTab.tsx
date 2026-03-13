@@ -9,6 +9,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import type { ColumnDefinition, IQuoteListItem } from '@alga-psa/types';
 import { listQuotes } from '../../../actions/quoteActions';
+import QuoteDetail from './QuoteDetail';
 import QuoteForm from './QuoteForm';
 
 function formatCurrency(minorUnits: number, currencyCode: string): string {
@@ -35,6 +36,7 @@ const QuotesTab: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [clientFilter, setClientFilter] = useState('all');
   const selectedQuoteId = searchParams?.get('quoteId');
+  const selectedMode = searchParams?.get('mode');
 
   useEffect(() => {
     void loadQuotes();
@@ -126,7 +128,7 @@ const QuotesTab: React.FC = () => {
     );
   }
 
-  if (selectedQuoteId) {
+  if (selectedQuoteId === 'new' || (selectedQuoteId && selectedMode === 'edit')) {
     return (
       <QuoteForm
         quoteId={selectedQuoteId}
@@ -135,6 +137,16 @@ const QuotesTab: React.FC = () => {
           void loadQuotes();
           router.push(`/msp/billing?tab=quotes&quoteId=${savedQuoteId}`);
         }}
+      />
+    );
+  }
+
+  if (selectedQuoteId) {
+    return (
+      <QuoteDetail
+        quoteId={selectedQuoteId}
+        onBack={() => router.push('/msp/billing?tab=quotes')}
+        onEdit={() => router.push(`/msp/billing?tab=quotes&quoteId=${selectedQuoteId}&mode=edit`)}
       />
     );
   }

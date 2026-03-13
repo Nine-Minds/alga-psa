@@ -391,7 +391,7 @@
   {
     "id": "F046",
     "description": "P1: QuoteDetail component — read-only view with all sections",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR16"
     ]
