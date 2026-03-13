@@ -139,3 +139,5 @@ npm run build
 - F012 — Replaced SecuritySettingsPage slug/label maps with stable ids, preserving URL sync through direct `?tab=` values.
 
 - F013 — Added ids to both Import/Export tab sets and switched section routing to use section ids directly.
+
+- F014 — Migrated TicketingSettings to id-based sections (`display`, `boards`, `statuses`, etc.) with direct URL persistence.

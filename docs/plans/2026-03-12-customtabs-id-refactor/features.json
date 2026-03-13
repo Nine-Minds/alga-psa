@@ -110,7 +110,7 @@
   {
     "id": "F014",
     "description": "Migrate TicketingSettings.tsx — add id to 6 tabs, remove bidirectional maps",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern A"
