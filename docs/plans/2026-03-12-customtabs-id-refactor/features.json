@@ -299,7 +299,7 @@
   {
     "id": "F035",
     "description": "Migrate TicketConversation.tsx — add id to 4 tabs ('all-comments', 'client', 'internal', 'resolution'), update activeTab/onTabChange props to use ids, keep t() labels for display",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern C"

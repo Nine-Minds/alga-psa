@@ -77,6 +77,11 @@ interface TicketConversationProps {
   defaultNewestFirst?: boolean;
 }
 
+const ALL_COMMENTS_TAB_ID = 'all-comments';
+const CLIENT_TAB_ID = 'client';
+const INTERNAL_TAB_ID = 'internal';
+const RESOLUTION_TAB_ID = 'resolution';
+
 const TicketConversation: React.FC<TicketConversationProps> = ({
   id,
   ticket,
@@ -117,9 +122,6 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [resolutionCloseStatusId, setResolutionCloseStatusId] = useState<string>(NO_STATUS_CHANGE);
   const [contactAvatarUrls, setContactAvatarUrls] = useState<Record<string, string | null>>({});
 
-  const internalLabel = t('conversation.internal', 'Internal');
-  const resolutionLabel = t('conversation.resolution', 'Resolution');
-
   const discardComposeEditor = React.useCallback(() => {
     onNewCommentContentChange(DEFAULT_BLOCK);
     setShowEditor(false);
@@ -146,9 +148,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const handleAddCommentClick = () => {
     // Auto-check toggles based on which tab is active
     if (!hideInternalTab) {
-      setIsInternalToggle(activeTab === internalLabel);
+      setIsInternalToggle(activeTab === INTERNAL_TAB_ID);
     }
-    setIsResolutionToggle(activeTab === resolutionLabel);
+    setIsResolutionToggle(activeTab === RESOLUTION_TAB_ID);
     setShowEditor(true);
   };
   const handleSubmitComment = async () => {
@@ -210,11 +212,11 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   useEffect(() => {
     if (showEditor) {
       if (!hideInternalTab) {
-        setIsInternalToggle(activeTab === internalLabel);
+        setIsInternalToggle(activeTab === INTERNAL_TAB_ID);
       }
-      setIsResolutionToggle(activeTab === resolutionLabel);
+      setIsResolutionToggle(activeTab === RESOLUTION_TAB_ID);
     }
-  }, [activeTab, showEditor, hideInternalTab, internalLabel, resolutionLabel]);
+  }, [activeTab, showEditor, hideInternalTab]);
 
   // Reset close-status selection when leaving resolution mode or closing the editor.
   useEffect(() => {
@@ -366,6 +368,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   // Build tab content array based on hideInternalTab
   const baseTabs = [
     {
+      id: ALL_COMMENTS_TAB_ID,
       label: t('conversation.allComments', 'All Comments'),
       content: (
         <ReflectionContainer id={`${id}-all-comments`} label="All Comments">
@@ -378,6 +381,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       )
     },
     {
+      id: CLIENT_TAB_ID,
       label: t('conversation.client', 'Client'),
       content: (
         <ReflectionContainer id={`${id}-client-visible-comments`} label="Client Comments">
@@ -387,6 +391,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       )
     },
     {
+      id: INTERNAL_TAB_ID,
       label: t('conversation.internal', 'Internal'),
       content: (
         <ReflectionContainer id={`${id}-internal-comments`} label="Internal Comments">
@@ -396,6 +401,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       )
     },
     {
+      id: RESOLUTION_TAB_ID,
       label: t('conversation.resolution', 'Resolution'),
       content: (
         <ReflectionContainer id={`${id}-resolution-comments`} label="Resolution Comments">
@@ -536,7 +542,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         </div>
         <CustomTabs
           tabs={tabContent}
-          defaultTab={t('conversation.allComments', 'All Comments')}
+          value={activeTab}
           tabStyles={tabStyles}
           onTabChange={onTabChange}
           extraContent={
