@@ -236,7 +236,7 @@
   {
     "id": "F028",
     "description": "Migrate ClientNotificationsList.tsx — add id to 3 tabs, remove TAB_SLUG_MAP/TAB_KEY_TO_SLUG/tabKeyToLabel/labelToTabKey maps, keep t() labels for display",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern C"

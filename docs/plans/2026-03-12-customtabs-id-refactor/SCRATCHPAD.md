@@ -167,3 +167,5 @@ npm run build
 - F026 — CreditsTabs and its CreditsPage caller now use stable ids (`active`, `all`, `expired`) instead of label slug maps.
 
 - F027 — BillingSettings now uses `general`, `tax`, and `payments` ids for section state and URL persistence.
+
+- F028 — ClientNotificationsList now keeps URL sync and filter state on stable ids (`unread`, `all`, `read`) while labels remain translated.
