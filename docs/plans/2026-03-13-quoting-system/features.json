@@ -188,7 +188,7 @@
   {
     "id": "F024",
     "description": "P1: Quote activity model — listByQuoteId for audit trail display",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR7"
     ]
