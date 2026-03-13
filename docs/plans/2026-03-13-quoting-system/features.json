@@ -359,7 +359,7 @@
   {
     "id": "F042",
     "description": "P1: QuoteLineItems editor — add custom/manual line items",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR15"
     ]

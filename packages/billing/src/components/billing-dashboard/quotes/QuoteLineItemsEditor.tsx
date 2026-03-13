@@ -1,9 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Button } from '@alga-psa/ui/components/Button';
+import { Input } from '@alga-psa/ui/components/Input';
 import type { CatalogPickerItem } from '../../../actions/serviceActions';
 import ServiceCatalogPicker from '../contracts/ServiceCatalogPicker';
-import { createDraftQuoteItemFromService, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
+import {
+  createCustomDraftQuoteItem,
+  createDraftQuoteItemFromService,
+  formatDraftQuoteMoney,
+  type DraftQuoteItem,
+} from './quoteLineItemDraft';
 
 interface QuoteLineItemsEditorProps {
   items: DraftQuoteItem[];
@@ -19,10 +26,36 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   onChange,
 }) => {
   const [servicePickerValue, setServicePickerValue] = useState('');
+  const [manualDescription, setManualDescription] = useState('');
+  const [manualQuantity, setManualQuantity] = useState('1');
+  const [manualUnitPrice, setManualUnitPrice] = useState('0.00');
 
   const handleAddService = (service: CatalogPickerItem) => {
     onChange([...items, createDraftQuoteItemFromService(service)]);
     setServicePickerValue('');
+  };
+
+  const handleAddCustomItem = () => {
+    const trimmedDescription = manualDescription.trim();
+    const quantity = Number.parseInt(manualQuantity, 10);
+    const unitPrice = Math.round(Number.parseFloat(manualUnitPrice || '0') * 100);
+
+    if (!trimmedDescription || Number.isNaN(quantity) || quantity <= 0 || Number.isNaN(unitPrice) || unitPrice < 0) {
+      return;
+    }
+
+    onChange([
+      ...items,
+      createCustomDraftQuoteItem({
+        description: trimmedDescription,
+        quantity,
+        unit_price: unitPrice,
+      }),
+    ]);
+
+    setManualDescription('');
+    setManualQuantity('1');
+    setManualUnitPrice('0.00');
   };
 
   return (
@@ -44,6 +77,42 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
             disabled={disabled}
           />
         </div>
+      </div>
+
+      <div className="grid gap-3 rounded-md border border-dashed border-border p-3 md:grid-cols-[minmax(0,2fr)_120px_140px_auto]">
+        <Input
+          value={manualDescription}
+          onChange={(event) => setManualDescription(event.target.value)}
+          placeholder="Custom item description"
+          disabled={disabled}
+        />
+        <Input
+          type="number"
+          min="1"
+          step="1"
+          value={manualQuantity}
+          onChange={(event) => setManualQuantity(event.target.value)}
+          placeholder="Qty"
+          disabled={disabled}
+        />
+        <Input
+          type="number"
+          min="0"
+          step="0.01"
+          value={manualUnitPrice}
+          onChange={(event) => setManualUnitPrice(event.target.value)}
+          placeholder="Unit price"
+          disabled={disabled}
+        />
+        <Button
+          id="quote-line-items-add-custom"
+          type="button"
+          variant="outline"
+          onClick={handleAddCustomItem}
+          disabled={disabled || !manualDescription.trim()}
+        >
+          Add Custom Item
+        </Button>
       </div>
 
       {items.length === 0 ? (

@@ -69,10 +69,34 @@ export function createDraftQuoteItemFromService(item: CatalogPickerItem): DraftQ
   };
 }
 
+export function createCustomDraftQuoteItem(input: {
+  description: string;
+  quantity?: number;
+  unit_price?: number;
+  unit_of_measure?: string | null;
+}): DraftQuoteItem {
+  return {
+    local_id: buildLocalId(),
+    service_id: null,
+    service_item_kind: null,
+    service_name: null,
+    service_sku: null,
+    billing_method: null,
+    description: input.description,
+    quantity: Number(input.quantity ?? 1),
+    unit_price: Number(input.unit_price ?? 0),
+    unit_of_measure: input.unit_of_measure ?? null,
+    phase: null,
+    is_optional: false,
+    is_selected: true,
+    is_recurring: false,
+    billing_frequency: null,
+  };
+}
+
 export function formatDraftQuoteMoney(minorUnits: number, currencyCode: string): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currencyCode,
   }).format((minorUnits || 0) / 100);
 }
-
