@@ -623,7 +623,7 @@
   {
     "id": "F074",
     "description": "P3: Quote-specific AST bindings — quoteNumber, quoteDate, validUntil, scope, termsAndConditions, clientNotes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P3-FR3"
     ]
