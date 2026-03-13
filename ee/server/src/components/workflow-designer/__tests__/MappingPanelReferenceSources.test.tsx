@@ -121,9 +121,9 @@ describe('MappingPanel reference sources', () => {
       />
     );
 
-    expect(screen.getByText('Payload')).toBeInTheDocument();
-    expect(screen.getByText('Step Outputs (vars)')).toBeInTheDocument();
-    expect(screen.getByText('Workflow Meta')).toBeInTheDocument();
+    expect(screen.getAllByText('Payload')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('Step Outputs (vars)')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('Workflow Meta')[0]).toBeInTheDocument();
     expect(screen.getByText('vars.ticketResult')).toBeInTheDocument();
     expect(screen.getByText('(Create Ticket)')).toBeInTheDocument();
     expect(screen.getByTestId('mapping-panel-editor')).toBeInTheDocument();

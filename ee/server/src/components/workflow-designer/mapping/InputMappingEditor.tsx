@@ -606,6 +606,10 @@ const MappingFieldEditor: React.FC<{
 
   const handleInsertField = useCallback((path: string) => {
     if (!path) return;
+    if (deriveWorkflowActionInputSourceMode(value).mode === 'reference') {
+      handleExpressionChange(path);
+      return;
+    }
     // Use Monaco editor's insertAtCursor if available
     if (editorRef.current) {
       editorRef.current.insertAtCursor(path);

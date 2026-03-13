@@ -55,6 +55,10 @@ describe('WorkflowActionInputSourceMode', () => {
       mode: 'reference',
       advancedMode: 'expression',
     });
+    expect(deriveWorkflowActionInputSourceMode({ $expr: 'ticketItem.id' })).toEqual({
+      mode: 'reference',
+      advancedMode: 'expression',
+    });
     expect(deriveWorkflowActionInputSourceMode({ $expr: 'payload.summary & "-" & meta.traceId' })).toEqual({
       mode: 'advanced',
       advancedMode: 'expression',

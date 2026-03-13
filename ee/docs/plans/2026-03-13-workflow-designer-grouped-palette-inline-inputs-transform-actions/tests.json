@@ -902,7 +902,7 @@
   {
     "id": "T151",
     "description": "Unit: selecting a structured reference generates a direct field-reference expression under the hood",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F151"]
   },
   {

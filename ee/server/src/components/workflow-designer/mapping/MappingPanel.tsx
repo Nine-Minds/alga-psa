@@ -15,10 +15,14 @@ import { InputMappingEditor, type ActionInputField } from './InputMappingEditor'
 import { useMappingDnd } from './useMappingDnd';
 import { useMappingPositions } from './useMappingPositions';
 import { MappingConnectionsOverlay, type ConnectionData } from './MappingConnectionsOverlay';
-import { TypeCompatibility, getTypeCompatibility, inferTypeFromJsonSchema } from './typeCompatibility';
+import { getTypeCompatibility } from './typeCompatibility';
 import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import type { Expr, InputMapping } from '@shared/workflow/runtime/client';
-import type { ExpressionContext, JsonSchema } from '../expression-editor';
+import type { ExpressionContext } from '../expression-editor';
+import {
+  buildWorkflowReferenceExpressionContext,
+  buildWorkflowReferenceSourceTypeLookup,
+} from '../workflowReferenceContext';
 
 /**
  * Schema field type from WorkflowDesigner's DataContext
@@ -118,93 +122,6 @@ const convertToDataTreeContext = (ctx: WorkflowDataContext, payloadRootPath: str
   forEach: ctx.forEach
 });
 
-const buildSourceTypeLookup = (ctx: WorkflowDataContext, payloadRootPath: string): Map<string, string> => {
-  const map = new Map<string, string>();
-
-  const addField = (field: SchemaField, basePath: string) => {
-    const path = basePath ? `${basePath}.${field.name}` : field.name;
-    if (field.type) {
-      map.set(path, field.type);
-    }
-    field.children?.forEach(child => addField(child, path));
-  };
-
-  ctx.payload.forEach(field => addField(field, payloadRootPath));
-  ctx.steps.forEach(stepOutput => {
-    const basePath = `vars.${stepOutput.saveAs}`;
-    const outputType = inferTypeFromJsonSchema(stepOutput.outputSchema as JsonSchema);
-    if (outputType) {
-      map.set(basePath, outputType);
-    } else {
-      // Ensure the step output root is treated as an object when schema is missing.
-      // For assigned vars (pseudo-step outputs), leave type undefined to avoid false incompatibility warnings.
-      const isAssignedVar = stepOutput.stepId.includes(':');
-      if (!isAssignedVar) {
-        map.set(basePath, 'object');
-      }
-    }
-    stepOutput.fields.forEach(field => addField(field, basePath));
-  });
-  ctx.globals.meta.forEach(field => addField(field, 'meta'));
-  if (ctx.inCatchBlock) {
-    ctx.globals.error.forEach(field => addField(field, 'error'));
-  }
-  if (ctx.forEach?.itemVar) {
-    map.set(ctx.forEach.itemVar, ctx.forEach.itemType ?? 'any');
-  }
-  if (ctx.forEach?.indexVar) {
-    map.set(ctx.forEach.indexVar, 'number');
-  }
-
-  return map;
-};
-
-/**
- * Build ExpressionContext from WorkflowDataContext for Monaco editor autocomplete
- */
-const buildExpressionContext = (ctx: WorkflowDataContext): ExpressionContext => {
-  // Build vars schema from step outputs
-  const varsProperties: Record<string, JsonSchema> = {};
-  for (const stepOutput of ctx.steps) {
-    varsProperties[stepOutput.saveAs] = stepOutput.outputSchema as JsonSchema;
-  }
-
-  const varsSchema: JsonSchema | undefined = Object.keys(varsProperties).length > 0
-    ? { type: 'object', properties: varsProperties }
-    : undefined;
-
-  // Meta schema
-  const metaSchema: JsonSchema = {
-    type: 'object',
-    properties: {
-      state: { type: 'string', description: 'Workflow state' },
-      traceId: { type: 'string', description: 'Trace ID' },
-      tags: { type: 'object', description: 'Workflow tags' },
-    },
-  };
-
-  // Error schema (only relevant in catch blocks)
-  const errorSchema: JsonSchema | undefined = ctx.inCatchBlock ? {
-    type: 'object',
-    properties: {
-      name: { type: 'string', description: 'Error name' },
-      message: { type: 'string', description: 'Error message' },
-      stack: { type: 'string', description: 'Stack trace' },
-      nodePath: { type: 'string', description: 'Error location in workflow' },
-    },
-  } : undefined;
-
-  return {
-    payloadSchema: ctx.payloadSchema as JsonSchema | undefined,
-    varsSchema,
-    metaSchema,
-    errorSchema,
-    inCatchBlock: ctx.inCatchBlock,
-    forEachItemVar: ctx.forEach?.itemVar,
-    forEachIndexVar: ctx.forEach?.indexVar,
-  };
-};
-
 export interface MappingPanelProps {
   /**
    * Current input mapping value
@@ -289,11 +206,15 @@ export const MappingPanel: React.FC<MappingPanelProps> = ({
     () => convertToDataTreeContext(dataContext, payloadRootPath),
     [dataContext, payloadRootPath]
   );
-  const sourceTypeMap = useMemo(() => buildSourceTypeLookup(dataContext, payloadRootPath), [dataContext, payloadRootPath]);
+  const sourceTypeMap = useMemo(
+    () => buildWorkflowReferenceSourceTypeLookup(dataContext, payloadRootPath),
+    [dataContext, payloadRootPath]
+  );
 
   // §20 - Build expression context for Monaco editor autocomplete
   const expressionContext = useMemo(() => {
-    const ctx = expressionContextOverride ?? buildExpressionContext(dataContext);
+    const ctx =
+      expressionContextOverride ?? buildWorkflowReferenceExpressionContext(dataContext);
     console.log('[MappingPanel] Built expressionContext:', {
       hasPayloadSchema: !!ctx.payloadSchema,
       payloadSchemaType: ctx.payloadSchema?.type,

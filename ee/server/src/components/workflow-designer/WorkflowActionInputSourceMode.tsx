@@ -37,7 +37,7 @@ export function isSimpleFieldReferenceExpression(expression: string | undefined)
   const trimmed = expression.trim();
   if (!trimmed) return false;
 
-  return /^(payload|vars|meta|error|item|\$index)(\.[A-Za-z_$][A-Za-z0-9_$]*|\[\d+\])*$/u.test(trimmed);
+  return /^(payload|vars|meta|error|[A-Za-z_][A-Za-z0-9_]*|\$index)(\.[A-Za-z_$][A-Za-z0-9_$]*|\[\d+\])*$/u.test(trimmed);
 }
 
 export function deriveWorkflowActionInputSourceMode(
