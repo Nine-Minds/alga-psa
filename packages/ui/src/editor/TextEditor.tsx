@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, MutableRefObject } from 'react';
+import { useEffect, useRef, MutableRefObject } from 'react';
 import { useTheme } from 'next-themes';
 import {
   useCreateBlockNote,
@@ -104,7 +104,10 @@ const schema = BlockNoteSchema.create({
   },
 });
 
-export default function TextEditor({ 
+// Pattern for detecting markdown in pasted text
+const markdownPattern = /^#{1,6}\s|^\*\s|^-\s|^\d+\.\s|\*\*[^*]+\*\*|\[.+\]\(.+\)|^```/m;
+
+export default function TextEditor({
   id = 'text-editor',
   roomName,
   initialContent: propInitialContent,
@@ -196,6 +199,9 @@ export default function TextEditor({
     return i >= 0 ? blocks.slice(0, i + 1) : DEFAULT_BLOCK;
   })();
 
+  // Ref for accessing editor instance from ProseMirror handlers
+  const bnEditorRef = useRef<BlockNoteEditor<any, any, any> | null>(null);
+
   // Create editor instance with custom schema and initial content
   const editor = useCreateBlockNote({
     schema,
@@ -271,6 +277,25 @@ export default function TextEditor({
           },
         },
         handlePaste: (view, event, slice) => {
+          // Detect markdown in pasted plain text and convert to rich blocks
+          const plainText = event.clipboardData?.getData('text/plain');
+          if (plainText && markdownPattern.test(plainText) && bnEditorRef.current) {
+            event.preventDefault();
+            const ed = bnEditorRef.current;
+            (async () => {
+              try {
+                const blocks = await ed.tryParseMarkdownToBlocks(plainText);
+                if (blocks && blocks.length > 0) {
+                  const currentBlock = ed.getTextCursorPosition().block;
+                  ed.replaceBlocks([currentBlock.id], blocks);
+                }
+              } catch (e) {
+                ed.insertInlineContent([{ type: "text", text: plainText, styles: {} }]);
+              }
+            })();
+            return true;
+          }
+
           // Handle pasting into empty blocks
           const { state, dispatch } = view;
           const { selection } = state;
@@ -295,6 +320,8 @@ export default function TextEditor({
       }
     }
   });
+
+  bnEditorRef.current = editor;
 
   // Get mention menu items based on search query
   const getMentionMenuItems = async (query: string): Promise<DefaultReactSuggestionItem[]> => {
@@ -349,43 +376,6 @@ export default function TextEditor({
       return [];
     }
   };
-
-  // Intercept paste events to detect and convert markdown
-  useEffect(() => {
-    if (!editor) return;
-
-    const domElement = editor.domElement;
-    if (!domElement) return;
-
-    const markdownPattern = /^#{1,6}\s|^\*\s|^-\s|^\d+\.\s|\*\*[^*]+\*\*|\[.+\]\(.+\)|^```/m;
-
-    const handlePaste = (event: ClipboardEvent) => {
-      const plainText = event.clipboardData?.getData('text/plain');
-      if (!plainText || !markdownPattern.test(plainText)) return;
-
-      // Prevent default paste — we'll handle it
-      event.preventDefault();
-      event.stopPropagation();
-
-      (async () => {
-        try {
-          const blocks = await editor.tryParseMarkdownToBlocks(plainText);
-          if (blocks && blocks.length > 0) {
-            const currentBlock = editor.getTextCursorPosition().block;
-            editor.replaceBlocks([currentBlock.id], blocks);
-          }
-        } catch (e) {
-          // Fallback: insert as plain text
-          editor.insertInlineContent([{ type: "text", text: plainText, styles: {} }]);
-        }
-      })();
-    };
-
-    domElement.addEventListener('paste', handlePaste, { capture: true });
-    return () => {
-      domElement.removeEventListener('paste', handlePaste, { capture: true });
-    };
-  }, [editor]);
 
   // Update editorRef when editor is created
   useEffect(() => {
