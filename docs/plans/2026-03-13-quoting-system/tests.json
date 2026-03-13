@@ -357,7 +357,7 @@
   {
     "id": "T044",
     "description": "Action: updateQuote enforces status transition rules",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
