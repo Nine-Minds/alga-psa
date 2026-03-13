@@ -194,13 +194,13 @@
   {
     "id": "T033",
     "description": "Playwright: grouped tile icons remain consistent during drag and click insertion",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F033"]
   },
   {
     "id": "T034",
     "description": "Playwright: grouped tile labels remain consistent during drag and click insertion",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F034"]
   },
   {
