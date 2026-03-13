@@ -311,7 +311,7 @@
   {
     "id": "F037",
     "description": "P1: Add 'Quotes' tab to billingTabsConfig.ts with appropriate icon and route",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR14"
     ]

@@ -21,6 +21,7 @@ export interface BillingTabDefinition {
 export type BillingTabValue =
   | 'contract-templates'
   | 'client-contracts'
+  | 'quotes'
   | 'accounting-exports'
   | 'contract-lines'
   | 'invoicing'
@@ -34,6 +35,12 @@ export type BillingTabValue =
   | 'reports';
 
 export const billingTabDefinitions: BillingTabDefinition[] = [
+  {
+    value: 'quotes',
+    label: 'Quotes',
+    href: '/msp/billing?tab=quotes',
+    icon: FileText
+  },
   {
     value: 'client-contracts',
     label: 'Client Contracts',

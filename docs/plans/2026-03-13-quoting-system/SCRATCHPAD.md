@@ -107,6 +107,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) F037 complete — P1: Added a `quotes` billing tab definition in `billingTabsConfig.ts` and wired a `QuotesTab` content pane into `BillingDashboard.tsx`, making `/msp/billing?tab=quotes` a valid dashboard destination.
 - (2026-03-13) F036b complete — P1: The quote list action/model pair already supports separate template-vs-standard views through the `is_template` filter on `listQuotes`, giving the UI a clean query surface for dedicated template listings.
 - (2026-03-13) T050e complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with a template lifecycle guard that rejects status transitions on template quotes, proving templates stay outside the sent/accepted/etc. state machine.
 - (2026-03-13) T050c complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with a `createQuoteFromTemplate` assertion that the returned draft has a fresh `quote_number`, proving template instantiation yields a normal numbered quote rather than another template shell.
