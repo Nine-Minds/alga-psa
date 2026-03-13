@@ -309,7 +309,7 @@
   {
     "id": "T038",
     "description": "Item model: delete removes item and adjusts display_order of remaining items",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]

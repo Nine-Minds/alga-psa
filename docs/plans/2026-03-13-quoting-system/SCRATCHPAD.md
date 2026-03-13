@@ -168,3 +168,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) T035 complete — Item model: create with service_id populates service_name, service_sku, unit_price from catalog. Added service-backed quote-item creation coverage.
 - (2026-03-13) T036 complete — Item model: create without service_id allows custom item entry. Added manual quote-item creation coverage.
 - (2026-03-13) T037 complete — Item model: update allows rate override (different unit_price than catalog default). Added quote-item rate override coverage.
+- (2026-03-13) T038 complete — Item model: delete removes item and adjusts display_order of remaining items. Added quote-item delete reorder coverage.
