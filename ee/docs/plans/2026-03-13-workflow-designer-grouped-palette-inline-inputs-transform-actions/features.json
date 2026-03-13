@@ -740,7 +740,7 @@
   {
     "id": "F124",
     "description": "Allow nested object fields to choose source modes independently from their parent object field",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {
@@ -770,25 +770,25 @@
   {
     "id": "F129",
     "description": "Expose enum-backed fields as structured fixed-value controls rather than raw text inputs in fixed mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {
     "id": "F130",
     "description": "Expose boolean-backed fields as structured fixed-value controls rather than raw text inputs in fixed mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {
     "id": "F131",
     "description": "Expose number-backed fields as numeric fixed-value controls rather than raw text inputs in fixed mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {
     "id": "F132",
     "description": "Expose string-backed fields as string fixed-value controls when no picker metadata or enum metadata exists",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {

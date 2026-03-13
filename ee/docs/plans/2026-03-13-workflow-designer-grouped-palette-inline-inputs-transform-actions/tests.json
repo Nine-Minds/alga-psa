@@ -740,7 +740,7 @@
   {
     "id": "T124",
     "description": "Playwright: nested object child fields can choose source modes independently of the parent field",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F124"]
   },
   {
@@ -770,25 +770,25 @@
   {
     "id": "T129",
     "description": "Playwright: enum-backed fields render as structured fixed-value controls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F129"]
   },
   {
     "id": "T130",
     "description": "Playwright: boolean-backed fields render as structured fixed-value controls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F130"]
   },
   {
     "id": "T131",
     "description": "Playwright: number-backed fields render as numeric fixed-value controls",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F131"]
   },
   {
     "id": "T132",
     "description": "Playwright: plain string-backed fields render as string controls when no picker or enum metadata exists",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F132"]
   },
   {

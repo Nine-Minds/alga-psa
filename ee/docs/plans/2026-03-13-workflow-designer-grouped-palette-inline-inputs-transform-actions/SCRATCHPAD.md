@@ -118,6 +118,10 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/actionInputEditorState.test.ts src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx src/components/workflow-designer/__tests__/InputMappingEditorValidationHints.test.tsx src/components/workflow-designer/__tests__/WorkflowActionInputTypeHint.test.tsx --reporter=dot`
   - `npx tsc --noEmit -p ee/server/tsconfig.json`
   - `npx eslint ee/server/src/components/workflow-designer/actionInputEditorState.ts ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/WorkflowActionInputTypeHint.tsx ee/server/src/components/workflow-designer/__tests__/actionInputEditorState.test.ts ee/server/src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorValidationHints.test.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputTypeHint.test.tsx`
+- (2026-03-14) Validate nested child source modes and primitive fixed controls:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx src/components/workflow-designer/__tests__/InputMappingEditorValidationHints.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorValidationHints.test.tsx`
 - (2026-03-13) Validate text transform action registration and catalog/search coverage:
   - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/actions/__tests__/registerTransformActions.test.ts shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts --reporter=dot`
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/paletteSearch.test.ts --reporter=dot`
@@ -342,6 +346,10 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Updated `actionInputEditorState` to count nested required object fields and authored object-array item fields in the required-field summary instead of treating any non-empty object/array as fully complete.
   - Backfilled the previously untracked `WorkflowActionInputTypeHint` seam and its tests into the branch so the inline validation-hint imports are now actually committed with the rest of the editor code.
   - Marked F121-F123, F125-F128, and T121-T123/T125-T128 implemented.
+- (2026-03-14) Completed the nested child source-mode and primitive fixed-control slice:
+  - Reused `MappingFieldEditor` recursively inside structured object and object-array literal groups so nested children now keep their own Reference/Fixed/Advanced mode state inside the parent object mapping.
+  - Added focused jsdom coverage showing nested child source-mode selectors render independently from the parent object field while enum, boolean, number, and plain string fields continue to use the intended structured fixed controls.
+  - Marked F124, F129-F132, and T124/T129-T132 implemented.
 - (2026-03-14) Completed the source-mode vocabulary slice:
   - Added `WorkflowActionInputSourceMode.tsx` so each editable field now exposes the user-facing `Reference`, `Fixed value`, and `Advanced` source-mode selector instead of raw expression/secret/literal labels.
   - Kept the existing serializer/runtime behavior underneath for now by mapping direct field-reference expressions to `Reference`, literal values to `Fixed value`, and complex expressions or secrets to `Advanced`.

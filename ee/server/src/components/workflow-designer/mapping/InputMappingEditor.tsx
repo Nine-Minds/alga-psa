@@ -500,6 +500,7 @@ function isMappingValueSet(value: MappingValue | undefined, fieldType?: string):
  */
 const MappingFieldEditor: React.FC<{
   field: ActionInputField;
+  fieldPath?: string;
   value: MappingValue | undefined;
   onChange: (value: MappingValue | undefined) => void;
   fieldOptions: SelectOption[];
@@ -508,14 +509,26 @@ const MappingFieldEditor: React.FC<{
   disabled?: boolean;
   sourceTypeMap?: Map<string, string>;
   expressionContext?: ExpressionContext;
-}> = ({ field, value, onChange, fieldOptions, secrets, stepId, disabled, sourceTypeMap, expressionContext }) => {
+}> = ({
+  field,
+  fieldPath,
+  value,
+  onChange,
+  fieldOptions,
+  secrets,
+  stepId,
+  disabled,
+  sourceTypeMap,
+  expressionContext,
+}) => {
   const [valueType, setValueType] = useState<ValueType>(() => getMappingValueType(value));
   const [expressionError, setExpressionError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [expanded, setExpanded] = useState(true);
   const editorRef = useRef<ExpressionEditorHandle>(null);
 
-  const idPrefix = `mapping-${stepId}-${field.name}`;
+  const resolvedFieldPath = fieldPath ?? field.name;
+  const idPrefix = `mapping-${stepId}-${resolvedFieldPath}`;
   const isMissingRequired = useMemo(
     () => Boolean(field.required) && !isMappingValueSet(value, field.type),
     [field.required, field.type, value]
@@ -737,12 +750,18 @@ const MappingFieldEditor: React.FC<{
             <LiteralValueEditor
               value={value as MappingValue}
               onChange={handleLiteralChange}
+              field={field}
               fieldType={field.type}
               fieldEnum={field.enum}
               fieldChildren={field.children}
               fieldConstraints={field.constraints}
+              fieldOptions={fieldOptions}
+              secrets={secrets}
+              stepId={stepId}
               idPrefix={idPrefix}
               disabled={disabled}
+              sourceTypeMap={sourceTypeMap}
+              expressionContext={expressionContext}
             />
           )}
         </div>
@@ -924,21 +943,33 @@ const parsePrimitiveList = (
 const LiteralValueEditor: React.FC<{
   value: MappingValue | undefined;
   onChange: (value: MappingValue) => void;
+  field: ActionInputField;
   fieldType: string;
   fieldEnum?: Array<string | number | boolean | null>;
   fieldChildren?: ActionInputField[];
   fieldConstraints?: ActionInputField['constraints'];
+  fieldOptions: SelectOption[];
+  secrets: Array<{ name: string; description?: string }>;
+  stepId: string;
   idPrefix: string;
   disabled?: boolean;
+  sourceTypeMap?: Map<string, string>;
+  expressionContext?: ExpressionContext;
 }> = ({
   value,
   onChange,
+  field,
   fieldType,
   fieldEnum,
   fieldChildren,
   fieldConstraints,
+  fieldOptions,
+  secrets,
+  stepId,
   idPrefix,
-  disabled
+  disabled,
+  sourceTypeMap,
+  expressionContext,
 }) => {
   const hasStructuredObjectEditor = fieldType === 'object' && (fieldChildren?.length ?? 0) > 0;
   const hasStructuredArrayObjectEditor = fieldType === 'array' && (fieldChildren?.length ?? 0) > 0;
@@ -1085,30 +1116,24 @@ const LiteralValueEditor: React.FC<{
           title="Object fields"
         >
           {fieldChildren?.map((child) => (
-            <div key={child.name} className="space-y-1.5">
-              <div className="flex items-center gap-1 text-xs font-medium text-gray-700">
-                <span>{child.name}</span>
-                {child.required && <span className="text-gray-500">*</span>}
-              </div>
-              <LiteralValueEditor
-                value={nextValue[child.name] as MappingValue | undefined}
-                onChange={(childValue) => {
-                  onChange({
-                    ...nextValue,
-                    [child.name]: childValue
-                  });
-                }}
-                fieldType={child.type}
-                fieldEnum={child.enum}
-                fieldChildren={child.children}
-                fieldConstraints={child.constraints}
-                idPrefix={`${idPrefix}-literal-${child.name}`}
-                disabled={disabled}
-              />
-              {child.description && (
-                <p className="text-[11px] text-gray-500">{child.description}</p>
-              )}
-            </div>
+            <MappingFieldEditor
+              key={child.name}
+              field={child}
+              fieldPath={`${field.name}.${child.name}`}
+              value={nextValue[child.name] as MappingValue | undefined}
+              onChange={(childValue) => {
+                onChange({
+                  ...nextValue,
+                  [child.name]: childValue
+                });
+              }}
+              fieldOptions={fieldOptions}
+              secrets={secrets}
+              stepId={stepId}
+              disabled={disabled}
+              sourceTypeMap={sourceTypeMap}
+              expressionContext={expressionContext}
+            />
           ))}
         </StructuredLiteralGroup>
       );
@@ -1151,30 +1176,24 @@ const LiteralValueEditor: React.FC<{
               }
             >
               {fieldChildren?.map((child) => (
-                <div key={`${idPrefix}-row-${rowIndex}-${child.name}`} className="space-y-1.5">
-                  <div className="flex items-center gap-1 text-xs font-medium text-gray-700">
-                    <span>{child.name}</span>
-                    {child.required && <span className="text-gray-500">*</span>}
-                  </div>
-                  <LiteralValueEditor
-                    value={row[child.name] as MappingValue | undefined}
-                    onChange={(childValue) => {
-                      const nextRows = [...rows];
-                      const nextRow = { ...row, [child.name]: childValue };
-                      nextRows[rowIndex] = nextRow;
-                      onChange(nextRows);
-                    }}
-                    fieldType={child.type}
-                    fieldEnum={child.enum}
-                    fieldChildren={child.children}
-                    fieldConstraints={child.constraints}
-                    idPrefix={`${idPrefix}-literal-row-${rowIndex}-${child.name}`}
-                    disabled={disabled}
-                  />
-                  {child.description && (
-                    <p className="text-[11px] text-gray-500">{child.description}</p>
-                  )}
-                </div>
+                <MappingFieldEditor
+                  key={`${idPrefix}-row-${rowIndex}-${child.name}`}
+                  field={child}
+                  fieldPath={`${field.name}[${rowIndex}].${child.name}`}
+                  value={row[child.name] as MappingValue | undefined}
+                  onChange={(childValue) => {
+                    const nextRows = [...rows];
+                    const nextRow = { ...row, [child.name]: childValue };
+                    nextRows[rowIndex] = nextRow;
+                    onChange(nextRows);
+                  }}
+                  fieldOptions={fieldOptions}
+                  secrets={secrets}
+                  stepId={stepId}
+                  disabled={disabled}
+                  sourceTypeMap={sourceTypeMap}
+                  expressionContext={expressionContext}
+                />
               ))}
             </StructuredLiteralGroup>
           ))}
