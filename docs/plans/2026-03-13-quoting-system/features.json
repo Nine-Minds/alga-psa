@@ -164,7 +164,7 @@
   {
     "id": "F021",
     "description": "P1: Quote item model — delete item and recalculate display_order",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR6"
     ]
