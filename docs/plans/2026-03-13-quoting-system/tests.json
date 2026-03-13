@@ -301,7 +301,7 @@
   {
     "id": "T037",
     "description": "Item model: update allows rate override (different unit_price than catalog default)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
