@@ -203,3 +203,4 @@ npm run build
 - **Build runbook update** — Added `NODE_OPTIONS='--max-old-space-size=8192'` to `server/package.json` build scripts so the checklist command `npm run build` succeeds without extra shell environment setup in this repo.
 - **T001 complete** — Added `packages/ui/src/components/CustomTabs.typecheck.ts` so `npx tsc -p packages/ui/tsconfig.json --noEmit` fails if `TabContent.id` ever becomes optional again.
 - **T002 complete** — `packages/ui/src/components/CustomTabs.test.tsx` verifies trigger buttons render the visible `label` text while internal matching still uses ids.
+- **T003 complete** — `packages/ui/src/components/CustomTabs.contract.test.ts` and the UI render test verify trigger internals are keyed off `tab.id` rather than `tab.label`.
