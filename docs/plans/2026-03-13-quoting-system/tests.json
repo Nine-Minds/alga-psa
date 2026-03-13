@@ -138,7 +138,7 @@
   {
     "id": "T018",
     "description": "Model: getById returns quote with items for correct tenant",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010"
     ]
