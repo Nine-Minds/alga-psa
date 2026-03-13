@@ -154,7 +154,7 @@
   {
     "id": "T020",
     "description": "Model: getById auto-expires quote if valid_until < today and status is 'sent'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
