@@ -15,7 +15,10 @@ const currentUser = {
   roles: [],
 };
 
-const mockKnex = {};
+const mockTrx = { scope: 'trx' };
+const mockKnex = {
+  transaction: async (handler: (trx: typeof mockTrx) => Promise<unknown>) => handler(mockTrx),
+};
 const createTenantKnex = vi.fn();
 const hasPermissionMock = vi.fn();
 
@@ -56,6 +59,56 @@ const baseItemInput = {
   is_selected: true,
   is_recurring: false,
   is_taxable: true,
+};
+
+const templateQuote = {
+  quote_id: '77777777-7777-4777-8777-777777777777',
+  quote_number: null,
+  title: 'Template quote',
+  description: 'Template description',
+  internal_notes: 'Internal template note',
+  client_notes: 'Template note',
+  terms_and_conditions: 'Template terms',
+  currency_code: 'USD',
+  is_template: true,
+  quote_items: [
+    {
+      quote_item_id: '88888888-8888-4888-8888-888888888888',
+      quote_id: '77777777-7777-4777-8777-777777777777',
+      service_id: SERVICE_ID,
+      description: 'Managed Endpoint',
+      quantity: 3,
+      unit_price: 1200,
+      total_price: 3600,
+      net_amount: 3600,
+      tax_amount: 0,
+      display_order: 0,
+      is_optional: true,
+      is_selected: true,
+      is_recurring: true,
+      billing_frequency: 'monthly',
+      is_taxable: true,
+      billing_method: 'fixed',
+    },
+    {
+      quote_item_id: '99999999-9999-4999-8999-999999999999',
+      quote_id: '77777777-7777-4777-8777-777777777777',
+      service_id: null,
+      description: 'Onboarding',
+      quantity: 1,
+      unit_price: 5000,
+      total_price: 5000,
+      net_amount: 5000,
+      tax_amount: 0,
+      display_order: 1,
+      is_optional: false,
+      is_selected: true,
+      is_recurring: false,
+      billing_frequency: null,
+      is_taxable: true,
+      billing_method: 'fixed',
+    },
+  ],
 };
 
 describe('quoteActions', () => {
@@ -227,5 +280,102 @@ describe('quoteActions', () => {
       expect.objectContaining({ is_recurring: true, billing_frequency: 'monthly' })
     );
     expect(result).toMatchObject({ is_recurring: true, billing_frequency: 'monthly' });
+  });
+
+  it('T050a: creating a quote template keeps is_template=true and omits numbering', async () => {
+    vi.spyOn(Quote, 'getById').mockResolvedValue({
+      quote_id: QUOTE_ID,
+      is_template: true,
+      quote_number: null,
+      title: 'Template quote',
+    } as any);
+
+    const { createQuote } = await import('../../src/actions/quoteActions');
+    const result = await createQuote({
+      ...baseQuoteInput,
+      client_id: null,
+      is_template: true,
+    } as any);
+
+    expect(Quote.create).toHaveBeenCalledWith(
+      mockKnex,
+      TENANT_ID,
+      expect.objectContaining({ is_template: true })
+    );
+    expect(result).toMatchObject({ is_template: true, quote_number: null });
+  });
+
+  it('T050b: createQuoteFromTemplate copies all template items into a new draft quote', async () => {
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce(templateQuote as any)
+      .mockResolvedValueOnce({
+        quote_id: QUOTE_ID,
+        quote_number: 'Q-0099',
+        is_template: false,
+        quote_items: templateQuote.quote_items,
+      } as any);
+
+    const { createQuoteFromTemplate } = await import('../../src/actions/quoteActions');
+    const result = await createQuoteFromTemplate(templateQuote.quote_id, {
+      client_id: baseQuoteInput.client_id,
+      quote_date: baseQuoteInput.quote_date,
+      valid_until: baseQuoteInput.valid_until,
+    } as any);
+
+    expect(QuoteItem.create).toHaveBeenCalledTimes(2);
+    expect(QuoteItem.create).toHaveBeenNthCalledWith(
+      1,
+      mockTrx,
+      TENANT_ID,
+      expect.objectContaining({
+        quote_id: QUOTE_ID,
+        description: 'Managed Endpoint',
+        is_optional: true,
+        is_recurring: true,
+        billing_frequency: 'monthly',
+      })
+    );
+    expect(QuoteItem.create).toHaveBeenNthCalledWith(
+      2,
+      mockTrx,
+      TENANT_ID,
+      expect.objectContaining({
+        quote_id: QUOTE_ID,
+        description: 'Onboarding',
+        is_optional: false,
+        is_recurring: false,
+      })
+    );
+    expect(result).toMatchObject({ quote_id: QUOTE_ID, quote_items: templateQuote.quote_items });
+  });
+
+  it('T050c: createQuoteFromTemplate returns a newly numbered draft quote', async () => {
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce(templateQuote as any)
+      .mockResolvedValueOnce({
+        quote_id: QUOTE_ID,
+        quote_number: 'Q-0042',
+        is_template: false,
+        quote_items: [],
+      } as any);
+
+    const { createQuoteFromTemplate } = await import('../../src/actions/quoteActions');
+    const result = await createQuoteFromTemplate(templateQuote.quote_id, {
+      client_id: baseQuoteInput.client_id,
+      quote_date: baseQuoteInput.quote_date,
+      valid_until: baseQuoteInput.valid_until,
+    } as any);
+
+    expect(result).toMatchObject({ quote_number: 'Q-0042', is_template: false });
+  });
+
+  it('T050e: quote templates are excluded from the normal status lifecycle', async () => {
+    vi.spyOn(Quote, 'update').mockRejectedValue(new Error('Quote templates do not participate in status transitions'));
+
+    const { updateQuote } = await import('../../src/actions/quoteActions');
+
+    await expect(updateQuote(QUOTE_ID, { status: 'sent' } as any)).rejects.toThrow(
+      'Quote templates do not participate in status transitions'
+    );
   });
 });

@@ -413,7 +413,7 @@
   {
     "id": "T050a",
     "description": "Business template: creating a quote template sets is_template=true and does not generate a quote_number",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
