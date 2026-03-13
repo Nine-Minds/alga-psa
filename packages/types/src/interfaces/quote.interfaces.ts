@@ -113,6 +113,73 @@ export interface IQuoteListItem extends IQuote {
   display_quote_number: string;
 }
 
+export interface QuoteViewModelParty {
+  name: string;
+  address?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  logo_url?: string | null;
+}
+
+export interface QuoteViewModelLineItem {
+  quote_item_id: string;
+  service_id?: string | null;
+  service_name?: string | null;
+  service_sku?: string | null;
+  billing_method?: 'fixed' | 'hourly' | 'usage' | 'per_unit' | null;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  tax_amount: number;
+  net_amount: number;
+  unit_of_measure?: string | null;
+  phase?: string | null;
+  is_optional: boolean;
+  is_selected: boolean;
+  is_recurring: boolean;
+  billing_frequency?: string | null;
+  is_discount?: boolean;
+  discount_type?: DiscountType | null;
+  discount_percentage?: number | null;
+  applies_to_item_id?: string | null;
+  applies_to_service_id?: string | null;
+  tax_region?: string | null;
+  tax_rate?: number | null;
+}
+
+export interface QuoteViewModelPhase {
+  name: string;
+  items: QuoteViewModelLineItem[];
+}
+
+export interface QuoteViewModel {
+  quote_id: string;
+  quote_number: string;
+  title: string;
+  description?: string | null;
+  scope_of_work?: string | null;
+  quote_date?: ISO8601String | null;
+  valid_until?: ISO8601String | null;
+  status?: QuoteStatus | null;
+  version: number;
+  po_number?: string | null;
+  currency_code: string;
+  subtotal: number;
+  discount_total: number;
+  tax: number;
+  total_amount: number;
+  terms_and_conditions?: string | null;
+  client_notes?: string | null;
+  client_id?: string | null;
+  contact_id?: string | null;
+  client?: QuoteViewModelParty | null;
+  contact?: QuoteViewModelParty | null;
+  tenant?: QuoteViewModelParty | null;
+  line_items: QuoteViewModelLineItem[];
+  phases?: QuoteViewModelPhase[];
+}
+
 export const QUOTE_STATUS_METADATA: Record<QuoteStatus, { label: string; description: string }> = {
   draft: { label: 'Draft', description: 'Quote is being prepared' },
   sent: { label: 'Sent', description: 'Quote has been sent to the client' },

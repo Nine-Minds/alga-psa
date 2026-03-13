@@ -615,7 +615,7 @@
   {
     "id": "F073",
     "description": "P3: QuoteViewModel interface in packages/types/",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P3-FR2"
     ]
