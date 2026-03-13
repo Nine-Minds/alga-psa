@@ -226,7 +226,7 @@
   {
     "id": "T029",
     "description": "Model: create sets default status to 'draft'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
