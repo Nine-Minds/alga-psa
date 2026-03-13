@@ -98,9 +98,12 @@ export function registerTransformActionsV2(): void {
       category: 'Transform',
       description: 'Join multiple values into a single text result.'
     },
-    handler: async (input) => ({
-      text: input.values.map((value) => coerceText(value)).join(input.separator ?? '')
-    })
+    handler: async (input) => {
+      const values = input.values ?? [];
+      return {
+        text: values.map((value) => coerceText(value)).join(input.separator ?? '')
+      };
+    }
   });
 
   registry.register({
@@ -168,9 +171,12 @@ export function registerTransformActionsV2(): void {
       category: 'Transform',
       description: 'Join an ordered list of values into a single text result.'
     },
-    handler: async (input) => ({
-      text: input.items.map((item) => coerceText(item)).join(input.delimiter ?? '')
-    })
+    handler: async (input) => {
+      const items = input.items ?? [];
+      return {
+        text: items.map((item) => coerceText(item)).join(input.delimiter ?? '')
+      };
+    }
   });
 
   registry.register({
@@ -240,7 +246,8 @@ export function registerTransformActionsV2(): void {
       description: 'Return the first usable value from an ordered candidate list.'
     },
     handler: async (input) => {
-      const matchedIndex = input.candidates.findIndex((candidate) => {
+      const candidates = input.candidates ?? [];
+      const matchedIndex = candidates.findIndex((candidate) => {
         if (candidate === null || candidate === undefined) return false;
         if (input.treatEmptyStringAsMissing && typeof candidate === 'string') {
           return candidate.trim().length > 0;
@@ -249,7 +256,7 @@ export function registerTransformActionsV2(): void {
       });
 
       return {
-        value: matchedIndex === -1 ? undefined : input.candidates[matchedIndex],
+        value: matchedIndex === -1 ? undefined : candidates[matchedIndex],
         matchedIndex: matchedIndex === -1 ? null : matchedIndex
       };
     }
@@ -272,9 +279,12 @@ export function registerTransformActionsV2(): void {
       category: 'Transform',
       description: 'Construct an object from explicit named inputs.'
     },
-    handler: async (input) => ({
-      object: Object.fromEntries(input.fields.map((field) => [field.key, field.value]))
-    })
+    handler: async (input) => {
+      const fields = input.fields ?? [];
+      return {
+        object: Object.fromEntries(fields.map((field) => [field.key, field.value]))
+      };
+    }
   });
 
   registry.register({
@@ -292,13 +302,17 @@ export function registerTransformActionsV2(): void {
       category: 'Transform',
       description: 'Select a fixed subset of fields from an object.'
     },
-    handler: async (input) => ({
-      object: Object.fromEntries(
-        input.fields
-          .filter((field) => Object.prototype.hasOwnProperty.call(input.source, field))
-          .map((field) => [field, input.source[field]])
-      )
-    })
+    handler: async (input) => {
+      const source = input.source ?? {};
+      const fields = input.fields ?? [];
+      return {
+        object: Object.fromEntries(
+          fields
+            .filter((field) => Object.prototype.hasOwnProperty.call(source, field))
+            .map((field) => [field, source[field]])
+        )
+      };
+    }
   });
 
   registry.register({
@@ -320,8 +334,10 @@ export function registerTransformActionsV2(): void {
       description: 'Rename object fields with explicit mapping entries.'
     },
     handler: async (input) => {
-      const renamed = { ...input.source };
-      for (const entry of input.renames) {
+      const source = input.source ?? {};
+      const renames = input.renames ?? [];
+      const renamed = { ...source };
+      for (const entry of renames) {
         if (!Object.prototype.hasOwnProperty.call(renamed, entry.from)) continue;
         renamed[entry.to] = renamed[entry.from];
         if (entry.to !== entry.from) {
@@ -348,7 +364,7 @@ export function registerTransformActionsV2(): void {
       description: 'Append one or more values to an existing array.'
     },
     handler: async (input) => ({
-      items: [...input.items, ...input.values]
+      items: [...(input.items ?? []), ...(input.values ?? [])]
     })
   });
 
@@ -367,7 +383,7 @@ export function registerTransformActionsV2(): void {
       description: 'Construct an array from explicit ordered values.'
     },
     handler: async (input) => ({
-      items: [...input.items]
+      items: [...(input.items ?? [])]
     })
   });
 }

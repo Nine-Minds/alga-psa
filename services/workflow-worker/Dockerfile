@@ -18,6 +18,7 @@ COPY tsconfig.json ./
 COPY package.json package-lock.json ./
 
 # Copy all workspace package.json files to set up the dependency tree
+COPY ee/packages/workflows/package.json ./ee/packages/workflows/
 COPY shared/package.json ./shared/
 COPY services/workflow-worker/package.json ./services/workflow-worker/
 COPY server/package.json ./server/
@@ -34,6 +35,7 @@ COPY packages/ui/package.json ./packages/ui/
 # Install dependencies for required workspaces (shared, worker, server, and required @alga-psa/* deps)
 # Skip puppeteer Chrome download to save disk space
 RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm install --include-workspace-root \
+  --workspace=@alga-psa/workflows \
   --workspace=@alga-psa/shared \
   --workspace=workflow-worker \
   --workspace=server \
@@ -48,6 +50,7 @@ RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm ins
   --workspace=@alga-psa/ui
 
 # Copy source code for shared + server workspaces
+COPY ee/packages/workflows/ ./ee/packages/workflows/
 COPY shared/ ./shared/
 COPY server/ ./server/
 COPY packages/ ./packages/
