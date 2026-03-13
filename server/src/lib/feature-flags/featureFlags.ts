@@ -4,7 +4,7 @@ import {
   type FeatureFlagEvaluationEvent,
   type FeatureFlagVariantAssignmentEvent,
   type FeatureFlagVariant,
-} from '@alga-psa/core';
+} from '@alga-psa/core/server';
 import { analytics } from '../analytics/posthog';
 import { createTenantKnex } from '../db';
 async function enrichProperties(context: FeatureFlagContext): Promise<Record<string, unknown>> {

@@ -2,7 +2,7 @@
 
 import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
-import { isFeatureFlagEnabled } from '@alga-psa/core';
+import { featureFlags } from '@alga-psa/core/server';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import type { WizardData } from '@alga-psa/types';
@@ -58,7 +58,7 @@ async function canTenantActivateAiAssistant(
   tenant: string,
   user?: Pick<IUserWithRoles, 'user_id' | 'user_type'>
 ): Promise<boolean> {
-  return isFeatureFlagEnabled(AI_ASSISTANT_ACTIVATION_FLAG, {
+  return featureFlags.isEnabled(AI_ASSISTANT_ACTIVATION_FLAG, {
     tenantId: tenant,
     userId: user?.user_id,
   });

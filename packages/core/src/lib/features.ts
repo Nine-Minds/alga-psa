@@ -1,20 +1,20 @@
 // Check both EDITION (server-side) and NEXT_PUBLIC_EDITION (client-side) for consistency
 // EDITION can be 'ee' or 'enterprise', NEXT_PUBLIC_EDITION is always 'enterprise'
-import {
-  featureFlags,
-  featureFlagsAreDisabled,
-  type FeatureFlagContext,
-  type FeatureFlagEvaluationEvent,
-  FeatureFlags,
-  type FeatureFlagsOptions,
-  type FeatureFlagVariant,
-  type FeatureFlagVariantAssignmentEvent,
-} from './featureFlagRuntime';
-
 export const isEnterprise =
   (process.env.EDITION ?? '').toLowerCase() === 'ee' ||
   (process.env.EDITION ?? '').toLowerCase() === 'enterprise' ||
   (process.env.NEXT_PUBLIC_EDITION ?? '').toLowerCase() === 'enterprise';
+
+const FEATURE_FLAG_DISABLE_VALUES = new Set(['true', '1', 'yes', 'on']);
+
+function featureFlagsAreDisabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  const raw = env.NEXT_PUBLIC_DISABLE_FEATURE_FLAGS ?? env.DISABLE_FEATURE_FLAGS;
+  if (typeof raw !== 'string') {
+    return false;
+  }
+
+  return FEATURE_FLAG_DISABLE_VALUES.has(raw.toLowerCase());
+}
 
 export function getFeatureImplementation<T>(ceModule: T, eeModule?: T): T {
   if (isEnterprise && eeModule) {
@@ -24,13 +24,18 @@ export function getFeatureImplementation<T>(ceModule: T, eeModule?: T): T {
 }
 
 // ---------------------------------------------------------------------------
-// Feature-flag registry override.
+// Feature-flag registry
 //
-// Packages call `isFeatureFlagEnabled()` from here. `packages/core` now owns
-// the default PostHog-backed runtime, and the server can still register a
-// richer checker override during startup when it wants analytics and extra
-// tenant properties.
+// Packages that need feature-flag checks (e.g. @alga-psa/integrations,
+// @alga-psa/clients) call `isFeatureFlagEnabled` from here.
+// The *server* registers the real PostHog-backed implementation at startup
+// via `registerFeatureFlagChecker`.
 // ---------------------------------------------------------------------------
+
+export interface FeatureFlagContext {
+  userId?: string;
+  tenantId?: string;
+}
 
 type FeatureFlagChecker = (
   flagKey: string,
@@ -51,16 +56,6 @@ export async function isFeatureFlagEnabled(
     return true;
   }
 
-  return (_checker ?? featureFlags.isEnabled.bind(featureFlags))(flagKey, context);
+  if (!_checker) return false;
+  return _checker(flagKey, context);
 }
-
-export {
-  featureFlags,
-  featureFlagsAreDisabled,
-  FeatureFlags,
-  type FeatureFlagContext,
-  type FeatureFlagEvaluationEvent,
-  type FeatureFlagsOptions,
-  type FeatureFlagVariant,
-  type FeatureFlagVariantAssignmentEvent,
-};
