@@ -135,3 +135,5 @@ npm run build
 - F010 — Refactored `server/src/components/settings/SettingsPage.tsx` so every top-level settings tab has an id and active state resolves against ids instead of label maps.
 
 - F011 — Migrated `server/src/components/settings/profile/UserProfile.tsx` to id-based tabs and updated `packages/integrations/src/lib/calendarAvailability.ts` to resolve profile tab ids directly.
+
+- F012 — Replaced SecuritySettingsPage slug/label maps with stable ids, preserving URL sync through direct `?tab=` values.

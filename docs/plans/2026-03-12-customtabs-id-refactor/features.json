@@ -92,7 +92,7 @@
   {
     "id": "F012",
     "description": "Migrate SecuritySettingsPage.tsx — add id to 7 tabs, remove bidirectional maps",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern A"
