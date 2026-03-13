@@ -1,13 +1,15 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, Box } from '@radix-ui/themes';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { Button } from '@alga-psa/ui/components/Button';
 import type { ColumnDefinition, IQuoteListItem } from '@alga-psa/types';
 import { listQuotes } from '../../../actions/quoteActions';
+import QuoteForm from './QuoteForm';
 
 function formatCurrency(minorUnits: number, currencyCode: string): string {
   return new Intl.NumberFormat('en-US', {
@@ -26,11 +28,13 @@ function formatDate(value?: string | null): string {
 
 const QuotesTab: React.FC = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [quotes, setQuotes] = useState<IQuoteListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [clientFilter, setClientFilter] = useState('all');
+  const selectedQuoteId = searchParams?.get('quoteId');
 
   useEffect(() => {
     void loadQuotes();
@@ -122,6 +126,19 @@ const QuotesTab: React.FC = () => {
     );
   }
 
+  if (selectedQuoteId) {
+    return (
+      <QuoteForm
+        quoteId={selectedQuoteId}
+        onCancel={() => router.push('/msp/billing?tab=quotes')}
+        onSaved={(savedQuoteId) => {
+          void loadQuotes();
+          router.push(`/msp/billing?tab=quotes&quoteId=${savedQuoteId}`);
+        }}
+      />
+    );
+  }
+
   return (
     <Card size="2">
       <Box p="4">
@@ -132,7 +149,8 @@ const QuotesTab: React.FC = () => {
           </Alert>
         ) : (
           <div className="space-y-4">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center">
               <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
                 Status
                 <select
@@ -167,6 +185,11 @@ const QuotesTab: React.FC = () => {
                   ))}
                 </select>
               </label>
+            </div>
+
+              <Button id="quotes-new-quote" onClick={() => router.push('/msp/billing?tab=quotes&quoteId=new')}>
+                New Quote
+              </Button>
             </div>
 
             <DataTable

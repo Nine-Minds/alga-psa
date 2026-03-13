@@ -335,7 +335,7 @@
   {
     "id": "F039",
     "description": "P1: QuoteForm component — create mode with client/contact pickers, 'Create from Template' option",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR16"
     ]
