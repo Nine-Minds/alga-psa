@@ -18,7 +18,7 @@
   {
     "id": "T003",
     "description": "Migration: quote_items table created with correct columns including is_selected, matching invoice_charges pattern plus quote-specific fields",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ]
