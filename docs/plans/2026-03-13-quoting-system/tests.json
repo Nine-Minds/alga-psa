@@ -10,7 +10,7 @@
   {
     "id": "T002",
     "description": "Migration: quotes table has indexes on (tenant, client_id), (tenant, status), (tenant, quote_number), (tenant, parent_quote_id)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001"
     ]

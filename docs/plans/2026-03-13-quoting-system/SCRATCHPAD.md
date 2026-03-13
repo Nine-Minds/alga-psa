@@ -131,3 +131,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) F024 complete — P1: Quote activity model — listByQuoteId for audit trail display. Implemented chronological quote activity listing.
 - (2026-03-13) F049a complete — P1: Register quote entity in deleteEntityWithValidation config with supportsArchive: true and dependency checks. Registered quote deletion rules with archive alternatives and business-history checks.
 - (2026-03-13) T001 complete — Migration: quotes table created with correct columns including is_template boolean, types, and constraints. Added DB-backed quote infrastructure coverage.
+- (2026-03-13) T002 complete — Migration: quotes table has indexes on (tenant, client_id), (tenant, status), (tenant, quote_number), (tenant, parent_quote_id). Covered quote index creation in the infrastructure suite.
