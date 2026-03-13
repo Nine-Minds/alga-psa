@@ -85,6 +85,7 @@ vi.mock('../expression-editor', () => ({
 import { InputMappingEditor } from '../mapping/InputMappingEditor';
 import type { MappingPositionsHandlers } from '../mapping/useMappingPositions';
 import type { DataTreeContext } from '../mapping/SourceDataTree';
+import type { InputMapping } from '@shared/workflow/runtime/client';
 
 const positionsHandlers: MappingPositionsHandlers = {
   registerSourceRef: vi.fn(),
@@ -127,6 +128,12 @@ const referenceBrowseContext: DataTreeContext = {
           type: 'string',
           source: 'vars',
         },
+        {
+          name: 'ticket_count',
+          path: 'vars.ticketResult.ticket_count',
+          type: 'number',
+          source: 'vars',
+        },
       ],
     },
   ],
@@ -146,7 +153,7 @@ afterEach(() => {
 });
 
 describe('InputMappingEditor reference mode', () => {
-  it('T151/T313: replaces the whole expression with a direct field reference when a structured source is chosen', async () => {
+  it('T151/T313: replaces the whole expression with a direct field reference when a structured source is chosen through source scope selectors', async () => {
     const onChange = vi.fn();
 
     await act(async () => {
@@ -172,7 +179,10 @@ describe('InputMappingEditor reference mode', () => {
     });
 
     await act(async () => {
-      fireEvent.change(screen.getByTestId('mapping-step-1-summary-picker'), {
+      fireEvent.change(screen.getByTestId('mapping-step-1-summary-reference-scope'), {
+        target: { value: 'payload' },
+      });
+      fireEvent.change(screen.getByTestId('mapping-step-1-summary-reference-field'), {
         target: { value: 'payload.ticket.id' },
       });
     });
@@ -209,6 +219,11 @@ describe('InputMappingEditor reference mode', () => {
     });
 
     expect(screen.getByTestId('mock-expression-editor')).toHaveValue('vars.ticketResult.ticket_id');
+    expect(screen.getByTestId('mapping-step-1-summary-reference-scope')).toHaveValue('vars');
+    expect(screen.getByTestId('mapping-step-1-summary-reference-step')).toHaveValue('ticketResult');
+    expect(screen.getByTestId('mapping-step-1-summary-reference-field')).toHaveValue(
+      'vars.ticketResult.ticket_id'
+    );
 
     await act(async () => {
       rerender(
@@ -234,7 +249,254 @@ describe('InputMappingEditor reference mode', () => {
     });
 
     expect(screen.getByTestId('mock-expression-editor')).toHaveValue('vars.ticketResult.ticket_id');
+    expect(screen.getByTestId('mapping-step-1-summary-reference-step')).toHaveValue('ticketResult');
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('T335: filters staged reference fields to compatible types for the current target field', async () => {
+    await act(async () => {
+      render(
+        <InputMappingEditor
+          value={{ summary: { $expr: '' } }}
+          onChange={vi.fn()}
+          targetFields={[
+            {
+              name: 'summary',
+              type: 'string',
+              required: true,
+            },
+          ]}
+          fieldOptions={[
+            { value: 'vars.ticketResult.ticket_id', label: 'vars.ticketResult.ticket_id' },
+            { value: 'vars.ticketResult.ticket_count', label: 'vars.ticketResult.ticket_count' },
+          ]}
+          stepId="step-filtered-reference"
+          positionsHandlers={positionsHandlers}
+          referenceBrowseContext={referenceBrowseContext}
+        />
+      );
+    });
+
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('mapping-step-filtered-reference-summary-reference-scope'), {
+        target: { value: 'vars' },
+      });
+      fireEvent.change(screen.getByTestId('mapping-step-filtered-reference-summary-reference-step'), {
+        target: { value: 'ticketResult' },
+      });
+    });
+
+    expect(
+      screen.getByTestId('mapping-step-filtered-reference-summary-reference-field')
+    ).toHaveTextContent('ticket_id');
+    expect(
+      screen.getByTestId('mapping-step-filtered-reference-summary-reference-field')
+    ).not.toHaveTextContent('ticket_count');
+  });
+
+  it('T336: preserves the chosen source scope while the user is still staging a reference selection', async () => {
+    function StatefulReferenceEditor() {
+      const [mapping, setMapping] = React.useState<InputMapping>({ summary: { $expr: '' } });
+
+      return (
+        <InputMappingEditor
+          value={mapping}
+          onChange={setMapping}
+          targetFields={[
+            {
+              name: 'summary',
+              type: 'string',
+              required: true,
+            },
+          ]}
+          fieldOptions={[
+            { value: 'payload.ticket.id', label: 'payload.ticket.id' },
+            { value: 'meta.traceId', label: 'meta.traceId' },
+          ]}
+          stepId="step-staged-scope"
+          positionsHandlers={positionsHandlers}
+          referenceBrowseContext={referenceBrowseContext}
+        />
+      );
+    }
+
+    await act(async () => {
+      render(<StatefulReferenceEditor />);
+    });
+
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('mapping-step-staged-scope-summary-reference-scope'), {
+        target: { value: 'payload' },
+      });
+    });
+
+    expect(
+      screen.getByTestId('mapping-step-staged-scope-summary-reference-scope')
+    ).toHaveValue('payload');
+    expect(
+      screen.getByTestId('mapping-step-staged-scope-summary-reference-field')
+    ).toBeInTheDocument();
+  });
+
+  it('T337: derives payload field choices from the current payload schema when the payload scope is selected', async () => {
+    await act(async () => {
+      render(
+        <InputMappingEditor
+          value={{ summary: { $expr: '' } }}
+          onChange={vi.fn()}
+          targetFields={[
+            {
+              name: 'summary',
+              type: 'string',
+              required: true,
+            },
+          ]}
+          fieldOptions={[
+            { value: 'payload', label: 'payload' },
+          ]}
+          expressionContext={{
+            payloadSchema: {
+              type: 'object',
+              properties: {
+                email: {
+                  type: 'object',
+                  properties: {
+                    subject: { type: 'string' },
+                    from: { type: 'string' },
+                  },
+                },
+                ticketCount: { type: 'number' },
+              },
+            },
+          }}
+          stepId="step-payload-schema"
+          positionsHandlers={positionsHandlers}
+          referenceBrowseContext={{
+            ...referenceBrowseContext,
+            payload: [],
+          }}
+        />
+      );
+    });
+
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('mapping-step-payload-schema-summary-reference-scope'), {
+        target: { value: 'payload' },
+      });
+    });
+
+    expect(
+      screen.getByTestId('mapping-step-payload-schema-summary-reference-field')
+    ).toHaveTextContent('payload');
+    expect(
+      screen.getByTestId('mapping-step-payload-schema-summary-reference-field')
+    ).toHaveTextContent('email.subject');
+    expect(
+      screen.getByTestId('mapping-step-payload-schema-summary-reference-field')
+    ).toHaveTextContent('email.from');
+    expect(
+      screen.getByTestId('mapping-step-payload-schema-summary-reference-field')
+    ).not.toHaveTextContent('ticketCount');
+  });
+
+  it('T338: refreshes visible payload field choices when the payload schema changes upstream', async () => {
+    const initialExpressionContext = {
+      payloadSchema: {
+        type: 'object',
+        properties: {
+          email: {
+            type: 'object',
+            properties: {
+              subject: { type: 'string' },
+            },
+          },
+        },
+      },
+    };
+    const updatedExpressionContext = {
+      payloadSchema: {
+        type: 'object',
+        properties: {
+          inbound: {
+            type: 'object',
+            properties: {
+              title: { type: 'string' },
+            },
+          },
+        },
+      },
+    };
+
+    let rerender: ReturnType<typeof render>['rerender'];
+
+    await act(async () => {
+      ({ rerender } = render(
+        <InputMappingEditor
+          value={{ summary: { $expr: '' } }}
+          onChange={vi.fn()}
+          targetFields={[
+            {
+              name: 'summary',
+              type: 'string',
+              required: true,
+            },
+          ]}
+          fieldOptions={[
+            { value: 'payload', label: 'payload' },
+          ]}
+          expressionContext={initialExpressionContext}
+          stepId="step-payload-refresh"
+          positionsHandlers={positionsHandlers}
+          referenceBrowseContext={{
+            ...referenceBrowseContext,
+            payload: [],
+          }}
+        />
+      ));
+    });
+
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('mapping-step-payload-refresh-summary-reference-scope'), {
+        target: { value: 'payload' },
+      });
+    });
+
+    expect(
+      screen.getByTestId('mapping-step-payload-refresh-summary-reference-field')
+    ).toHaveTextContent('email.subject');
+
+    await act(async () => {
+      rerender(
+        <InputMappingEditor
+          value={{ summary: { $expr: '' } }}
+          onChange={vi.fn()}
+          targetFields={[
+            {
+              name: 'summary',
+              type: 'string',
+              required: true,
+            },
+          ]}
+          fieldOptions={[
+            { value: 'payload', label: 'payload' },
+          ]}
+          expressionContext={updatedExpressionContext}
+          stepId="step-payload-refresh"
+          positionsHandlers={positionsHandlers}
+          referenceBrowseContext={{
+            ...referenceBrowseContext,
+            payload: [],
+          }}
+        />
+      );
+    });
+
+    expect(
+      screen.getByTestId('mapping-step-payload-refresh-summary-reference-field')
+    ).toHaveTextContent('inbound.title');
+    expect(
+      screen.getByTestId('mapping-step-payload-refresh-summary-reference-field')
+    ).not.toHaveTextContent('email.subject');
   });
 
   it('T287: keeps saved advanced expressions editable when they cannot hydrate into structured Reference mode', async () => {
@@ -299,7 +561,7 @@ describe('InputMappingEditor reference mode', () => {
       );
     });
 
-    expect(screen.queryByText('Payload')).not.toBeInTheDocument();
+    expect(document.getElementById('source-data-tree-search')).not.toBeInTheDocument();
 
     await act(async () => {
       fireEvent.click(
@@ -307,6 +569,7 @@ describe('InputMappingEditor reference mode', () => {
       );
     });
 
+    expect(document.getElementById('source-data-tree-search')).toBeInTheDocument();
     expect(screen.getAllByText('Payload')[0]).toBeInTheDocument();
     expect(screen.getAllByText('Step Outputs (vars)')[0]).toBeInTheDocument();
     expect(screen.getAllByText('Workflow Meta')[0]).toBeInTheDocument();
