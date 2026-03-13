@@ -157,3 +157,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) T025 complete — Model: listByTenant filters by client_id correctly. Added listByTenant client filter coverage.
 - (2026-03-13) T026 complete — Model: listByTenant sorts by quote_date descending by default. Added listByTenant default sort coverage.
 - (2026-03-13) T027 complete — Model: listByClient returns only quotes for specified client. Added listByClient coverage.
+- (2026-03-13) T028 complete — Model: create inserts quote with generated quote_number and logs 'created' activity. Added quote create numbering/activity coverage.
