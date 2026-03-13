@@ -148,3 +148,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) T016 complete — Schema: status transition validation allows sent→accepted, sent→rejected, sent→expired, sent→cancelled. Added sent transition validation coverage.
 - (2026-03-13) T017 complete — Schema: status transition validation allows accepted→converted but rejects converted→draft. Added accepted/converted transition validation coverage.
 - (2026-03-13) T018 complete — Model: getById returns quote with items for correct tenant. Added getById tenant read coverage.
+- (2026-03-13) T019 complete — Model: getById returns null for wrong tenant (isolation). Added getById tenant isolation coverage.
