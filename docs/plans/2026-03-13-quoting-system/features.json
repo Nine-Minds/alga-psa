@@ -535,7 +535,7 @@
   {
     "id": "F063",
     "description": "P2: Versioning — set old version status to 'superseded'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2-FR4"
     ]
