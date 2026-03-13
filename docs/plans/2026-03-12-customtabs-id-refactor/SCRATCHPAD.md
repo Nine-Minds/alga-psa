@@ -147,3 +147,5 @@ npm run build
 - F016 — InteractionSettings now uses `interaction-types` and `interaction-statuses` ids for state and section URLs.
 
 - F017 — Added stable ids to ExtensionManagement tabs and changed its static default from `Manage` to `manage`.
+
+- F018 — Migrated the SLA settings page to use id-based tabs (`dashboard`, `policies`, `business-hours`, `pause-rules`, `escalation`) for routing and state.

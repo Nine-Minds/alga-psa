@@ -146,7 +146,7 @@
   {
     "id": "F018",
     "description": "Migrate SLA settings page (sla/page.tsx) — add id to 5 tabs, remove bidirectional maps",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern A"
