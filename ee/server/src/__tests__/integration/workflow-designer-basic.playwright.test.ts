@@ -876,7 +876,7 @@ test.describe('Workflow Designer UI - basic', () => {
     }
   });
 
-  test('grouped action steps remain reorderable within the pipeline', async ({ page }) => {
+  test('T234: transform grouped steps remain reorderable within the pipeline like existing action.call steps', async ({ page }) => {
     test.setTimeout(120000);
 
     const { db, tenantData, workflowPage } = await setupDesigner(page);
@@ -943,6 +943,62 @@ test.describe('Workflow Designer UI - basic', () => {
     }
   });
 
+  test('T234/T235: transform grouped steps remain movable across control-block branches and can be inserted inside control blocks', async ({ page }) => {
+    test.setTimeout(120000);
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    try {
+      await workflowPage.clickNewWorkflow();
+      await expect(workflowPage.addButtonFor('control.if')).toBeEnabled();
+      await workflowPage.addButtonFor('control.if').click();
+      await workflowPage.addButtonFor('transform').click();
+
+      const rootPipe = page.locator('#workflow-designer-pipe-root');
+      const thenPipe = page.locator(`#${pipeIdForPath('root.steps[0].then')}`);
+      await expect(thenPipe).toBeVisible();
+
+      const rootStepIds = await getStepIdsIn(rootPipe);
+      expect(rootStepIds.length).toBeGreaterThanOrEqual(2);
+      const movableTransformId = rootStepIds[1];
+
+      await thenPipe.click();
+      const initialThenStepIds = await getStepIdsIn(thenPipe);
+      const initialRootStepIds = [...rootStepIds];
+
+      await workflowPage.addButtonFor('transform').click();
+
+      let insertedTransformId: string | null = null;
+      await expect.poll(async () => {
+        const nextThenStepIds = await getStepIdsIn(thenPipe);
+        insertedTransformId =
+          nextThenStepIds.find((stepId) => !initialThenStepIds.includes(stepId)) ?? null;
+        return insertedTransformId;
+      }).not.toBeNull();
+
+      await expect.poll(async () => getStepIdsIn(rootPipe)).toEqual(initialRootStepIds);
+
+      const handle = dragHandleFor(page, movableTransformId ?? '');
+      await expect(handle).toBeVisible();
+      await dragBetween(page, handle, thenPipe, { targetY: 0.75 });
+
+      await expect.poll(async () => {
+        const nextThenStepIds = await getStepIdsIn(thenPipe);
+        return {
+          insertedTransformStillPresent: nextThenStepIds.includes(insertedTransformId ?? ''),
+          movedTransformPresent: nextThenStepIds.includes(movableTransformId ?? ''),
+          length: nextThenStepIds.length,
+        };
+      }).toEqual({
+        insertedTransformStillPresent: true,
+        movedTransformPresent: true,
+        length: initialThenStepIds.length + 2,
+      });
+    } finally {
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
+      await db.destroy();
+    }
+  });
+
   test('grouped action steps preserve delete behavior', async ({ page }) => {
     test.setTimeout(120000);
 
@@ -956,6 +1012,24 @@ test.describe('Workflow Designer UI - basic', () => {
 
       await expect(page.locator('[id^="workflow-step-select-"]')).toHaveCount(0);
       await expect(page.getByText('Select a step to edit its configuration.')).toBeVisible();
+    } finally {
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
+      await db.destroy();
+    }
+  });
+
+  test('T079: grouped action steps preserve the current absence of duplicate behavior', async ({ page }) => {
+    test.setTimeout(120000);
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    try {
+      await workflowPage.clickNewWorkflow();
+      await workflowPage.addButtonFor('ticket').click();
+
+      const stepId = await workflowPage.getFirstStepId();
+      await expect(workflowPage.stepDeleteButton(stepId)).toBeVisible();
+      await expect(page.locator(`#workflow-step-duplicate-${stepId}`)).toHaveCount(0);
+      await expect(page.getByRole('button', { name: /duplicate step/i })).toHaveCount(0);
     } finally {
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();

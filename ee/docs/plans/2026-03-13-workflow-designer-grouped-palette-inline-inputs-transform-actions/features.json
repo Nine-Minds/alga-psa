@@ -469,8 +469,8 @@
   },
   {
     "id": "F079",
-    "description": "A grouped action step should preserve duplicate or copy behavior already used for existing steps",
-    "implemented": false,
+    "description": "A grouped action step should preserve the current absence of duplicate or copy behavior because existing workflow steps expose no duplicate affordance",
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model"]
   },
   {
@@ -1400,13 +1400,13 @@
   {
     "id": "F234",
     "description": "Keep transform grouped steps movable and reorderable like existing action.call steps",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Grouped Action Step Model"]
   },
   {
     "id": "F235",
     "description": "Keep transform grouped steps available inside control blocks just like existing action.call steps",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Grouped Action Step Model"]
   },
   {

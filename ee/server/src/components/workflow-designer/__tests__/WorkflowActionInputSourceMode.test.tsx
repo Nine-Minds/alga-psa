@@ -50,7 +50,7 @@ describe('WorkflowActionInputSourceMode', () => {
     expect(screen.getByText('Secret')).toBeInTheDocument();
   });
 
-  it('treats direct field references as reference mode and complex expressions as advanced expressions', () => {
+  it('T152/T153: rehydrates direct field references into Reference mode and falls complex expressions back to Advanced mode', () => {
     expect(deriveWorkflowActionInputSourceMode({ $expr: 'payload.summary' })).toEqual({
       mode: 'reference',
       advancedMode: 'expression',

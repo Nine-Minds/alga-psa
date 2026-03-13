@@ -469,8 +469,8 @@
   },
   {
     "id": "T079",
-    "description": "Playwright: grouped action steps preserve duplicate behavior",
-    "implemented": false,
+    "description": "Playwright: grouped action steps preserve the current absence of duplicate behavior",
+    "implemented": true,
     "featureIds": ["F079"]
   },
   {
@@ -908,13 +908,13 @@
   {
     "id": "T152",
     "description": "Integration: previously saved direct field-reference expressions rehydrate back into structured Reference mode when possible",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F152"]
   },
   {
     "id": "T153",
     "description": "Integration: unrepresentable saved expressions fall back to Advanced mode instead of breaking hydration",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F153"]
   },
   {
@@ -1400,13 +1400,13 @@
   {
     "id": "T234",
     "description": "Playwright: transform grouped steps remain reorderable and movable like existing action.call steps",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F234"]
   },
   {
     "id": "T235",
     "description": "Playwright: transform grouped steps remain usable inside control blocks",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F235"]
   },
   {
