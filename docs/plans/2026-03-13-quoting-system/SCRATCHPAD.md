@@ -161,3 +161,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) T029 complete — Model: create sets default status to 'draft'. Added quote create default status coverage.
 - (2026-03-13) T030 complete — Model: update changes fields and logs 'updated' activity. Added quote update activity coverage.
 - (2026-03-13) T031 complete — Model: update rejects invalid status transitions. Added invalid quote transition rejection coverage.
+- (2026-03-13) T032 complete — Model: delete removes draft quotes with no business history via deleteEntityWithValidation. Added draft quote delete coverage.

@@ -250,7 +250,7 @@
   {
     "id": "T032",
     "description": "Model: delete removes draft quotes with no business history via deleteEntityWithValidation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F049a"
