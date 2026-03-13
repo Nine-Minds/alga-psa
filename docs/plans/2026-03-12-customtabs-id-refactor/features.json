@@ -10,7 +10,7 @@
   {
     "id": "F002",
     "description": "CustomTabs uses `tab.id` (not `tab.label`) as Radix Tabs `value` prop for triggers and content panels",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Internal Component Changes"
     ]
