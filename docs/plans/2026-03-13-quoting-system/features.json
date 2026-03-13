@@ -285,7 +285,7 @@
   {
     "id": "F036",
     "description": "P1: Quote business templates — is_template flag on quotes, template CRUD with wizard + quick create (matching contract template pattern)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR13"
     ]

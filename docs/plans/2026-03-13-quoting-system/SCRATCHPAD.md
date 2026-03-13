@@ -107,6 +107,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) F036 complete — P1: Quote business-template backend now rides on the generic quote actions and model behavior: `is_template=true` quotes are created without numbering, excluded from the normal status lifecycle, and can be read/updated/deleted through the same tenant-scoped CRUD surface.
 - (2026-03-13) T050 complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with a recurring-item case proving `addQuoteItem` preserves `is_recurring` and `billing_frequency` through the action layer.
 - (2026-03-13) T049 complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with an optional-item case proving `addQuoteItem` preserves `is_optional=true` through the server-action boundary.
 - (2026-03-13) T048 complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with a rate-override case proving `addQuoteItem` forwards an explicit `unit_price` that differs from the service catalog default.
