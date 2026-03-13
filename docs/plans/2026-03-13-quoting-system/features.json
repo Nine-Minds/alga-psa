@@ -423,7 +423,7 @@
   {
     "id": "F049a",
     "description": "P1: Register quote entity in deleteEntityWithValidation config with supportsArchive: true and dependency checks",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR19"
     ]
