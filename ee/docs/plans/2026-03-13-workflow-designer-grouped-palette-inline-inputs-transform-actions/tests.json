@@ -1436,13 +1436,13 @@
   {
     "id": "T240",
     "description": "Unit: new transform actions can be added without introducing one-off designer surfaces",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F240"]
   },
   {
     "id": "T241",
     "description": "Integration: truncate-text accepts a source string and truncation settings",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F241"]
   },
   {
@@ -1460,43 +1460,43 @@
   {
     "id": "T244",
     "description": "Integration: concat-text accepts multiple source values and a separator",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F244"]
   },
   {
     "id": "T245",
     "description": "Integration: replace-text accepts a source string, search value, and replacement value",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F245"]
   },
   {
     "id": "T246",
     "description": "Integration: split-text accepts a source string and delimiter",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F246"]
   },
   {
     "id": "T247",
     "description": "Integration: join-text accepts a source array and delimiter",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F247"]
   },
   {
     "id": "T248",
     "description": "Integration: lowercase-text accepts a source string",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F248"]
   },
   {
     "id": "T249",
     "description": "Integration: uppercase-text accepts a source string",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F249"]
   },
   {
     "id": "T250",
     "description": "Integration: trim-text accepts a source string",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F250"]
   },
   {
@@ -1562,13 +1562,13 @@
   {
     "id": "T261",
     "description": "Integration: coalesce-value accepts ordered candidate inputs and returns the first usable value",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F261"]
   },
   {
     "id": "T262",
     "description": "Integration: build-object accepts named field inputs and returns an object",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F262"]
   },
   {
@@ -1580,25 +1580,25 @@
   {
     "id": "T264",
     "description": "Integration: pick-fields accepts an input object and a selected subset of fields",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F264"]
   },
   {
     "id": "T265",
     "description": "Integration: rename-fields accepts an input object and an explicit field rename mapping",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F265"]
   },
   {
     "id": "T266",
     "description": "Integration: append-array accepts an input array and appended values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F266"]
   },
   {
     "id": "T267",
     "description": "Integration: build-array accepts ordered item inputs and returns an array",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F267"]
   },
   {

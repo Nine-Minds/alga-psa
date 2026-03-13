@@ -187,3 +187,11 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Added a runtime publish-validation assertion showing `transform.truncate_text` missing required inputs fails through the same `action.call` validation path used by business actions.
   - Confirmed no transform-specific validation branch was needed because transform actions already flow through the shared action registry and `validateInputMappingSchema`.
   - Marked F230 and T230 implemented.
+- (2026-03-13) Completed the transform extensibility guardrail slice:
+  - Extended the shared catalog unit suite with a hypothetical `transform.slugify_text` action to prove new `transform.*` registrations automatically join the existing `Transform` group.
+  - Verified the catalog lookup path continues to hydrate the new transform action back to the shared grouped tile without any one-off UI wiring.
+  - Marked F240 and T240 implemented.
+- (2026-03-13) Completed the transform runtime acceptance slice:
+  - Expanded the shared transform-handler suite so text transforms now cover truncate, concat, replace, split, join, lowercase, uppercase, and trim with schema-validated inputs.
+  - Reused the same runtime suite to claim the already-landed coalesce, build-object, pick-fields, rename-fields, append-array, and build-array behavior against real handlers.
+  - Marked T241, T244-T250, and T261-T267 implemented.

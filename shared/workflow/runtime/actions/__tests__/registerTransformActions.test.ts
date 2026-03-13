@@ -59,13 +59,17 @@ describe('registerTransformActionsV2', () => {
     expect(registry.get('transform.build_array', 1)?.outputSchema.safeParse({ items: ['ticket', 42] }).success).toBe(true);
   });
 
-  it('applies representative text transforms through runtime handlers', async () => {
+  it('T241/T244/T245/T246/T247/T248/T249/T250: applies representative text transforms through runtime handlers', async () => {
     const registry = getActionRegistryV2();
 
     const truncate = registry.get('transform.truncate_text', 1);
     const concat = registry.get('transform.concat_text', 1);
+    const replace = registry.get('transform.replace_text', 1);
     const split = registry.get('transform.split_text', 1);
+    const join = registry.get('transform.join_text', 1);
+    const lowercase = registry.get('transform.lowercase_text', 1);
     const uppercase = registry.get('transform.uppercase_text', 1);
+    const trim = registry.get('transform.trim_text', 1);
 
     const truncated = await truncate?.handler(
       truncate.inputSchema.parse({ text: 'workflow designer', maxLength: 12, strategy: 'middle', ellipsis: '...' }),
@@ -75,22 +79,42 @@ describe('registerTransformActionsV2', () => {
       concat.inputSchema.parse({ values: ['workflow', 'designer'], separator: ' ' }),
       {} as never
     );
+    const replaced = await replace?.handler(
+      replace.inputSchema.parse({ text: 'workflow workflow', search: 'workflow', replacement: 'designer', replaceAll: false }),
+      {} as never
+    );
     const splitText = await split?.handler(
       split.inputSchema.parse({ text: 'a,,b', delimiter: ',', removeEmpty: true }),
+      {} as never
+    );
+    const joinedText = await join?.handler(
+      join.inputSchema.parse({ items: ['workflow', 'designer'], delimiter: '::' }),
+      {} as never
+    );
+    const lowercased = await lowercase?.handler(
+      lowercase.inputSchema.parse({ text: 'AlGa' }),
       {} as never
     );
     const uppercased = await uppercase?.handler(
       uppercase.inputSchema.parse({ text: 'alga' }),
       {} as never
     );
+    const trimmed = await trim?.handler(
+      trim.inputSchema.parse({ text: '  workflow  ' }),
+      {} as never
+    );
 
     expect(truncated).toEqual({ text: 'workf...gner' });
     expect(concatenated).toEqual({ text: 'workflow designer' });
+    expect(replaced).toEqual({ text: 'designer workflow' });
     expect(splitText).toEqual({ items: ['a', 'b'] });
+    expect(joinedText).toEqual({ text: 'workflow::designer' });
+    expect(lowercased).toEqual({ text: 'alga' });
     expect(uppercased).toEqual({ text: 'ALGA' });
+    expect(trimmed).toEqual({ text: 'workflow' });
   });
 
-  it('applies representative object, value, and array transforms through runtime handlers', async () => {
+  it('T261/T262/T264/T265/T266/T267: applies representative object, value, and array transforms through runtime handlers', async () => {
     const registry = getActionRegistryV2();
 
     const coalesce = registry.get('transform.coalesce_value', 1);

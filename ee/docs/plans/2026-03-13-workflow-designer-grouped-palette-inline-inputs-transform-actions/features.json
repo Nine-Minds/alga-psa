@@ -1436,7 +1436,7 @@
   {
     "id": "F240",
     "description": "Keep transform grouped-step behavior consistent enough that new transform actions can be added without new one-off designer surfaces",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Non-functional Requirements"]
   },
   {

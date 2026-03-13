@@ -91,6 +91,13 @@ const mockActions: WorkflowDesignerCatalogSourceAction[] = [
     outputSchema: { type: 'object', properties: { text: { type: 'string' } } }
   },
   {
+    id: 'transform.slugify_text',
+    version: 1,
+    ui: { label: 'Slugify Text', description: 'Normalize text into a slug', category: 'Transform' },
+    inputSchema: { type: 'object', properties: { text: { type: 'string' }, separator: { type: 'string' } } },
+    outputSchema: { type: 'object', properties: { text: { type: 'string' } } }
+  },
+  {
     id: 'slack.send_message',
     version: 1,
     ui: { label: 'Send Slack Message', description: 'Send a Slack message', category: 'Apps', icon: 'slack' },
@@ -135,8 +142,20 @@ describe('workflow designer action catalog', () => {
     });
     expect(catalog.find((record) => record.groupKey === 'transform')?.allowedActionIds).toEqual([
       'transform.concat_text',
+      'transform.slugify_text',
       'transform.truncate_text'
     ]);
+  });
+
+  it('T240: new transform actions join the shared Transform group without extra designer wiring', () => {
+    const transformRecord = catalog.find((record) => record.groupKey === 'transform');
+
+    expect(transformRecord?.actions.map((action) => action.id)).toEqual([
+      'transform.concat_text',
+      'transform.slugify_text',
+      'transform.truncate_text'
+    ]);
+    expect(getWorkflowDesignerCatalogRecordForAction(catalog, 'transform.slugify_text')?.groupKey).toBe('transform');
   });
 
   it('T004: external grouped palette entries serialize as app catalog records', () => {
