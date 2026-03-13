@@ -34,6 +34,9 @@ import { ClientNotificationsList } from '../notifications/ClientNotificationsLis
 
 type NotificationView = 'email' | 'internal';
 
+const CLIENT_PROFILE_TAB_IDS = ['profile', 'security', 'activity', 'notification-settings'] as const;
+const DEFAULT_CLIENT_PROFILE_TAB = 'profile';
+
 export function ClientProfile() {
   const { t: tProfile } = useTranslation('client-portal');
   const { t: tCommon } = useTranslation('common');
@@ -158,16 +161,32 @@ export function ClientProfile() {
 
   // Define tab labels (must be before early returns to maintain hook order)
   const profileTabLabel = tProfile('nav.profile');
-  const activityTabLabel = tProfile('profile.activity', 'Activity');
 
   // Determine the default tab based on URL parameter
   const defaultTab = useMemo(() => {
-    const tabParam = searchParams?.get('tab') ?? null;
-    if (tabParam === 'activity') {
-      return activityTabLabel;
+    const tabParam = searchParams?.get('tab')?.toLowerCase() ?? null;
+    if (tabParam && CLIENT_PROFILE_TAB_IDS.includes(tabParam as typeof CLIENT_PROFILE_TAB_IDS[number])) {
+      return tabParam;
     }
-    return profileTabLabel;
-  }, [searchParams, profileTabLabel, activityTabLabel]);
+    return DEFAULT_CLIENT_PROFILE_TAB;
+  }, [searchParams]);
+
+  const handleTabChange = (tabId: string) => {
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    if (tabId === DEFAULT_CLIENT_PROFILE_TAB) {
+      params.delete('tab');
+    } else {
+      params.set('tab', tabId);
+    }
+
+    const newUrl = params.toString()
+      ? `${window.location.pathname}?${params.toString()}`
+      : window.location.pathname;
+
+    window.history.pushState({}, '', newUrl);
+  };
 
   if (loading) {
     return (
@@ -195,6 +214,7 @@ export function ClientProfile() {
 
   const tabContent: TabContent[] = [
     {
+      id: 'profile',
       label: profileTabLabel,
       content: (
         <Card>
@@ -285,6 +305,7 @@ export function ClientProfile() {
       ),
     },
     {
+      id: 'security',
       label: tProfile('profile.security'),
       content: (
         <div className="space-y-6">
@@ -294,10 +315,12 @@ export function ClientProfile() {
       ),
     },
     {
+      id: 'activity',
       label: tProfile('profile.activity', 'Activity'),
       content: <ClientNotificationsList />,
     },
     {
+      id: 'notification-settings',
       label: tProfile('profile.notificationSettings', 'Notification Settings'),
       content: (
         <Card>
@@ -355,6 +378,7 @@ export function ClientProfile() {
       <CustomTabs
         tabs={tabContent}
         defaultTab={defaultTab}
+        onTabChange={handleTabChange}
       />
 
       {/* Action Buttons */}

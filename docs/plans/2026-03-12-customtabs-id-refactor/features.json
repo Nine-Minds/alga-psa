@@ -254,7 +254,7 @@
   {
     "id": "F030",
     "description": "Migrate ClientProfile.tsx — add id to 4+ tabs, remove slug maps",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern A/B"

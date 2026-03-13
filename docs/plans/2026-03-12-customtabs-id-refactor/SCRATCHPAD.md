@@ -171,3 +171,5 @@ npm run build
 - F028 — ClientNotificationsList now keeps URL sync and filter state on stable ids (`unread`, `all`, `read`) while labels remain translated.
 
 - F029 — ClientPortalSettingsPage now uses id-based tab state and direct `?tab=` routing for account, client details, and user management.
+
+- F030 — ClientProfile now assigns stable ids to its translated tabs and syncs tab changes back to the URL using ids.
