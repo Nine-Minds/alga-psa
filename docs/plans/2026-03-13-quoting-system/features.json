@@ -34,7 +34,7 @@
   {
     "id": "F005",
     "description": "P1: TypeScript interfaces — IQuote, IQuoteItem, IQuoteActivity, QuoteStatus in packages/types/src/interfaces/quote.interfaces.ts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR3"
     ]
