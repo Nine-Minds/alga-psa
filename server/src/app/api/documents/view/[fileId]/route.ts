@@ -68,7 +68,11 @@ export async function GET(
     // If it's not a tenant logo, we need authentication
     if (!isTenantLogo) {
       // Try session-based auth first, then fall back to API key auth (mobile app)
-      user = await getCurrentUser();
+      try {
+        user = await getCurrentUser();
+      } catch {
+        // No session context (e.g. mobile API request) — fall through to API key auth
+      }
       if (user) {
         const tenantContext = await createTenantKnex();
         knex = tenantContext.knex;
