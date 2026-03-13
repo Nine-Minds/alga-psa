@@ -268,7 +268,7 @@
   {
     "id": "T033a",
     "description": "Model: delete blocks drafts that have business history (emails sent, etc.) and offers archive",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F049a"

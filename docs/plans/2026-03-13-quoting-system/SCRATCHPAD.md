@@ -163,3 +163,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) T031 complete — Model: update rejects invalid status transitions. Added invalid quote transition rejection coverage.
 - (2026-03-13) T032 complete — Model: delete removes draft quotes with no business history via deleteEntityWithValidation. Added draft quote delete coverage.
 - (2026-03-13) T033 complete — Model: delete blocks non-draft quotes and offers archive alternative. Added non-draft quote delete blocking coverage.
+- (2026-03-13) T033a complete — Model: delete blocks drafts that have business history (emails sent, etc.) and offers archive. Added draft-with-history delete blocking coverage.
