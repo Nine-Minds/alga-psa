@@ -302,7 +302,7 @@
   {
     "id": "F036b",
     "description": "P1: Quote template list UI — separate view for templates (filtered by is_template=true)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR13",
       "P1-FR15"
