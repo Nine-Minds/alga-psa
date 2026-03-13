@@ -123,3 +123,5 @@ npm run build
 - F004 — Verified CustomTabs now emits tab ids from `onTabChange`, matching the new internal value model.
 
 - F005 — Updated default and controlled tab matching to compare incoming values against `tab.id` instead of labels.
+
+- F006 — `beforeTabChange` now sees the same id-based values that Radix and parent callbacks use.

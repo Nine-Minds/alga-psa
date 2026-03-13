@@ -42,7 +42,7 @@
   {
     "id": "F006",
     "description": "CustomTabs `beforeTabChange` callback receives `tab.id` values",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Internal Component Changes"
     ]
