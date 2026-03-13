@@ -7,6 +7,7 @@ interface QuoteCalculationContext {
   client_id?: string | null;
   quote_date?: string | null;
   currency_code?: string | null;
+  tax_source?: 'internal' | 'external' | 'pending_external' | null;
 }
 
 interface QuoteItemRow {
@@ -65,6 +66,7 @@ export async function recalculateQuoteFinancials(
   const taxService = quote.client_id ? new TaxService() : null;
   const quoteDate = toQuoteDate(quote.quote_date);
   const currencyCode = quote.currency_code ?? 'USD';
+  const taxSource = quote.tax_source ?? 'internal';
 
   let subtotal = 0;
   let discountTotal = 0;
@@ -85,7 +87,7 @@ export async function recalculateQuoteFinancials(
     } else {
       subtotal += isIncludedInTotals ? totalPrice : 0;
 
-      if (isIncludedInTotals && quote.client_id && taxService) {
+      if (isIncludedInTotals && quote.client_id && taxService && taxSource === 'internal') {
         const taxResult = await runWithTenant(tenant, async () => {
           return taxService.calculateTax(
             quote.client_id!,
@@ -99,6 +101,9 @@ export async function recalculateQuoteFinancials(
 
         taxAmount = taxResult.taxAmount;
         taxRate = Math.round(Number(taxResult.taxRate ?? 0));
+      } else if (taxSource !== 'internal') {
+        taxAmount = 0;
+        taxRate = 0;
       }
 
       tax += taxAmount;

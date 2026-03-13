@@ -26,6 +26,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Email: supports multiple addresses (array). Contact_id remains as primary/default recipient, but MSP can add additional recipients.
 - (2026-03-13) Optional item selections: client toggles persisted server-side via `is_selected` on quote_items. On accept, selections sent to MSP for review before conversion. MSP detail view highlights client's choices.
 - (2026-03-13) "Save as Template" action on existing quotes (Phase 6) — creates a business template from a quote, stripping client-specific data.
+- (2026-03-13) `tax_source` lives on `quotes` (not `quote_items`) to mirror the invoice model: internal quotes calculate tax locally, while external/pending-external quotes keep item tax amounts at zero until a later integration supplies them.
 
 ## Parallel Work
 
@@ -108,6 +109,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) F053 complete — P2: Added quote-level `tax_source` support (`internal` / `external` / `pending_external`) via a new migration, shared quote typing/schema updates, and recalculation logic that skips internal tax computation when the quote delegates tax externally.
 - (2026-03-13) F052 complete — P2: The quote recalculation path now persists `tax_region` (item override or client region fallback) and rounded `tax_rate` back onto each quote item, and the quote-item Zod schemas now accept those fields.
 - (2026-03-13) F051 complete — P2: Quote tax recalculation now honors `is_taxable` directly and inherits client tax-exempt / reverse-charge behavior from `TaxService`, yielding zero tax when those client conditions apply.
 - (2026-03-13) F050 complete — P2: Added `quoteCalculationService.ts`, which runs `TaxService.calculateTax()` for each included, non-discount quote item and is now invoked from quote-item mutations so quote tax fields are recomputed automatically.

@@ -455,7 +455,7 @@
   {
     "id": "F053",
     "description": "P2: Tax calculation — support tax_source (internal/external/pending_external)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2-FR1"
     ]

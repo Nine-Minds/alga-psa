@@ -1,6 +1,6 @@
 import { TenantEntity } from './index';
 import type { ISO8601String } from '../lib/temporal';
-import type { DiscountType } from './invoice.interfaces';
+import type { DiscountType, TaxSource } from './invoice.interfaces';
 
 export type QuoteStatus =
   | 'draft'
@@ -76,6 +76,7 @@ export interface IQuote extends TenantEntity {
   tax: number;
   total_amount: number;
   currency_code: string;
+  tax_source?: TaxSource | null;
   internal_notes?: string | null;
   client_notes?: string | null;
   terms_and_conditions?: string | null;

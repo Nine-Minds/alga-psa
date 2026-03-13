@@ -28,6 +28,7 @@ const createQuoteBaseSchema = z.object({
   client_notes: z.string().optional().nullable(),
   terms_and_conditions: z.string().optional().nullable(),
   currency_code: z.string().trim().length(3).default('USD'),
+  tax_source: z.enum(['internal', 'external', 'pending_external']).default('internal'),
   is_template: z.boolean().default(false),
   created_by: z.string().uuid().optional().nullable(),
 });
