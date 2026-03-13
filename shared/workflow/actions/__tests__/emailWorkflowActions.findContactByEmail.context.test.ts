@@ -145,10 +145,13 @@ describe('findContactByEmail context-aware resolution', () => {
     const result = await findContactByEmail('ROBERT@NINEMINDS.COM', 'tenant-1');
 
     expect(result).toEqual({
+      contact_id: '',
       name: 'Robert Isaacs',
       email: 'robert@nineminds.com',
+      client_id: '',
       user_id: 'internal-user-1',
       user_type: 'internal',
+      client_name: '',
     });
   });
 

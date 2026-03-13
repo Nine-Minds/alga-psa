@@ -91,13 +91,13 @@ function sanitizeCommentContentForIndexRetry(content: string): string {
 // =============================================================================
 
 export interface FindContactByEmailOutput {
-  contact_id?: string;
+  contact_id: string;
   name: string;
   email: string;
-  client_id?: string;
+  client_id: string;
   user_id?: string;
   user_type?: 'internal' | 'client';
-  client_name?: string;
+  client_name: string;
   phone?: string;
   title?: string;
 }
@@ -264,10 +264,13 @@ export async function findContactByEmail(
       if (internalUser) {
         const displayName = `${internalUser.first_name || ''} ${internalUser.last_name || ''}`.trim();
         return {
+          contact_id: '',
           name: displayName || normalizedEmail,
           email: normalizeEmailAddress(internalUser.email) ?? normalizedEmail,
+          client_id: '',
           user_id: internalUser.user_id,
-          user_type: 'internal',
+          user_type: 'internal' as const,
+          client_name: '',
         };
       }
 
