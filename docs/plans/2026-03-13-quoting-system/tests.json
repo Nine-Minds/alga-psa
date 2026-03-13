@@ -26,7 +26,7 @@
   {
     "id": "T004",
     "description": "Migration: quote_items FK to quotes cascades on delete",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ]

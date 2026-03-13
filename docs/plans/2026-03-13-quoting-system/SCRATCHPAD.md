@@ -133,3 +133,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) T001 complete — Migration: quotes table created with correct columns including is_template boolean, types, and constraints. Added DB-backed quote infrastructure coverage.
 - (2026-03-13) T002 complete — Migration: quotes table has indexes on (tenant, client_id), (tenant, status), (tenant, quote_number), (tenant, parent_quote_id). Covered quote index creation in the infrastructure suite.
 - (2026-03-13) T003 complete — Migration: quote_items table created with correct columns including is_selected, matching invoice_charges pattern plus quote-specific fields. Covered quote_items schema shape in the infrastructure suite.
+- (2026-03-13) T004 complete — Migration: quote_items FK to quotes cascades on delete. Covered quote_items cascade behavior in the infrastructure suite.
