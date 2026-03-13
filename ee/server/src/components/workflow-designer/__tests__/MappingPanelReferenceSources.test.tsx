@@ -2,28 +2,38 @@
 
 import React from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@alga-psa/tenancy/actions', () => ({
   listTenantSecrets: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('../mapping/InputMappingEditor', () => ({
-  InputMappingEditor: () => <div data-testid="mapping-panel-editor" />,
+  InputMappingEditor: ({
+    referenceBrowseContext,
+  }: {
+    referenceBrowseContext?: {
+      payload: Array<unknown>;
+      vars: Array<{ saveAs: string }>;
+      meta: Array<unknown>;
+      error: Array<unknown>;
+      forEach?: { itemVar: string; indexVar: string };
+    };
+  }) => (
+    <div data-testid="mapping-panel-editor">
+      {JSON.stringify({
+        payloadCount: referenceBrowseContext?.payload.length ?? 0,
+        varNames: (referenceBrowseContext?.vars ?? []).map((entry) => entry.saveAs),
+        metaCount: referenceBrowseContext?.meta.length ?? 0,
+        errorCount: referenceBrowseContext?.error.length ?? 0,
+        forEach: referenceBrowseContext?.forEach ?? null,
+      })}
+    </div>
+  ),
 }));
 
 import { MappingPanel } from '../mapping/MappingPanel';
 import type { WorkflowDataContext } from '../mapping/MappingPanel';
-
-beforeAll(() => {
-  class ResizeObserverMock {
-    observe() {}
-    disconnect() {}
-    unobserve() {}
-  }
-
-  vi.stubGlobal('ResizeObserver', ResizeObserverMock);
-});
 
 const payloadField: WorkflowDataContext['payload'][number] = {
   name: 'ticket',
@@ -88,10 +98,10 @@ describe('MappingPanel reference sources', () => {
     cleanup();
   });
 
-  it('T159: shows payload, previous-step outputs, and workflow metadata source groups before drilling into nested references', async () => {
+  it('T159: passes grouped payload, vars, and workflow metadata into the inline reference browser context without rendering the browser by default', async () => {
     render(
       <MappingPanel
-        value={{}}
+        value={{ summary: { $expr: 'vars.ticketResult.ticket_id' } }}
         onChange={vi.fn()}
         targetFields={[
           {
@@ -125,15 +135,16 @@ describe('MappingPanel reference sources', () => {
       />
     );
 
-    expect(screen.getAllByText('Payload')[0]).toBeInTheDocument();
-    expect(screen.getAllByText('Step Outputs (vars)')[0]).toBeInTheDocument();
-    expect(screen.getAllByText('Workflow Meta')[0]).toBeInTheDocument();
-    expect(screen.getByText('vars.ticketResult')).toBeInTheDocument();
-    expect(screen.getByText('(Create Ticket)')).toBeInTheDocument();
-    expect(screen.getAllByTestId('mapping-panel-editor')[0]).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-panel-editor')).toHaveTextContent('"payloadCount":1');
+    expect(screen.getByTestId('mapping-panel-editor')).toHaveTextContent('"varNames":["ticketResult"]');
+    expect(screen.getByTestId('mapping-panel-editor')).toHaveTextContent('"metaCount":1');
+    expect(screen.queryByText('Payload')).not.toBeInTheDocument();
+    expect(screen.queryByText('Step Outputs (vars)')).not.toBeInTheDocument();
+    expect(screen.queryByText('Workflow Meta')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('source-data-tree-search')).not.toBeInTheDocument();
   });
 
-  it('T158/T316/T317: only shows catch and loop sources when the current step context allows them and leaves the first grouped action step without previous vars', () => {
+  it('T158/T316/T317: only passes catch and loop sources into the inline reference browser context when the current step allows them', () => {
     const { rerender } = render(
       <MappingPanel
         value={{}}
@@ -156,9 +167,8 @@ describe('MappingPanel reference sources', () => {
       />
     );
 
-    expect(screen.queryByText('Error Context')).not.toBeInTheDocument();
-    expect(screen.queryByText('Loop Context')).not.toBeInTheDocument();
-    expect(screen.getByText(/No vars yet\./)).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-panel-editor')).toHaveTextContent('"errorCount":0');
+    expect(screen.getByTestId('mapping-panel-editor')).toHaveTextContent('"forEach":null');
 
     rerender(
       <MappingPanel
@@ -193,9 +203,8 @@ describe('MappingPanel reference sources', () => {
       />
     );
 
-    expect(screen.getByText('Error Context')).toBeInTheDocument();
-    expect(screen.getByText('Loop Context')).toBeInTheDocument();
-    expect(screen.getByText('ticketItem')).toBeInTheDocument();
-    expect(screen.getByText('$index')).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-panel-editor')).toHaveTextContent('"errorCount":1');
+    expect(screen.getByTestId('mapping-panel-editor')).toHaveTextContent('"itemVar":"ticketItem"');
+    expect(screen.getByTestId('mapping-panel-editor')).toHaveTextContent('"indexVar":"$index"');
   });
 });

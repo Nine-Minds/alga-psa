@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { ChevronRight, ChevronDown, Plus, Trash2, AlertTriangle, Wand2, Sparkles, RotateCcw, LinkIcon } from 'lucide-react';
+import { ChevronRight, ChevronDown, Plus, Trash2, AlertTriangle, Wand2, Sparkles, RotateCcw } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -18,21 +18,14 @@ import {
   type ExpressionContext,
   type JsonSchema
 } from '../expression-editor';
-import {
-  useMappingDnd,
-  getDragData,
-  getDropTargetClasses,
-  type DragItem
-} from './useMappingDnd';
 import type { MappingPositionsHandlers } from './useMappingPositions';
 import { useMappingKeyboard } from './useMappingKeyboard';
+import { SourceDataTree, type DataTreeContext } from './SourceDataTree';
 import {
   TypeCompatibility,
   getTypeCompatibility,
-  getCompatibilityColor,
   getCompatibilityClasses,
   getCompatibilityLabel,
-  getDisplayTypeName
 } from './typeCompatibility';
 import { WorkflowActionInputFieldInfo } from '../WorkflowActionInputFieldInfo';
 import { getWorkflowActionInputTypeHint, WorkflowActionInputTypeHint } from '../WorkflowActionInputTypeHint';
@@ -424,7 +417,7 @@ export interface InputMappingEditorProps {
   /**
    * §19.3 - Shared position handlers from MappingPanel
    */
-  positionsHandlers: MappingPositionsHandlers;
+  positionsHandlers?: MappingPositionsHandlers;
 
   /**
    * §19.1 - Source field type lookup for compatibility indicators
@@ -436,6 +429,11 @@ export interface InputMappingEditorProps {
    * If not provided, falls back to building context from fieldOptions
    */
   expressionContext?: ExpressionContext;
+
+  /**
+   * Grouped source data used by inline "Browse sources" reference panels.
+   */
+  referenceBrowseContext?: DataTreeContext;
 
   /**
    * Whether the editor is disabled
@@ -514,6 +512,7 @@ const MappingFieldEditor: React.FC<{
   disabled?: boolean;
   sourceTypeMap?: Map<string, string>;
   expressionContext?: ExpressionContext;
+  referenceBrowseContext?: DataTreeContext;
 }> = ({
   field,
   fieldPath,
@@ -526,6 +525,7 @@ const MappingFieldEditor: React.FC<{
   disabled,
   sourceTypeMap,
   expressionContext,
+  referenceBrowseContext,
 }) => {
   const [valueType, setValueType] = useState<ValueType>(() => getMappingValueType(value));
   const [expressionError, setExpressionError] = useState<string | null>(null);
@@ -686,6 +686,20 @@ const MappingFieldEditor: React.FC<{
     label: s.name,
     ...(s.description && { description: s.description })
   }));
+  const [showBrowseSources, setShowBrowseSources] = useState(false);
+  const currentSourceMode = deriveWorkflowActionInputSourceMode(value).mode;
+  const selectedReferencePath = currentSourceMode === 'reference' ? extractPrimaryPath(getDisplayValue(value)) : null;
+
+  useEffect(() => {
+    if (currentSourceMode !== 'reference' && showBrowseSources) {
+      setShowBrowseSources(false);
+    }
+  }, [currentSourceMode, showBrowseSources]);
+
+  const handleBrowseSelect = useCallback((path: string) => {
+    handleExpressionChange(path);
+    setShowBrowseSources(false);
+  }, [handleExpressionChange]);
 
   return (
     <Card className="p-3 space-y-2">
@@ -722,7 +736,27 @@ const MappingFieldEditor: React.FC<{
         <div className="pl-6 space-y-2">
           {valueType === 'expr' && (
             <div className="space-y-2">
-              <div className="flex items-center justify-end">
+              <div className="flex items-center justify-between gap-2">
+                {currentSourceMode === 'reference' ? (
+                  <Button
+                    id={`${idPrefix}-browse-sources-toggle`}
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    disabled={disabled || !referenceBrowseContext}
+                    onClick={() => setShowBrowseSources((current) => !current)}
+                    className="text-xs text-gray-600 hover:text-gray-900"
+                  >
+                    {showBrowseSources ? (
+                      <ChevronDown className="mr-1 h-3.5 w-3.5" />
+                    ) : (
+                      <ChevronRight className="mr-1 h-3.5 w-3.5" />
+                    )}
+                    Browse sources
+                  </Button>
+                ) : (
+                  <span />
+                )}
                 {/* §17.3.2 - Type-filtered field picker */}
                 <TypeFilteredFieldPicker
                   id={`${idPrefix}-picker`}
@@ -732,6 +766,17 @@ const MappingFieldEditor: React.FC<{
                   disabled={disabled}
                 />
               </div>
+              {currentSourceMode === 'reference' && showBrowseSources && referenceBrowseContext && (
+                <SourceDataTree
+                  context={referenceBrowseContext}
+                  onSelectField={handleBrowseSelect}
+                  selectedPath={selectedReferencePath ?? undefined}
+                  disabled={disabled}
+                  maxHeight="280px"
+                  targetType={field.type}
+                  compact
+                />
+              )}
               {/* §20 - Monaco expression editor with syntax highlighting and autocomplete */}
               <ExpressionEditor
                 ref={editorRef}
@@ -810,6 +855,7 @@ const MappingFieldEditor: React.FC<{
               disabled={disabled}
               sourceTypeMap={sourceTypeMap}
               expressionContext={expressionContext}
+              referenceBrowseContext={referenceBrowseContext}
             />
           )}
         </div>
@@ -1004,6 +1050,7 @@ const LiteralValueEditor: React.FC<{
   disabled?: boolean;
   sourceTypeMap?: Map<string, string>;
   expressionContext?: ExpressionContext;
+  referenceBrowseContext?: DataTreeContext;
 }> = ({
   value,
   onChange,
@@ -1020,6 +1067,7 @@ const LiteralValueEditor: React.FC<{
   disabled,
   sourceTypeMap,
   expressionContext,
+  referenceBrowseContext,
 }) => {
   const hasPickerEditor = Boolean(field.picker?.kind);
   const hasStructuredObjectEditor = fieldType === 'object' && (fieldChildren?.length ?? 0) > 0;
@@ -1253,6 +1301,7 @@ const LiteralValueEditor: React.FC<{
               disabled={disabled}
               sourceTypeMap={sourceTypeMap}
               expressionContext={expressionContext}
+              referenceBrowseContext={referenceBrowseContext}
             />
           ))}
         </StructuredLiteralGroup>
@@ -1334,6 +1383,7 @@ const LiteralValueEditor: React.FC<{
                   disabled={disabled}
                   sourceTypeMap={sourceTypeMap}
                   expressionContext={expressionContext}
+                  referenceBrowseContext={referenceBrowseContext}
                 />
               ))}
             </StructuredLiteralGroup>
@@ -1466,6 +1516,7 @@ const LiteralValueEditor: React.FC<{
                 disabled={disabled}
                 sourceTypeMap={sourceTypeMap}
                 expressionContext={expressionContext}
+                referenceBrowseContext={referenceBrowseContext}
               />
             </StructuredLiteralGroup>
           ))}
@@ -1605,21 +1656,13 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   targetFields,
   fieldOptions,
   stepId,
-  positionsHandlers,
   sourceTypeMap,
   disabled,
-  expressionContext: providedExpressionContext
+  expressionContext: providedExpressionContext,
+  referenceBrowseContext,
 }) => {
   const [secrets, setSecrets] = useState<Array<{ name: string; description?: string }>>([]);
   const [showUnmapped, setShowUnmapped] = useState(true);
-
-  // §19.2 - Drag-and-drop state
-  const [dndState, dndHandlers] = useMappingDnd({
-    onCreateMapping: (targetFieldName, sourcePath) => {
-      // Create expression mapping from dropped item
-      onChange({ ...value, [targetFieldName]: { $expr: sourcePath } });
-    }
-  });
 
   // Fetch available secrets
   useEffect(() => {
@@ -1831,7 +1874,6 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                 id={`mapping-field-${stepId}-${field.name}`}
                 role="option"
                 className={`relative group transition-all ${fieldProps.className}`}
-                ref={(el) => positionsHandlers.registerTargetRef(field.name, el)}
                 tabIndex={fieldProps.tabIndex}
                 aria-selected={fieldProps['aria-selected']}
                 onFocus={fieldProps.onFocus}
@@ -1848,6 +1890,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                   disabled={disabled}
                   sourceTypeMap={sourceTypeMap}
                   expressionContext={expressionContext}
+                  referenceBrowseContext={referenceBrowseContext}
                 />
                 <button
                   onClick={() => handleRemoveMapping(field.name)}
@@ -1881,18 +1924,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
             <div className="space-y-1 pl-5" role="group" aria-label="Unmapped fields">
                   {unmappedFields.map((field, idx) => {
                     const suggestion = suggestionMap.get(field.name);
-                    const isDropTarget = dndState.isDragging;
-                    const isActiveDropTarget = dndState.dropTarget === field.name;
                     const isMissingRequired = Boolean(field.required) && !isMappingValueSet(value[field.name], field.type);
-
-                    // §19.2 - Calculate type compatibility for drop feedback
-                    const dropCompatibility = dndState.draggedItem?.type && field.type
-                      ? getTypeCompatibility(dndState.draggedItem.type, field.type)
-                      : null;
-
-                const dropClasses = isActiveDropTarget && dropCompatibility
-                  ? getCompatibilityClasses(dropCompatibility)
-                  : null;
 
                 // §17.3 - Keyboard navigation props
                 const fieldIndex = allFieldNames.indexOf(field.name);
@@ -1904,46 +1936,21 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                     key={field.name}
                     id={`mapping-field-${stepId}-${field.name}`}
                     role="option"
-                    ref={(el) => positionsHandlers.registerTargetRef(field.name, el)}
                     tabIndex={fieldProps.tabIndex}
                     aria-selected={fieldProps['aria-selected']}
                     onFocus={fieldProps.onFocus}
                     onKeyDown={fieldProps.onKeyDown}
                     className={`flex items-center justify-between py-1.5 px-2 rounded transition-all ${
                       suggestion ? 'bg-primary-50 border border-primary-100' : ''
-                    } ${isDropTarget ? 'border-2 border-dashed border-gray-300' : ''} ${
-                      isActiveDropTarget && dropClasses
-                        ? `${dropClasses.bg} ${dropClasses.border} border-solid`
-                        : isActiveDropTarget
-                          ? 'bg-primary-50 border-primary-300 border-solid'
-                          : 'hover:bg-gray-50'
-                    } ${isFocused ? 'ring-2 ring-primary-500 ring-offset-1' : ''}`}
-                    onDragOver={(e) => {
-                      if (disabled) return;
-                      e.preventDefault();
-                      e.dataTransfer.dropEffect = 'copy';
-                      dndHandlers.handleDragOver(field.name, field.type);
-                    }}
-                    onDragLeave={() => {
-                      dndHandlers.handleDragLeave();
-                    }}
-                    onDrop={(e) => {
-                      if (disabled) return;
-                      e.preventDefault();
-                      dndHandlers.handleDrop(field.name);
-                    }}
+                    } hover:bg-gray-50 ${isFocused ? 'ring-2 ring-primary-500 ring-offset-1' : ''}`}
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      {/* §19.2 - Drop zone indicator */}
-                      {isDropTarget && (
-                        <LinkIcon className={`w-3.5 h-3.5 ${isActiveDropTarget ? 'text-primary-500' : 'text-gray-400'}`} />
-                      )}
                       <WorkflowActionInputFieldInfo
                         field={field}
                         isMissingRequired={isMissingRequired}
                       />
                       {/* §17.3.3 - Show suggestion indicator */}
-                      {suggestion && !isDropTarget && (
+                      {suggestion && (
                         <span className="text-xs text-primary-600 flex items-center gap-1 truncate">
                           <Sparkles className="w-3 h-3" />
                           <span className="truncate">← {suggestion.sourcePath}</span>
@@ -1952,16 +1959,9 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                           )}
                         </span>
                       )}
-                      {/* §19.2 - Show dragged item info when hovering */}
-                      {isActiveDropTarget && dndState.draggedItem && (
-                        <span className="text-xs text-primary-600 flex items-center gap-1 truncate">
-                          <LinkIcon className="w-3 h-3" />
-                          <span className="truncate">← {dndState.draggedItem.path}</span>
-                        </span>
-                      )}
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
-                      {suggestion && !isDropTarget && (
+                      {suggestion && (
                         <Button
                           id={`apply-suggestion-${stepId}-${field.name}`}
                           variant="ghost"
@@ -1974,18 +1974,16 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                           <Wand2 className="w-3.5 h-3.5" />
                         </Button>
                       )}
-                      {!isDropTarget && (
-                        <Button
-                          id={`add-mapping-${stepId}-${field.name}`}
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleAddMapping(field.name)}
-                          disabled={disabled}
-                        >
-                          <Plus className="w-3.5 h-3.5 mr-1" />
-                          Map
-                        </Button>
-                      )}
+                      <Button
+                        id={`add-mapping-${stepId}-${field.name}`}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleAddMapping(field.name)}
+                        disabled={disabled}
+                      >
+                        <Plus className="w-3.5 h-3.5 mr-1" />
+                        Map
+                      </Button>
                     </div>
                   </div>
                 );

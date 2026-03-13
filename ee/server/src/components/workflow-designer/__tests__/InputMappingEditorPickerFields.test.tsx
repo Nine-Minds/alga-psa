@@ -379,9 +379,6 @@ describe('InputMappingEditor picker-backed fields', () => {
       fireEvent.change(screen.getByTestId('mapping-step-picker-modes-board_id-source-mode'), {
         target: { value: 'advanced' },
       });
-      fireEvent.change(screen.getByTestId('mapping-step-picker-modes-board_id-advanced-mode'), {
-        target: { value: 'expression' },
-      });
       fireEvent.change(screen.getByTestId('mapping-step-picker-modes-board_id-source-mode'), {
         target: { value: 'fixed' },
       });

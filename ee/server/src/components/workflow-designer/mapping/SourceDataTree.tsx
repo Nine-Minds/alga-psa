@@ -14,9 +14,6 @@ import {
   AlertTriangle,
   Tag,
   Search,
-  Pin,
-  PinOff,
-  GripVertical
 } from 'lucide-react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -26,11 +23,6 @@ import {
   getCompatibilityClasses,
   getCompatibilityLabel
 } from './typeCompatibility';
-import {
-  type DragItem,
-  type MappingDndHandlers,
-  setDragData
-} from './useMappingDnd';
 
 /**
  * Schema field structure for tree display
@@ -105,20 +97,9 @@ export interface SourceDataTreeProps {
   targetType?: string;
 
   /**
-   * §19.2 - Drag-and-drop handlers for mapping (always enabled)
+   * Compact mode for inline reference browsing.
    */
-  dndHandlers: MappingDndHandlers;
-
-  /**
-   * §19.3 - Callback to register element refs for connection lines
-   */
-  onRegisterRef?: (path: string, element: HTMLElement | null) => void;
-
-  /**
-   * §19.3 - Register/unregister scroll container for position tracking
-   */
-  onRegisterScrollContainer?: (element: HTMLElement | null) => void;
-  onUnregisterScrollContainer?: (element: HTMLElement | null) => void;
+  compact?: boolean;
 }
 
 // Type icons by field type
@@ -168,11 +149,7 @@ const TreeNode: React.FC<{
   selectedPath?: string;
   disabled?: boolean;
   searchQuery?: string;
-  pinnedPaths: Set<string>;
-  onTogglePin: (path: string) => void;
   targetType?: string;
-  dndHandlers: MappingDndHandlers;
-  onRegisterRef?: (path: string, element: HTMLElement | null) => void;
 }> = ({
   field,
   depth,
@@ -180,16 +157,11 @@ const TreeNode: React.FC<{
   selectedPath,
   disabled,
   searchQuery,
-  pinnedPaths,
-  onTogglePin,
   targetType,
-  dndHandlers,
-  onRegisterRef
 }) => {
   const [expanded, setExpanded] = useState(depth < 2);
   const hasChildren = field.children && field.children.length > 0;
   const isSelected = selectedPath === field.path;
-  const isPinned = pinnedPaths.has(field.path);
   const isLeaf = !hasChildren;
 
   // §19.1 - Calculate type compatibility if target type is specified
@@ -224,56 +196,18 @@ const TreeNode: React.FC<{
     setExpanded(!expanded);
   };
 
-  const handlePin = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onTogglePin(field.path);
-  };
-
-  // §19.2 - Drag start handler
-  const handleDragStart = (e: React.DragEvent) => {
-    if (disabled) return;
-
-    const item: DragItem = {
-      path: field.path,
-      type: field.type,
-      name: field.name
-    };
-
-    setDragData(e, item);
-    dndHandlers.handleDragStart(item);
-
-    // Add a drag image
-    if (e.currentTarget instanceof HTMLElement) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      e.dataTransfer.setDragImage(e.currentTarget, rect.width / 2, rect.height / 2);
-    }
-  };
-
-  const handleDragEnd = () => {
-    dndHandlers.handleDragEnd();
-  };
-
   // §19.1 - Determine if field should be dimmed based on compatibility
   const isDimmed = targetType && compatibility === TypeCompatibility.INCOMPATIBLE;
 
   return (
     <div className="select-none">
       <div
-        ref={(el) => {
-          if (isLeaf && onRegisterRef) {
-            onRegisterRef(field.path, el);
-          }
-        }}
         onClick={handleClick}
-        draggable={isLeaf && !disabled}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
         className={`
           flex items-center gap-1 py-1 px-2 rounded cursor-pointer group
           ${isSelected ? 'bg-primary-100 text-primary-800' : 'hover:bg-gray-100'}
           ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
           ${isDimmed ? 'opacity-40' : ''}
-          ${isLeaf && !disabled ? 'cursor-grab active:cursor-grabbing' : ''}
         `}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
         title={field.description || field.path}
@@ -320,11 +254,6 @@ const TreeNode: React.FC<{
           </span>
         )}
 
-        {/* §19.2 - Drag handle for draggable fields */}
-        {isLeaf && !disabled && (
-          <GripVertical className="w-3 h-3 text-gray-300 opacity-0 group-hover:opacity-100 cursor-grab" />
-        )}
-
         {/* Required indicator */}
         {field.required && (
           <span className="text-destructive text-xs">*</span>
@@ -335,14 +264,6 @@ const TreeNode: React.FC<{
           <Badge className="text-[10px] bg-gray-100 text-gray-500 px-1 py-0">?</Badge>
         )}
 
-        {/* Pin button */}
-        <button
-          onClick={handlePin}
-          className={`p-0.5 rounded opacity-0 group-hover:opacity-100 ${isPinned ? 'opacity-100 text-warning' : 'text-gray-400 hover:text-gray-600'}`}
-          title={isPinned ? 'Unpin' : 'Pin'}
-        >
-          {isPinned ? <Pin className="w-3 h-3" /> : <PinOff className="w-3 h-3" />}
-        </button>
       </div>
 
       {/* Children */}
@@ -357,11 +278,7 @@ const TreeNode: React.FC<{
               selectedPath={selectedPath}
               disabled={disabled}
               searchQuery={searchQuery}
-              pinnedPaths={pinnedPaths}
-              onTogglePin={onTogglePin}
               targetType={targetType}
-              dndHandlers={dndHandlers}
-              onRegisterRef={onRegisterRef}
             />
           ))}
         </div>
@@ -406,10 +323,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
   maxHeight = '400px',
   height,
   targetType,
-  dndHandlers,
-  onRegisterRef,
-  onRegisterScrollContainer,
-  onUnregisterScrollContainer
+  compact = false,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedSections, setExpandedSections] = useState({
@@ -419,54 +333,10 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
     error: false,
     forEach: true
   });
-  const [pinnedPaths, setPinnedPaths] = useState<Set<string>>(new Set());
-  const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
-
-  React.useEffect(() => {
-    if (!onRegisterScrollContainer || !scrollContainerRef.current) return;
-    const element = scrollContainerRef.current;
-    onRegisterScrollContainer(element);
-    return () => {
-      onUnregisterScrollContainer?.(element);
-    };
-  }, [onRegisterScrollContainer, onUnregisterScrollContainer]);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
-
-  const togglePin = useCallback((path: string) => {
-    setPinnedPaths(prev => {
-      const next = new Set(prev);
-      if (next.has(path)) {
-        next.delete(path);
-      } else {
-        next.add(path);
-      }
-      return next;
-    });
-  }, []);
-
-  // Convert context to flat list for pinned items
-  const allFields = useMemo(() => {
-    const fields: DataField[] = [];
-    const addFields = (list: DataField[]) => {
-      list.forEach(f => {
-        fields.push(f);
-        if (f.children) addFields(f.children);
-      });
-    };
-    addFields(context.payload);
-    context.vars.forEach(v => addFields(v.fields));
-    addFields(context.meta);
-    addFields(context.error);
-    return fields;
-  }, [context]);
-
-  const pinnedFields = useMemo(() =>
-    allFields.filter(f => pinnedPaths.has(f.path)),
-    [allFields, pinnedPaths]
-  );
 
   const countFields = (fields: DataField[]): number => {
     return fields.reduce((acc, f) => acc + 1 + (f.children ? countFields(f.children) : 0), 0);
@@ -478,7 +348,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
       style={height ? { height } : undefined}
     >
       {/* Search input */}
-      <div className="p-2 border-b border-gray-200">
+      <div className={`p-2 border-b border-gray-200 ${compact ? 'bg-gray-50/70' : ''}`}>
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
@@ -496,38 +366,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
       <div
         className="overflow-y-auto flex-1"
         style={height ? undefined : { maxHeight }}
-        ref={scrollContainerRef}
       >
-        {/* Pinned fields */}
-        {pinnedFields.length > 0 && (
-          <div className="p-2 border-b border-warning/30 bg-warning/10">
-            <div className="flex items-center gap-2 mb-2 text-xs font-medium text-warning-foreground">
-              <Pin className="w-3.5 h-3.5" />
-              Pinned Fields
-            </div>
-            {pinnedFields.map(field => (
-              <div
-                key={field.path}
-                onClick={() => !disabled && onSelectField(field.path)}
-                className={`
-                  flex items-center gap-2 py-1 px-2 rounded cursor-pointer text-sm
-                  ${selectedPath === field.path ? 'bg-warning/20' : 'hover:bg-warning/10'}
-                  ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-                `}
-              >
-                {getTypeIcon(field.type)}
-                <span className="truncate">{field.path}</span>
-                <button
-                  onClick={(e) => { e.stopPropagation(); togglePin(field.path); }}
-                  className="ml-auto text-warning hover:text-warning"
-                >
-                  <Pin className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
         <div className="p-2 space-y-2">
           {/* Payload section */}
           {context.payload.length > 0 && (
@@ -550,11 +389,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
                       selectedPath={selectedPath}
                       disabled={disabled}
                       searchQuery={searchQuery}
-                      pinnedPaths={pinnedPaths}
-                      onTogglePin={togglePin}
                       targetType={targetType}
-                      dndHandlers={dndHandlers}
-                      onRegisterRef={onRegisterRef}
                     />
                   ))}
                 </div>
@@ -583,33 +418,11 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
                     return (
                       <div key={stepVar.stepId} className="border-l-2 border-success/30 ml-2">
                         <div
-                          ref={(el) => {
-                            onRegisterRef?.(stepVarPath, el);
-                          }}
                           onClick={() => !disabled && onSelectField(stepVarPath)}
-                          draggable={!disabled}
-                          onDragStart={(e) => {
-                            if (disabled) return;
-                            const item: DragItem = {
-                              path: stepVarPath,
-                              type: 'object',
-                              name: stepVar.saveAs
-                            };
-                            setDragData(e, item);
-                            dndHandlers.handleDragStart(item);
-                            if (e.currentTarget instanceof HTMLElement) {
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              e.dataTransfer.setDragImage(e.currentTarget, rect.width / 2, rect.height / 2);
-                            }
-                          }}
-                          onDragEnd={() => {
-                            dndHandlers.handleDragEnd();
-                          }}
                           className={`
                             flex items-center gap-2 py-1 px-2 rounded cursor-pointer group
                             ${selectedPath === stepVarPath ? 'bg-success/15' : 'hover:bg-muted'}
                             ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
-                            ${!disabled ? 'cursor-grab active:cursor-grabbing' : ''}
                           `}
                         >
                           <Braces className="w-3.5 h-3.5 text-green-600" />
@@ -629,11 +442,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
                             selectedPath={selectedPath}
                             disabled={disabled}
                             searchQuery={searchQuery}
-                            pinnedPaths={pinnedPaths}
-                            onTogglePin={togglePin}
                             targetType={targetType}
-                            dndHandlers={dndHandlers}
-                            onRegisterRef={onRegisterRef}
                           />
                         ))}
                       </div>
@@ -708,11 +517,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
                       selectedPath={selectedPath}
                       disabled={disabled}
                       searchQuery={searchQuery}
-                      pinnedPaths={pinnedPaths}
-                      onTogglePin={togglePin}
                       targetType={targetType}
-                      dndHandlers={dndHandlers}
-                      onRegisterRef={onRegisterRef}
                     />
                   ))}
                 </div>
@@ -741,11 +546,7 @@ export const SourceDataTree: React.FC<SourceDataTreeProps> = ({
                       selectedPath={selectedPath}
                       disabled={disabled}
                       searchQuery={searchQuery}
-                      pinnedPaths={pinnedPaths}
-                      onTogglePin={togglePin}
                       targetType={targetType}
-                      dndHandlers={dndHandlers}
-                      onRegisterRef={onRegisterRef}
                     />
                   ))}
                 </div>

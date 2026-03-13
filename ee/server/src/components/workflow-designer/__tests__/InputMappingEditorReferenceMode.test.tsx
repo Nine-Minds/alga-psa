@@ -84,6 +84,7 @@ vi.mock('../expression-editor', () => ({
 
 import { InputMappingEditor } from '../mapping/InputMappingEditor';
 import type { MappingPositionsHandlers } from '../mapping/useMappingPositions';
+import type { DataTreeContext } from '../mapping/SourceDataTree';
 
 const positionsHandlers: MappingPositionsHandlers = {
   registerSourceRef: vi.fn(),
@@ -95,6 +96,49 @@ const positionsHandlers: MappingPositionsHandlers = {
   getSourcePosition: vi.fn(() => null),
   getTargetPosition: vi.fn(() => null),
   getConnections: vi.fn(() => []),
+};
+
+const referenceBrowseContext: DataTreeContext = {
+  payload: [
+    {
+      name: 'ticket',
+      path: 'payload.ticket',
+      type: 'object',
+      source: 'payload',
+      children: [
+        {
+          name: 'id',
+          path: 'payload.ticket.id',
+          type: 'string',
+          source: 'payload',
+        },
+      ],
+    },
+  ],
+  vars: [
+    {
+      stepId: 'step-0',
+      stepName: 'Find Ticket',
+      saveAs: 'ticketResult',
+      fields: [
+        {
+          name: 'ticket_id',
+          path: 'vars.ticketResult.ticket_id',
+          type: 'string',
+          source: 'vars',
+        },
+      ],
+    },
+  ],
+  meta: [
+    {
+      name: 'traceId',
+      path: 'meta.traceId',
+      type: 'string',
+      source: 'meta',
+    },
+  ],
+  error: [],
 };
 
 afterEach(() => {
@@ -122,6 +166,7 @@ describe('InputMappingEditor reference mode', () => {
           ]}
           stepId="step-1"
           positionsHandlers={positionsHandlers}
+          referenceBrowseContext={referenceBrowseContext}
         />
       );
     });
@@ -158,6 +203,7 @@ describe('InputMappingEditor reference mode', () => {
           ]}
           stepId="step-1"
           positionsHandlers={positionsHandlers}
+          referenceBrowseContext={referenceBrowseContext}
         />
       ));
     });
@@ -182,6 +228,7 @@ describe('InputMappingEditor reference mode', () => {
           ]}
           stepId="step-1"
           positionsHandlers={positionsHandlers}
+          referenceBrowseContext={referenceBrowseContext}
         />
       );
     });
@@ -209,6 +256,7 @@ describe('InputMappingEditor reference mode', () => {
           ]}
           stepId="step-advanced-expression"
           positionsHandlers={positionsHandlers}
+          referenceBrowseContext={referenceBrowseContext}
         />
       );
     });
@@ -222,5 +270,53 @@ describe('InputMappingEditor reference mode', () => {
     expect(screen.getByTestId('mock-expression-editor')).toHaveValue(
       'payload.summary & "-" & meta.traceId'
     );
+  });
+
+  it('T334: shows a collapsible browse-sources tree for reference mode and maps the current field when a source is selected', async () => {
+    const onChange = vi.fn();
+
+    await act(async () => {
+      render(
+        <InputMappingEditor
+          value={{ summary: { $expr: '' } }}
+          onChange={onChange}
+          targetFields={[
+            {
+              name: 'summary',
+              type: 'string',
+              required: true,
+            },
+          ]}
+          fieldOptions={[
+            { value: 'payload.ticket.id', label: 'payload.ticket.id' },
+            { value: 'vars.ticketResult.ticket_id', label: 'vars.ticketResult.ticket_id' },
+            { value: 'meta.traceId', label: 'meta.traceId' },
+          ]}
+          stepId="step-browse-sources"
+          positionsHandlers={positionsHandlers}
+          referenceBrowseContext={referenceBrowseContext}
+        />
+      );
+    });
+
+    expect(screen.queryByText('Payload')).not.toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(
+        document.getElementById('mapping-step-browse-sources-summary-browse-sources-toggle')!
+      );
+    });
+
+    expect(screen.getAllByText('Payload')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('Step Outputs (vars)')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('Workflow Meta')[0]).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByText('ticket_id'));
+    });
+
+    expect(onChange).toHaveBeenCalledWith({
+      summary: { $expr: 'vars.ticketResult.ticket_id' },
+    });
   });
 });
