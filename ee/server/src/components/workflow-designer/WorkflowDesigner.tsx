@@ -4405,6 +4405,16 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     });
   }, [requestDiscardChangesConfirmation, router]);
 
+  const designerContentKey = useMemo(() => {
+    if (activeWorkflowId) {
+      return `workflow-${activeWorkflowId}`;
+    }
+    if (requestedNewWorkflow) {
+      return `new-${activeDefinition?.id ?? 'empty'}`;
+    }
+    return `draft-${activeDefinition?.id ?? 'empty'}`;
+  }, [activeDefinition?.id, activeWorkflowId, requestedNewWorkflow]);
+
   return (
     <div className="h-full min-h-0 flex flex-col">
       <div className="border-b bg-white dark:bg-[rgb(var(--color-card))] px-6 py-4">
@@ -4539,7 +4549,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             }}
           />
         ) : isEditorDesignerMode ? (
-          designerContent
+          <React.Fragment key={designerContentKey}>{designerContent}</React.Fragment>
         ) : (
           workflowListContent
         )}
