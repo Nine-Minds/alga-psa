@@ -55,6 +55,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-13) The workflow-editor list can still render the `New Workflow` CTA while the schedule join fails on `tenant_workflow_schedule`, so Playwright needs a resilient path into `/msp/workflow-editor/new` instead of assuming the list-to-designer transition always settles cleanly from that degraded state.
 - (2026-03-13) Grouped-step reorder and branch-move behavior still matches the existing `action.call` drag model; the remaining failures were test harness timing issues around palette readiness and seeded branch contents, not grouped-step regressions.
 - (2026-03-13) The next checklist item (`F079` / `T079`) is now verified as a true scope blocker: `WorkflowDesigner.tsx` only supports add/update/delete/reorder flows, and the page object plus Playwright coverage expose no step duplication affordance to preserve. Implementing `F079` would require inventing a new feature outside the current PRD rather than maintaining parity.
+- (2026-03-14) The default `npx playwright test` path for workflow-designer specs still cold-boots Docker deps, reruns the full migration/seed pipeline, and rebuilds the workflow-worker image before hitting assertions. Small grouped-step state checks are therefore safer to validate through deterministic grouped-step helpers in this worktree unless the branch is already running a warm local harness.
 
 ## Commands / Runbooks
 
@@ -119,6 +120,11 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/groupedActionSelection.test.ts src/components/workflow-designer/__tests__/GroupedActionConfigSection.test.tsx src/components/workflow-designer/__tests__/groupedActionStep.test.ts src/components/workflow-designer/__tests__/WorkflowDesignerPalette.test.tsx --reporter=dot`
   - `npx tsc --noEmit -p ee/server/tsconfig.json`
   - `npx eslint ee/server/src/components/workflow-designer/WorkflowDesigner.tsx ee/server/src/components/workflow-designer/groupedActionSelection.ts ee/server/src/components/workflow-designer/GroupedActionConfigSection.tsx ee/server/src/components/workflow-designer/WorkflowDesignerPalette.tsx ee/server/src/components/workflow-designer/__tests__/groupedActionSelection.test.ts ee/server/src/components/workflow-designer/__tests__/GroupedActionConfigSection.test.tsx`
+- (2026-03-14) Validate grouped-step default/unselected helper coverage:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/groupedActionStep.test.ts src/components/workflow-designer/__tests__/GroupedActionConfigSection.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+- (2026-03-14) Abort the equivalent grouped-step browser run after confirming the default webserver path still performs a full cold Playwright stack bootstrap before the tests reach assertions:
+  - `cd ee/server && npx playwright test src/__tests__/integration/workflow-designer-basic.playwright.test.ts -g "a newly created grouped action step can remain action-unselected until the user chooses one|a grouped action step auto-selects the declared default action when configured|step name editing remains available before and after action selection|save-output controls remain available before and after action selection" --reporter=line`
 
 ## Links / References
 
@@ -231,3 +237,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Replaced raw `actionId`/`version` schema fields with grouped action selection logic that updates the visible step label/description and keeps legacy `action.call` persistence intact.
   - Added helper logic to preserve still-valid input mappings, drop stale mappings, and refresh auto-generated `saveAs` names when the chosen action changes.
   - Marked F081-F083, F086-F087, F093-F094, F096-F097, and T081-T083, T086-T087, T093-T094, T096-T097 implemented.
+- (2026-03-14) Completed the grouped-step default-selection slice:
+  - Added grouped-step helper coverage proving transform-scoped steps can persist only additive grouped metadata until the builder explicitly chooses an action.
+  - Added grouped-step helper coverage proving grouped records with a declared default action can still insert the existing `actionId`/`version`/auto-saveAs runtime config without changing the `action.call` contract.
+  - Marked F084, F085, T084, and T085 implemented via deterministic helper coverage because the equivalent Playwright seam still incurs a full cold stack bootstrap on this branch.

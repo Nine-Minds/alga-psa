@@ -500,13 +500,13 @@
   {
     "id": "T084",
     "description": "Playwright: a newly created grouped action step can remain action-unselected until the user chooses one",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F084"]
   },
   {
     "id": "T085",
     "description": "Playwright: a grouped action step auto-selects the declared default action when configured",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F085"]
   },
   {

@@ -500,13 +500,13 @@
   {
     "id": "F084",
     "description": "A newly created grouped action step should allow no selected action until the user makes an explicit choice",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model"]
   },
   {
     "id": "F085",
     "description": "A grouped action step should optionally auto-select a default action when the catalog record declares one",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model"]
   },
   {

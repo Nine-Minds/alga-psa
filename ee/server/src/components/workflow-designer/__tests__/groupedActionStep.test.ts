@@ -73,6 +73,40 @@ describe('workflow designer grouped action step helpers', () => {
     });
   });
 
+  it('T084: grouped steps can remain action-unselected until the builder makes an explicit choice', () => {
+    expect(
+      buildGroupedActionStepConfig({
+        groupKey: 'transform',
+        tileKind: 'transform',
+      })
+    ).toEqual({
+      designerGroupKey: 'transform',
+      designerTileKind: 'transform',
+    });
+  });
+
+  it('T085: grouped steps can preselect a declared default action when one is supplied during insertion', () => {
+    const ticketRecord = catalog[0];
+    expect(ticketRecord.defaultActionId).toBe('tickets.create');
+    expect(
+      buildGroupedActionStepConfig(
+        {
+          actionId: ticketRecord.defaultActionId,
+          actionVersion: 1,
+          groupKey: ticketRecord.groupKey,
+          tileKind: ticketRecord.tileKind,
+        },
+        { generateSaveAsName: () => 'ticketsCreateResult' }
+      )
+    ).toEqual({
+      actionId: 'tickets.create',
+      version: 1,
+      saveAs: 'ticketsCreateResult',
+      designerGroupKey: 'ticket',
+      designerTileKind: 'core-object',
+    });
+  });
+
   it('T225: transform grouped steps stay on action.call even before an action is chosen', () => {
     const step = applyGroupedActionSelectionToStep(
       { id: 'step-1', type: 'action.call', name: '', config: {} },
