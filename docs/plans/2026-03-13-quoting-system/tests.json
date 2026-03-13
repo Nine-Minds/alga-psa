@@ -365,7 +365,7 @@
   {
     "id": "T045",
     "description": "Action: deleteQuote rejects deletion of sent/accepted quotes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
