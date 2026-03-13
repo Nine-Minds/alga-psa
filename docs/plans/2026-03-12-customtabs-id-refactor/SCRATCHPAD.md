@@ -121,3 +121,5 @@ npm run build
 - F003 — Updated CustomTabs trigger and content React keys to `tab.id` to avoid label-coupled identity.
 
 - F004 — Verified CustomTabs now emits tab ids from `onTabChange`, matching the new internal value model.
+
+- F005 — Updated default and controlled tab matching to compare incoming values against `tab.id` instead of labels.

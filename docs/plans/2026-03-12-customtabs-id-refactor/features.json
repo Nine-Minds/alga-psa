@@ -34,7 +34,7 @@
   {
     "id": "F005",
     "description": "CustomTabs `defaultTab` and `value` props match against `tab.id`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Internal Component Changes"
     ]
