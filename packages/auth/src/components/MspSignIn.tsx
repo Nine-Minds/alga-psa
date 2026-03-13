@@ -155,7 +155,7 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
         </div>
 
         {/* Right side with login form */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-8 pt-24">
           <Card className="max-w-md w-full bg-card/95 backdrop-blur dark:bg-card dark:backdrop-blur-none dark:border dark:border-border-200">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold text-center">

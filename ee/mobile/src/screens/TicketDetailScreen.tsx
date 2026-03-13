@@ -1997,6 +1997,7 @@ export function CommentsSection({
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
+  const { session } = useAuth();
   const startIndex = Math.max(0, comments.length - visibleCount);
   const visible = comments.slice(startIndex);
 
@@ -2074,6 +2075,7 @@ export function CommentsSection({
                     <Avatar
                       name={c.created_by_name ?? undefined}
                       imageUri={c.created_by_avatar_url && baseUrl ? `${baseUrl}${c.created_by_avatar_url}` : undefined}
+                      authToken={session?.accessToken}
                       size="sm"
                     />
                   ) : null}

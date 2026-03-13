@@ -32,12 +32,15 @@ function getInitials(name: string): string {
 export function Avatar({
   name,
   imageUri,
+  authToken,
   size = "md",
   accessibilityLabel,
 }: {
   name?: string;
   /** Remote image URL for the avatar. Falls back to initials on load failure. */
   imageUri?: string | null;
+  /** API key / bearer token sent as x-api-key header when loading the image. */
+  authToken?: string | null;
   size?: "sm" | "md" | "lg";
   accessibilityLabel?: string;
 }) {
@@ -66,7 +69,10 @@ export function Avatar({
     >
       {showImage ? (
         <Image
-          source={{ uri: imageUri! }}
+          source={{
+            uri: imageUri!,
+            ...(authToken ? { headers: { "x-api-key": authToken } } : undefined),
+          }}
           style={{ width: dim, height: dim }}
           onError={() => setImgFailed(true)}
         />

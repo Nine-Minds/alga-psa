@@ -15,7 +15,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.alga.psa.mobile",
-      "buildNumber": "5",
+      "buildNumber": "6",
       "supportsTablet": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false

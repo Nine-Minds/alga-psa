@@ -4,6 +4,9 @@ import { getConnection } from '@/lib/db/db';
 import { StorageProviderFactory } from '@alga-psa/storage';
 import { FileStoreModel } from 'server/src/models/storage';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { ApiKeyServiceForApi } from 'server/src/lib/services/apiKeyServiceForApi';
+import { findUserByIdForApi } from '@alga-psa/users/actions';
+import { runWithTenant } from 'server/src/lib/db';
 
 export async function GET(
   request: NextRequest,
@@ -64,10 +67,28 @@ export async function GET(
 
     // If it's not a tenant logo, we need authentication
     if (!isTenantLogo) {
+      // Try session-based auth first, then fall back to API key auth (mobile app)
       user = await getCurrentUser();
-      const tenantContext = await createTenantKnex();
-      knex = tenantContext.knex;
-      tenant = tenantContext.tenant;
+      if (user) {
+        const tenantContext = await createTenantKnex();
+        knex = tenantContext.knex;
+        tenant = tenantContext.tenant;
+      } else {
+        const apiKey = request.headers.get('x-api-key');
+        if (apiKey) {
+          const keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenant = keyRecord.tenant;
+            const resolved = await runWithTenant(tenant!, async () => {
+              const u = await findUserByIdForApi(keyRecord.user_id, tenant!);
+              const ctx = await createTenantKnex();
+              return { user: u, knex: ctx.knex };
+            });
+            user = resolved.user;
+            knex = resolved.knex;
+          }
+        }
+      }
 
       if (!tenant || !user) {
         return new NextResponse('Unauthorized', { status: 401 });

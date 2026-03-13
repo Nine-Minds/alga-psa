@@ -50,13 +50,13 @@ type TicketsListCacheValue = {
 };
 
 const DEFAULT_FILTERS: TicketListFilters = {
-  status: "any",
+  status: "open",
   statusIds: [],
   assignee: "any",
   priorityName: "",
   updatedSinceDays: null,
   updatedSinceDate: "",
-  sortField: "updated_at",
+  sortField: "entered_at",
   sortOrder: "desc",
 };
 
@@ -673,7 +673,7 @@ function FilterChipBar({
   const dateOnly = filters.updatedSinceDate.trim();
   if (dateOnly) chips.push(t("filters.updatedDate", { date: dateOnly }));
   else if (filters.updatedSinceDays) chips.push(t("filters.updatedDays", { days: filters.updatedSinceDays }));
-  if (filters.sortField !== "updated_at" || filters.sortOrder !== "desc") {
+  if (filters.sortField !== DEFAULT_FILTERS.sortField || filters.sortOrder !== DEFAULT_FILTERS.sortOrder) {
     chips.push(t("filters.sortLabel", { field: filters.sortField, order: filters.sortOrder }));
   }
 
@@ -1035,16 +1035,7 @@ function FiltersModal({
         <View style={{ flexDirection: "row" }}>
           <PrimaryButton
             onPress={() =>
-              setFilters({
-                status: "any",
-                statusIds: [],
-                assignee: "any",
-                priorityName: "",
-                updatedSinceDays: null,
-                updatedSinceDate: "",
-                sortField: "updated_at",
-                sortOrder: "desc",
-              })
+              setFilters({ ...DEFAULT_FILTERS })
             }
           >
             {t("common:clear")}
