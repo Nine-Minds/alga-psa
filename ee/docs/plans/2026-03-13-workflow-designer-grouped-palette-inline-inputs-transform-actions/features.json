@@ -2523,7 +2523,7 @@
   {
     "id": "F297",
     "description": "Restrict fixed picker option retrieval to business data the current workflow authoring user is already permitted to read",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "UX / UI Notes > Picker UX"

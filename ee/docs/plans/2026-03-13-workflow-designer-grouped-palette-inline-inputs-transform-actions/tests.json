@@ -2372,7 +2372,7 @@
   {
     "id": "T297",
     "description": "Permissions: fixed picker option retrieval is limited to data the authoring user can already read",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F297"
     ]
