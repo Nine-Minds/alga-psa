@@ -99,7 +99,7 @@
   {
     "id": "F013",
     "description": "P1: Quote model — listByClient for client-specific quote listing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR5"
     ]
