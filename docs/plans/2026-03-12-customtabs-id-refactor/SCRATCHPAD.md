@@ -165,3 +165,5 @@ npm run build
 - F025 — The contracts dashboard now uses `templates`, `client-contracts`, and `drafts` ids directly in its main CustomTabs instance.
 
 - F026 — CreditsTabs and its CreditsPage caller now use stable ids (`active`, `all`, `expired`) instead of label slug maps.
+
+- F027 — BillingSettings now uses `general`, `tax`, and `payments` ids for section state and URL persistence.

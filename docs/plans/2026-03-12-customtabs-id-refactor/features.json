@@ -227,7 +227,7 @@
   {
     "id": "F027",
     "description": "Migrate BillingSettings.tsx — add id to 3 tabs, remove bidirectional maps",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern A"
