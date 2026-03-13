@@ -245,7 +245,7 @@
   {
     "id": "F029",
     "description": "Migrate ClientPortalSettingsPage.tsx — add id to 3 tabs, remove slugToLabelMap/labelToSlugMap",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern A"

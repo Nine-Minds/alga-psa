@@ -169,3 +169,5 @@ npm run build
 - F027 — BillingSettings now uses `general`, `tax`, and `payments` ids for section state and URL persistence.
 
 - F028 — ClientNotificationsList now keeps URL sync and filter state on stable ids (`unread`, `all`, `read`) while labels remain translated.
+
+- F029 — ClientPortalSettingsPage now uses id-based tab state and direct `?tab=` routing for account, client details, and user management.
