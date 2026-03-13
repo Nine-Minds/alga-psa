@@ -21,6 +21,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-13) Keep expressions and secrets available only as advanced fallbacks.
 - (2026-03-13) Implement the first grouped-catalog slice as a shared builder plus a separate server projection instead of mutating the runtime action registry shape. This keeps the runtime registry unchanged while giving the designer a stable authoring abstraction to build on.
 - (2026-03-13) Keep the first UI wiring incremental: load the grouped catalog into the designer and use it to derive business-action grouping metadata before replacing the palette with grouped tiles. This reduces risk while moving the data model to the new architecture.
+- (2026-03-13) Land transform actions incrementally through the runtime action registry first, starting with the text-shaping slice. That unlocks grouped-catalog search and downstream schema wiring without coupling the first runtime batch to the upcoming inline-editor refactor.
 
 ## Discoveries / Constraints
 
@@ -40,6 +41,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-13) The Playwright tenant bootstrap failure is still present on this branch. Search- and palette-focused browser tests abort in `tenant-creation.ts` before the workflow designer loads, so browser checklist items remain blocked even when the underlying UI code is in place.
 - (2026-03-13) The shared designer catalog helper had a local JSON-schema type that was narrower than the action registry payloads (notably tuple-style `items` and metadata-rich definitions). The search slice widened that helper type so EE TypeScript checks can validate the designer path against real action schemas.
 - (2026-03-13) Grouped palette insertion was still throwing away authoring scope once a tile became an `action.call` step. Without additive metadata, grouped drag/click insertion and legacy hydration both had to fall back to action-only guesses.
+- (2026-03-13) The grouped `Transform` tile already participated in palette rendering, drag/click insertion, and grouped-step hydration; the missing piece was simply that no `transform.*` runtime actions existed yet, so the tile remained effectively empty for search and future action dropdowns.
 
 ## Commands / Runbooks
 
@@ -73,6 +75,11 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `npx tsc --noEmit -p ee/server/tsconfig.json`
 - (2026-03-13) Validate grouped action step helpers:
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/groupedActionStep.test.ts src/components/workflow-designer/__tests__/paletteSearch.test.ts`
+- (2026-03-13) Validate text transform action registration and catalog/search coverage:
+  - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/actions/__tests__/registerTransformActions.test.ts shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts --reporter=dot`
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/paletteSearch.test.ts --reporter=dot`
+  - `cd server && npx vitest run src/test/integration/workflowRuntimeV2.publish.integration.test.ts --config vitest.config.ts --testNamePattern="T020: workflow designer receives the grouped catalog projection from the server action|Transform actions are exposed through the runtime action registry projection" --reporter=dot`
+  - `npx eslint shared/workflow/runtime/actions/registerTransformActions.ts shared/workflow/runtime/actions/__tests__/registerTransformActions.test.ts shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts ee/server/src/components/workflow-designer/__tests__/paletteSearch.test.ts server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts shared/workflow/runtime/init.ts`
 
 ## Links / References
 
@@ -122,6 +129,11 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Wired grouped drag/click insertion through that helper so grouped tiles can create `action.call` steps even when no default action is selected yet.
   - Added grouped-step hydration helpers so legacy `action.call` steps can recover their grouped catalog record from `actionId` when metadata is absent.
   - Marked F061-F066 and F069-F075 implemented; selection/reordering browser checks remain pending behind the tenant bootstrap blocker.
+- (2026-03-13) Completed the first transform runtime slice:
+  - Added first-class `transform.*` runtime actions for truncate, concat, replace, split, join, lowercase, uppercase, and trim, each with explicit input/output schemas and deterministic pure handlers.
+  - Wired the runtime initializer to register transform actions so the grouped `Transform` catalog record now exposes contained actions to server projections and designer search.
+  - Extended catalog/search coverage so `truncate-text`-style queries now match the grouped `Transform` tile through contained action metadata rather than a hidden action row.
+  - Marked F049, F226-F229, F241-F258, and T226-T228/T251-T258 implemented.
 - (2026-03-13) Validation blocker:
   - The new grouped-palette Playwright tests could not complete because tenant bootstrap failed before the browser reached the designer (`Failed to create tenant` from `tenant-creation.ts`). The assertions themselves did not run, so `tests.json` remains unchanged for the new palette tests.
 - (2026-03-13) Validation update:
@@ -130,3 +142,6 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `npx tsc --noEmit -p ee/server/tsconfig.json` now completes successfully after the schema-type widening.
   - `groupedActionStep.test.ts` passed under EE Vitest, covering runtime-compatible grouped-step metadata plus legacy group/app hydration (T069-T075).
   - Targeted Playwright search/palette tests still fail before assertions because tenant creation aborts with the same `Failed to create tenant` error from `ee/server/src/lib/testing/tenant-creation.ts`.
+  - The new transform-action shared unit suite passed, covering registry presence, explicit schemas, typed output fields, and representative text-transform behavior.
+  - The existing server registry/catalog integration suite passed after extending it to assert that grouped catalog projection and runtime action projection now include `transform.truncate_text`.
+  - ESLint on the touched files passed with only pre-existing warnings in `server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts`.

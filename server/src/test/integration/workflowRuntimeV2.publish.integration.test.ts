@@ -474,9 +474,23 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
   it('T020: workflow designer receives the grouped catalog projection from the server action. Mocks: non-target dependencies.', async () => {
     const catalog = await listWorkflowDesignerActionCatalogAction();
     const ticketRecord = catalog.find((entry) => entry.groupKey === 'ticket');
+    const transformRecord = catalog.find((entry) => entry.groupKey === 'transform');
     expect(ticketRecord).toBeDefined();
     expect(ticketRecord?.tileKind).toBe('core-object');
     expect(ticketRecord?.allowedActionIds).toContain('tickets.create');
+    expect(transformRecord?.tileKind).toBe('transform');
+    expect(transformRecord?.allowedActionIds).toContain('transform.truncate_text');
+  });
+
+  it('Transform actions are exposed through the runtime action registry projection. Mocks: non-target dependencies.', async () => {
+    const actions = await listWorkflowRegistryActionsAction();
+    const truncateAction = actions.find((entry) => entry.id === 'transform.truncate_text');
+    const splitAction = actions.find((entry) => entry.id === 'transform.split_text');
+
+    expect(truncateAction?.ui?.category).toBe('Transform');
+    expect(truncateAction?.inputSchema).toBeDefined();
+    expect(truncateAction?.outputSchema).toBeDefined();
+    expect(splitAction?.outputSchema).toBeDefined();
   });
 
   it('Schema server action returns JSON schema by schemaRef (API delegates to server action). Mocks: non-target dependencies.', async () => {

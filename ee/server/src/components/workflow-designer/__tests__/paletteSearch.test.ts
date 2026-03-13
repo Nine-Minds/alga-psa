@@ -12,6 +12,12 @@ describe('workflow designer palette search helpers', () => {
     'Create, find, update, assign, and manage tickets.',
     'Create Ticket tickets.create client_id ticket_id',
   ]);
+  const transformSearchIndex = buildPaletteSearchIndex([
+    'transform',
+    'Transform',
+    'Shape and normalize workflow data without raw expressions.',
+    'Truncate Text transform.truncate_text text maxLength',
+  ]);
 
   it('matches grouped tiles by contained action labels, action ids, and field names', () => {
     expect(matchesPaletteSearchQuery(ticketSearchIndex, 'Create Ticket')).toBe(true);
@@ -31,6 +37,11 @@ describe('workflow designer palette search helpers', () => {
     expect(matchesPaletteSearchQuery(ticketSearchIndex, 'tickets')).toBe(true);
     expect(matchesPaletteSearchQuery(ticketSearchIndex, 'assign ticket')).toBe(true);
     expect(matchesPaletteSearchQuery(ticketSearchIndex, 'find-contact')).toBe(false);
+  });
+
+  it('matches transform tiles by contained action phrases such as truncate-text', () => {
+    expect(matchesPaletteSearchQuery(transformSearchIndex, 'truncate-text')).toBe(true);
+    expect(matchesPaletteSearchQuery(transformSearchIndex, 'transform truncate')).toBe(true);
   });
 
   it('T052: preserves stable grouped ordering when grouping palette results', () => {

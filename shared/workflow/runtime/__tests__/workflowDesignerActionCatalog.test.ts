@@ -77,6 +77,20 @@ const mockActions: WorkflowDesignerCatalogSourceAction[] = [
     outputSchema: { type: 'object', properties: { note_id: { type: 'string' } } }
   },
   {
+    id: 'transform.truncate_text',
+    version: 1,
+    ui: { label: 'Truncate Text', description: 'Shorten text', category: 'Transform' },
+    inputSchema: { type: 'object', properties: { text: { type: 'string' }, maxLength: { type: 'number' } } },
+    outputSchema: { type: 'object', properties: { text: { type: 'string' } } }
+  },
+  {
+    id: 'transform.concat_text',
+    version: 1,
+    ui: { label: 'Concat Text', description: 'Join values into text', category: 'Transform' },
+    inputSchema: { type: 'object', properties: { values: { type: 'array', items: { type: 'string' } }, separator: { type: 'string' } } },
+    outputSchema: { type: 'object', properties: { text: { type: 'string' } } }
+  },
+  {
     id: 'slack.send_message',
     version: 1,
     ui: { label: 'Send Slack Message', description: 'Send a Slack message', category: 'Apps', icon: 'slack' },
@@ -119,6 +133,10 @@ describe('workflow designer action catalog', () => {
       tileKind: 'transform',
       label: 'Transform'
     });
+    expect(catalog.find((record) => record.groupKey === 'transform')?.allowedActionIds).toEqual([
+      'transform.concat_text',
+      'transform.truncate_text'
+    ]);
   });
 
   it('T004: external grouped palette entries serialize as app catalog records', () => {

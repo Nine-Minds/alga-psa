@@ -290,7 +290,7 @@
   {
     "id": "F049",
     "description": "Search for truncate-text terms should resolve to the Transform tile rather than a hidden action tile",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "Requirements > Transform Actions"]
   },
   {
@@ -1352,25 +1352,25 @@
   {
     "id": "F226",
     "description": "Register transform actions in the runtime action registry like other first-class actions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Data / API / Integrations"]
   },
   {
     "id": "F227",
     "description": "Give each transform action an explicit input schema that can drive the inline field editor",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions"]
   },
   {
     "id": "F228",
     "description": "Give each transform action an explicit output schema that can drive downstream reference selection",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Reference Source Model"]
   },
   {
     "id": "F229",
     "description": "Allow transform actions to participate in the same grouped-catalog search model as business actions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "UX / UI Notes > Palette Model"]
   },
   {
@@ -1442,109 +1442,109 @@
   {
     "id": "F241",
     "description": "Provide a truncate-text transform action that accepts a source string and truncation settings",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Users and Primary Flows"]
   },
   {
     "id": "F242",
     "description": "Allow truncate-text to express truncation length through explicit schema-backed fields rather than raw expression syntax",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions"]
   },
   {
     "id": "F243",
     "description": "Allow truncate-text to express truncation direction or strategy through explicit schema-backed fields rather than raw expression syntax",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions"]
   },
   {
     "id": "F244",
     "description": "Provide a concat-text transform action that accepts multiple source values and a separator",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions"]
   },
   {
     "id": "F245",
     "description": "Provide a replace-text transform action that accepts a source string, search value, and replacement value",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions"]
   },
   {
     "id": "F246",
     "description": "Provide a split-text transform action that accepts a source string and delimiter",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions"]
   },
   {
     "id": "F247",
     "description": "Provide a join-text transform action that accepts an array of strings and delimiter",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions"]
   },
   {
     "id": "F248",
     "description": "Provide a lowercase-text transform action that accepts a source string",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions"]
   },
   {
     "id": "F249",
     "description": "Provide an uppercase-text transform action that accepts a source string",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions"]
   },
   {
     "id": "F250",
     "description": "Provide a trim-text transform action that accepts a source string",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions"]
   },
   {
     "id": "F251",
     "description": "Expose truncate-text output as a typed string field for downstream references",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Reference Source Model"]
   },
   {
     "id": "F252",
     "description": "Expose concat-text output as a typed string field for downstream references",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Reference Source Model"]
   },
   {
     "id": "F253",
     "description": "Expose replace-text output as a typed string field for downstream references",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Reference Source Model"]
   },
   {
     "id": "F254",
     "description": "Expose split-text output as a typed array field for downstream references",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Reference Source Model"]
   },
   {
     "id": "F255",
     "description": "Expose join-text output as a typed string field for downstream references",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Reference Source Model"]
   },
   {
     "id": "F256",
     "description": "Expose lowercase-text output as a typed string field for downstream references",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Reference Source Model"]
   },
   {
     "id": "F257",
     "description": "Expose uppercase-text output as a typed string field for downstream references",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Reference Source Model"]
   },
   {
     "id": "F258",
     "description": "Expose trim-text output as a typed string field for downstream references",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Reference Source Model"]
   },
   {

@@ -1352,19 +1352,19 @@
   {
     "id": "T226",
     "description": "Unit: transform actions are registered in the runtime action registry like other actions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F226"]
   },
   {
     "id": "T227",
     "description": "Unit: each transform action exposes an explicit input schema",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F227"]
   },
   {
     "id": "T228",
     "description": "Unit: each transform action exposes an explicit output schema",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F228"]
   },
   {
@@ -1502,49 +1502,49 @@
   {
     "id": "T251",
     "description": "Unit: truncate-text output is exposed as a typed string for downstream references",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F251"]
   },
   {
     "id": "T252",
     "description": "Unit: concat-text output is exposed as a typed string for downstream references",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F252"]
   },
   {
     "id": "T253",
     "description": "Unit: replace-text output is exposed as a typed string for downstream references",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F253"]
   },
   {
     "id": "T254",
     "description": "Unit: split-text output is exposed as a typed array for downstream references",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F254"]
   },
   {
     "id": "T255",
     "description": "Unit: join-text output is exposed as a typed string for downstream references",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F255"]
   },
   {
     "id": "T256",
     "description": "Unit: lowercase-text output is exposed as a typed string for downstream references",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F256"]
   },
   {
     "id": "T257",
     "description": "Unit: uppercase-text output is exposed as a typed string for downstream references",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F257"]
   },
   {
     "id": "T258",
     "description": "Unit: trim-text output is exposed as a typed string for downstream references",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F258"]
   },
   {
