@@ -209,3 +209,4 @@ npm run build
 - **T006 complete** — The UI interaction test confirms clicking a tab calls `onTabChange` with the stable tab id ().
 - **T007 complete** — The render test covers `defaultTab="general"` selecting the matching tab by id.
 - **T008 complete** — The controlled-mode UI test verifies `value`/`onTabChange` round-trip tab ids instead of labels.
+- **T009 complete** — The interaction test verifies `beforeTabChange` receives  and can block the change.
