@@ -126,3 +126,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) F019 complete — P1: Quote item model — create with service catalog lookup (denormalize name, SKU, default rate, unit_of_measure). Implemented quote-item creation with service catalog denormalization.
 - (2026-03-13) F020 complete — P1: Quote item model — update (rate override, quantity, description, flags). Implemented quote-item updates including quantity and rate overrides.
 - (2026-03-13) F021 complete — P1: Quote item model — delete item and recalculate display_order. Implemented quote-item deletion with display-order compaction.
+- (2026-03-13) F022 complete — P1: Quote item model — reorder items (update display_order batch). Implemented batch quote-item reorder support.

@@ -172,7 +172,7 @@
   {
     "id": "F022",
     "description": "P1: Quote item model — reorder items (update display_order batch)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR6"
     ]
