@@ -124,3 +124,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) F017 complete — P1: Quote model — auto-expiration: if valid_until < today and status is 'sent', set to 'expired' on read. Implemented on-access quote auto-expiration for sent quotes.
 - (2026-03-13) F018 complete — P1: Quote item model — listByQuoteId ordered by display_order. Implemented ordered quote-item listing by quote.
 - (2026-03-13) F019 complete — P1: Quote item model — create with service catalog lookup (denormalize name, SKU, default rate, unit_of_measure). Implemented quote-item creation with service catalog denormalization.
+- (2026-03-13) F020 complete — P1: Quote item model — update (rate override, quantity, description, flags). Implemented quote-item updates including quantity and rate overrides.

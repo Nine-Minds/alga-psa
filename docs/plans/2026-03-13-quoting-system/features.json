@@ -156,7 +156,7 @@
   {
     "id": "F020",
     "description": "P1: Quote item model — update (rate override, quantity, description, flags)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR6"
     ]
