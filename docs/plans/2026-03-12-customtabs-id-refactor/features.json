@@ -272,7 +272,7 @@
   {
     "id": "F032",
     "description": "Migrate ContactDetails.tsx — add id to 6 tabs, remove findTabLabel helper, handleTabChange writes id directly to URL",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern B"

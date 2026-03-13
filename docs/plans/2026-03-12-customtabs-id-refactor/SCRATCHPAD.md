@@ -175,3 +175,5 @@ npm run build
 - F030 — ClientProfile now assigns stable ids to its translated tabs and syncs tab changes back to the URL using ids.
 
 - F031 — BillingOverview now uses dynamic tab ids (`overview`, `invoices`, `hours-by-service`, `usage-metrics`) instead of translated label maps.
+
+- F032 — ContactDetails tabs now use ids directly and the old `findTabLabel` helper is removed.
