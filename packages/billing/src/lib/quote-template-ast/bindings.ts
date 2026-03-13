@@ -2,6 +2,7 @@ import type { InvoiceTemplateAst } from '@alga-psa/types';
 
 type QuoteTemplateBindings = NonNullable<InvoiceTemplateAst['bindings']>;
 type QuoteTemplateValueBindings = NonNullable<QuoteTemplateBindings['values']>;
+type QuoteTemplateCollectionBindings = NonNullable<QuoteTemplateBindings['collections']>;
 
 export const QUOTE_TEMPLATE_VALUE_BINDINGS: QuoteTemplateValueBindings = {
   quoteNumber: { id: 'quoteNumber', kind: 'value', path: 'quote_number' },
@@ -28,9 +29,16 @@ export const QUOTE_TEMPLATE_VALUE_BINDINGS: QuoteTemplateValueBindings = {
   tenantName: { id: 'tenantName', kind: 'value', path: 'tenant.name', fallback: 'Your Company' },
 };
 
+export const QUOTE_TEMPLATE_COLLECTION_BINDINGS: QuoteTemplateCollectionBindings = {
+  lineItems: { id: 'lineItems', kind: 'collection', path: 'line_items' },
+  phases: { id: 'phases', kind: 'collection', path: 'phases' },
+};
+
 export const buildQuoteTemplateBindings = (): QuoteTemplateBindings => ({
   values: {
     ...QUOTE_TEMPLATE_VALUE_BINDINGS,
   },
-  collections: {},
+  collections: {
+    ...QUOTE_TEMPLATE_COLLECTION_BINDINGS,
+  },
 });

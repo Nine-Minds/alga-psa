@@ -631,7 +631,7 @@
   {
     "id": "F075",
     "description": "P3: Quote-specific AST collection bindings — lineItems with optional/recurring/phase metadata",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P3-FR3"
     ]
