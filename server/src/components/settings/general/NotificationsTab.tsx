@@ -35,10 +35,10 @@ function NotificationsTabContent() {
   // Determine initial tab based on URL parameter and view
   const getInitialTab = (view: NotificationView): string => {
     const requestedTab = sectionParam?.toLowerCase();
-    const validTabs = view === 'email' ? EMAIL_NOTIFICATION_TAB_IDS : INTERNAL_NOTIFICATION_TAB_IDS;
+    const validTabs: readonly string[] = view === 'email' ? EMAIL_NOTIFICATION_TAB_IDS : INTERNAL_NOTIFICATION_TAB_IDS;
     const defaultTab = view === 'email' ? 'settings' : 'categories';
 
-    if (requestedTab && validTabs.includes(requestedTab as (typeof validTabs)[number])) {
+    if (requestedTab && validTabs.includes(requestedTab)) {
       return requestedTab;
     }
 

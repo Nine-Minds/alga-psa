@@ -405,7 +405,7 @@
   {
     "id": "F047",
     "description": "Build passes with zero TypeScript errors (npm run build)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria"
     ]

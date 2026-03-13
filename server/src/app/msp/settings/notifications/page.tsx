@@ -41,10 +41,10 @@ function NotificationsSettingsContent() {
 
   const getInitialTab = (view: NotificationView): string => {
     const requestedTab = tabParam?.toLowerCase();
-    const validTabs = view === 'email' ? EMAIL_NOTIFICATION_TAB_IDS : INTERNAL_NOTIFICATION_TAB_IDS;
+    const validTabs: readonly string[] = view === 'email' ? EMAIL_NOTIFICATION_TAB_IDS : INTERNAL_NOTIFICATION_TAB_IDS;
     const defaultTab = view === 'email' ? DEFAULT_EMAIL_TAB : DEFAULT_INTERNAL_TAB;
 
-    if (requestedTab && validTabs.includes(requestedTab as (typeof validTabs)[number])) {
+    if (requestedTab && validTabs.includes(requestedTab)) {
       return requestedTab;
     }
 
