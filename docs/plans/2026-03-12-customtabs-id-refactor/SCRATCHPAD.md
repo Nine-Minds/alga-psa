@@ -129,3 +129,5 @@ npm run build
 - F007 — Group auto-expand checks now use `tab.id` for both `defaultTab` and controlled `value` lookups.
 
 - F008 — Preserved `tab.label` as the rendered trigger text so display copy stays fully translatable.
+
+- F009 — Uncontrolled CustomTabs now fall back to `allTabs[0].id` when no explicit default is provided.
