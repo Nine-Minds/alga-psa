@@ -98,7 +98,7 @@
   {
     "id": "T013",
     "description": "Schema: createQuoteSchema rejects invalid dates (valid_until before quote_date)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007"
     ]
