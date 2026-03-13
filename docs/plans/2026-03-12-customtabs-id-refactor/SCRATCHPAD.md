@@ -153,3 +153,5 @@ npm run build
 - F019 — Updated the `/msp/settings/notifications` page to use id-based email/internal tab values and direct URL sync.
 
 - F020 — InvoicingHub now uses `generate`, `drafts`, and `finalized` ids directly for `subtab` routing and tab selection.
+
+- F021 — ContractsHub now uses `templates` and `client-contracts` ids directly for URL sync instead of label maps.
