@@ -325,7 +325,7 @@
   {
     "id": "T040",
     "description": "Activity model: create stores activity with all fields and auto-timestamps",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
