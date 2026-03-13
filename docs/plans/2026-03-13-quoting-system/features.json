@@ -58,7 +58,7 @@
   {
     "id": "F008",
     "description": "P1: Zod schemas — createQuoteItemSchema and updateQuoteItemSchema",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR4"
     ]
