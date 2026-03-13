@@ -177,3 +177,5 @@ npm run build
 - F031 — BillingOverview now uses dynamic tab ids (`overview`, `invoices`, `hours-by-service`, `usage-metrics`) instead of translated label maps.
 
 - F032 — ContactDetails tabs now use ids directly and the old `findTabLabel` helper is removed.
+
+- F033 — ClientDetails now uses id-based tabs throughout and no longer resolves tabs through `findTabLabel`.
