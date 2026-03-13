@@ -445,7 +445,7 @@
   {
     "id": "T050e",
     "description": "Business template: templates are not included in status lifecycle (no sent/accepted/etc.)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
