@@ -6,6 +6,7 @@ import { AutomationProps } from '../ui-reflection/types';
 import { LucideIcon, ChevronDown } from 'lucide-react';
 
 export interface TabContent {
+  id: string;
   label: string;
   content: React.ReactNode;
   icon?: LucideIcon | React.ReactNode;
@@ -88,7 +89,7 @@ export const CustomTabs = ({
   const [internalValue, setInternalValue] = React.useState(() => {
     if (controlledValue) return controlledValue;
     if (defaultTab) return defaultTab;
-    if (allTabs && allTabs.length > 0) return allTabs[0].label;
+    if (allTabs && allTabs.length > 0) return allTabs[0].id;
     return '';
   });
 
@@ -122,7 +123,7 @@ export const CustomTabs = ({
       // Auto-expand the section containing the default tab
       if (groups && groups.length > 0) {
         groups.forEach((group, groupIndex) => {
-          if (group.tabs.some(tab => tab.label === defaultTab)) {
+          if (group.tabs.some(tab => tab.id === defaultTab)) {
             setExpandedSections(prev => ({
               ...prev,
               [groupIndex]: true
@@ -137,7 +138,7 @@ export const CustomTabs = ({
   React.useEffect(() => {
     if (groups && groups.length > 0 && value) {
       groups.forEach((group, groupIndex) => {
-        if (group.tabs.some(tab => tab.label === value)) {
+        if (group.tabs.some(tab => tab.id === value)) {
           setExpandedSections(prev => {
             if (prev[groupIndex] === false) {
               return { ...prev, [groupIndex]: true };
@@ -218,10 +219,10 @@ export const CustomTabs = ({
                   const globalIndex = groups.slice(0, groupIndex).reduce((acc, g) => acc + g.tabs.length, 0) + tabIndex;
                   return (
                     <Tabs.Trigger
-                      key={tab.label}
+                      key={tab.id}
                       id={`${prefix}-trigger-${globalIndex}`}
                       className={`${defaultTriggerClass} ${iconClassName} ml-4 ${tabStyles?.trigger || ''} ${tabStyles?.activeTrigger || defaultActiveTriggerClass}`}
-                      value={tab.label}
+                      value={tab.id}
                     >
                       {renderIcon(IconComponent)}
                       {tab.label}
@@ -240,10 +241,10 @@ export const CustomTabs = ({
               : '';
             return (
               <Tabs.Trigger
-                key={tab.label}
+                key={tab.id}
                 id={`${prefix}-trigger-${index}`}
                 className={`${defaultTriggerClass} ${iconClassName} ${tabStyles?.trigger || ''} ${tabStyles?.activeTrigger || defaultActiveTriggerClass}`}
-                value={tab.label}
+                value={tab.id}
               >
                 {renderIcon(IconComponent)}
                 {tab.label}
@@ -255,9 +256,9 @@ export const CustomTabs = ({
       </Tabs.List>
       {allTabs.map((tab, index): React.JSX.Element => (
         <Tabs.Content 
-          key={tab.label}
+          key={tab.id}
           id={`${prefix}-content-${index}`}
-          value={tab.label} 
+          value={tab.id} 
           className={`focus:outline-none ${tabStyles?.content || ''}`}
         >
           {tab.content}

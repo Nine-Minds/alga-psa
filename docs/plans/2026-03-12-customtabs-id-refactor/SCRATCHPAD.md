@@ -113,3 +113,5 @@ npm run build
 8. **EE consumers** — 2 files
 9. **Translation guide update**
 10. **Build verification**
+
+- F001 — Added required `TabContent.id` in `packages/ui/src/components/CustomTabs.tsx` so ids are now the stable tab contract.
