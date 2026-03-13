@@ -50,7 +50,7 @@
   {
     "id": "F007",
     "description": "CustomTabs auto-expand section logic matches `tab.id === defaultTab` and `tab.id === value`",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Internal Component Changes"
     ]
