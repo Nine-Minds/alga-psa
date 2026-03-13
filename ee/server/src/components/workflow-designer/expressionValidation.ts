@@ -93,6 +93,9 @@ export const validateStepExpressions = (
   };
 
   Object.entries(config).forEach(([key, value]) => {
+    if (key === 'inputMapping') {
+      return;
+    }
     checkValue(value, key);
   });
 
