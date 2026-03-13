@@ -13,6 +13,9 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type NotificationView = 'email' | 'internal';
 
+const EMAIL_NOTIFICATION_TAB_IDS = ['settings', 'email-templates', 'categories', 'telemetry'] as const;
+const INTERNAL_NOTIFICATION_TAB_IDS = ['categories'] as const;
+
 export default function NotificationsTab() {
   return <NotificationsTabContent />;
 }
@@ -23,32 +26,6 @@ function NotificationsTabContent() {
   const viewParam = searchParams?.get('view');
   const sectionParam = searchParams?.get('section');
 
-  // Map URL slugs to tab labels for email view
-  const emailSectionToLabelMap: Record<string, string> = {
-    'settings': 'Settings',
-    'email-templates': 'Email Templates',
-    'categories': 'Categories',
-    'telemetry': 'Telemetry'
-  };
-
-  // Map URL slugs to tab labels for internal view
-  const internalSectionToLabelMap: Record<string, string> = {
-    'categories': 'Categories'
-  };
-
-  // Map tab labels back to URL slugs for email view
-  const emailLabelToSlugMap: Record<string, string> = {
-    'Settings': 'settings',
-    'Email Templates': 'email-templates',
-    'Categories': 'categories',
-    'Telemetry': 'telemetry'
-  };
-
-  // Map tab labels back to URL slugs for internal view
-  const internalLabelToSlugMap: Record<string, string> = {
-    'Categories': 'categories'
-  };
-
   // Determine initial view based on URL parameter
   const getInitialView = (): NotificationView => {
     if (viewParam === 'internal') return 'internal';
@@ -57,11 +34,15 @@ function NotificationsTabContent() {
 
   // Determine initial tab based on URL parameter and view
   const getInitialTab = (view: NotificationView): string => {
-    if (!sectionParam) {
-      return view === 'email' ? 'Settings' : 'Categories';
+    const requestedTab = sectionParam?.toLowerCase();
+    const validTabs = view === 'email' ? EMAIL_NOTIFICATION_TAB_IDS : INTERNAL_NOTIFICATION_TAB_IDS;
+    const defaultTab = view === 'email' ? 'settings' : 'categories';
+
+    if (requestedTab && validTabs.includes(requestedTab as (typeof validTabs)[number])) {
+      return requestedTab;
     }
-    const sectionMap = view === 'email' ? emailSectionToLabelMap : internalSectionToLabelMap;
-    return sectionMap[sectionParam.toLowerCase()] || (view === 'email' ? 'Settings' : 'Categories');
+
+    return defaultTab;
   };
 
   const initialView = getInitialView();
@@ -83,7 +64,7 @@ function NotificationsTabContent() {
   }, [viewParam, sectionParam, currentView, currentTab]);
 
   // Update URL when view or tab changes
-  const updateURL = useCallback((view: NotificationView, tabLabel: string) => {
+  const updateURL = useCallback((view: NotificationView, tabId: string) => {
     const currentSearchParams = new URLSearchParams(window.location.search);
 
     // Update view parameter
@@ -94,12 +75,10 @@ function NotificationsTabContent() {
     }
 
     // Update section parameter
-    const slugMap = view === 'email' ? emailLabelToSlugMap : internalLabelToSlugMap;
-    const urlSlug = slugMap[tabLabel];
     const defaultSlug = view === 'email' ? 'settings' : 'categories';
 
-    if (urlSlug && urlSlug !== defaultSlug) {
-      currentSearchParams.set('section', urlSlug);
+    if (tabId !== defaultSlug) {
+      currentSearchParams.set('section', tabId);
     } else {
       currentSearchParams.delete('section');
     }
@@ -125,7 +104,7 @@ function NotificationsTabContent() {
     confirmNavigation(() => {
       setCurrentView(newView);
       // Reset to first tab of new view
-      const newTab = newView === 'email' ? 'Settings' : 'Categories';
+      const newTab = newView === 'email' ? 'settings' : 'categories';
       setCurrentTab(newTab);
       updateURL(newView, newTab);
     });
@@ -143,6 +122,7 @@ function NotificationsTabContent() {
 
   const emailTabContent = [
     {
+      id: 'settings',
       label: "Settings",
       content: (
         <Card>
@@ -157,6 +137,7 @@ function NotificationsTabContent() {
       ),
     },
     {
+      id: 'email-templates',
       label: "Email Templates",
       content: (
         <Card>
@@ -171,6 +152,7 @@ function NotificationsTabContent() {
       ),
     },
     {
+      id: 'categories',
       label: "Categories",
       content: (
         <Card>
@@ -185,6 +167,7 @@ function NotificationsTabContent() {
       ),
     },
     {
+      id: 'telemetry',
       label: "Telemetry",
       content: (
         <Card>
@@ -202,6 +185,7 @@ function NotificationsTabContent() {
 
   const internalTabContent = [
     {
+      id: 'categories',
       label: "Categories",
       content: (
         <Card>

@@ -141,3 +141,5 @@ npm run build
 - F013 — Added ids to both Import/Export tab sets and switched section routing to use section ids directly.
 
 - F014 — Migrated TicketingSettings to id-based sections (`display`, `boards`, `statuses`, etc.) with direct URL persistence.
+
+- F015 — Converted both NotificationsTab views to id-based tabs so email/internal sections sync URLs without label maps.
