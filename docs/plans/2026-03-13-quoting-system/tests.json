@@ -162,7 +162,7 @@
   {
     "id": "T021",
     "description": "Model: getById does not auto-expire drafts or accepted quotes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
