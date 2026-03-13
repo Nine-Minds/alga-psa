@@ -107,6 +107,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) T043 complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with a `createQuote` success-path assertion that the action returns the persisted quote including its generated `quote_number` and stamps `created_by` from the authenticated user context.
 - (2026-03-13) T042 complete — Added `packages/billing/tests/quote/quoteActions.test.ts` coverage proving `createQuote` returns a permission error when `billing:create` is denied; updated `packages/billing/vitest.config.ts` alias resolution so the billing package test runner can load quote server-action dependencies.
 - (2026-03-13) F035 complete — P1: Quote item create/update actions preserve `is_recurring` and `billing_frequency`, and schema validation requires a billing frequency for recurring items so conversion-ready recurrence metadata is stored end-to-end.
 - (2026-03-13) F034 complete — P1: Quote item create/update actions preserve `is_optional`, and the quote item model persists/returns that flag so optional line items are available to downstream UI and portal flows.

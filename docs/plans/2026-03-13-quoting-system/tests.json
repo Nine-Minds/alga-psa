@@ -349,7 +349,7 @@
   {
     "id": "T043",
     "description": "Action: createQuote returns quote with generated number",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
