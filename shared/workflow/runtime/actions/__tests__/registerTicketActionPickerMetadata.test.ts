@@ -11,7 +11,7 @@ describe('ticket workflow picker metadata', () => {
     }
   });
 
-  it('T169/T170/T171/T172/T173/T174/T175/T176/T177/T178/T179: exports ticket-core picker metadata from real workflow actions', () => {
+  it('T169/T170/T171/T172/T173/T174/T175/T176/T177/T178/T179/T220: exports ticket-core picker metadata from real workflow actions without expanding dependent scope beyond ticket-core identifiers', () => {
     const registry = getActionRegistryV2();
     const createAction = registry.get('tickets.create', 1);
     const updateAction = registry.get('tickets.update_fields', 1);
@@ -47,9 +47,13 @@ describe('ticket workflow picker metadata', () => {
     expect(createProperties.contact_id?.['x-workflow-picker-dependencies']).toEqual(['client_id']);
 
     expect(createProperties.board_id?.['x-workflow-picker-kind']).toBe('board');
+    expect(createProperties.board_id?.['x-workflow-picker-dependencies']).toBeUndefined();
     expect(createProperties.status_id?.['x-workflow-picker-kind']).toBe('ticket-status');
+    expect(createProperties.status_id?.['x-workflow-picker-dependencies']).toBeUndefined();
     expect(createProperties.priority_id?.['x-workflow-picker-kind']).toBe('ticket-priority');
+    expect(createProperties.priority_id?.['x-workflow-picker-dependencies']).toBeUndefined();
     expect(createProperties.assigned_to?.['x-workflow-picker-kind']).toBe('user');
+    expect(createProperties.assigned_to?.['x-workflow-picker-dependencies']).toBeUndefined();
     expect(createProperties.category_id?.['x-workflow-picker-kind']).toBe('ticket-category');
     expect(createProperties.category_id?.['x-workflow-picker-dependencies']).toEqual(['board_id']);
     expect(createProperties.subcategory_id?.['x-workflow-picker-kind']).toBe('ticket-subcategory');
@@ -65,12 +69,18 @@ describe('ticket workflow picker metadata', () => {
     expect(assignAssigneeProperties.id?.['x-workflow-picker-kind']).toBe('user-or-team');
 
     expect(updatePatchProperties.status_id?.['x-workflow-picker-kind']).toBe('ticket-status');
+    expect(updatePatchProperties.status_id?.['x-workflow-picker-dependencies']).toBeUndefined();
     expect(updatePatchProperties.priority_id?.['x-workflow-picker-kind']).toBe('ticket-priority');
+    expect(updatePatchProperties.priority_id?.['x-workflow-picker-dependencies']).toBeUndefined();
     expect(updatePatchProperties.assigned_to?.['x-workflow-picker-kind']).toBe('user');
+    expect(updatePatchProperties.assigned_to?.['x-workflow-picker-dependencies']).toBeUndefined();
     expect(updatePatchProperties.category_id?.['x-workflow-picker-kind']).toBe('ticket-category');
+    expect(updatePatchProperties.category_id?.['x-workflow-picker-dependencies']).toBeUndefined();
     expect(updatePatchProperties.subcategory_id?.['x-workflow-picker-kind']).toBe(
       'ticket-subcategory'
     );
+    expect(updatePatchProperties.subcategory_id?.['x-workflow-picker-dependencies']).toBeUndefined();
     expect(updatePatchProperties.location_id?.['x-workflow-picker-kind']).toBe('client-location');
+    expect(updatePatchProperties.location_id?.['x-workflow-picker-dependencies']).toBeUndefined();
   });
 });

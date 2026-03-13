@@ -314,6 +314,7 @@ export const WorkflowActionInputFixedPicker: React.FC<{
   const [options, setOptions] = useState<WorkflowPickerOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadedDependencySignature, setLoadedDependencySignature] = useState<string | null>(null);
 
   const pickerKind = field.picker?.kind;
   const dependencyResolutions = useMemo(
@@ -324,16 +325,29 @@ export const WorkflowActionInputFixedPicker: React.FC<{
     () => (pickerKind ? buildDisabledExplanation(pickerKind, dependencyResolutions) : undefined),
     [dependencyResolutions, pickerKind]
   );
-  const pickerOptions = useMemo(() => {
+  const dependencySignature = useMemo(
+    () => JSON.stringify(dependencyResolutions),
+    [dependencyResolutions]
+  );
+  const filteredOptions = useMemo(() => {
     if (!pickerKind) return [];
-    const filtered = filterWorkflowPickerOptions(pickerKind, options, dependencyResolutions);
-    return appendCurrentValueOption(filtered, value);
-  }, [dependencyResolutions, options, pickerKind, value]);
+    return filterWorkflowPickerOptions(pickerKind, options, dependencyResolutions);
+  }, [dependencyResolutions, options, pickerKind]);
+  const pickerOptions = useMemo(() => {
+    return appendCurrentValueOption(filteredOptions, value);
+  }, [filteredOptions, value]);
+  const hasResolvedDependencies = useMemo(
+    () =>
+      dependencyResolutions.length > 0 &&
+      dependencyResolutions.every((dependency) => dependency.status === 'fixed'),
+    [dependencyResolutions]
+  );
 
   useEffect(() => {
     if (!pickerKind) {
       setOptions([]);
       setLoadError(null);
+      setLoadedDependencySignature(null);
       return;
     }
 
@@ -341,17 +355,20 @@ export const WorkflowActionInputFixedPicker: React.FC<{
     if (shouldSkipLoad) {
       setOptions([]);
       setLoadError(null);
+      setLoadedDependencySignature(null);
       return;
     }
 
     let active = true;
     setIsLoading(true);
     setLoadError(null);
+    setLoadedDependencySignature(null);
 
     loadWorkflowPickerOptions(pickerKind, dependencyResolutions)
       .then((nextOptions) => {
         if (!active) return;
         setOptions(nextOptions);
+        setLoadedDependencySignature(dependencySignature);
       })
       .catch((error) => {
         if (!active) return;
@@ -368,7 +385,18 @@ export const WorkflowActionInputFixedPicker: React.FC<{
     return () => {
       active = false;
     };
-  }, [dependencyResolutions, disabledExplanation, pickerKind]);
+  }, [dependencyResolutions, dependencySignature, disabledExplanation, pickerKind]);
+
+  useEffect(() => {
+    if (!hasResolvedDependencies || !value || loadedDependencySignature !== dependencySignature) {
+      return;
+    }
+
+    const stillValid = filteredOptions.some((option) => option.value === value);
+    if (!stillValid) {
+      onChange(null);
+    }
+  }, [dependencySignature, filteredOptions, hasResolvedDependencies, loadedDependencySignature, onChange, value]);
 
   if (!pickerKind) {
     return null;

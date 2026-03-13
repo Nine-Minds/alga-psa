@@ -1202,121 +1202,121 @@
   {
     "id": "F201",
     "description": "Narrow fixed contact picker options by selected fixed client when both fields are authored in fixed mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Picker UX", "Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F202",
     "description": "Narrow fixed location picker options by selected fixed client when both fields are authored in fixed mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Picker UX", "Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F203",
     "description": "Narrow fixed category picker options by selected fixed board when both fields are authored in fixed mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Picker UX", "Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F204",
     "description": "Narrow fixed subcategory picker options by selected fixed category when both fields are authored in fixed mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Picker UX", "Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F205",
     "description": "Narrow fixed subcategory picker options by selected fixed board when board-scoped subcategories are required",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Picker UX", "Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F206",
     "description": "Show an explanatory disabled state for the fixed contact picker when no fixed client is selected and client scoping is required",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Picker UX"]
   },
   {
     "id": "F207",
     "description": "Show an explanatory disabled state for the fixed location picker when no fixed client is selected and client scoping is required",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Picker UX"]
   },
   {
     "id": "F208",
     "description": "Show an explanatory disabled state for the fixed category picker when no fixed board is selected and board scoping is required",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Picker UX"]
   },
   {
     "id": "F209",
     "description": "Show an explanatory disabled state for the fixed subcategory picker when required upstream board or category selections are missing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Picker UX"]
   },
   {
     "id": "F210",
     "description": "Treat a dynamically referenced client_id as insufficient to unlock a fixed contact picker option list",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Picker UX", "Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F211",
     "description": "Treat a dynamically referenced client_id as insufficient to unlock a fixed location picker option list",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Picker UX", "Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F212",
     "description": "Treat a dynamically referenced board_id as insufficient to unlock a fixed category picker option list",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Picker UX", "Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F213",
     "description": "Treat a dynamically referenced category_id as insufficient to unlock a fixed subcategory picker option list",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Picker UX", "Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F214",
     "description": "Recalculate dependent picker option lists immediately when a fixed upstream picker value changes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Picker UX"]
   },
   {
     "id": "F215",
     "description": "Clear no-longer-valid fixed dependent picker selections when an upstream fixed picker value changes scope",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Picker UX", "Requirements > Compatibility, Save/Load, and Validation"]
   },
   {
     "id": "F216",
     "description": "Preserve still-valid fixed dependent picker selections when an upstream fixed picker value changes but the selection remains in scope",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Picker UX", "Requirements > Compatibility, Save/Load, and Validation"]
   },
   {
     "id": "F217",
     "description": "Rehydrate dependent picker selections correctly when loading a saved workflow draft with valid fixed upstream values",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Compatibility, Save/Load, and Validation"]
   },
   {
     "id": "F218",
     "description": "Rehydrate dependent picker disabled states correctly when loading a saved workflow draft with dynamic upstream references",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Compatibility, Save/Load, and Validation"]
   },
   {
     "id": "F219",
     "description": "Allow dependent ticket picker fields to switch back to Reference mode when fixed-scope narrowing is not available",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring", "UX / UI Notes > Picker UX"]
   },
   {
     "id": "F220",
     "description": "Keep dependent picker behavior limited to ticket-core identifiers in the first implementation pass",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Non-goals", "Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {

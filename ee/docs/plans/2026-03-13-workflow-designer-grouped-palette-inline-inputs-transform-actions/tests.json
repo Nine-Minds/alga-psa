@@ -1202,121 +1202,121 @@
   {
     "id": "T201",
     "description": "Playwright: fixed contact picker options narrow by selected fixed client",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F201"]
   },
   {
     "id": "T202",
     "description": "Playwright: fixed location picker options narrow by selected fixed client",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F202"]
   },
   {
     "id": "T203",
     "description": "Playwright: fixed category picker options narrow by selected fixed board",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F203"]
   },
   {
     "id": "T204",
     "description": "Playwright: fixed subcategory picker options narrow by selected fixed category",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F204"]
   },
   {
     "id": "T205",
     "description": "Playwright: fixed subcategory picker options narrow by selected fixed board where board scoping is required",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F205"]
   },
   {
     "id": "T206",
     "description": "Playwright: fixed contact picker shows a disabled explanation when required fixed client scope is missing",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F206"]
   },
   {
     "id": "T207",
     "description": "Playwright: fixed location picker shows a disabled explanation when required fixed client scope is missing",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F207"]
   },
   {
     "id": "T208",
     "description": "Playwright: fixed category picker shows a disabled explanation when required fixed board scope is missing",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F208"]
   },
   {
     "id": "T209",
     "description": "Playwright: fixed subcategory picker shows a disabled explanation when upstream scope is missing",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F209"]
   },
   {
     "id": "T210",
     "description": "Playwright: a dynamic client reference does not unlock fixed contact options",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F210"]
   },
   {
     "id": "T211",
     "description": "Playwright: a dynamic client reference does not unlock fixed location options",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F211"]
   },
   {
     "id": "T212",
     "description": "Playwright: a dynamic board reference does not unlock fixed category options",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F212"]
   },
   {
     "id": "T213",
     "description": "Playwright: a dynamic category reference does not unlock fixed subcategory options",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F213"]
   },
   {
     "id": "T214",
     "description": "Playwright: dependent picker option lists recalculate immediately when an upstream fixed value changes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F214"]
   },
   {
     "id": "T215",
     "description": "Playwright: invalid dependent picker selections clear when upstream fixed scope changes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F215"]
   },
   {
     "id": "T216",
     "description": "Playwright: valid dependent picker selections are preserved when upstream fixed scope changes without invalidating them",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F216"]
   },
   {
     "id": "T217",
     "description": "Playwright: saved drafts rehydrate dependent picker selections correctly when fixed upstream values are valid",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F217"]
   },
   {
     "id": "T218",
     "description": "Playwright: saved drafts rehydrate dependent picker disabled states correctly when upstream values are dynamic",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F218"]
   },
   {
     "id": "T219",
     "description": "Playwright: dependent picker fields can always fall back to Reference mode when fixed narrowing is unavailable",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F219"]
   },
   {
     "id": "T220",
     "description": "Unit: dependent picker behavior remains limited to ticket-core identifiers in the first implementation pass",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F220"]
   },
   {

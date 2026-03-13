@@ -72,6 +72,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-14) `tickets.update_fields.patch` does not carry `board_id` or `client_id`, so dependency annotations for `patch.category_id`, `patch.subcategory_id`, and `patch.location_id` cannot point at those roots without disabling valid update authoring. Scoped dependency metadata currently stays on create-style fields while update pickers remain unscoped until ticket-state-aware narrowing exists.
 - (2026-03-14) `ee/server` Vitest lacked an alias for `@alga-psa/teams/actions`, and shared Vitest lacked direct source aliases for `@alga-psa/storage`, `@alga-psa/types`, `@alga-psa/auth`, `@alga-psa/validation`, and `@alga-psa/shared`; the picker slice needed both configs widened before the reused package action loaders could run in this harness.
 - (2026-03-14) The inline mapping editor’s expression compatibility hints were assuming any truthy value was object-like. A fixed-to-advanced mode transition can briefly leave `valueType === 'expr'` while the old literal string is still present, so those guards needed an explicit object check.
+- (2026-03-14) Dependent picker invalidation cannot key off the previous option array. When an upstream fixed scope changes, the picker briefly renders with stale options from the old scope; clearing invalid selections only after the new dependency signature has finished loading avoids wiping still-valid values during that transition.
 
 ## Commands / Runbooks
 
@@ -236,6 +237,11 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `npx tsc --noEmit -p ee/server/tsconfig.json`
   - `npx tsc --noEmit -p shared/tsconfig.json`
   - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputFixedPicker.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorPickerFields.test.tsx ee/server/src/components/workflow-designer/__tests__/actionInputEditorState.test.ts shared/workflow/runtime/actions/businessOperations/tickets.ts shared/workflow/runtime/actions/__tests__/registerTicketActionPickerMetadata.test.ts shared/vitest.config.ts ee/server/vitest.config.ts`
+- (2026-03-14) Validate dependent ticket picker narrowing, disabled states, and scope-change persistence:
+  - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/actions/__tests__/registerTicketActionPickerMetadata.test.ts --reporter=dot`
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/InputMappingEditorPickerFields.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputFixedPicker.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorPickerFields.test.tsx shared/workflow/runtime/actions/__tests__/registerTicketActionPickerMetadata.test.ts`
 
 ## Links / References
 
@@ -266,6 +272,11 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 
 ## Progress Log
 
+- (2026-03-14) Completed the dependent ticket-picker scope slice:
+  - Reused the picker metadata from the first ticket-picker batch to narrow contact, location, category, and subcategory fixed-value options from the current fixed upstream client/board/category selections.
+  - Added disabled explanatory states when those dependencies are missing or dynamic, while keeping dependent fields free to switch back to Reference mode instead of trapping the builder in Fixed mode.
+  - Tightened the picker invalidation path so upstream scope changes clear only now-invalid fixed selections after the new scoped option set loads, while preserved selections survive when the same identifier remains valid in the new scope.
+  - Marked F201-F220 and T201-T220 implemented.
 - (2026-03-14) Completed the first ticket-picker authoring slice:
   - Added real workflow picker annotations to the runtime ticket action schemas for board, client, contact, status, priority, assigned user, assignee user/team, category, subcategory, and location fields, and exposed `location_id` through the workflow ticket create/update action contracts.
   - Added a reusable `WorkflowActionInputFixedPicker` so picker-backed fixed values render through existing board/client/contact/status/priority/user/team/category/location data sources instead of falling back to plain string inputs.
