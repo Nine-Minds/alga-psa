@@ -7,7 +7,6 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import type { InputMapping, MappingValue, Expr } from '@shared/workflow/runtime/client';
 import {
@@ -272,7 +271,7 @@ const buildReferenceSourceModel = (
     const prefix = `vars.${step.saveAs}`;
     model.vars.push({
       value: step.saveAs,
-      label: `${step.saveAs} (${step.stepName})`,
+      label: `${step.stepName} (${step.saveAs})`,
       fields: flattenReferenceFields(step.fields, prefix),
     });
   });
@@ -516,8 +515,8 @@ const ReferenceScopeSelector: React.FC<{
   const scopeOptions = useMemo<SelectOption[]>(() => {
     const options: SelectOption[] = [];
     if (model.payload.length > 0) options.push({ value: 'payload', label: 'Payload' });
-    if (model.vars.length > 0) options.push({ value: 'vars', label: 'Step output' });
-    if (model.meta.length > 0) options.push({ value: 'meta', label: 'Workflow meta' });
+    if (model.vars.length > 0) options.push({ value: 'vars', label: 'Step results' });
+    if (model.meta.length > 0) options.push({ value: 'meta', label: 'Workflow details' });
     if (model.error.length > 0) options.push({ value: 'error', label: 'Error' });
     if (model.forEach.length > 0) options.push({ value: 'forEach', label: 'Loop context' });
     return options;
@@ -576,7 +575,7 @@ const ReferenceScopeSelector: React.FC<{
           id={`${idPrefix}-reference-step`}
           options={stepOptions}
           value={selectedStep || undefined}
-          placeholder="Select step output..."
+          placeholder="Select step..."
           onValueChange={onStepChange}
           disabled={disabled}
         />
@@ -657,7 +656,7 @@ export interface InputMappingEditorProps {
   targetFields: ActionInputField[];
 
   /**
-   * Available data context options for expressions
+   * Available data context options for references
    */
   fieldOptions: SelectOption[];
 
@@ -677,8 +676,8 @@ export interface InputMappingEditorProps {
   sourceTypeMap?: Map<string, string>;
 
   /**
-   * §20 - Expression context for Monaco editor autocomplete
-   * If not provided, falls back to building context from fieldOptions
+   * Reference context derived from workflow schemas.
+   * Falls back to building a minimal context from fieldOptions.
    */
   expressionContext?: ExpressionContext;
 
@@ -1896,8 +1895,6 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
     return map;
   }, [suggestions]);
 
-  // §20 - Build expression context for Monaco editor
-  // Use provided context if available, otherwise fall back to building from fieldOptions
   const expressionContext = useMemo(() => {
     if (providedExpressionContext) {
       return providedExpressionContext;
@@ -1980,7 +1977,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   if (targetFields.length === 0) {
     return (
       <div className="text-sm text-gray-500 p-3 bg-gray-50 rounded border border-gray-200">
-        This action has no input fields to map.
+        This action has no input fields.
       </div>
     );
   }
@@ -1992,26 +1989,26 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
       onFocus={keyboardHandlers.activate}
       onBlur={keyboardHandlers.deactivate}
       role="listbox"
-      aria-label="Input mapping fields"
+      aria-label="Action input fields"
       aria-activedescendant={
         keyboardState.focusedIndex >= 0
           ? `mapping-field-${stepId}-${allFieldNames[keyboardState.focusedIndex]}`
           : undefined
       }
     >
-      <div className="flex items-center justify-between">
-        <Label className="text-sm font-semibold">Input Mapping</Label>
-        <div className="flex items-center gap-3">
-          <div className="text-xs text-gray-500" title="Fields marked with * are required">
-            <span className="text-[11px] text-gray-500" aria-hidden>*</span> required
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 text-xs text-gray-500">
+          <div>
+            {Object.keys(value).length} of {targetFields.length} fields filled
           </div>
           {missingRequiredCount > 0 && (
             <div className="text-xs text-destructive flex items-center gap-1" title="Required fields are missing values">
               <AlertTriangle className="w-3 h-3" />
-              {missingRequiredCount} missing
+              {missingRequiredCount} required missing
             </div>
           )}
-          {/* §17.3.3 - Auto-map button */}
+        </div>
+        <div className="flex items-center gap-3">
           {suggestions.length > 0 && (
             <Button
               id={`auto-map-${stepId}`}
@@ -2022,10 +2019,9 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
               className="text-xs text-primary-600 hover:text-primary-700"
             >
               <Wand2 className="w-3.5 h-3.5 mr-1" />
-              Auto-map ({suggestions.length})
+              Apply suggestions ({suggestions.length})
             </Button>
           )}
-          {/* §17.3 - Clear all button */}
           {Object.keys(value).length > 0 && (
             <Button
               id={`clear-all-mappings-${stepId}`}
@@ -2036,12 +2032,9 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
               className="text-xs text-gray-500 hover:text-destructive"
             >
               <RotateCcw className="w-3.5 h-3.5 mr-1" />
-              Clear all
+              Clear values
             </Button>
           )}
-          <div className="text-xs text-gray-500">
-            {Object.keys(value).length} / {targetFields.length} fields mapped
-          </div>
         </div>
       </div>
 
@@ -2093,7 +2086,6 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
         </div>
       )}
 
-      {/* Unmapped fields */}
       {unmappedFields.length > 0 && (
         <div className="space-y-2">
           <button
@@ -2101,11 +2093,11 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
             className="flex items-center gap-2 text-xs font-medium text-gray-600 hover:text-gray-800"
           >
             {showUnmapped ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-            Unmapped fields ({unmappedFields.length})
+            Empty fields ({unmappedFields.length})
           </button>
 
           {showUnmapped && (
-            <div className="space-y-1 pl-5" role="group" aria-label="Unmapped fields">
+            <div className="space-y-1 pl-5" role="group" aria-label="Empty fields">
                   {unmappedFields.map((field, idx) => {
                     const suggestion = suggestionMap.get(field.name);
                     const isMissingRequired = Boolean(field.required) && !isMappingValueSet(value[field.name], field.type);
@@ -2166,7 +2158,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                         disabled={disabled}
                       >
                         <Plus className="w-3.5 h-3.5 mr-1" />
-                        Map
+                        Fill
                       </Button>
                     </div>
                   </div>

@@ -59,8 +59,8 @@ describe('WorkflowActionInputSection', () => {
     );
 
     expect(screen.getByText('Action inputs')).toBeInTheDocument();
-    expect(screen.getByText('0 / 2 fields configured')).toBeInTheDocument();
-    expect(screen.getByText('1 required field still unmapped')).toBeInTheDocument();
+    expect(screen.queryByText('0 / 2 fields configured')).not.toBeInTheDocument();
+    expect(screen.queryByText('1 required field still unmapped')).not.toBeInTheDocument();
     expect(screen.getByTestId('mapping-panel-step-1')).toHaveTextContent('{}');
     expect(screen.queryByRole('button', { name: 'Edit mapping' })).not.toBeInTheDocument();
 
@@ -91,8 +91,8 @@ describe('WorkflowActionInputSection', () => {
       />
     );
 
-    expect(screen.getByText('1 / 2 fields configured')).toBeInTheDocument();
-    expect(screen.getByText('All 1 required fields are mapped')).toBeInTheDocument();
+    expect(screen.queryByText('1 / 2 fields configured')).not.toBeInTheDocument();
+    expect(screen.queryByText('All 1 required fields are mapped')).not.toBeInTheDocument();
   });
 
   it('T223/T238: transform grouped steps reuse the inline action-input section and validation summary', () => {
@@ -128,8 +128,8 @@ describe('WorkflowActionInputSection', () => {
     );
 
     expect(screen.getByText('Action inputs')).toBeInTheDocument();
-    expect(screen.getByText('1 / 3 fields configured')).toBeInTheDocument();
-    expect(screen.getByText('1 required field still unmapped')).toBeInTheDocument();
+    expect(screen.queryByText('1 / 3 fields configured')).not.toBeInTheDocument();
+    expect(screen.queryByText('1 required field still unmapped')).not.toBeInTheDocument();
     expect(screen.getByTestId('mapping-panel-transform-step')).toHaveTextContent('{"maxLength":24}');
   });
 
@@ -166,8 +166,8 @@ describe('WorkflowActionInputSection', () => {
     );
 
     expect(screen.getByText('Action inputs')).toBeInTheDocument();
-    expect(screen.getByText('1 / 3 fields configured')).toBeInTheDocument();
-    expect(screen.getByText('1 required field still unmapped')).toBeInTheDocument();
+    expect(screen.queryByText('1 / 3 fields configured')).not.toBeInTheDocument();
+    expect(screen.queryByText('1 required field still unmapped')).not.toBeInTheDocument();
     expect(screen.getByTestId('mapping-panel-app-step')).toHaveTextContent('{"channel":"ops-alerts"}');
   });
 
@@ -201,8 +201,8 @@ describe('WorkflowActionInputSection', () => {
     );
 
     expect(screen.getByText('Action inputs')).toBeInTheDocument();
-    expect(screen.getByText('1 / 2 fields configured')).toBeInTheDocument();
-    expect(screen.getByText('All 1 required fields are mapped')).toBeInTheDocument();
+    expect(screen.queryByText('1 / 2 fields configured')).not.toBeInTheDocument();
+    expect(screen.queryByText('All 1 required fields are mapped')).not.toBeInTheDocument();
     expect(screen.getByTestId('mapping-panel-readonly-step')).toHaveAttribute('data-disabled', 'true');
     expect(screen.getByTestId('mapping-panel-readonly-step')).toHaveTextContent(
       '{"summary":"Existing summary"}'

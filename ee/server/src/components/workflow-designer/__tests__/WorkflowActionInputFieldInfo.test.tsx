@@ -31,13 +31,13 @@ describe('WorkflowActionInputFieldInfo', () => {
 
     const view = within(container);
     expect(view.getByText('summary')).toBeInTheDocument();
-    expect(view.getAllByTitle('Required field is missing a value')).toHaveLength(2);
-    expect(view.getByText('Missing')).toBeInTheDocument();
+    expect(view.getByTitle('Required field is missing a value')).toBeInTheDocument();
+    expect(view.getByText('Required')).toBeInTheDocument();
     expect(view.getByText('Ticket summary')).toBeInTheDocument();
     expect(view.getByText('Format: email')).toBeInTheDocument();
-    expect(view.getByText('Items: string')).toBeInTheDocument();
+    expect(view.getByText('Each item: string')).toBeInTheDocument();
     expect(view.getByText('Length: 5 - 120')).toBeInTheDocument();
-    expect(view.getByText('Pattern: ^[a-z]+$')).toBeInTheDocument();
+    expect(view.queryByText('Pattern: ^[a-z]+$')).not.toBeInTheDocument();
     expect(view.getByText('Default summary')).toBeInTheDocument();
     expect(view.getByText('Escalate printer issue')).toBeInTheDocument();
 
@@ -52,7 +52,7 @@ describe('WorkflowActionInputFieldInfo', () => {
     );
 
     expect(view.getByText('details')).toBeInTheDocument();
-    expect(view.getByText('Optional')).toBeInTheDocument();
+    expect(view.queryByText('Optional')).not.toBeInTheDocument();
     expect(view.getByText('Additional ticket details')).toBeInTheDocument();
   });
 });

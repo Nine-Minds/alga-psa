@@ -16,7 +16,7 @@ const buildConstraintHints = (
   }
 
   if (constraints.itemType) {
-    hints.push(`Items: ${constraints.itemType}`);
+    hints.push(`Each item: ${constraints.itemType}`);
   }
 
   if (typeof constraints.minLength === 'number' || typeof constraints.maxLength === 'number') {
@@ -29,10 +29,6 @@ const buildConstraintHints = (
     hints.push(
       `Range: ${constraints.minimum ?? '-∞'} - ${constraints.maximum ?? '∞'}`
     );
-  }
-
-  if (constraints.pattern) {
-    hints.push(`Pattern: ${constraints.pattern}`);
   }
 
   return hints;
@@ -48,25 +44,17 @@ export const WorkflowActionInputFieldInfo: React.FC<{
     <div className="min-w-0 flex-1">
       <div className="flex items-center gap-2">
         <span className="text-sm text-gray-700">{field.name}</span>
-        {field.required ? (
+        {field.required && (
           <span
-            className={`text-[11px] ${isMissingRequired ? 'text-destructive' : 'text-gray-500'}`}
-            aria-hidden
+            className={`text-[11px] font-medium uppercase tracking-wide ${
+              isMissingRequired ? 'text-destructive' : 'text-gray-500'
+            }`}
             title={isMissingRequired ? 'Required field is missing a value' : 'Required'}
           >
-            *
-          </span>
-        ) : (
-          <span className="text-[11px] font-medium uppercase tracking-wide text-gray-400">
-            Optional
+            Required
           </span>
         )}
         <span className="text-xs text-gray-400">{field.type}</span>
-        {isMissingRequired && (
-          <span className="inline-flex items-center gap-1 text-[11px] text-destructive" title="Required field is missing a value">
-            Missing
-          </span>
-        )}
       </div>
       {field.description && (
         <p className="mt-0.5 text-[11px] text-gray-500">{field.description}</p>

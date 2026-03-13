@@ -24,9 +24,6 @@ export const WorkflowActionInputSection: React.FC<{
   targetFields,
   dataContext,
   fieldOptions,
-  mappedInputFieldCount,
-  requiredActionInputFields,
-  unmappedRequiredInputFieldCount,
   disabled = false,
 }) => (
   <div
@@ -35,24 +32,6 @@ export const WorkflowActionInputSection: React.FC<{
   >
     <div className="min-w-0">
       <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">Action inputs</div>
-      <p className="mt-1 text-xs text-gray-500">
-        Configure action fields inline using workflow data, fixed values, or advanced mappings.
-      </p>
-      <div className="mt-1 text-xs text-gray-500">
-        {mappedInputFieldCount} / {targetFields.length} fields configured
-      </div>
-      {requiredActionInputFields.length > 0 && (
-        <div
-          id={`workflow-step-input-mapping-required-status-${stepId}`}
-          className={`mt-1 text-xs ${
-            unmappedRequiredInputFieldCount > 0 ? 'text-destructive' : 'text-emerald-700'
-          }`}
-        >
-          {unmappedRequiredInputFieldCount > 0
-            ? `${unmappedRequiredInputFieldCount} required field${unmappedRequiredInputFieldCount === 1 ? '' : 's'} still unmapped`
-            : `All ${requiredActionInputFields.length} required fields are mapped`}
-        </div>
-      )}
     </div>
 
     <MappingPanel
