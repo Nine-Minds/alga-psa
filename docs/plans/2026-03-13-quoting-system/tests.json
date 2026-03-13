@@ -421,7 +421,7 @@
   {
     "id": "T050b",
     "description": "Business template: createQuoteFromTemplate copies all items from template to new draft quote",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036a"
     ]
