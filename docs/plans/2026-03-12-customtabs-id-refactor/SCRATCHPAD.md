@@ -159,3 +159,5 @@ npm run build
 - F022 — Added stable ids to DiscrepancyDetail tab content and switched its default selection to the first tab id.
 
 - F023 — CreditReconciliation now uses report-status ids (`all`, `open`, `in-review`, `resolved`) for dynamic tab routing.
+
+- F024 — CreditManagement now stores and routes `creditTab` as ids (`active-credits`, `expired-credits`, `all-credits`).

@@ -200,7 +200,7 @@
   {
     "id": "F024",
     "description": "Migrate CreditManagement.tsx — add id to tabs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern D"

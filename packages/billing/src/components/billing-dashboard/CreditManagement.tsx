@@ -194,21 +194,8 @@ const placeholderCreditUsageData = [
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
-// Map URL slugs to tab labels - defined outside component to avoid recreation
-const TAB_TO_LABEL_MAP: Record<string, string> = {
-  'active-credits': 'Active Credits',
-  'expired-credits': 'Expired Credits',
-  'all-credits': 'All Credits'
-};
-
-// Reverse map for URL updates
-const LABEL_TO_SLUG_MAP: Record<string, string> = {
-  'Active Credits': 'active-credits',
-  'Expired Credits': 'expired-credits',
-  'All Credits': 'all-credits'
-};
-
-const DEFAULT_TAB = 'Active Credits';
+const CREDIT_MANAGEMENT_TABS = ['active-credits', 'expired-credits', 'all-credits'] as const;
+const DEFAULT_TAB = 'active-credits';
 
 const CreditManagement: React.FC = () => {
   const router = useRouter();
@@ -217,8 +204,10 @@ const CreditManagement: React.FC = () => {
 
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
-    const initialLabel = tabParam ? TAB_TO_LABEL_MAP[tabParam.toLowerCase()] : undefined;
-    return initialLabel || DEFAULT_TAB;
+    const requestedTab = tabParam?.toLowerCase();
+    return requestedTab && CREDIT_MANAGEMENT_TABS.includes(requestedTab as typeof CREDIT_MANAGEMENT_TABS[number])
+      ? requestedTab
+      : DEFAULT_TAB;
   });
 
   const [loading, setLoading] = useState(true);
@@ -318,21 +307,21 @@ const CreditManagement: React.FC = () => {
 
   // Update active tab when URL parameter changes
   useEffect(() => {
-    const currentLabel = tabParam ? TAB_TO_LABEL_MAP[tabParam.toLowerCase()] : undefined;
-    const targetTab = currentLabel || DEFAULT_TAB;
+    const requestedTab = tabParam?.toLowerCase();
+    const targetTab = requestedTab && CREDIT_MANAGEMENT_TABS.includes(requestedTab as typeof CREDIT_MANAGEMENT_TABS[number])
+      ? requestedTab
+      : DEFAULT_TAB;
     if (targetTab !== activeTab) {
       setActiveTab(targetTab);
     }
   }, [tabParam, activeTab]);
 
-  const updateURL = (tabLabel: string) => {
-    const urlSlug = LABEL_TO_SLUG_MAP[tabLabel];
-
+  const updateURL = (tabId: string) => {
     // Build new URL preserving existing parameters
     const currentSearchParams = new URLSearchParams(window.location.search);
 
-    if (urlSlug && urlSlug !== 'active-credits') {
-      currentSearchParams.set('creditTab', urlSlug);
+    if (tabId !== DEFAULT_TAB) {
+      currentSearchParams.set('creditTab', tabId);
     } else {
       currentSearchParams.delete('creditTab');
     }
@@ -493,6 +482,7 @@ const CreditManagement: React.FC = () => {
           <CustomTabs
             tabs={[
               {
+                id: 'active-credits',
                 label: "Active Credits",
                 content: (
                   <DataTable
@@ -508,6 +498,7 @@ const CreditManagement: React.FC = () => {
                 )
               },
               {
+                id: 'expired-credits',
                 label: "Expired Credits",
                 content: (
                   <DataTable
@@ -523,6 +514,7 @@ const CreditManagement: React.FC = () => {
                 )
               },
               {
+                id: 'all-credits',
                 label: "All Credits",
                 content: (
                   <DataTable
@@ -539,9 +531,9 @@ const CreditManagement: React.FC = () => {
               }
             ]}
             defaultTab={activeTab}
-            onTabChange={(tab) => {
-              setActiveTab(tab);
-              updateURL(tab);
+            onTabChange={(tabId) => {
+              setActiveTab(tabId);
+              updateURL(tabId);
             }}
           />
           
