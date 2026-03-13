@@ -140,3 +140,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) T008 complete — Numbering: different tenants have independent sequences. Covered QUOTE numbering isolation across tenants.
 - (2026-03-13) T009 complete — Types: IQuote interface includes all required fields with correct types. Added package-level quote type coverage.
 - (2026-03-13) T010 complete — Types: QuoteStatus includes draft, sent, accepted, rejected, expired, converted, cancelled, superseded. Added package-level QuoteStatus coverage.
+- (2026-03-13) T011 complete — Types: IQuoteListItem includes joined client name and computed display fields. Added package-level quote list item type coverage.

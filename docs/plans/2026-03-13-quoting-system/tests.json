@@ -82,7 +82,7 @@
   {
     "id": "T011",
     "description": "Types: IQuoteListItem includes joined client name and computed display fields",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]
