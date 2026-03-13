@@ -73,46 +73,38 @@ const PaymentSettingsConfig = dynamic(
   }
 );
 
+const BILLING_SECTION_IDS = ['general', 'tax', 'payments'] as const;
+const DEFAULT_BILLING_SECTION = 'general';
+
 const BillingSettings: React.FC = () => {
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section');
 
-  // Map URL slugs to tab labels
-  const sectionToLabelMap: Record<string, string> = {
-    'general': 'General',
-    'tax': 'Tax',
-    'payments': 'Payments'
-  };
-
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
-    const initialLabel = sectionParam ? sectionToLabelMap[sectionParam.toLowerCase()] : undefined;
-    return initialLabel || 'General'; // Default to 'General'
+    const requestedTab = sectionParam?.toLowerCase();
+    return requestedTab && BILLING_SECTION_IDS.includes(requestedTab as typeof BILLING_SECTION_IDS[number])
+      ? requestedTab
+      : DEFAULT_BILLING_SECTION;
   });
 
   // Update active tab when URL parameter changes
   useEffect(() => {
-    const currentLabel = sectionParam ? sectionToLabelMap[sectionParam.toLowerCase()] : undefined;
-    const targetTab = currentLabel || 'General';
+    const requestedTab = sectionParam?.toLowerCase();
+    const targetTab = requestedTab && BILLING_SECTION_IDS.includes(requestedTab as typeof BILLING_SECTION_IDS[number])
+      ? requestedTab
+      : DEFAULT_BILLING_SECTION;
     if (targetTab !== activeTab) {
       setActiveTab(targetTab);
     }
   }, [sectionParam, activeTab]);
 
-  const updateURL = (tabLabel: string) => {
-    // Map tab labels back to URL slugs
-    const labelToSlugMap: Record<string, string> = Object.entries(sectionToLabelMap).reduce((acc, [slug, label]) => {
-      acc[label] = slug;
-      return acc;
-    }, {} as Record<string, string>);
-
-    const urlSlug = labelToSlugMap[tabLabel];
-
+  const updateURL = (tabId: string) => {
     // Build new URL with tab and section parameters
     const currentSearchParams = new URLSearchParams(window.location.search);
 
-    if (urlSlug && urlSlug !== 'general') {
-      currentSearchParams.set('section', urlSlug);
+    if (tabId !== DEFAULT_BILLING_SECTION) {
+      currentSearchParams.set('section', tabId);
     } else {
       currentSearchParams.delete('section');
     }
@@ -127,6 +119,7 @@ const BillingSettings: React.FC = () => {
 
   const tabContent: TabContent[] = [
     {
+      id: 'general',
       label: 'General',
       content: (
         <div className="space-y-6">
@@ -149,6 +142,7 @@ const BillingSettings: React.FC = () => {
       ),
     },
     {
+      id: 'tax',
       label: 'Tax',
       content: (
         <div className="space-y-6">
@@ -166,6 +160,7 @@ const BillingSettings: React.FC = () => {
       ),
     },
     {
+      id: 'payments',
       label: 'Payments',
       content: (
         <Card>
@@ -188,9 +183,9 @@ const BillingSettings: React.FC = () => {
       tabs={tabContent}
       defaultTab={activeTab}
       orientation="horizontal"
-      onTabChange={(tab) => {
-        setActiveTab(tab);
-        updateURL(tab);
+      onTabChange={(tabId) => {
+        setActiveTab(tabId);
+        updateURL(tabId);
       }}
     />
   );

@@ -558,6 +558,7 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
 
   const tabContent = [
     {
+      id: 'details',
       label: "Details",
       content: (
         <div {...withDataAutomationId({ id: 'details-tab-content' })} className="space-y-6">
@@ -575,10 +576,12 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
       )
     },
     {
+      id: 'related-assets',
       label: "Related Assets",
       content: renderRelatedAssets()
     },
     {
+      id: 'documents',
       label: "Documents",
       content: (
         <Card {...withDataAutomationId({ id: 'documents-card' })} className="p-6">

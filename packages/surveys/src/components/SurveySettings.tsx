@@ -15,17 +15,7 @@ import {
 } from '@alga-psa/surveys/actions/surveyActions';
 import type { SurveyTemplate, SurveyTrigger } from '@alga-psa/surveys/actions/surveyActions';
 
-// Map URL slugs to tab labels
-const TAB_SLUG_TO_LABEL: Record<string, string> = {
-  'templates': 'Templates',
-  'triggers': 'Triggers',
-};
-
-// Map tab labels to URL slugs
-const TAB_LABEL_TO_SLUG: Record<string, string> = {
-  'Templates': 'templates',
-  'Triggers': 'triggers',
-};
+const DEFAULT_TAB = 'templates';
 
 const SurveySettings = (): React.JSX.Element => {
   const { t } = useTranslation('common');
@@ -41,29 +31,25 @@ const SurveySettings = (): React.JSX.Element => {
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
     const subtab = searchParams?.get('subtab');
-    const initialLabel = subtab ? TAB_SLUG_TO_LABEL[subtab.toLowerCase()] : undefined;
-    return initialLabel || 'Templates'; // Default to 'Templates'
+    return subtab?.toLowerCase() || DEFAULT_TAB;
   });
 
   // Update active tab when URL parameter changes
   useEffect(() => {
     const subtab = searchParams?.get('subtab');
-    const currentLabel = subtab ? TAB_SLUG_TO_LABEL[subtab.toLowerCase()] : undefined;
-    const targetTab = currentLabel || 'Templates';
+    const targetTab = subtab?.toLowerCase() || DEFAULT_TAB;
     if (targetTab !== activeTab) {
       setActiveTab(targetTab);
     }
   }, [searchParams, activeTab]);
 
   // Update URL when tab changes
-  const handleTabChange = useCallback((tabLabel: string) => {
-    setActiveTab(tabLabel);
-
-    const urlSlug = TAB_LABEL_TO_SLUG[tabLabel];
+  const handleTabChange = useCallback((tabId: string) => {
+    setActiveTab(tabId);
     const currentSearchParams = new URLSearchParams(window.location.search);
 
-    if (urlSlug && urlSlug !== 'templates') {
-      currentSearchParams.set('subtab', urlSlug);
+    if (tabId !== DEFAULT_TAB) {
+      currentSearchParams.set('subtab', tabId);
     } else {
       currentSearchParams.delete('subtab');
     }
@@ -134,6 +120,7 @@ const SurveySettings = (): React.JSX.Element => {
   const tabs = useMemo(
     () => [
       {
+        id: 'templates',
         label: templateTabLabel,
         content: templatesError ? (
           <Alert variant="destructive" id="survey-template-error">
@@ -149,6 +136,7 @@ const SurveySettings = (): React.JSX.Element => {
         ),
       },
       {
+        id: 'triggers',
         label: triggerTabLabel,
         content: triggersError ? (
           <Alert variant="destructive" id="survey-trigger-error">

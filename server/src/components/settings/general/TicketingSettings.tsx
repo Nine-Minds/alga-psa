@@ -11,32 +11,29 @@ import { DisplaySettings } from '@alga-psa/tickets/components';
 import { NumberingSettings, PrioritySettings } from '@alga-psa/reference-data/components';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
+const TICKETING_TAB_IDS = ['display', 'ticket-numbering', 'boards', 'statuses', 'priorities', 'categories'] as const;
+const DEFAULT_TICKETING_TAB = 'display';
+
 const TicketingSettingsRefactored = (): React.JSX.Element => {
   const { t } = useTranslation('msp/settings');
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section');
   const typeParam = searchParams?.get('type');
 
-  // Map URL slugs to tab labels
-  const sectionToLabelMap: Record<string, string> = {
-    'display': 'Display',
-    'ticket-numbering': 'Ticket Numbering',
-    'boards': 'Boards',
-    'statuses': 'Statuses',
-    'priorities': 'Priorities',
-    'categories': 'Categories'
-  };
-
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
-    const initialLabel = sectionParam ? sectionToLabelMap[sectionParam.toLowerCase()] : undefined;
-    return initialLabel || 'Display';
+    const requestedTab = sectionParam?.toLowerCase();
+    return requestedTab && TICKETING_TAB_IDS.includes(requestedTab as typeof TICKETING_TAB_IDS[number])
+      ? requestedTab
+      : DEFAULT_TICKETING_TAB;
   });
 
   // Update active tab when URL parameter changes
   useEffect(() => {
-    const currentLabel = sectionParam ? sectionToLabelMap[sectionParam.toLowerCase()] : undefined;
-    const targetTab = currentLabel || 'Display';
+    const requestedTab = sectionParam?.toLowerCase();
+    const targetTab = requestedTab && TICKETING_TAB_IDS.includes(requestedTab as typeof TICKETING_TAB_IDS[number])
+      ? requestedTab
+      : DEFAULT_TICKETING_TAB;
     if (targetTab !== activeTab) {
       setActiveTab(targetTab);
     }
@@ -44,45 +41,43 @@ const TicketingSettingsRefactored = (): React.JSX.Element => {
 
   const tabs = [
     {
+      id: 'display',
       label: "Display",
       content: <DisplaySettings />
     },
     {
+      id: 'ticket-numbering',
       label: "Ticket Numbering",
       content: <NumberingSettings entityType="TICKET" />
     },
     {
+      id: 'boards',
       label: "Boards",
       content: <BoardsSettings />
     },
     {
+      id: 'statuses',
       label: "Statuses",
       content: <StatusSettings initialStatusType={typeParam} />
     },
     {
+      id: 'priorities',
       label: "Priorities",
       content: <PrioritySettings initialPriorityType="ticket" />
     },
     {
+      id: 'categories',
       label: "Categories",
       content: <CategoriesSettings />
     }
   ];
 
-  const updateURL = (tabLabel: string) => {
-    // Map tab labels back to URL slugs
-    const labelToSlugMap: Record<string, string> = Object.entries(sectionToLabelMap).reduce((acc, [slug, label]) => {
-      acc[label] = slug;
-      return acc;
-    }, {} as Record<string, string>);
-
-    const urlSlug = labelToSlugMap[tabLabel];
-    
+  const updateURL = (tabId: string) => {
     // Build new URL with tab and section parameters
     const currentSearchParams = new URLSearchParams(window.location.search);
     
-    if (urlSlug && urlSlug !== 'display') {
-      currentSearchParams.set('section', urlSlug);
+    if (tabId !== DEFAULT_TICKETING_TAB) {
+      currentSearchParams.set('section', tabId);
     } else {
       currentSearchParams.delete('section');
     }
@@ -101,9 +96,9 @@ const TicketingSettingsRefactored = (): React.JSX.Element => {
       <CustomTabs 
         tabs={tabs} 
         defaultTab={activeTab}
-        onTabChange={(tab) => {
-          setActiveTab(tab);
-          updateURL(tab);
+        onTabChange={(tabId) => {
+          setActiveTab(tabId);
+          updateURL(tabId);
         }}
       />
     </div>

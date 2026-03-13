@@ -1,0 +1,566 @@
+[
+  {
+    "id": "T001",
+    "description": "TabContent interface requires `id` field \u2014 TypeScript error if omitted",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T002",
+    "description": "CustomTabs renders tab.label as visible text in trigger buttons (not tab.id)",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T003",
+    "description": "CustomTabs sets Radix Tabs trigger value={tab.id}",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T004",
+    "description": "CustomTabs sets Radix Tabs content value={tab.id}",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T005",
+    "description": "CustomTabs sets React key={tab.id} on triggers and content panels",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T006",
+    "description": "onTabChange callback receives tab.id when user clicks a tab",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T007",
+    "description": "defaultTab prop selects the correct tab when matching a tab.id",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T008",
+    "description": "Controlled value prop selects the correct tab when matching a tab.id",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T009",
+    "description": "beforeTabChange receives (newTabId, currentTabId) and can prevent change by returning false",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T010",
+    "description": "When no defaultTab is provided, first tab is selected using allTabs[0].id",
+    "implemented": true,
+    "featureIds": [
+      "F009"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T011",
+    "description": "Grouped tabs: auto-expand section works when defaultTab matches a tab.id in that group",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T012",
+    "description": "Grouped tabs: auto-expand section works when controlled value matches a tab.id in that group",
+    "implemented": true,
+    "featureIds": [
+      "F007"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T013",
+    "description": "Tab with id='general' and label='General' displays 'General' but internal value is 'general'",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F008"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T014",
+    "description": "Two tabs can have different ids but matching labels without conflict (though unlikely, validates id-based matching)",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T015",
+    "description": "Tab label can contain translated text (non-ASCII) while id remains stable ASCII",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F008"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T016",
+    "description": "SettingsPage: activeTab state stores tab id, not label",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T017",
+    "description": "SettingsPage: URL ?tab=billing selects the billing tab (id-based)",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T018",
+    "description": "SettingsPage: no slugToLabelMap or labelToSlugMap exists in the file",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ],
+    "verification": "grep"
+  },
+  {
+    "id": "T019",
+    "description": "SecuritySettingsPage: URL ?tab=sessions selects Sessions tab by id",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T020",
+    "description": "SecuritySettingsPage: no bidirectional slug maps exist in the file",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ],
+    "verification": "grep"
+  },
+  {
+    "id": "T021",
+    "description": "InvoicingHub: ?subtab=drafts selects Drafts tab by id",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T022",
+    "description": "InvoicingHub: tab change updates URL with tab id directly",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T023",
+    "description": "ContractsHub: ?subtab=client-contracts selects the correct tab by id",
+    "implemented": true,
+    "featureIds": [
+      "F021"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T024",
+    "description": "AssetDetailTabs: ?tab=software selects Software tab by id",
+    "implemented": true,
+    "featureIds": [
+      "F037"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T025",
+    "description": "AssetDetailTabs: no tabSlugToLabelMap or tabLabelToSlugMap exists",
+    "implemented": true,
+    "featureIds": [
+      "F037"
+    ],
+    "verification": "grep"
+  },
+  {
+    "id": "T026",
+    "description": "CreditsTabs: ?tab=active selects Active Credits tab by id 'active'",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T027",
+    "description": "SurveySettings: ?subtab=triggers selects Triggers tab by id",
+    "implemented": true,
+    "featureIds": [
+      "F039"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T028",
+    "description": "ProjectSettings: ?section=task-statuses selects Task Statuses tab by id",
+    "implemented": true,
+    "featureIds": [
+      "F041"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T029",
+    "description": "TimeEntrySettings: ?subtab=time-periods selects Time Periods tab by id",
+    "implemented": true,
+    "featureIds": [
+      "F040"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T030",
+    "description": "BillingSettings: ?section=tax selects Tax tab by id",
+    "implemented": true,
+    "featureIds": [
+      "F027"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T031",
+    "description": "ClientNotificationsList: tab id used for both URL sync and filter state, translated label displayed",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T032",
+    "description": "ClientNotificationsList: no TAB_SLUG_MAP / tabKeyToLabel / labelToTabKey maps exist",
+    "implemented": true,
+    "featureIds": [
+      "F028"
+    ],
+    "verification": "grep"
+  },
+  {
+    "id": "T033",
+    "description": "ClientPortalSettingsPage: ?tab=user-management selects correct tab by id",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T034",
+    "description": "TicketConversation: activeTab prop receives id ('all-comments', 'client', 'internal', 'resolution')",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T035",
+    "description": "TicketConversation: onTabChange fires with tab id, not translated label",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T036",
+    "description": "TicketConversation: hideInternalTab=true still works \u2014 only shows 'all-comments' and 'resolution' tabs",
+    "implemented": true,
+    "featureIds": [
+      "F035"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T037",
+    "description": "TicketConversation parent components pass id-based activeTab",
+    "implemented": true,
+    "featureIds": [
+      "F036"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T038",
+    "description": "ContactDetails: ?tab=documents selects Documents tab by id",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T039",
+    "description": "ContactDetails: no findTabLabel helper exists in the file",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ],
+    "verification": "grep"
+  },
+  {
+    "id": "T040",
+    "description": "ClientDetails: ?tab=details selects Details tab by id",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T041",
+    "description": "ClientDetails: no findTabLabel helper exists in the file",
+    "implemented": true,
+    "featureIds": [
+      "F033"
+    ],
+    "verification": "grep"
+  },
+  {
+    "id": "T042",
+    "description": "IntegrationsSettingsPage: uses category ID directly as tab.id",
+    "implemented": true,
+    "featureIds": [
+      "F042"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T043",
+    "description": "AccountingMappingManager: uses module slug as tab.id, no toSlug() or slug maps",
+    "implemented": true,
+    "featureIds": [
+      "F043"
+    ],
+    "verification": "grep"
+  },
+  {
+    "id": "T044",
+    "description": "NotificationsSection (EE): ?notificationTab=read selects Read tab by id",
+    "implemented": true,
+    "featureIds": [
+      "F045"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T045",
+    "description": "WorkflowDesigner (EE): grouped tabs render correctly with id-based matching",
+    "implemented": true,
+    "featureIds": [
+      "F044"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T046",
+    "description": "ExtensionManagement: defaultTab='manage' selects tab with id='manage'",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T047",
+    "description": "NotificationsTab: two separate CustomTabs instances both use id-based matching correctly",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T048",
+    "description": "ImportExportSettings: both main tabs and detail tabs use id-based matching",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T049",
+    "description": "TicketingSettings: ?section=boards selects Boards tab by id",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T050",
+    "description": "InteractionSettings: ?section=interaction-statuses selects correct tab by id",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T051",
+    "description": "UserProfile: ?tab=security selects Security tab by id",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T052",
+    "description": "UserProfile: Calendar tab conditionally added with proper id",
+    "implemented": true,
+    "featureIds": [
+      "F011"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T053",
+    "description": "SLA page: tab selection via URL works with id-based matching",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T054",
+    "description": "Notifications settings page: two CustomTabs instances (email + internal) both use id-based matching",
+    "implemented": true,
+    "featureIds": [
+      "F019"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T055",
+    "description": "ClientProfile: tab selection and URL sync use id",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T056",
+    "description": "BillingOverview: dynamic tab list uses id-based matching",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ],
+    "verification": "build"
+  },
+  {
+    "id": "T057",
+    "description": "Full build succeeds: `npm run build` completes with zero TypeScript errors",
+    "implemented": true,
+    "featureIds": [
+      "F047"
+    ],
+    "verification": "build",
+    "command": "npm run build"
+  },
+  {
+    "id": "T058",
+    "description": "Translation guide no longer warns against translating tab labels",
+    "implemented": true,
+    "featureIds": [
+      "F046"
+    ],
+    "verification": "grep"
+  },
+  {
+    "id": "T059",
+    "description": "No file in the codebase contains a slugToLabel/labelToSlug/subtabToLabel/labelToSubtab map for CustomTabs",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F011",
+      "F012",
+      "F013",
+      "F014",
+      "F015",
+      "F016",
+      "F018",
+      "F019",
+      "F020",
+      "F021",
+      "F026",
+      "F027",
+      "F029",
+      "F037",
+      "F039",
+      "F040",
+      "F041",
+      "F045"
+    ],
+    "verification": "grep",
+    "command": "grep -rn 'slugToLabel\\|labelToSlug\\|subtabToLabel\\|labelToSubtab\\|TAB_SLUG_TO_LABEL\\|TAB_LABEL_TO_SLUG\\|tabSlugToLabelMap\\|tabLabelToSlugMap\\|sectionToLabelMap\\|labelToSlugMap\\|emailSectionToLabelMap\\|emailLabelToSlugMap\\|internalSectionToLabelMap\\|internalLabelToSlugMap' --include='*.tsx' --include='*.ts' server/ packages/ ee/"
+  },
+  {
+    "id": "T060",
+    "description": "No file in the codebase contains a findTabLabel helper for CustomTabs",
+    "implemented": true,
+    "featureIds": [
+      "F032",
+      "F033"
+    ],
+    "verification": "grep",
+    "command": "grep -rn 'findTabLabel' --include='*.tsx' --include='*.ts' server/ packages/ ee/"
+  }
+]

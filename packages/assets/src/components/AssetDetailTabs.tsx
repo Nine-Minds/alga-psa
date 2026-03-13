@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import { ServiceHistoryTab } from './tabs/ServiceHistoryTab';
@@ -16,54 +16,29 @@ interface AssetDetailTabsProps {
   asset: Asset;
 }
 
-// Map URL slugs to tab labels
-const tabSlugToLabelMap: Record<string, string> = {
-  'service-history': 'Service History',
-  'software': 'Software',
-  'maintenance': 'Maintenance',
-  'related-assets': 'Related Assets',
-  'documents-passwords': 'Documents & Passwords',
-  'audit-log': 'Audit Log'
-};
-
-// Map tab labels to URL slugs
-const tabLabelToSlugMap: Record<string, string> = Object.entries(tabSlugToLabelMap).reduce(
-  (acc, [slug, label]) => {
-    acc[label] = slug;
-    return acc;
-  },
-  {} as Record<string, string>
-);
-
-const DEFAULT_TAB = 'Service History';
+const DEFAULT_TAB = 'service-history';
 
 export const AssetDetailTabs: React.FC<AssetDetailTabsProps> = ({ asset }) => {
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
 
   // Determine initial active tab based on URL parameter
-  const [activeTab, setActiveTab] = useState<string>(() => {
-    const initialLabel = tabParam ? tabSlugToLabelMap[tabParam.toLowerCase()] : undefined;
-    return initialLabel || DEFAULT_TAB;
-  });
+  const [activeTab, setActiveTab] = useState<string>(() => tabParam?.toLowerCase() || DEFAULT_TAB);
 
   // Update active tab when URL parameter changes
   useEffect(() => {
-    const currentLabel = tabParam ? tabSlugToLabelMap[tabParam.toLowerCase()] : undefined;
-    const targetTab = currentLabel || DEFAULT_TAB;
+    const targetTab = tabParam?.toLowerCase() || DEFAULT_TAB;
     if (targetTab !== activeTab) {
       setActiveTab(targetTab);
     }
   }, [tabParam, activeTab]);
 
-  const updateURL = (tabLabel: string) => {
-    const urlSlug = tabLabelToSlugMap[tabLabel];
-
+  const updateURL = (tabId: string) => {
     // Build new URL with tab parameter
     const currentSearchParams = new URLSearchParams(window.location.search);
 
-    if (urlSlug && urlSlug !== 'service-history') {
-      currentSearchParams.set('tab', urlSlug);
+    if (tabId !== DEFAULT_TAB) {
+      currentSearchParams.set('tab', tabId);
     } else {
       currentSearchParams.delete('tab');
     }
@@ -76,38 +51,44 @@ export const AssetDetailTabs: React.FC<AssetDetailTabsProps> = ({ asset }) => {
     window.history.pushState({}, '', newUrl);
   };
 
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-    updateURL(tab);
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    updateURL(tabId);
   };
 
   const tabs = [
     {
+      id: 'service-history',
       label: 'Service History',
       icon: History,
       content: <ServiceHistoryTab asset={asset} />
     },
     {
+      id: 'software',
       label: 'Software',
       icon: LayoutGrid,
       content: <SoftwareInventoryTab asset={asset} />
     },
     {
+      id: 'maintenance',
       label: 'Maintenance',
       icon: CalendarDays,
       content: <MaintenanceSchedulesTab assetId={asset.asset_id} />
     },
     {
+      id: 'related-assets',
       label: 'Related Assets',
       icon: Network,
       content: <RelatedAssetsTab asset={asset} />
     },
     {
+      id: 'documents-passwords',
       label: 'Documents & Passwords',
       icon: Lock,
       content: <DocumentsPasswordsTab asset={asset} />
     },
     {
+      id: 'audit-log',
       label: 'Audit Log',
       icon: FileText,
       content: <AuditLogTab assetId={asset.asset_id} />

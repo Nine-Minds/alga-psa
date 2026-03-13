@@ -35,6 +35,8 @@ import {
   Legend
 } from 'recharts';
 
+const RECONCILIATION_TAB_IDS = ['all', 'open', 'in-review', 'resolved'] as const;
+
 // Define a type that extends ICreditReconciliationReport with client_name
 type ExtendedReconciliationReport = ICreditReconciliationReport & {
   client_name?: string
@@ -157,48 +159,12 @@ const CreditReconciliation: React.FC = () => {
   const { data: session } = useSession();
   const subtabParam = searchParams?.get('subtab');
 
-  // Map URL slugs to tab base labels (without counts)
-  const subtabToLabelMap: Record<string, string> = {
-    'all': 'All',
-    'open': 'Open',
-    'in-review': 'In Review',
-    'resolved': 'Resolved'
-  };
-
-  // Map tab base labels to URL slugs
-  const labelToSubtabMap: Record<string, string> = {
-    'All': 'all',
-    'Open': 'open',
-    'In Review': 'in-review',
-    'Resolved': 'resolved'
-  };
-
-  // Extract base label from tab label (removes count like "All (5)" -> "All")
-  const extractBaseLabel = (tabLabel: string): string => {
-    const match = tabLabel.match(/^(.+?)\s*\(/);
-    return match ? match[1] : tabLabel;
-  };
-
-  // Find full tab label from base label
-  const getFullTabLabel = (baseLabel: string): string => {
-    switch (baseLabel) {
-      case 'All': return `All (${reports.length})`;
-      case 'Open': return `Open (${openReports.length})`;
-      case 'In Review': return `In Review (${inReviewReports.length})`;
-      case 'Resolved': return `Resolved (${resolvedReports.length})`;
-      default: return `All (${reports.length})`;
-    }
-  };
-
   // Update URL when tab changes
-  const handleTabChange = (tabLabel: string): void => {
-    const baseLabel = extractBaseLabel(tabLabel);
-    const urlSlug = labelToSubtabMap[baseLabel];
-
+  const handleTabChange = (tabId: string): void => {
     const currentSearchParams = new URLSearchParams(window.location.search);
 
-    if (urlSlug && urlSlug !== 'all') {
-      currentSearchParams.set('subtab', urlSlug);
+    if (tabId !== 'all') {
+      currentSearchParams.set('subtab', tabId);
     } else {
       currentSearchParams.delete('subtab');
     }
@@ -557,6 +523,7 @@ const CreditReconciliation: React.FC = () => {
           <CustomTabs
             tabs={[
               {
+                id: 'all',
                 label: `All (${reports.length})`,
                 content: (
                   <DataTable
@@ -572,6 +539,7 @@ const CreditReconciliation: React.FC = () => {
                 )
               },
               {
+                id: 'open',
                 label: `Open (${openReports.length})`,
                 content: (
                   <DataTable
@@ -587,6 +555,7 @@ const CreditReconciliation: React.FC = () => {
                 )
               },
               {
+                id: 'in-review',
                 label: `In Review (${inReviewReports.length})`,
                 content: (
                   <DataTable
@@ -602,6 +571,7 @@ const CreditReconciliation: React.FC = () => {
                 )
               },
               {
+                id: 'resolved',
                 label: `Resolved (${resolvedReports.length})`,
                 content: (
                   <DataTable
@@ -617,7 +587,9 @@ const CreditReconciliation: React.FC = () => {
                 )
               }
             ]}
-            defaultTab={getFullTabLabel(subtabParam ? subtabToLabelMap[subtabParam.toLowerCase()] || 'All' : 'All')}
+            defaultTab={subtabParam && RECONCILIATION_TAB_IDS.includes(subtabParam.toLowerCase() as typeof RECONCILIATION_TAB_IDS[number])
+              ? subtabParam.toLowerCase()
+              : 'all'}
             onTabChange={handleTabChange}
           />
         </CardContent>

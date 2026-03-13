@@ -1,7 +1,7 @@
 import { isEnterprise } from '@alga-psa/core';
 
 export const CALENDAR_SETTINGS_CATEGORY = 'calendar';
-export const CALENDAR_PROFILE_TAB = 'Calendar';
+export const CALENDAR_PROFILE_TAB = 'calendar';
 
 const BASE_INTEGRATION_CATEGORY_IDS = [
   'accounting',
@@ -12,7 +12,7 @@ const BASE_INTEGRATION_CATEGORY_IDS = [
   'payments',
 ] as const;
 
-const BASE_PROFILE_TABS = ['Profile', 'Security', 'Single Sign-On', 'API Keys', 'Notifications'] as const;
+const BASE_PROFILE_TABS = ['profile', 'security', 'single-sign-on', 'api-keys', 'notifications'] as const;
 
 export function isCalendarEnterpriseEdition(env: NodeJS.ProcessEnv = process.env): boolean {
   if (env === process.env) {
@@ -57,10 +57,11 @@ export function resolveUserProfileTab(
   isEnterpriseEdition = isCalendarEnterpriseEdition()
 ): string {
   const visibleTabs = getVisibleUserProfileTabs(isEnterpriseEdition);
+  const normalizedTab = requestedTab?.toLowerCase();
 
-  if (requestedTab && visibleTabs.includes(requestedTab)) {
-    return requestedTab;
+  if (normalizedTab && visibleTabs.includes(normalizedTab)) {
+    return normalizedTab;
   }
 
-  return visibleTabs[0] ?? 'Profile';
+  return visibleTabs[0] ?? 'profile';
 }
