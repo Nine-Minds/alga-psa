@@ -74,7 +74,7 @@
   {
     "id": "T010",
     "description": "Types: QuoteStatus includes draft, sent, accepted, rejected, expired, converted, cancelled, superseded",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
