@@ -7,6 +7,14 @@ import type { Expr, MappingValue } from '@shared/workflow/runtime/client';
 
 export type WorkflowActionInputSourceModeValue = 'reference' | 'fixed' | 'advanced';
 export type WorkflowActionInputAdvancedModeValue = 'expression' | 'secret';
+export type WorkflowActionInputFieldLike = {
+  type?: string;
+  enum?: Array<string | number | boolean | null>;
+  default?: unknown;
+  picker?: {
+    allowsDynamicReference?: boolean;
+  };
+};
 
 const SOURCE_MODE_OPTIONS = [
   { value: 'reference', label: 'Reference' },
@@ -46,6 +54,77 @@ export function deriveWorkflowActionInputSourceMode(
   }
 
   return { mode: 'fixed', advancedMode: 'expression' };
+}
+
+export function getDefaultWorkflowActionInputSourceMode(
+  field: WorkflowActionInputFieldLike
+): WorkflowActionInputSourceModeValue {
+  if (field.picker && field.picker.allowsDynamicReference === false) {
+    return 'fixed';
+  }
+  if (field.enum?.length) {
+    return 'fixed';
+  }
+  if (field.type === 'boolean' || field.type === 'number' || field.type === 'integer') {
+    return 'fixed';
+  }
+  return 'reference';
+}
+
+export function buildDefaultWorkflowActionInputLiteralValue(
+  field: WorkflowActionInputFieldLike
+): MappingValue {
+  if (field.default !== undefined) return field.default as MappingValue;
+  if (field.type === 'boolean') return false;
+  if (field.type === 'number' || field.type === 'integer') return 0;
+  if (field.type === 'array') return [];
+  if (field.type === 'object') return {};
+  if (field.enum?.length) return field.enum[0] as MappingValue;
+  return '';
+}
+
+export function createWorkflowActionInputValueForMode(
+  field: WorkflowActionInputFieldLike,
+  currentValue: MappingValue | undefined,
+  mode: WorkflowActionInputSourceModeValue,
+  advancedMode: WorkflowActionInputAdvancedModeValue = 'expression'
+): MappingValue {
+  if (mode === 'reference') {
+    if (
+      currentValue &&
+      typeof currentValue === 'object' &&
+      '$expr' in currentValue &&
+      isSimpleFieldReferenceExpression((currentValue as Expr).$expr)
+    ) {
+      return currentValue;
+    }
+    return { $expr: '' };
+  }
+
+  if (mode === 'advanced') {
+    if (advancedMode === 'secret') {
+      if (currentValue && typeof currentValue === 'object' && '$secret' in currentValue) {
+        return currentValue;
+      }
+      return { $secret: '' };
+    }
+
+    if (currentValue && typeof currentValue === 'object' && '$expr' in currentValue) {
+      return currentValue;
+    }
+    return { $expr: '' };
+  }
+
+  if (
+    currentValue !== undefined &&
+    (typeof currentValue !== 'object' ||
+      currentValue === null ||
+      (!('$expr' in currentValue) && !('$secret' in currentValue)))
+  ) {
+    return currentValue;
+  }
+
+  return buildDefaultWorkflowActionInputLiteralValue(field);
 }
 
 export const WorkflowActionInputSourceMode: React.FC<{

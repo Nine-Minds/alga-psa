@@ -662,31 +662,31 @@
   {
     "id": "F111",
     "description": "Default new editable fields to the structured source mode chosen by the field type and metadata",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {
     "id": "F112",
     "description": "Serialize Reference-mode values into the existing expression-backed inputMapping representation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor", "Rollout / Migration"]
   },
   {
     "id": "F113",
     "description": "Serialize Fixed-mode values into the existing literal inputMapping representation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor", "Rollout / Migration"]
   },
   {
     "id": "F114",
     "description": "Serialize Advanced expression values into the existing expression-backed inputMapping representation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor", "Requirements > Advanced Expressions"]
   },
   {
     "id": "F115",
     "description": "Serialize Advanced secret values into the existing secret-backed inputMapping representation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor", "Requirements > Advanced Expressions"]
   },
   {

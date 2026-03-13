@@ -662,31 +662,31 @@
   {
     "id": "T111",
     "description": "Playwright: new fields default to the intended structured authoring mode for their type and metadata",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F111"]
   },
   {
     "id": "T112",
     "description": "Unit: Reference-mode values serialize into expression-backed inputMapping values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F112"]
   },
   {
     "id": "T113",
     "description": "Unit: Fixed-mode values serialize into literal inputMapping values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F113"]
   },
   {
     "id": "T114",
     "description": "Unit: Advanced expression values serialize into expression-backed inputMapping values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F114"]
   },
   {
     "id": "T115",
     "description": "Unit: Advanced secret values serialize into secret-backed inputMapping values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F115"]
   },
   {

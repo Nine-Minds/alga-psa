@@ -162,6 +162,10 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx src/components/workflow-designer/__tests__/InputMappingEditorInline.test.tsx --reporter=dot`
   - `npx tsc --noEmit -p ee/server/tsconfig.json`
   - `npx eslint ee/server/src/components/workflow-designer/WorkflowDesigner.tsx ee/server/src/components/workflow-designer/WorkflowActionInputSection.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorInline.test.tsx ee/server/vitest.config.ts`
+- (2026-03-14) Validate the source-mode defaulting and serialization helpers:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputSourceMode.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`
 
 ## Links / References
 
@@ -303,6 +307,11 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Updated `InputMappingEditor` rows to surface required/optional state and schema descriptions directly in the inline list for both mapped and unmapped fields.
   - Added focused jsdom coverage for the inline section shell and for row-level required/optional/description rendering, plus the missing EE Vitest alias for `@alga-psa/tenancy/actions`.
   - Marked F101-F106 and T101-T106 implemented.
+- (2026-03-14) Completed the source-mode defaulting and serialization slice:
+  - Centralized the workflow action-input source-mode transitions behind pure helpers in `WorkflowActionInputSourceMode.tsx` so mode detection, defaulting, and mapping-value conversion all share the same logic.
+  - Updated `InputMappingEditor` to use those helpers when builders switch modes or activate a new unmapped field, which keeps Reference/Fixed/Advanced authoring on the existing `inputMapping` contract.
+  - Added unit coverage for default mode selection and for the reference/fixed/advanced-expression/advanced-secret serialization paths.
+  - Marked F111-F115 and T111-T115 implemented.
 - (2026-03-14) Completed the source-mode vocabulary slice:
   - Added `WorkflowActionInputSourceMode.tsx` so each editable field now exposes the user-facing `Reference`, `Fixed value`, and `Advanced` source-mode selector instead of raw expression/secret/literal labels.
   - Kept the existing serializer/runtime behavior underneath for now by mapping direct field-reference expressions to `Reference`, literal values to `Fixed value`, and complex expressions or secrets to `Advanced`.

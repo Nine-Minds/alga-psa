@@ -37,7 +37,8 @@ import {
 import { WorkflowActionInputFieldInfo } from '../WorkflowActionInputFieldInfo';
 import {
   WorkflowActionInputSourceMode,
-  isSimpleFieldReferenceExpression,
+  createWorkflowActionInputValueForMode,
+  getDefaultWorkflowActionInputSourceMode,
   type WorkflowActionInputAdvancedModeValue,
   type WorkflowActionInputSourceModeValue,
 } from '../WorkflowActionInputSourceMode';
@@ -523,70 +524,20 @@ const MappingFieldEditor: React.FC<{
     setValueType(getMappingValueType(value));
   }, [value]);
 
-  const buildDefaultLiteralValue = useCallback((): MappingValue => {
-    if (field.type === 'boolean') return false;
-    if (field.type === 'number' || field.type === 'integer') return 0;
-    if (field.type === 'array') return [];
-    if (field.type === 'object') return {};
-    return '';
-  }, [field.type]);
-
   const handleSourceModeChange = useCallback((nextMode: WorkflowActionInputSourceModeValue) => {
     setExpressionError(null);
-
-    if (nextMode === 'reference') {
-      setValueType('expr');
-      if (value && typeof value === 'object' && '$expr' in value && isSimpleFieldReferenceExpression((value as Expr).$expr)) {
-        onChange(value);
-        return;
-      }
-      onChange({ $expr: '' });
-      return;
-    }
-
-    if (nextMode === 'advanced') {
-      if (valueType === 'secret' && value && typeof value === 'object' && '$secret' in value) {
-        onChange(value);
-        return;
-      }
-
-      setValueType('expr');
-      if (value && typeof value === 'object' && '$expr' in value) {
-        onChange(value);
-        return;
-      }
-      onChange({ $expr: '' });
-      return;
-    }
-
-    setValueType('literal');
-    if (value !== undefined && (typeof value !== 'object' || value === null || (!('$expr' in value) && !('$secret' in value)))) {
-      onChange(value);
-      return;
-    }
-    onChange(buildDefaultLiteralValue());
-  }, [buildDefaultLiteralValue, onChange, value, valueType]);
+    const currentAdvancedMode: WorkflowActionInputAdvancedModeValue = valueType === 'secret' ? 'secret' : 'expression';
+    const nextValue = createWorkflowActionInputValueForMode(field, value, nextMode, currentAdvancedMode);
+    setValueType(nextMode === 'fixed' ? 'literal' : currentAdvancedMode === 'secret' && nextMode === 'advanced' ? 'secret' : 'expr');
+    onChange(nextValue);
+  }, [field, onChange, value, valueType]);
 
   const handleAdvancedModeChange = useCallback((nextMode: WorkflowActionInputAdvancedModeValue) => {
     setExpressionError(null);
-
-    if (nextMode === 'secret') {
-      setValueType('secret');
-      if (value && typeof value === 'object' && '$secret' in value) {
-        onChange(value);
-        return;
-      }
-      onChange({ $secret: '' });
-      return;
-    }
-
-    setValueType('expr');
-    if (value && typeof value === 'object' && '$expr' in value) {
-      onChange(value);
-      return;
-    }
-    onChange({ $expr: '' });
-  }, [onChange, value]);
+    const nextValue = createWorkflowActionInputValueForMode(field, value, 'advanced', nextMode);
+    setValueType(nextMode === 'secret' ? 'secret' : 'expr');
+    onChange(nextValue);
+  }, [field, onChange, value]);
 
   const handleExpressionChange = useCallback((expr: string) => {
     try {
@@ -1472,9 +1423,14 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   }, [value, onChange]);
 
   const handleAddMapping = useCallback((fieldName: string) => {
-    // Default to expression for new mappings
-    onChange({ ...value, [fieldName]: { $expr: '' } });
-  }, [value, onChange]);
+    const field = targetFields.find((candidate) => candidate.name === fieldName);
+    if (!field) return;
+    const defaultMode = getDefaultWorkflowActionInputSourceMode(field);
+    onChange({
+      ...value,
+      [fieldName]: createWorkflowActionInputValueForMode(field, undefined, defaultMode, 'expression'),
+    });
+  }, [onChange, targetFields, value]);
 
   const handleRemoveMapping = useCallback((fieldName: string) => {
     const next = { ...value };
