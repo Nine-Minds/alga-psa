@@ -72,6 +72,10 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-14) The next transform authoring items (`F274-F277`) were already satisfied by the shared structured literal editor: `build_object.fields[]` uses the array-of-object row editor, `rename_fields.renames[]` uses the same explicit row editor, and `pick_fields.fields[]` reuses the primitive-array list control. The missing work was transform-specific coverage rather than new production code.
 - (2026-03-14) `coalesce_value.candidates[]` and `build_array.items[]` exposed a real remaining gap: schema extraction knew they were arrays, but because their item schema was `unknown`, the inline editor still fell back to raw JSON. Marking those item arrays as `unknown` and routing them through a row-based dynamic array editor lets each item reuse the normal Reference/Fixed/Advanced controls.
 - (2026-03-14) Downstream reference options were already transform-agnostic once a step had an output schema and `saveAs`; after the object-output inference landed, `buildWorkflowReferenceFieldOptions(...)` needed only focused coverage for coalesce value outputs plus build-object object outputs to close `F280`.
+- (2026-03-14) The advanced-fallback slice was largely already present: complex `$expr` mappings were already classified as `Advanced`, secret-backed mappings already rendered through the advanced secret subtype, shared expression validation still ran against saved advanced expressions, and runtime `mappingResolver` behavior for `$expr`/`$secret` mappings was unchanged. The missing work was checklist-aligned coverage plus an explicit editor test that unstructured saved expressions stay editable.
+- (2026-03-14) `F283` needed a real UI change rather than more checklist cleanup. The lightest safe de-emphasis was to keep `Advanced` last in the source-mode picker and add a persistent muted hint in `WorkflowActionInputSourceMode` that frames it as an expressions/secrets escape hatch instead of the default authoring path.
+- (2026-03-14) There is no separate designer-only “secret validator” on this branch; the concrete secret-validation behavior is still the runtime `mappingResolver` contract that resolves named secrets and throws the existing missing-secret error when resolution is unavailable. `F285` therefore closes by pinning that unchanged failure behavior explicitly rather than inventing a second validation layer.
+- (2026-03-14) The obvious `T288` server integration seam is still locally blocked in this worktree: a targeted draft save/reload/publish test around mixed advanced mappings reaches the package DB tenant connection (`[db/tenant] Database configuration ... database "server"`) instead of the mocked test knex, so `F288/T288` remain open until that harness routing is corrected or a different save/reload seam is chosen.
 - (2026-03-14) Reference mode was still injecting placeholder `payload.*` children when no payload schema existed. Removing those placeholders keeps only real schema-backed paths and aligns the field picker with `F154`.
 - (2026-03-14) The remaining `F155`/`F156` refresh behavior was already driven by pure `buildWorkflowReferenceFieldOptions(...)` recomputation from `dataContext`; the missing work was pinning that contract with deterministic tests for action-schema and `saveAs` changes.
 - (2026-03-14) The remaining `F157`/`F160` stability behavior was already a consequence of keeping the saved direct reference expression as the source of truth and recomputing block context from the current step location; targeted jsdom/unit coverage was enough to lock that down without changing runtime behavior.
@@ -276,6 +280,18 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `npx tsc --noEmit -p ee/server/tsconfig.json`
   - `npx eslint ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/actionInputEditorState.ts ee/server/src/components/workflow-designer/__tests__/TransformActionInputEditor.test.tsx ee/server/src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts`
     - Passed with the same pre-existing `InputMappingEditor.tsx` warnings already noted elsewhere on this branch; no new eslint errors were introduced by the transform-array slice.
+- (2026-03-14) Validate advanced fallback/editor behavior:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx src/components/workflow-designer/__tests__/InputMappingEditorReferenceMode.test.tsx src/components/workflow-designer/__tests__/expressionValidation.test.ts --reporter=dot`
+  - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/__tests__/mappingResolver.test.ts --reporter=dot`
+  - `npx eslint ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorReferenceMode.test.tsx ee/server/src/components/workflow-designer/__tests__/expressionValidation.test.ts shared/workflow/runtime/__tests__/mappingResolver.test.ts`
+- (2026-03-14) Validate Advanced-mode de-emphasis copy:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx src/components/workflow-designer/__tests__/InputMappingEditorReferenceMode.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputSourceMode.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorReferenceMode.test.tsx`
+- (2026-03-14) Re-validate missing-secret guardrails after tagging the advanced fallback checklist:
+  - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/__tests__/mappingResolver.test.ts --reporter=dot`
+- (2026-03-14) Attempt and then revert the mixed advanced save/reload/publish integration seam after it reached the local package DB instead of the mocked workflow test knex:
+  - `cd server && npx vitest run src/test/integration/workflowRuntimeV2.publish.integration.test.ts --config vitest.config.ts --testNamePattern="T288:" --reporter=dot`
 
 ## Links / References
 
@@ -334,6 +350,20 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Added a row-based dynamic array editor for unknown-item arrays so `coalesce_value.candidates[]` and `build_array.items[]` can author multiple structured references with the same per-item source-mode controls used elsewhere in the inline editor.
   - Added focused coverage proving coalesce/build-array render multiple structured reference rows, and that both coalesce value outputs and build-object object outputs appear in downstream reference pickers like normal business-action outputs.
   - Marked F278-F280 and T278-T280 implemented.
+- (2026-03-14) Completed the advanced fallback coverage slice:
+  - Added focused coverage proving complex saved expressions and secret-backed values remain in `Advanced` mode, and that saved expressions which cannot be represented structurally still reopen as editable advanced expressions instead of breaking hydration.
+  - Tagged the existing shared expression-validation seam and runtime `mappingResolver` suite to cover advanced-expression diagnostics plus unchanged runtime resolution for `$expr` and `$secret` mappings.
+  - Marked F281-F282, F284, F286-F287, and T281-T282/T284/T286-T287 implemented.
+- (2026-03-14) Completed the Advanced-mode de-emphasis slice:
+  - Updated `WorkflowActionInputSourceMode` to keep the existing selector behavior while adding a muted “Use Advanced only for expressions or secrets” hint directly under the mode controls.
+  - Added focused coverage proving the escape-hatch guidance is rendered alongside the source-mode selector.
+  - Marked F283 and T283 implemented.
+- (2026-03-14) Completed the advanced secret-validation parity slice:
+  - Tagged the existing `mappingResolver` missing-secret failure path as the checklist seam for advanced secret validation parity, matching the actual runtime contract this branch already uses.
+  - Marked F285 and T285 implemented.
+- (2026-03-14) Blocker after the advanced fallback slice:
+  - An attempted `T288` draft save/reload/publish integration test was reverted instead of left failing because this local harness still routes that path into the package DB tenant connection (`database "server" does not exist`) rather than the mocked test knex.
+  - `F288/T288` remain open for a later pass with the correct server-action DB seam.
 - (2026-03-14) Completed the dependent ticket-picker scope slice:
   - Reused the picker metadata from the first ticket-picker batch to narrow contact, location, category, and subcategory fixed-value options from the current fixed upstream client/board/category selections.
   - Added disabled explanatory states when those dependencies are missing or dynamic, while keeping dependent fields free to switch back to Reference mode instead of trapping the builder in Fixed mode.

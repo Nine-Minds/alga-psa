@@ -14,7 +14,7 @@ describe('workflow step expression validation wiring', () => {
     expect(source.includes('validateExpressionPath')).toBe(false);
   });
 
-  it('flags unknown roots and missing vars paths via shared validator diagnostics', () => {
+  it('T284: preserves shared diagnostics for advanced expressions after the inline editor refactor', () => {
     const validations = validateStepExpressions(
       {
         inputMapping: {

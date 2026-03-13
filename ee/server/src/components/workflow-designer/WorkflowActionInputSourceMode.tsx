@@ -187,25 +187,30 @@ export const WorkflowActionInputSourceMode: React.FC<{
   const sourceMode = deriveWorkflowActionInputSourceMode(value);
 
   return (
-    <div className="flex items-center gap-2">
-      <CustomSelect
-        id={`${idPrefix}-source-mode`}
-        options={[...SOURCE_MODE_OPTIONS]}
-        value={sourceMode.mode}
-        onValueChange={(nextMode) => onModeChange(nextMode as WorkflowActionInputSourceModeValue)}
-        disabled={disabled}
-        className="w-36"
-      />
-      {sourceMode.mode === 'advanced' && (
+    <div className="flex flex-col items-end gap-1">
+      <div className="flex items-center gap-2">
         <CustomSelect
-          id={`${idPrefix}-advanced-mode`}
-          options={[...ADVANCED_MODE_OPTIONS]}
-          value={sourceMode.advancedMode}
-          onValueChange={(nextMode) => onAdvancedModeChange(nextMode as WorkflowActionInputAdvancedModeValue)}
+          id={`${idPrefix}-source-mode`}
+          options={[...SOURCE_MODE_OPTIONS]}
+          value={sourceMode.mode}
+          onValueChange={(nextMode) => onModeChange(nextMode as WorkflowActionInputSourceModeValue)}
           disabled={disabled}
-          className="w-32"
+          className="w-36"
         />
-      )}
+        {sourceMode.mode === 'advanced' && (
+          <CustomSelect
+            id={`${idPrefix}-advanced-mode`}
+            options={[...ADVANCED_MODE_OPTIONS]}
+            value={sourceMode.advancedMode}
+            onValueChange={(nextMode) => onAdvancedModeChange(nextMode as WorkflowActionInputAdvancedModeValue)}
+            disabled={disabled}
+            className="w-32"
+          />
+        )}
+      </div>
+      <p className="text-[11px] text-gray-400 text-right">
+        Use Advanced only for expressions or secrets.
+      </p>
     </div>
   );
 };

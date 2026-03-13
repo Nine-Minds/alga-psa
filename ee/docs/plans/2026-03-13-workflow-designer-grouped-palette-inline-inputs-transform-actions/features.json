@@ -1682,43 +1682,43 @@
   {
     "id": "F281",
     "description": "Keep Advanced mode available for fields whose saved value cannot be represented as a structured reference or fixed value",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Advanced Expressions"]
   },
   {
     "id": "F282",
     "description": "Keep Advanced mode available for fields that still need secret references",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Advanced Expressions"]
   },
   {
     "id": "F283",
     "description": "De-emphasize Advanced mode in the UI so structured references and transform actions are the primary authoring path",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Advanced Expressions", "UX / UI Notes > Field Authoring Model"]
   },
   {
     "id": "F284",
     "description": "Preserve existing expression validation behavior for advanced field values after the editor refactor",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Advanced Expressions", "Requirements > Compatibility, Save/Load, and Validation"]
   },
   {
     "id": "F285",
     "description": "Preserve existing secret validation behavior for advanced field values after the editor refactor",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Advanced Expressions", "Requirements > Compatibility, Save/Load, and Validation"]
   },
   {
     "id": "F286",
     "description": "Preserve existing runtime mapping resolution behavior for advanced field values after the editor refactor",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Advanced Expressions", "Rollout / Migration"]
   },
   {
     "id": "F287",
     "description": "Keep existing workflows with advanced expressions editable even when they no longer fit the structured field-authoring path",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Advanced Expressions", "Rollout / Migration"]
   },
   {

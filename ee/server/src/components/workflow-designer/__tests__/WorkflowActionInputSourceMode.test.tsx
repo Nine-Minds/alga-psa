@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   buildDefaultWorkflowActionInputLiteralValue,
@@ -12,6 +12,10 @@ import {
   transitionWorkflowActionInputMode,
   WorkflowActionInputSourceMode,
 } from '../WorkflowActionInputSourceMode';
+
+afterEach(() => {
+  cleanup();
+});
 
 describe('WorkflowActionInputSourceMode', () => {
   it('T107-T110: renders explicit reference, fixed value, and advanced source modes', () => {
@@ -63,6 +67,47 @@ describe('WorkflowActionInputSourceMode', () => {
       mode: 'advanced',
       advancedMode: 'expression',
     });
+  });
+
+  it('T281/T282: keeps Advanced mode available for complex expressions and secret-backed values', () => {
+    const { rerender } = render(
+      <WorkflowActionInputSourceMode
+        idPrefix="advanced-field"
+        value={{ $expr: 'payload.summary & "-" & meta.traceId' }}
+        onModeChange={vi.fn()}
+        onAdvancedModeChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Advanced')).toBeInTheDocument();
+    expect(screen.getByText('Expression')).toBeInTheDocument();
+
+    rerender(
+      <WorkflowActionInputSourceMode
+        idPrefix="advanced-field"
+        value={{ $secret: 'API_TOKEN' }}
+        onModeChange={vi.fn()}
+        onAdvancedModeChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Advanced')).toBeInTheDocument();
+    expect(screen.getByText('Secret')).toBeInTheDocument();
+  });
+
+  it('T283: de-emphasizes Advanced mode with escape-hatch guidance in the source-mode UI', () => {
+    render(
+      <WorkflowActionInputSourceMode
+        idPrefix="guided-field"
+        value={{ $expr: 'payload.summary' }}
+        onModeChange={vi.fn()}
+        onAdvancedModeChange={vi.fn()}
+      />
+    );
+
+    expect(
+      screen.getByText('Use Advanced only for expressions or secrets.')
+    ).toBeInTheDocument();
   });
 
   it('T111: defaults new editable fields to structured source modes based on field type and metadata', () => {

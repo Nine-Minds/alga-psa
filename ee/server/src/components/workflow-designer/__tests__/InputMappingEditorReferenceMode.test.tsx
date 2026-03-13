@@ -189,4 +189,38 @@ describe('InputMappingEditor reference mode', () => {
     expect(screen.getByTestId('mock-expression-editor')).toHaveValue('vars.ticketResult.ticket_id');
     expect(onChange).not.toHaveBeenCalled();
   });
+
+  it('T287: keeps saved advanced expressions editable when they cannot hydrate into structured Reference mode', async () => {
+    await act(async () => {
+      render(
+        <InputMappingEditor
+          value={{ summary: { $expr: 'payload.summary & "-" & meta.traceId' } }}
+          onChange={vi.fn()}
+          targetFields={[
+            {
+              name: 'summary',
+              type: 'string',
+              required: true,
+            },
+          ]}
+          fieldOptions={[
+            { value: 'payload.summary', label: 'payload.summary' },
+            { value: 'meta.traceId', label: 'meta.traceId' },
+          ]}
+          stepId="step-advanced-expression"
+          positionsHandlers={positionsHandlers}
+        />
+      );
+    });
+
+    expect(
+      screen.getByTestId('mapping-step-advanced-expression-summary-source-mode')
+    ).toHaveValue('advanced');
+    expect(
+      screen.getByTestId('mapping-step-advanced-expression-summary-advanced-mode')
+    ).toHaveValue('expression');
+    expect(screen.getByTestId('mock-expression-editor')).toHaveValue(
+      'payload.summary & "-" & meta.traceId'
+    );
+  });
 });

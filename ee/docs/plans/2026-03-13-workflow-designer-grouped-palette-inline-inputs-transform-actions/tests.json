@@ -1682,43 +1682,43 @@
   {
     "id": "T281",
     "description": "Playwright: Advanced mode remains available for values that cannot be represented structurally",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F281"]
   },
   {
     "id": "T282",
     "description": "Playwright: Advanced mode remains available for secret-backed values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F282"]
   },
   {
     "id": "T283",
     "description": "Visual regression: Advanced mode is visually de-emphasized relative to structured authoring",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F283"]
   },
   {
     "id": "T284",
     "description": "Unit: expression validation behavior remains unchanged for advanced values after the refactor",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F284"]
   },
   {
     "id": "T285",
     "description": "Unit: secret validation behavior remains unchanged for advanced values after the refactor",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F285"]
   },
   {
     "id": "T286",
     "description": "Integration: runtime mapping resolution remains unchanged for advanced values after the refactor",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F286"]
   },
   {
     "id": "T287",
     "description": "Integration: existing workflows with advanced expressions remain editable even when they cannot be restructured",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F287"]
   },
   {
