@@ -185,3 +185,7 @@ npm run build
 - F035 — TicketConversation now uses stable ids (`all-comments`, `client`, `internal`, `resolution`) and controls CustomTabs by id while keeping translated labels.
 
 - F036 — Updated MSP and client-portal TicketDetails callers to pass id-based TicketConversation tabs and handle id-based tab changes.
+
+## Progress Log
+
+- **F037 complete** — Migrated `packages/assets/src/components/AssetDetailTabs.tsx` to stable tab ids (`service-history`, `software`, `maintenance`, `related-assets`, `documents-passwords`, `audit-log`), removed label/slug maps, and now sync the `tab` query param directly with `activeTab` ids.

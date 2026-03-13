@@ -316,7 +316,7 @@
   {
     "id": "F037",
     "description": "Migrate AssetDetailTabs.tsx — add id to 6 tabs, remove tabSlugToLabelMap/tabLabelToSlugMap",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern A"
