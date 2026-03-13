@@ -107,7 +107,7 @@
   {
     "id": "F014",
     "description": "P1: Quote model — create (inserts quote row, generates quote_number, logs activity)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR5"
     ]
