@@ -471,7 +471,7 @@
   {
     "id": "F055",
     "description": "P2: Discount line items — applies_to_item_id scoping (discount on specific item)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2-FR2"
     ]
