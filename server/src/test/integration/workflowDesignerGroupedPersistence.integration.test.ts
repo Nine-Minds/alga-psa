@@ -25,6 +25,7 @@ import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefi
 import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
 import { getSchemaRegistry } from '@shared/workflow/runtime';
 import type { WorkflowDefinition } from '@shared/workflow/runtime/client';
+import type { PublishError } from '@shared/workflow/runtime/types';
 import {
   exportWorkflowBundleV1ForWorkflowId
 } from 'server/src/lib/workflow/bundle/exportWorkflowBundleV1';
@@ -221,6 +222,45 @@ const buildMixedDefinition = (workflowId: string): WorkflowDefinition => ({
   })
 });
 
+const buildChangedActionInvalidDefinition = (workflowId: string): WorkflowDefinition => ({
+  id: workflowId,
+  ...buildWorkflowDefinition({
+    name: 'Grouped validation workflow',
+    payloadSchemaRef: TEST_SCHEMA_REF,
+    steps: [
+      {
+        id: 'grouped-action-step',
+        type: 'action.call',
+        name: 'Changed Action',
+        config: {
+          designerAppKey: 'app:test',
+          designerTileKind: 'app',
+          actionId: 'test.actionProvided',
+          version: 1,
+          inputMapping: {
+            value: { $expr: 'payload.foo' }
+          },
+          saveAs: 'changedResult'
+        }
+      }
+    ]
+  })
+});
+
+const expectGroupedValidationError = (errors: Record<string, unknown>[] | null | undefined) => {
+  expect(errors?.length).toBeGreaterThan(0);
+  expect(errors).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining<Partial<PublishError>>({
+        code: 'MISSING_REQUIRED_MAPPING',
+        stepId: 'grouped-action-step',
+        stepPath: 'root.steps[0]',
+        severity: 'error'
+      })
+    ])
+  );
+};
+
 beforeAll(async () => {
   ensureWorkflowRuntimeV2TestRegistrations();
   db = await createTestDbConnection();
@@ -278,6 +318,36 @@ describe('workflow designer grouped-step persistence', () => {
     );
   });
 
+  it('T298/T324: grouped-step validation errors stay attached to the same step after draft save and reload', async () => {
+    const created = await createWorkflowDefinitionAction({
+      key: 'test.grouped-validation-persistence',
+      definition: {
+        id: uuidv4(),
+        ...buildWorkflowDefinition({
+          name: 'Initial grouped validation workflow',
+          payloadSchemaRef: TEST_SCHEMA_REF,
+          steps: [stateSetStep('state-1', 'READY')]
+        })
+      }
+    });
+
+    const invalidDefinition = buildChangedActionInvalidDefinition(created.workflowId);
+    await updateWorkflowDefinitionDraftAction({
+      workflowId: created.workflowId,
+      definition: invalidDefinition
+    });
+
+    const recordAfterSave = await WorkflowDefinitionModelV2.getById(db, created.workflowId);
+    expect(recordAfterSave?.draft_definition).toEqual(invalidDefinition);
+    expectGroupedValidationError(recordAfterSave?.validation_errors);
+
+    const listed = await listWorkflowDefinitionsAction();
+    const reloadedDraft = listed.find((workflow) => workflow.workflow_id === created.workflowId);
+
+    expect(reloadedDraft?.draft_definition).toEqual(invalidDefinition);
+    expectGroupedValidationError(reloadedDraft?.validation_errors as Record<string, unknown>[] | undefined);
+  });
+
   it('T288: mixed structured and advanced grouped-step drafts still publish without contract drift', async () => {
     const created = await createWorkflowDefinitionAction({
       key: 'test.mixed-grouped-publish',
@@ -318,7 +388,39 @@ describe('workflow designer grouped-step persistence', () => {
     );
   });
 
-  it('T290: workflow import/export preserves grouped action.call definitions that mix structured and advanced mappings', async () => {
+  it('T299/T323: grouped-step publish validation still uses the runtime contract after grouped action changes leave required inputs unmapped', async () => {
+    const created = await createWorkflowDefinitionAction({
+      key: 'test.grouped-publish-validation',
+      definition: {
+        id: uuidv4(),
+        ...buildWorkflowDefinition({
+          name: 'Initial grouped publish validation workflow',
+          payloadSchemaRef: TEST_SCHEMA_REF,
+          steps: [stateSetStep('state-1', 'READY')]
+        })
+      }
+    });
+
+    const invalidDefinition = buildChangedActionInvalidDefinition(created.workflowId);
+    await updateWorkflowDefinitionDraftAction({
+      workflowId: created.workflowId,
+      definition: invalidDefinition
+    });
+
+    const publishResult = await publishWorkflowDefinitionAction({
+      workflowId: created.workflowId,
+      version: 1
+    });
+
+    expect(publishResult.ok).toBe(false);
+    expectGroupedValidationError(publishResult.errors as Record<string, unknown>[] | undefined);
+
+    const rowAfterFailedPublish = await WorkflowDefinitionModelV2.getById(db, created.workflowId);
+    expectGroupedValidationError(rowAfterFailedPublish?.validation_errors);
+    expect(rowAfterFailedPublish?.status).toBe('draft');
+  });
+
+  it('T290/T328: workflow import/export preserves grouped action.call definitions that mix structured and advanced mappings', async () => {
     const definition = buildMixedDefinition(uuidv4());
     const created = await createWorkflowDefinitionAction({
       key: 'test.grouped-import-export',

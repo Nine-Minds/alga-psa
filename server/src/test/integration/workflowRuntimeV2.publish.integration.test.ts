@@ -499,6 +499,42 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     expect(result.errors?.some((err: any) => err.code === 'MISSING_REQUIRED_MAPPING')).toBe(true);
   });
 
+  it('T299/T323: grouped action.call steps keep publish validation on the unchanged runtime contract after action changes leave stale mappings behind. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
+    const result = await publishWorkflow(workflowId, 1, {
+      id: workflowId,
+      version: 1,
+      name: 'Grouped action missing required mapping',
+      payloadSchemaRef: TEST_SCHEMA_REF,
+      steps: [
+        {
+          id: 'grouped-invalid-step',
+          type: 'action.call',
+          config: {
+            designerAppKey: 'app:test',
+            designerTileKind: 'app',
+            actionId: 'test.actionProvided',
+            version: 1,
+            inputMapping: {
+              value: 'leftover-from-previous-action'
+            }
+          }
+        }
+      ]
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'MISSING_REQUIRED_MAPPING',
+          stepId: 'grouped-invalid-step',
+          stepPath: 'root.steps[0]'
+        })
+      ])
+    );
+  });
+
   it('Publish fails when required workflow fields (id/name/steps) are missing. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
     const result = await publishWorkflow(workflowId, 1, { payloadSchemaRef: TEST_SCHEMA_REF });

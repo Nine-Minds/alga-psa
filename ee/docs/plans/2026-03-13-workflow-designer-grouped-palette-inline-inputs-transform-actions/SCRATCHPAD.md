@@ -80,6 +80,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-14) The older `workflowRuntimeV2.publish.integration.test.ts` harness was mocking `server/src/lib/db` and `server/src/lib/auth/rbac`, but the EE workflow action package imports `@alga-psa/db` and `@alga-psa/auth`. `T291` needed package-level mocks for `createTenantKnex` and `withAuth` before the new tenant-aware app catalog lookup could stay on the test knex instead of leaking into the default package DB.
 - (2026-03-14) Read-only workflow sessions were already blocking palette insertion and draft/publish controls, but the properties rail swapped grouped steps to a generic “step editing is disabled” message. `F295/F296` needed that branch inverted for `action.call` steps so grouped action details stay inspectable while the actual grouped selectors and inline input controls render disabled.
 - (2026-03-14) Ticket picker option retrieval was already permission-gated for ticket settings and teams, but contact-backed picker sources still flowed through `getContactsByClient` and `getAllContacts` with no `contact:read` check. `F297/T297` closes by enforcing that read permission before either action opens tenant DB access.
+- (2026-03-14) Draft validation persistence for grouped steps was already implemented in `updateWorkflowDefinitionDraftAction` and consumed by the designer through `validation_errors` on the workflow record; `F298/F299` were checklist gaps, not missing runtime storage. The needed work was explicit grouped-step coverage proving stale grouped mappings still produce step-bound validation errors across save/reload and publish.
+- (2026-03-14) Local `server` integration suites are currently blocked in this Codex harness even when a Postgres server is listening: TCP connects to `127.0.0.1:5438` and socket connects to `/tmp/.s.PGSQL.5438` both fail with `Operation not permitted`. The grouped validation persistence tests can be added and typechecked here, but they cannot be executed until local DB access is allowed in this environment.
+- (2026-03-14) The plan commit series stays inside scope: grouped palette/catalog, grouped-step authoring, inline inputs, ticket-core picker metadata and permission gating, transform actions, app-tile availability filtering, read-only grouped inspection, and persistence/validation parity. No duplicate-step feature, alternate runtime primitive, or plugin-packaging flow was introduced under this plan.
 - (2026-03-14) `F288` exposed a real runtime validation gap: `action.call` publish validation was still rejecting additive designer metadata (`designerGroupKey`, `designerTileKind`, `designerAppKey`) even though grouped steps already persisted those fields in drafts. The runtime node schema needed to allow those additive keys explicitly to keep grouped drafts publish-compatible.
 - (2026-03-14) The remaining app/plugin availability item (`F291`) is not the same kind of work as `F292-F294`: grouped app steps already reuse the shared hydration/input/picker machinery, but the server-side catalog projection still builds app tiles from the global action registry without any tenant-install filter. Closing `F291` will need a real tenant-aware availability seam rather than just more app-step UI tests.
 - (2026-03-14) Reference mode was still injecting placeholder `payload.*` children when no payload schema existed. Removing those placeholders keeps only real schema-backed paths and aligns the field picker with `F154`.
@@ -311,6 +314,13 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `cd packages/clients && npx vitest run --config vitest.config.ts src/actions/queryActions.permission.test.ts --reporter=dot`
   - `npx tsc --noEmit -p packages/clients/tsconfig.json`
   - `npx eslint packages/clients/src/actions/queryActions.ts packages/clients/src/actions/queryActions.permission.test.ts`
+- (2026-03-14) Validate grouped-step validation persistence and publish parity:
+  - `mkdir -p server/coverage/.tmp`
+  - `cd server && npx vitest run src/test/integration/workflowDesignerGroupedPersistence.integration.test.ts src/test/integration/workflowRuntimeV2.publish.integration.test.ts --config vitest.config.ts --coverage.enabled=false --testNamePattern="T298|T299|T323|T324" --reporter=dot`
+  - `npx tsc --noEmit -p server/tsconfig.json`
+  - `npx eslint server/src/test/integration/workflowDesignerGroupedPersistence.integration.test.ts server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts`
+- (2026-03-14) Review plan-scope conformance:
+  - `git log --oneline --reverse --grep '^feat(F'`
 - (2026-03-14) Validate grouped-step save/reload/publish and import/export persistence:
   - `cd server && npx vitest run src/test/integration/workflowDesignerGroupedPersistence.integration.test.ts --config vitest.config.ts --reporter=dot`
   - `npx tsc --noEmit -p server/tsconfig.json`
@@ -601,3 +611,11 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Added explicit `contact:read` permission checks to `getContactsByClient` and `getAllContacts`, which are the contact-backed fixed-picker sources used by the inline workflow authoring UI.
   - Added focused clients-package tests proving both actions reject before opening tenant DB access when the caller lacks contact read permission.
   - Marked F297 and T297 implemented.
+- (2026-03-14) Blocker on the grouped validation persistence slice:
+  - Added focused server integration coverage for grouped-step save/reload validation persistence and publish-path parity, including stale grouped mappings after an action change.
+  - `npx vitest` cannot execute either `workflowDesignerGroupedPersistence.integration.test.ts` or `workflowRuntimeV2.publish.integration.test.ts` in this Codex environment because every Postgres connection attempt to the local `5438` harness is denied with `Operation not permitted`, even when the local server process is already listening.
+  - Left F298-F299 and T298-T299/T323-T324 unchecked until those integration tests can actually run.
+- (2026-03-14) Completed the scope-conformance review slice:
+  - Reviewed the plan-specific `feat(F...)` commit series and confirmed the shipped work stays inside the PRD scope: grouped palette/catalog refactor, inline field-based action authoring, ticket-core picker metadata/permissions, transform actions, grouped-step persistence/validation parity, tenant-filtered app availability, and read-only grouped inspection.
+  - Confirmed no out-of-scope workflow-authoring features were introduced, including no new duplicate-step affordance, no new runtime execution primitive beyond `action.call`, and no plugin packaging workflow beyond grouped app-tile filtering.
+  - Marked F300 and T300/T330 implemented.

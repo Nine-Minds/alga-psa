@@ -2549,7 +2549,7 @@
   {
     "id": "F300",
     "description": "Keep this first implementation limited to grouped palette, inline action inputs, ticket-core pickers, and transform actions without expanding into unrelated workflow-authoring features",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Goals",
       "Non-goals"
