@@ -865,6 +865,7 @@ const MappingFieldEditor: React.FC<{
     if (!field.type) return null;
 
     const compatibility = getTypeCompatibility(sourceType, field.type);
+    if (compatibility === TypeCompatibility.EXACT) return null;
     const classes = getCompatibilityClasses(compatibility);
 
     return {

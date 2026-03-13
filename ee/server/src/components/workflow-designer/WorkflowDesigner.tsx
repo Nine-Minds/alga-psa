@@ -5346,7 +5346,18 @@ const StepConfigPanel: React.FC<{
           fieldOptions={enhancedFieldOptions}
           actionRegistry={actionRegistry}
           stepId={step.id}
-          excludeFields={step.type === 'action.call' ? ['actionId', 'version', 'saveAs', 'inputMapping'] : []}
+          excludeFields={step.type === 'action.call'
+            ? [
+                'actionId',
+                'version',
+                'saveAs',
+                'inputMapping',
+                'designerGroupKey',
+                'designerTileKind',
+                'designerAppKey',
+              ]
+            : []}
+          sectionTitle={step.type === 'action.call' ? 'Step settings' : undefined}
           expressionContext={expressionContext}
         />
       )}
@@ -5429,6 +5440,16 @@ const getFieldMeta = (key: string) => {
   return { label };
 };
 
+const getSchemaFormVisibleEntries = (
+  schema: JsonSchema,
+  rootSchema: JsonSchema,
+  excludeFields: string[]
+) => {
+  const resolved = resolveSchema(schema, rootSchema);
+  const allProperties = resolved.properties ?? {};
+  return Object.entries(allProperties).filter(([key]) => !excludeFields.includes(key));
+};
+
 const SchemaForm: React.FC<{
   schema: JsonSchema;
   rootSchema: JsonSchema;
@@ -5438,17 +5459,29 @@ const SchemaForm: React.FC<{
   actionRegistry: ActionRegistryItem[];
   stepId: string;
   excludeFields?: string[];
+  sectionTitle?: string;
+  showSectionHeader?: boolean;
   expressionContext?: ExpressionContext;
   disabled?: boolean;
-}> = ({ schema, rootSchema, value, onChange, fieldOptions, actionRegistry, stepId, excludeFields = [], expressionContext, disabled = false }) => {
+}> = ({
+  schema,
+  rootSchema,
+  value,
+  onChange,
+  fieldOptions,
+  actionRegistry,
+  stepId,
+  excludeFields = [],
+  sectionTitle = 'Node Configuration',
+  showSectionHeader = true,
+  expressionContext,
+  disabled = false
+}) => {
   const resolved = resolveSchema(schema, rootSchema);
   const configValue = value ?? {};
-  const allProperties = resolved.properties ?? {};
-  // Filter out excluded fields (e.g., inputMapping when MappingPanel is shown)
-  const properties = Object.fromEntries(
-    Object.entries(allProperties).filter(([key]) => !excludeFields.includes(key))
-  );
-  const required = resolved.required ?? [];
+  const fieldEntries = getSchemaFormVisibleEntries(schema, rootSchema, excludeFields);
+  const properties = Object.fromEntries(fieldEntries);
+  const required = (resolved.required ?? []).filter((key) => !excludeFields.includes(key));
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const updateValue = (key: string, nextValue: unknown) => {
@@ -5470,7 +5503,6 @@ const SchemaForm: React.FC<{
   });
 
   // Separate regular and advanced fields
-  const fieldEntries = Object.entries(properties);
   const regularFields = fieldEntries.filter(([key]) => !getFieldMeta(key).advanced);
   const advancedFields = fieldEntries.filter(([key]) => getFieldMeta(key).advanced);
 
@@ -5601,6 +5633,7 @@ const SchemaForm: React.FC<{
             fieldOptions={fieldOptions}
             actionRegistry={actionRegistry}
             stepId={`${stepId}-${key}`}
+            showSectionHeader={false}
             expressionContext={expressionContext}
             disabled={disabled}
           />
@@ -5637,14 +5670,20 @@ const SchemaForm: React.FC<{
     );
   };
 
+  if (fieldEntries.length === 0) {
+    return null;
+  }
+
   return (
     <div className="space-y-4">
-      <div>
-        <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">Node Configuration</div>
-        {missingRequired.length > 0 && (
-          <div className="text-xs text-destructive">Missing required: {missingRequired.map(k => getFieldMeta(k).label).join(', ')}</div>
-        )}
-      </div>
+      {showSectionHeader && (
+        <div>
+          <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">{sectionTitle}</div>
+          {missingRequired.length > 0 && (
+            <div className="text-xs text-destructive">Missing required: {missingRequired.map(k => getFieldMeta(k).label).join(', ')}</div>
+          )}
+        </div>
+      )}
 
       {/* Regular fields */}
       {regularFields.map(([key, propSchema]) => renderField(key, propSchema))}
