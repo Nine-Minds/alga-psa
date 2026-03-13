@@ -291,7 +291,7 @@ export function registerTransformActionsV2(): void {
     id: 'transform.pick_fields',
     version: 1,
     inputSchema: z.object({
-      source: z.record(z.unknown()).default({}).describe('Source object to read from'),
+      source: z.record(z.unknown()).nullable().default({}).describe('Source object to read from'),
       fields: z.array(z.string().min(1)).default([]).describe('Field names to keep from the source object')
     }),
     outputSchema: objectOutputSchema,

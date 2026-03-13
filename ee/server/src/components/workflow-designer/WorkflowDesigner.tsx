@@ -93,6 +93,10 @@ import { WorkflowStepNameField } from './WorkflowStepNameField';
 import { WorkflowStepSaveOutputSection } from './WorkflowStepSaveOutputSection';
 import { WorkflowActionInputSection } from './WorkflowActionInputSection';
 import { buildWorkflowReferenceFieldOptions } from './workflowReferenceOptions';
+import {
+  DEFAULT_WORKFLOW_DESIGNER_SIDEBAR_WIDTH,
+  getWorkflowDesignerSidebarWidthFromDrag,
+} from './workflowDesignerSidebarSizing';
 
 import type {
   WorkflowDefinition,
@@ -1175,6 +1179,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const [triggerTypeSelection, setTriggerTypeSelection] = useState<TriggerTypeSelection>('manual');
   const [isSavingMetadata, setIsSavingMetadata] = useState(false);
   const [stepsViewMode, setStepsViewMode] = useState<'list' | 'graph'>('list');
+  const [designerSidebarWidth, setDesignerSidebarWidth] = useState(DEFAULT_WORKFLOW_DESIGNER_SIDEBAR_WIDTH);
   const designerFloatAnchorRef = useRef<HTMLDivElement | null>(null);
   const designerFloatAnchorRectRef = useRef<{
     top: number;
@@ -1182,12 +1187,17 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     right: number;
     bottom: number;
   } | null>(null);
+  const designerSidebarResizeRef = useRef<{
+    startClientX: number;
+    startWidth: number;
+  } | null>(null);
   const [designerFloatAnchorRect, setDesignerFloatAnchorRect] = useState<{
     top: number;
     left: number;
     right: number;
     bottom: number;
   } | null>(null);
+  const [isDesignerSidebarResizing, setIsDesignerSidebarResizing] = useState(false);
 
   const nodeRegistryMap = useMemo(() => Object.fromEntries(nodeRegistry.map((node) => [node.id, node])), [nodeRegistry]);
   const router = useRouter();
@@ -1549,6 +1559,54 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     const tab = mapSectionToControlPanelTab(controlPanelSectionFromQuery, canAdmin);
     setActiveTab(tab);
   }, [canAdmin, controlPanelSectionFromQuery, mode]);
+
+  const stopDesignerSidebarResize = useCallback(() => {
+    designerSidebarResizeRef.current = null;
+    setIsDesignerSidebarResizing(false);
+    if (typeof document !== 'undefined') {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isDesignerSidebarResizing) {
+      return;
+    }
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const resizeState = designerSidebarResizeRef.current;
+      if (!resizeState) return;
+
+      setDesignerSidebarWidth(
+        getWorkflowDesignerSidebarWidthFromDrag(
+          resizeState.startWidth,
+          resizeState.startClientX,
+          event.clientX
+        )
+      );
+    };
+
+    const handlePointerUp = () => {
+      stopDesignerSidebarResize();
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
+    };
+  }, [isDesignerSidebarResizing, stopDesignerSidebarResize]);
+
+  useEffect(() => {
+    if (!designerFloatAnchorRect && isDesignerSidebarResizing) {
+      stopDesignerSidebarResize();
+    }
+  }, [designerFloatAnchorRect, isDesignerSidebarResizing, stopDesignerSidebarResize]);
 
   const handleControlPanelTabChange = useCallback((nextTabLabel: string) => {
     setActiveTab(nextTabLabel);
@@ -2967,14 +3025,39 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           {/* Floating Properties (right) */}
           <aside
             id="workflow-designer-sidebar-scroll"
-            className={`pointer-events-auto w-[420px] max-h-[calc(100vh-220px)] bg-white/95 dark:bg-[rgb(var(--color-card))]/95 backdrop-blur border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg shadow-lg overflow-y-auto p-4 space-y-4 z-40 ${designerFloatAnchorRect ? '' : 'hidden'}`}
+            className={`pointer-events-auto relative max-h-[calc(100vh-220px)] bg-white/95 dark:bg-[rgb(var(--color-card))]/95 backdrop-blur border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg shadow-lg overflow-y-auto p-4 space-y-4 z-40 ${designerFloatAnchorRect ? '' : 'hidden'}`}
             style={designerFloatAnchorRect ? {
               position: 'fixed',
               top: Math.min(Math.max(8, designerFloatAnchorRect.top + 16), window.innerHeight - 160),
-              left: Math.min(Math.max(8, designerFloatAnchorRect.right - 16 - 420), window.innerWidth - 8 - 420),
+              left: Math.min(
+                Math.max(8, designerFloatAnchorRect.right - 16 - designerSidebarWidth),
+                Math.max(8, window.innerWidth - 8 - designerSidebarWidth)
+              ),
+              width: designerSidebarWidth,
               maxHeight: Math.max(160, designerFloatAnchorRect.bottom - (designerFloatAnchorRect.top + 16) - 16)
             } : undefined}
           >
+            <div
+              id="workflow-designer-sidebar-resize-handle"
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Resize properties panel"
+              className={`absolute inset-y-0 left-0 z-10 w-3 select-none ${canManage ? 'cursor-col-resize' : 'pointer-events-none opacity-0'}`}
+              onPointerDown={(event) => {
+                if (!canManage) return;
+                event.preventDefault();
+                event.stopPropagation();
+                designerSidebarResizeRef.current = {
+                  startClientX: event.clientX,
+                  startWidth: designerSidebarWidth,
+                };
+                setIsDesignerSidebarResizing(true);
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+              }}
+            >
+              <div className="absolute inset-y-4 left-1.5 w-px bg-gray-200 dark:bg-[rgb(var(--color-border-200))]" />
+            </div>
             {activeWorkflowRecord && metadataDraft && canEditMetadata && (
               <Card className="p-3 space-y-3">
                 <div>

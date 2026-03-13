@@ -145,9 +145,6 @@ for (const seed of BUILT_IN_CATALOG_SEEDS) {
   }
 }
 
-const isLegacyWorkflowSpecificAction = (action: WorkflowDesignerCatalogSourceAction): boolean =>
-  (action.ui?.category ?? '').trim().toLowerCase() === 'email';
-
 const getActionModuleName = (actionId: string): string => actionId.split('.')[0]?.trim().toLowerCase() ?? '';
 
 const toTitleCase = (value: string): string =>
@@ -202,7 +199,6 @@ export const buildWorkflowDesignerActionCatalog = (
   actions: WorkflowDesignerCatalogSourceAction[]
 ): WorkflowDesignerCatalogRecord[] => {
   const catalogActions = actions
-    .filter((action) => !isLegacyWorkflowSpecificAction(action))
     .map((action) => ({
       source: action,
       moduleName: getActionModuleName(action.id),

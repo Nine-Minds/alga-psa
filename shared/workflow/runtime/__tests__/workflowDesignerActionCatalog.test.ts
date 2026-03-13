@@ -214,7 +214,10 @@ describe('workflow designer action catalog', () => {
     ]);
   });
 
-  it('excludes legacy workflow-specific email actions from the catalog', () => {
-    expect(getWorkflowDesignerCatalogRecordForAction(catalog, 'create_ticket_from_email')).toBeUndefined();
+  it('keeps email-category actions available in the grouped catalog', () => {
+    expect(getWorkflowDesignerCatalogRecordForAction(catalog, 'create_ticket_from_email')).toMatchObject({
+      groupKey: 'app:create_ticket_from_email',
+      tileKind: 'app',
+    });
   });
 });

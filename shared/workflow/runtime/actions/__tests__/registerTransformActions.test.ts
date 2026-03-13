@@ -156,4 +156,15 @@ describe('registerTransformActionsV2', () => {
     expect(appendedArray).toEqual({ items: ['ticket', 'contact', 'client'] });
     expect(builtArray).toEqual({ items: ['ticket', 42, { status: 'open' }] });
   });
+
+  it('accepts null pick_fields sources and treats them as empty objects', async () => {
+    const registry = getActionRegistryV2();
+    const pickFields = registry.get('transform.pick_fields', 1);
+
+    const parsed = pickFields?.inputSchema.parse({ source: null, fields: ['ticketId'] });
+    const pickedObject = await pickFields?.handler(parsed as never, {} as never);
+
+    expect(parsed).toEqual({ source: null, fields: ['ticketId'] });
+    expect(pickedObject).toEqual({ object: {} });
+  });
 });
