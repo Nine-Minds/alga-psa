@@ -389,7 +389,7 @@
   {
     "id": "T048",
     "description": "Action: addQuoteItem allows rate override different from catalog default",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
