@@ -527,7 +527,7 @@
   {
     "id": "F062",
     "description": "P2: Versioning — copy all quote_items to new version",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2-FR4"
     ]
