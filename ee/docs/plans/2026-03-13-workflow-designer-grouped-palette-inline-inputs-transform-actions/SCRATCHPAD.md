@@ -76,6 +76,8 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-14) `F283` needed a real UI change rather than more checklist cleanup. The lightest safe de-emphasis was to keep `Advanced` last in the source-mode picker and add a persistent muted hint in `WorkflowActionInputSourceMode` that frames it as an expressions/secrets escape hatch instead of the default authoring path.
 - (2026-03-14) There is no separate designer-only “secret validator” on this branch; the concrete secret-validation behavior is still the runtime `mappingResolver` contract that resolves named secrets and throws the existing missing-secret error when resolution is unavailable. `F285` therefore closes by pinning that unchanged failure behavior explicitly rather than inventing a second validation layer.
 - (2026-03-14) The obvious `T288` server integration seam is still locally blocked in this worktree: a targeted draft save/reload/publish test around mixed advanced mappings reaches the package DB tenant connection (`[db/tenant] Database configuration ... database "server"`) instead of the mocked test knex, so `F288/T288` remain open until that harness routing is corrected or a different save/reload seam is chosen.
+- (2026-03-14) `listWorkflowDesignerActionCatalogAction` was still exposing every inferred app tile even when no matching tenant extension was installed. Filtering app tiles by `tenant_extension_install` + `extension_registry` closes the deployment/tenant availability gap without changing core-object or transform records.
+- (2026-03-14) The older `workflowRuntimeV2.publish.integration.test.ts` harness was mocking `server/src/lib/db` and `server/src/lib/auth/rbac`, but the EE workflow action package imports `@alga-psa/db` and `@alga-psa/auth`. `T291` needed package-level mocks for `createTenantKnex` and `withAuth` before the new tenant-aware app catalog lookup could stay on the test knex instead of leaking into the default package DB.
 - (2026-03-14) `F288` exposed a real runtime validation gap: `action.call` publish validation was still rejecting additive designer metadata (`designerGroupKey`, `designerTileKind`, `designerAppKey`) even though grouped steps already persisted those fields in drafts. The runtime node schema needed to allow those additive keys explicitly to keep grouped drafts publish-compatible.
 - (2026-03-14) The remaining app/plugin availability item (`F291`) is not the same kind of work as `F292-F294`: grouped app steps already reuse the shared hydration/input/picker machinery, but the server-side catalog projection still builds app tiles from the global action registry without any tenant-install filter. Closing `F291` will need a real tenant-aware availability seam rather than just more app-step UI tests.
 - (2026-03-14) Reference mode was still injecting placeholder `payload.*` children when no payload schema existed. Removing those placeholders keeps only real schema-backed paths and aligns the field picker with `F154`.
@@ -294,6 +296,11 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/__tests__/mappingResolver.test.ts --reporter=dot`
 - (2026-03-14) Attempt and then revert the mixed advanced save/reload/publish integration seam after it reached the local package DB instead of the mocked workflow test knex:
   - `cd server && npx vitest run src/test/integration/workflowRuntimeV2.publish.integration.test.ts --config vitest.config.ts --testNamePattern="T288:" --reporter=dot`
+- (2026-03-14) Validate tenant-aware app catalog filtering:
+  - `cd server && npx vitest run src/test/integration/workflowRuntimeV2.publish.integration.test.ts --config vitest.config.ts --testNamePattern="T020: workflow designer receives the grouped catalog projection from the server action|T291: app/plugin grouped tiles only appear when available to the current deployment and tenant context" --reporter=dot`
+  - `npx tsc --noEmit -p server/tsconfig.json`
+  - `npx tsc --noEmit -p ee/packages/workflows/tsconfig.json`
+  - `npx eslint ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts`
 - (2026-03-14) Validate grouped-step save/reload/publish and import/export persistence:
   - `cd server && npx vitest run src/test/integration/workflowDesignerGroupedPersistence.integration.test.ts --config vitest.config.ts --reporter=dot`
   - `npx tsc --noEmit -p server/tsconfig.json`
@@ -570,3 +577,8 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Added focused inline action-input section coverage proving app-scoped grouped steps reuse the same properties-panel field section and required-field summary model as built-ins when the action schema is compatible.
   - Added focused action-input state coverage proving app-scoped action schemas preserve picker annotations through the same extraction path used by built-in ticket actions.
   - Marked F292-F294 and T292-T294 implemented.
+- (2026-03-14) Completed the tenant-aware app catalog availability slice:
+  - Filtered designer-catalog app tiles in `listWorkflowDesignerActionCatalogAction` so app/plugin records only appear when the current tenant has a matching enabled extension install in `tenant_extension_install` joined to `extension_registry`.
+  - Added focused server integration coverage that seeds one installed synthetic app extension and proves the grouped catalog returns only the installed app tile while still keeping the existing grouped catalog projection test green.
+  - Corrected the older server integration harness to mock `@alga-psa/db` and `@alga-psa/auth` at the package boundary, which keeps the workflow action package on the test knex instead of the default package DB during catalog assertions.
+  - Marked F291 and T291 implemented.
