@@ -114,6 +114,34 @@ const registry: WorkflowDesignerActionRegistryItem[] = [
       },
     },
   },
+  {
+    id: 'slack.send_message',
+    version: 1,
+    ui: {
+      label: 'Send Slack Message',
+      description: 'Send a Slack message.',
+    },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        channel_id: {
+          type: 'string',
+          'x-workflow-picker-kind': 'client',
+          'x-workflow-picker-fixed-value-hint': 'select',
+          'x-workflow-picker-allow-dynamic-reference': true,
+        },
+        message: { type: 'string' },
+      },
+      required: ['channel_id', 'message'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        ok: { type: 'boolean' },
+        ts: { type: 'string' },
+      },
+    },
+  },
 ];
 
 describe('action input editor state', () => {
@@ -229,6 +257,37 @@ describe('action input editor state', () => {
     });
     expect(state.inputMapping).toEqual({
       ticket_id: 'ticket-123',
+    });
+  });
+
+  it('T294: app grouped steps preserve picker metadata when app schemas provide the same annotations', () => {
+    const step: NodeStep = {
+      id: 'step-app-picker',
+      type: 'action.call',
+      name: 'Slack',
+      config: {
+        designerGroupKey: 'app:slack',
+        designerTileKind: 'app',
+        designerAppKey: 'app:slack',
+        actionId: 'slack.send_message',
+        version: 1,
+        inputMapping: {
+          channel_id: 'client-123',
+        },
+      },
+    };
+
+    const state = buildActionInputEditorState(step, registry);
+    expect(state.actionInputFields.find((field) => field.name === 'channel_id')).toMatchObject({
+      type: 'string',
+      picker: {
+        kind: 'client',
+        fixedValueHint: 'select',
+        allowsDynamicReference: true,
+      },
+    });
+    expect(state.inputMapping).toEqual({
+      channel_id: 'client-123',
     });
   });
 

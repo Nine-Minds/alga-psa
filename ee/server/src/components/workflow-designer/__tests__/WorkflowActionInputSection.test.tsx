@@ -119,4 +119,42 @@ describe('WorkflowActionInputSection', () => {
     expect(screen.getByText('1 required field still unmapped')).toBeInTheDocument();
     expect(screen.getByTestId('mapping-panel-transform-step')).toBeInTheDocument();
   });
+
+  it('T293: app grouped steps reuse the same inline field editor model when their schemas are compatible', () => {
+    render(
+      <WorkflowActionInputSection
+        stepId="app-step"
+        inputMapping={{ channel: 'ops-alerts' }}
+        onInputMappingChange={vi.fn()}
+        targetFields={[
+          { name: 'channel', type: 'string', required: true },
+          { name: 'message', type: 'string', required: true },
+          { name: 'thread_ts', type: 'string' },
+        ]}
+        dataContext={{
+          payload: [],
+          payloadSchema: undefined,
+          steps: [],
+          globals: {
+            env: [],
+            secrets: [],
+            meta: [],
+            error: [],
+          },
+        }}
+        fieldOptions={[]}
+        mappedInputFieldCount={1}
+        requiredActionInputFields={[
+          { name: 'channel', type: 'string', required: true },
+          { name: 'message', type: 'string', required: true },
+        ]}
+        unmappedRequiredInputFieldCount={1}
+      />
+    );
+
+    expect(screen.getByText('Action inputs')).toBeInTheDocument();
+    expect(screen.getByText('1 / 3 fields configured')).toBeInTheDocument();
+    expect(screen.getByText('1 required field still unmapped')).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-panel-app-step')).toBeInTheDocument();
+  });
 });

@@ -4,7 +4,7 @@ import { exprSchema, inputMappingSchema } from '../types';
 import { resolveExpressions } from '../utils/expressionResolver';
 import { resolveInputMapping, noOpSecretResolver } from '../utils/mappingResolver';
 import { applyAssignments } from '../utils/assignmentUtils';
-import type { Envelope, InputMapping } from '../types';
+import type { Envelope } from '../types';
 import { safeSerialize } from '../utils/redactionUtils';
 import { parseEmailBodyWithFallback, renderCommentBlocksWithFallback } from './utils/emailNodes';
 import { getFormValidationService } from '@shared/task-inbox';
@@ -44,6 +44,9 @@ const actionCallSchema = z.object({
   version: z.number().int().positive(),
   inputMapping: inputMappingSchema.optional().default({}),
   saveAs: z.string().optional(),
+  designerGroupKey: z.string().min(1).optional(),
+  designerTileKind: z.enum(['core-object', 'transform', 'app']).optional(),
+  designerAppKey: z.string().min(1).optional(),
   onError: z.object({
     policy: z.enum(['fail', 'continue'])
   }).optional(),

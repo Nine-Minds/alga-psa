@@ -1724,19 +1724,19 @@
   {
     "id": "T288",
     "description": "Integration: mixed workflows that use both structured values and advanced values still save, reload, and publish correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F288"]
   },
   {
     "id": "T289",
     "description": "Integration: grouped-step output data context remains stable after save and reload",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F289"]
   },
   {
     "id": "T290",
     "description": "Integration: workflow import and export remain compatible because the runtime action.call contract is unchanged",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F290"]
   },
   {
@@ -1748,19 +1748,19 @@
   {
     "id": "T292",
     "description": "Integration: app/plugin grouped steps hydrate through the same grouped-step model as built-ins",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F292"]
   },
   {
     "id": "T293",
     "description": "Integration: app/plugin grouped steps use the same inline field editor model when their schemas are compatible",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F293"]
   },
   {
     "id": "T294",
     "description": "Integration: app/plugin grouped steps use the same picker-metadata model when they provide annotations",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F294"]
   },
   {
@@ -1952,13 +1952,13 @@
   {
     "id": "T326",
     "description": "Integration: transform outputs remain browseable by downstream reference pickers after draft save/load",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F224", "F232", "F269", "F280"]
   },
   {
     "id": "T327",
     "description": "Integration: build-object and rename-fields preserve output field names in downstream reference autocomplete",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F263", "F265", "F271", "F280"]
   },
   {

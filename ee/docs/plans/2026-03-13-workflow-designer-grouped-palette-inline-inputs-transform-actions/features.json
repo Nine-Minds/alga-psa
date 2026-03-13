@@ -1724,19 +1724,19 @@
   {
     "id": "F288",
     "description": "Preserve current save, reload, and publish behavior for workflows that mix structured fields and advanced values",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Compatibility, Save/Load, and Validation"]
   },
   {
     "id": "F289",
     "description": "Preserve current action output data-context generation when grouped steps are saved and reloaded",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Compatibility, Save/Load, and Validation", "Requirements > Reference Source Model"]
   },
   {
     "id": "F290",
     "description": "Preserve current import and export compatibility for workflow definitions that only rely on the existing action.call runtime contract",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Rollout / Migration"]
   },
   {
@@ -1748,19 +1748,19 @@
   {
     "id": "F292",
     "description": "Allow app/plugin grouped steps to use the same grouped-step hydration model as built-in grouped steps",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Plugin/App Support", "Requirements > Grouped Action Step Model"]
   },
   {
     "id": "F293",
     "description": "Allow app/plugin grouped steps to use the same inline field editor model as built-in grouped steps when their schemas are compatible",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Plugin/App Support", "Requirements > Inline Field-Based Action Input Editor"]
   },
   {
     "id": "F294",
     "description": "Allow app/plugin grouped steps to use the same picker-metadata model as built-in grouped steps when their schemas provide annotations",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Plugin/App Support", "Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {

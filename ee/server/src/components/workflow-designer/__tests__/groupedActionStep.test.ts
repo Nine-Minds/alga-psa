@@ -148,4 +148,26 @@ describe('workflow designer grouped action step helpers', () => {
       )?.groupKey
     ).toBe('app:slack');
   });
+
+  it('T292: app grouped steps hydrate through the same grouped-step model as built-ins', () => {
+    const step = applyGroupedActionSelectionToStep(
+      { id: 'step-app', type: 'action.call', name: 'Slack', config: {} },
+      {
+        actionId: 'slack.send_message',
+        actionVersion: 1,
+        groupKey: 'app:slack',
+        groupLabel: 'Slack',
+        tileKind: 'app',
+      }
+    );
+
+    expect(getGroupedActionCatalogRecordForStep(step, catalog)?.groupKey).toBe('app:slack');
+    expect(step.config).toMatchObject({
+      actionId: 'slack.send_message',
+      version: 1,
+      designerGroupKey: 'app:slack',
+      designerTileKind: 'app',
+      designerAppKey: 'app:slack',
+    });
+  });
 });

@@ -76,6 +76,8 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-14) `F283` needed a real UI change rather than more checklist cleanup. The lightest safe de-emphasis was to keep `Advanced` last in the source-mode picker and add a persistent muted hint in `WorkflowActionInputSourceMode` that frames it as an expressions/secrets escape hatch instead of the default authoring path.
 - (2026-03-14) There is no separate designer-only “secret validator” on this branch; the concrete secret-validation behavior is still the runtime `mappingResolver` contract that resolves named secrets and throws the existing missing-secret error when resolution is unavailable. `F285` therefore closes by pinning that unchanged failure behavior explicitly rather than inventing a second validation layer.
 - (2026-03-14) The obvious `T288` server integration seam is still locally blocked in this worktree: a targeted draft save/reload/publish test around mixed advanced mappings reaches the package DB tenant connection (`[db/tenant] Database configuration ... database "server"`) instead of the mocked test knex, so `F288/T288` remain open until that harness routing is corrected or a different save/reload seam is chosen.
+- (2026-03-14) `F288` exposed a real runtime validation gap: `action.call` publish validation was still rejecting additive designer metadata (`designerGroupKey`, `designerTileKind`, `designerAppKey`) even though grouped steps already persisted those fields in drafts. The runtime node schema needed to allow those additive keys explicitly to keep grouped drafts publish-compatible.
+- (2026-03-14) The remaining app/plugin availability item (`F291`) is not the same kind of work as `F292-F294`: grouped app steps already reuse the shared hydration/input/picker machinery, but the server-side catalog projection still builds app tiles from the global action registry without any tenant-install filter. Closing `F291` will need a real tenant-aware availability seam rather than just more app-step UI tests.
 - (2026-03-14) Reference mode was still injecting placeholder `payload.*` children when no payload schema existed. Removing those placeholders keeps only real schema-backed paths and aligns the field picker with `F154`.
 - (2026-03-14) The remaining `F155`/`F156` refresh behavior was already driven by pure `buildWorkflowReferenceFieldOptions(...)` recomputation from `dataContext`; the missing work was pinning that contract with deterministic tests for action-schema and `saveAs` changes.
 - (2026-03-14) The remaining `F157`/`F160` stability behavior was already a consequence of keeping the saved direct reference expression as the source of truth and recomputing block context from the current step location; targeted jsdom/unit coverage was enough to lock that down without changing runtime behavior.
@@ -292,6 +294,15 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/__tests__/mappingResolver.test.ts --reporter=dot`
 - (2026-03-14) Attempt and then revert the mixed advanced save/reload/publish integration seam after it reached the local package DB instead of the mocked workflow test knex:
   - `cd server && npx vitest run src/test/integration/workflowRuntimeV2.publish.integration.test.ts --config vitest.config.ts --testNamePattern="T288:" --reporter=dot`
+- (2026-03-14) Validate grouped-step save/reload/publish and import/export persistence:
+  - `cd server && npx vitest run src/test/integration/workflowDesignerGroupedPersistence.integration.test.ts --config vitest.config.ts --reporter=dot`
+  - `npx tsc --noEmit -p server/tsconfig.json`
+  - `npx tsc --noEmit -p shared/tsconfig.json`
+  - `npx eslint shared/workflow/runtime/nodes/registerDefaultNodes.ts server/src/test/integration/workflowDesignerGroupedPersistence.integration.test.ts`
+- (2026-03-14) Validate app grouped-step hydration and inline editor/picker reuse:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/groupedActionStep.test.ts src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx src/components/workflow-designer/__tests__/actionInputEditorState.test.ts --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/__tests__/groupedActionStep.test.ts ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx ee/server/src/components/workflow-designer/__tests__/actionInputEditorState.test.ts`
 
 ## Links / References
 
@@ -549,3 +560,13 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Switched runtime schema export for action-registry and schema-registry projections onto the shared workflow-aware JSON-schema wrapper.
   - Added focused shared coverage for picker metadata export plus an explicit designer-side test proving `ActionInputField` extraction preserves the exported picker annotations.
   - Marked F161-F165 and T161-T165 implemented.
+- (2026-03-14) Completed the grouped-step persistence and bundle-compatibility slice:
+  - Widened the runtime `action.call` config schema so grouped-step additive metadata (`designerGroupKey`, `designerTileKind`, and `designerAppKey`) survives publish validation instead of being rejected as unknown config.
+  - Added a focused server integration suite that saves, reloads, publishes, exports, and re-imports a mixed grouped workflow using structured references, fixed literals, advanced expressions, transform outputs, and app-scoped grouped metadata.
+  - Added assertions that downstream grouped-step data context still exposes renamed transform object fields after draft save/reload, and that bundle round-trips preserve the unchanged `action.call` contract plus additive grouped metadata.
+  - Marked F288-F290 and T288-T290/T326-T327 implemented.
+- (2026-03-14) Completed the app grouped-step parity coverage slice:
+  - Added focused grouped-step helper coverage proving app-scoped grouped steps hydrate back through the same additive `designerAppKey`/`actionId` selection path already used by built-in grouped steps.
+  - Added focused inline action-input section coverage proving app-scoped grouped steps reuse the same properties-panel field section and required-field summary model as built-ins when the action schema is compatible.
+  - Added focused action-input state coverage proving app-scoped action schemas preserve picker annotations through the same extraction path used by built-in ticket actions.
+  - Marked F292-F294 and T292-T294 implemented.
