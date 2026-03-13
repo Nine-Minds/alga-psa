@@ -599,7 +599,7 @@
   {
     "id": "F071",
     "description": "P3: Database migration — create standard_quote_document_templates table with system-wide defaults",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P3-FR1"
     ]
