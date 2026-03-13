@@ -842,49 +842,49 @@
   {
     "id": "F141",
     "description": "Reference mode should expose workflow payload fields as selectable sources",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Reference Source Model"]
   },
   {
     "id": "F142",
     "description": "Reference mode should expose previous step outputs as selectable sources",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Reference Source Model"]
   },
   {
     "id": "F143",
     "description": "Reference mode should expose workflow metadata fields as selectable sources",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Reference Source Model"]
   },
   {
     "id": "F144",
     "description": "Reference mode should expose catch-block error fields as selectable sources when editing inside catch context",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Reference Source Model"]
   },
   {
     "id": "F145",
     "description": "Reference mode should expose forEach item and index fields as selectable sources when editing inside loop context",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Reference Source Model"]
   },
   {
     "id": "F146",
     "description": "Reference mode should expose previous step outputs grouped by producing step or saveAs name",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Reference Source Model", "UX / UI Notes > Field Authoring Model"]
   },
   {
     "id": "F147",
     "description": "Reference mode should allow direct selection of a step output root object where the target field accepts object-like input",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Reference Source Model"]
   },
   {
     "id": "F148",
     "description": "Reference mode should allow direct selection of a nested property path where the target field accepts a primitive input",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Reference Source Model"]
   },
   {
@@ -944,13 +944,13 @@
   {
     "id": "F158",
     "description": "Reference mode should show no previous-step output sources for the first action step in a workflow when none exist yet",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "Requirements > Reference Source Model"]
   },
   {
     "id": "F159",
     "description": "Reference mode should allow builders to inspect the root source group before drilling into nested fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Field Authoring Model", "Requirements > Reference Source Model"]
   },
   {

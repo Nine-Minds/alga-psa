@@ -92,6 +92,7 @@ import { PaletteItemWithTooltip } from './PaletteItemWithTooltip';
 import { WorkflowStepNameField } from './WorkflowStepNameField';
 import { WorkflowStepSaveOutputSection } from './WorkflowStepSaveOutputSection';
 import { WorkflowActionInputSection } from './WorkflowActionInputSection';
+import { buildWorkflowReferenceFieldOptions } from './workflowReferenceOptions';
 
 import type {
   WorkflowDefinition,
@@ -845,79 +846,6 @@ const buildFieldOptions = (payloadSchema?: JsonSchema | null): SelectOption[] =>
         options.push({ value: path, label: path });
       }
     });
-  }
-
-  return options;
-};
-
-// §16.2 - Enhanced field options that include step outputs from data context
-const buildEnhancedFieldOptions = (
-  payloadSchema: JsonSchema | null,
-  dataContext: DataContext | null
-): SelectOption[] => {
-  const options: SelectOption[] = [
-    { value: 'payload', label: '📦 payload' },
-    { value: 'vars', label: '📝 vars' },
-    { value: 'meta', label: '🏷️ meta' },
-    { value: 'meta.state', label: 'meta.state' },
-    { value: 'meta.traceId', label: 'meta.traceId' },
-    { value: 'meta.tags', label: 'meta.tags' },
-    { value: 'error', label: '⚠️ error' },
-    { value: 'error.message', label: 'error.message' },
-    { value: 'error.code', label: 'error.code' },
-    { value: 'error.stack', label: 'error.stack' }
-  ];
-
-  // Add payload fields from schema
-  if (payloadSchema) {
-    collectSchemaPaths(payloadSchema, payloadSchema).forEach((path) => {
-      if (!options.some((opt) => opt.value === path)) {
-        options.push({ value: path, label: path });
-      }
-    });
-  } else {
-    // §16.2 - Add common payload placeholders when no schema is available
-    // This allows autocomplete to work even for new workflows without a schema
-    const commonPayloadFields = [
-      'payload.id',
-      'payload.type',
-      'payload.data',
-      'payload.timestamp',
-      'payload.tenant'
-    ];
-    commonPayloadFields.forEach(path => {
-      options.push({ value: path, label: `${path} (placeholder)` });
-    });
-  }
-
-  // Add step outputs from data context
-  if (dataContext) {
-    dataContext.steps.forEach((stepOutput) => {
-      const basePath = `vars.${stepOutput.saveAs}`;
-      options.push({
-        value: basePath,
-        label: `🔗 ${basePath} (${stepOutput.stepName})`
-      });
-
-      // Add nested paths from output schema
-      collectSchemaPaths(stepOutput.outputSchema, stepOutput.outputSchema, basePath).forEach((path) => {
-        if (!options.some((opt) => opt.value === path)) {
-          options.push({ value: path, label: path });
-        }
-      });
-    });
-
-    // §17.3.1 - Add forEach item and index when inside a forEach loop
-    if (dataContext.forEach) {
-      options.push({
-        value: dataContext.forEach.itemVar,
-        label: `🔄 ${dataContext.forEach.itemVar} (current item)`
-      });
-      options.push({
-        value: dataContext.forEach.indexVar,
-        label: `🔢 ${dataContext.forEach.indexVar} (loop index)`
-      });
-    }
   }
 
   return options;
@@ -5024,7 +4952,7 @@ const StepConfigPanel: React.FC<{
 
   // §16.2 - Enhanced field options with step outputs
   const enhancedFieldOptions = useMemo(() =>
-    buildEnhancedFieldOptions(payloadSchema, dataContext),
+    buildWorkflowReferenceFieldOptions(payloadSchema, dataContext),
     [payloadSchema, dataContext]
   );
 

@@ -110,9 +110,11 @@ const convertToDataTreeContext = (ctx: WorkflowDataContext, payloadRootPath: str
   meta: ctx.globals.meta.map(field =>
     convertSchemaFieldToDataField(field, 'meta', 'meta')
   ),
-  error: ctx.globals.error.map(field =>
-    convertSchemaFieldToDataField(field, 'error', 'error')
-  ),
+  error: ctx.inCatchBlock
+    ? ctx.globals.error.map(field =>
+        convertSchemaFieldToDataField(field, 'error', 'error')
+      )
+    : [],
   forEach: ctx.forEach
 });
 
@@ -144,7 +146,9 @@ const buildSourceTypeLookup = (ctx: WorkflowDataContext, payloadRootPath: string
     stepOutput.fields.forEach(field => addField(field, basePath));
   });
   ctx.globals.meta.forEach(field => addField(field, 'meta'));
-  ctx.globals.error.forEach(field => addField(field, 'error'));
+  if (ctx.inCatchBlock) {
+    ctx.globals.error.forEach(field => addField(field, 'error'));
+  }
   if (ctx.forEach?.itemVar) {
     map.set(ctx.forEach.itemVar, ctx.forEach.itemType ?? 'any');
   }

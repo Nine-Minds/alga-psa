@@ -144,4 +144,72 @@ describe('workflow data context', () => {
       },
     });
   });
+
+  it('tracks catch-block context so Reference mode can expose error sources only where they are valid', () => {
+    const definition: WorkflowDefinition = {
+      id: 'workflow-catch',
+      version: 1,
+      name: 'Catch workflow',
+      payloadSchemaRef: 'system:default',
+      trigger: { type: 'event', eventName: 'ticket.created' },
+      steps: [
+        {
+          id: 'try-catch-1',
+          type: 'control.tryCatch',
+          try: [],
+          catch: [
+            {
+              id: 'catch-step',
+              type: 'action.call',
+              config: {
+                actionId: 'tickets.create',
+                version: 1,
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    const context = buildDataContext(definition, 'catch-step', actionRegistry, null);
+
+    expect(context.inCatchBlock).toBe(true);
+  });
+
+  it('tracks forEach item and index variables so Reference mode can expose loop sources', () => {
+    const definition: WorkflowDefinition = {
+      id: 'workflow-loop',
+      version: 1,
+      name: 'Loop workflow',
+      payloadSchemaRef: 'system:default',
+      trigger: { type: 'event', eventName: 'ticket.created' },
+      steps: [
+        {
+          id: 'foreach-1',
+          type: 'control.forEach',
+          items: { $expr: 'payload.items' },
+          itemVar: 'ticketItem',
+          concurrency: 1,
+          body: [
+            {
+              id: 'loop-step',
+              type: 'action.call',
+              config: {
+                actionId: 'tickets.create',
+                version: 1,
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    const context = buildDataContext(definition, 'loop-step', actionRegistry, null);
+
+    expect(context.forEach).toEqual({
+      itemVar: 'ticketItem',
+      indexVar: '$index',
+      itemType: 'any',
+    });
+  });
 });
