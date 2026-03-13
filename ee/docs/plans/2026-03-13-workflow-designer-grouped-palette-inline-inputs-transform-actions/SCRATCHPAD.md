@@ -57,6 +57,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-13) The next checklist item (`F079` / `T079`) is now verified as a true scope blocker: `WorkflowDesigner.tsx` only supports add/update/delete/reorder flows, and the page object plus Playwright coverage expose no step duplication affordance to preserve. Implementing `F079` would require inventing a new feature outside the current PRD rather than maintaining parity.
 - (2026-03-14) The default `npx playwright test` path for workflow-designer specs still cold-boots Docker deps, reruns the full migration/seed pipeline, and rebuilds the workflow-worker image before hitting assertions. Small grouped-step state checks are therefore safer to validate through deterministic grouped-step helpers in this worktree unless the branch is already running a warm local harness.
 - (2026-03-14) The selected-action schema state and required-field counts were being recomputed in multiple places inside `WorkflowDesigner.tsx` (step properties panel and pipeline badges). Extracting that state into a shared helper reduces drift and gives the grouped action-change path a deterministic test seam for schema/summary updates.
+- (2026-03-14) Downstream reference exposure was already driven by a pure step-output context walker keyed off each prior step’s current `actionId`/`version`. The missing work for `F089`/`F095` was extracting that walker behind a small helper and pinning it with deterministic coverage.
 
 ## Commands / Runbooks
 
@@ -134,6 +135,10 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/actionInputEditorState.test.ts src/components/workflow-designer/__tests__/groupedActionSelection.test.ts src/components/workflow-designer/__tests__/groupedActionStep.test.ts --reporter=dot`
   - `npx tsc --noEmit -p ee/server/tsconfig.json`
   - `npx eslint ee/server/src/components/workflow-designer/actionInputEditorState.ts ee/server/src/components/workflow-designer/__tests__/actionInputEditorState.test.ts ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`
+- (2026-03-14) Validate grouped-step downstream output-schema exposure through the extracted helper:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/workflowDataContext.test.ts src/components/workflow-designer/__tests__/groupedActionSelection.test.ts --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/workflowDataContext.ts ee/server/src/components/workflow-designer/WorkflowDesigner.tsx ee/server/src/components/workflow-designer/__tests__/workflowDataContext.test.ts ee/server/src/components/workflow-designer/__tests__/groupedActionSelection.test.ts`
 
 ## Links / References
 
@@ -258,3 +263,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Extracted shared grouped action-input editor state so the selected action, derived input fields, and required-field completion counts come from one pure helper used by both the properties panel and the pipeline mapping-status badges.
   - Added focused tests that change a grouped step from `tickets.create` to `tickets.update_fields` and assert that the visible input fields and required-field completion counts recalculate immediately from the new action schema.
   - Marked F088, F090, T088, and T090 implemented.
+- (2026-03-14) Completed the grouped-step downstream output-schema slice:
+  - Extracted the prior-step data-context walker into `workflowDataContext.ts` so downstream output exposure no longer needs to be tested through the full client component module graph.
+  - Added focused coverage that changes an upstream grouped step from `tickets.create` to `tickets.update_fields` and asserts the downstream step sees the updated output schema and field list immediately.
+  - Marked F089, F095, T089, and T095 implemented.

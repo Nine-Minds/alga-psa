@@ -25,7 +25,7 @@ const updateAction: WorkflowDesignerCatalogAction = {
 };
 
 describe('grouped action selection helpers', () => {
-  it('preserves still-valid input mappings, drops stale ones, and refreshes auto-generated saveAs names', () => {
+  it('T086/T093/T094/T096: preserves valid mappings, drops stale mappings, refreshes auto names, and updates the auto-managed step label', () => {
     const step: NodeStep = {
       id: 'step-1',
       type: 'action.call',

@@ -530,7 +530,7 @@
   {
     "id": "T089",
     "description": "Integration: choosing an action updates the output schema exposed to downstream steps",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F089"]
   },
   {
@@ -566,7 +566,7 @@
   {
     "id": "T095",
     "description": "Integration: changing an action recalculates downstream output schema exposure immediately",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F095"]
   },
   {

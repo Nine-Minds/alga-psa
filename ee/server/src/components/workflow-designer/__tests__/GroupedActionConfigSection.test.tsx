@@ -54,7 +54,7 @@ const slackRecord: WorkflowDesignerCatalogRecord = {
 };
 
 describe('GroupedActionConfigSection', () => {
-  it('shows the grouped tile label and an invalid state before an action is chosen', () => {
+  it('T081/T097: shows the grouped tile label and invalid state before an action is chosen', () => {
     render(
       <GroupedActionConfigSection
         stepId="step-1"
@@ -68,7 +68,7 @@ describe('GroupedActionConfigSection', () => {
     expect(screen.getByText('Select a Ticket action before configuring inputs or publishing this workflow.')).toBeInTheDocument();
   });
 
-  it('builds action-select options from the grouped record only', () => {
+  it('T082/T083: builds action-select options from the grouped record only', () => {
     expect(buildGroupedActionSelectOptions(ticketRecord)).toEqual([
       { value: 'tickets.create', label: 'Create Ticket' },
       { value: 'tickets.update_fields', label: 'Update Ticket' },
@@ -78,7 +78,7 @@ describe('GroupedActionConfigSection', () => {
     ]);
   });
 
-  it('renders selected app action descriptions without the missing-action warning', () => {
+  it('T083/T087: renders selected app action descriptions without the missing-action warning', () => {
     render(
       <GroupedActionConfigSection
         stepId="step-3"

@@ -530,7 +530,7 @@
   {
     "id": "F089",
     "description": "Choosing an action should update the step output schema used by downstream data-context exposure",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model", "Requirements > Reference Source Model"]
   },
   {
@@ -566,7 +566,7 @@
   {
     "id": "F095",
     "description": "Changing from one chosen action to another should recalculate output schema exposure for downstream steps immediately",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model", "Requirements > Reference Source Model"]
   },
   {
