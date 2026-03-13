@@ -80,6 +80,7 @@ vi.mock('../expression-editor', () => ({
 
 import { InputMappingEditor } from '../mapping/InputMappingEditor';
 import type { MappingPositionsHandlers } from '../mapping/useMappingPositions';
+import type { InputMapping } from '@shared/workflow/runtime/client';
 
 const positionsHandlers: MappingPositionsHandlers = {
   registerSourceRef: vi.fn(),
@@ -98,6 +99,31 @@ afterEach(() => {
 });
 
 describe('transform action input editor', () => {
+  const TransformEditorHarness = ({
+    initialValue,
+    targetFields,
+    fieldOptions = [],
+    stepId = 'step-transform-inputs',
+  }: {
+    initialValue: InputMapping;
+    targetFields: React.ComponentProps<typeof InputMappingEditor>['targetFields'];
+    fieldOptions?: React.ComponentProps<typeof InputMappingEditor>['fieldOptions'];
+    stepId?: string;
+  }) => {
+    const [value, setValue] = React.useState<InputMapping>(initialValue);
+
+    return (
+      <InputMappingEditor
+        value={value}
+        onChange={setValue}
+        targetFields={targetFields}
+        fieldOptions={fieldOptions}
+        stepId={stepId}
+        positionsHandlers={positionsHandlers}
+      />
+    );
+  };
+
   it('T236/T242/T243/T259/T260: text transform actions use structured references plus fixed numeric and enum parameter controls', async () => {
     const onChange = vi.fn();
 
@@ -195,5 +221,269 @@ describe('transform action input editor', () => {
         screen.getByText('Type "object" is incompatible with expected "string"')
       ).toBeInTheDocument();
     });
+  });
+
+  it('T263/T274/T275: build-object supports user-defined keys plus structured references and fixed literals for each field source', async () => {
+    await act(async () => {
+      render(
+        <TransformEditorHarness
+          initialValue={{
+            fields: [
+              {
+                key: 'ticketId',
+                value: { $expr: 'payload.ticket.id' },
+              },
+              {
+                key: 'ticketSummary',
+                value: 'Escalate printer issue',
+              },
+            ],
+          }}
+          targetFields={[
+            {
+              name: 'fields',
+              type: 'array',
+              children: [
+                {
+                  name: 'key',
+                  type: 'string',
+                  required: true,
+                },
+                {
+                  name: 'value',
+                  type: 'string',
+                },
+              ],
+              constraints: {
+                itemType: 'object',
+              },
+            },
+          ]}
+          fieldOptions={[
+            { value: 'payload.ticket.id', label: 'payload.ticket.id' },
+            { value: 'payload.ticket.summary', label: 'payload.ticket.summary' },
+          ]}
+          stepId="step-build-object"
+        />
+      );
+    });
+
+    expect(screen.getByDisplayValue('ticketId')).toBeInTheDocument();
+    expect(
+      document.getElementById('mapping-step-build-object-fields[1].key-literal-str')
+    ).toHaveValue('ticketSummary');
+    expect(
+      screen.getByTestId('mapping-step-build-object-fields[0].value-source-mode')
+    ).toHaveValue('reference');
+    expect(screen.getByTestId('mapping-step-build-object-fields[0].value-picker')).toBeInTheDocument();
+    expect(
+      screen.getByTestId('mapping-step-build-object-fields[1].value-source-mode')
+    ).toHaveValue('fixed');
+    expect(
+      document.getElementById('mapping-step-build-object-fields[1].value-literal-str')
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.change(screen.getByDisplayValue('ticketId'), {
+        target: { value: 'ticketSummary' },
+      });
+      fireEvent.change(screen.getByTestId('mapping-step-build-object-fields[0].value-picker'), {
+        target: { value: 'payload.ticket.summary' },
+      });
+      fireEvent.change(screen.getByDisplayValue('Escalate printer issue'), {
+        target: { value: 'Escalate again' },
+      });
+    });
+
+    expect(
+      document.getElementById('mapping-step-build-object-fields[0].key-literal-str')
+    ).toHaveValue('ticketSummary');
+    expect(screen.getByTestId('mock-expression-editor')).toHaveValue('payload.ticket.summary');
+    expect(screen.getByDisplayValue('Escalate again')).toBeInTheDocument();
+  });
+
+  it('T276: rename-fields exposes explicit structured rename rows instead of requiring expression editing', async () => {
+    await act(async () => {
+      render(
+        <TransformEditorHarness
+          initialValue={{
+            source: { $expr: 'vars.ticketResult' },
+            renames: [{ from: 'ticket_id', to: 'ticketId' }],
+          }}
+          targetFields={[
+            {
+              name: 'source',
+              type: 'object',
+            },
+            {
+              name: 'renames',
+              type: 'array',
+              children: [
+                {
+                  name: 'from',
+                  type: 'string',
+                  required: true,
+                },
+                {
+                  name: 'to',
+                  type: 'string',
+                  required: true,
+                },
+              ],
+              constraints: {
+                itemType: 'object',
+              },
+            },
+          ]}
+          fieldOptions={[{ value: 'vars.ticketResult', label: 'vars.ticketResult' }]}
+          stepId="step-rename-fields"
+        />
+      );
+    });
+
+    expect(screen.getByDisplayValue('ticket_id')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('ticketId')).toBeInTheDocument();
+    expect(
+      screen.getByTestId('mapping-step-rename-fields-renames[0].from-source-mode')
+    ).toHaveValue('fixed');
+    expect(
+      screen.getByTestId('mapping-step-rename-fields-renames[0].to-source-mode')
+    ).toHaveValue('fixed');
+    expect(screen.queryByTestId('mock-expression-editor')).toBeInTheDocument();
+    expect(
+      screen.queryByTestId('mapping-step-rename-fields-renames[0].from-picker')
+    ).not.toBeInTheDocument();
+  });
+
+  it('T277: pick-fields exposes a structured fixed field list instead of raw JSON entry', async () => {
+    await act(async () => {
+      render(
+        <TransformEditorHarness
+          initialValue={{
+            source: { $expr: 'vars.ticketResult' },
+            fields: ['ticket_id', 'updated'],
+          }}
+          targetFields={[
+            {
+              name: 'source',
+              type: 'object',
+            },
+            {
+              name: 'fields',
+              type: 'array',
+              constraints: {
+                itemType: 'string',
+              },
+            },
+          ]}
+          fieldOptions={[{ value: 'vars.ticketResult', label: 'vars.ticketResult' }]}
+          stepId="step-pick-fields"
+        />
+      );
+    });
+
+    const listEditor = screen.getByPlaceholderText(
+      'Enter one value per line, or comma-separated'
+    ) as HTMLTextAreaElement;
+
+    expect(listEditor).toBeInTheDocument();
+    expect(listEditor.value).toContain('ticket_id');
+    expect(listEditor.value).toContain('updated');
+    expect(
+      screen.getByTestId('mapping-step-pick-fields-fields-source-mode')
+    ).toHaveValue('fixed');
+    expect(
+      document.getElementById('mapping-step-pick-fields-fields-literal-json')
+    ).not.toBeInTheDocument();
+  });
+
+  it('T278: coalesce-value supports multiple structured reference candidates without raw JSON editing', async () => {
+    await act(async () => {
+      render(
+        <TransformEditorHarness
+          initialValue={{
+            candidates: [
+              { $expr: 'payload.ticket.id' },
+              { $expr: 'payload.ticket.summary' },
+            ],
+          }}
+          targetFields={[
+            {
+              name: 'candidates',
+              type: 'array',
+              constraints: {
+                itemType: 'unknown',
+              },
+            },
+          ]}
+          fieldOptions={[
+            { value: 'payload.ticket.id', label: 'payload.ticket.id' },
+            { value: 'payload.ticket.summary', label: 'payload.ticket.summary' },
+          ]}
+          stepId="step-coalesce"
+        />
+      );
+    });
+
+    expect(
+      screen.getByTestId('mapping-step-coalesce-candidates[0]-source-mode')
+    ).toHaveValue('reference');
+    expect(screen.getByTestId('mapping-step-coalesce-candidates[0]-picker')).toBeInTheDocument();
+    expect(
+      screen.getByTestId('mapping-step-coalesce-candidates[1]-source-mode')
+    ).toHaveValue('reference');
+    expect(screen.getByTestId('mapping-step-coalesce-candidates[1]-picker')).toBeInTheDocument();
+
+    const editors = screen.getAllByTestId('mock-expression-editor');
+    expect(editors[0]).toHaveValue('payload.ticket.id');
+    expect(editors[1]).toHaveValue('payload.ticket.summary');
+    expect(
+      document.getElementById('mapping-step-coalesce-candidates-literal-json')
+    ).not.toBeInTheDocument();
+  });
+
+  it('T279: build-array supports multiple structured references without raw JSON editing', async () => {
+    await act(async () => {
+      render(
+        <TransformEditorHarness
+          initialValue={{
+            items: [
+              { $expr: 'payload.ticket.id' },
+              { $expr: 'vars.ticketResult.updated' },
+            ],
+          }}
+          targetFields={[
+            {
+              name: 'items',
+              type: 'array',
+              constraints: {
+                itemType: 'unknown',
+              },
+            },
+          ]}
+          fieldOptions={[
+            { value: 'payload.ticket.id', label: 'payload.ticket.id' },
+            { value: 'vars.ticketResult.updated', label: 'vars.ticketResult.updated' },
+          ]}
+          stepId="step-build-array"
+        />
+      );
+    });
+
+    expect(screen.getByTestId('mapping-step-build-array-items[0]-source-mode')).toHaveValue(
+      'reference'
+    );
+    expect(screen.getByTestId('mapping-step-build-array-items[1]-source-mode')).toHaveValue(
+      'reference'
+    );
+    expect(screen.getByTestId('mapping-step-build-array-items[0]-picker')).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-step-build-array-items[1]-picker')).toBeInTheDocument();
+    expect(screen.getAllByTestId('mock-expression-editor')[0]).toHaveValue('payload.ticket.id');
+    expect(screen.getAllByTestId('mock-expression-editor')[1]).toHaveValue(
+      'vars.ticketResult.updated'
+    );
+    expect(
+      document.getElementById('mapping-step-build-array-items-literal-json')
+    ).not.toBeInTheDocument();
   });
 });

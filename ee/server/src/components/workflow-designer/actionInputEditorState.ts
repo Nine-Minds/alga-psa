@@ -196,7 +196,9 @@ const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSch
       children = extractActionInputFields(resolvedProp, root);
     } else if (type === 'array' && resolvedProp.items) {
       const itemSchema = resolveSchema(resolvedProp.items, root);
-      itemType = normalizeSchemaType(itemSchema) ?? undefined;
+      itemType =
+        normalizeSchemaType(itemSchema) ??
+        (itemSchema.properties ? 'object' : 'unknown');
       if (itemSchema.properties) {
         children = extractActionInputFields(itemSchema, root);
       }

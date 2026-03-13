@@ -69,6 +69,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-14) The transform branch-move Playwright slice needed the same setup ordering as the existing grouped-step parity coverage: insert the movable transform on the root pipe before selecting the control-block branch, then add the branch-local transform after the branch is selected. Trying to switch selection back to root mid-test was creating a harness-only false negative.
 - (2026-03-14) The fairest way to close `F079`/`T079` is to codify the current parity contract rather than leave a permanent false blocker in the middle of the checklist: workflow steps expose drag/delete controls only, so grouped steps preserve the current absence of duplicate/copy behavior.
 - (2026-03-14) Dynamic object transform outputs are inferred most safely in `workflowDataContext.ts`, not by mutating the runtime registry schemas. `transform.build_object`, `transform.pick_fields`, and `transform.rename_fields` all depend on step-local `config.inputMapping` values, so downstream browseable field names have to be derived per step from saved mappings and direct reference paths.
+- (2026-03-14) The next transform authoring items (`F274-F277`) were already satisfied by the shared structured literal editor: `build_object.fields[]` uses the array-of-object row editor, `rename_fields.renames[]` uses the same explicit row editor, and `pick_fields.fields[]` reuses the primitive-array list control. The missing work was transform-specific coverage rather than new production code.
+- (2026-03-14) `coalesce_value.candidates[]` and `build_array.items[]` exposed a real remaining gap: schema extraction knew they were arrays, but because their item schema was `unknown`, the inline editor still fell back to raw JSON. Marking those item arrays as `unknown` and routing them through a row-based dynamic array editor lets each item reuse the normal Reference/Fixed/Advanced controls.
+- (2026-03-14) Downstream reference options were already transform-agnostic once a step had an output schema and `saveAs`; after the object-output inference landed, `buildWorkflowReferenceFieldOptions(...)` needed only focused coverage for coalesce value outputs plus build-object object outputs to close `F280`.
 - (2026-03-14) Reference mode was still injecting placeholder `payload.*` children when no payload schema existed. Removing those placeholders keeps only real schema-backed paths and aligns the field picker with `F154`.
 - (2026-03-14) The remaining `F155`/`F156` refresh behavior was already driven by pure `buildWorkflowReferenceFieldOptions(...)` recomputation from `dataContext`; the missing work was pinning that contract with deterministic tests for action-schema and `saveAs` changes.
 - (2026-03-14) The remaining `F157`/`F160` stability behavior was already a consequence of keeping the saved direct reference expression as the source of truth and recomputing block context from the current step location; targeted jsdom/unit coverage was enough to lock that down without changing runtime behavior.
@@ -264,6 +267,15 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/workflowDataContext.test.ts --reporter=dot`
   - `npx tsc --noEmit -p ee/server/tsconfig.json`
   - `npx eslint ee/server/src/components/workflow-designer/workflowDataContext.ts ee/server/src/components/workflow-designer/__tests__/workflowDataContext.test.ts`
+- (2026-03-14) Validate structured transform object/field authoring seams:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/TransformActionInputEditor.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/__tests__/TransformActionInputEditor.test.tsx`
+- (2026-03-14) Validate dynamic-array transform reference authoring plus downstream picker coverage:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/TransformActionInputEditor.test.tsx src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts src/components/workflow-designer/__tests__/actionInputEditorState.test.ts --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/actionInputEditorState.ts ee/server/src/components/workflow-designer/__tests__/TransformActionInputEditor.test.tsx ee/server/src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts`
+    - Passed with the same pre-existing `InputMappingEditor.tsx` warnings already noted elsewhere on this branch; no new eslint errors were introduced by the transform-array slice.
 
 ## Links / References
 
@@ -313,6 +325,15 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Propagated literal value types and direct-reference source schemas into `build_object`, narrowed `pick_fields` to the selected source properties when the source schema is known, and preserved renamed plus untouched source keys for `rename_fields`.
   - Added focused data-context tests proving downstream reference browsing now sees named `object.*` children for build-object, only selected keys for pick-fields, and renamed keys for rename-fields.
   - Marked F269-F271 and T269-T271 implemented.
+- (2026-03-14) Completed the structured transform authoring coverage slice:
+  - Added focused jsdom coverage proving `build_object.fields[]` supports user-defined field names plus per-row structured references and fixed literal values without falling back to raw JSON or freeform expressions.
+  - Added focused coverage proving `rename_fields.renames[]` renders explicit structured rename rows and `pick_fields.fields[]` renders the fixed field list through the primitive-array editor rather than raw JSON.
+  - Marked F274-F277 and T263/T274-T277 implemented.
+- (2026-03-14) Completed the dynamic-array transform reference slice:
+  - Updated schema-to-editor extraction so array item schemas with no explicit JSON-schema primitive now surface as `itemType: unknown` instead of disappearing into the raw-JSON fallback path.
+  - Added a row-based dynamic array editor for unknown-item arrays so `coalesce_value.candidates[]` and `build_array.items[]` can author multiple structured references with the same per-item source-mode controls used elsewhere in the inline editor.
+  - Added focused coverage proving coalesce/build-array render multiple structured reference rows, and that both coalesce value outputs and build-object object outputs appear in downstream reference pickers like normal business-action outputs.
+  - Marked F278-F280 and T278-T280 implemented.
 - (2026-03-14) Completed the dependent ticket-picker scope slice:
   - Reused the picker metadata from the first ticket-picker batch to narrow contact, location, category, and subcategory fixed-value options from the current fixed upstream client/board/category selections.
   - Added disabled explanatory states when those dependencies are missing or dynamic, while keeping dependent fields free to switch back to Reference mode instead of trapping the builder in Fixed mode.

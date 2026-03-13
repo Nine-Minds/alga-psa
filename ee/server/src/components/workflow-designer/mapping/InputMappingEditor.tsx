@@ -1029,9 +1029,19 @@ const LiteralValueEditor: React.FC<{
     (fieldChildren?.length ?? 0) === 0 &&
     Boolean(fieldConstraints?.itemType) &&
     fieldConstraints?.itemType !== 'object' &&
+    fieldConstraints?.itemType !== 'unknown' &&
+    fieldConstraints?.itemType !== 'any' &&
     fieldConstraints?.itemType !== 'array';
+  const hasStructuredDynamicArrayEditor =
+    fieldType === 'array' &&
+    (fieldChildren?.length ?? 0) === 0 &&
+    (fieldConstraints?.itemType === 'unknown' ||
+      fieldConstraints?.itemType === 'any');
   const supportsStructuredEditor =
-    hasStructuredObjectEditor || hasStructuredArrayObjectEditor || hasStructuredPrimitiveArrayEditor;
+    hasStructuredObjectEditor ||
+    hasStructuredArrayObjectEditor ||
+    hasStructuredPrimitiveArrayEditor ||
+    hasStructuredDynamicArrayEditor;
 
   const [editorMode, setEditorMode] = useState<'structured' | 'json'>(
     supportsStructuredEditor ? 'structured' : 'json'
@@ -1379,6 +1389,103 @@ const LiteralValueEditor: React.FC<{
       );
     };
 
+    const renderStructuredDynamicArrayEditor = () => {
+      const rows = Array.isArray(value) ? value : [];
+      const itemField: ActionInputField = {
+        name: 'item',
+        type: fieldConstraints?.itemType ?? 'unknown',
+      };
+
+      const addRow = () => {
+        const defaultMode = getDefaultWorkflowActionInputSourceMode(itemField);
+        const nextItem = createWorkflowActionInputValueForMode(
+          itemField,
+          undefined,
+          defaultMode,
+          'expression'
+        );
+        onChange([...rows, nextItem]);
+      };
+
+      return (
+        <div className="space-y-3">
+          {rows.map((rowValue, rowIndex) => (
+            <StructuredLiteralGroup
+              key={`${idPrefix}-dynamic-row-${rowIndex}`}
+              id={`${idPrefix}-literal-dynamic-row-${rowIndex}`}
+              title={`Item ${rowIndex + 1}`}
+              actions={
+                <div className="flex items-center gap-1">
+                  <Button
+                    id={`${idPrefix}-literal-dynamic-row-reset-${rowIndex}`}
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    onClick={() => {
+                      const nextRows = [...rows];
+                      nextRows[rowIndex] = createWorkflowActionInputValueForMode(
+                        itemField,
+                        undefined,
+                        getDefaultWorkflowActionInputSourceMode(itemField),
+                        'expression'
+                      );
+                      onChange(nextRows);
+                    }}
+                    disabled={disabled}
+                    className="h-7 px-2 text-gray-500 hover:text-gray-900"
+                  >
+                    Reset
+                  </Button>
+                  <Button
+                    id={`${idPrefix}-literal-dynamic-row-remove-${rowIndex}`}
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    onClick={() => onChange(rows.filter((_, idx) => idx !== rowIndex))}
+                    disabled={disabled}
+                    className="h-7 px-2 text-gray-500 hover:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              }
+            >
+              <MappingFieldEditor
+                field={itemField}
+                fieldPath={`${field.name}[${rowIndex}]`}
+                value={rowValue as MappingValue | undefined}
+                onChange={(nextRowValue) => {
+                  const nextRows = [...rows];
+                  nextRows[rowIndex] = nextRowValue;
+                  onChange(nextRows);
+                }}
+                rootInputMapping={rootInputMapping}
+                fieldOptions={fieldOptions}
+                secrets={secrets}
+                stepId={stepId}
+                disabled={disabled}
+                sourceTypeMap={sourceTypeMap}
+                expressionContext={expressionContext}
+              />
+            </StructuredLiteralGroup>
+          ))}
+
+          <Button
+            id={`${idPrefix}-literal-dynamic-array-add`}
+            variant="outline"
+            size="sm"
+            type="button"
+            onClick={addRow}
+            disabled={disabled}
+            className="w-full justify-center"
+          >
+            <Plus className="mr-1 h-3.5 w-3.5" />
+            Add item
+          </Button>
+        </div>
+      );
+    };
+
     const showStructured = supportsStructuredEditor && editorMode === 'structured';
 
     return wrapNullableEditor(
@@ -1397,6 +1504,7 @@ const LiteralValueEditor: React.FC<{
         {showStructured && hasStructuredObjectEditor && renderStructuredObjectEditor()}
         {showStructured && hasStructuredArrayObjectEditor && renderStructuredArrayObjectEditor()}
         {showStructured && hasStructuredPrimitiveArrayEditor && renderStructuredPrimitiveArrayEditor()}
+        {showStructured && hasStructuredDynamicArrayEditor && renderStructuredDynamicArrayEditor()}
         {!showStructured && renderJsonEditor()}
       </div>
     );

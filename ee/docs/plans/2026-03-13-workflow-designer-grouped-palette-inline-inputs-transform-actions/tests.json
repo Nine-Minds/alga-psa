@@ -1574,7 +1574,7 @@
   {
     "id": "T263",
     "description": "Playwright: build-object allows user-chosen output field names without expression syntax",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F263"]
   },
   {
@@ -1640,43 +1640,43 @@
   {
     "id": "T274",
     "description": "Playwright: build-object accepts structured references for per-field source values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F274"]
   },
   {
     "id": "T275",
     "description": "Playwright: build-object accepts fixed literal values for per-field source values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F275"]
   },
   {
     "id": "T276",
     "description": "Playwright: rename-fields exposes explicit rename fields rather than requiring expressions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F276"]
   },
   {
     "id": "T277",
     "description": "Playwright: pick-fields exposes explicit fixed field-selection controls rather than requiring expressions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F277"]
   },
   {
     "id": "T278",
     "description": "Playwright: coalesce-value accepts multiple structured references without expression syntax",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F278"]
   },
   {
     "id": "T279",
     "description": "Playwright: build-array accepts multiple structured references without expression syntax",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F279"]
   },
   {
     "id": "T280",
     "description": "Playwright: object and value transform outputs participate in downstream picker and reference flows like business outputs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F280"]
   },
   {

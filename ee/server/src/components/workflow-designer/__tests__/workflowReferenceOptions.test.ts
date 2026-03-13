@@ -174,4 +174,57 @@ describe('workflow reference options', () => {
       'Truncate Text'
     );
   });
+
+  it('T280: object and value transform outputs participate in downstream reference pickers like business outputs', () => {
+    const options = buildWorkflowReferenceFieldOptions(payloadSchema, {
+      ...baseDataContext,
+      steps: [
+        {
+          stepId: 'coalesce-step',
+          stepName: 'Coalesce Value',
+          saveAs: 'fallbackValue',
+          outputSchema: {
+            type: 'object',
+            properties: {
+              value: { type: 'string' },
+              matchedIndex: { type: 'number' },
+            },
+          },
+          fields: [],
+        },
+        {
+          stepId: 'build-object-step',
+          stepName: 'Build Object',
+          saveAs: 'ticketSummary',
+          outputSchema: {
+            type: 'object',
+            properties: {
+              object: {
+                type: 'object',
+                properties: {
+                  ticketId: { type: 'string' },
+                  priority: { type: 'string' },
+                },
+              },
+            },
+          },
+          fields: [],
+        },
+      ],
+    });
+
+    const values = options.map((option) => option.value);
+
+    expect(values).toContain('vars.fallbackValue');
+    expect(values).toContain('vars.fallbackValue.value');
+    expect(values).toContain('vars.ticketSummary');
+    expect(values).toContain('vars.ticketSummary.object');
+    expect(values).toContain('vars.ticketSummary.object.ticketId');
+    expect(options.find((option) => option.value === 'vars.fallbackValue')?.label).toContain(
+      'Coalesce Value'
+    );
+    expect(options.find((option) => option.value === 'vars.ticketSummary')?.label).toContain(
+      'Build Object'
+    );
+  });
 });

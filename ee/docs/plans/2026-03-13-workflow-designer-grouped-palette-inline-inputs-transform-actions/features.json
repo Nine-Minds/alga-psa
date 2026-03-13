@@ -1640,43 +1640,43 @@
   {
     "id": "F274",
     "description": "Allow object-building transform inputs to use structured references for each output field source",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Reference Source Model"]
   },
   {
     "id": "F275",
     "description": "Allow object-building transform inputs to use fixed literal values for each output field source",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Inline Field-Based Action Input Editor"]
   },
   {
     "id": "F276",
     "description": "Allow rename-fields transform inputs to express renamed field labels through explicit schema-backed fields rather than raw expression syntax",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions"]
   },
   {
     "id": "F277",
     "description": "Allow pick-fields transform inputs to choose a fixed list of output fields through explicit schema-backed fields rather than raw expression syntax",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions"]
   },
   {
     "id": "F278",
     "description": "Allow coalesce-value transform inputs to accept multiple structured references without requiring raw expression syntax",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions"]
   },
   {
     "id": "F279",
     "description": "Allow array-building transform inputs to accept multiple structured references without requiring raw expression syntax",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions"]
   },
   {
     "id": "F280",
     "description": "Allow object/value transform outputs to participate in downstream picker and reference flows exactly like business-action outputs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Reference Source Model"]
   },
   {
