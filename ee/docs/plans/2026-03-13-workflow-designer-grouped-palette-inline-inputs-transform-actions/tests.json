@@ -410,43 +410,43 @@
   {
     "id": "T069",
     "description": "Unit: grouped action steps still persist step.type as action.call",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F069"]
   },
   {
     "id": "T070",
     "description": "Unit: grouped action steps still persist actionId under config.actionId",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F070"]
   },
   {
     "id": "T071",
     "description": "Unit: grouped action steps still persist version under config.version",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F071"]
   },
   {
     "id": "T072",
     "description": "Unit: grouped action steps may store additive group metadata without affecting runtime shape",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F072"]
   },
   {
     "id": "T073",
     "description": "Unit: grouped action steps may store additive app metadata without affecting runtime shape",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F073"]
   },
   {
     "id": "T074",
     "description": "Integration: legacy action.call steps infer their group from actionId during hydration",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F074"]
   },
   {
     "id": "T075",
     "description": "Integration: legacy action.call app steps infer their app scope from actionId during hydration",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F075"]
   },
   {

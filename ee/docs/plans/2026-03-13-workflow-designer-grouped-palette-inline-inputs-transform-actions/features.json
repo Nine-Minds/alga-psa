@@ -362,37 +362,37 @@
   {
     "id": "F061",
     "description": "Dropping a core-object tile should create an action.call step scoped to that group",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model"]
   },
   {
     "id": "F062",
     "description": "Dropping the Transform tile should create an action.call step scoped to the transform group",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model", "Requirements > Transform Actions"]
   },
   {
     "id": "F063",
     "description": "Dropping an app tile should create an action.call step scoped to that app",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model", "Requirements > Plugin/App Support"]
   },
   {
     "id": "F064",
     "description": "Clicking a core-object tile should create an action.call step scoped to that group",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model"]
   },
   {
     "id": "F065",
     "description": "Clicking the Transform tile should create an action.call step scoped to the transform group",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model", "Requirements > Transform Actions"]
   },
   {
     "id": "F066",
     "description": "Clicking an app tile should create an action.call step scoped to that app",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model", "Requirements > Plugin/App Support"]
   },
   {
@@ -410,43 +410,43 @@
   {
     "id": "F069",
     "description": "A grouped action step should keep step.type equal to action.call for runtime compatibility",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model", "Rollout / Migration"]
   },
   {
     "id": "F070",
     "description": "A grouped action step should keep actionId stored under config.actionId for runtime compatibility",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model", "Rollout / Migration"]
   },
   {
     "id": "F071",
     "description": "A grouped action step should keep action version stored under config.version for runtime compatibility",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model", "Rollout / Migration"]
   },
   {
     "id": "F072",
     "description": "A grouped action step should allow additive storage of group metadata for authoring convenience",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model", "Rollout / Migration"]
   },
   {
     "id": "F073",
     "description": "A grouped action step should allow additive storage of app metadata for authoring convenience",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model", "Requirements > Plugin/App Support"]
   },
   {
     "id": "F074",
     "description": "Legacy action.call steps without additive group metadata should infer their group from actionId when hydrated in the designer",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model", "Rollout / Migration"]
   },
   {
     "id": "F075",
     "description": "Legacy action.call steps without additive app metadata should infer their app scope from actionId when hydrated in the designer",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model", "Requirements > Plugin/App Support"]
   },
   {

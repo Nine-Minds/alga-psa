@@ -39,6 +39,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-13) Grouped palette search was still doing raw substring matches against joined text. Hyphenated, dotted, underscored, and singular/plural queries were only matching incidentally, so the search slice needed explicit normalization rather than more ad hoc field concatenation.
 - (2026-03-13) The Playwright tenant bootstrap failure is still present on this branch. Search- and palette-focused browser tests abort in `tenant-creation.ts` before the workflow designer loads, so browser checklist items remain blocked even when the underlying UI code is in place.
 - (2026-03-13) The shared designer catalog helper had a local JSON-schema type that was narrower than the action registry payloads (notably tuple-style `items` and metadata-rich definitions). The search slice widened that helper type so EE TypeScript checks can validate the designer path against real action schemas.
+- (2026-03-13) Grouped palette insertion was still throwing away authoring scope once a tile became an `action.call` step. Without additive metadata, grouped drag/click insertion and legacy hydration both had to fall back to action-only guesses.
 
 ## Commands / Runbooks
 
@@ -70,6 +71,8 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts --reporter=dot`
 - (2026-03-13) Verify the EE server TypeScript surface:
   - `npx tsc --noEmit -p ee/server/tsconfig.json`
+- (2026-03-13) Validate grouped action step helpers:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/groupedActionStep.test.ts src/components/workflow-designer/__tests__/paletteSearch.test.ts`
 
 ## Links / References
 
@@ -114,10 +117,16 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Added singular/plural token variants so grouped tiles match natural object-name queries and verb-object phrases without duplicating tiles.
   - Reused the helper for stable grouped ordering so empty-state and filtered results keep the same category ordering.
   - Marked F041-F048, F050-F053, and F056-F060 implemented; F049 remains blocked until first-class transform actions exist and F054/F055 still need browser validation once tenant bootstrap is fixed.
+- (2026-03-13) Completed the grouped action metadata slice:
+  - Added a grouped-action-step helper that persists additive designer scope (`designerGroupKey`, `designerTileKind`, and `designerAppKey`) without changing the runtime `action.call` contract.
+  - Wired grouped drag/click insertion through that helper so grouped tiles can create `action.call` steps even when no default action is selected yet.
+  - Added grouped-step hydration helpers so legacy `action.call` steps can recover their grouped catalog record from `actionId` when metadata is absent.
+  - Marked F061-F066 and F069-F075 implemented; selection/reordering browser checks remain pending behind the tenant bootstrap blocker.
 - (2026-03-13) Validation blocker:
   - The new grouped-palette Playwright tests could not complete because tenant bootstrap failed before the browser reached the designer (`Failed to create tenant` from `tenant-creation.ts`). The assertions themselves did not run, so `tests.json` remains unchanged for the new palette tests.
 - (2026-03-13) Validation update:
   - `paletteSearch.test.ts` passed under EE Vitest, covering normalized grouped search semantics plus stable grouped ordering (T052).
   - The shared catalog unit suite still passes after widening the internal schema helper type used by the grouped designer catalog.
   - `npx tsc --noEmit -p ee/server/tsconfig.json` now completes successfully after the schema-type widening.
+  - `groupedActionStep.test.ts` passed under EE Vitest, covering runtime-compatible grouped-step metadata plus legacy group/app hydration (T069-T075).
   - Targeted Playwright search/palette tests still fail before assertions because tenant creation aborts with the same `Failed to create tenant` error from `ee/server/src/lib/testing/tenant-creation.ts`.

@@ -78,6 +78,11 @@ import {
   groupPaletteItemsByCategory,
   matchesPaletteSearchQuery,
 } from './paletteSearch';
+import {
+  applyGroupedActionSelectionToStep,
+  buildGroupedActionStepConfig,
+  getGroupedActionCatalogRecordForStep,
+} from './groupedActionStep';
 
 import type {
   WorkflowDefinition,
@@ -1193,7 +1198,11 @@ const buildEnhancedFieldOptions = (
   return options;
 };
 
-const getStepLabel = (step: Step, nodeRegistry: Record<string, NodeRegistryItem>): string => {
+const getStepLabel = (
+  step: Step,
+  nodeRegistry: Record<string, NodeRegistryItem>,
+  designerActionCatalog?: WorkflowDesignerCatalogRecord[]
+): string => {
   if (step.type === 'control.if') return 'If';
   if (step.type === 'control.forEach') return 'For Each';
   if (step.type === 'control.tryCatch') return 'Try/Catch';
@@ -1201,7 +1210,10 @@ const getStepLabel = (step: Step, nodeRegistry: Record<string, NodeRegistryItem>
   if (step.type === 'control.return') return 'Return';
   const registryItem = nodeRegistry[step.type];
   const name = (step as NodeStep).name?.trim();
-  return name || registryItem?.ui?.label || step.type;
+  const groupedLabel = designerActionCatalog
+    ? getGroupedActionCatalogRecordForStep(step, designerActionCatalog)?.label
+    : undefined;
+  return name || groupedLabel || registryItem?.ui?.label || step.type;
 };
 
 const getGraphSubtitle = (step: Step): string | null => {
@@ -1683,8 +1695,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         const stepPath = `${prefix}.steps[${index}]`;
         if (step.type === 'control.if') {
           const ifStep = step as IfBlock;
-          locations.push({ pipePath: `${stepPath}.then`, label: `${getStepLabel(step, nodeRegistryMap)} THEN` });
-          locations.push({ pipePath: `${stepPath}.else`, label: `${getStepLabel(step, nodeRegistryMap)} ELSE` });
+          locations.push({ pipePath: `${stepPath}.then`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog)} THEN` });
+          locations.push({ pipePath: `${stepPath}.else`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog)} ELSE` });
           visit(ifStep.then, `${stepPath}.then`);
           if (ifStep.else) {
             visit(ifStep.else, `${stepPath}.else`);
@@ -1692,14 +1704,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         }
         if (step.type === 'control.tryCatch') {
           const tcStep = step as TryCatchBlock;
-          locations.push({ pipePath: `${stepPath}.try`, label: `${getStepLabel(step, nodeRegistryMap)} TRY` });
-          locations.push({ pipePath: `${stepPath}.catch`, label: `${getStepLabel(step, nodeRegistryMap)} CATCH` });
+          locations.push({ pipePath: `${stepPath}.try`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog)} TRY` });
+          locations.push({ pipePath: `${stepPath}.catch`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog)} CATCH` });
           visit(tcStep.try, `${stepPath}.try`);
           visit(tcStep.catch, `${stepPath}.catch`);
         }
         if (step.type === 'control.forEach') {
           const feStep = step as ForEachBlock;
-          locations.push({ pipePath: `${stepPath}.body`, label: `${getStepLabel(step, nodeRegistryMap)} BODY` });
+          locations.push({ pipePath: `${stepPath}.body`, label: `${getStepLabel(step, nodeRegistryMap, designerActionCatalog)} BODY` });
           visit(feStep.body, `${stepPath}.body`);
         }
       });
@@ -1707,7 +1719,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
     visit(activeDefinition.steps as Step[], 'root');
     return locations;
-  }, [activeDefinition, nodeRegistryMap]);
+  }, [activeDefinition, designerActionCatalog, nodeRegistryMap]);
 
   const activeWorkflowRecord = useMemo(
     () => definitions.find((definition) => definition.workflow_id === activeWorkflowId) ?? null,
@@ -2925,19 +2937,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
       // Apply action config if it's an action.call from palette
       if (draggingFromPalette.type === 'action.call') {
-        const existingConfig = (newStep as NodeStep).config as Record<string, unknown> | undefined;
-        newStep = {
-          ...newStep,
-          name: draggingFromPalette.groupLabel ?? (newStep as NodeStep).name,
-          config: {
-            ...existingConfig,
-            ...(draggingFromPalette.actionId ? {
-              actionId: draggingFromPalette.actionId,
-              version: draggingFromPalette.actionVersion ?? 1,
-              saveAs: generateSaveAsName(draggingFromPalette.actionId)
-            } : {})
-          }
-        };
+        newStep = applyGroupedActionSelectionToStep(
+          newStep as NodeStep,
+          draggingFromPalette,
+          { generateSaveAsName }
+        );
       }
 
       // Insert at destination
@@ -3308,12 +3312,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                     if (itemWithAction.groupKey) {
                                       handleAddStep(
                                         'action.call',
-                                        itemWithAction.actionId
-                                          ? {
-                                              actionId: itemWithAction.actionId,
-                                              version: itemWithAction.actionVersion
-                                            }
-                                          : undefined,
+                                        buildGroupedActionStepConfig(itemWithAction, { generateSaveAsName }),
                                         itemWithAction.label
                                       );
                                     } else if (itemWithAction.actionId) {
@@ -4555,7 +4554,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                     <div className="h-[650px] rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] overflow-hidden">
                       <WorkflowGraph
                         steps={(activeDefinition?.steps ?? []) as Step[]}
-                        getLabel={(step) => getStepLabel(step as Step, nodeRegistryMap)}
+                        getLabel={(step) => getStepLabel(step as Step, nodeRegistryMap, designerActionCatalog)}
                         getSubtitle={(step) => getGraphSubtitle(step as Step) ?? (step as Step).type}
                         inputMappingStatusByStepId={actionInputMappingStatusByStepId}
                         selectedStepId={selectedStepId}
