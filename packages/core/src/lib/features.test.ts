@@ -35,4 +35,43 @@ describe('isFeatureFlagEnabled', () => {
 
     await expect(isFeatureFlagEnabled('teams-integration-ui')).resolves.toBe(true);
   });
+
+  it('uses the core default runtime when no checker has been registered', async () => {
+    vi.doMock('posthog-node', () => ({
+      PostHog: class {
+        async isFeatureEnabled() {
+          return true;
+        }
+      },
+    }));
+
+    const { isFeatureFlagEnabled } = await import('./features');
+
+    await expect(
+      isFeatureFlagEnabled('ai-assistant-activation', {
+        tenantId: 'tenant-a',
+        userId: 'user-a',
+      })
+    ).resolves.toBe(true);
+  });
+
+  it('prefers the registered checker over the core default runtime', async () => {
+    vi.doMock('posthog-node', () => ({
+      PostHog: class {
+        async isFeatureEnabled() {
+          return true;
+        }
+      },
+    }));
+
+    const { isFeatureFlagEnabled, registerFeatureFlagChecker } = await import('./features');
+    registerFeatureFlagChecker(async () => false);
+
+    await expect(
+      isFeatureFlagEnabled('ai-assistant-activation', {
+        tenantId: 'tenant-a',
+        userId: 'user-a',
+      })
+    ).resolves.toBe(false);
+  });
 });
