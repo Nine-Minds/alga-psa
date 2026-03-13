@@ -373,7 +373,7 @@
   {
     "id": "T046",
     "description": "Action: addQuoteItem with service_id populates defaults from catalog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
