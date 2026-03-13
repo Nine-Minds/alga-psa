@@ -204,3 +204,4 @@ npm run build
 - **T001 complete** — Added `packages/ui/src/components/CustomTabs.typecheck.ts` so `npx tsc -p packages/ui/tsconfig.json --noEmit` fails if `TabContent.id` ever becomes optional again.
 - **T002 complete** — `packages/ui/src/components/CustomTabs.test.tsx` verifies trigger buttons render the visible `label` text while internal matching still uses ids.
 - **T003 complete** — `packages/ui/src/components/CustomTabs.contract.test.ts` and the UI render test verify trigger internals are keyed off `tab.id` rather than `tab.label`.
+- **T004 complete** — The contract test asserts tab content panels use `value={tab.id}`, covering Radix content matching by id.
