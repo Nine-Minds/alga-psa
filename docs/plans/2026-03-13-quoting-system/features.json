@@ -196,7 +196,7 @@
   {
     "id": "F025",
     "description": "P1: Server action — createQuote with withAuth(), permission check, number generation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR8"
     ]
