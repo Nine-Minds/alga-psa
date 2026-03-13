@@ -171,3 +171,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) T038 complete — Item model: delete removes item and adjusts display_order of remaining items. Added quote-item delete reorder coverage.
 - (2026-03-13) T039 complete — Item model: reorder updates display_order for all items in batch. Added quote-item batch reorder coverage.
 - (2026-03-13) T040 complete — Activity model: create stores activity with all fields and auto-timestamps. Added quote activity creation coverage.
+- (2026-03-13) T041 complete — Activity model: listByQuoteId returns activities in chronological order. Added quote activity ordering coverage.

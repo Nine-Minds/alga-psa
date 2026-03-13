@@ -333,7 +333,7 @@
   {
     "id": "T041",
     "description": "Activity model: listByQuoteId returns activities in chronological order",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
