@@ -235,6 +235,9 @@ const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSch
     return {
       name,
       type,
+      nullable: Array.isArray(resolvedProp.type)
+        ? resolvedProp.type.includes('null')
+        : resolvedProp.type === 'null',
       description: resolvedProp.description,
       required: isFieldRequired,
       examples: Array.isArray(resolvedProp.examples) ? resolvedProp.examples : undefined,

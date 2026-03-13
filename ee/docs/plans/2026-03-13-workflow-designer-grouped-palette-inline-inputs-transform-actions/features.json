@@ -794,19 +794,19 @@
   {
     "id": "F133",
     "description": "Expose nullable fields in a way that allows the builder to intentionally set null where the schema allows it",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {
     "id": "F134",
     "description": "Preserve authored nested values when switching a field from Fixed mode to Advanced mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor", "Requirements > Advanced Expressions"]
   },
   {
     "id": "F135",
     "description": "Preserve authored nested values when switching a field from Reference mode to Advanced mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor", "Requirements > Advanced Expressions"]
   },
   {

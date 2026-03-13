@@ -794,19 +794,19 @@
   {
     "id": "T133",
     "description": "Playwright: nullable fields allow an intentional null state where the schema permits it",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F133"]
   },
   {
     "id": "T134",
     "description": "Playwright: switching a nested field from Fixed mode to Advanced mode preserves the authored value until changed",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F134"]
   },
   {
     "id": "T135",
     "description": "Playwright: switching a nested field from Reference mode to Advanced mode preserves the authored value until changed",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F135"]
   },
   {

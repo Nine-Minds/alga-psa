@@ -122,6 +122,14 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx src/components/workflow-designer/__tests__/InputMappingEditorValidationHints.test.tsx --reporter=dot`
   - `npx tsc --noEmit -p ee/server/tsconfig.json`
   - `npx eslint ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorValidationHints.test.tsx`
+- (2026-03-14) Validate nullable fixed-value field support:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx src/components/workflow-designer/__tests__/actionInputEditorState.test.ts --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/actionInputEditorState.ts ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx ee/server/src/components/workflow-designer/__tests__/actionInputEditorState.test.ts`
+- (2026-03-14) Validate source-mode preservation across fixed/reference/advanced transitions:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputSourceMode.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorStructuredLiterals.test.tsx`
 - (2026-03-13) Validate text transform action registration and catalog/search coverage:
   - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/actions/__tests__/registerTransformActions.test.ts shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts --reporter=dot`
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/paletteSearch.test.ts --reporter=dot`
@@ -350,6 +358,14 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Reused `MappingFieldEditor` recursively inside structured object and object-array literal groups so nested children now keep their own Reference/Fixed/Advanced mode state inside the parent object mapping.
   - Added focused jsdom coverage showing nested child source-mode selectors render independently from the parent object field while enum, boolean, number, and plain string fields continue to use the intended structured fixed controls.
   - Marked F124, F129-F132, and T124/T129-T132 implemented.
+- (2026-03-14) Completed the nullable fixed-value slice:
+  - Threaded `nullable` through the schema-to-editor field extraction so fixed-value editors can distinguish intentional `null` from an unset field.
+  - Added an explicit fixed-mode null selector that hides the underlying primitive/object editor while the field is intentionally set to `null`.
+  - Marked F133 and T133 implemented.
+- (2026-03-14) Completed the source-mode preservation slice:
+  - Added a mode-transition helper that preserves previously authored fixed literals and direct reference expressions while builders move fields into and back out of Advanced mode.
+  - Wired `MappingFieldEditor` to retain those preserved values locally so nested object fields can round-trip between Fixed/Reference and Advanced without discarding their prior authoring state.
+  - Marked F134-F135 and T134-T135 implemented.
 - (2026-03-14) Completed the source-mode vocabulary slice:
   - Added `WorkflowActionInputSourceMode.tsx` so each editable field now exposes the user-facing `Reference`, `Fixed value`, and `Advanced` source-mode selector instead of raw expression/secret/literal labels.
   - Kept the existing serializer/runtime behavior underneath for now by mapping direct field-reference expressions to `Reference`, literal values to `Fixed value`, and complex expressions or secrets to `Advanced`.

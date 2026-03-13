@@ -9,6 +9,7 @@ import {
   createWorkflowActionInputValueForMode,
   deriveWorkflowActionInputSourceMode,
   getDefaultWorkflowActionInputSourceMode,
+  transitionWorkflowActionInputMode,
   WorkflowActionInputSourceMode,
 } from '../WorkflowActionInputSourceMode';
 
@@ -105,5 +106,45 @@ describe('WorkflowActionInputSourceMode', () => {
     expect(buildDefaultWorkflowActionInputLiteralValue({ type: 'number' })).toBe(0);
     expect(buildDefaultWorkflowActionInputLiteralValue({ type: 'array' })).toEqual([]);
     expect(buildDefaultWorkflowActionInputLiteralValue({ type: 'object' })).toEqual({});
+  });
+
+  it('T134/T135: preserves fixed nested values and direct references when switching into advanced mode', () => {
+    const nestedLiteral = {
+      requester: {
+        name: 'Alex',
+      },
+    };
+    const fixedToAdvanced = transitionWorkflowActionInputMode(
+      { type: 'object' },
+      nestedLiteral,
+      'advanced',
+      'expression'
+    );
+
+    expect(fixedToAdvanced.nextValue).toEqual({ $expr: '' });
+    expect(fixedToAdvanced.preservedFixedValue).toEqual(nestedLiteral);
+
+    const advancedBackToFixed = transitionWorkflowActionInputMode(
+      { type: 'object' },
+      fixedToAdvanced.nextValue,
+      'fixed',
+      'expression',
+      {
+        preservedFixedValue: fixedToAdvanced.preservedFixedValue,
+      }
+    );
+
+    expect(advancedBackToFixed.nextValue).toEqual(nestedLiteral);
+
+    const directReference = { $expr: 'payload.requester.name' } as const;
+    const referenceToAdvanced = transitionWorkflowActionInputMode(
+      { type: 'string' },
+      directReference,
+      'advanced',
+      'expression'
+    );
+
+    expect(referenceToAdvanced.nextValue).toEqual(directReference);
+    expect(referenceToAdvanced.preservedReferenceValue).toEqual(directReference);
   });
 });

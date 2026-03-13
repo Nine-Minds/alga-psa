@@ -233,4 +233,32 @@ describe('InputMappingEditor structured literals', () => {
     expect(stringInput?.type).toBe('text');
     expect(stringInput?.value).toBe('Printer offline');
   });
+
+  it('T133: nullable fields expose an intentional null state in fixed mode', () => {
+    render(
+      <InputMappingEditor
+        value={{
+          due_at: null,
+        }}
+        onChange={vi.fn()}
+        targetFields={[
+          {
+            name: 'due_at',
+            type: 'string',
+            nullable: true,
+          },
+        ]}
+        fieldOptions={[]}
+        stepId="step-nullable"
+        positionsHandlers={positionsHandlers}
+      />
+    );
+
+    expect(
+      document.getElementById('mapping-step-nullable-due_at-literal-null-mode-container')
+    ).toBeInTheDocument();
+    expect(
+      document.getElementById('mapping-step-nullable-due_at-literal-str')
+    ).not.toBeInTheDocument();
+  });
 });

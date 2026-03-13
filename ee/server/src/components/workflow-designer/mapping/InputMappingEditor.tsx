@@ -39,7 +39,9 @@ import { getWorkflowActionInputTypeHint, WorkflowActionInputTypeHint } from '../
 import {
   WorkflowActionInputSourceMode,
   createWorkflowActionInputValueForMode,
+  deriveWorkflowActionInputSourceMode,
   getDefaultWorkflowActionInputSourceMode,
+  transitionWorkflowActionInputMode,
   type WorkflowActionInputAdvancedModeValue,
   type WorkflowActionInputSourceModeValue,
 } from '../WorkflowActionInputSourceMode';
@@ -363,6 +365,7 @@ const TypeFilteredFieldPicker: React.FC<{
 export interface ActionInputField {
   name: string;
   type: string;
+  nullable?: boolean;
   description?: string;
   required?: boolean;
   examples?: unknown[];
@@ -525,6 +528,12 @@ const MappingFieldEditor: React.FC<{
   const [expressionError, setExpressionError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [expanded, setExpanded] = useState(true);
+  const [preservedFixedValue, setPreservedFixedValue] = useState<MappingValue | undefined>(() =>
+    deriveWorkflowActionInputSourceMode(value).mode === 'fixed' ? value : undefined
+  );
+  const [preservedReferenceValue, setPreservedReferenceValue] = useState<MappingValue | undefined>(() =>
+    deriveWorkflowActionInputSourceMode(value).mode === 'reference' ? value : undefined
+  );
   const editorRef = useRef<ExpressionEditorHandle>(null);
 
   const resolvedFieldPath = fieldPath ?? field.name;
@@ -539,13 +548,34 @@ const MappingFieldEditor: React.FC<{
     setValueType(getMappingValueType(value));
   }, [value]);
 
+  useEffect(() => {
+    const sourceMode = deriveWorkflowActionInputSourceMode(value).mode;
+    if (sourceMode === 'fixed' && value !== undefined) {
+      setPreservedFixedValue(value);
+    }
+    if (sourceMode === 'reference' && value !== undefined) {
+      setPreservedReferenceValue(value);
+    }
+  }, [value]);
+
   const handleSourceModeChange = useCallback((nextMode: WorkflowActionInputSourceModeValue) => {
     setExpressionError(null);
     const currentAdvancedMode: WorkflowActionInputAdvancedModeValue = valueType === 'secret' ? 'secret' : 'expression';
-    const nextValue = createWorkflowActionInputValueForMode(field, value, nextMode, currentAdvancedMode);
+    const transition = transitionWorkflowActionInputMode(
+      field,
+      value,
+      nextMode,
+      currentAdvancedMode,
+      {
+        preservedFixedValue,
+        preservedReferenceValue,
+      }
+    );
+    setPreservedFixedValue(transition.preservedFixedValue);
+    setPreservedReferenceValue(transition.preservedReferenceValue);
     setValueType(nextMode === 'fixed' ? 'literal' : currentAdvancedMode === 'secret' && nextMode === 'advanced' ? 'secret' : 'expr');
-    onChange(nextValue);
-  }, [field, onChange, value, valueType]);
+    onChange(transition.nextValue);
+  }, [field, onChange, preservedFixedValue, preservedReferenceValue, value, valueType]);
 
   const handleAdvancedModeChange = useCallback((nextMode: WorkflowActionInputAdvancedModeValue) => {
     setExpressionError(null);
@@ -1015,6 +1045,38 @@ const LiteralValueEditor: React.FC<{
     }
   }, [value, hasStructuredPrimitiveArrayEditor]);
 
+  const nullableOptions: SelectOption[] = [
+    { value: 'value', label: 'Use value' },
+    { value: 'null', label: 'Set null' },
+  ];
+  const supportsNull = field.nullable === true;
+  const wrapNullableEditor = (editor: React.ReactNode) => {
+    if (!supportsNull) return editor;
+
+    return (
+      <div className="space-y-2">
+        <CustomSelect
+          id={`${idPrefix}-literal-null-mode`}
+          options={nullableOptions}
+          value={value === null ? 'null' : 'value'}
+          onValueChange={(nextMode) => {
+            if (nextMode === 'null') {
+              onChange(null);
+              return;
+            }
+
+            if (value === null) {
+              onChange(buildDefaultLiteralValue(field));
+            }
+          }}
+          disabled={disabled}
+          className="w-36"
+        />
+        {value !== null && editor}
+      </div>
+    );
+  };
+
   // Handle enum fields
   if (fieldEnum && fieldEnum.length > 0) {
     const enumOptions: SelectOption[] = fieldEnum.map(e => ({
@@ -1022,7 +1084,7 @@ const LiteralValueEditor: React.FC<{
       label: String(e ?? '')
     }));
 
-    return (
+    return wrapNullableEditor(
       <CustomSelect
         id={`${idPrefix}-literal-enum`}
         options={enumOptions}
@@ -1039,7 +1101,7 @@ const LiteralValueEditor: React.FC<{
 
   // Handle boolean
   if (fieldType === 'boolean') {
-    return (
+    return wrapNullableEditor(
       <CustomSelect
         id={`${idPrefix}-literal-bool`}
         options={[
@@ -1055,7 +1117,7 @@ const LiteralValueEditor: React.FC<{
 
   // Handle number/integer
   if (fieldType === 'number' || fieldType === 'integer') {
-    return (
+    return wrapNullableEditor(
       <Input
         id={`${idPrefix}-literal-num`}
         type="number"
@@ -1250,7 +1312,7 @@ const LiteralValueEditor: React.FC<{
 
     const showStructured = supportsStructuredEditor && editorMode === 'structured';
 
-    return (
+    return wrapNullableEditor(
       <div className="space-y-2">
         {supportsStructuredEditor && (
           <CustomSelect
@@ -1273,7 +1335,7 @@ const LiteralValueEditor: React.FC<{
 
   // Default to string
   const stringInputType = fieldConstraints?.format === 'email' ? 'email' : 'text';
-  return (
+  return wrapNullableEditor(
     <Input
       id={`${idPrefix}-literal-str`}
       type={stringInputType}

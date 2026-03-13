@@ -16,6 +16,11 @@ export type WorkflowActionInputFieldLike = {
   };
 };
 
+export type WorkflowActionInputPreservedModeValues = {
+  preservedFixedValue?: MappingValue;
+  preservedReferenceValue?: MappingValue;
+};
+
 const SOURCE_MODE_OPTIONS = [
   { value: 'reference', label: 'Reference' },
   { value: 'fixed', label: 'Fixed value' },
@@ -125,6 +130,45 @@ export function createWorkflowActionInputValueForMode(
   }
 
   return buildDefaultWorkflowActionInputLiteralValue(field);
+}
+
+export function transitionWorkflowActionInputMode(
+  field: WorkflowActionInputFieldLike,
+  currentValue: MappingValue | undefined,
+  nextMode: WorkflowActionInputSourceModeValue,
+  advancedMode: WorkflowActionInputAdvancedModeValue = 'expression',
+  preservedValues: WorkflowActionInputPreservedModeValues = {}
+): WorkflowActionInputPreservedModeValues & { nextValue: MappingValue } {
+  const currentMode = deriveWorkflowActionInputSourceMode(currentValue).mode;
+  let preservedFixedValue = preservedValues.preservedFixedValue;
+  let preservedReferenceValue = preservedValues.preservedReferenceValue;
+
+  if (currentMode === 'fixed' && currentValue !== undefined) {
+    preservedFixedValue = currentValue;
+  }
+
+  if (
+    currentMode === 'reference' &&
+    currentValue &&
+    typeof currentValue === 'object' &&
+    '$expr' in currentValue &&
+    isSimpleFieldReferenceExpression((currentValue as Expr).$expr)
+  ) {
+    preservedReferenceValue = currentValue;
+  }
+
+  const transitionSeedValue =
+    nextMode === 'fixed' && preservedFixedValue !== undefined
+      ? preservedFixedValue
+      : nextMode === 'reference' && preservedReferenceValue !== undefined
+        ? preservedReferenceValue
+        : currentValue;
+
+  return {
+    nextValue: createWorkflowActionInputValueForMode(field, transitionSeedValue, nextMode, advancedMode),
+    preservedFixedValue,
+    preservedReferenceValue,
+  };
 }
 
 export const WorkflowActionInputSourceMode: React.FC<{
