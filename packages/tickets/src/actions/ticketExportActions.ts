@@ -2,6 +2,7 @@
 
 import type { ITicketListFilters, ITicketListItem, ITag } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
+import { withAuth } from '@alga-psa/auth';
 import { getTicketsForList } from './optimizedTicketActions';
 
 const MAX_EXPORT_ROWS = 10000;
@@ -144,7 +145,7 @@ function ticketToRow(
  * Batch-resolve contact names, user names, and subcategory names
  * for all tickets in a single set of queries.
  */
-async function resolveNameLookups(tickets: ITicketListItem[]): Promise<NameLookups> {
+async function resolveNameLookups(tickets: ITicketListItem[], tenant: string): Promise<NameLookups> {
   const { knex: db } = await createTenantKnex();
 
   // Collect unique IDs
@@ -165,7 +166,8 @@ async function resolveNameLookups(tickets: ITicketListItem[]): Promise<NameLooku
   if (contactIds.size > 0) {
     const contacts = await db('contacts')
       .select('contact_name_id', 'full_name')
-      .whereIn('contact_name_id', Array.from(contactIds));
+      .whereIn('contact_name_id', Array.from(contactIds))
+      .andWhere('tenant', tenant);
     for (const c of contacts) {
       lookups.contacts[c.contact_name_id] = c.full_name || '';
     }
@@ -175,7 +177,8 @@ async function resolveNameLookups(tickets: ITicketListItem[]): Promise<NameLooku
   if (userIds.size > 0) {
     const users = await db('users')
       .select('user_id', db.raw("CONCAT(first_name, ' ', last_name) as full_name"))
-      .whereIn('user_id', Array.from(userIds));
+      .whereIn('user_id', Array.from(userIds))
+      .andWhere('tenant', tenant);
     for (const u of users) {
       lookups.users[u.user_id] = u.full_name || '';
     }
@@ -185,7 +188,8 @@ async function resolveNameLookups(tickets: ITicketListItem[]): Promise<NameLooku
   if (subcategoryIds.size > 0) {
     const categories = await db('categories')
       .select('category_id', 'category_name')
-      .whereIn('category_id', Array.from(subcategoryIds));
+      .whereIn('category_id', Array.from(subcategoryIds))
+      .andWhere('tenant', tenant);
     for (const c of categories) {
       lookups.categories[c.category_id] = c.category_name || '';
     }
@@ -194,11 +198,13 @@ async function resolveNameLookups(tickets: ITicketListItem[]): Promise<NameLooku
   return lookups;
 }
 
-export async function exportTicketsToCSV(
+export const exportTicketsToCSV = withAuth(async (
+  _user,
+  { tenant },
   filters: ITicketListFilters,
   selectedFields?: string[],
   ticketIds?: string[]
-): Promise<{ csv: string; count: number }> {
+): Promise<{ csv: string; count: number }> => {
   const result = await getTicketsForList(filters, 1, MAX_EXPORT_ROWS);
 
   // Filter to only selected tickets if IDs are provided
@@ -207,7 +213,7 @@ export async function exportTicketsToCSV(
     : result.tickets;
 
   // Resolve names that aren't part of the standard list query
-  const lookups = await resolveNameLookups(tickets);
+  const lookups = await resolveNameLookups(tickets, tenant);
   const ticketTags = result.metadata?.ticketTags || {};
 
   const rows = tickets.map(t => ticketToRow(t, lookups, ticketTags));
@@ -229,7 +235,12 @@ export async function exportTicketsToCSV(
   );
 
   const escapeField = (field: string): string => {
-    const str = String(field);
+    let str = String(field);
+    // Guard against CSV injection: prefix dangerous leading characters with a single quote
+    // so spreadsheet apps don't interpret the value as a formula.
+    if (/^[=+\-@\t\r]/.test(str)) {
+      str = "'" + str;
+    }
     if (str.includes(',') || str.includes('"') || str.includes('\n')) {
       return `"${str.replace(/"/g, '""')}"`;
     }
@@ -242,4 +253,4 @@ export async function exportTicketsToCSV(
   ];
 
   return { csv: csvLines.join('\n'), count: tickets.length };
-}
+});
