@@ -188,7 +188,7 @@
   {
     "id": "T032",
     "description": "Playwright: app/plugin catalog records render as top-level app tiles",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F032"]
   },
   {
@@ -206,7 +206,7 @@
   {
     "id": "T035",
     "description": "Playwright: grouped tile tooltips show the tile description",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F035"]
   },
   {
@@ -398,7 +398,7 @@
   {
     "id": "T067",
     "description": "Playwright: a newly inserted grouped action step becomes selected like current action.call steps",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F067"]
   },
   {
@@ -464,7 +464,7 @@
   {
     "id": "T078",
     "description": "Playwright: grouped action steps preserve delete behavior",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F078"]
   },
   {
@@ -476,7 +476,7 @@
   {
     "id": "T080",
     "description": "Playwright: grouped action steps preserve saveAs auto-generation behavior",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F080"]
   },
   {

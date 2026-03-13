@@ -159,6 +159,59 @@ function buildSchemaTestNode() {
   };
 }
 
+function buildAppCatalogRegistryOverrides(): WorkflowPlaywrightOverrides {
+  return {
+    registryActions: [
+      {
+        id: 'slack.send_message',
+        version: 1,
+        ui: {
+          label: 'Send Slack Message',
+          description: 'Send a message to a Slack channel.',
+          category: 'Apps',
+          icon: 'slack',
+        },
+        inputSchema: {
+          type: 'object',
+          properties: {
+            channel: { type: 'string' },
+            message: { type: 'string' },
+          },
+        },
+        outputSchema: {
+          type: 'object',
+          properties: {
+            ts: { type: 'string' },
+          },
+        },
+      },
+      {
+        id: 'github.create_issue',
+        version: 1,
+        ui: {
+          label: 'Create GitHub Issue',
+          description: 'Create an issue in GitHub.',
+          category: 'Apps',
+          icon: 'github',
+        },
+        inputSchema: {
+          type: 'object',
+          properties: {
+            repository: { type: 'string' },
+            title: { type: 'string' },
+          },
+        },
+        outputSchema: {
+          type: 'object',
+          properties: {
+            issue_number: { type: 'number' },
+          },
+        },
+      },
+    ],
+  };
+}
+
 async function snapshotWorkflowDefinitions(db: Knex): Promise<WorkflowDefinitionSnapshot> {
   const definitions = await db('workflow_definitions').select();
   const versions = await db('workflow_definition_versions').select();
@@ -688,6 +741,44 @@ test.describe('Workflow Designer UI - basic', () => {
     }
   });
 
+  test('app/plugin catalog records render as top-level app tiles', async ({ page }) => {
+    test.setTimeout(120000);
+    await applyWorkflowOverrides(page, buildAppCatalogRegistryOverrides());
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    try {
+      await workflowPage.clickNewWorkflow();
+
+      await expect(workflowPage.addButtonFor('app:slack')).toBeVisible();
+      await expect(workflowPage.addButtonFor('app:github')).toBeVisible();
+      await expect(page.locator('#workflow-designer-palette-scroll')).toContainText('Apps');
+      await expect(page.getByTestId('palette-item-slack.send_message')).toHaveCount(0);
+      await expect(page.getByTestId('palette-item-github.create_issue')).toHaveCount(0);
+    } finally {
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
+      await db.destroy();
+    }
+  });
+
+  test('grouped tile tooltips show the tile description', async ({ page }) => {
+    test.setTimeout(120000);
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    try {
+      await workflowPage.clickNewWorkflow();
+
+      const ticketTile = workflowPage.addButtonFor('ticket');
+      await ticketTile.hover();
+
+      await expect(page.getByText('Create, find, update, assign, and manage tickets.')).toBeVisible({
+        timeout: 5_000,
+      });
+    } finally {
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
+      await db.destroy();
+    }
+  });
+
   test('palette search remains interactive after a grouped tile has been inserted', async ({ page }) => {
     test.setTimeout(120000);
 
@@ -823,7 +914,7 @@ test.describe('Workflow Designer UI - basic', () => {
       const groupedStepId = rootStepIds[1];
       const thenPipe = page.locator(`#${pipeIdForPath('root.steps[0].then')}`);
       await expect(thenPipe).toBeVisible();
-      await expect(thenPipe.getByText('Drop steps here')).toBeVisible();
+      await expect(thenPipe.getByTestId('empty-pipeline')).toBeVisible();
 
       await dragBetween(page, dragHandleFor(page, groupedStepId), thenPipe, { targetY: 0.75 });
 

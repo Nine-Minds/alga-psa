@@ -398,7 +398,7 @@
   {
     "id": "F067",
     "description": "A newly inserted grouped action step should initially preserve the current step selection behavior",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model"]
   },
   {
@@ -464,7 +464,7 @@
   {
     "id": "F078",
     "description": "A grouped action step should preserve delete behavior already used for existing steps",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model"]
   },
   {
@@ -476,7 +476,7 @@
   {
     "id": "F080",
     "description": "A grouped action step should preserve saveAs generation behavior already used for action.call steps",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "Requirements > Grouped Action Step Model"]
   },
   {
