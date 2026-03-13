@@ -5,8 +5,8 @@ import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { IQuote } from '@alga-psa/types';
-import Quote from '../models/quote';
+import type { IQuote, IQuoteListItem, PaginatedResult } from '@alga-psa/types';
+import Quote, { type QuoteListOptions } from '../models/quote';
 import { createQuoteSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
 
 type CreateQuoteInput = Omit<
@@ -33,6 +33,14 @@ const requireBillingCreatePermission = async (user: unknown): Promise<ActionPerm
 const requireBillingUpdatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing', 'update')) {
     return permissionError('Permission denied: Cannot update quotes');
+  }
+
+  return null;
+};
+
+const requireBillingReadPermission = async (user: unknown): Promise<ActionPermissionError | null> => {
+  if (!await hasPermission(user as any, 'billing', 'read')) {
+    return permissionError('Permission denied: Cannot read quotes');
   }
 
   return null;
@@ -82,4 +90,32 @@ export const updateQuote = withAuth(async (
 
   const updatedQuote = await Quote.update(knex, tenant, quoteId, parsedInput);
   return await Quote.getById(knex, tenant, updatedQuote.quote_id) as IQuote;
+});
+
+export const getQuote = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string
+): Promise<IQuote | null | ActionPermissionError> => {
+  const denied = await requireBillingReadPermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  return await Quote.getById(knex, tenant, quoteId);
+});
+
+export const listQuotes = withAuth(async (
+  user,
+  { tenant },
+  options: QuoteListOptions = {}
+): Promise<PaginatedResult<IQuoteListItem> | ActionPermissionError> => {
+  const denied = await requireBillingReadPermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  return await Quote.listByTenant(knex, tenant, options);
 });

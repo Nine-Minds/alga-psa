@@ -212,7 +212,7 @@
   {
     "id": "F027",
     "description": "P1: Server action — getQuote (single) and listQuotes (paginated list)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR8"
     ]

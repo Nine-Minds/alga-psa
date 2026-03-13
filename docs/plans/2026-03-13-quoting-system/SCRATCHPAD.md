@@ -105,6 +105,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) F027 complete — P1: Added `getQuote` and `listQuotes` server actions in `packages/billing/src/actions/quoteActions.ts`, both wrapped with `withAuth()`, enforcing `billing:read`, and delegating to the tenant-scoped quote model for single-record and paginated list retrieval.
 - (2026-03-13) F026 complete — P1: Added `updateQuote` server action in `packages/billing/src/actions/quoteActions.ts`, wrapped with `withAuth()`, enforcing `billing:update`, validating input with `updateQuoteSchema`, defaulting `updated_by` from the authenticated user, and relying on the quote model for status-transition enforcement.
 - (2026-03-13) F025 complete — P1: Added `createQuote` server action in `packages/billing/src/actions/quoteActions.ts`, wrapped with `withAuth()`, enforcing `billing:create`, validating input with `createQuoteSchema`, defaulting `created_by` from the authenticated user, and returning the created quote with generated `quote_number`.
 - (2026-03-13) F001 complete — P1: Database migration — create `quotes` table with all fields including is_template boolean, indexes, and Citus-compatible composite keys. Implemented via the quote foundation migration.
