@@ -58,6 +58,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-14) The default `npx playwright test` path for workflow-designer specs still cold-boots Docker deps, reruns the full migration/seed pipeline, and rebuilds the workflow-worker image before hitting assertions. Small grouped-step state checks are therefore safer to validate through deterministic grouped-step helpers in this worktree unless the branch is already running a warm local harness.
 - (2026-03-14) The selected-action schema state and required-field counts were being recomputed in multiple places inside `WorkflowDesigner.tsx` (step properties panel and pipeline badges). Extracting that state into a shared helper reduces drift and gives the grouped action-change path a deterministic test seam for schema/summary updates.
 - (2026-03-14) Downstream reference exposure was already driven by a pure step-output context walker keyed off each prior step’s current `actionId`/`version`. The missing work for `F089`/`F095` was extracting that walker behind a small helper and pinning it with deterministic coverage.
+- (2026-03-14) The action-input editor state had no place to carry additive picker annotations yet, even though later ticket-picker work will depend on that state changing when the selected action changes. Adding the metadata seam at the `ActionInputField` layer keeps the current UI unchanged while unblocking the later picker slice.
 
 ## Commands / Runbooks
 
@@ -139,6 +140,10 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/workflowDataContext.test.ts src/components/workflow-designer/__tests__/groupedActionSelection.test.ts --reporter=dot`
   - `npx tsc --noEmit -p ee/server/tsconfig.json`
   - `npx eslint ee/server/src/components/workflow-designer/workflowDataContext.ts ee/server/src/components/workflow-designer/WorkflowDesigner.tsx ee/server/src/components/workflow-designer/__tests__/workflowDataContext.test.ts ee/server/src/components/workflow-designer/__tests__/groupedActionSelection.test.ts`
+- (2026-03-14) Validate grouped action-input picker metadata and field-type updates:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/actionInputEditorState.test.ts --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/actionInputEditorState.ts ee/server/src/components/workflow-designer/__tests__/actionInputEditorState.test.ts`
 
 ## Links / References
 
@@ -267,3 +272,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Extracted the prior-step data-context walker into `workflowDataContext.ts` so downstream output exposure no longer needs to be tested through the full client component module graph.
   - Added focused coverage that changes an upstream grouped step from `tickets.create` to `tickets.update_fields` and asserts the downstream step sees the updated output schema and field list immediately.
   - Marked F089, F095, T089, and T095 implemented.
+- (2026-03-14) Completed the grouped-step picker/type metadata slice:
+  - Extended `ActionInputField` and `actionInputEditorState` to preserve additive workflow picker annotations from action schemas without changing the current mapping UI.
+  - Added focused coverage that changing the selected action swaps both the picker metadata and the target field type used by compatibility hinting.
+  - Marked F091, F092, T091, and T092 implemented.

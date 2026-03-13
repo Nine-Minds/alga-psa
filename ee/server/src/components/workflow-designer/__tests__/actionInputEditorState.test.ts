@@ -52,7 +52,13 @@ const registry: WorkflowDesignerActionRegistryItem[] = [
     inputSchema: {
       type: 'object',
       properties: {
-        ticket_id: { type: 'string' },
+        ticket_id: {
+          type: 'integer',
+          'x-workflow-picker-kind': 'ticket',
+          'x-workflow-picker-dependencies': ['board_id'],
+          'x-workflow-picker-fixed-value-hint': 'search',
+          'x-workflow-picker-allow-dynamic-reference': true,
+        },
         summary: { type: 'string' },
       },
       required: ['ticket_id'],
@@ -97,6 +103,44 @@ describe('action input editor state', () => {
 
     const nextState = buildActionInputEditorState(nextStep, registry);
     expect(nextState.actionInputFields.map((field) => field.name)).toEqual(['ticket_id', 'summary']);
+  });
+
+  it('T091/T092: choosing an action updates picker metadata and field types used by the grouped editor', () => {
+    const step: NodeStep = {
+      id: 'step-3',
+      type: 'action.call',
+      name: 'Ticket',
+      config: {
+        designerGroupKey: 'ticket',
+        designerTileKind: 'core-object',
+        actionId: 'tickets.create',
+        version: 1,
+      },
+    };
+
+    const initialState = buildActionInputEditorState(step, registry);
+    expect(initialState.actionInputFields.find((field) => field.name === 'summary')).toMatchObject({
+      type: 'string',
+      picker: undefined,
+    });
+
+    const nextStep = applyCatalogActionChoiceToStep(step, updateAction, {
+      generateSaveAsName,
+      currentGroupLabel: 'Ticket',
+      currentActionLabel: 'Create Ticket',
+      nextGroupLabel: 'Ticket',
+    });
+
+    const nextState = buildActionInputEditorState(nextStep, registry);
+    expect(nextState.actionInputFields.find((field) => field.name === 'ticket_id')).toMatchObject({
+      type: 'integer',
+      picker: {
+        kind: 'ticket',
+        dependencies: ['board_id'],
+        fixedValueHint: 'search',
+        allowsDynamicReference: true,
+      },
+    });
   });
 
   it('T090: choosing an action updates the required-field completion counts for the grouped editor summary', () => {

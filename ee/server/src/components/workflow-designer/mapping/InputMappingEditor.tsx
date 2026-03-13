@@ -356,6 +356,12 @@ export interface ActionInputField {
   type: string;
   description?: string;
   required?: boolean;
+  picker?: {
+    kind: string;
+    dependencies?: string[];
+    fixedValueHint?: string;
+    allowsDynamicReference?: boolean;
+  };
   enum?: Array<string | number | boolean | null>;
   default?: unknown;
   constraints?: {

@@ -542,13 +542,13 @@
   {
     "id": "T091",
     "description": "Integration: choosing an action updates the picker metadata set used by the field editor",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F091"]
   },
   {
     "id": "T092",
     "description": "Integration: choosing an action updates type-compatibility hints on inline fields",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F092"]
   },
   {

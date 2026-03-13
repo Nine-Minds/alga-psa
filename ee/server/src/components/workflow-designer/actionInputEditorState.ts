@@ -16,6 +16,10 @@ type JsonSchema = {
   default?: unknown;
   $ref?: string;
   definitions?: Record<string, JsonSchema>;
+  'x-workflow-picker-kind'?: string;
+  'x-workflow-picker-dependencies'?: string[];
+  'x-workflow-picker-fixed-value-hint'?: string;
+  'x-workflow-picker-allow-dynamic-reference'?: boolean;
 };
 
 export type WorkflowDesignerActionRegistryItem = {
@@ -103,6 +107,10 @@ const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSch
       maximum?: number;
       pattern?: string;
       items?: JsonSchema;
+      'x-workflow-picker-kind'?: string;
+      'x-workflow-picker-dependencies'?: string[];
+      'x-workflow-picker-fixed-value-hint'?: string;
+      'x-workflow-picker-allow-dynamic-reference'?: boolean;
     };
 
     let children: ActionInputField[] | undefined;
@@ -129,12 +137,30 @@ const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSch
       itemType,
     };
     const hasConstraints = Object.values(constraints).some((constraint) => constraint !== undefined);
+    const picker =
+      typeof rawResolved['x-workflow-picker-kind'] === 'string'
+        ? {
+            kind: rawResolved['x-workflow-picker-kind'],
+            dependencies: Array.isArray(rawResolved['x-workflow-picker-dependencies'])
+              ? rawResolved['x-workflow-picker-dependencies']
+              : undefined,
+            fixedValueHint:
+              typeof rawResolved['x-workflow-picker-fixed-value-hint'] === 'string'
+                ? rawResolved['x-workflow-picker-fixed-value-hint']
+                : undefined,
+            allowsDynamicReference:
+              typeof rawResolved['x-workflow-picker-allow-dynamic-reference'] === 'boolean'
+                ? rawResolved['x-workflow-picker-allow-dynamic-reference']
+                : undefined,
+          }
+        : undefined;
 
     return {
       name,
       type,
       description: resolvedProp.description,
       required: isFieldRequired,
+      picker,
       enum: resolvedProp.enum,
       default: resolvedProp.default,
       constraints: hasConstraints ? constraints : undefined,

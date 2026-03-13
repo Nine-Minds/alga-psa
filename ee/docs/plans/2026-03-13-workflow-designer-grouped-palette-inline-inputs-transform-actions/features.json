@@ -542,13 +542,13 @@
   {
     "id": "F091",
     "description": "Choosing an action should update the step picker metadata set used by the field editor",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model", "Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F092",
     "description": "Choosing an action should update type-compatibility hints shown for mapped fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model", "Requirements > Inline Field-Based Action Input Editor"]
   },
   {
