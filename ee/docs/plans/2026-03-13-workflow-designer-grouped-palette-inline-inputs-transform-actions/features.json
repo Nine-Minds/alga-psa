@@ -320,7 +320,7 @@
   {
     "id": "F054",
     "description": "Palette search should continue working while a grouped tile is being dragged from the palette",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {

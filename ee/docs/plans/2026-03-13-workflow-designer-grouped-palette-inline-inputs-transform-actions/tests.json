@@ -1978,5 +1978,11 @@
     "description": "Plan conformance: the shipped implementation can be mapped cleanly to the scoped feature set without unrelated workflow-editor scope expansion",
     "implemented": false,
     "featureIds": ["F300"]
+  },
+  {
+    "id": "T331",
+    "description": "Unit: palette search remains interactive while grouped palette drag state is active",
+    "implemented": true,
+    "featureIds": ["F054"]
   }
 ]

@@ -22,6 +22,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-13) Implement the first grouped-catalog slice as a shared builder plus a separate server projection instead of mutating the runtime action registry shape. This keeps the runtime registry unchanged while giving the designer a stable authoring abstraction to build on.
 - (2026-03-13) Keep the first UI wiring incremental: load the grouped catalog into the designer and use it to derive business-action grouping metadata before replacing the palette with grouped tiles. This reduces risk while moving the data model to the new architecture.
 - (2026-03-13) Land transform actions incrementally through the runtime action registry first, starting with the text-shaping slice. That unlocks grouped-catalog search and downstream schema wiring without coupling the first runtime batch to the upcoming inline-editor refactor.
+- (2026-03-13) Cover the remaining grouped-palette drag/search state through a small palette-presentational component plus jsdom coverage instead of waiting on the DB-backed Playwright harness. This keeps the shipped behavior unchanged while giving the drag-state UI a deterministic test seam.
 
 ## Discoveries / Constraints
 
@@ -45,6 +46,8 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-13) The Playwright workflow entry surface has moved from `/msp/workflows?tab=designer` to the workflow-automation pages under `/msp/workflow-editor`, and the page is additionally gated by the tenant experimental feature `workflowAutomation`.
 - (2026-03-13) The Playwright workflow list can error in this worktree because the local test database is missing `tenant_workflow_schedule`, but the list/error states still expose a working `New Workflow` CTA, so grouped-designer browser coverage can proceed once the route and feature gate are handled.
 - (2026-03-13) Playwright still does not reliably trigger grouped palette drag-start state in the current harness, so the explicit “search while dragging grouped tile” coverage remains blocked even though click insertion and post-insertion search coverage now pass.
+- (2026-03-13) The current local Playwright harness is additionally blocked by the isolated test database being down (`ECONNREFUSED` on `localhost:5433`), so new grouped-step browser tests cannot currently bootstrap tenants in this worktree even after the worker-image build fix.
+- (2026-03-13) `createTenantComplete` wraps connection failures into an empty-message `Failed to create tenant:` error because Node surfaces the refused Postgres connection as an `AggregateError` with a blank top-level message.
 
 ## Commands / Runbooks
 
@@ -89,6 +92,11 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-13) Validate grouped palette browser coverage against the current workflow-editor route:
   - `cd ee/server && PW_WEBSERVER=false PW_KEEP_DEPS=true PLAYWRIGHT_BASE_URL=http://localhost:3300 PLAYWRIGHT_DB_PORT=5433 PLAYWRIGHT_DB_PORT_LOCKED=true DB_PORT=5433 DB_DIRECT_PORT=5433 PLAYWRIGHT_DB_HOST=localhost DB_HOST=localhost PLAYWRIGHT_DB_NAME=alga_contract_wizard_test DB_NAME_SERVER=alga_contract_wizard_test PLAYWRIGHT_DB_ADMIN_USER=postgres PLAYWRIGHT_DB_ADMIN_PASSWORD=postpass123 PLAYWRIGHT_DB_APP_USER=app_user PLAYWRIGHT_DB_APP_PASSWORD=postpass123 NEXTAUTH_SECRET=test-nextauth-secret npx playwright test src/__tests__/integration/workflow-designer-basic.playwright.test.ts -g "palette search filters nodes and restores list|palette search filters nodes by id|palette renders grouped business tiles instead of one tile per business action|control blocks still render as dedicated palette entries alongside grouped tiles|transform renders as a top-level palette tile|palette search remains interactive after a grouped tile has been inserted" --reporter=list`
   - `cd ee/server && npx eslint src/__tests__/page-objects/WorkflowDesignerPage.ts src/__tests__/integration/helpers/playwrightAuthSessionHelper.ts src/__tests__/integration/workflow-designer-basic.playwright.test.ts`
+- (2026-03-13) Reproduce the current Playwright tenant-bootstrap blocker directly:
+  - `DB_HOST=localhost DB_PORT=5433 DB_NAME_SERVER=alga_contract_wizard_test DB_USER_SERVER=postgres DB_PASSWORD_SERVER=postpass123 npx tsx -e "import { createTestDbConnection } from './src/lib/testing/db-test-utils'; import { createTenant, createAdminUser, setupTenantData } from './src/lib/testing/tenant-creation'; (async () => { const db=createTestDbConnection(); const email='debug+'+Date.now()+'@example.com'; try { const tenantResult=await createTenant(db,{tenantName:'debug-tenant',email}); console.log('TENANT', tenantResult); const userResult=await createAdminUser(db,{tenantId:tenantResult.tenantId,firstName:'Test',lastName:'Admin',email,clientId:tenantResult.clientId}); console.log('USER', userResult); const setupResult=await setupTenantData(db,{tenantId:tenantResult.tenantId,adminUserId:userResult.userId,clientId:tenantResult.clientId}); console.log('SETUP', setupResult); } catch (error) { console.error('RAW', error); console.error('NAME', error instanceof Error ? error.name : typeof error); console.error('MESSAGE', error instanceof Error ? error.message : String(error)); console.error('STACK', error instanceof Error ? error.stack : ''); } finally { await db.destroy(); } })();"`
+- (2026-03-13) Validate the extracted palette drag/search unit seam:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowDesignerPalette.test.tsx src/components/workflow-designer/__tests__/paletteSearch.test.ts --reporter=dot`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowDesigner.tsx ee/server/src/components/workflow-designer/WorkflowDesignerPalette.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowDesignerPalette.test.tsx ee/server/src/__tests__/integration/workflow-designer-basic.playwright.test.ts`
 
 ## Links / References
 
@@ -166,3 +174,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Marked F055 and T021-T031/T055 implemented.
 - (2026-03-13) Remaining grouped palette browser blocker:
   - T054/F054 still remain open because Playwright did not reliably fire the grouped palette drag-start state in this harness, so “search while dragging” still needs a future browser-driver-friendly strategy.
+- (2026-03-13) Completed the grouped palette drag/search seam:
+  - Extracted the floating palette sidebar into `WorkflowDesignerPalette.tsx` so the drag-state banner, search box, and grouped tile rendering can be exercised without a full workflow-designer browser harness.
+  - Added `WorkflowDesignerPalette.test.tsx` jsdom coverage that keeps the palette in grouped-drag state, filters to a matching control tile, and verifies the drag banner persists while search changes.
+  - Updated the new grouped-step Playwright specs to match the current designer insertion model more closely (keyboard drag start and pipe click selection), but browser validation remains blocked here until the isolated Postgres test env on `localhost:5433` is available again.

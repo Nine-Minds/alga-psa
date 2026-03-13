@@ -83,6 +83,7 @@ import {
   buildGroupedActionStepConfig,
   getGroupedActionCatalogRecordForStep,
 } from './groupedActionStep';
+import { WorkflowDesignerPalette } from './WorkflowDesignerPalette';
 
 import type {
   WorkflowDefinition,
@@ -3246,97 +3247,70 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 	      <div ref={designerFloatAnchorRef} className="relative flex flex-col flex-1 min-h-0 overflow-hidden bg-gray-50 dark:bg-[rgb(var(--color-background))]">
         <div className="sticky top-4 z-20 h-0 pointer-events-none">
           {/* Floating Icon-Grid Palette (left) */}
-          <aside
-            className={`pointer-events-auto w-56 max-h-[calc(100vh-220px)] bg-white/95 dark:bg-[rgb(var(--color-card))]/95 backdrop-blur border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg shadow-lg overflow-hidden flex flex-col min-h-0 z-40 ${designerFloatAnchorRect ? '' : 'hidden'}`}
-            style={designerFloatAnchorRect ? {
-              position: 'fixed',
-              top: Math.min(Math.max(8, designerFloatAnchorRect.top + 16), window.innerHeight - 160),
-              left: Math.min(Math.max(8, designerFloatAnchorRect.left + 16), window.innerWidth - 8 - 224),
-              maxHeight: Math.max(160, designerFloatAnchorRect.bottom - (designerFloatAnchorRect.top + 16) - 16)
-            } : undefined}
-          >
-            <div className="p-3 border-b">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  id="workflow-designer-search"
-                  type="text"
-                  placeholder="Search"
-                  value={search}
-                  disabled={registryError}
-                  onChange={(event) => setSearch(event.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-            </div>
-            {draggingFromPalette && (
-              <div className="px-3 py-1.5 bg-primary-50 border-b text-xs text-primary-700">
-                Drop on pipeline to add
-              </div>
-            )}
-            <Droppable droppableId="palette" isDropDisabled={true}>
-              {(provided) => (
-                <div
-                  id="workflow-designer-palette-scroll"
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className="flex-1 min-h-0 overflow-y-auto p-3 space-y-4"
-                >
-                  {Object.entries(groupedPaletteItems).map(([category, items]) => (
-                    <div key={category}>
-                      <div className="text-[10px] font-semibold uppercase text-gray-400 tracking-wider mb-2">{category}</div>
-                      <div className="grid grid-cols-4 gap-1">
-                        {items.map((item, itemIndex) => (
-                          <Draggable
-                            key={item.id}
-                            draggableId={getPaletteDraggableId(item)}
-                            index={itemIndex}
-                            isDragDisabled={!canManage || registryError}
-                          >
-                            {(dragProvided, snapshot) => {
-                              const itemWithAction = item as typeof item & {
-                                actionId?: string;
-                                actionVersion?: number;
-                                groupKey?: string;
-                                groupLabel?: string;
-                                tileKind?: 'core-object' | 'transform' | 'app';
-                              };
-                              return (
-                                <PaletteItemWithTooltip
-                                  item={itemWithAction}
-                                  icon={getPaletteIcon(item)}
-                                  isDragging={snapshot.isDragging}
-                                  provided={dragProvided}
-                                  disabled={!canManage || registryError}
-                                  onClick={() => {
-                                    if (itemWithAction.groupKey) {
-                                      handleAddStep(
-                                        'action.call',
-                                        buildGroupedActionStepConfig(itemWithAction, { generateSaveAsName }),
-                                        itemWithAction.label
-                                      );
-                                    } else if (itemWithAction.actionId) {
-                                      handleAddStep('action.call', {
-                                        actionId: itemWithAction.actionId,
-                                        version: itemWithAction.actionVersion
-                                      });
-                                    } else {
-                                      handleAddStep(item.type as Step['type']);
-                                    }
-                                  }}
-                                />
+          <Droppable droppableId="palette" isDropDisabled={true}>
+            {(provided) => (
+              <WorkflowDesignerPalette
+                visible={Boolean(designerFloatAnchorRect)}
+                style={designerFloatAnchorRect ? {
+                  position: 'fixed',
+                  top: Math.min(Math.max(8, designerFloatAnchorRect.top + 16), window.innerHeight - 160),
+                  left: Math.min(Math.max(8, designerFloatAnchorRect.left + 16), window.innerWidth - 8 - 224),
+                  maxHeight: Math.max(160, designerFloatAnchorRect.bottom - (designerFloatAnchorRect.top + 16) - 16)
+                } : undefined}
+                search={search}
+                onSearchChange={setSearch}
+                registryError={registryError}
+                draggingFromPalette={Boolean(draggingFromPalette)}
+                groupedPaletteItems={groupedPaletteItems}
+                scrollContainerRef={provided.innerRef}
+                scrollContainerProps={provided.droppableProps}
+                scrollContainerFooter={provided.placeholder}
+                renderItem={(item, _category, itemIndex) => (
+                  <Draggable
+                    key={item.id}
+                    draggableId={getPaletteDraggableId(item)}
+                    index={itemIndex}
+                    isDragDisabled={!canManage || registryError}
+                  >
+                    {(dragProvided, snapshot) => {
+                      const itemWithAction = item as typeof item & {
+                        actionId?: string;
+                        actionVersion?: number;
+                        groupKey?: string;
+                        groupLabel?: string;
+                        tileKind?: 'core-object' | 'transform' | 'app';
+                      };
+                      return (
+                        <PaletteItemWithTooltip
+                          item={itemWithAction}
+                          icon={getPaletteIcon(item)}
+                          isDragging={snapshot.isDragging}
+                          provided={dragProvided}
+                          disabled={!canManage || registryError}
+                          onClick={() => {
+                            if (itemWithAction.groupKey) {
+                              handleAddStep(
+                                'action.call',
+                                buildGroupedActionStepConfig(itemWithAction, { generateSaveAsName }),
+                                itemWithAction.label
                               );
-                            }}
-                          </Draggable>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                  {provided.placeholder}
-                </div>
-              )}
-            </Droppable>
-          </aside>
+                            } else if (itemWithAction.actionId) {
+                              handleAddStep('action.call', {
+                                actionId: itemWithAction.actionId,
+                                version: itemWithAction.actionVersion
+                              });
+                            } else {
+                              handleAddStep(item.type as Step['type']);
+                            }
+                          }}
+                        />
+                      );
+                    }}
+                  </Draggable>
+                )}
+              />
+            )}
+          </Droppable>
 
           {/* Floating Properties (right) */}
           <aside

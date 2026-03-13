@@ -175,6 +175,71 @@ async function restoreWorkflowDefinitions(db: Knex, snapshot: WorkflowDefinition
   }
 }
 
+const pipeIdForPath = (pipePath: string): string =>
+  `workflow-designer-pipe-${pipePath.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+
+const dragHandleFor = (page: Page, stepId: string) =>
+  page.locator(`#workflow-step-drag-${stepId}`);
+
+async function getStepIdsIn(scope: ReturnType<Page['locator']>): Promise<string[]> {
+  return scope.evaluate((node) => {
+    return Array.from(node.querySelectorAll(':scope > [data-step-id]'))
+      .map((child) => (child as HTMLElement).dataset.stepId || '')
+      .filter(Boolean);
+  });
+}
+
+async function dragBetween(
+  page: Page,
+  source: ReturnType<Page['locator']>,
+  target: ReturnType<Page['locator']>,
+  options: { targetX?: number; targetY?: number } = {}
+): Promise<void> {
+  await source.scrollIntoViewIfNeeded();
+  await target.scrollIntoViewIfNeeded();
+
+  const sourceBox = await source.boundingBox();
+  const targetBox = await target.boundingBox();
+
+  if (!sourceBox || !targetBox) {
+    throw new Error('Unable to determine drag/drop bounds.');
+  }
+
+  const targetX = options.targetX ?? 0.5;
+  const targetY = options.targetY ?? 0.5;
+  const startX = sourceBox.x + sourceBox.width / 2;
+  const startY = sourceBox.y + sourceBox.height / 2;
+  const endX = targetBox.x + targetBox.width * targetX;
+  const endY = targetBox.y + targetBox.height * targetY;
+
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(endX, endY, { steps: 25 });
+  await page.waitForTimeout(150);
+  await page.mouse.up();
+}
+
+async function beginPaletteDrag(page: Page, item: ReturnType<Page['locator']>): Promise<void> {
+  await item.scrollIntoViewIfNeeded();
+  await item.focus();
+  await page.keyboard.press('Space');
+  await page.waitForTimeout(100);
+}
+
+async function setPaletteSearchValue(page: Page, value: string): Promise<void> {
+  await page.locator('#workflow-designer-search').evaluate((node, nextValue) => {
+    const input = node as HTMLInputElement;
+    const nativeValueSetter = Object.getOwnPropertyDescriptor(
+      HTMLInputElement.prototype,
+      'value'
+    )?.set;
+
+    nativeValueSetter?.call(input, nextValue);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }, value);
+}
+
 test.describe('Workflow Designer UI - basic', () => {
   test('unauthenticated visit redirects to sign in', async ({ page }) => {
     test.setTimeout(60000);
@@ -642,6 +707,163 @@ test.describe('Workflow Designer UI - basic', () => {
 
       await workflowPage.searchPalette('');
       await expect(workflowPage.addButtonFor('ticket')).toBeVisible();
+    } finally {
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
+      await db.destroy();
+    }
+  });
+
+  test('palette search remains interactive while a grouped tile is being dragged', async ({ page }) => {
+    test.setTimeout(120000);
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    try {
+      await workflowPage.clickNewWorkflow();
+
+      const stepButtons = page.locator('[id^="workflow-step-select-"]');
+      await expect(stepButtons).toHaveCount(0);
+
+      await beginPaletteDrag(page, workflowPage.addButtonFor('ticket'));
+      await expect(page.getByText('Drop on pipeline to add')).toBeVisible();
+
+      await setPaletteSearchValue(page, 'Call Workflow');
+      await expect(workflowPage.addButtonFor('control.callWorkflow')).toBeVisible();
+      await expect(workflowPage.addButtonFor('ticket')).toBeHidden();
+      await expect(page.getByText('Drop on pipeline to add')).toBeVisible();
+
+      await setPaletteSearchValue(page, '');
+      await expect(workflowPage.addButtonFor('ticket')).toBeVisible();
+      await expect(stepButtons).toHaveCount(0);
+    } finally {
+      await page.keyboard.press('Escape').catch(() => undefined);
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
+      await db.destroy();
+    }
+  });
+
+  test('a newly inserted grouped action step becomes selected like current action.call steps', async ({ page }) => {
+    test.setTimeout(120000);
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    try {
+      await workflowPage.clickNewWorkflow();
+      await workflowPage.addButtonFor('ticket').click();
+
+      const stepId = await workflowPage.getFirstStepId();
+      await expect(page.locator(`#workflow-step-name-${stepId}`)).toBeVisible();
+      await expect(page.getByTestId(`step-card-${stepId}`)).toHaveClass(/ring-2/);
+    } finally {
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
+      await db.destroy();
+    }
+  });
+
+  test('a newly inserted grouped action step lands on the currently selected pipe like current action.call steps', async ({ page }) => {
+    test.setTimeout(120000);
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    try {
+      await workflowPage.clickNewWorkflow();
+      await workflowPage.addButtonFor('control.tryCatch').click();
+
+      const rootPipe = page.locator('#workflow-designer-pipe-root');
+      const rootStepIds = await getStepIdsIn(rootPipe);
+      expect(rootStepIds).toHaveLength(1);
+
+      const catchPipe = page.locator(`#${pipeIdForPath('root.steps[0].catch')}`);
+      await expect(catchPipe).toBeVisible();
+      await catchPipe.click();
+
+      await workflowPage.addButtonFor('ticket').click();
+
+      await expect.poll(async () => getStepIdsIn(catchPipe)).toHaveLength(1);
+      await expect.poll(async () => getStepIdsIn(rootPipe)).toEqual(rootStepIds);
+    } finally {
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
+      await db.destroy();
+    }
+  });
+
+  test('grouped action steps remain reorderable within the pipeline', async ({ page }) => {
+    test.setTimeout(120000);
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    try {
+      await workflowPage.clickNewWorkflow();
+      await workflowPage.addButtonFor('ticket').click();
+      await workflowPage.addButtonFor('transform').click();
+
+      const rootPipe = page.locator('#workflow-designer-pipe-root');
+      const initialOrder = await getStepIdsIn(rootPipe);
+      expect(initialOrder).toHaveLength(2);
+
+      const [firstId, secondId] = initialOrder;
+      await dragBetween(page, dragHandleFor(page, secondId), dragHandleFor(page, firstId));
+
+      await expect.poll(async () => getStepIdsIn(rootPipe)).toEqual([secondId, firstId]);
+    } finally {
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
+      await db.destroy();
+    }
+  });
+
+  test('grouped action steps remain movable across control-block branches', async ({ page }) => {
+    test.setTimeout(120000);
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    try {
+      await workflowPage.clickNewWorkflow();
+      await workflowPage.addButtonFor('control.if').click();
+      await workflowPage.addButtonFor('ticket').click();
+
+      const rootPipe = page.locator('#workflow-designer-pipe-root');
+      const rootStepIds = await getStepIdsIn(rootPipe);
+      expect(rootStepIds.length).toBeGreaterThanOrEqual(2);
+
+      const groupedStepId = rootStepIds[1];
+      const thenPipe = page.locator(`#${pipeIdForPath('root.steps[0].then')}`);
+      await expect(thenPipe).toBeVisible();
+      await expect(thenPipe.getByText('Drop steps here')).toBeVisible();
+
+      await dragBetween(page, dragHandleFor(page, groupedStepId), thenPipe, { targetY: 0.75 });
+
+      await expect.poll(async () => getStepIdsIn(thenPipe)).toEqual([groupedStepId]);
+      await expect.poll(async () => getStepIdsIn(rootPipe)).toEqual([rootStepIds[0]]);
+    } finally {
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
+      await db.destroy();
+    }
+  });
+
+  test('grouped action steps preserve delete behavior', async ({ page }) => {
+    test.setTimeout(120000);
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    try {
+      await workflowPage.clickNewWorkflow();
+      await workflowPage.addButtonFor('ticket').click();
+
+      const stepId = await workflowPage.getFirstStepId();
+      await workflowPage.stepDeleteButton(stepId).click();
+
+      await expect(page.locator('[id^="workflow-step-select-"]')).toHaveCount(0);
+      await expect(page.getByText('Select a step to edit its configuration.')).toBeVisible();
+    } finally {
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
+      await db.destroy();
+    }
+  });
+
+  test('grouped action steps preserve saveAs auto-generation behavior', async ({ page }) => {
+    test.setTimeout(120000);
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    try {
+      await workflowPage.clickNewWorkflow();
+      await workflowPage.addButtonFor('ticket').click();
+
+      const stepId = await workflowPage.getFirstStepId();
+      await expect(page.locator(`#workflow-step-saveAs-${stepId}`)).toHaveValue('ticketsCreateResult');
     } finally {
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();
