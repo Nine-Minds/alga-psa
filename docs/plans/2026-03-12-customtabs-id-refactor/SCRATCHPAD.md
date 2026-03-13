@@ -131,3 +131,5 @@ npm run build
 - F008 — Preserved `tab.label` as the rendered trigger text so display copy stays fully translatable.
 
 - F009 — Uncontrolled CustomTabs now fall back to `allTabs[0].id` when no explicit default is provided.
+
+- F010 — Refactored `server/src/components/settings/SettingsPage.tsx` so every top-level settings tab has an id and active state resolves against ids instead of label maps.

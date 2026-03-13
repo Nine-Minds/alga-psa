@@ -74,7 +74,7 @@
   {
     "id": "F010",
     "description": "Migrate SettingsPage.tsx — add id to all 17 tabs, replace slugToLabelMap with id-based matching, activeTab stores id",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern F"
