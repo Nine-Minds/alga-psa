@@ -220,7 +220,7 @@
   {
     "id": "F028",
     "description": "P1: Server action — deleteQuote via deleteEntityWithValidation (drafts hard delete, others archive)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR8",
       "P1-FR19"

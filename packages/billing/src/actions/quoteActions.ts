@@ -46,6 +46,14 @@ const requireBillingReadPermission = async (user: unknown): Promise<ActionPermis
   return null;
 };
 
+const requireBillingDeletePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
+  if (!await hasPermission(user as any, 'billing', 'delete')) {
+    return permissionError('Permission denied: Cannot delete quotes');
+  }
+
+  return null;
+};
+
 const getActorUserId = (user: unknown): string | null => {
   if (!user || typeof user !== 'object') {
     return null;
@@ -118,4 +126,18 @@ export const listQuotes = withAuth(async (
 
   const { knex } = await createTenantKnex();
   return await Quote.listByTenant(knex, tenant, options);
+});
+
+export const deleteQuote = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string
+): Promise<Awaited<ReturnType<typeof Quote.delete>> | ActionPermissionError> => {
+  const denied = await requireBillingDeletePermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  return await Quote.delete(knex, tenant, quoteId);
 });
