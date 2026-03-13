@@ -602,37 +602,37 @@
   {
     "id": "T101",
     "description": "Playwright: each chosen action input field renders as an inline field row or group",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F101"]
   },
   {
     "id": "T102",
     "description": "Playwright: required-field indicators render on inline field rows",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F102"]
   },
   {
     "id": "T103",
     "description": "Playwright: optional-field indicators render where useful on inline field rows",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F103"]
   },
   {
     "id": "T104",
     "description": "Playwright: schema descriptions render in the inline field editor",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F104"]
   },
   {
     "id": "T105",
     "description": "Playwright: the required-field completion summary renders above the inline editor",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F105"]
   },
   {
     "id": "T106",
     "description": "Playwright: the action input editor is inline in the properties panel and not behind a modal-first workflow",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F106"]
   },
   {

@@ -34,6 +34,7 @@ import {
   getCompatibilityLabel,
   getDisplayTypeName
 } from './typeCompatibility';
+import { WorkflowActionInputFieldInfo } from '../WorkflowActionInputFieldInfo';
 
 /**
  * Extended select option with type information for compatibility filtering
@@ -659,18 +660,10 @@ const MappingFieldEditor: React.FC<{
           disabled={disabled}
         >
           {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          <span className="flex items-center gap-1">
-            {field.name}
-            {field.required && (
-              <span
-                className="text-[11px] text-gray-500"
-                aria-hidden
-                title="Required"
-              >
-                *
-              </span>
-            )}
-          </span>
+          <WorkflowActionInputFieldInfo
+            field={field}
+            isMissingRequired={isMissingRequired}
+          />
           {isMissingRequired && (
             <span className="inline-flex items-center gap-1 text-[11px] text-destructive" title="Required field is missing a value">
               <AlertTriangle className="w-3 h-3" />
@@ -701,10 +694,6 @@ const MappingFieldEditor: React.FC<{
 
       {expanded && (
         <div className="pl-6 space-y-2">
-          {field.description && (
-            <p className="text-xs text-gray-500">{field.description}</p>
-          )}
-
           {valueType === 'expr' && (
             <div className="space-y-2">
               <div className="flex items-center justify-end">
@@ -1673,17 +1662,10 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                       {isDropTarget && (
                         <LinkIcon className={`w-3.5 h-3.5 ${isActiveDropTarget ? 'text-primary-500' : 'text-gray-400'}`} />
                       )}
-                      <span className="text-sm text-gray-700">{field.name}</span>
-                      {field.required && (
-                        <span
-                          className={`text-[11px] ${isMissingRequired ? 'text-destructive' : 'text-gray-500'}`}
-                          aria-hidden
-                          title={isMissingRequired ? 'Required field is missing a value' : 'Required'}
-                        >
-                          *
-                        </span>
-                      )}
-                      <span className="text-xs text-gray-400">{field.type}</span>
+                      <WorkflowActionInputFieldInfo
+                        field={field}
+                        isMissingRequired={isMissingRequired}
+                      />
                       {/* §17.3.3 - Show suggestion indicator */}
                       {suggestion && !isDropTarget && (
                         <span className="text-xs text-primary-600 flex items-center gap-1 truncate">

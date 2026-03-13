@@ -29,7 +29,6 @@ import {
 
 import { Button } from '@alga-psa/ui/components/Button';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { Dialog, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Card } from '@alga-psa/ui/components/Card';
@@ -92,6 +91,7 @@ import { buildActionInputEditorState } from './actionInputEditorState';
 import { PaletteItemWithTooltip } from './PaletteItemWithTooltip';
 import { WorkflowStepNameField } from './WorkflowStepNameField';
 import { WorkflowStepSaveOutputSection } from './WorkflowStepSaveOutputSection';
+import { WorkflowActionInputSection } from './WorkflowActionInputSection';
 
 import type {
   WorkflowDefinition,
@@ -4968,11 +4968,6 @@ const StepConfigPanel: React.FC<{
 }) => {
   const nodeSchema = step.type.startsWith('control.') ? null : nodeRegistry[step.type]?.configSchema;
   const [showDataContext, setShowDataContext] = useState(false);
-  const [isInputMappingDialogOpen, setIsInputMappingDialogOpen] = useState(false);
-
-  useEffect(() => {
-    setIsInputMappingDialogOpen(false);
-  }, [step.id]);
 
   // Build data context for this step position
   const dataContext = useMemo(() =>
@@ -5335,71 +5330,17 @@ const StepConfigPanel: React.FC<{
 
       {/* §17 - Input Mapping Panel for action.call steps */}
       {step.type === 'action.call' && selectedAction && actionInputFields.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-gray-200">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">Input Mapping</div>
-              <p className="text-xs text-gray-500 mt-1">
-                Map workflow data to action inputs.
-              </p>
-              <div className="text-xs text-gray-500 mt-1">
-                {mappedInputFieldCount} / {actionInputFields.length} fields mapped
-              </div>
-              {requiredActionInputFields.length > 0 && (
-                <div
-                  id={`workflow-step-input-mapping-required-status-${step.id}`}
-                  className={`text-xs mt-1 ${
-                    unmappedRequiredInputFieldCount > 0 ? 'text-destructive' : 'text-emerald-700'
-                  }`}
-                >
-                  {unmappedRequiredInputFieldCount > 0
-                    ? `${unmappedRequiredInputFieldCount} required field${unmappedRequiredInputFieldCount === 1 ? '' : 's'} still unmapped`
-                    : `All ${requiredActionInputFields.length} required fields are mapped`}
-                </div>
-              )}
-            </div>
-            <Button
-              id={`workflow-step-input-mapping-open-${step.id}`}
-              variant="outline"
-              size="sm"
-              onClick={() => setIsInputMappingDialogOpen(true)}
-            >
-              Edit mapping
-            </Button>
-          </div>
-
-          <Dialog
-            id={`workflow-step-input-mapping-dialog-${step.id}`}
-            isOpen={isInputMappingDialogOpen}
-            onClose={() => setIsInputMappingDialogOpen(false)}
-            title={`Input Mapping: ${selectedAction.ui?.label ?? selectedAction.id}`}
-            className="max-w-6xl"
-            draggable={false}
-          >
-            <div className="mb-3 text-sm text-gray-600">
-              Map workflow data to action inputs. Drag fields or click to assign values.
-            </div>
-            <MappingPanel
-              value={inputMapping}
-              onChange={handleInputMappingChange}
-              targetFields={actionInputFields}
-              dataContext={dataContext}
-              fieldOptions={enhancedFieldOptions}
-              stepId={step.id}
-              sourceTreeMaxHeight="70vh"
-            />
-
-            <DialogFooter>
-              <Button
-                id={`workflow-step-input-mapping-close-${step.id}`}
-                variant="outline"
-                onClick={() => setIsInputMappingDialogOpen(false)}
-              >
-                Close
-              </Button>
-            </DialogFooter>
-          </Dialog>
-        </div>
+        <WorkflowActionInputSection
+          stepId={step.id}
+          inputMapping={inputMapping}
+          onInputMappingChange={handleInputMappingChange}
+          targetFields={actionInputFields}
+          dataContext={dataContext}
+          fieldOptions={enhancedFieldOptions}
+          mappedInputFieldCount={mappedInputFieldCount}
+          requiredActionInputFields={requiredActionInputFields}
+          unmappedRequiredInputFieldCount={unmappedRequiredInputFieldCount}
+        />
       )}
 
       {/* §16.1 - Action Schema Reference for action.call steps */}

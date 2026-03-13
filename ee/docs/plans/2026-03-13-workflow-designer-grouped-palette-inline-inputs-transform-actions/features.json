@@ -602,37 +602,37 @@
   {
     "id": "F101",
     "description": "Render each chosen action input field as a visible inline field row or field group in the properties panel",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor", "UX / UI Notes > Field Authoring Model"]
   },
   {
     "id": "F102",
     "description": "Render required-field indicators directly on inline field rows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {
     "id": "F103",
     "description": "Render optional-field indicators directly on inline field rows where useful",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {
     "id": "F104",
     "description": "Render field descriptions directly in the inline field editor when schema descriptions exist",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {
     "id": "F105",
     "description": "Render the current required-field completion summary above the inline field editor",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Inline Field-Based Action Input Editor"]
   },
   {
     "id": "F106",
     "description": "Keep the inline field editor mounted in the right-side properties panel rather than behind a modal dialog",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Step Properties Model", "Requirements > Inline Field-Based Action Input Editor"]
   },
   {

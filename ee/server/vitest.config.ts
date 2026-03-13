@@ -56,6 +56,7 @@ export default defineConfig({
       { find: /^@alga-psa\/shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
       { find: /^@alga-psa\/ui\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/ui/src')}/$1` },
       { find: /^@alga-psa\/ui$/, replacement: `${path.resolve(__dirname, '../../packages/ui/src/index.ts')}` },
+      { find: /^@alga-psa\/tenancy\/actions$/, replacement: `${path.resolve(__dirname, '../../packages/tenancy/src/actions/index.ts')}` },
       { find: /^@alga-psa\/integrations$/, replacement: `${path.resolve(__dirname, '../../packages/integrations/src/index.ts')}` },
       { find: /^@alga-psa\/integrations\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/integrations/src')}/$1` },
       { find: /^@alga-psa\/ee-stubs$/, replacement: `${path.resolve(__dirname, './src/index.ts')}` },

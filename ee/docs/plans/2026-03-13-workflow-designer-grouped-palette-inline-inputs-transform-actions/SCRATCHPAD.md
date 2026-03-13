@@ -29,6 +29,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-13) The current workflow designer already uses `action.call` as the execution primitive and injects `actionId`/`version` when action-specific palette items are dragged onto the canvas.
 - (2026-03-13) The current palette is constructed directly from the action registry plus designer-side curation in `ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`.
 - (2026-03-13) The current action-input UX already derives field lists from action schemas, but hides authoring behind an `Input Mapping` dialog.
+- (2026-03-14) EE Vitest still cannot resolve `@alga-psa/tenancy/actions` when importing the full `InputMappingEditor` module directly, so row-level inline-field coverage is currently more stable through extracted presentational seams than through the full secrets-backed editor in this harness.
 - (2026-03-13) The current runtime `InputMapping` contract supports expressions, secrets, and literal values and resolves them in `shared/workflow/runtime/utils/mappingResolver.ts`.
 - (2026-03-13) The current designer already maintains schema-driven data context for payload, prior step outputs, metadata, error context, and forEach context.
 - (2026-03-13) The current designer already has mapping/type-compatibility UI primitives and expression-editor autocomplete infrastructure that should be reused where possible.
@@ -59,6 +60,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-14) The selected-action schema state and required-field counts were being recomputed in multiple places inside `WorkflowDesigner.tsx` (step properties panel and pipeline badges). Extracting that state into a shared helper reduces drift and gives the grouped action-change path a deterministic test seam for schema/summary updates.
 - (2026-03-14) Downstream reference exposure was already driven by a pure step-output context walker keyed off each prior step’s current `actionId`/`version`. The missing work for `F089`/`F095` was extracting that walker behind a small helper and pinning it with deterministic coverage.
 - (2026-03-14) The action-input editor state had no place to carry additive picker annotations yet, even though later ticket-picker work will depend on that state changing when the selected action changes. Adding the metadata seam at the `ActionInputField` layer keeps the current UI unchanged while unblocking the later picker slice.
+- (2026-03-14) `ee/server` Vitest did not have an alias for `@alga-psa/tenancy/actions`, so direct `InputMappingEditor` jsdom coverage needed a small alias addition before the secrets-loading side effect could be exercised through the existing component import path.
 
 ## Commands / Runbooks
 
@@ -96,6 +98,10 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/ActionSchemaReference.test.tsx src/components/workflow-designer/__tests__/WorkflowStepPropertiesBasics.test.tsx --reporter=dot`
   - `npx tsc --noEmit -p ee/server/tsconfig.json`
   - `npx eslint ee/server/src/components/workflow-designer/ActionSchemaReference.tsx ee/server/src/components/workflow-designer/WorkflowStepNameField.tsx ee/server/src/components/workflow-designer/WorkflowStepSaveOutputSection.tsx ee/server/src/components/workflow-designer/__tests__/ActionSchemaReference.test.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowStepPropertiesBasics.test.tsx ee/server/src/components/workflow-designer/workflowDataContext.ts ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`
+- (2026-03-14) Validate inline action-input properties-panel seams:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputFieldInfo.tsx ee/server/src/components/workflow-designer/WorkflowActionInputSection.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputFieldInfo.test.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`
 - (2026-03-13) Validate text transform action registration and catalog/search coverage:
   - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/actions/__tests__/registerTransformActions.test.ts shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts --reporter=dot`
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/paletteSearch.test.ts --reporter=dot`
@@ -148,6 +154,10 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/actionInputEditorState.test.ts --reporter=dot`
   - `npx tsc --noEmit -p ee/server/tsconfig.json`
   - `npx eslint ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/actionInputEditorState.ts ee/server/src/components/workflow-designer/__tests__/actionInputEditorState.test.ts`
+- (2026-03-14) Validate the first inline action-input section slice:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx src/components/workflow-designer/__tests__/InputMappingEditorInline.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowDesigner.tsx ee/server/src/components/workflow-designer/WorkflowActionInputSection.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSection.test.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorInline.test.tsx ee/server/vitest.config.ts`
 
 ## Links / References
 
@@ -284,3 +294,8 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Marked F098-F100 and T098-T100 implemented.
   - Added focused coverage that changing the selected action swaps both the picker metadata and the target field type used by compatibility hinting.
   - Marked F091, F092, T091, and T092 implemented.
+- (2026-03-14) Completed the first inline action-input section slice:
+  - Replaced the action-step input-mapping dialog opener with an always-mounted `WorkflowActionInputSection` so chosen action fields render directly in the properties panel.
+  - Updated `InputMappingEditor` rows to surface required/optional state and schema descriptions directly in the inline list for both mapped and unmapped fields.
+  - Added focused jsdom coverage for the inline section shell and for row-level required/optional/description rendering, plus the missing EE Vitest alias for `@alga-psa/tenancy/actions`.
+  - Marked F101-F106 and T101-T106 implemented.
