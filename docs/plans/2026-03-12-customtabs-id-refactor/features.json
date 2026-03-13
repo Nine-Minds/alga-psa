@@ -26,7 +26,7 @@
   {
     "id": "F004",
     "description": "CustomTabs `onTabChange` callback fires with `tab.id` string",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Internal Component Changes"
     ]

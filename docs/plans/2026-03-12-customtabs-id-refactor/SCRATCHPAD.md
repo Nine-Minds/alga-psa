@@ -119,3 +119,5 @@ npm run build
 - F002 — Switched Radix trigger/content `value` props to `tab.id`, with runtime and source-contract coverage in the new CustomTabs tests.
 
 - F003 — Updated CustomTabs trigger and content React keys to `tab.id` to avoid label-coupled identity.
+
+- F004 — Verified CustomTabs now emits tab ids from `onTabChange`, matching the new internal value model.
