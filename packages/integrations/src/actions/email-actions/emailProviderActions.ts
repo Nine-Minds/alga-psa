@@ -94,7 +94,7 @@ export async function getHostedMicrosoftConfig() {
     client_id: await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID'),
     client_secret: await secretProvider.getAppSecret('MICROSOFT_CLIENT_SECRET'),
     tenant_id: await secretProvider.getAppSecret('MICROSOFT_TENANT_ID') || 'common',
-    redirect_uri: await secretProvider.getAppSecret('MICROSOFT_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/microsoft/callback'
+    redirect_uri: await secretProvider.getAppSecret('MICROSOFT_REDIRECT_URI') || 'https://algapsa.com/api/auth/microsoft/callback'
   };
 }
 
@@ -1237,10 +1237,10 @@ export const runMicrosoft365Diagnostics = withAuth(async (
 //       // Use app-level configuration
 //       if (params.provider === 'google') {
 //         clientId = await secretProvider.getAppSecret('GOOGLE_CLIENT_ID') || null;
-//         effectiveRedirectUri = await secretProvider.getAppSecret('GOOGLE_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/google/callback';
+//         effectiveRedirectUri = await secretProvider.getAppSecret('GOOGLE_REDIRECT_URI') || 'https://algapsa.com/api/auth/google/callback';
 //       } else if (params.provider === 'microsoft') {
 //         clientId = await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID') || null;
-//         effectiveRedirectUri = await secretProvider.getAppSecret('MICROSOFT_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/microsoft/callback';
+//         effectiveRedirectUri = await secretProvider.getAppSecret('MICROSOFT_REDIRECT_URI') || 'https://algapsa.com/api/auth/microsoft/callback';
 //       }
 //     } else {
 //       // Use tenant-specific or fallback credentials

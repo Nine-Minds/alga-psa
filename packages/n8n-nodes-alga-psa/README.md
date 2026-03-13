@@ -45,7 +45,7 @@ For manual/custom installation paths, follow n8n's manual community-node install
 
 Create credential type `Alga PSA API` with:
 
-- `Base URL` example: `https://api.algapsa.com`
+- `Base URL` example: `https://algapsa.com`
 - `API Key` your Alga PSA key (sent as `x-api-key` header)
 - Field names in node credentials: `baseUrl`, `apiKey`
 

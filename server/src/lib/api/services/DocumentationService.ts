@@ -349,10 +349,10 @@ export class DocumentationService {
             <div class="code-example-tab" onclick="showCodeExample('python')">Python</div>
           </div>
           <div class="code-example-content">
-            <pre id="curl-example"><code class="language-bash">curl -X GET "https://api.algapsa.com/api/v1/teams" \\
+            <pre id="curl-example"><code class="language-bash">curl -X GET "https://algapsa.com/api/v1/teams" \\
   -H "X-API-Key: your-api-key-here" \\
   -H "Content-Type: application/json"</code></pre>
-            <pre id="javascript-example" style="display: none;"><code class="language-javascript">const response = await fetch('https://api.algapsa.com/api/v1/teams', {
+            <pre id="javascript-example" style="display: none;"><code class="language-javascript">const response = await fetch('https://algapsa.com/api/v1/teams', {
   headers: {
     'X-API-Key': 'your-api-key-here',
     'Content-Type': 'application/json'
@@ -367,7 +367,7 @@ headers = {
     'Content-Type': 'application/json'
 }
 
-response = requests.get('https://api.algapsa.com/api/v1/teams', headers=headers)
+response = requests.get('https://algapsa.com/api/v1/teams', headers=headers)
 data = response.json()
 print(data)</code></pre>
           </div>
@@ -469,7 +469,7 @@ print(data)</code></pre>
       <h3>⚙️ Webhook Setup</h3>
       <div class="code-examples">
         <div class="code-example-content">
-          <pre><code class="language-bash">curl -X POST "https://api.algapsa.com/api/v1/webhooks" \\
+          <pre><code class="language-bash">curl -X POST "https://algapsa.com/api/v1/webhooks" \\
   -H "X-API-Key: your-api-key-here" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -518,7 +518,7 @@ print(data)</code></pre>
 
 const client = new AlgaPSAClient({
   apiKey: 'your-api-key-here',
-  baseUrl: 'https://api.algapsa.com'
+  baseUrl: 'https://algapsa.com'
 });
 
 // Get all teams with automatic HATEOAS link following
@@ -771,7 +771,7 @@ await fetch(ticket._links.comments.href, {
           {
             language: 'curl',
             label: 'cURL',
-            code: `curl -X GET "https://api.algapsa.com/api/v1/teams?page=1&limit=25" \\
+            code: `curl -X GET "https://algapsa.com/api/v1/teams?page=1&limit=25" \\
   -H "X-API-Key: your-api-key-here"`
           },
           {
@@ -827,7 +827,7 @@ teams = response.json()`
           {
             language: 'curl',
             label: 'cURL',
-            code: `curl -X POST "https://api.algapsa.com/api/v1/teams" \\
+            code: `curl -X POST "https://algapsa.com/api/v1/teams" \\
   -H "X-API-Key: your-api-key-here" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -890,7 +890,7 @@ Every API response includes a \`_links\` object containing related actions and r
 Start from the API root and follow links to discover all available functionality:
 
 \`\`\`bash
-curl -X GET "https://api.algapsa.com/api/v1" -H "X-API-Key: your-key"
+curl -X GET "https://algapsa.com/api/v1" -H "X-API-Key: your-key"
 \`\`\`
         `,
         subsections: [
