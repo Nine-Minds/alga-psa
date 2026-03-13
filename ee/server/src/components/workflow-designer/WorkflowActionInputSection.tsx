@@ -42,7 +42,6 @@ export const WorkflowActionInputSection: React.FC<{
       fieldOptions={fieldOptions}
       stepId={stepId}
       disabled={disabled}
-      sourceTreeMaxHeight="32rem"
     />
   </div>
 );
