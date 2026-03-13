@@ -196,3 +196,4 @@ npm run build
 - **F041 complete** — Migrated `packages/projects/src/components/settings/ProjectSettings.tsx` to stable section ids (`project-numbering`, `project-statuses`, `task-statuses`, `task-priorities`) and removed the label-based URL maps.
 - **F042 complete** — `packages/integrations/src/components/settings/integrations/IntegrationsSettingsPage.tsx` now uses each category's existing `id` as the tab id and as the `category` query param, with labels left purely for display.
 - **F043 complete** — Simplified `packages/integrations/src/components/accounting-mappings/AccountingMappingManager.tsx` to use each module's stable `id` directly for tab ids and URL params, removing `toSlug()` and the slug/label maps.
+- **F045 complete** — Migrated `ee/packages/workflows/src/components/user-activities/NotificationsSection.tsx` to stable tab ids (`unread`, `all`, `read`) and kept its notification filter behavior and `notificationTab` URL sync id-based.

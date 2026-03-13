@@ -23,19 +23,7 @@ interface NotificationsSectionProps {
   noCard?: boolean;
 }
 
-// Map URL slugs to tab labels
-const tabSlugToLabelMap: Record<string, string> = {
-  'unread': 'Unread',
-  'all': 'All',
-  'read': 'Read'
-};
-
-// Map tab labels to URL slugs
-const tabLabelToSlugMap: Record<string, string> = {
-  'Unread': 'unread',
-  'All': 'all',
-  'Read': 'read'
-};
+const DEFAULT_TAB = 'unread';
 
 export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: NotificationsSectionProps) {
   const { data: session } = useSession();
@@ -50,11 +38,7 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
 
   // Determine initial tab from URL or default to "Unread"
   const initialTab = useMemo(() => {
-    if (notificationTabParam) {
-      const label = tabSlugToLabelMap[notificationTabParam.toLowerCase()];
-      if (label) return label;
-    }
-    return 'Unread';
+    return notificationTabParam?.toLowerCase() || DEFAULT_TAB;
   }, [notificationTabParam]);
 
   const [activeTab, setActiveTab] = useState<string>(initialTab);
@@ -106,21 +90,18 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
 
   // Update active tab when URL parameter changes
   useEffect(() => {
-    if (notificationTabParam) {
-      const label = tabSlugToLabelMap[notificationTabParam.toLowerCase()];
-      if (label && label !== activeTab) {
-        setActiveTab(label);
-        // Also update filters based on the new tab
-        if (label === "Unread") {
-          setNotificationFilters(prev => ({ ...prev, isClosed: false }));
-        } else if (label === "Read") {
-          setNotificationFilters(prev => ({ ...prev, isClosed: true }));
-        } else if (label === "All") {
-          setNotificationFilters(prev => {
-            const { isClosed, ...rest } = prev;
-            return rest;
-          });
-        }
+    const tabId = notificationTabParam?.toLowerCase() || DEFAULT_TAB;
+    if (tabId !== activeTab) {
+      setActiveTab(tabId);
+      if (tabId === 'unread') {
+        setNotificationFilters(prev => ({ ...prev, isClosed: false }));
+      } else if (tabId === 'read') {
+        setNotificationFilters(prev => ({ ...prev, isClosed: true }));
+      } else if (tabId === 'all') {
+        setNotificationFilters(prev => {
+          const { isClosed, ...rest } = prev;
+          return rest;
+        });
       }
     }
   }, [notificationTabParam, activeTab]);
@@ -181,16 +162,16 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
   };
 
   // Handle tab change to update filters and URL
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
 
-    if (tab === "Unread") {
+    if (tabId === 'unread') {
       // Show unread notifications
       setNotificationFilters(prev => ({ ...prev, isClosed: false }));
-    } else if (tab === "Read") {
+    } else if (tabId === 'read') {
       // Show read notifications
       setNotificationFilters(prev => ({ ...prev, isClosed: true }));
-    } else if (tab === "All") {
+    } else if (tabId === 'all') {
       // Show all notifications
       const { isClosed, ...rest } = notificationFilters;
       setNotificationFilters(rest);
@@ -199,9 +180,8 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
     // Update URL with the new tab
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      const slug = tabLabelToSlugMap[tab];
-      if (slug && slug !== 'unread') {
-        params.set('notificationTab', slug);
+      if (tabId !== DEFAULT_TAB) {
+        params.set('notificationTab', tabId);
       } else {
         params.delete('notificationTab');
       }
@@ -311,14 +291,17 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false }: N
 
   const tabContent = [
     {
+      id: 'unread',
       label: "Unread",
       content: renderNotifications()
     },
     {
+      id: 'all',
       label: "All",
       content: renderNotifications()
     },
     {
+      id: 'read',
       label: "Read",
       content: renderNotifications()
     }
