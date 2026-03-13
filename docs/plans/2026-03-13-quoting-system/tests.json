@@ -210,7 +210,7 @@
   {
     "id": "T027",
     "description": "Model: listByClient returns only quotes for specified client",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
