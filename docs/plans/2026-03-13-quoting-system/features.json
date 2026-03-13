@@ -447,7 +447,7 @@
   {
     "id": "F052",
     "description": "P2: Tax calculation — per-item tax_region and tax_rate population",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2-FR1"
     ]
