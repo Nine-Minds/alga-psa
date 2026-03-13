@@ -429,7 +429,7 @@
   {
     "id": "T050c",
     "description": "Business template: createQuoteFromTemplate generates a new quote_number for the draft",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036a"
     ]

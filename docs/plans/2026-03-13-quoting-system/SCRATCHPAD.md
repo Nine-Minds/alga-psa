@@ -107,6 +107,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) T050c complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with a `createQuoteFromTemplate` assertion that the returned draft has a fresh `quote_number`, proving template instantiation yields a normal numbered quote rather than another template shell.
 - (2026-03-13) T050b complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with a `createQuoteFromTemplate` case asserting every template line item is recreated on the new draft quote with the expected recurrence and optional-item metadata.
 - (2026-03-13) T050a complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with a template-creation case proving `createQuote` preserves `is_template=true` and returns a template without a generated quote number.
 - (2026-03-13) F036a complete — P1: Added `createQuoteFromTemplate` in `packages/billing/src/actions/quoteActions.ts`; it validates `billing:create`, loads a template quote, creates a new draft quote from template defaults, clones all template items in a transaction, and returns the populated draft quote with a fresh quote number.
