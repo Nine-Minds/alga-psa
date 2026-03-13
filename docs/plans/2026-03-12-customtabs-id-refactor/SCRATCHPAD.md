@@ -211,3 +211,4 @@ npm run build
 - **T008 complete** — The controlled-mode UI test verifies `value`/`onTabChange` round-trip tab ids instead of labels.
 - **T009 complete** — The interaction test verifies `beforeTabChange` receives  and can block the change.
 - **T010 complete** — The fallback test verifies an uncontrolled `CustomTabs` instance activates the first tab via `allTabs[0].id`.
+- **T011 complete** — Grouped-tab UI coverage verifies auto-expanded matching when `defaultTab` points at a nested tab id.
