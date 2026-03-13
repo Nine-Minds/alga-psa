@@ -123,7 +123,7 @@
   {
     "id": "F016",
     "description": "P1: Quote model — delete via deleteEntityWithValidation: hard delete drafts with no business history, archive for others",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR5",
       "P1-FR19"

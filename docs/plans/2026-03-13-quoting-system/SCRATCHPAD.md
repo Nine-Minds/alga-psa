@@ -120,3 +120,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) F013 complete — P1: Quote model — listByClient for client-specific quote listing. Implemented client-scoped quote listing in the model layer.
 - (2026-03-13) F014 complete — P1: Quote model — create (inserts quote row, generates quote_number, logs activity). Implemented quote creation with QUOTE numbering and created-activity logging.
 - (2026-03-13) F015 complete — P1: Quote model — update (validates status transition, updates fields, logs activity). Implemented quote updates with status validation and activity logging.
+- (2026-03-13) F016 complete — P1: Quote model — delete via deleteEntityWithValidation: hard delete drafts with no business history, archive for others. Implemented quote deletion through deletion validation with draft hard-delete behavior.
