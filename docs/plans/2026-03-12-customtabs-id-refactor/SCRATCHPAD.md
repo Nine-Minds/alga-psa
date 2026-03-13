@@ -214,3 +214,4 @@ npm run build
 - **T011 complete** — Grouped-tab UI coverage verifies auto-expanded matching when `defaultTab` points at a nested tab id.
 - **T012 complete** — Grouped controlled-mode coverage verifies auto-expanded matching when `value` points at a nested tab id.
 - **T013 complete** — The base UI test verifies a tab can display `General` while its internal identity remains `general`.
+- **T014 complete** — The duplicate-label UI test proves matching is id-based even when two tabs share the same visible label.
