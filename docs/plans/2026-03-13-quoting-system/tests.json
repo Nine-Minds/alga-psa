@@ -202,7 +202,7 @@
   {
     "id": "T026",
     "description": "Model: listByTenant sorts by quote_date descending by default",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]
