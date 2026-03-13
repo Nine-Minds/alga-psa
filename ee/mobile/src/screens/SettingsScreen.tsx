@@ -95,6 +95,7 @@ export function SettingsScreen() {
             <Avatar
               name={session.user?.name ?? session.user?.email ?? undefined}
               imageUri={session.user?.avatarUrl && config.ok ? `${config.baseUrl}${session.user.avatarUrl}` : undefined}
+              authToken={session.accessToken}
               size="lg"
             />
             <View style={{ marginLeft: theme.spacing.md, flex: 1 }}>
