@@ -83,7 +83,7 @@
   {
     "id": "F011",
     "description": "P1: Quote model — getByNumber (for human-readable lookup)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR5"
     ]
