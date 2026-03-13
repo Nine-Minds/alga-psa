@@ -62,6 +62,7 @@ async function setupDesigner(page: Page): Promise<{
       companyName: `Workflow UI ${uuidv4().slice(0, 6)}`,
     },
     completeOnboarding: { completedAt: new Date() },
+    experimentalFeatures: { workflowAutomation: true },
     permissions: ADMIN_PERMISSIONS,
   });
 
@@ -261,6 +262,7 @@ test.describe('Workflow Designer UI - basic', () => {
         companyName: `Workflow UI ${uuidv4().slice(0, 6)}`,
       },
       completeOnboarding: { completedAt: new Date() },
+      experimentalFeatures: { workflowAutomation: true },
       permissions: ADMIN_PERMISSIONS,
     });
 
@@ -615,6 +617,31 @@ test.describe('Workflow Designer UI - basic', () => {
     try {
       await workflowPage.clickNewWorkflow();
       await expect(workflowPage.addButtonFor('transform')).toBeVisible();
+    } finally {
+      await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
+      await db.destroy();
+    }
+  });
+
+  test('palette search remains interactive after a grouped tile has been inserted', async ({ page }) => {
+    test.setTimeout(120000);
+
+    const { db, tenantData, workflowPage } = await setupDesigner(page);
+    try {
+      await workflowPage.clickNewWorkflow();
+
+      const stepButtons = page.locator('[id^="workflow-step-select-"]');
+      await expect(stepButtons).toHaveCount(0);
+
+      await workflowPage.addButtonFor('ticket').click();
+      await expect(stepButtons).toHaveCount(1);
+
+      await workflowPage.searchPalette('Call Workflow');
+      await expect(workflowPage.addButtonFor('control.callWorkflow')).toBeVisible();
+      await expect(workflowPage.addButtonFor('ticket')).toBeHidden();
+
+      await workflowPage.searchPalette('');
+      await expect(workflowPage.addButtonFor('ticket')).toBeVisible();
     } finally {
       await rollbackTenant(db, tenantData.tenant.tenantId).catch(() => {});
       await db.destroy();

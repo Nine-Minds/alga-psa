@@ -40,6 +40,10 @@ export type TenantRolePermissionConfig = {
 export type TenantPreparationOptions = {
   completeOnboarding?: boolean | { completedAt?: Date };
   permissions?: TenantRolePermissionConfig[];
+  experimentalFeatures?: {
+    aiAssistant?: boolean;
+    workflowAutomation?: boolean;
+  };
 };
 
 export type CreateTenantAndLoginOptions = TenantPreparationOptions & {
@@ -390,7 +394,7 @@ export async function prepareTenantForPlaywright(
   tenantId: string,
   options: TenantPreparationOptions = {}
 ): Promise<void> {
-  const { completeOnboarding, permissions } = options;
+  const { completeOnboarding, permissions, experimentalFeatures } = options;
 
   if (completeOnboarding) {
     const completedAt =
@@ -404,6 +408,45 @@ export async function prepareTenantForPlaywright(
     for (const { roleName, permissions: tuples } of permissions) {
       await ensureRoleHasPermission(db, tenantId, roleName, tuples);
     }
+  }
+
+  if (experimentalFeatures) {
+    const existing = await db('tenant_settings')
+      .where({ tenant: tenantId })
+      .first();
+
+    const existingSettings =
+      existing?.settings && typeof existing.settings === 'object'
+        ? existing.settings as Record<string, unknown>
+        : {};
+    const existingExperimentalFeatures =
+      existingSettings.experimentalFeatures && typeof existingSettings.experimentalFeatures === 'object'
+        ? existingSettings.experimentalFeatures as Record<string, unknown>
+        : {};
+
+    const nextSettings = {
+      ...existingSettings,
+      experimentalFeatures: {
+        ...existingExperimentalFeatures,
+        ...experimentalFeatures,
+      },
+    };
+
+    await db('tenant_settings')
+      .insert({
+        tenant: tenantId,
+        onboarding_completed: false,
+        onboarding_skipped: false,
+        onboarding_data: null,
+        settings: nextSettings,
+        created_at: new Date(),
+        updated_at: new Date(),
+      })
+      .onConflict('tenant')
+      .merge({
+        settings: nextSettings,
+        updated_at: new Date(),
+      });
   }
 }
 

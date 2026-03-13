@@ -25,7 +25,6 @@ COPY packages/core/package.json ./packages/core/
 COPY packages/db/package.json ./packages/db/
 COPY packages/event-bus/package.json ./packages/event-bus/
 COPY packages/event-schemas/package.json ./packages/event-schemas/
-COPY packages/media/package.json ./packages/media/
 COPY packages/formatting/package.json ./packages/formatting/
 COPY packages/portal-shared/package.json ./packages/portal-shared/
 COPY packages/storage/package.json ./packages/storage/

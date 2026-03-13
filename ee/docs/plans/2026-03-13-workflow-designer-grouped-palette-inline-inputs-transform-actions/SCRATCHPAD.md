@@ -42,6 +42,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-13) The shared designer catalog helper had a local JSON-schema type that was narrower than the action registry payloads (notably tuple-style `items` and metadata-rich definitions). The search slice widened that helper type so EE TypeScript checks can validate the designer path against real action schemas.
 - (2026-03-13) Grouped palette insertion was still throwing away authoring scope once a tile became an `action.call` step. Without additive metadata, grouped drag/click insertion and legacy hydration both had to fall back to action-only guesses.
 - (2026-03-13) The grouped `Transform` tile already participated in palette rendering, drag/click insertion, and grouped-step hydration; the missing piece was simply that no `transform.*` runtime actions existed yet, so the tile remained effectively empty for search and future action dropdowns.
+- (2026-03-13) The Playwright workflow entry surface has moved from `/msp/workflows?tab=designer` to the workflow-automation pages under `/msp/workflow-editor`, and the page is additionally gated by the tenant experimental feature `workflowAutomation`.
+- (2026-03-13) The Playwright workflow list can error in this worktree because the local test database is missing `tenant_workflow_schedule`, but the list/error states still expose a working `New Workflow` CTA, so grouped-designer browser coverage can proceed once the route and feature gate are handled.
+- (2026-03-13) Playwright still does not reliably trigger grouped palette drag-start state in the current harness, so the explicit “search while dragging grouped tile” coverage remains blocked even though click insertion and post-insertion search coverage now pass.
 
 ## Commands / Runbooks
 
@@ -83,6 +86,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-13) Extend transform runtime coverage to object/value/array actions:
   - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/actions/__tests__/registerTransformActions.test.ts --reporter=dot`
   - `npx eslint shared/workflow/runtime/actions/registerTransformActions.ts shared/workflow/runtime/actions/__tests__/registerTransformActions.test.ts`
+- (2026-03-13) Validate grouped palette browser coverage against the current workflow-editor route:
+  - `cd ee/server && PW_WEBSERVER=false PW_KEEP_DEPS=true PLAYWRIGHT_BASE_URL=http://localhost:3300 PLAYWRIGHT_DB_PORT=5433 PLAYWRIGHT_DB_PORT_LOCKED=true DB_PORT=5433 DB_DIRECT_PORT=5433 PLAYWRIGHT_DB_HOST=localhost DB_HOST=localhost PLAYWRIGHT_DB_NAME=alga_contract_wizard_test DB_NAME_SERVER=alga_contract_wizard_test PLAYWRIGHT_DB_ADMIN_USER=postgres PLAYWRIGHT_DB_ADMIN_PASSWORD=postpass123 PLAYWRIGHT_DB_APP_USER=app_user PLAYWRIGHT_DB_APP_PASSWORD=postpass123 NEXTAUTH_SECRET=test-nextauth-secret npx playwright test src/__tests__/integration/workflow-designer-basic.playwright.test.ts -g "palette search filters nodes and restores list|palette search filters nodes by id|palette renders grouped business tiles instead of one tile per business action|control blocks still render as dedicated palette entries alongside grouped tiles|transform renders as a top-level palette tile|palette search remains interactive after a grouped tile has been inserted" --reporter=list`
+  - `cd ee/server && npx eslint src/__tests__/page-objects/WorkflowDesignerPage.ts src/__tests__/integration/helpers/playwrightAuthSessionHelper.ts src/__tests__/integration/workflow-designer-basic.playwright.test.ts`
 
 ## Links / References
 
@@ -153,3 +159,10 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - The existing server registry/catalog integration suite passed after extending it to assert that grouped catalog projection and runtime action projection now include `transform.truncate_text`.
   - ESLint on the touched files passed with only pre-existing warnings in `server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts`.
   - An attempted DB-backed integration expansion for text transform execution was reverted because the local `server` test database was unavailable in this worktree (`error: database "server" does not exist`), so text-transform runtime behavior remains covered through shared unit tests for now.
+- (2026-03-13) Completed the grouped palette browser-harness refresh:
+  - Fixed Playwright workflow-designer navigation to use `/msp/workflow-editor` instead of the removed `/msp/workflows?tab=designer` route.
+  - Updated Playwright tenant preparation so workflow-designer specs explicitly enable the tenant experimental feature `workflowAutomation`.
+  - Verified grouped palette business tiles, control blocks, the top-level `Transform` tile, and post-insertion palette search against the live workflow-editor surface.
+  - Marked F055 and T021-T031/T055 implemented.
+- (2026-03-13) Remaining grouped palette browser blocker:
+  - T054/F054 still remain open because Playwright did not reliably fire the grouped palette drag-start state in this harness, so “search while dragging” still needs a future browser-driver-friendly strategy.

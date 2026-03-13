@@ -122,67 +122,67 @@
   {
     "id": "T021",
     "description": "Playwright: the palette renders grouped business tiles instead of one tile per business action",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {
     "id": "T022",
     "description": "Playwright: control blocks still render as dedicated palette entries",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
     "id": "T023",
     "description": "Playwright: Ticket renders as a top-level grouped palette tile",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   },
   {
     "id": "T024",
     "description": "Playwright: Contact renders as a top-level grouped palette tile",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {
     "id": "T025",
     "description": "Playwright: Client renders as a top-level grouped palette tile",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   },
   {
     "id": "T026",
     "description": "Playwright: Communication renders as a top-level grouped palette tile",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F026"]
   },
   {
     "id": "T027",
     "description": "Playwright: Scheduling renders as a top-level grouped palette tile",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F027"]
   },
   {
     "id": "T028",
     "description": "Playwright: Project renders as a top-level grouped palette tile",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F028"]
   },
   {
     "id": "T029",
     "description": "Playwright: Time renders as a top-level grouped palette tile",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F029"]
   },
   {
     "id": "T030",
     "description": "Playwright: CRM renders as a top-level grouped palette tile",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F030"]
   },
   {
     "id": "T031",
     "description": "Playwright: Transform renders as a top-level grouped palette tile",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F031"]
   },
   {
@@ -326,7 +326,7 @@
   {
     "id": "T055",
     "description": "Playwright: palette search remains interactive after a grouped tile has been inserted",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F055"]
   },
   {
