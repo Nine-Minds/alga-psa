@@ -263,7 +263,7 @@
   {
     "id": "F031",
     "description": "Migrate BillingOverview.tsx — add id to dynamic tabs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern D"

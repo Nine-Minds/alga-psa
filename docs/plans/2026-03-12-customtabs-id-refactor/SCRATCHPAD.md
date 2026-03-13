@@ -173,3 +173,5 @@ npm run build
 - F029 — ClientPortalSettingsPage now uses id-based tab state and direct `?tab=` routing for account, client details, and user management.
 
 - F030 — ClientProfile now assigns stable ids to its translated tabs and syncs tab changes back to the URL using ids.
+
+- F031 — BillingOverview now uses dynamic tab ids (`overview`, `invoices`, `hours-by-service`, `usage-metrics`) instead of translated label maps.
