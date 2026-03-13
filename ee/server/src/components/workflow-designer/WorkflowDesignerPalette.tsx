@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search } from 'lucide-react';
+import type { DroppableProvidedProps } from '@hello-pangea/dnd';
 
 export type WorkflowDesignerPaletteItem = {
   id: string;
@@ -17,7 +18,7 @@ type WorkflowDesignerPaletteProps<TItem extends WorkflowDesignerPaletteItem> = {
   groupedPaletteItems: Record<string, TItem[]>;
   renderItem: (item: TItem, category: string, itemIndex: number) => React.ReactNode;
   scrollContainerRef?: React.Ref<HTMLDivElement>;
-  scrollContainerProps?: React.HTMLAttributes<HTMLDivElement>;
+  scrollContainerProps?: DroppableProvidedProps;
   scrollContainerFooter?: React.ReactNode;
 };
 

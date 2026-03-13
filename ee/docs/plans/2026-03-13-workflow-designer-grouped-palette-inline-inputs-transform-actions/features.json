@@ -482,19 +482,19 @@
   {
     "id": "F081",
     "description": "The step properties panel should show the grouped tile label before an action is chosen",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Step Properties Model"]
   },
   {
     "id": "F082",
     "description": "The step properties panel should show an action dropdown limited to the allowed actions for the selected group",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model", "UX / UI Notes > Step Properties Model"]
   },
   {
     "id": "F083",
     "description": "The step properties panel should show an action dropdown limited to the allowed actions for the selected app tile",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Plugin/App Support", "UX / UI Notes > Step Properties Model"]
   },
   {
@@ -512,13 +512,13 @@
   {
     "id": "F086",
     "description": "Choosing an action should update the displayed step label to match the chosen action",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model", "UX / UI Notes > Step Properties Model"]
   },
   {
     "id": "F087",
     "description": "Choosing an action should update the displayed step description to match the chosen action",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Grouped Action Step Model"]
   },
   {
@@ -554,13 +554,13 @@
   {
     "id": "F093",
     "description": "Changing from one chosen action to another should safely preserve any still-valid input mappings",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Compatibility, Save/Load, and Validation"]
   },
   {
     "id": "F094",
     "description": "Changing from one chosen action to another should safely discard or isolate stale mappings that no longer match any field",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Compatibility, Save/Load, and Validation"]
   },
   {
@@ -572,13 +572,13 @@
   {
     "id": "F096",
     "description": "Changing from one chosen action to another should recalculate saveAs suggestions when the step output name is auto-generated",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "Requirements > Grouped Action Step Model"]
   },
   {
     "id": "F097",
     "description": "The step properties panel should surface an invalid state when no required action has been chosen yet",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Compatibility, Save/Load, and Validation"]
   },
   {

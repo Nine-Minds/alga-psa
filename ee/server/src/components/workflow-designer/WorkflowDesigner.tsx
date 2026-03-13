@@ -83,6 +83,8 @@ import {
   buildGroupedActionStepConfig,
   getGroupedActionCatalogRecordForStep,
 } from './groupedActionStep';
+import { GroupedActionConfigSection } from './GroupedActionConfigSection';
+import { applyCatalogActionChoiceToStep } from './groupedActionSelection';
 import { WorkflowDesignerPalette } from './WorkflowDesignerPalette';
 
 import type {
@@ -3402,6 +3404,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   errors={errorsByStepId.get(selectedStep.id) ?? []}
                   nodeRegistry={nodeRegistryMap}
                   actionRegistry={actionRegistry}
+                  designerActionCatalog={designerActionCatalog}
                   fieldOptions={fieldOptions}
                   payloadSchema={payloadSchema}
                   definition={activeDefinition}
@@ -5224,6 +5227,7 @@ const StepConfigPanel: React.FC<{
   errors: PublishError[];
   nodeRegistry: Record<string, NodeRegistryItem>;
   actionRegistry: ActionRegistryItem[];
+  designerActionCatalog: WorkflowDesignerCatalogRecord[];
   fieldOptions: SelectOption[];
   payloadSchema: JsonSchema | null;
   definition: WorkflowDefinition;
@@ -5234,6 +5238,7 @@ const StepConfigPanel: React.FC<{
   errors,
   nodeRegistry,
   actionRegistry,
+  designerActionCatalog,
   fieldOptions,
   payloadSchema,
   definition,
@@ -5259,6 +5264,10 @@ const StepConfigPanel: React.FC<{
     const config = (step as NodeStep).config as { actionId?: string; version?: number } | undefined;
     return getActionFromRegistry(config?.actionId, config?.version, actionRegistry);
   }, [step, actionRegistry]);
+  const groupedActionRecord = useMemo(
+    () => getGroupedActionCatalogRecordForStep(step, designerActionCatalog),
+    [step, designerActionCatalog]
+  );
 
   const saveAs = step.type === 'action.call'
     ? ((step as NodeStep).config as { saveAs?: string } | undefined)?.saveAs
@@ -5309,6 +5318,18 @@ const StepConfigPanel: React.FC<{
       }
     });
   }, [step, onChange]);
+  const handleGroupedActionChange = useCallback((actionId?: string) => {
+    if (step.type !== 'action.call' || !groupedActionRecord) return;
+    const nextAction = actionId
+      ? groupedActionRecord.actions.find((action) => action.id === actionId) ?? null
+      : null;
+    onChange(applyCatalogActionChoiceToStep(step as NodeStep, nextAction, {
+      generateSaveAsName,
+      currentGroupLabel: groupedActionRecord.label,
+      currentActionLabel: selectedAction?.ui?.label ?? selectedAction?.id,
+      nextGroupLabel: groupedActionRecord.label,
+    }));
+  }, [groupedActionRecord, onChange, selectedAction, step]);
 
   // §16.2 - Enhanced field options with step outputs
   const enhancedFieldOptions = useMemo(() =>
@@ -5385,7 +5406,7 @@ const StepConfigPanel: React.FC<{
   return (
     <div className="space-y-4">
       <div>
-        <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">{getStepLabel(step, nodeRegistry)}</div>
+        <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">{getStepLabel(step, nodeRegistry, designerActionCatalog)}</div>
         <div className="text-xs text-gray-500">{stepPath ?? step.id}</div>
       </div>
 
@@ -5457,6 +5478,16 @@ const StepConfigPanel: React.FC<{
           label="Step name"
           value={(step as NodeStep).name ?? ''}
           onChange={(event) => onChange({ ...(step as NodeStep), name: event.target.value })}
+        />
+      )}
+
+      {step.type === 'action.call' && groupedActionRecord && (
+        <GroupedActionConfigSection
+          stepId={step.id}
+          record={groupedActionRecord}
+          selectedActionId={selectedAction?.id}
+          selectedActionDescription={selectedAction?.ui?.description}
+          onActionChange={handleGroupedActionChange}
         />
       )}
 
@@ -5669,7 +5700,7 @@ const StepConfigPanel: React.FC<{
           fieldOptions={enhancedFieldOptions}
           actionRegistry={actionRegistry}
           stepId={step.id}
-          excludeFields={step.type === 'action.call' ? ['inputMapping'] : []}
+          excludeFields={step.type === 'action.call' ? ['actionId', 'version', 'saveAs', 'inputMapping'] : []}
           expressionContext={expressionContext}
         />
       )}

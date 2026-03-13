@@ -482,19 +482,19 @@
   {
     "id": "T081",
     "description": "Playwright: the step properties panel shows the grouped tile label before an action is chosen",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F081"]
   },
   {
     "id": "T082",
     "description": "Playwright: the step properties panel shows an action dropdown limited to the selected group",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F082"]
   },
   {
     "id": "T083",
     "description": "Playwright: the step properties panel shows an action dropdown limited to the selected app tile",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F083"]
   },
   {
@@ -512,13 +512,13 @@
   {
     "id": "T086",
     "description": "Playwright: choosing an action updates the displayed step label",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F086"]
   },
   {
     "id": "T087",
     "description": "Playwright: choosing an action updates the displayed step description",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F087"]
   },
   {
@@ -554,13 +554,13 @@
   {
     "id": "T093",
     "description": "Integration: changing an action preserves input mappings that still target valid fields",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F093"]
   },
   {
     "id": "T094",
     "description": "Integration: changing an action isolates or clears stale mappings that no longer target valid fields",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F094"]
   },
   {
@@ -572,13 +572,13 @@
   {
     "id": "T096",
     "description": "Integration: changing an action recalculates saveAs suggestions when auto-generation is used",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F096"]
   },
   {
     "id": "T097",
     "description": "Playwright: grouped steps surface an invalid state when no action has been chosen yet",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F097"]
   },
   {
