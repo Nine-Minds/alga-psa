@@ -20,6 +20,12 @@ describe('registerTransformActionsV2', () => {
       'transform.lowercase_text',
       'transform.uppercase_text',
       'transform.trim_text',
+      'transform.coalesce_value',
+      'transform.build_object',
+      'transform.pick_fields',
+      'transform.rename_fields',
+      'transform.append_array',
+      'transform.build_array',
     ];
 
     for (const actionId of actionIds) {
@@ -43,6 +49,14 @@ describe('registerTransformActionsV2', () => {
     expect(registry.get('transform.lowercase_text', 1)?.outputSchema.safeParse({ text: 'abc' }).success).toBe(true);
     expect(registry.get('transform.uppercase_text', 1)?.outputSchema.safeParse({ text: 'ABC' }).success).toBe(true);
     expect(registry.get('transform.trim_text', 1)?.outputSchema.safeParse({ text: 'abc' }).success).toBe(true);
+  });
+
+  it('T268/T272/T273: exposes schema-driven outputs for coalesce and array transforms', () => {
+    const registry = getActionRegistryV2();
+
+    expect(registry.get('transform.coalesce_value', 1)?.outputSchema.safeParse({ value: 'ticket-123', matchedIndex: 2 }).success).toBe(true);
+    expect(registry.get('transform.append_array', 1)?.outputSchema.safeParse({ items: ['ticket', 'contact'] }).success).toBe(true);
+    expect(registry.get('transform.build_array', 1)?.outputSchema.safeParse({ items: ['ticket', 42] }).success).toBe(true);
   });
 
   it('applies representative text transforms through runtime handlers', async () => {
@@ -74,5 +88,48 @@ describe('registerTransformActionsV2', () => {
     expect(concatenated).toEqual({ text: 'workflow designer' });
     expect(splitText).toEqual({ items: ['a', 'b'] });
     expect(uppercased).toEqual({ text: 'ALGA' });
+  });
+
+  it('applies representative object, value, and array transforms through runtime handlers', async () => {
+    const registry = getActionRegistryV2();
+
+    const coalesce = registry.get('transform.coalesce_value', 1);
+    const buildObject = registry.get('transform.build_object', 1);
+    const pickFields = registry.get('transform.pick_fields', 1);
+    const renameFields = registry.get('transform.rename_fields', 1);
+    const appendArray = registry.get('transform.append_array', 1);
+    const buildArray = registry.get('transform.build_array', 1);
+
+    const coalesced = await coalesce?.handler(
+      coalesce.inputSchema.parse({ candidates: [null, '', 'ticket-123'], treatEmptyStringAsMissing: true }),
+      {} as never
+    );
+    const builtObject = await buildObject?.handler(
+      buildObject.inputSchema.parse({ fields: [{ key: 'ticketId', value: 'ticket-123' }, { key: 'priority', value: 'high' }] }),
+      {} as never
+    );
+    const pickedObject = await pickFields?.handler(
+      pickFields.inputSchema.parse({ source: { ticketId: 'ticket-123', priority: 'high', ignored: true }, fields: ['priority', 'ticketId'] }),
+      {} as never
+    );
+    const renamedObject = await renameFields?.handler(
+      renameFields.inputSchema.parse({ source: { ticket_id: 'ticket-123', priority: 'high' }, renames: [{ from: 'ticket_id', to: 'ticketId' }] }),
+      {} as never
+    );
+    const appendedArray = await appendArray?.handler(
+      appendArray.inputSchema.parse({ items: ['ticket'], values: ['contact', 'client'] }),
+      {} as never
+    );
+    const builtArray = await buildArray?.handler(
+      buildArray.inputSchema.parse({ items: ['ticket', 42, { status: 'open' }] }),
+      {} as never
+    );
+
+    expect(coalesced).toEqual({ value: 'ticket-123', matchedIndex: 2 });
+    expect(builtObject).toEqual({ object: { ticketId: 'ticket-123', priority: 'high' } });
+    expect(pickedObject).toEqual({ object: { priority: 'high', ticketId: 'ticket-123' } });
+    expect(renamedObject).toEqual({ object: { ticketId: 'ticket-123', priority: 'high' } });
+    expect(appendedArray).toEqual({ items: ['ticket', 'contact', 'client'] });
+    expect(builtArray).toEqual({ items: ['ticket', 42, { status: 'open' }] });
   });
 });

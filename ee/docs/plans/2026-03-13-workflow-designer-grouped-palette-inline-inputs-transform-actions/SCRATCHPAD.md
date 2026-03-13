@@ -80,6 +80,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/paletteSearch.test.ts --reporter=dot`
   - `cd server && npx vitest run src/test/integration/workflowRuntimeV2.publish.integration.test.ts --config vitest.config.ts --testNamePattern="T020: workflow designer receives the grouped catalog projection from the server action|Transform actions are exposed through the runtime action registry projection" --reporter=dot`
   - `npx eslint shared/workflow/runtime/actions/registerTransformActions.ts shared/workflow/runtime/actions/__tests__/registerTransformActions.test.ts shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts ee/server/src/components/workflow-designer/__tests__/paletteSearch.test.ts server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts shared/workflow/runtime/init.ts`
+- (2026-03-13) Extend transform runtime coverage to object/value/array actions:
+  - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/actions/__tests__/registerTransformActions.test.ts --reporter=dot`
+  - `npx eslint shared/workflow/runtime/actions/registerTransformActions.ts shared/workflow/runtime/actions/__tests__/registerTransformActions.test.ts`
 
 ## Links / References
 
@@ -134,6 +137,10 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Wired the runtime initializer to register transform actions so the grouped `Transform` catalog record now exposes contained actions to server projections and designer search.
   - Extended catalog/search coverage so `truncate-text`-style queries now match the grouped `Transform` tile through contained action metadata rather than a hidden action row.
   - Marked F049, F226-F229, F241-F258, and T226-T228/T251-T258 implemented.
+- (2026-03-13) Extended transform runtime coverage beyond text shaping:
+  - Added first-class `transform.coalesce_value`, `transform.build_object`, `transform.pick_fields`, `transform.rename_fields`, `transform.append_array`, and `transform.build_array` actions with explicit schemas and deterministic pure handlers.
+  - Added unit coverage for representative coalesce/object/array behavior plus schema assertions for coalesce and array outputs.
+  - Marked F261-F268, F272-F273, and T268/T272-T273 implemented.
 - (2026-03-13) Validation blocker:
   - The new grouped-palette Playwright tests could not complete because tenant bootstrap failed before the browser reached the designer (`Failed to create tenant` from `tenant-creation.ts`). The assertions themselves did not run, so `tests.json` remains unchanged for the new palette tests.
 - (2026-03-13) Validation update:
@@ -145,3 +152,4 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - The new transform-action shared unit suite passed, covering registry presence, explicit schemas, typed output fields, and representative text-transform behavior.
   - The existing server registry/catalog integration suite passed after extending it to assert that grouped catalog projection and runtime action projection now include `transform.truncate_text`.
   - ESLint on the touched files passed with only pre-existing warnings in `server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts`.
+  - An attempted DB-backed integration expansion for text transform execution was reverted because the local `server` test database was unavailable in this worktree (`error: database "server" does not exist`), so text-transform runtime behavior remains covered through shared unit tests for now.

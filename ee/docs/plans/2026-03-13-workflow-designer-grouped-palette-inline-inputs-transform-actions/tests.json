@@ -1604,7 +1604,7 @@
   {
     "id": "T268",
     "description": "Unit: coalesce-value exposes a downstream-compatible output schema",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F268"]
   },
   {
@@ -1628,13 +1628,13 @@
   {
     "id": "T272",
     "description": "Unit: append-array exposes an array output schema browseable by downstream references",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F272"]
   },
   {
     "id": "T273",
     "description": "Unit: build-array exposes an array output schema browseable by downstream references",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F273"]
   },
   {

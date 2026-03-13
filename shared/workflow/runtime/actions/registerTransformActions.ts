@@ -18,6 +18,19 @@ const arrayOutputSchema = z.object({
   items: z.array(z.string()).describe('Transformed string array output')
 });
 
+const genericArrayOutputSchema = z.object({
+  items: z.array(z.unknown()).describe('Transformed array output')
+});
+
+const objectOutputSchema = z.object({
+  object: z.record(z.unknown()).describe('Transformed object output')
+});
+
+const coalesceOutputSchema = z.object({
+  value: z.unknown().optional().describe('First usable candidate value'),
+  matchedIndex: z.number().int().nullable().describe('Zero-based index of the selected candidate')
+});
+
 function truncateText(
   text: string,
   maxLength: number,
@@ -208,6 +221,153 @@ export function registerTransformActionsV2(): void {
     },
     handler: async (input) => ({
       text: coerceText(input.text).trim()
+    })
+  });
+
+  registry.register({
+    id: 'transform.coalesce_value',
+    version: 1,
+    inputSchema: z.object({
+      candidates: z.array(z.unknown()).default([]).describe('Ordered candidate values'),
+      treatEmptyStringAsMissing: z.boolean().default(true).describe('Whether empty strings should be skipped')
+    }),
+    outputSchema: coalesceOutputSchema,
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Coalesce Value',
+      category: 'Transform',
+      description: 'Return the first usable value from an ordered candidate list.'
+    },
+    handler: async (input) => {
+      const matchedIndex = input.candidates.findIndex((candidate) => {
+        if (candidate === null || candidate === undefined) return false;
+        if (input.treatEmptyStringAsMissing && typeof candidate === 'string') {
+          return candidate.trim().length > 0;
+        }
+        return true;
+      });
+
+      return {
+        value: matchedIndex === -1 ? undefined : input.candidates[matchedIndex],
+        matchedIndex: matchedIndex === -1 ? null : matchedIndex
+      };
+    }
+  });
+
+  registry.register({
+    id: 'transform.build_object',
+    version: 1,
+    inputSchema: z.object({
+      fields: z.array(z.object({
+        key: z.string().min(1).describe('Output field name'),
+        value: z.unknown().optional().describe('Output field value')
+      })).default([]).describe('Named fields to include in the output object')
+    }),
+    outputSchema: objectOutputSchema,
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Build Object',
+      category: 'Transform',
+      description: 'Construct an object from explicit named inputs.'
+    },
+    handler: async (input) => ({
+      object: Object.fromEntries(input.fields.map((field) => [field.key, field.value]))
+    })
+  });
+
+  registry.register({
+    id: 'transform.pick_fields',
+    version: 1,
+    inputSchema: z.object({
+      source: z.record(z.unknown()).default({}).describe('Source object to read from'),
+      fields: z.array(z.string().min(1)).default([]).describe('Field names to keep from the source object')
+    }),
+    outputSchema: objectOutputSchema,
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Pick Fields',
+      category: 'Transform',
+      description: 'Select a fixed subset of fields from an object.'
+    },
+    handler: async (input) => ({
+      object: Object.fromEntries(
+        input.fields
+          .filter((field) => Object.prototype.hasOwnProperty.call(input.source, field))
+          .map((field) => [field, input.source[field]])
+      )
+    })
+  });
+
+  registry.register({
+    id: 'transform.rename_fields',
+    version: 1,
+    inputSchema: z.object({
+      source: z.record(z.unknown()).default({}).describe('Source object to rename fields on'),
+      renames: z.array(z.object({
+        from: z.string().min(1).describe('Existing field name'),
+        to: z.string().min(1).describe('New field name')
+      })).default([]).describe('Explicit field rename mappings')
+    }),
+    outputSchema: objectOutputSchema,
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Rename Fields',
+      category: 'Transform',
+      description: 'Rename object fields with explicit mapping entries.'
+    },
+    handler: async (input) => {
+      const renamed = { ...input.source };
+      for (const entry of input.renames) {
+        if (!Object.prototype.hasOwnProperty.call(renamed, entry.from)) continue;
+        renamed[entry.to] = renamed[entry.from];
+        if (entry.to !== entry.from) {
+          delete renamed[entry.from];
+        }
+      }
+      return { object: renamed };
+    }
+  });
+
+  registry.register({
+    id: 'transform.append_array',
+    version: 1,
+    inputSchema: z.object({
+      items: z.array(z.unknown()).default([]).describe('Source array'),
+      values: z.array(z.unknown()).default([]).describe('Values to append to the source array')
+    }),
+    outputSchema: genericArrayOutputSchema,
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Append Array',
+      category: 'Transform',
+      description: 'Append one or more values to an existing array.'
+    },
+    handler: async (input) => ({
+      items: [...input.items, ...input.values]
+    })
+  });
+
+  registry.register({
+    id: 'transform.build_array',
+    version: 1,
+    inputSchema: z.object({
+      items: z.array(z.unknown()).default([]).describe('Ordered values for the output array')
+    }),
+    outputSchema: genericArrayOutputSchema,
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Build Array',
+      category: 'Transform',
+      description: 'Construct an array from explicit ordered values.'
+    },
+    handler: async (input) => ({
+      items: [...input.items]
     })
   });
 }

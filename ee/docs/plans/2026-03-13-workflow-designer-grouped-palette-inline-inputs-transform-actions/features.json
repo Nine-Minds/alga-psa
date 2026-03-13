@@ -1562,49 +1562,49 @@
   {
     "id": "F261",
     "description": "Provide a coalesce-value transform action that accepts ordered candidate inputs and returns the first usable value",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions"]
   },
   {
     "id": "F262",
     "description": "Provide a build-object transform action that accepts named fields and returns an object",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Users and Primary Flows"]
   },
   {
     "id": "F263",
     "description": "Allow build-object to assign user-chosen output field names without requiring expression syntax",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Users and Primary Flows"]
   },
   {
     "id": "F264",
     "description": "Provide a pick-fields transform action that accepts an input object and a selected subset of fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions"]
   },
   {
     "id": "F265",
     "description": "Provide a rename-fields transform action that accepts an input object and an explicit field rename mapping",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Users and Primary Flows"]
   },
   {
     "id": "F266",
     "description": "Provide an append-array transform action that accepts an input array and one or more values to append",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions"]
   },
   {
     "id": "F267",
     "description": "Provide a build-array transform action that accepts ordered item inputs and returns an array",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions"]
   },
   {
     "id": "F268",
     "description": "Expose coalesce-value output with a schema type compatible with downstream references",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Reference Source Model"]
   },
   {
@@ -1628,13 +1628,13 @@
   {
     "id": "F272",
     "description": "Expose append-array output as an array schema that downstream references can browse",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Reference Source Model"]
   },
   {
     "id": "F273",
     "description": "Expose build-array output as an array schema that downstream references can browse",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Reference Source Model"]
   },
   {
