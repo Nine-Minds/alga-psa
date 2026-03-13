@@ -397,7 +397,7 @@
   {
     "id": "T049",
     "description": "Action: addQuoteItem stores is_optional=true when flagged",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
