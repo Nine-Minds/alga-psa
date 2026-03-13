@@ -10,7 +10,7 @@ import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { expectError, expectNotFound } from '../../../../../test-utils/errorUtils';
 import { createTestDate, createTestDateISO, dateHelpers } from '../../../../../test-utils/dateUtils';
 import { ClientContractLine } from '@alga-psa/billing/models';
-import { BillingEngine } from '@alga-psa/billing/lib/billing/billingEngine';
+import { BillingEngine } from '@alga-psa/billing/services';
 import {
   createTestService,
   createFixedPlanAssignment,

@@ -27,7 +27,7 @@ import { buildPaymentAppliedPayload, buildPaymentRecordedPayload, buildPaymentRe
 
 // Import existing service functions
 import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
-import { BillingEngine } from '@alga-psa/billing/lib/billing/billingEngine';
+import { BillingEngine } from '@alga-psa/billing/services';
 import { TaxService } from '@alga-psa/billing/services/taxService';
 import { NumberingService } from '@shared/services/numberingService';
 import { PDFGenerationService, createPDFGenerationService } from '../../../services/pdf-generation.service';
