@@ -343,7 +343,7 @@
   {
     "id": "F040",
     "description": "Migrate TimeEntrySettings.tsx — add id to 2 tabs, remove subtabToLabelMap/labelToSlugMap",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern A"

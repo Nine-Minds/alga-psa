@@ -192,3 +192,4 @@ npm run build
 - **F038 complete** — Added stable ids to the static `packages/assets/src/components/AssetDetails.tsx` tab list (`details`, `related-assets`, `documents`) so it satisfies the required `TabContent.id` contract.
 - **F038 complete** — Added stable ids to the static `packages/assets/src/components/AssetDetails.tsx` tab list (`details`, `related-assets`, `documents`) so it satisfies the required `TabContent.id` contract.
 - **F039 complete** — Converted `packages/surveys/src/components/SurveySettings.tsx` to stable tab ids (`templates`, `triggers`) and now writes the `subtab` query param directly from the selected tab id while keeping translated labels for display.
+- **F040 complete** — Reworked `packages/scheduling/src/components/settings/time-entry/TimeEntrySettings.tsx` to use `time-period-settings` and `time-periods` as stable ids and persist `subtab` directly from the selected tab id.
