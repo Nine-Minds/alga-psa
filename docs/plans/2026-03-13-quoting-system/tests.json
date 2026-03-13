@@ -285,7 +285,7 @@
   {
     "id": "T035",
     "description": "Item model: create with service_id populates service_name, service_sku, unit_price from catalog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
