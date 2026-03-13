@@ -143,3 +143,5 @@ npm run build
 - F014 — Migrated TicketingSettings to id-based sections (`display`, `boards`, `statuses`, etc.) with direct URL persistence.
 
 - F015 — Converted both NotificationsTab views to id-based tabs so email/internal sections sync URLs without label maps.
+
+- F016 — InteractionSettings now uses `interaction-types` and `interaction-statuses` ids for state and section URLs.

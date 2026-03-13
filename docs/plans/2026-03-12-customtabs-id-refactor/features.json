@@ -128,7 +128,7 @@
   {
     "id": "F016",
     "description": "Migrate InteractionSettings.tsx — add id to 2 tabs, remove bidirectional maps",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern A"
