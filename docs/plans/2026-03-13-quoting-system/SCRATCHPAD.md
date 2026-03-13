@@ -130,3 +130,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) F023 complete — P1: Quote activity model — create activity entry with type, description, performed_by, metadata. Implemented quote activity creation with metadata support.
 - (2026-03-13) F024 complete — P1: Quote activity model — listByQuoteId for audit trail display. Implemented chronological quote activity listing.
 - (2026-03-13) F049a complete — P1: Register quote entity in deleteEntityWithValidation config with supportsArchive: true and dependency checks. Registered quote deletion rules with archive alternatives and business-history checks.
+- (2026-03-13) T001 complete — Migration: quotes table created with correct columns including is_template boolean, types, and constraints. Added DB-backed quote infrastructure coverage.
