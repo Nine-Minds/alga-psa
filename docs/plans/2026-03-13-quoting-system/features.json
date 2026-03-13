@@ -319,7 +319,7 @@
   {
     "id": "F038",
     "description": "P1: QuoteList component — DataTable with columns, sorting, pagination",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR15"
     ]

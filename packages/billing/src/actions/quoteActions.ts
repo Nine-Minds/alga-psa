@@ -81,6 +81,31 @@ const getActorUserId = (user: unknown): string | null => {
   return typeof candidate === 'string' ? candidate : null;
 };
 
+const QUOTE_DATE_FIELDS = [
+  'quote_date',
+  'valid_until',
+  'archived_at',
+  'sent_at',
+  'viewed_at',
+  'accepted_at',
+  'rejected_at',
+  'cancelled_at',
+  'expired_at',
+  'converted_at',
+] as const;
+
+const normalizeQuoteDates = (value: Record<string, any>): Record<string, any> => {
+  const normalized: Record<string, any> = { ...value };
+
+  for (const field of QUOTE_DATE_FIELDS) {
+    if (normalized[field] instanceof Date) {
+      normalized[field] = normalized[field].toISOString();
+    }
+  }
+
+  return normalized;
+};
+
 export const createQuote = withAuth(async (user, { tenant }, input: CreateQuoteInput): Promise<IQuote | ActionPermissionError> => {
   const denied = await requireBillingCreatePermission(user);
   if (denied) {
@@ -88,12 +113,18 @@ export const createQuote = withAuth(async (user, { tenant }, input: CreateQuoteI
   }
 
   const { knex } = await createTenantKnex();
-  const parsedInput = createQuoteSchema.parse({
+  const parsedInput = normalizeQuoteDates(createQuoteSchema.parse({
     ...input,
     created_by: input.created_by ?? getActorUserId(user),
-  });
+  }));
 
-  const createdQuote = await Quote.create(knex, tenant, parsedInput);
+  const createdQuote = await Quote.create(knex, tenant, {
+    ...parsedInput,
+    subtotal: input.subtotal ?? 0,
+    discount_total: input.discount_total ?? 0,
+    tax: input.tax ?? 0,
+    total_amount: input.total_amount ?? 0,
+  } as any);
   return await Quote.getById(knex, tenant, createdQuote.quote_id) as IQuote;
 });
 
@@ -109,12 +140,12 @@ export const updateQuote = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  const parsedInput = updateQuoteSchema.parse({
+  const parsedInput = normalizeQuoteDates(updateQuoteSchema.parse({
     ...input,
     updated_by: input.updated_by ?? getActorUserId(user),
-  });
+  }));
 
-  const updatedQuote = await Quote.update(knex, tenant, quoteId, parsedInput);
+  const updatedQuote = await Quote.update(knex, tenant, quoteId, parsedInput as Partial<IQuote>);
   return await Quote.getById(knex, tenant, updatedQuote.quote_id) as IQuote;
 });
 
@@ -176,7 +207,7 @@ export const addQuoteItem = withAuth(async (
     created_by: input.created_by ?? getActorUserId(user),
   });
 
-  return await QuoteItem.create(knex, tenant, parsedInput);
+  return await QuoteItem.create(knex, tenant, parsedInput as any);
 });
 
 export const updateQuoteItem = withAuth(async (
@@ -252,7 +283,7 @@ export const createQuoteFromTemplate = withAuth(async (
     }
 
     const actorUserId = getActorUserId(user);
-    const parsedQuote = createQuoteSchema.parse({
+    const parsedQuote = normalizeQuoteDates(createQuoteSchema.parse({
       client_id: input.client_id,
       contact_id: input.contact_id ?? null,
       title: input.title ?? template.title,
@@ -266,9 +297,15 @@ export const createQuoteFromTemplate = withAuth(async (
       currency_code: input.currency_code ?? template.currency_code,
       is_template: false,
       created_by: input.created_by ?? actorUserId,
-    });
+    }));
 
-    const createdQuote = await Quote.create(trx, tenant, parsedQuote);
+    const createdQuote = await Quote.create(trx, tenant, {
+      ...parsedQuote,
+      subtotal: input.subtotal ?? 0,
+      discount_total: input.discount_total ?? 0,
+      tax: input.tax ?? 0,
+      total_amount: input.total_amount ?? 0,
+    } as any);
 
     for (const templateItem of template.quote_items ?? []) {
       await QuoteItem.create(trx, tenant, {
