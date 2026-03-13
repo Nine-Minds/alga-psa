@@ -559,7 +559,7 @@
   {
     "id": "F066",
     "description": "P2: Version history — UI sidebar/dropdown to navigate between versions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2-FR5"
     ]

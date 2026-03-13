@@ -148,6 +148,7 @@ const QuotesTab: React.FC = () => {
         quoteId={selectedQuoteId}
         onBack={() => router.push('/msp/billing?tab=quotes')}
         onEdit={() => router.push(`/msp/billing?tab=quotes&quoteId=${selectedQuoteId}&mode=edit`)}
+        onSelectVersion={(quoteVersionId) => router.push(`/msp/billing?tab=quotes&quoteId=${quoteVersionId}`)}
       />
     );
   }

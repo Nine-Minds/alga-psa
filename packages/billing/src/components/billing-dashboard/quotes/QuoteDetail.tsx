@@ -7,7 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import type { IClient, IContact, IQuote } from '@alga-psa/types';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
-import { deleteQuote, getQuote, updateQuote } from '../../../actions/quoteActions';
+import { deleteQuote, getQuote, listQuoteVersions, updateQuote } from '../../../actions/quoteActions';
 import { getAllContacts } from '@alga-psa/clients/actions';
 import QuoteStatusBadge from './QuoteStatusBadge';
 
@@ -15,6 +15,7 @@ interface QuoteDetailProps {
   quoteId: string;
   onBack: () => void;
   onEdit?: () => void;
+  onSelectVersion?: (quoteId: string) => void;
 }
 
 function formatCurrency(minorUnits: number, currencyCode: string): string {
@@ -37,8 +38,9 @@ function formatQuoteNumber(quote: IQuote): string {
   return quote.version > 1 ? `${baseNumber} v${quote.version}` : baseNumber;
 }
 
-const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit }) => {
+const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSelectVersion }) => {
   const [quote, setQuote] = useState<IQuote | null>(null);
+  const [versions, setVersions] = useState<IQuote[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,6 +67,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit }) =>
       setQuote(loadedQuote);
       setClients(loadedClients);
       setContacts(loadedContacts);
+
+      const loadedVersions = await listQuoteVersions(quoteId);
+      setVersions(Array.isArray(loadedVersions) ? loadedVersions : []);
       setError(null);
     } catch (loadError) {
       console.error('Error loading quote detail:', loadError);
@@ -235,6 +240,47 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit }) =>
             <div className="text-xs uppercase tracking-wide text-muted-foreground">Total</div>
             <div className="mt-1 font-medium">{formatCurrency(quote.total_amount, quote.currency_code || 'USD')}</div>
           </div>
+        </section>
+
+        <section className="grid gap-3 rounded-lg border border-border p-4 md:grid-cols-2 xl:grid-cols-4">
+          <div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">Subtotal</div>
+            <div className="mt-1 text-lg font-semibold">{formatCurrency(quote.subtotal, quote.currency_code || 'USD')}</div>
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">Discounts</div>
+            <div className="mt-1 text-lg font-semibold">{formatCurrency(quote.discount_total, quote.currency_code || 'USD')}</div>
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">Tax</div>
+            <div className="mt-1 text-lg font-semibold">{formatCurrency(quote.tax, quote.currency_code || 'USD')}</div>
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">Total</div>
+            <div className="mt-1 text-lg font-semibold">{formatCurrency(quote.total_amount, quote.currency_code || 'USD')}</div>
+          </div>
+        </section>
+
+        <section className="space-y-3 rounded-lg border border-border p-4">
+          <h3 className="text-base font-semibold">Version History</h3>
+          {versions.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {versions.map((version) => (
+                <Button
+                  key={version.quote_id}
+                  id={`quote-version-${version.quote_id}`}
+                  type="button"
+                  variant={version.quote_id === quote.quote_id ? 'default' : 'outline'}
+                  onClick={() => onSelectVersion?.(version.quote_id)}
+                  disabled={version.quote_id === quote.quote_id}
+                >
+                  {formatQuoteNumber(version)}
+                </Button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No prior revisions for this quote yet.</p>
+          )}
         </section>
 
         <section className="space-y-2 rounded-lg border border-border p-4">

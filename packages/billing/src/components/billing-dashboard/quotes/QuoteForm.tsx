@@ -12,7 +12,7 @@ import { getAllClientsForBilling } from '../../../actions/billingClientsActions'
 import { addQuoteItem, createQuote, createQuoteFromTemplate, getQuote, listQuotes, removeQuoteItem, reorderQuoteItems, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
 import { getAllContacts } from '@alga-psa/clients/actions';
 import QuoteLineItemsEditor from './QuoteLineItemsEditor';
-import { createDraftQuoteItemFromQuoteItem, type DraftQuoteItem } from './quoteLineItemDraft';
+import { calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
 
 interface QuoteFormProps {
   quoteId?: string | null;
@@ -128,6 +128,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
 
     return contacts.filter((contact) => contact.client_id === form.client_id);
   }, [contacts, form.client_id]);
+
+  const draftTotals = useMemo(() => calculateDraftQuoteTotals(lineItems), [lineItems]);
 
   const handleChange = (field: keyof QuoteFormState, value: string) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -403,6 +405,25 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
           onChange={setLineItems}
           disabled={isSaving}
         />
+
+        <section className="grid gap-3 rounded-lg border border-border p-4 md:grid-cols-2 xl:grid-cols-4">
+          <div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">Subtotal</div>
+            <div className="mt-1 text-lg font-semibold">{formatDraftQuoteMoney(draftTotals.subtotal, 'USD')}</div>
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">Discounts</div>
+            <div className="mt-1 text-lg font-semibold">{formatDraftQuoteMoney(draftTotals.discount_total, 'USD')}</div>
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">Tax</div>
+            <div className="mt-1 text-lg font-semibold">{formatDraftQuoteMoney(draftTotals.tax, 'USD')}</div>
+          </div>
+          <div>
+            <div className="text-xs uppercase tracking-wide text-muted-foreground">Total</div>
+            <div className="mt-1 text-lg font-semibold">{formatDraftQuoteMoney(draftTotals.total_amount, 'USD')}</div>
+          </div>
+        </section>
       </Box>
     </Card>
   );

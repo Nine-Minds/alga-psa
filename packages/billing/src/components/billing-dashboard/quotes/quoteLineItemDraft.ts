@@ -18,7 +18,22 @@ export type DraftQuoteItem = {
   is_selected: boolean;
   is_recurring: boolean;
   billing_frequency?: string | null;
+  is_discount?: boolean;
+  discount_type?: 'percentage' | 'fixed' | null;
+  discount_percentage?: number | null;
+  applies_to_item_id?: string | null;
+  applies_to_service_id?: string | null;
+  is_taxable?: boolean;
+  tax_region?: string | null;
+  tax_rate?: number | null;
 };
+
+export interface DraftQuoteTotals {
+  subtotal: number;
+  discount_total: number;
+  tax: number;
+  total_amount: number;
+}
 
 function buildLocalId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -46,6 +61,14 @@ export function createDraftQuoteItemFromQuoteItem(item: IQuoteItem): DraftQuoteI
     is_selected: item.is_selected ?? true,
     is_recurring: Boolean(item.is_recurring),
     billing_frequency: item.billing_frequency ?? null,
+    is_discount: item.is_discount ?? false,
+    discount_type: item.discount_type ?? null,
+    discount_percentage: item.discount_percentage ?? null,
+    applies_to_item_id: item.applies_to_item_id ?? null,
+    applies_to_service_id: item.applies_to_service_id ?? null,
+    is_taxable: item.is_taxable ?? true,
+    tax_region: item.tax_region ?? null,
+    tax_rate: item.tax_rate ?? null,
   };
 }
 
@@ -66,6 +89,14 @@ export function createDraftQuoteItemFromService(item: CatalogPickerItem): DraftQ
     is_selected: true,
     is_recurring: false,
     billing_frequency: null,
+    is_discount: false,
+    discount_type: null,
+    discount_percentage: null,
+    applies_to_item_id: null,
+    applies_to_service_id: null,
+    is_taxable: true,
+    tax_region: null,
+    tax_rate: null,
   };
 }
 
@@ -91,6 +122,76 @@ export function createCustomDraftQuoteItem(input: {
     is_selected: true,
     is_recurring: false,
     billing_frequency: null,
+    is_discount: false,
+    discount_type: null,
+    discount_percentage: null,
+    applies_to_item_id: null,
+    applies_to_service_id: null,
+    is_taxable: true,
+    tax_region: null,
+    tax_rate: null,
+  };
+}
+
+function included(item: DraftQuoteItem): boolean {
+  return !item.is_optional || item.is_selected !== false;
+}
+
+function computeDiscountAmount(item: DraftQuoteItem, baseAmount: number): number {
+  if (item.discount_type === 'percentage') {
+    return Math.round(baseAmount * ((item.discount_percentage ?? 0) / 100));
+  }
+
+  return item.quantity * item.unit_price;
+}
+
+export function calculateDraftQuoteTotals(items: DraftQuoteItem[]): DraftQuoteTotals {
+  const includedBaseItems = items.filter((item) => !item.is_discount && included(item));
+  const baseSubtotal = includedBaseItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+  const baseItemTotals = new Map(includedBaseItems.map((item) => [item.quote_item_id ?? item.local_id, item.quantity * item.unit_price]));
+  const baseServiceTotals = new Map<string, number>();
+
+  for (const item of includedBaseItems) {
+    if (!item.service_id) {
+      continue;
+    }
+
+    baseServiceTotals.set(item.service_id, (baseServiceTotals.get(item.service_id) ?? 0) + (item.quantity * item.unit_price));
+  }
+
+  let subtotal = 0;
+  let discountTotal = 0;
+  let tax = 0;
+
+  for (const item of items) {
+    const totalPrice = item.quantity * item.unit_price;
+    const scopedBaseAmount = item.applies_to_item_id
+      ? (baseItemTotals.get(item.applies_to_item_id) ?? 0)
+      : item.applies_to_service_id
+        ? (baseServiceTotals.get(item.applies_to_service_id) ?? 0)
+        : baseSubtotal;
+    const resolvedTotal = item.is_discount ? computeDiscountAmount(item, scopedBaseAmount) : totalPrice;
+
+    if (!included(item)) {
+      continue;
+    }
+
+    if (item.is_discount) {
+      discountTotal += resolvedTotal;
+      continue;
+    }
+
+    subtotal += resolvedTotal;
+    if (item.is_taxable !== false && item.tax_rate) {
+      tax += Math.round(resolvedTotal * (item.tax_rate / 100));
+    }
+  }
+
+  return {
+    subtotal,
+    discount_total: discountTotal,
+    tax,
+    total_amount: subtotal - discountTotal + tax,
   };
 }
 
