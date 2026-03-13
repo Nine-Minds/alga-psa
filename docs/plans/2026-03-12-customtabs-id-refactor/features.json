@@ -325,7 +325,7 @@
   {
     "id": "F038",
     "description": "Migrate AssetDetails.tsx — add id to tabs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern D"

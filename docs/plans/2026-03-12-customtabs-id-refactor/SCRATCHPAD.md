@@ -189,3 +189,5 @@ npm run build
 ## Progress Log
 
 - **F037 complete** — Migrated `packages/assets/src/components/AssetDetailTabs.tsx` to stable tab ids (`service-history`, `software`, `maintenance`, `related-assets`, `documents-passwords`, `audit-log`), removed label/slug maps, and now sync the `tab` query param directly with `activeTab` ids.
+- **F038 complete** — Added stable ids to the static `packages/assets/src/components/AssetDetails.tsx` tab list (`details`, `related-assets`, `documents`) so it satisfies the required `TabContent.id` contract.
+- **F038 complete** — Added stable ids to the static `packages/assets/src/components/AssetDetails.tsx` tab list (`details`, `related-assets`, `documents`) so it satisfies the required `TabContent.id` contract.
