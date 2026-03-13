@@ -186,7 +186,7 @@
   {
     "id": "T024",
     "description": "Model: listByTenant filters by status correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ]
