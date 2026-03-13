@@ -107,6 +107,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) F038a complete — P1: Added in-tab quote list filters in `QuotesTab.tsx`: a status dropdown with the planned lifecycle states plus archived, and a client filter built from the loaded quote list.
 - (2026-03-13) F038 complete — P1: Replaced the quotes dashboard placeholder with a `DataTable`-backed `QuotesTab` that loads non-template quotes via `listQuotes`, shows the required core columns, supports built-in table pagination, and routes row clicks toward upcoming quote detail handling.
 - (2026-03-13) F037 complete — P1: Added a `quotes` billing tab definition in `billingTabsConfig.ts` and wired a `QuotesTab` content pane into `BillingDashboard.tsx`, making `/msp/billing?tab=quotes` a valid dashboard destination.
 - (2026-03-13) F036b complete — P1: The quote list action/model pair already supports separate template-vs-standard views through the `is_template` filter on `listQuotes`, giving the UI a clean query surface for dedicated template listings.

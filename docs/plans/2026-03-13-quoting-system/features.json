@@ -327,7 +327,7 @@
   {
     "id": "F038a",
     "description": "P1: QuoteList — status filter dropdown (All/Drafts/Sent/Accepted/Rejected/Expired/Converted/Cancelled/Archived) and client filter",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR15"
     ]

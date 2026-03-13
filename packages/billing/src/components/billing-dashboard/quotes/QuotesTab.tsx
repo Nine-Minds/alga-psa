@@ -29,6 +29,8 @@ const QuotesTab: React.FC = () => {
   const [quotes, setQuotes] = useState<IQuoteListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [clientFilter, setClientFilter] = useState('all');
 
   useEffect(() => {
     void loadQuotes();
@@ -90,6 +92,20 @@ const QuotesTab: React.FC = () => {
     },
   ]), []);
 
+  const clientOptions = useMemo(() => {
+    return Array.from(
+      new Set(quotes.map((quote) => quote.client_name).filter((value): value is string => Boolean(value)))
+    ).sort((left, right) => left.localeCompare(right));
+  }, [quotes]);
+
+  const filteredQuotes = useMemo(() => {
+    return quotes.filter((quote) => {
+      const matchesStatus = statusFilter === 'all' ? true : quote.status === statusFilter;
+      const matchesClient = clientFilter === 'all' ? true : quote.client_name === clientFilter;
+      return matchesStatus && matchesClient;
+    });
+  }, [clientFilter, quotes, statusFilter]);
+
   if (isLoading) {
     return (
       <Card size="2">
@@ -115,13 +131,52 @@ const QuotesTab: React.FC = () => {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : (
-          <DataTable
-            data={quotes}
-            columns={columns}
-            pagination
-            onRowClick={(record) => router.push(`/msp/billing?tab=quotes&quoteId=${record.quote_id}`)}
-            rowClassName={() => 'cursor-pointer'}
-          />
+          <div className="space-y-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center">
+              <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+                Status
+                <select
+                  value={statusFilter}
+                  onChange={(event) => setStatusFilter(event.target.value)}
+                  className="min-w-[180px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="all">All</option>
+                  <option value="draft">Drafts</option>
+                  <option value="sent">Sent</option>
+                  <option value="accepted">Accepted</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="expired">Expired</option>
+                  <option value="converted">Converted</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+                Client
+                <select
+                  value={clientFilter}
+                  onChange={(event) => setClientFilter(event.target.value)}
+                  className="min-w-[220px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="all">All clients</option>
+                  {clientOptions.map((clientName) => (
+                    <option key={clientName} value={clientName}>
+                      {clientName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <DataTable
+              data={filteredQuotes}
+              columns={columns}
+              pagination
+              onRowClick={(record) => router.push(`/msp/billing?tab=quotes&quoteId=${record.quote_id}`)}
+              rowClassName={() => 'cursor-pointer'}
+            />
+          </div>
         )}
       </Box>
     </Card>
