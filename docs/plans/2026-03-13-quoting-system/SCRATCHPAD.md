@@ -146,3 +146,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) T014 complete — Schema: createQuoteItemSchema requires description and validates quantity > 0. Added createQuoteItemSchema validation coverage.
 - (2026-03-13) T015 complete — Schema: status transition validation allows draft→sent but rejects draft→accepted. Added draft transition validation coverage.
 - (2026-03-13) T016 complete — Schema: status transition validation allows sent→accepted, sent→rejected, sent→expired, sent→cancelled. Added sent transition validation coverage.
+- (2026-03-13) T017 complete — Schema: status transition validation allows accepted→converted but rejects converted→draft. Added accepted/converted transition validation coverage.

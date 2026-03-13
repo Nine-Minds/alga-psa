@@ -130,7 +130,7 @@
   {
     "id": "T017",
     "description": "Schema: status transition validation allows accepted→converted but rejects converted→draft",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009"
     ]
