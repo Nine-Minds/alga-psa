@@ -397,7 +397,7 @@
   {
     "id": "F046",
     "description": "Update translation guide (.ai/translation/translation-guide.md) — remove 'do not translate tab labels' warning, document that tab labels are now translatable via t()",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria"
     ]
