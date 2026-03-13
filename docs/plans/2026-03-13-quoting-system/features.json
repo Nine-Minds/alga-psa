@@ -229,7 +229,7 @@
   {
     "id": "F029",
     "description": "P1: Server action — addQuoteItem with service catalog integration",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR8"
     ]

@@ -5,9 +5,10 @@ import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { IQuote, IQuoteListItem, PaginatedResult } from '@alga-psa/types';
+import type { IQuote, IQuoteItem, IQuoteListItem, PaginatedResult } from '@alga-psa/types';
 import Quote, { type QuoteListOptions } from '../models/quote';
-import { createQuoteSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
+import QuoteItem from '../models/quoteItem';
+import { createQuoteItemSchema, createQuoteSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
 
 type CreateQuoteInput = Omit<
   IQuote,
@@ -21,6 +22,18 @@ type CreateQuoteInput = Omit<
   | 'status'
   | 'version'
 > & Partial<Pick<IQuote, 'status' | 'version'>>;
+
+type CreateQuoteItemInput = Omit<
+  IQuoteItem,
+  | 'quote_item_id'
+  | 'tenant'
+  | 'total_price'
+  | 'net_amount'
+  | 'tax_amount'
+  | 'display_order'
+  | 'created_at'
+  | 'updated_at'
+> & Partial<Pick<IQuoteItem, 'display_order'>>;
 
 const requireBillingCreatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing', 'create')) {
@@ -140,4 +153,23 @@ export const deleteQuote = withAuth(async (
 
   const { knex } = await createTenantKnex();
   return await Quote.delete(knex, tenant, quoteId);
+});
+
+export const addQuoteItem = withAuth(async (
+  user,
+  { tenant },
+  input: CreateQuoteItemInput
+): Promise<IQuoteItem | ActionPermissionError> => {
+  const denied = await requireBillingUpdatePermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  const parsedInput = createQuoteItemSchema.parse({
+    ...input,
+    created_by: input.created_by ?? getActorUserId(user),
+  });
+
+  return await QuoteItem.create(knex, tenant, parsedInput);
 });
