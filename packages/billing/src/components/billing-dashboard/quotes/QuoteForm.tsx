@@ -9,8 +9,10 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import type { IClient, IContact, IQuote, IQuoteListItem } from '@alga-psa/types';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
-import { createQuote, createQuoteFromTemplate, getQuote, listQuotes, updateQuote } from '../../../actions/quoteActions';
+import { addQuoteItem, createQuote, createQuoteFromTemplate, getQuote, listQuotes, updateQuote } from '../../../actions/quoteActions';
 import { getAllContacts } from '@alga-psa/clients/actions';
+import QuoteLineItemsEditor from './QuoteLineItemsEditor';
+import { createDraftQuoteItemFromQuoteItem, type DraftQuoteItem } from './quoteLineItemDraft';
 
 interface QuoteFormProps {
   quoteId?: string | null;
@@ -52,6 +54,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
   const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [templates, setTemplates] = useState<IQuoteListItem[]>([]);
+  const [lineItems, setLineItems] = useState<DraftQuoteItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -92,6 +95,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
           client_notes: quote.client_notes || '',
           terms_and_conditions: quote.terms_and_conditions || '',
         });
+        setLineItems((quote.quote_items || []).map(createDraftQuoteItemFromQuoteItem));
       } else {
         const today = new Date();
         const validUntil = new Date(today);
@@ -102,6 +106,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
           quote_date: today.toISOString().slice(0, 10),
           valid_until: validUntil.toISOString().slice(0, 10),
         });
+        setLineItems([]);
       }
 
       setError(null);
@@ -169,6 +174,46 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
       if (!result || 'permissionError' in result) {
         throw new Error(result?.permissionError || 'Quote save failed');
       }
+
+      let nextLineItems = lineItems;
+      for (const item of lineItems) {
+        if (item.quote_item_id) {
+          continue;
+        }
+
+        const createdItem = await addQuoteItem({
+          quote_id: result.quote_id,
+          service_id: item.service_id ?? null,
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          unit_of_measure: item.unit_of_measure ?? null,
+          phase: item.phase ?? null,
+          is_optional: item.is_optional,
+          is_selected: item.is_selected,
+          is_recurring: item.is_recurring,
+          billing_frequency: item.billing_frequency ?? null,
+          billing_method: item.billing_method ?? null,
+        });
+
+        if ('permissionError' in createdItem) {
+          throw new Error(createdItem.permissionError);
+        }
+
+        nextLineItems = nextLineItems.map((draftItem) => {
+          if (draftItem.local_id !== item.local_id) {
+            return draftItem;
+          }
+
+          return {
+            ...draftItem,
+            local_id: createdItem.quote_item_id,
+            quote_item_id: createdItem.quote_item_id,
+          };
+        });
+      }
+
+      setLineItems(nextLineItems);
 
       onSaved(result.quote_id);
     } catch (submitError) {
@@ -306,6 +351,13 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
             <TextArea value={form.terms_and_conditions} onChange={(event) => handleChange('terms_and_conditions', event.target.value)} rows={4} />
           </label>
         </div>
+
+        <QuoteLineItemsEditor
+          items={lineItems}
+          currencyCode="USD"
+          onChange={setLineItems}
+          disabled={isSaving}
+        />
       </Box>
     </Card>
   );

@@ -56,6 +56,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) **Parent branch**: `cleanup/billing` (billing cutover, not yet merged to main)
 - (2026-03-13) Run migrations: `cd server && npx knex migrate:latest`
 - (2026-03-13) Migration files: `server/migrations/YYYYMMDDHHmmss_description.cjs`
+- (2026-03-13) Billing package typecheck: `npm --prefix packages/billing run typecheck`
 
 ## Testing References
 
@@ -107,6 +108,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) F041 complete — P1: Added a `QuoteLineItemsEditor` to `QuoteForm.tsx` with `ServiceCatalogPicker` search across services/products, local draft line-item state, and save-time persistence through `addQuoteItem`, so quote drafts can now pick catalog items before saving.
 - (2026-03-13) T050d complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with a `listQuotes` filtering assertion that distinguishes template views (`is_template=true`) from the standard quote list (`is_template=false` by default).
 - (2026-03-13) F040 complete — P1: The same `QuoteForm.tsx` now supports edit mode by loading an existing quote via `getQuote`, pre-filling quote metadata, and saving changes back through `updateQuote`.
 - (2026-03-13) F039 complete — P1: Added `QuoteForm.tsx` and wired `QuotesTab.tsx` to open it in create mode with client and contact pickers, a template selector backed by `listQuotes({ is_template: true })`, and draft-save flows for both blank and template-based quote creation.

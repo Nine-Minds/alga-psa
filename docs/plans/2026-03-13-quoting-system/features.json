@@ -351,7 +351,7 @@
   {
     "id": "F041",
     "description": "P1: QuoteLineItems editor — add items from service catalog search",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR15"
     ]
