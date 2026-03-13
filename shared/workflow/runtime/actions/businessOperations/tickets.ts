@@ -17,6 +17,33 @@ import {
   buildBlockNoteWithMentions,
   attachDocumentToTicket
 } from './shared';
+import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
+
+const WORKFLOW_PICKER_HINTS = {
+  board: 'Search boards',
+  client: 'Search clients',
+  contact: 'Search contacts',
+  'ticket-status': 'Search statuses',
+  'ticket-priority': 'Search priorities',
+  user: 'Search users',
+  'user-or-team': 'Search users or teams',
+  'ticket-category': 'Search categories',
+  'ticket-subcategory': 'Search subcategories',
+  'client-location': 'Search locations',
+} as const;
+
+const withWorkflowPicker = <T extends z.ZodTypeAny>(
+  schema: T,
+  description: string,
+  kind: keyof typeof WORKFLOW_PICKER_HINTS,
+  dependencies?: string[]
+): T =>
+  withWorkflowJsonSchemaMetadata(schema, description, {
+    'x-workflow-picker-kind': kind,
+    'x-workflow-picker-dependencies': dependencies,
+    'x-workflow-picker-fixed-value-hint': WORKFLOW_PICKER_HINTS[kind],
+    'x-workflow-picker-allow-dynamic-reference': true,
+  });
 
 export function registerTicketActions(): void {
   const registry = getActionRegistryV2();
@@ -28,20 +55,50 @@ export function registerTicketActions(): void {
     id: 'tickets.create',
     version: 1,
     inputSchema: z.object({
-      client_id: uuidSchema.describe('Client id'),
-      contact_id: uuidSchema.nullable().optional().describe('Optional contact id'),
+      client_id: withWorkflowPicker(uuidSchema, 'Client id', 'client'),
+      contact_id: withWorkflowPicker(
+        uuidSchema.nullable().optional(),
+        'Optional contact id',
+        'contact',
+        ['client_id']
+      ),
       title: z.string().min(1).describe('Ticket subject/title'),
       description: z.string().default('').describe('Ticket description/body'),
-      board_id: uuidSchema.describe('Board id'),
-      status_id: uuidSchema.describe('Status id'),
-      priority_id: uuidSchema.describe('Priority id'),
-      assigned_to: uuidSchema.nullable().optional().describe('Assigned user id'),
+      board_id: withWorkflowPicker(uuidSchema, 'Board id', 'board'),
+      location_id: withWorkflowPicker(
+        uuidSchema.nullable().optional(),
+        'Optional location id',
+        'client-location',
+        ['client_id']
+      ),
+      status_id: withWorkflowPicker(uuidSchema, 'Status id', 'ticket-status'),
+      priority_id: withWorkflowPicker(uuidSchema, 'Priority id', 'ticket-priority'),
+      assigned_to: withWorkflowPicker(
+        uuidSchema.nullable().optional(),
+        'Assigned user id',
+        'user'
+      ),
       assignee: z.object({
         type: z.enum(['user', 'team']).describe('Assignee type'),
-        id: uuidSchema.describe('User id or team id')
+        id: withWorkflowPicker(
+          uuidSchema,
+          'User id or team id',
+          'user-or-team',
+          ['assignee.type']
+        )
       }).optional().describe('Optional assignee (user or team)'),
-      category_id: uuidSchema.nullable().optional().describe('Category id'),
-      subcategory_id: uuidSchema.nullable().optional().describe('Subcategory id'),
+      category_id: withWorkflowPicker(
+        uuidSchema.nullable().optional(),
+        'Category id',
+        'ticket-category',
+        ['board_id']
+      ),
+      subcategory_id: withWorkflowPicker(
+        uuidSchema.nullable().optional(),
+        'Subcategory id',
+        'ticket-subcategory',
+        ['board_id', 'category_id']
+      ),
       tags: z.array(z.string()).optional().describe('Optional tags (stored in ticket attributes)'),
       custom_fields: z.record(z.unknown()).optional().describe('Optional custom fields (stored in ticket attributes)'),
       attributes: z.record(z.unknown()).optional().describe('Additional attributes (merged into ticket.attributes)'),
@@ -126,6 +183,7 @@ export function registerTicketActions(): void {
             client_id: input.client_id,
             contact_id: input.contact_id ?? undefined,
             board_id: input.board_id,
+            location_id: input.location_id ?? undefined,
             status_id: input.status_id,
             priority_id: input.priority_id,
             assigned_to: assignedTo ?? undefined,
@@ -322,12 +380,37 @@ export function registerTicketActions(): void {
     inputSchema: z.object({
       ticket_id: uuidSchema.describe('Ticket id'),
       patch: z.object({
-        status_id: uuidSchema.optional().describe('New status id'),
-        priority_id: uuidSchema.optional().describe('New priority id'),
-        assigned_to: uuidSchema.nullable().optional().describe('New assigned user id'),
+        status_id: withWorkflowPicker(
+          uuidSchema.optional(),
+          'New status id',
+          'ticket-status'
+        ),
+        priority_id: withWorkflowPicker(
+          uuidSchema.optional(),
+          'New priority id',
+          'ticket-priority'
+        ),
+        assigned_to: withWorkflowPicker(
+          uuidSchema.nullable().optional(),
+          'New assigned user id',
+          'user'
+        ),
         title: z.string().min(1).optional().describe('New title'),
-        category_id: uuidSchema.nullable().optional().describe('Category id'),
-        subcategory_id: uuidSchema.nullable().optional().describe('Subcategory id'),
+        category_id: withWorkflowPicker(
+          uuidSchema.nullable().optional(),
+          'Category id',
+          'ticket-category'
+        ),
+        subcategory_id: withWorkflowPicker(
+          uuidSchema.nullable().optional(),
+          'Subcategory id',
+          'ticket-subcategory'
+        ),
+        location_id: withWorkflowPicker(
+          uuidSchema.nullable().optional(),
+          'Location id',
+          'client-location'
+        ),
         due_date: isoDateTimeSchema.nullable().optional().describe('Optional due date (stored in ticket.attributes.due_date)'),
         tags: z.array(z.string()).optional().describe('Tags (stored in ticket attributes)'),
         custom_fields: z.record(z.unknown()).optional().describe('Custom fields (stored in ticket attributes)'),
@@ -404,6 +487,7 @@ export function registerTicketActions(): void {
         assigned_to: (current.assigned_to as string | null) ?? null,
         category_id: (current.category_id as string | null) ?? null,
         subcategory_id: (current.subcategory_id as string | null) ?? null,
+        location_id: (current.location_id as string | null) ?? null,
         due_date: (currentAttributes.due_date as string | null | undefined) ?? null,
         tags: (currentAttributes.tags as string[] | undefined) ?? null
       };
@@ -419,6 +503,7 @@ export function registerTicketActions(): void {
             ...(input.patch.assigned_to !== undefined ? { assigned_to: input.patch.assigned_to } : {}),
             ...(input.patch.category_id !== undefined ? { category_id: input.patch.category_id } : {}),
             ...(input.patch.subcategory_id !== undefined ? { subcategory_id: input.patch.subcategory_id } : {}),
+            ...(input.patch.location_id !== undefined ? { location_id: input.patch.location_id } : {}),
             attributes: mergedAttributes,
             updated_by: tx.actorUserId
           },
@@ -444,6 +529,7 @@ export function registerTicketActions(): void {
         assigned_to: (updated.assigned_to as string | null) ?? null,
         category_id: (updated.category_id as string | null) ?? null,
         subcategory_id: (updated.subcategory_id as string | null) ?? null,
+        location_id: (updated.location_id as string | null) ?? null,
         due_date: (normalizedUpdatedAttributes.due_date as string | null | undefined) ?? null,
         tags: (normalizedUpdatedAttributes.tags as string[] | undefined) ?? null
       };
@@ -474,7 +560,12 @@ export function registerTicketActions(): void {
       ticket_id: uuidSchema.describe('Ticket id'),
       assignee: z.object({
         type: z.enum(['user', 'team', 'queue']).describe('Assignee type'),
-        id: uuidSchema.describe('Assignee id (user_id, team_id, or queue id)')
+        id: withWorkflowPicker(
+          uuidSchema,
+          'Assignee id (user_id, team_id, or queue id)',
+          'user-or-team',
+          ['assignee.type']
+        )
       }),
       reason: z.string().optional().describe('Optional assignment reason'),
       comment: z.object({

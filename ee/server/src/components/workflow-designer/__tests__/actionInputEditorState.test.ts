@@ -206,6 +206,32 @@ describe('action input editor state', () => {
     });
   });
 
+  it('T180: picker metadata reaches the chosen action field editor without changing the persisted inputMapping shape', () => {
+    const step: NodeStep = {
+      id: 'step-picker-persisted',
+      type: 'action.call',
+      name: 'Update Ticket',
+      config: {
+        actionId: 'tickets.update_fields',
+        version: 2,
+        inputMapping: {
+          ticket_id: 'ticket-123',
+        },
+      },
+    };
+
+    const state = buildActionInputEditorState(step, registry);
+    expect(state.actionInputFields.find((field) => field.name === 'ticket_id')?.picker).toEqual({
+      kind: 'ticket',
+      dependencies: ['board_id'],
+      fixedValueHint: 'search',
+      allowsDynamicReference: true,
+    });
+    expect(state.inputMapping).toEqual({
+      ticket_id: 'ticket-123',
+    });
+  });
+
   it('T090: choosing an action updates the required-field completion counts for the grouped editor summary', () => {
     const step: NodeStep = {
       id: 'step-2',

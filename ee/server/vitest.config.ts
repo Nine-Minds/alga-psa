@@ -63,6 +63,8 @@ export default defineConfig({
       { find: /^@alga-psa\/ee-stubs\/(.*)$/, replacement: `${path.resolve(__dirname, './src')}/$1` },
       { find: /^@alga-psa\/clients$/, replacement: `${path.resolve(__dirname, '../../packages/clients/src/index.ts')}` },
       { find: /^@alga-psa\/clients\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/clients/src')}/$1` },
+      { find: /^@alga-psa\/teams$/, replacement: `${path.resolve(__dirname, '../../packages/teams/src/index.ts')}` },
+      { find: /^@alga-psa\/teams\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/teams/src')}/$1` },
       { find: /^@alga-psa\/core\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/core/src/lib')}/$1` },
       { find: /^@alga-psa\/core$/, replacement: `${path.resolve(__dirname, '../../packages/core/src/index.ts')}` },
       { find: /^@alga-psa\/db\/admin$/, replacement: `${path.resolve(__dirname, '../../packages/db/src/lib/admin.ts')}` },

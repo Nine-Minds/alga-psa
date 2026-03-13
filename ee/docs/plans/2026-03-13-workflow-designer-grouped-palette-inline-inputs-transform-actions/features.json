@@ -992,211 +992,211 @@
   {
     "id": "F166",
     "description": "Render picker-backed fields in Fixed mode using the annotated picker kind rather than the plain primitive type",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring", "UX / UI Notes > Picker UX"]
   },
   {
     "id": "F167",
     "description": "Allow picker-backed fields to switch back to Reference mode without losing the field's picker metadata",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F168",
     "description": "Allow picker-backed fields to switch to Advanced mode without losing the field's picker metadata",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring", "Requirements > Advanced Expressions"]
   },
   {
     "id": "F169",
     "description": "Support a board picker annotation on ticket board identifier fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F170",
     "description": "Support a client picker annotation on ticket client identifier fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F171",
     "description": "Support a contact picker annotation on ticket contact identifier fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F172",
     "description": "Support a ticket status picker annotation on ticket status identifier fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F173",
     "description": "Support a ticket priority picker annotation on ticket priority identifier fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F174",
     "description": "Support a user-or-team picker annotation on ticket assignment fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F175",
     "description": "Support a ticket category picker annotation on ticket category identifier fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F176",
     "description": "Support a ticket subcategory picker annotation on ticket subcategory identifier fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F177",
     "description": "Support a client-location picker annotation on ticket location identifier fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F178",
     "description": "Allow picker annotations to declare that a field remains eligible for dynamic references as well as fixed values",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F179",
     "description": "Allow picker annotations to declare the field dependencies required for fixed-value narrowing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F180",
     "description": "Surface picker metadata through the chosen action's field editor without changing the persisted inputMapping contract",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring", "Rollout / Migration"]
   },
   {
     "id": "F181",
     "description": "Render board_id in ticket create/update actions as a fixed-value board picker in Fixed mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring", "UX / UI Notes > Picker UX"]
   },
   {
     "id": "F182",
     "description": "Render client_id in ticket create/update actions as a fixed-value client picker in Fixed mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring", "UX / UI Notes > Picker UX"]
   },
   {
     "id": "F183",
     "description": "Render contact_id in ticket create/update actions as a fixed-value contact picker in Fixed mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring", "UX / UI Notes > Picker UX"]
   },
   {
     "id": "F184",
     "description": "Render status_id in ticket create/update actions as a fixed-value status picker in Fixed mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring", "UX / UI Notes > Picker UX"]
   },
   {
     "id": "F185",
     "description": "Render priority_id in ticket create/update actions as a fixed-value priority picker in Fixed mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring", "UX / UI Notes > Picker UX"]
   },
   {
     "id": "F186",
     "description": "Render assigned_to in ticket create/update actions as a fixed-value user picker in Fixed mode when appropriate",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring", "UX / UI Notes > Picker UX"]
   },
   {
     "id": "F187",
     "description": "Render assignee.id in ticket create/update actions as a fixed-value user-or-team picker in Fixed mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring", "UX / UI Notes > Picker UX"]
   },
   {
     "id": "F188",
     "description": "Render category_id in ticket create/update actions as a fixed-value category picker in Fixed mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring", "UX / UI Notes > Picker UX"]
   },
   {
     "id": "F189",
     "description": "Render subcategory_id in ticket create/update actions as a fixed-value subcategory picker in Fixed mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring", "UX / UI Notes > Picker UX"]
   },
   {
     "id": "F190",
     "description": "Render location_id in ticket create/update actions as a fixed-value client-location picker in Fixed mode",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring", "UX / UI Notes > Picker UX"]
   },
   {
     "id": "F191",
     "description": "Allow board_id fields to fall back to Reference mode instead of forcing a fixed board selection",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F192",
     "description": "Allow client_id fields to fall back to Reference mode instead of forcing a fixed client selection",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F193",
     "description": "Allow contact_id fields to fall back to Reference mode instead of forcing a fixed contact selection",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F194",
     "description": "Allow status_id fields to fall back to Reference mode instead of forcing a fixed status selection",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F195",
     "description": "Allow priority_id fields to fall back to Reference mode instead of forcing a fixed priority selection",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F196",
     "description": "Allow assignee fields to fall back to Reference mode instead of forcing a fixed assignee selection",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F197",
     "description": "Allow category_id fields to fall back to Reference mode instead of forcing a fixed category selection",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F198",
     "description": "Allow subcategory_id fields to fall back to Reference mode instead of forcing a fixed subcategory selection",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F199",
     "description": "Allow location_id fields to fall back to Reference mode instead of forcing a fixed location selection",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring"]
   },
   {
     "id": "F200",
     "description": "Persist selected fixed ticket picker values as literal identifier values inside the existing inputMapping contract",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Picker Metadata and Fixed Value Authoring", "Rollout / Migration"]
   },
   {

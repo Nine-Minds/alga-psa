@@ -36,6 +36,7 @@ import {
 } from './typeCompatibility';
 import { WorkflowActionInputFieldInfo } from '../WorkflowActionInputFieldInfo';
 import { getWorkflowActionInputTypeHint, WorkflowActionInputTypeHint } from '../WorkflowActionInputTypeHint';
+import { WorkflowActionInputFixedPicker } from '../WorkflowActionInputFixedPicker';
 import {
   WorkflowActionInputSourceMode,
   createWorkflowActionInputValueForMode,
@@ -506,6 +507,7 @@ const MappingFieldEditor: React.FC<{
   fieldPath?: string;
   value: MappingValue | undefined;
   onChange: (value: MappingValue | undefined) => void;
+  rootInputMapping: InputMapping;
   fieldOptions: SelectOption[];
   secrets: Array<{ name: string; description?: string }>;
   stepId: string;
@@ -517,6 +519,7 @@ const MappingFieldEditor: React.FC<{
   fieldPath,
   value,
   onChange,
+  rootInputMapping,
   fieldOptions,
   secrets,
   stepId,
@@ -627,7 +630,12 @@ const MappingFieldEditor: React.FC<{
 
   // §16.2 - Type mismatch warning for expression mappings
   const typeMismatchWarning = useMemo(() => {
-    if (valueType !== 'expr' || !value || !('$expr' in (value as object))) {
+    if (
+      valueType !== 'expr' ||
+      !value ||
+      typeof value !== 'object' ||
+      !('$expr' in value)
+    ) {
       return null;
     }
 
@@ -646,7 +654,12 @@ const MappingFieldEditor: React.FC<{
   }, [valueType, value, fieldOptions, field.type, sourceTypeMap]);
 
   const compatibilityBadge = useMemo(() => {
-    if (valueType !== 'expr' || !value || !('$expr' in (value as object))) {
+    if (
+      valueType !== 'expr' ||
+      !value ||
+      typeof value !== 'object' ||
+      !('$expr' in value)
+    ) {
       return null;
     }
 
@@ -785,6 +798,7 @@ const MappingFieldEditor: React.FC<{
               value={value as MappingValue}
               onChange={handleLiteralChange}
               field={field}
+              rootInputMapping={rootInputMapping}
               fieldType={field.type}
               fieldEnum={field.enum}
               fieldChildren={field.children}
@@ -978,6 +992,7 @@ const LiteralValueEditor: React.FC<{
   value: MappingValue | undefined;
   onChange: (value: MappingValue) => void;
   field: ActionInputField;
+  rootInputMapping: InputMapping;
   fieldType: string;
   fieldEnum?: Array<string | number | boolean | null>;
   fieldChildren?: ActionInputField[];
@@ -993,6 +1008,7 @@ const LiteralValueEditor: React.FC<{
   value,
   onChange,
   field,
+  rootInputMapping,
   fieldType,
   fieldEnum,
   fieldChildren,
@@ -1005,6 +1021,7 @@ const LiteralValueEditor: React.FC<{
   sourceTypeMap,
   expressionContext,
 }) => {
+  const hasPickerEditor = Boolean(field.picker?.kind);
   const hasStructuredObjectEditor = fieldType === 'object' && (fieldChildren?.length ?? 0) > 0;
   const hasStructuredArrayObjectEditor = fieldType === 'array' && (fieldChildren?.length ?? 0) > 0;
   const hasStructuredPrimitiveArrayEditor =
@@ -1082,6 +1099,19 @@ const LiteralValueEditor: React.FC<{
   };
 
   // Handle enum fields
+  if (hasPickerEditor) {
+    return wrapNullableEditor(
+      <WorkflowActionInputFixedPicker
+        field={field}
+        value={typeof value === 'string' ? value : null}
+        onChange={(nextValue) => onChange(nextValue)}
+        idPrefix={idPrefix}
+        rootInputMapping={rootInputMapping}
+        disabled={disabled}
+      />
+    );
+  }
+
   if (fieldEnum && fieldEnum.length > 0) {
     const enumOptions: SelectOption[] = fieldEnum.map(e => ({
       value: String(e ?? ''),
@@ -1206,6 +1236,7 @@ const LiteralValueEditor: React.FC<{
                   [child.name]: childValue
                 });
               }}
+              rootInputMapping={rootInputMapping}
               fieldOptions={fieldOptions}
               secrets={secrets}
               stepId={stepId}
@@ -1286,6 +1317,7 @@ const LiteralValueEditor: React.FC<{
                     nextRows[rowIndex] = nextRow;
                     onChange(nextRows);
                   }}
+                  rootInputMapping={rootInputMapping}
                   fieldOptions={fieldOptions}
                   secrets={secrets}
                   stepId={stepId}
@@ -1701,6 +1733,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                   field={field}
                   value={value[field.name]}
                   onChange={(v) => handleFieldChange(field.name, v)}
+                  rootInputMapping={value}
                   fieldOptions={fieldOptions}
                   secrets={secrets}
                   stepId={stepId}

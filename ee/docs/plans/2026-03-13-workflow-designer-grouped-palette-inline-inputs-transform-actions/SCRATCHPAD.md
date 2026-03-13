@@ -69,6 +69,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-14) The remaining `F155`/`F156` refresh behavior was already driven by pure `buildWorkflowReferenceFieldOptions(...)` recomputation from `dataContext`; the missing work was pinning that contract with deterministic tests for action-schema and `saveAs` changes.
 - (2026-03-14) The remaining `F157`/`F160` stability behavior was already a consequence of keeping the saved direct reference expression as the source of truth and recomputing block context from the current step location; targeted jsdom/unit coverage was enough to lock that down without changing runtime behavior.
 - (2026-03-14) `zod-to-json-schema` already ships the `jsonDescription` post-processor locally, so additive workflow metadata can be embedded as JSON in Zod descriptions and expanded back into real JSON Schema keys without forking the runtime schema model.
+- (2026-03-14) `tickets.update_fields.patch` does not carry `board_id` or `client_id`, so dependency annotations for `patch.category_id`, `patch.subcategory_id`, and `patch.location_id` cannot point at those roots without disabling valid update authoring. Scoped dependency metadata currently stays on create-style fields while update pickers remain unscoped until ticket-state-aware narrowing exists.
+- (2026-03-14) `ee/server` Vitest lacked an alias for `@alga-psa/teams/actions`, and shared Vitest lacked direct source aliases for `@alga-psa/storage`, `@alga-psa/types`, `@alga-psa/auth`, `@alga-psa/validation`, and `@alga-psa/shared`; the picker slice needed both configs widened before the reused package action loaders could run in this harness.
+- (2026-03-14) The inline mapping editor’s expression compatibility hints were assuming any truthy value was object-like. A fixed-to-advanced mode transition can briefly leave `valueType === 'expr'` while the old literal string is still present, so those guards needed an explicit object check.
 
 ## Commands / Runbooks
 
@@ -227,6 +230,12 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/actionInputEditorState.test.ts --reporter=dot`
   - `npx tsc --noEmit -p ee/server/tsconfig.json`
   - `npx eslint shared/workflow/runtime/jsonSchemaMetadata.ts shared/workflow/runtime/__tests__/jsonSchemaMetadata.test.ts shared/workflow/runtime/registries/schemaRegistry.ts ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts ee/server/src/components/workflow-designer/__tests__/actionInputEditorState.test.ts`
+- (2026-03-14) Validate ticket picker annotations, fixed-picker UI, and picker-value persistence:
+  - `pnpm vitest run --config shared/vitest.config.ts shared/workflow/runtime/actions/__tests__/registerTicketActionPickerMetadata.test.ts shared/workflow/runtime/__tests__/jsonSchemaMetadata.test.ts --reporter=dot`
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/InputMappingEditorPickerFields.test.tsx src/components/workflow-designer/__tests__/actionInputEditorState.test.ts src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx tsc --noEmit -p shared/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/WorkflowActionInputFixedPicker.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/components/workflow-designer/__tests__/InputMappingEditorPickerFields.test.tsx ee/server/src/components/workflow-designer/__tests__/actionInputEditorState.test.ts shared/workflow/runtime/actions/businessOperations/tickets.ts shared/workflow/runtime/actions/__tests__/registerTicketActionPickerMetadata.test.ts shared/vitest.config.ts ee/server/vitest.config.ts`
 
 ## Links / References
 
@@ -257,6 +266,11 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 
 ## Progress Log
 
+- (2026-03-14) Completed the first ticket-picker authoring slice:
+  - Added real workflow picker annotations to the runtime ticket action schemas for board, client, contact, status, priority, assigned user, assignee user/team, category, subcategory, and location fields, and exposed `location_id` through the workflow ticket create/update action contracts.
+  - Added a reusable `WorkflowActionInputFixedPicker` so picker-backed fixed values render through existing board/client/contact/status/priority/user/team/category/location data sources instead of falling back to plain string inputs.
+  - Kept picker-backed fields round-trippable across Fixed, Reference, and Advanced mode changes, and proved fixed picker selections still persist as literal identifier values inside `config.inputMapping`.
+  - Marked F166-F200 and T166-T200 implemented.
 - (2026-03-13) Completed the first grouped-catalog slice:
   - Added shared grouped designer catalog types and builder covering built-in core-object records, a stable transform record, and inferred app records.
   - Added `listWorkflowDesignerActionCatalogAction` plus `/api/workflow/registry/designer-catalog`.

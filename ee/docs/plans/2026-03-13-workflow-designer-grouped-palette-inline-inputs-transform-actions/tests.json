@@ -992,211 +992,211 @@
   {
     "id": "T166",
     "description": "Playwright: picker-backed fields render using picker UI instead of primitive UI in Fixed mode",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F166"]
   },
   {
     "id": "T167",
     "description": "Playwright: picker-backed fields can switch from Fixed mode back to Reference mode without losing metadata",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F167"]
   },
   {
     "id": "T168",
     "description": "Playwright: picker-backed fields can switch from Fixed mode to Advanced mode without losing metadata",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F168"]
   },
   {
     "id": "T169",
     "description": "Unit: board_id fields carry the board picker annotation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F169"]
   },
   {
     "id": "T170",
     "description": "Unit: client_id fields carry the client picker annotation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F170"]
   },
   {
     "id": "T171",
     "description": "Unit: contact_id fields carry the contact picker annotation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F171"]
   },
   {
     "id": "T172",
     "description": "Unit: status_id fields carry the ticket status picker annotation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F172"]
   },
   {
     "id": "T173",
     "description": "Unit: priority_id fields carry the ticket priority picker annotation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F173"]
   },
   {
     "id": "T174",
     "description": "Unit: assignee fields carry the user-or-team picker annotation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F174"]
   },
   {
     "id": "T175",
     "description": "Unit: category_id fields carry the category picker annotation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F175"]
   },
   {
     "id": "T176",
     "description": "Unit: subcategory_id fields carry the subcategory picker annotation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F176"]
   },
   {
     "id": "T177",
     "description": "Unit: location_id fields carry the client-location picker annotation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F177"]
   },
   {
     "id": "T178",
     "description": "Unit: picker-backed fields remain eligible for dynamic references when metadata says they should",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F178"]
   },
   {
     "id": "T179",
     "description": "Unit: picker-backed fields preserve declared dependency metadata",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F179"]
   },
   {
     "id": "T180",
     "description": "Integration: picker metadata reaches the chosen action field editor without changing the persisted inputMapping shape",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F180"]
   },
   {
     "id": "T181",
     "description": "Playwright: board_id renders as a fixed-value board picker in ticket authoring",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F181"]
   },
   {
     "id": "T182",
     "description": "Playwright: client_id renders as a fixed-value client picker in ticket authoring",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F182"]
   },
   {
     "id": "T183",
     "description": "Playwright: contact_id renders as a fixed-value contact picker in ticket authoring",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F183"]
   },
   {
     "id": "T184",
     "description": "Playwright: status_id renders as a fixed-value status picker in ticket authoring",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F184"]
   },
   {
     "id": "T185",
     "description": "Playwright: priority_id renders as a fixed-value priority picker in ticket authoring",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F185"]
   },
   {
     "id": "T186",
     "description": "Playwright: assigned_to renders as a fixed-value user picker when appropriate",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F186"]
   },
   {
     "id": "T187",
     "description": "Playwright: assignee.id renders as a fixed-value user-or-team picker",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F187"]
   },
   {
     "id": "T188",
     "description": "Playwright: category_id renders as a fixed-value category picker",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F188"]
   },
   {
     "id": "T189",
     "description": "Playwright: subcategory_id renders as a fixed-value subcategory picker",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F189"]
   },
   {
     "id": "T190",
     "description": "Playwright: location_id renders as a fixed-value location picker",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F190"]
   },
   {
     "id": "T191",
     "description": "Playwright: board_id can be switched back to Reference mode instead of forcing a fixed board",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F191"]
   },
   {
     "id": "T192",
     "description": "Playwright: client_id can be switched back to Reference mode instead of forcing a fixed client",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F192"]
   },
   {
     "id": "T193",
     "description": "Playwright: contact_id can be switched back to Reference mode instead of forcing a fixed contact",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F193"]
   },
   {
     "id": "T194",
     "description": "Playwright: status_id can be switched back to Reference mode instead of forcing a fixed status",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F194"]
   },
   {
     "id": "T195",
     "description": "Playwright: priority_id can be switched back to Reference mode instead of forcing a fixed priority",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F195"]
   },
   {
     "id": "T196",
     "description": "Playwright: assignee fields can be switched back to Reference mode instead of forcing a fixed selection",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F196"]
   },
   {
     "id": "T197",
     "description": "Playwright: category_id can be switched back to Reference mode instead of forcing a fixed category",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F197"]
   },
   {
     "id": "T198",
     "description": "Playwright: subcategory_id can be switched back to Reference mode instead of forcing a fixed subcategory",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F198"]
   },
   {
     "id": "T199",
     "description": "Playwright: location_id can be switched back to Reference mode instead of forcing a fixed location",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F199"]
   },
   {
     "id": "T200",
     "description": "Integration: fixed ticket picker selections persist as literal identifier values inside inputMapping",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F200"]
   },
   {
