@@ -369,6 +369,16 @@ describe('quoteActions', () => {
     expect(result).toMatchObject({ quote_number: 'Q-0042', is_template: false });
   });
 
+  it('T050d: listQuotes separates template and non-template views with is_template filtering', async () => {
+    const { listQuotes } = await import('../../src/actions/quoteActions');
+
+    await listQuotes({ is_template: true });
+    await listQuotes();
+
+    expect(Quote.listByTenant).toHaveBeenNthCalledWith(1, mockKnex, TENANT_ID, { is_template: true });
+    expect(Quote.listByTenant).toHaveBeenNthCalledWith(2, mockKnex, TENANT_ID, {});
+  });
+
   it('T050e: quote templates are excluded from the normal status lifecycle', async () => {
     vi.spyOn(Quote, 'update').mockRejectedValue(new Error('Quote templates do not participate in status transitions'));
 

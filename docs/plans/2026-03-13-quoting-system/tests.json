@@ -437,7 +437,7 @@
   {
     "id": "T050d",
     "description": "Business template: template list filters by is_template=true, quote list filters by is_template=false/null",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036b"
     ]
