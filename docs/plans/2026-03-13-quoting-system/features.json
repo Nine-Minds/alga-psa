@@ -180,7 +180,7 @@
   {
     "id": "F023",
     "description": "P1: Quote activity model — create activity entry with type, description, performed_by, metadata",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR7"
     ]
