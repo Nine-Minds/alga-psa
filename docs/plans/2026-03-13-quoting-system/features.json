@@ -343,7 +343,7 @@
   {
     "id": "F040",
     "description": "P1: QuoteForm component — edit mode (load existing quote, update fields)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR15"
     ]

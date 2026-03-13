@@ -107,6 +107,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) F040 complete — P1: The same `QuoteForm.tsx` now supports edit mode by loading an existing quote via `getQuote`, pre-filling quote metadata, and saving changes back through `updateQuote`.
 - (2026-03-13) F039 complete — P1: Added `QuoteForm.tsx` and wired `QuotesTab.tsx` to open it in create mode with client and contact pickers, a template selector backed by `listQuotes({ is_template: true })`, and draft-save flows for both blank and template-based quote creation.
 - (2026-03-13) F038a complete — P1: Added in-tab quote list filters in `QuotesTab.tsx`: a status dropdown with the planned lifecycle states plus archived, and a client filter built from the loaded quote list.
 - (2026-03-13) F038 complete — P1: Replaced the quotes dashboard placeholder with a `DataTable`-backed `QuotesTab` that loads non-template quotes via `listQuotes`, shows the required core columns, supports built-in table pagination, and routes row clicks toward upcoming quote detail handling.
