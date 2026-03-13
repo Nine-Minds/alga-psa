@@ -575,7 +575,7 @@
   {
     "id": "F068",
     "description": "P2: Totals display — live recalculation as items are edited in the form",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2-FR6"
     ]
