@@ -75,7 +75,7 @@
   {
     "id": "F010",
     "description": "P1: Quote model — getById with tenant isolation and auto-expiration check",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR5"
     ]
