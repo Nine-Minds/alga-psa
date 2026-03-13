@@ -563,4 +563,56 @@ describe('InputMappingEditor reference mode', () => {
       summary: { $expr: 'vars.ticketResult.ticket_id' },
     });
   });
+
+  it('keeps schema order stable after filling a later field', async () => {
+    const onChange = vi.fn();
+
+    const { container } = render(
+      <InputMappingEditor
+        value={{}}
+        onChange={onChange}
+        targetFields={[
+          {
+            name: 'client_id',
+            type: 'string',
+            required: true,
+          },
+          {
+            name: 'contact_id',
+            type: 'string',
+            required: false,
+          },
+          {
+            name: 'title',
+            type: 'string',
+            required: true,
+          },
+        ]}
+        fieldOptions={[
+          { value: 'payload.client_id', label: 'payload.client_id' },
+        ]}
+        stepId="step-stable-order"
+        positionsHandlers={positionsHandlers}
+        referenceBrowseContext={referenceBrowseContext}
+      />
+    );
+
+    const initialIds = Array.from(
+      container.querySelectorAll('[id^="mapping-field-step-stable-order-"]')
+    ).map((element) => element.id);
+
+    expect(initialIds).toEqual([
+      'mapping-field-step-stable-order-client_id',
+      'mapping-field-step-stable-order-contact_id',
+      'mapping-field-step-stable-order-title',
+    ]);
+
+    await act(async () => {
+      fireEvent.click(document.getElementById('add-mapping-step-stable-order-title')!);
+    });
+
+    expect(onChange).toHaveBeenCalledWith({
+      title: { $expr: '' },
+    });
+  });
 });

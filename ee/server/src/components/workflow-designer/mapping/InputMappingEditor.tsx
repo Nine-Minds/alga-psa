@@ -560,8 +560,10 @@ const ReferenceScopeSelector: React.FC<{
     return model.vars.map((step) => ({ value: step.value, label: step.label }));
   }, [model.vars, selectedScope]);
 
+  const selectClassName = 'min-w-0 w-full overflow-hidden whitespace-nowrap';
+
   return (
-    <div className="grid gap-2 md:grid-cols-3">
+    <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(12rem,1fr))]">
       <CustomSelect
         id={`${idPrefix}-reference-scope`}
         options={scopeOptions}
@@ -569,6 +571,7 @@ const ReferenceScopeSelector: React.FC<{
         placeholder="Select source scope..."
         onValueChange={(value) => onScopeChange(value as ReferenceSourceScope | '')}
         disabled={disabled}
+        className={selectClassName}
       />
       {selectedScope === 'vars' && (
         <CustomSelect
@@ -578,6 +581,7 @@ const ReferenceScopeSelector: React.FC<{
           placeholder="Select step..."
           onValueChange={onStepChange}
           disabled={disabled}
+          className={selectClassName}
         />
       )}
       {selectedScope && selectedScope !== 'vars' && (
@@ -588,6 +592,7 @@ const ReferenceScopeSelector: React.FC<{
           placeholder="Select field..."
           onValueChange={onFieldChange}
           disabled={disabled}
+          className={selectClassName}
         />
       )}
       {selectedScope === 'vars' && selectedStep && (
@@ -598,6 +603,7 @@ const ReferenceScopeSelector: React.FC<{
           placeholder="Select field..."
           onValueChange={onFieldChange}
           disabled={disabled}
+          className={selectClassName}
         />
       )}
     </div>
@@ -930,36 +936,41 @@ const MappingFieldEditor: React.FC<{
 
   return (
     <Card className="p-3 space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-3">
         <button
           onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-2 text-sm font-medium text-gray-800 hover:text-gray-600"
+          className="min-w-0 flex-1 text-left text-sm font-medium text-gray-800 hover:text-gray-600"
           disabled={disabled}
         >
-          {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          <WorkflowActionInputFieldInfo
-            field={field}
-            isMissingRequired={isMissingRequired}
-          />
-          {compatibilityBadge && (
-            <Badge
-              className={`text-[10px] ${compatibilityBadge.classes.bg} ${compatibilityBadge.classes.text} ${compatibilityBadge.classes.border}`}
-              title={`${compatibilityBadge.label}: ${compatibilityBadge.sourceType ?? 'unknown'} → ${compatibilityBadge.targetType}`}
-            >
-              {compatibilityBadge.label}
-            </Badge>
-          )}
+          <div className="flex min-w-0 items-start gap-2">
+            {expanded ? <ChevronDown className="mt-0.5 h-4 w-4 shrink-0" /> : <ChevronRight className="mt-0.5 h-4 w-4 shrink-0" />}
+            <WorkflowActionInputFieldInfo
+              field={field}
+              isMissingRequired={isMissingRequired}
+              compact
+            />
+          </div>
         </button>
-        <WorkflowActionInputSourceMode
-          idPrefix={idPrefix}
-          value={value}
-          onModeChange={handleSourceModeChange}
-          disabled={disabled}
-        />
       </div>
 
       {expanded && (
-        <div className="pl-6 space-y-2">
+        <div className="space-y-3 pl-2">
+          <div className="flex items-center justify-between gap-3">
+            <WorkflowActionInputSourceMode
+              idPrefix={idPrefix}
+              value={value}
+              onModeChange={handleSourceModeChange}
+              disabled={disabled}
+            />
+            {compatibilityBadge && valueType === 'reference' && (
+              <Badge
+                className={`text-[10px] ${compatibilityBadge.classes.bg} ${compatibilityBadge.classes.text} ${compatibilityBadge.classes.border}`}
+                title={`${compatibilityBadge.label}: ${compatibilityBadge.sourceType ?? 'unknown'} → ${compatibilityBadge.targetType}`}
+              >
+                {compatibilityBadge.label}
+              </Badge>
+            )}
+          </div>
           {valueType === 'reference' && (
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
@@ -1866,23 +1877,17 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   expressionContext: providedExpressionContext,
   referenceBrowseContext,
 }) => {
-  const [showUnmapped, setShowUnmapped] = useState(true);
-
-  // Separate mapped and unmapped fields
-  const { mappedFields, unmappedFields } = useMemo(() => {
-    const mappedNames = new Set(Object.keys(value));
-    return {
-      mappedFields: targetFields.filter(f => mappedNames.has(f.name)),
-      unmappedFields: targetFields.filter(f => !mappedNames.has(f.name))
-    };
-  }, [targetFields, value]);
-
   const missingRequiredCount = useMemo(() => {
     return targetFields.filter((field) => {
       if (!field.required) return false;
       return !isMappingValueSet(value[field.name], field.type);
     }).length;
   }, [targetFields, value]);
+
+  const filledFieldCount = useMemo(
+    () => targetFields.filter((field) => isMappingValueSet(value[field.name], field.type)).length,
+    [targetFields, value]
+  );
 
   // §17.3.3 - Auto-mapping suggestions
   const suggestions = useMemo(() =>
@@ -1947,14 +1952,10 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   }, [value, onChange]);
 
   // §17.3 - Keyboard navigation
-  // Build ordered list of all field names (mapped first, then unmapped)
-  const allFieldNames = useMemo(() => {
-    const mappedNames = Object.keys(value);
-    const unmappedNames = targetFields
-      .filter(f => !mappedNames.includes(f.name))
-      .map(f => f.name);
-    return [...mappedNames, ...unmappedNames];
-  }, [value, targetFields]);
+  const allFieldNames = useMemo(
+    () => targetFields.map((field) => field.name),
+    [targetFields]
+  );
 
   const [keyboardState, keyboardHandlers] = useMappingKeyboard({
     fieldCount: targetFields.length,
@@ -1997,10 +1998,10 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
           : undefined
       }
     >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 text-xs text-gray-500">
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
           <div>
-            {Object.keys(value).length} of {targetFields.length} fields filled
+            {filledFieldCount} of {targetFields.length} fields filled
           </div>
           {missingRequiredCount > 0 && (
             <div className="text-xs text-destructive flex items-center gap-1" title="Required fields are missing values">
@@ -2009,7 +2010,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
             </div>
           )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col items-start gap-1">
           {suggestions.length > 0 && (
             <Button
               id={`auto-map-${stepId}`}
@@ -2039,14 +2040,17 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
         </div>
       </div>
 
-      {/* Mapped fields */}
-      {mappedFields.length > 0 && (
-        <div className="space-y-2" role="group" aria-label="Mapped fields">
-          {mappedFields.map((field, idx) => {
-            const fieldIndex = allFieldNames.indexOf(field.name);
-            const isFocused = keyboardState.isActive && keyboardState.focusedIndex === fieldIndex;
-            const fieldProps = keyboardHandlers.getFieldProps(fieldIndex);
+      <div className="space-y-2" role="group" aria-label="Action input fields list">
+        {targetFields.map((field) => {
+          const suggestion = suggestionMap.get(field.name);
+          const isMissingRequired = Boolean(field.required) && !isMappingValueSet(value[field.name], field.type);
+          const fieldIndex = allFieldNames.indexOf(field.name);
+          const isFocused = keyboardState.isActive && keyboardState.focusedIndex === fieldIndex;
+          const fieldProps = keyboardHandlers.getFieldProps(fieldIndex);
+          const fieldValue = value[field.name];
+          const hasConfiguredValue = Object.prototype.hasOwnProperty.call(value, field.name);
 
+          if (hasConfiguredValue) {
             return (
               <div
                 key={field.name}
@@ -2060,7 +2064,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
               >
                 <MappingFieldEditor
                   field={field}
-                  value={value[field.name]}
+                  value={fieldValue}
                   onChange={(v) => handleFieldChange(field.name, v)}
                   rootInputMapping={value}
                   fieldOptions={fieldOptions}
@@ -2083,92 +2087,68 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                 </button>
               </div>
             );
-          })}
-        </div>
-      )}
+          }
 
-      {unmappedFields.length > 0 && (
-        <div className="space-y-2">
-          <button
-            onClick={() => setShowUnmapped(!showUnmapped)}
-            className="flex items-center gap-2 text-xs font-medium text-gray-600 hover:text-gray-800"
-          >
-            {showUnmapped ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-            Empty fields ({unmappedFields.length})
-          </button>
-
-          {showUnmapped && (
-            <div className="space-y-1 pl-5" role="group" aria-label="Empty fields">
-                  {unmappedFields.map((field, idx) => {
-                    const suggestion = suggestionMap.get(field.name);
-                    const isMissingRequired = Boolean(field.required) && !isMappingValueSet(value[field.name], field.type);
-
-                // §17.3 - Keyboard navigation props
-                const fieldIndex = allFieldNames.indexOf(field.name);
-                const isFocused = keyboardState.isActive && keyboardState.focusedIndex === fieldIndex;
-                const fieldProps = keyboardHandlers.getFieldProps(fieldIndex);
-
-                return (
-                  <div
-                    key={field.name}
-                    id={`mapping-field-${stepId}-${field.name}`}
-                    role="option"
-                    tabIndex={fieldProps.tabIndex}
-                    aria-selected={fieldProps['aria-selected']}
-                    onFocus={fieldProps.onFocus}
-                    onKeyDown={fieldProps.onKeyDown}
-                    className={`flex items-center justify-between py-1.5 px-2 rounded transition-all ${
-                      suggestion ? 'bg-primary-50 border border-primary-100' : ''
-                    } hover:bg-gray-50 ${isFocused ? 'ring-2 ring-primary-500 ring-offset-1' : ''}`}
+          return (
+            <div
+              key={field.name}
+              id={`mapping-field-${stepId}-${field.name}`}
+              role="option"
+              tabIndex={fieldProps.tabIndex}
+              aria-selected={fieldProps['aria-selected']}
+              onFocus={fieldProps.onFocus}
+              onKeyDown={fieldProps.onKeyDown}
+              className={`rounded px-2.5 py-2 transition-all ${
+                suggestion ? 'bg-primary-50 border border-primary-100' : ''
+              } hover:bg-gray-50 ${isFocused ? 'ring-2 ring-primary-500 ring-offset-1' : ''}`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1 space-y-1">
+                  <WorkflowActionInputFieldInfo
+                    field={field}
+                    isMissingRequired={isMissingRequired}
+                    compact
+                  />
+                  {suggestion && (
+                    <span className="flex min-w-0 items-center gap-1 text-xs text-primary-600">
+                      <Sparkles className="w-3 h-3" />
+                      <span className="truncate">← {suggestion.sourcePath}</span>
+                      {suggestion.confidence === 'fuzzy' && (
+                        <span className="text-primary-400">(fuzzy)</span>
+                      )}
+                    </span>
+                  )}
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  {suggestion && (
+                    <Button
+                      id={`apply-suggestion-${stepId}-${field.name}`}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleApplySuggestion(suggestion)}
+                      disabled={disabled}
+                      className="text-xs text-primary-600"
+                      title={`Apply suggestion: ${suggestion.sourcePath}`}
+                    >
+                      <Wand2 className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                  <Button
+                    id={`add-mapping-${stepId}-${field.name}`}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleAddMapping(field.name)}
+                    disabled={disabled}
                   >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <WorkflowActionInputFieldInfo
-                        field={field}
-                        isMissingRequired={isMissingRequired}
-                      />
-                      {/* §17.3.3 - Show suggestion indicator */}
-                      {suggestion && (
-                        <span className="text-xs text-primary-600 flex items-center gap-1 truncate">
-                          <Sparkles className="w-3 h-3" />
-                          <span className="truncate">← {suggestion.sourcePath}</span>
-                          {suggestion.confidence === 'fuzzy' && (
-                            <span className="text-primary-400">(fuzzy)</span>
-                          )}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      {suggestion && (
-                        <Button
-                          id={`apply-suggestion-${stepId}-${field.name}`}
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleApplySuggestion(suggestion)}
-                          disabled={disabled}
-                          className="text-xs text-primary-600"
-                          title={`Apply suggestion: ${suggestion.sourcePath}`}
-                        >
-                          <Wand2 className="w-3.5 h-3.5" />
-                        </Button>
-                      )}
-                      <Button
-                        id={`add-mapping-${stepId}-${field.name}`}
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleAddMapping(field.name)}
-                        disabled={disabled}
-                      >
-                        <Plus className="w-3.5 h-3.5 mr-1" />
-                        Fill
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
+                    <Plus className="w-3.5 h-3.5 mr-1" />
+                    Fill
+                  </Button>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 };

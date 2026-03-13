@@ -37,12 +37,14 @@ const buildConstraintHints = (
 export const WorkflowActionInputFieldInfo: React.FC<{
   field: Pick<ActionInputField, 'name' | 'type' | 'description' | 'required' | 'default' | 'examples' | 'constraints'>;
   isMissingRequired?: boolean;
-}> = ({ field, isMissingRequired = false }) => {
+  compact?: boolean;
+}> = ({ field, isMissingRequired = false, compact = false }) => {
   const constraintHints = buildConstraintHints(field.constraints);
+  const compactHint = field.description ?? constraintHints[0] ?? null;
 
   return (
-    <div className="min-w-0 flex-1">
-      <div className="flex items-center gap-2">
+    <div className="min-w-0 w-full">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
         <span className="text-sm text-gray-700">{field.name}</span>
         {field.required && (
           <span
@@ -56,20 +58,25 @@ export const WorkflowActionInputFieldInfo: React.FC<{
         )}
         <span className="text-xs text-gray-400">{field.type}</span>
       </div>
-      {field.description && (
+      {compact && compactHint && (
+        <p className="mt-0.5 truncate text-[11px] text-gray-500" title={compactHint}>
+          {compactHint}
+        </p>
+      )}
+      {!compact && field.description && (
         <p className="mt-0.5 text-[11px] text-gray-500">{field.description}</p>
       )}
-      {constraintHints.map((hint) => (
+      {!compact && constraintHints.map((hint) => (
         <p key={hint} className="mt-0.5 text-[11px] text-gray-500">
           {hint}
         </p>
       ))}
-      {field.default !== undefined && (
+      {!compact && field.default !== undefined && (
         <p className="mt-0.5 text-[11px] text-gray-500">
           Default: <code className="rounded bg-gray-100 px-1 py-0.5 text-gray-700">{String(field.default)}</code>
         </p>
       )}
-      {field.examples && field.examples.length > 0 && (
+      {!compact && field.examples && field.examples.length > 0 && (
         <p className="mt-0.5 text-[11px] text-gray-500">
           Example: <code className="rounded bg-gray-100 px-1 py-0.5 text-gray-700">{String(field.examples[0])}</code>
         </p>
