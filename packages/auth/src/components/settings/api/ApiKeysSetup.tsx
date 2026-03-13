@@ -87,6 +87,22 @@ export default function ApiKeysSetup() {
     }
   }, [loadApiKeys]);
 
+  const handleDownloadKey = useCallback(() => {
+    try {
+      const blob = new Blob([newKeyValue], { type: 'text/plain;charset=utf-8' });
+      const downloadUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = downloadUrl;
+      anchor.download = 'api-key.txt';
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      handleError(error, 'Failed to download API key');
+    }
+  }, [newKeyValue]);
+
   const columns: ColumnDefinition<ApiKey>[] = useMemo(() => [
     {
       title: 'Description',
@@ -202,20 +218,30 @@ export default function ApiKeysSetup() {
             <div className="p-4 bg-gray-50 rounded-md">
               <code className="text-sm break-all">{newKeyValue}</code>
             </div>
-            <Button
-              id="copy-api-key-button"
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(newKeyValue);
-                  toast.success('API key copied to clipboard!');
-                } catch (error) {
-                  handleError(error, 'Failed to copy API key to clipboard');
-                }
-              }}
-              className="w-full"
-            >
-              Copy to Clipboard
-            </Button>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button
+                id="copy-api-key-button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(newKeyValue);
+                    toast.success('API key copied to clipboard!');
+                  } catch (error) {
+                    handleError(error, 'Failed to copy API key to clipboard');
+                  }
+                }}
+                className="w-full"
+              >
+                Copy to Clipboard
+              </Button>
+              <Button
+                id="download-api-key-button"
+                onClick={handleDownloadKey}
+                variant="outline"
+                className="w-full"
+              >
+                Download as .txt
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
