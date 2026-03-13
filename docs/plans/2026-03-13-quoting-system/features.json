@@ -261,7 +261,7 @@
   {
     "id": "F033",
     "description": "P1: Service catalog integration — support all billing methods (fixed, hourly, usage, per_unit)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR10"
     ]
