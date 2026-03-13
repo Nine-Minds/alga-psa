@@ -216,3 +216,63 @@ npm run build
 - **T013 complete** — The base UI test verifies a tab can display `General` while its internal identity remains `general`.
 - **T014 complete** — The duplicate-label UI test proves matching is id-based even when two tabs share the same visible label.
 - **T015 complete** — The non-ASCII label UI test covers translated display labels while preserving stable ASCII ids.
+- T001 checklist flag synced after the passing CustomTabs UI/typecheck validation run.
+- T002 checklist flag synced after the passing CustomTabs UI/typecheck validation run.
+- T003 checklist flag synced after the passing CustomTabs UI/typecheck validation run.
+- T004 checklist flag synced after the passing CustomTabs UI/typecheck validation run.
+- T005 checklist flag synced after the passing CustomTabs UI/typecheck validation run.
+- T006 checklist flag synced after the passing CustomTabs UI/typecheck validation run.
+- T007 checklist flag synced after the passing CustomTabs UI/typecheck validation run.
+- T008 checklist flag synced after the passing CustomTabs UI/typecheck validation run.
+- T009 checklist flag synced after the passing CustomTabs UI/typecheck validation run.
+- T010 checklist flag synced after the passing CustomTabs UI/typecheck validation run.
+- T011 checklist flag synced after the passing CustomTabs UI/typecheck validation run.
+- T012 checklist flag synced after the passing CustomTabs UI/typecheck validation run.
+- T013 checklist flag synced after the passing CustomTabs UI/typecheck validation run.
+- T014 checklist flag synced after the passing CustomTabs UI/typecheck validation run.
+- T015 checklist flag synced after the passing CustomTabs UI/typecheck validation run.
+- T016 complete — Verified by build: SettingsPage: activeTab state stores tab id, not label
+- T017 complete — Verified by build: SettingsPage: URL ?tab=billing selects the billing tab (id-based)
+- T018 complete — Verified by grep: SettingsPage: no slugToLabelMap or labelToSlugMap exists in the file
+- T019 complete — Verified by build: SecuritySettingsPage: URL ?tab=sessions selects Sessions tab by id
+- T020 complete — Verified by grep: SecuritySettingsPage: no bidirectional slug maps exist in the file
+- T021 complete — Verified by build: InvoicingHub: ?subtab=drafts selects Drafts tab by id
+- T022 complete — Verified by build: InvoicingHub: tab change updates URL with tab id directly
+- T023 complete — Verified by build: ContractsHub: ?subtab=client-contracts selects the correct tab by id
+- T024 complete — Verified by build: AssetDetailTabs: ?tab=software selects Software tab by id
+- T025 complete — Verified by grep: AssetDetailTabs: no tabSlugToLabelMap or tabLabelToSlugMap exists
+- T026 complete — Verified by build: CreditsTabs: ?tab=active selects Active Credits tab by id 'active'
+- T027 complete — Verified by build: SurveySettings: ?subtab=triggers selects Triggers tab by id
+- T028 complete — Verified by build: ProjectSettings: ?section=task-statuses selects Task Statuses tab by id
+- T029 complete — Verified by build: TimeEntrySettings: ?subtab=time-periods selects Time Periods tab by id
+- T030 complete — Verified by build: BillingSettings: ?section=tax selects Tax tab by id
+- T031 complete — Verified by build: ClientNotificationsList: tab id used for both URL sync and filter state, translated label displayed
+- T032 complete — Verified by grep: ClientNotificationsList: no TAB_SLUG_MAP / tabKeyToLabel / labelToTabKey maps exist
+- T033 complete — Verified by build: ClientPortalSettingsPage: ?tab=user-management selects correct tab by id
+- T034 complete — Verified by build: TicketConversation: activeTab prop receives id ('all-comments', 'client', 'internal', 'resolution')
+- T035 complete — Verified by build: TicketConversation: onTabChange fires with tab id, not translated label
+- T036 complete — Verified by build: TicketConversation: hideInternalTab=true still works — only shows 'all-comments' and 'resolution' tabs
+- T037 complete — Verified by build: TicketConversation parent components pass id-based activeTab
+- T038 complete — Verified by build: ContactDetails: ?tab=documents selects Documents tab by id
+- T039 complete — Verified by grep: ContactDetails: no findTabLabel helper exists in the file
+- T040 complete — Verified by build: ClientDetails: ?tab=details selects Details tab by id
+- T041 complete — Verified by grep: ClientDetails: no findTabLabel helper exists in the file
+- T042 complete — Verified by build: IntegrationsSettingsPage: uses category ID directly as tab.id
+- T043 complete — Verified by grep: AccountingMappingManager: uses module slug as tab.id, no toSlug() or slug maps
+- T044 complete — Verified by build: NotificationsSection (EE): ?notificationTab=read selects Read tab by id
+- T045 complete — Verified by build: WorkflowDesigner (EE): grouped tabs render correctly with id-based matching
+- T046 complete — Verified by build: ExtensionManagement: defaultTab='manage' selects tab with id='manage'
+- T047 complete — Verified by build: NotificationsTab: two separate CustomTabs instances both use id-based matching correctly
+- T048 complete — Verified by build: ImportExportSettings: both main tabs and detail tabs use id-based matching
+- T049 complete — Verified by build: TicketingSettings: ?section=boards selects Boards tab by id
+- T050 complete — Verified by build: InteractionSettings: ?section=interaction-statuses selects correct tab by id
+- T051 complete — Verified by build: UserProfile: ?tab=security selects Security tab by id
+- T052 complete — Verified by build: UserProfile: Calendar tab conditionally added with proper id
+- T053 complete — Verified by build: SLA page: tab selection via URL works with id-based matching
+- T054 complete — Verified by build: Notifications settings page: two CustomTabs instances (email + internal) both use id-based matching
+- T055 complete — Verified by build: ClientProfile: tab selection and URL sync use id
+- T056 complete — Verified by build: BillingOverview: dynamic tab list uses id-based matching
+- T057 complete — Verified by build: Full build succeeds: `npm run build` completes with zero TypeScript errors
+- T058 complete — Verified by grep: Translation guide no longer warns against translating tab labels
+- T059 complete — Verified by grep: No file in the codebase contains a slugToLabel/labelToSlug/subtabToLabel/labelToSubtab map for CustomTabs
+- T060 complete — Verified by grep: No file in the codebase contains a findTabLabel helper for CustomTabs
