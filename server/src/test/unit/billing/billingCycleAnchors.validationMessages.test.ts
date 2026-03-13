@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateAnchorSettingsForCycle } from 'server/src/lib/billing/billingCycleAnchors';
+import { validateAnchorSettingsForCycle } from '@alga-psa/billing/lib/billing/billingCycleAnchors';
 
 describe('Billing cycle anchor validation messaging', () => {
   it('rejects monthly day-of-month outside 1..28 with a clear message', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { BillingEngine } from 'server/src/lib/billing/billingEngine';
+import { BillingEngine } from '@alga-psa/billing/lib/billing/billingEngine';
 
 vi.mock('@/lib/db/db');
 vi.mock('@alga-psa/db', () => ({

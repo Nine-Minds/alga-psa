@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
-import { createClientContractLineCycles } from 'server/src/lib/billing/createBillingCycles';
+import { createClientContractLineCycles } from '@alga-psa/billing/lib/billing/createBillingCycles';
 import { createNextBillingCycle } from '@alga-psa/billing/actions';
 import { updateClientBillingCycleAnchor } from '@alga-psa/billing/actions';
 import { updateClientBillingSchedule } from '@alga-psa/billing/actions';
