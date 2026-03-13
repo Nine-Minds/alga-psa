@@ -115,7 +115,7 @@
   {
     "id": "F015",
     "description": "P1: Quote model — update (validates status transition, updates fields, logs activity)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR5"
     ]
