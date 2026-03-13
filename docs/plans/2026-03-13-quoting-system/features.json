@@ -439,7 +439,7 @@
   {
     "id": "F051",
     "description": "P2: Tax calculation — respect is_taxable flag, tax exemption, and reverse charge",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2-FR1"
     ]
