@@ -52,7 +52,8 @@ export function deriveWorkflowActionInputSourceMode(
     }
 
     if ('$expr' in value) {
-      return isSimpleFieldReferenceExpression((value as Expr).$expr)
+      const expression = (value as Expr).$expr;
+      return !expression?.trim() || isSimpleFieldReferenceExpression(expression)
         ? { mode: 'reference', advancedMode: 'expression' }
         : { mode: 'advanced', advancedMode: 'expression' };
     }
