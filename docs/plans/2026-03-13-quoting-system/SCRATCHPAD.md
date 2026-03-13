@@ -122,3 +122,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) F015 complete — P1: Quote model — update (validates status transition, updates fields, logs activity). Implemented quote updates with status validation and activity logging.
 - (2026-03-13) F016 complete — P1: Quote model — delete via deleteEntityWithValidation: hard delete drafts with no business history, archive for others. Implemented quote deletion through deletion validation with draft hard-delete behavior.
 - (2026-03-13) F017 complete — P1: Quote model — auto-expiration: if valid_until < today and status is 'sent', set to 'expired' on read. Implemented on-access quote auto-expiration for sent quotes.
+- (2026-03-13) F018 complete — P1: Quote item model — listByQuoteId ordered by display_order. Implemented ordered quote-item listing by quote.

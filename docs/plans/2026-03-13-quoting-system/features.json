@@ -140,7 +140,7 @@
   {
     "id": "F018",
     "description": "P1: Quote item model — listByQuoteId ordered by display_order",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR6"
     ]
