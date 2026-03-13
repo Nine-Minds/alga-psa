@@ -50,7 +50,7 @@
   {
     "id": "T007",
     "description": "Numbering: sequential calls generate Q-0001, Q-0002, Q-0003",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004"
     ]

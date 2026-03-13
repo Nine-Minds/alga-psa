@@ -136,3 +136,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) T004 complete — Migration: quote_items FK to quotes cascades on delete. Covered quote_items cascade behavior in the infrastructure suite.
 - (2026-03-13) T005 complete — Migration: quote_activities table created with correct columns and FK to quotes. Covered quote_activities schema and FK wiring in the infrastructure suite.
 - (2026-03-13) T006 complete — Numbering: 'QUOTE' entity type generates Q-0001 on first call. Covered first QUOTE numbering generation.
+- (2026-03-13) T007 complete — Numbering: sequential calls generate Q-0001, Q-0002, Q-0003. Covered sequential QUOTE numbering generation.
