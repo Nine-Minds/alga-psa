@@ -375,7 +375,7 @@
   {
     "id": "F044",
     "description": "P1: QuoteLineItems editor — toggle is_optional and is_recurring per item",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR15"
     ]

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
 import type { CatalogPickerItem } from '../../../actions/serviceActions';
 import ServiceCatalogPicker from '../contracts/ServiceCatalogPicker';
@@ -130,6 +131,7 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
               <tr>
                 <th className="px-3 py-2 font-medium">Item</th>
                 <th className="px-3 py-2 font-medium">Billing</th>
+                <th className="px-3 py-2 font-medium">Flags</th>
                 <th className="px-3 py-2 font-medium">Qty</th>
                 <th className="px-3 py-2 font-medium">Unit Price</th>
                 <th className="px-3 py-2 font-medium">Total</th>
@@ -152,6 +154,47 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                   </td>
                   <td className="px-3 py-3 align-top text-muted-foreground">
                     {item.billing_method ? item.billing_method.replace('_', ' ') : '—'}
+                    {item.is_recurring && item.billing_frequency ? (
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        {item.billing_frequency.replace('_', ' ')}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td className="px-3 py-3 align-top">
+                    <div className="space-y-2">
+                      <Checkbox
+                        id={`quote-line-optional-${item.local_id}`}
+                        checked={item.is_optional}
+                        label="Optional"
+                        disabled={disabled}
+                        containerClassName="mb-0"
+                        onChange={(event) => updateItem(item.local_id, { is_optional: event.target.checked })}
+                      />
+                      <Checkbox
+                        id={`quote-line-recurring-${item.local_id}`}
+                        checked={item.is_recurring}
+                        label="Recurring"
+                        disabled={disabled}
+                        containerClassName="mb-0"
+                        onChange={(event) => updateItem(item.local_id, {
+                          is_recurring: event.target.checked,
+                          billing_frequency: event.target.checked ? (item.billing_frequency ?? 'monthly') : null,
+                        })}
+                      />
+                      {item.is_recurring ? (
+                        <select
+                          value={item.billing_frequency ?? 'monthly'}
+                          onChange={(event) => updateItem(item.local_id, { billing_frequency: event.target.value })}
+                          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          disabled={disabled}
+                        >
+                          <option value="weekly">Weekly</option>
+                          <option value="monthly">Monthly</option>
+                          <option value="quarterly">Quarterly</option>
+                          <option value="annually">Annually</option>
+                        </select>
+                      ) : null}
+                    </div>
                   </td>
                   <td className="px-3 py-3 align-top text-muted-foreground">
                     <Input
