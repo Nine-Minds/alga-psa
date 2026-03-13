@@ -495,7 +495,7 @@
   {
     "id": "F058",
     "description": "P2: Totals calculation — subtotal, discount_total, tax, total_amount computed from items",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2-FR3"
     ]
