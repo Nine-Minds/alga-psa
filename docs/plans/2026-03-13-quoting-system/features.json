@@ -204,7 +204,7 @@
   {
     "id": "F026",
     "description": "P1: Server action — updateQuote with status transition validation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR8"
     ]

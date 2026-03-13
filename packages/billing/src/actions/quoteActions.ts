@@ -7,7 +7,7 @@ import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { IQuote } from '@alga-psa/types';
 import Quote from '../models/quote';
-import { createQuoteSchema } from '../schemas/quoteSchemas';
+import { createQuoteSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
 
 type CreateQuoteInput = Omit<
   IQuote,
@@ -25,6 +25,14 @@ type CreateQuoteInput = Omit<
 const requireBillingCreatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing', 'create')) {
     return permissionError('Permission denied: Cannot create quotes');
+  }
+
+  return null;
+};
+
+const requireBillingUpdatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
+  if (!await hasPermission(user as any, 'billing', 'update')) {
+    return permissionError('Permission denied: Cannot update quotes');
   }
 
   return null;
@@ -53,4 +61,25 @@ export const createQuote = withAuth(async (user, { tenant }, input: CreateQuoteI
 
   const createdQuote = await Quote.create(knex, tenant, parsedInput);
   return await Quote.getById(knex, tenant, createdQuote.quote_id) as IQuote;
+});
+
+export const updateQuote = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string,
+  input: Partial<IQuote>
+): Promise<IQuote | ActionPermissionError> => {
+  const denied = await requireBillingUpdatePermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  const parsedInput = updateQuoteSchema.parse({
+    ...input,
+    updated_by: input.updated_by ?? getActorUserId(user),
+  });
+
+  const updatedQuote = await Quote.update(knex, tenant, quoteId, parsedInput);
+  return await Quote.getById(knex, tenant, updatedQuote.quote_id) as IQuote;
 });
