@@ -161,3 +161,5 @@ npm run build
 - F023 — CreditReconciliation now uses report-status ids (`all`, `open`, `in-review`, `resolved`) for dynamic tab routing.
 
 - F024 — CreditManagement now stores and routes `creditTab` as ids (`active-credits`, `expired-credits`, `all-credits`).
+
+- F025 — The contracts dashboard now uses `templates`, `client-contracts`, and `drafts` ids directly in its main CustomTabs instance.
