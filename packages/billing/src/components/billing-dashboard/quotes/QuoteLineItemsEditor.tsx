@@ -30,6 +30,10 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   const [manualQuantity, setManualQuantity] = useState('1');
   const [manualUnitPrice, setManualUnitPrice] = useState('0.00');
 
+  const updateItem = (localId: string, patch: Partial<DraftQuoteItem>) => {
+    onChange(items.map((item) => item.local_id === localId ? { ...item, ...patch } : item));
+  };
+
   const handleAddService = (service: CatalogPickerItem) => {
     onChange([...items, createDraftQuoteItemFromService(service)]);
     setServicePickerValue('');
@@ -135,7 +139,11 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
               {items.map((item) => (
                 <tr key={item.local_id}>
                   <td className="px-3 py-3 align-top">
-                    <div className="font-medium text-foreground">{item.description}</div>
+                    <Input
+                      value={item.description}
+                      onChange={(event) => updateItem(item.local_id, { description: event.target.value })}
+                      disabled={disabled}
+                    />
                     <div className="text-xs text-muted-foreground">
                       {item.service_name || 'Custom item'}
                       {item.service_sku ? ` • ${item.service_sku}` : ''}
@@ -145,9 +153,31 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                   <td className="px-3 py-3 align-top text-muted-foreground">
                     {item.billing_method ? item.billing_method.replace('_', ' ') : '—'}
                   </td>
-                  <td className="px-3 py-3 align-top text-muted-foreground">{item.quantity}</td>
                   <td className="px-3 py-3 align-top text-muted-foreground">
-                    {formatDraftQuoteMoney(item.unit_price, currencyCode)}
+                    <Input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={String(item.quantity)}
+                      onChange={(event) => {
+                        const quantity = Number.parseInt(event.target.value, 10);
+                        updateItem(item.local_id, { quantity: Number.isNaN(quantity) || quantity <= 0 ? 1 : quantity });
+                      }}
+                      disabled={disabled}
+                    />
+                  </td>
+                  <td className="px-3 py-3 align-top text-muted-foreground">
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={(item.unit_price / 100).toFixed(2)}
+                      onChange={(event) => {
+                        const nextValue = Math.round(Number.parseFloat(event.target.value || '0') * 100);
+                        updateItem(item.local_id, { unit_price: Number.isNaN(nextValue) || nextValue < 0 ? 0 : nextValue });
+                      }}
+                      disabled={disabled}
+                    />
                   </td>
                   <td className="px-3 py-3 align-top font-medium text-foreground">
                     {formatDraftQuoteMoney(item.quantity * item.unit_price, currencyCode)}

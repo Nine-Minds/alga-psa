@@ -9,7 +9,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import type { IClient, IContact, IQuote, IQuoteListItem } from '@alga-psa/types';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
-import { addQuoteItem, createQuote, createQuoteFromTemplate, getQuote, listQuotes, updateQuote } from '../../../actions/quoteActions';
+import { addQuoteItem, createQuote, createQuoteFromTemplate, getQuote, listQuotes, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
 import { getAllContacts } from '@alga-psa/clients/actions';
 import QuoteLineItemsEditor from './QuoteLineItemsEditor';
 import { createDraftQuoteItemFromQuoteItem, type DraftQuoteItem } from './quoteLineItemDraft';
@@ -178,6 +178,27 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
       let nextLineItems = lineItems;
       for (const item of lineItems) {
         if (item.quote_item_id) {
+          const updatedItem = await updateQuoteItem(item.quote_item_id, {
+            description: item.description,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            unit_of_measure: item.unit_of_measure ?? null,
+            phase: item.phase ?? null,
+            is_optional: item.is_optional,
+            is_selected: item.is_selected,
+            is_recurring: item.is_recurring,
+            billing_frequency: item.billing_frequency ?? null,
+            billing_method: item.billing_method ?? null,
+          });
+
+          if ('permissionError' in updatedItem) {
+            throw new Error(updatedItem.permissionError);
+          }
+
+          nextLineItems = nextLineItems.map((draftItem) => draftItem.local_id === item.local_id ? {
+            ...draftItem,
+            ...createDraftQuoteItemFromQuoteItem(updatedItem),
+          } : draftItem);
           continue;
         }
 

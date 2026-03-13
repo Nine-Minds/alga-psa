@@ -108,6 +108,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) F043 complete — P1: Quote line rows now edit description, quantity, and unit price inline in `QuoteLineItemsEditor`, and `QuoteForm.tsx` persists edits for existing rows via `updateQuoteItem` during draft saves.
 - (2026-03-13) F042 complete — P1: Expanded `QuoteLineItemsEditor` with a small manual-entry composer (description, quantity, unit price) backed by `createCustomDraftQuoteItem`, so sales users can add custom quote lines without relying on the service catalog.
 - (2026-03-13) F041 complete — P1: Added a `QuoteLineItemsEditor` to `QuoteForm.tsx` with `ServiceCatalogPicker` search across services/products, local draft line-item state, and save-time persistence through `addQuoteItem`, so quote drafts can now pick catalog items before saving.
 - (2026-03-13) T050d complete — Extended `packages/billing/tests/quote/quoteActions.test.ts` with a `listQuotes` filtering assertion that distinguishes template views (`is_template=true`) from the standard quote list (`is_template=false` by default).
