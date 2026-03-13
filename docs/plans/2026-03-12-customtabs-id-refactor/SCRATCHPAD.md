@@ -208,3 +208,4 @@ npm run build
 - **T005 complete** — The source contract test locks in `key={tab.id}` for trigger and content rendering paths.
 - **T006 complete** — The UI interaction test confirms clicking a tab calls `onTabChange` with the stable tab id ().
 - **T007 complete** — The render test covers `defaultTab="general"` selecting the matching tab by id.
+- **T008 complete** — The controlled-mode UI test verifies `value`/`onTabChange` round-trip tab ids instead of labels.
