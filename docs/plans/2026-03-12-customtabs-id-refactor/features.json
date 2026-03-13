@@ -137,7 +137,7 @@
   {
     "id": "F017",
     "description": "Migrate ExtensionManagement.tsx — add id to 2 tabs, change defaultTab from 'Manage' to 'manage'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern D"

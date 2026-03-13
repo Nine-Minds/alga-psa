@@ -145,3 +145,5 @@ npm run build
 - F015 — Converted both NotificationsTab views to id-based tabs so email/internal sections sync URLs without label maps.
 
 - F016 — InteractionSettings now uses `interaction-types` and `interaction-statuses` ids for state and section URLs.
+
+- F017 — Added stable ids to ExtensionManagement tabs and changed its static default from `Manage` to `manage`.
