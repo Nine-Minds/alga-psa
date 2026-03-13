@@ -157,3 +157,5 @@ npm run build
 - F021 — ContractsHub now uses `templates` and `client-contracts` ids directly for URL sync instead of label maps.
 
 - F022 — Added stable ids to DiscrepancyDetail tab content and switched its default selection to the first tab id.
+
+- F023 — CreditReconciliation now uses report-status ids (`all`, `open`, `in-review`, `resolved`) for dynamic tab routing.

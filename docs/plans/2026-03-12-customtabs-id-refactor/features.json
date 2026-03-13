@@ -191,7 +191,7 @@
   {
     "id": "F023",
     "description": "Migrate CreditReconciliation.tsx — add id to tabs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern D"
