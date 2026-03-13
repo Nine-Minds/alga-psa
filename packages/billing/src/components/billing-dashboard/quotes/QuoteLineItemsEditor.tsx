@@ -30,9 +30,32 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   const [manualDescription, setManualDescription] = useState('');
   const [manualQuantity, setManualQuantity] = useState('1');
   const [manualUnitPrice, setManualUnitPrice] = useState('0.00');
+  const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
 
   const updateItem = (localId: string, patch: Partial<DraftQuoteItem>) => {
     onChange(items.map((item) => item.local_id === localId ? { ...item, ...patch } : item));
+  };
+
+  const moveItem = (draggedId: string, targetId: string) => {
+    if (draggedId === targetId) {
+      return;
+    }
+
+    const draggedIndex = items.findIndex((item) => item.local_id === draggedId);
+    const targetIndex = items.findIndex((item) => item.local_id === targetId);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      return;
+    }
+
+    const reorderedItems = [...items];
+    const [draggedItem] = reorderedItems.splice(draggedIndex, 1);
+    reorderedItems.splice(targetIndex, 0, draggedItem);
+    onChange(reorderedItems);
+  };
+
+  const removeItem = (localId: string) => {
+    onChange(items.filter((item) => item.local_id !== localId));
   };
 
   const handleAddService = (service: CatalogPickerItem) => {
@@ -129,17 +152,34 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
           <table className="min-w-full divide-y divide-border text-sm">
             <thead className="bg-muted/40 text-left">
               <tr>
+                <th className="px-3 py-2 font-medium">Move</th>
                 <th className="px-3 py-2 font-medium">Item</th>
                 <th className="px-3 py-2 font-medium">Billing</th>
                 <th className="px-3 py-2 font-medium">Flags</th>
                 <th className="px-3 py-2 font-medium">Qty</th>
                 <th className="px-3 py-2 font-medium">Unit Price</th>
                 <th className="px-3 py-2 font-medium">Total</th>
+                <th className="px-3 py-2 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border bg-background">
               {items.map((item) => (
-                <tr key={item.local_id}>
+                <tr
+                  key={item.local_id}
+                  draggable={!disabled}
+                  onDragStart={() => setDraggedItemId(item.local_id)}
+                  onDragEnd={() => setDraggedItemId(null)}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    if (draggedItemId) {
+                      moveItem(draggedItemId, item.local_id);
+                    }
+                    setDraggedItemId(null);
+                  }}
+                  className={draggedItemId === item.local_id ? 'opacity-60' : undefined}
+                >
+                  <td className="px-3 py-3 align-top text-lg text-muted-foreground">⋮⋮</td>
                   <td className="px-3 py-3 align-top">
                     <Input
                       value={item.description}
@@ -224,6 +264,17 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
                   </td>
                   <td className="px-3 py-3 align-top font-medium text-foreground">
                     {formatDraftQuoteMoney(item.quantity * item.unit_price, currencyCode)}
+                  </td>
+                  <td className="px-3 py-3 align-top">
+                    <Button
+                      id={`quote-line-remove-${item.local_id}`}
+                      type="button"
+                      variant="outline"
+                      onClick={() => removeItem(item.local_id)}
+                      disabled={disabled}
+                    >
+                      Remove
+                    </Button>
                   </td>
                 </tr>
               ))}

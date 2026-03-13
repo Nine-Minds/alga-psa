@@ -383,7 +383,7 @@
   {
     "id": "F045",
     "description": "P1: QuoteLineItems editor — remove items and reorder via drag",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR15"
     ]

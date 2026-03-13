@@ -9,7 +9,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import type { IClient, IContact, IQuote, IQuoteListItem } from '@alga-psa/types';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
-import { addQuoteItem, createQuote, createQuoteFromTemplate, getQuote, listQuotes, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
+import { addQuoteItem, createQuote, createQuoteFromTemplate, getQuote, listQuotes, removeQuoteItem, reorderQuoteItems, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
 import { getAllContacts } from '@alga-psa/clients/actions';
 import QuoteLineItemsEditor from './QuoteLineItemsEditor';
 import { createDraftQuoteItemFromQuoteItem, type DraftQuoteItem } from './quoteLineItemDraft';
@@ -55,6 +55,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [templates, setTemplates] = useState<IQuoteListItem[]>([]);
   const [lineItems, setLineItems] = useState<DraftQuoteItem[]>([]);
+  const [persistedQuoteItemIds, setPersistedQuoteItemIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +97,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
           terms_and_conditions: quote.terms_and_conditions || '',
         });
         setLineItems((quote.quote_items || []).map(createDraftQuoteItemFromQuoteItem));
+        setPersistedQuoteItemIds((quote.quote_items || []).map((item) => item.quote_item_id));
       } else {
         const today = new Date();
         const validUntil = new Date(today);
@@ -107,6 +109,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
           valid_until: validUntil.toISOString().slice(0, 10),
         });
         setLineItems([]);
+        setPersistedQuoteItemIds([]);
       }
 
       setError(null);
@@ -234,7 +237,28 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, onCancel, onSaved }) => 
         });
       }
 
+      const currentQuoteItemIds = nextLineItems
+        .map((item) => item.quote_item_id)
+        .filter((value): value is string => Boolean(value));
+
+      const removedQuoteItemIds = persistedQuoteItemIds.filter((itemId) => !currentQuoteItemIds.includes(itemId));
+      for (const removedQuoteItemId of removedQuoteItemIds) {
+        const removalResult = await removeQuoteItem(removedQuoteItemId);
+        if (typeof removalResult !== 'boolean') {
+          throw new Error(removalResult.permissionError);
+        }
+      }
+
+      if (currentQuoteItemIds.length > 0) {
+        const reorderedItems = await reorderQuoteItems(result.quote_id, currentQuoteItemIds);
+        if ('permissionError' in reorderedItems) {
+          throw new Error(reorderedItems.permissionError);
+        }
+        nextLineItems = reorderedItems.map(createDraftQuoteItemFromQuoteItem);
+      }
+
       setLineItems(nextLineItems);
+      setPersistedQuoteItemIds(nextLineItems.map((item) => item.quote_item_id).filter((value): value is string => Boolean(value)));
 
       onSaved(result.quote_id);
     } catch (submitError) {

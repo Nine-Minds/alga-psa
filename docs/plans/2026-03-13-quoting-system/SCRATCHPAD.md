@@ -108,6 +108,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) F045 complete — P1: Quote lines can now be removed locally and reordered by drag in `QuoteLineItemsEditor`; `QuoteForm.tsx` tracks persisted item IDs, deletes removed rows through `removeQuoteItem`, and writes display order back via `reorderQuoteItems` after each save.
 - (2026-03-13) F044 complete — P1: Added per-row `Optional` and `Recurring` toggles plus billing-frequency selection in `QuoteLineItemsEditor`, with `QuoteForm.tsx` already persisting those flags through the existing quote-item save path.
 - (2026-03-13) F043 complete — P1: Quote line rows now edit description, quantity, and unit price inline in `QuoteLineItemsEditor`, and `QuoteForm.tsx` persists edits for existing rows via `updateQuoteItem` during draft saves.
 - (2026-03-13) F042 complete — P1: Expanded `QuoteLineItemsEditor` with a small manual-entry composer (description, quantity, unit price) backed by `createCustomDraftQuoteItem`, so sales users can add custom quote lines without relying on the service catalog.
