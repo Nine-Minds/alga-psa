@@ -551,7 +551,7 @@
   {
     "id": "F065",
     "description": "P2: Version history — query all versions by parent_quote_id chain",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2-FR5"
     ]
