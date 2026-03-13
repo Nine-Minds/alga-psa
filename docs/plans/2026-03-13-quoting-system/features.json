@@ -503,7 +503,7 @@
   {
     "id": "F059",
     "description": "P2: Totals calculation — recalculate on item add/update/remove",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2-FR3"
     ]
