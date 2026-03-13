@@ -160,3 +160,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) T028 complete — Model: create inserts quote with generated quote_number and logs 'created' activity. Added quote create numbering/activity coverage.
 - (2026-03-13) T029 complete — Model: create sets default status to 'draft'. Added quote create default status coverage.
 - (2026-03-13) T030 complete — Model: update changes fields and logs 'updated' activity. Added quote update activity coverage.
+- (2026-03-13) T031 complete — Model: update rejects invalid status transitions. Added invalid quote transition rejection coverage.

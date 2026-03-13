@@ -242,7 +242,7 @@
   {
     "id": "T031",
     "description": "Model: update rejects invalid status transitions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
