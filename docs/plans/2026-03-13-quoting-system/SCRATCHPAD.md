@@ -108,6 +108,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) F048 complete — P1: `Quote.getById()` now hydrates `quote_activities`, and `QuoteDetail.tsx` renders those entries in a dedicated activity log section for quote-history auditing.
 - (2026-03-13) F047 complete — P1: `QuoteDetail.tsx` now renders status-aware action groups: drafts show Edit/Send/Delete, sent quotes show Revise/Cancel, accepted quotes show the three conversion buttons, and Delete/Cancel are backed by the existing `deleteQuote` and `updateQuote` actions while later-phase actions remain visibly disabled.
 - (2026-03-13) F046 complete — P1: Added `QuoteDetail.tsx` as the default existing-quote view, showing summary metadata, scope, line items, notes, and terms; `QuotesTab.tsx` now routes existing quote selections into this read-only detail screen while reserving `mode=edit` for `QuoteForm`.
 - (2026-03-13) F045 complete — P1: Quote lines can now be removed locally and reordered by drag in `QuoteLineItemsEditor`; `QuoteForm.tsx` tracks persisted item IDs, deletes removed rows through `removeQuoteItem`, and writes display order back via `reorderQuoteItems` after each save.

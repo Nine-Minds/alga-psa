@@ -70,6 +70,7 @@ async function mapQuoteRecord(
   }
 
   resolvedQuote.quote_items = await QuoteItem.listByQuoteId(knexOrTrx, tenant, resolvedQuote.quote_id);
+  resolvedQuote.quote_activities = await QuoteActivity.listByQuoteId(knexOrTrx, tenant, resolvedQuote.quote_id);
   return resolvedQuote;
 }
 

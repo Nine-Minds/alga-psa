@@ -407,7 +407,7 @@
   {
     "id": "F048",
     "description": "P1: QuoteDetail — activity log display",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR16"
     ]

@@ -296,6 +296,27 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit }) =>
           <h3 className="text-base font-semibold">Terms &amp; Conditions</h3>
           <p className="whitespace-pre-wrap text-sm text-foreground">{quote.terms_and_conditions || '—'}</p>
         </section>
+
+        <section className="space-y-3 rounded-lg border border-border p-4">
+          <h3 className="text-base font-semibold">Activity Log</h3>
+          {quote.quote_activities?.length ? (
+            <div className="space-y-3">
+              {quote.quote_activities.map((activity) => (
+                <div key={activity.activity_id} className="rounded-md border border-border p-3">
+                  <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                    <div className="font-medium text-foreground">{activity.description}</div>
+                    <div className="text-xs text-muted-foreground">{formatDate(activity.created_at)}</div>
+                  </div>
+                  <div className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
+                    {activity.activity_type.replace(/_/g, ' ')}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No quote activity recorded yet.</p>
+          )}
+        </section>
       </Box>
     </Card>
   );
