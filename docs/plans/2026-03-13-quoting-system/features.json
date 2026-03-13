@@ -132,7 +132,7 @@
   {
     "id": "F017",
     "description": "P1: Quote model — auto-expiration: if valid_until < today and status is 'sent', set to 'expired' on read",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR5"
     ]
