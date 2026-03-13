@@ -245,7 +245,7 @@
   {
     "id": "F031",
     "description": "P1: Service catalog integration — search/pick service, populate item with defaults",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR10"
     ]
