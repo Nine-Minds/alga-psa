@@ -151,3 +151,5 @@ npm run build
 - F018 — Migrated the SLA settings page to use id-based tabs (`dashboard`, `policies`, `business-hours`, `pause-rules`, `escalation`) for routing and state.
 
 - F019 — Updated the `/msp/settings/notifications` page to use id-based email/internal tab values and direct URL sync.
+
+- F020 — InvoicingHub now uses `generate`, `drafts`, and `finalized` ids directly for `subtab` routing and tab selection.
