@@ -26,7 +26,7 @@
   {
     "id": "F004",
     "description": "P1: Add 'QUOTE' entity type to SharedNumberingService and seed next_number table with prefix='Q-', padding_length=4",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR2"
     ]
