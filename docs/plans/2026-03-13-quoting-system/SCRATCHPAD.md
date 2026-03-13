@@ -116,3 +116,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) F009 complete — P1: Zod schema — status transition validation (only allow valid next statuses). Added reusable quote status transition validation helpers for model enforcement.
 - (2026-03-13) F010 complete — P1: Quote model — getById with tenant isolation and auto-expiration check. Implemented the quote model getById path with tenant isolation and item hydration.
 - (2026-03-13) F011 complete — P1: Quote model — getByNumber (for human-readable lookup). Implemented quote lookup by human-readable number in the model layer.
+- (2026-03-13) F012 complete — P1: Quote model — listByTenant with pagination, sorting, and status/client filtering. Implemented paginated tenant quote listing with status/client filters and sorting.

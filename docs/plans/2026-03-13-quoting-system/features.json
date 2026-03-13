@@ -91,7 +91,7 @@
   {
     "id": "F012",
     "description": "P1: Quote model — listByTenant with pagination, sorting, and status/client filtering",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR5"
     ]
