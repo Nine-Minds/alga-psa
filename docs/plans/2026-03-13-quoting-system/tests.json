@@ -170,7 +170,7 @@
   {
     "id": "T022",
     "description": "Model: getByNumber returns correct quote by human-readable number within tenant",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]

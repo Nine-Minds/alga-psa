@@ -151,3 +151,4 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) T019 complete — Model: getById returns null for wrong tenant (isolation). Added getById tenant isolation coverage.
 - (2026-03-13) T020 complete — Model: getById auto-expires quote if valid_until < today and status is 'sent'. Added sent quote auto-expiration coverage.
 - (2026-03-13) T021 complete — Model: getById does not auto-expire drafts or accepted quotes. Added non-sent auto-expiration guard coverage.
+- (2026-03-13) T022 complete — Model: getByNumber returns correct quote by human-readable number within tenant. Added getByNumber coverage.
