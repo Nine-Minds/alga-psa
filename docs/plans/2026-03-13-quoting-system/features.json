@@ -269,7 +269,7 @@
   {
     "id": "F034",
     "description": "P1: Optional line items — is_optional flag stored and returned in item data",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR11"
     ]

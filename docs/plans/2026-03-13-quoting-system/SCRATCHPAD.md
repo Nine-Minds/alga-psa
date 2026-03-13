@@ -105,6 +105,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) F034 complete — P1: Quote item create/update actions preserve `is_optional`, and the quote item model persists/returns that flag so optional line items are available to downstream UI and portal flows.
 - (2026-03-13) F033 complete — P1: Quote item actions now accept the full billing method enum (`fixed`, `hourly`, `usage`, `per_unit`) through the quote item schema and preserve service-derived billing methods from the catalog.
 - (2026-03-13) F032 complete — P1: `addQuoteItem` and `updateQuoteItem` preserve explicit `unit_price` values, so quote items can override service catalog default pricing without losing the service metadata linkage.
 - (2026-03-13) F031 complete — P1: The `addQuoteItem` action now exposes service catalog-backed quote item creation end-to-end: callers provide `service_id`, and the quote item model denormalizes service name/SKU/rate/unit defaults before persisting.
