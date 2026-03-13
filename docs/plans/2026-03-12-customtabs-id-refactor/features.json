@@ -83,7 +83,7 @@
   {
     "id": "F011",
     "description": "Migrate UserProfile.tsx — add id to 6 tabs, remove slug maps, defaultTab/onTabChange use id directly",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern A"

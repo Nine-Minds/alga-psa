@@ -115,7 +115,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
     setActiveTab(tab);
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      if (tab === 'Profile') {
+      if (tab === 'profile') {
         params.delete('tab');
       } else {
         params.set('tab', tab);
@@ -332,6 +332,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
 
   const tabContent: TabContent[] = [
     {
+      id: 'profile',
       label: "Profile",
       content: (
         <Card>
@@ -484,6 +485,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
       ),
     },
     {
+      id: 'security',
       label: "Security",
       content: (
         <div className="space-y-6">
@@ -493,14 +495,17 @@ export default function UserProfile({ userId }: UserProfileProps) {
       ),
     },
     {
+      id: 'single-sign-on',
       label: "Single Sign-On",
       content: <ConnectSsoWrapper />,
     },
     {
+      id: 'api-keys',
       label: "API Keys",
       content: <ApiKeysSetup />,
     },
     {
+      id: 'notifications',
       label: "Notifications",
       content: (
         <Card>
@@ -552,6 +557,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
       ),
     },
     ...(isCalendarTabAvailable ? [{
+      id: 'calendar',
       label: "Calendar",
       content: <CalendarProfileSettings />,
     }] : []),
