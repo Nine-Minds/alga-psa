@@ -23,6 +23,9 @@ type CreateQuoteInput = Omit<
   | 'version'
 > & Partial<Pick<IQuote, 'status' | 'version'>>;
 
+type CreateQuoteFromTemplateInput = Pick<CreateQuoteInput, 'client_id' | 'quote_date' | 'valid_until'>
+  & Partial<Omit<CreateQuoteInput, 'client_id' | 'quote_date' | 'valid_until' | 'is_template'>>;
+
 type CreateQuoteItemInput = Omit<
   IQuoteItem,
   | 'quote_item_id'
@@ -223,4 +226,78 @@ export const reorderQuoteItems = withAuth(async (
 
   const { knex } = await createTenantKnex();
   return await QuoteItem.reorder(knex, tenant, quoteId, orderedQuoteItemIds);
+});
+
+export const createQuoteFromTemplate = withAuth(async (
+  user,
+  { tenant },
+  templateQuoteId: string,
+  input: CreateQuoteFromTemplateInput
+): Promise<IQuote | ActionPermissionError> => {
+  const denied = await requireBillingCreatePermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+
+  return await knex.transaction(async (trx) => {
+    const template = await Quote.getById(trx, tenant, templateQuoteId);
+    if (!template) {
+      throw new Error(`Quote template ${templateQuoteId} not found in tenant ${tenant}`);
+    }
+
+    if (!template.is_template) {
+      throw new Error(`Quote ${templateQuoteId} is not a template`);
+    }
+
+    const actorUserId = getActorUserId(user);
+    const parsedQuote = createQuoteSchema.parse({
+      client_id: input.client_id,
+      contact_id: input.contact_id ?? null,
+      title: input.title ?? template.title,
+      description: input.description ?? template.description ?? null,
+      quote_date: input.quote_date,
+      valid_until: input.valid_until,
+      po_number: input.po_number ?? null,
+      internal_notes: input.internal_notes ?? template.internal_notes ?? null,
+      client_notes: input.client_notes ?? template.client_notes ?? null,
+      terms_and_conditions: input.terms_and_conditions ?? template.terms_and_conditions ?? null,
+      currency_code: input.currency_code ?? template.currency_code,
+      is_template: false,
+      created_by: input.created_by ?? actorUserId,
+    });
+
+    const createdQuote = await Quote.create(trx, tenant, parsedQuote);
+
+    for (const templateItem of template.quote_items ?? []) {
+      await QuoteItem.create(trx, tenant, {
+        quote_id: createdQuote.quote_id,
+        service_id: templateItem.service_id ?? null,
+        service_item_kind: templateItem.service_item_kind ?? null,
+        service_name: templateItem.service_name ?? null,
+        service_sku: templateItem.service_sku ?? null,
+        billing_method: templateItem.billing_method ?? null,
+        description: templateItem.description,
+        quantity: templateItem.quantity,
+        unit_price: templateItem.unit_price,
+        unit_of_measure: templateItem.unit_of_measure ?? null,
+        display_order: templateItem.display_order,
+        phase: templateItem.phase ?? null,
+        is_optional: templateItem.is_optional,
+        is_selected: templateItem.is_selected,
+        is_recurring: templateItem.is_recurring,
+        billing_frequency: templateItem.billing_frequency ?? null,
+        is_discount: templateItem.is_discount ?? false,
+        discount_type: templateItem.discount_type ?? null,
+        discount_percentage: templateItem.discount_percentage ?? null,
+        applies_to_item_id: templateItem.applies_to_item_id ?? null,
+        applies_to_service_id: templateItem.applies_to_service_id ?? null,
+        is_taxable: templateItem.is_taxable ?? true,
+        created_by: actorUserId,
+      });
+    }
+
+    return await Quote.getById(trx, tenant, createdQuote.quote_id) as IQuote;
+  });
 });

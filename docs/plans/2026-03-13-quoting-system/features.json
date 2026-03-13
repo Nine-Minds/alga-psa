@@ -293,7 +293,7 @@
   {
     "id": "F036a",
     "description": "P1: Server action — createQuoteFromTemplate: copy template items into new draft quote",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR8",
       "P1-FR13"
