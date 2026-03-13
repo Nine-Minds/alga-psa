@@ -38,7 +38,7 @@ const catalog: WorkflowDesignerCatalogRecord[] = [
 ];
 
 describe('workflow designer grouped action step helpers', () => {
-  it('T070/T071/T072: grouped action config preserves runtime action fields and additive group metadata', () => {
+  it('T036/T037/T061/T064/T070/T071/T072: core grouped-tile insertion builds an action.call config with runtime action fields and additive group metadata', () => {
     expect(
       buildGroupedActionStepConfig(
         {
@@ -58,7 +58,7 @@ describe('workflow designer grouped action step helpers', () => {
     });
   });
 
-  it('T073: app selections preserve additive app metadata', () => {
+  it('T063/T066/T073: app grouped-tile insertion preserves additive app metadata without changing the action.call runtime contract', () => {
     expect(
       buildGroupedActionStepConfig({
         actionId: 'slack.send_message',
@@ -73,7 +73,7 @@ describe('workflow designer grouped action step helpers', () => {
     });
   });
 
-  it('T084: grouped steps can remain action-unselected until the builder makes an explicit choice', () => {
+  it('T062/T065/T084: transform grouped-tile insertion can stay action-unselected while still scoping the action.call step to the transform group', () => {
     expect(
       buildGroupedActionStepConfig({
         groupKey: 'transform',

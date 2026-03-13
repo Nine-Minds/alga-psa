@@ -22,7 +22,7 @@ describe('queryActions contact read permissions', () => {
     vi.clearAllMocks();
   });
 
-  it('T297: getContactsByClient rejects without contact read permission before opening tenant DB access', async () => {
+  it('T297/T329: getContactsByClient rejects without contact read permission before opening tenant DB access', async () => {
     hasPermissionAsyncMock.mockResolvedValue(false);
 
     const { getContactsByClient } = await import('./queryActions');
@@ -38,7 +38,7 @@ describe('queryActions contact read permissions', () => {
     );
   });
 
-  it('T297: getAllContacts rejects without contact read permission before opening tenant DB access', async () => {
+  it('T297/T329: getAllContacts rejects without contact read permission before opening tenant DB access', async () => {
     hasPermissionAsyncMock.mockResolvedValue(false);
 
     const { getAllContacts } = await import('./queryActions');

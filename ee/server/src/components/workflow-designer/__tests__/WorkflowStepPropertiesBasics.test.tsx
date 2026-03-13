@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { WorkflowStepNameField } from '../WorkflowStepNameField';
 import { WorkflowStepSaveOutputSection } from '../WorkflowStepSaveOutputSection';
@@ -10,6 +10,10 @@ import { WorkflowStepSaveOutputSection } from '../WorkflowStepSaveOutputSection'
 const generateSaveAsName = (actionId: string) => actionId.replace(/\./g, '_');
 
 describe('workflow step properties basics', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it('T099/T100: keeps step naming and save-output controls available before and after action selection', () => {
     const onStepNameChange = vi.fn();
     const onSaveAsChange = vi.fn();
@@ -74,7 +78,7 @@ describe('workflow step properties basics', () => {
     expect(onCopyPath).toHaveBeenLastCalledWith('vars.tickets_create');
   });
 
-  it('T296: read-only grouped steps can still inspect step naming and transform outputs without editing them', () => {
+  it('T296/T320: read-only grouped steps can still inspect step naming and transform outputs without editing them', () => {
     const onStepNameChange = vi.fn();
     const onSaveAsChange = vi.fn();
     const onCopyPath = vi.fn();
@@ -100,7 +104,7 @@ describe('workflow step properties basics', () => {
     );
 
     expect(screen.getByDisplayValue('Transform ticket summary')).toBeDisabled();
-    expect(screen.getByRole('switch')).toBeDisabled();
+    expect(document.getElementById('workflow-step-saveAs-toggle-readonly-step')).toBeDisabled();
     expect(screen.getByDisplayValue('shortSummary')).toBeDisabled();
     expect(screen.getByText('vars.shortSummary')).toBeInTheDocument();
 

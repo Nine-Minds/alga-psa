@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@alga-psa/tenancy/actions', () => ({
   listTenantSecrets: vi.fn().mockResolvedValue([]),
@@ -84,7 +84,11 @@ const globals: WorkflowDataContext['globals'] = {
 };
 
 describe('MappingPanel reference sources', () => {
-  it('shows payload, previous-step outputs, and workflow metadata in Reference mode', async () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('T159: shows payload, previous-step outputs, and workflow metadata source groups before drilling into nested references', async () => {
     render(
       <MappingPanel
         value={{}}
@@ -126,10 +130,10 @@ describe('MappingPanel reference sources', () => {
     expect(screen.getAllByText('Workflow Meta')[0]).toBeInTheDocument();
     expect(screen.getByText('vars.ticketResult')).toBeInTheDocument();
     expect(screen.getByText('(Create Ticket)')).toBeInTheDocument();
-    expect(screen.getByTestId('mapping-panel-editor')).toBeInTheDocument();
+    expect(screen.getAllByTestId('mapping-panel-editor')[0]).toBeInTheDocument();
   });
 
-  it('only shows catch and loop sources when the current step context allows them', () => {
+  it('T158/T316/T317: only shows catch and loop sources when the current step context allows them and leaves the first grouped action step without previous vars', () => {
     const { rerender } = render(
       <MappingPanel
         value={{}}

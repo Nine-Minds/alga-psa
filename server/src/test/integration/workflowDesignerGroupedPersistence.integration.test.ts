@@ -282,7 +282,7 @@ afterAll(async () => {
 });
 
 describe('workflow designer grouped-step persistence', () => {
-  it('T289/T326/T327: mixed grouped-step drafts preserve downstream data context across save and reload', async () => {
+  it('T289/T304/T326/T327: mixed grouped-step drafts preserve downstream data context across save and reload', async () => {
     const created = await createWorkflowDefinitionAction({
       key: 'test.mixed-grouped-persistence',
       definition: {
@@ -348,7 +348,7 @@ describe('workflow designer grouped-step persistence', () => {
     expectGroupedValidationError(reloadedDraft?.validation_errors as Record<string, unknown>[] | undefined);
   });
 
-  it('T288: mixed structured and advanced grouped-step drafts still publish without contract drift', async () => {
+  it('T288/T314: mixed structured and advanced grouped-step drafts still publish without contract drift', async () => {
     const created = await createWorkflowDefinitionAction({
       key: 'test.mixed-grouped-publish',
       definition: {
@@ -420,7 +420,7 @@ describe('workflow designer grouped-step persistence', () => {
     expect(rowAfterFailedPublish?.status).toBe('draft');
   });
 
-  it('T290/T328: workflow import/export preserves grouped action.call definitions that mix structured and advanced mappings', async () => {
+  it('T290/T307/T328: workflow import/export preserves grouped action.call definitions that mix structured and advanced mappings', async () => {
     const definition = buildMixedDefinition(uuidv4());
     const created = await createWorkflowDefinitionAction({
       key: 'test.grouped-import-export',
@@ -494,6 +494,93 @@ describe('workflow designer grouped-step persistence', () => {
           }
         }
       ]
+    });
+  });
+
+  it('T301/T303/T315/T325: grouped ticket and transform drafts round-trip fixed picker literals plus structured references through draft save and reload', async () => {
+    const created = await createWorkflowDefinitionAction({
+      key: 'test.grouped-ticket-transform-roundtrip',
+      definition: {
+        id: uuidv4(),
+        ...buildWorkflowDefinition({
+          name: 'Ticket and transform round trip',
+          payloadSchemaRef: TEST_SCHEMA_REF,
+          steps: [stateSetStep('state-1', 'READY')]
+        })
+      }
+    });
+
+    const definition: WorkflowDefinition = {
+      id: created.workflowId,
+      ...buildWorkflowDefinition({
+        name: 'Ticket and transform round trip',
+        payloadSchemaRef: TEST_SCHEMA_REF,
+        steps: [
+          {
+            id: 'truncate-step',
+            type: 'action.call',
+            name: 'Truncate Text',
+            config: {
+              designerGroupKey: 'transform',
+              designerTileKind: 'transform',
+              actionId: 'transform.truncate_text',
+              version: 1,
+              saveAs: 'trimmedTitle',
+              inputMapping: {
+                text: { $expr: 'payload.foo' },
+                maxLength: 24,
+                strategy: 'end'
+              }
+            }
+          },
+          {
+            id: 'ticket-step',
+            type: 'action.call',
+            name: 'Create Ticket',
+            config: {
+              designerGroupKey: 'ticket',
+              designerTileKind: 'core-object',
+              actionId: 'tickets.create',
+              version: 1,
+              saveAs: 'createdTicket',
+              inputMapping: {
+                client_id: '00000000-0000-0000-0000-000000000111',
+                title: { $expr: 'vars.trimmedTitle.text' },
+                description: 'Created from grouped workflow draft',
+                board_id: '00000000-0000-0000-0000-000000000222',
+                status_id: '00000000-0000-0000-0000-000000000333',
+                priority_id: '00000000-0000-0000-0000-000000000444'
+              }
+            }
+          }
+        ]
+      })
+    };
+
+    await updateWorkflowDefinitionDraftAction({
+      workflowId: created.workflowId,
+      definition
+    });
+
+    const listed = await listWorkflowDefinitionsAction();
+    const reloadedDraft = listed.find((workflow) => workflow.workflow_id === created.workflowId);
+
+    expect(reloadedDraft?.draft_definition).toEqual(definition);
+    expect((reloadedDraft?.draft_definition as WorkflowDefinition).steps).toEqual(
+      definition.steps
+    );
+    expect((reloadedDraft?.draft_definition as WorkflowDefinition).steps?.[1]).toMatchObject({
+      type: 'action.call',
+      config: {
+        actionId: 'tickets.create',
+        inputMapping: {
+          client_id: '00000000-0000-0000-0000-000000000111',
+          title: { $expr: 'vars.trimmedTitle.text' },
+          board_id: '00000000-0000-0000-0000-000000000222',
+          status_id: '00000000-0000-0000-0000-000000000333',
+          priority_id: '00000000-0000-0000-0000-000000000444'
+        }
+      }
     });
   });
 });

@@ -48,7 +48,7 @@ const baseDataContext: DataContext = {
 };
 
 describe('workflow reference options', () => {
-  it('builds selectable payload, step-output, and metadata options for Reference mode', () => {
+  it('T141/T142/T143/T146/T147/T148: builds selectable payload, step-output, and metadata options for Reference mode', () => {
     const options = buildWorkflowReferenceFieldOptions(payloadSchema, baseDataContext);
     const values = options.map((option) => option.value);
 
@@ -89,7 +89,7 @@ describe('workflow reference options', () => {
     expect(values).not.toContain('payload.data');
   });
 
-  it('only exposes error options when the current step is inside catch context', () => {
+  it('T144/T317: only exposes error options when the current step is inside catch context', () => {
     const normalValues = buildWorkflowReferenceFieldOptions(payloadSchema, baseDataContext).map(
       (option) => option.value
     );
@@ -105,7 +105,7 @@ describe('workflow reference options', () => {
     expect(catchValues).toContain('error.stack');
   });
 
-  it('adds loop item and index variables when the current step is inside a forEach block', () => {
+  it('T145/T316: adds loop item and index variables when the current step is inside a forEach block', () => {
     const values = buildWorkflowReferenceFieldOptions(payloadSchema, {
       ...baseDataContext,
       forEach: {

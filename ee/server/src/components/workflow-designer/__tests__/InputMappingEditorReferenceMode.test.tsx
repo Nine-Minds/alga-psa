@@ -102,7 +102,7 @@ afterEach(() => {
 });
 
 describe('InputMappingEditor reference mode', () => {
-  it('replaces the whole expression with a direct field reference when a structured source is chosen', async () => {
+  it('T151/T313: replaces the whole expression with a direct field reference when a structured source is chosen', async () => {
     const onChange = vi.fn();
 
     await act(async () => {

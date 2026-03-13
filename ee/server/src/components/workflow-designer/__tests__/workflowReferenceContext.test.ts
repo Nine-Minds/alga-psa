@@ -83,7 +83,7 @@ const dataContext: WorkflowDataContext = {
 };
 
 describe('workflow reference context', () => {
-  it('builds expression autocomplete context from payload, step outputs, metadata, catch state, and loop state', () => {
+  it('T149: builds expression autocomplete context from payload, step outputs, metadata, catch state, and loop state', () => {
     const baseContext = buildWorkflowReferenceExpressionContext(dataContext);
     const catchContext = buildWorkflowReferenceExpressionContext({
       ...dataContext,
@@ -119,7 +119,7 @@ describe('workflow reference context', () => {
     });
   });
 
-  it('builds type lookup entries from payload, step outputs, metadata, catch sources, and loop variables', () => {
+  it('T150: builds type lookup entries from payload, step outputs, metadata, catch sources, and loop variables', () => {
     const baseLookup = buildWorkflowReferenceSourceTypeLookup(dataContext, 'payload');
     const catchLookup = buildWorkflowReferenceSourceTypeLookup(
       { ...dataContext, inCatchBlock: true },

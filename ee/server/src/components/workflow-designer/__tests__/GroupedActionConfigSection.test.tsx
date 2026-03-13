@@ -99,7 +99,7 @@ describe('GroupedActionConfigSection', () => {
     expect(screen.getByText('Select a Ticket action before configuring inputs or publishing this workflow.')).toBeInTheDocument();
   });
 
-  it('T082/T083: builds action-select options from the grouped record only', () => {
+  it('T082/T083/T321: builds action-select options from only the selected grouped business or app record', () => {
     expect(buildGroupedActionSelectOptions(ticketRecord)).toEqual([
       { value: 'tickets.create', label: 'Create Ticket' },
       { value: 'tickets.update_fields', label: 'Update Ticket' },

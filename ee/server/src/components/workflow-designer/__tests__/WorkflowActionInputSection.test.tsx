@@ -133,7 +133,7 @@ describe('WorkflowActionInputSection', () => {
     expect(screen.getByTestId('mapping-panel-transform-step')).toHaveTextContent('{"maxLength":24}');
   });
 
-  it('T293: app grouped steps reuse the same inline field editor model when their schemas are compatible', () => {
+  it('T293/T322: app grouped steps reuse the same inline field editor model when their schemas are compatible', () => {
     render(
       <WorkflowActionInputSection
         stepId="app-step"
@@ -171,7 +171,7 @@ describe('WorkflowActionInputSection', () => {
     expect(screen.getByTestId('mapping-panel-app-step')).toHaveTextContent('{"channel":"ops-alerts"}');
   });
 
-  it('T295/T296: keeps inline field state visible for read-only grouped steps while disabling edits', () => {
+  it('T295/T296/T320: keeps inline field state visible for read-only grouped steps while disabling edits', () => {
     render(
       <WorkflowActionInputSection
         stepId="readonly-step"

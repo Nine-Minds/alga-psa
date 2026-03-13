@@ -282,7 +282,7 @@
   {
     "id": "T036",
     "description": "Playwright: grouped tiles can still be dragged onto valid workflow pipes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
@@ -290,7 +290,7 @@
   {
     "id": "T037",
     "description": "Playwright: grouped tiles can still be inserted by click-to-add",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037"
     ]
@@ -298,7 +298,7 @@
   {
     "id": "T038",
     "description": "Visual regression: the floating palette container still renders correctly with grouped tile contents",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038"
     ]
@@ -306,7 +306,7 @@
   {
     "id": "T039",
     "description": "Playwright: grouped palette enters a usable degraded state when registry data fails to load",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039"
     ]
@@ -314,7 +314,7 @@
   {
     "id": "T040",
     "description": "Playwright: grouped palette remains visible but non-editable in read-only sessions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040"
     ]
@@ -322,7 +322,7 @@
   {
     "id": "T041",
     "description": "Playwright: palette search matches a grouped tile by contained action label",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041"
     ]
@@ -330,7 +330,7 @@
   {
     "id": "T042",
     "description": "Playwright: palette search matches a grouped tile by contained actionId",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042"
     ]
@@ -338,7 +338,7 @@
   {
     "id": "T043",
     "description": "Playwright: palette search matches a grouped tile by contained input field names",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043"
     ]
@@ -346,7 +346,7 @@
   {
     "id": "T044",
     "description": "Playwright: palette search matches a grouped tile by contained output field names",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F044"
     ]
@@ -354,7 +354,7 @@
   {
     "id": "T045",
     "description": "Playwright: palette search matches a grouped tile by the group label",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045"
     ]
@@ -362,7 +362,7 @@
   {
     "id": "T046",
     "description": "Playwright: palette search matches a grouped tile by the group description",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046"
     ]
@@ -370,7 +370,7 @@
   {
     "id": "T047",
     "description": "Playwright: searching create ticket returns the Ticket tile and not duplicate hidden action rows",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047",
       "F059"
@@ -379,7 +379,7 @@
   {
     "id": "T048",
     "description": "Playwright: searching find contact returns the Contact tile",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F048"
     ]
@@ -387,7 +387,7 @@
   {
     "id": "T049",
     "description": "Playwright: searching truncate returns the Transform tile",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F049"
     ]
@@ -395,7 +395,7 @@
   {
     "id": "T050",
     "description": "Playwright: control blocks still appear in search results when the query matches them",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ]
@@ -403,7 +403,7 @@
   {
     "id": "T051",
     "description": "Playwright: clearing the search box restores the full grouped palette",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051",
       "F060"
@@ -420,7 +420,7 @@
   {
     "id": "T053",
     "description": "Playwright: app/plugin tile contents participate in palette search",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053"
     ]
@@ -428,7 +428,7 @@
   {
     "id": "T054",
     "description": "Playwright: palette search remains interactive while a grouped tile is being dragged",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054"
     ]
@@ -444,7 +444,7 @@
   {
     "id": "T056",
     "description": "Playwright: legacy individually rendered nodes still participate in search",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056"
     ]
@@ -452,7 +452,7 @@
   {
     "id": "T057",
     "description": "Playwright: singular and plural object labels both match the intended grouped tile",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F057"
     ]
@@ -460,7 +460,7 @@
   {
     "id": "T058",
     "description": "Playwright: verb-object queries like assign ticket still match the Ticket tile",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058"
     ]
@@ -468,7 +468,7 @@
   {
     "id": "T059",
     "description": "Playwright: search never duplicates a grouped tile once per contained action",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F059"
     ]
@@ -476,7 +476,7 @@
   {
     "id": "T060",
     "description": "Playwright: clearing search preserves current selection and drag target context",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060"
     ]
@@ -484,7 +484,7 @@
   {
     "id": "T061",
     "description": "Playwright: dropping a core-object tile creates an action.call step scoped to that group",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061"
     ]
@@ -492,7 +492,7 @@
   {
     "id": "T062",
     "description": "Playwright: dropping the Transform tile creates an action.call step scoped to the transform group",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F062"
     ]
@@ -500,7 +500,7 @@
   {
     "id": "T063",
     "description": "Playwright: dropping an app tile creates an action.call step scoped to that app",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063"
     ]
@@ -508,7 +508,7 @@
   {
     "id": "T064",
     "description": "Playwright: clicking a core-object tile creates an action.call step scoped to that group",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F064"
     ]
@@ -516,7 +516,7 @@
   {
     "id": "T065",
     "description": "Playwright: clicking the Transform tile creates an action.call step scoped to the transform group",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F065"
     ]
@@ -524,7 +524,7 @@
   {
     "id": "T066",
     "description": "Playwright: clicking an app tile creates an action.call step scoped to that app",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066"
     ]
@@ -1124,7 +1124,7 @@
   {
     "id": "T141",
     "description": "Playwright: Reference mode exposes workflow payload fields as selectable sources",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F141"
     ]
@@ -1132,7 +1132,7 @@
   {
     "id": "T142",
     "description": "Playwright: Reference mode exposes previous step outputs as selectable sources",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F142"
     ]
@@ -1140,7 +1140,7 @@
   {
     "id": "T143",
     "description": "Playwright: Reference mode exposes workflow metadata fields as selectable sources",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F143"
     ]
@@ -1148,7 +1148,7 @@
   {
     "id": "T144",
     "description": "Playwright: Reference mode exposes catch-block error fields inside catch context",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F144"
     ]
@@ -1156,7 +1156,7 @@
   {
     "id": "T145",
     "description": "Playwright: Reference mode exposes forEach item and index fields inside loop context",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F145"
     ]
@@ -1164,7 +1164,7 @@
   {
     "id": "T146",
     "description": "Playwright: previous step outputs are grouped by producer step or saveAs name in Reference mode",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F146"
     ]
@@ -1172,7 +1172,7 @@
   {
     "id": "T147",
     "description": "Playwright: object-accepting target fields can select a step output root object directly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F147"
     ]
@@ -1180,7 +1180,7 @@
   {
     "id": "T148",
     "description": "Playwright: primitive-accepting target fields can select nested property paths directly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F148"
     ]
@@ -1188,7 +1188,7 @@
   {
     "id": "T149",
     "description": "Integration: Reference mode continues feeding the expression-editor autocomplete context",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F149"
     ]
@@ -1196,7 +1196,7 @@
   {
     "id": "T150",
     "description": "Integration: Reference mode continues feeding type-compatibility hints",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F150"
     ]
@@ -1260,7 +1260,7 @@
   {
     "id": "T158",
     "description": "Playwright: the first action step shows no previous-step output sources when none exist yet",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F158"
     ]
@@ -1268,7 +1268,7 @@
   {
     "id": "T159",
     "description": "Playwright: builders can inspect source groups before drilling into nested fields in Reference mode",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F159"
     ]
@@ -1828,7 +1828,7 @@
   {
     "id": "T229",
     "description": "Playwright: transform actions participate in grouped palette search",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F229"
     ]
@@ -2380,7 +2380,7 @@
   {
     "id": "T298",
     "description": "Playwright: grouped-step validation errors remain visible after save and reload",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F298"
     ]
@@ -2388,7 +2388,7 @@
   {
     "id": "T299",
     "description": "Integration: publish validation remains consistent with the unchanged runtime contract after the refactor",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F299"
     ]
@@ -2404,7 +2404,7 @@
   {
     "id": "T301",
     "description": "E2E: builder creates a workflow by dragging Ticket, choosing Create Ticket, filling required fields through the inline editor, and saving successfully",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021",
       "F061",
@@ -2416,7 +2416,7 @@
   {
     "id": "T302",
     "description": "E2E: builder creates a workflow by dragging Ticket, choosing Find Ticket, and then switching to Create Ticket without losing still-valid fields",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F082",
       "F093",
@@ -2427,7 +2427,7 @@
   {
     "id": "T303",
     "description": "E2E: builder creates a workflow by dragging Transform, choosing truncate-text, saving the output, and referencing it from a later Ticket step",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031",
       "F062",
@@ -2440,7 +2440,7 @@
   {
     "id": "T304",
     "description": "E2E: builder creates a workflow by dragging Transform, choosing build-object, renaming fields, and referencing the resulting object from a later action",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F262",
       "F263",
@@ -2452,7 +2452,7 @@
   {
     "id": "T305",
     "description": "E2E: searching create ticket highlights the Ticket tile, not a hidden action tile, and click insertion creates the correct grouped step",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F047",
       "F064",
@@ -2462,7 +2462,7 @@
   {
     "id": "T306",
     "description": "E2E: searching truncate highlights the Transform tile and click insertion creates the correct grouped step",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F049",
       "F065",
@@ -2472,7 +2472,7 @@
   {
     "id": "T307",
     "description": "E2E: an existing legacy action.call workflow draft opens in the grouped-step UI without migration and can be saved again successfully",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F074",
       "F287",
@@ -2483,7 +2483,7 @@
   {
     "id": "T308",
     "description": "E2E: builder uses a fixed board picker, fixed status picker, and fixed priority picker to author a ticket action without entering raw IDs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F181",
       "F184",
@@ -2494,7 +2494,7 @@
   {
     "id": "T309",
     "description": "E2E: builder uses a prior contacts.find output to populate contact_id through Reference mode while using fixed pickers for other ticket fields",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F142",
       "F148",
@@ -2505,7 +2505,7 @@
   {
     "id": "T310",
     "description": "E2E: builder uses a fixed client to unlock contact and location pickers, then changes the client and sees dependent choices update correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F201",
       "F202",
@@ -2517,7 +2517,7 @@
   {
     "id": "T311",
     "description": "E2E: builder uses a fixed board to unlock category and subcategory pickers, then changes the board and sees dependent choices update correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F203",
       "F205",
@@ -2529,7 +2529,7 @@
   {
     "id": "T312",
     "description": "E2E: builder uses dynamic references for client and board and sees dependent fixed pickers remain disabled with clear explanations",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F210",
       "F211",
@@ -2540,7 +2540,7 @@
   {
     "id": "T313",
     "description": "E2E: builder authors a grouped step entirely through structured references and never opens Advanced mode",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F107",
       "F108",
@@ -2552,7 +2552,7 @@
   {
     "id": "T314",
     "description": "E2E: builder falls back to Advanced mode for a legacy expression and the workflow still saves, reloads, and publishes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F281",
       "F284",
@@ -2563,7 +2563,7 @@
   {
     "id": "T315",
     "description": "E2E: builder mixes structured field authoring, fixed ticket pickers, and transform outputs in a single workflow draft and saves successfully",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F101",
       "F181",
@@ -2574,7 +2574,7 @@
   {
     "id": "T316",
     "description": "E2E: a grouped action step inside a forEach block still exposes loop item and index references in the inline field editor",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F145",
       "F160"
@@ -2583,7 +2583,7 @@
   {
     "id": "T317",
     "description": "E2E: a grouped action step inside a catch block still exposes error references in the inline field editor",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F144",
       "F160"
@@ -2592,7 +2592,7 @@
   {
     "id": "T318",
     "description": "E2E: grouped action steps remain reorderable and still preserve their selected action and authored field values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F076",
       "F096",
@@ -2602,7 +2602,7 @@
   {
     "id": "T319",
     "description": "E2E: grouped action steps moved across branches preserve action selection and valid field values",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F077",
       "F155",
@@ -2612,7 +2612,7 @@
   {
     "id": "T320",
     "description": "E2E: read-only workflow users can inspect grouped steps and transform outputs but cannot edit them",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040",
       "F295",
@@ -2622,7 +2622,7 @@
   {
     "id": "T321",
     "description": "E2E: app/plugin tiles render when available and can create grouped steps with filtered action dropdowns",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032",
       "F063",
@@ -2634,7 +2634,7 @@
   {
     "id": "T322",
     "description": "E2E: app/plugin grouped steps can use the inline field editor when their schemas are supported",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F293",
       "F294"
@@ -2643,7 +2643,7 @@
   {
     "id": "T323",
     "description": "Integration: grouped-step validation continues to block publish when required fields are missing after action changes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F090",
       "F116",
@@ -2653,7 +2653,7 @@
   {
     "id": "T324",
     "description": "Integration: grouped-step validation errors remain attached to the correct step after save and reload",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F298",
       "F299"
@@ -2662,7 +2662,7 @@
   {
     "id": "T325",
     "description": "Integration: fixed picker values and structured references round-trip through draft save/load without contract drift",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F112",
       "F113",
@@ -2696,7 +2696,7 @@
   {
     "id": "T328",
     "description": "Integration: the grouped palette model does not break workflow import/export of unchanged action.call definitions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F290",
       "F299"
@@ -2705,7 +2705,7 @@
   {
     "id": "T329",
     "description": "Permissions: ticket-core picker option retrieval respects the current workflow authoring user's existing data-read permissions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F297"
     ]

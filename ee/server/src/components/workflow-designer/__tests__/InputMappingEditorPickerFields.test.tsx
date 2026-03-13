@@ -177,7 +177,7 @@ const getSelectValues = (testId: string): string[] =>
   Array.from((screen.getByTestId(testId) as HTMLSelectElement).options).map((option) => option.value);
 
 describe('InputMappingEditor picker-backed fields', () => {
-  it('T166/T181/T182/T183/T184/T185/T186/T187/T188/T189/T190: renders ticket-core picker-backed fields with picker UI in fixed mode', async () => {
+  it('T166/T181/T182/T183/T184/T185/T186/T187/T188/T189/T190/T308: renders ticket-core picker-backed fields with picker UI in fixed mode so builders can author ticket actions without raw ids', async () => {
     await act(async () => {
       render(
         <InputMappingEditor
@@ -326,7 +326,7 @@ describe('InputMappingEditor picker-backed fields', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('T167/T168/T191/T192/T193/T194/T195/T196/T197/T198/T199: picker-backed fields can switch to reference or advanced mode and back to fixed without losing picker UI', async () => {
+  it('T167/T168/T191/T192/T193/T194/T195/T196/T197/T198/T199/T309: picker-backed fields can switch to reference or advanced mode and back to fixed without losing picker UI', async () => {
     const changeSpy = vi.fn();
 
     const Harness = () => {
@@ -434,7 +434,7 @@ describe('InputMappingEditor picker-backed fields', () => {
     );
   });
 
-  it('T201/T202/T203/T204/T205/T214/T217: dependent ticket pickers narrow to fixed upstream scope, refresh immediately, and rehydrate valid saved selections', async () => {
+  it('T201/T202/T203/T204/T205/T214/T217/T310/T311: dependent ticket pickers narrow to fixed upstream scope, refresh immediately, and rehydrate valid saved selections', async () => {
     const targetFields = [
       {
         name: 'client_id',
@@ -661,7 +661,7 @@ describe('InputMappingEditor picker-backed fields', () => {
     expect(screen.getByText('Choose a fixed Board first to load subcategory options.')).toBeVisible();
   });
 
-  it('T210/T211/T212/T213/T218/T219: dynamic upstream references keep dependent fixed pickers disabled while still allowing a switch back to Reference mode', async () => {
+  it('T210/T211/T212/T213/T218/T219/T312: dynamic upstream references keep dependent fixed pickers disabled while still allowing a switch back to Reference mode', async () => {
     const ClientScopeHarness = () => {
       const [value, setValue] = React.useState({
         client_id: { $expr: 'payload.client.id' },

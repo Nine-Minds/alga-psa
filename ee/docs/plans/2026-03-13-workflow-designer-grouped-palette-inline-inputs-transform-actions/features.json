@@ -2532,7 +2532,7 @@
   {
     "id": "F298",
     "description": "Keep grouped-step validation errors visible in the properties panel after save and reload",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Compatibility, Save/Load, and Validation"
     ]
@@ -2540,7 +2540,7 @@
   {
     "id": "F299",
     "description": "Keep grouped-step publish validation consistent with the existing runtime contract after the designer refactor",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Compatibility, Save/Load, and Validation",
       "Rollout / Migration"

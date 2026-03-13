@@ -333,7 +333,7 @@ test.describe('Workflow Designer UI - basic', () => {
     }
   });
 
-  test('registry discovery failure surfaces toast and disables palette usage', async ({ page }) => {
+  test('T039: grouped palette enters a usable degraded state when registry data fails to load', async ({ page }) => {
     test.setTimeout(120000);
     await applyWorkflowOverrides(page, { failRegistries: true });
 

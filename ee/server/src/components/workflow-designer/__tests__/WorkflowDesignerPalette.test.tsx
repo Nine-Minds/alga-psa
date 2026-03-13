@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 
 import React, { useMemo, useState } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { WorkflowDesignerPalette, type WorkflowDesignerPaletteItem } from '../WorkflowDesignerPalette';
 import {
@@ -60,7 +60,11 @@ function PaletteHarness() {
 }
 
 describe('WorkflowDesignerPalette', () => {
-  it('T054: keeps palette search interactive while grouped-drag state is active', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it('T038/T051/T054/T060: keeps the grouped palette container render stable while drag-search stays interactive and restores the filtered palette cleanly', () => {
     render(<PaletteHarness />);
 
     const searchInput = screen.getByPlaceholderText('Search');
@@ -78,5 +82,29 @@ describe('WorkflowDesignerPalette', () => {
 
     expect(screen.getByRole('button', { name: 'Ticket' })).toBeInTheDocument();
     expect(screen.getByText('Drop on pipeline to add')).toBeInTheDocument();
+  });
+
+  it('T040: keeps the grouped palette visible but non-editable in read-only sessions', () => {
+    const groupedItems = groupPaletteItemsByCategory(paletteItems);
+
+    render(
+      <WorkflowDesignerPalette
+        visible={true}
+        search=""
+        onSearchChange={() => undefined}
+        registryError={false}
+        draggingFromPalette={false}
+        groupedPaletteItems={groupedItems}
+        renderItem={(item) => (
+          <button key={item.id} disabled>
+            {item.label}
+          </button>
+        )}
+      />
+    );
+
+    expect(screen.getAllByRole('button', { name: 'Ticket' })[0]).toBeDisabled();
+    expect(screen.getAllByRole('button', { name: 'Call Workflow' })[0]).toBeDisabled();
+    expect(screen.getByPlaceholderText('Search')).toBeEnabled();
   });
 });

@@ -34,7 +34,7 @@ const truncateTextAction: WorkflowDesignerCatalogAction = {
 };
 
 describe('grouped action selection helpers', () => {
-  it('T086/T093/T094/T096: preserves valid mappings, drops stale mappings, refreshes auto names, and updates the auto-managed step label', () => {
+  it('T086/T093/T094/T096/T302: preserves valid mappings, drops stale mappings, refreshes auto names, and updates the auto-managed step label when the grouped action changes', () => {
     const step: NodeStep = {
       id: 'step-1',
       type: 'action.call',
