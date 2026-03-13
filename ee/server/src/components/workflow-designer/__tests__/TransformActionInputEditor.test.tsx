@@ -4,10 +4,6 @@ import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@alga-psa/tenancy/actions', () => ({
-  listTenantSecrets: vi.fn().mockResolvedValue([]),
-}));
-
 vi.mock('@alga-psa/integrations/actions', () => ({
   getTicketFieldOptions: vi.fn().mockResolvedValue({
     options: {
@@ -60,22 +56,6 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
       ))}
     </select>
   ),
-}));
-
-vi.mock('../expression-editor', () => ({
-  ExpressionEditor: React.forwardRef(function MockExpressionEditor(
-    props: { value?: string; onChange?: (value: string) => void },
-    ref: React.ForwardedRef<HTMLTextAreaElement>
-  ) {
-    return (
-      <textarea
-        ref={ref}
-        data-testid="mock-expression-editor"
-        value={props.value ?? ''}
-        onChange={(event) => props.onChange?.(event.target.value)}
-      />
-    );
-  }),
 }));
 
 import { InputMappingEditor } from '../mapping/InputMappingEditor';
@@ -165,7 +145,7 @@ describe('transform action input editor', () => {
 
     expect(screen.getByTestId('mapping-step-transform-inputs-text-source-mode')).toBeInTheDocument();
     expect(screen.getByTestId('mapping-step-transform-inputs-maxLength-source-mode')).toBeInTheDocument();
-    expect(screen.getByTestId('mapping-step-transform-inputs-text-picker')).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-step-transform-inputs-text-reference-field')).toBeInTheDocument();
 
     expect(screen.getByText('maxLength')).toBeInTheDocument();
     expect(screen.getByText('strategy')).toBeInTheDocument();
@@ -177,7 +157,10 @@ describe('transform action input editor', () => {
     );
 
     await act(async () => {
-      fireEvent.change(screen.getByTestId('mapping-step-transform-inputs-text-picker'), {
+      fireEvent.change(screen.getByTestId('mapping-step-transform-inputs-text-reference-scope'), {
+        target: { value: 'payload' },
+      });
+      fireEvent.change(screen.getByTestId('mapping-step-transform-inputs-text-reference-field'), {
         target: { value: 'payload.ticket.id' },
       });
     });
@@ -275,7 +258,7 @@ describe('transform action input editor', () => {
     expect(
       screen.getByTestId('mapping-step-build-object-fields[0].value-source-mode')
     ).toHaveValue('reference');
-    expect(screen.getByTestId('mapping-step-build-object-fields[0].value-picker')).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-step-build-object-fields[0].value-reference-field')).toBeInTheDocument();
     expect(
       screen.getByTestId('mapping-step-build-object-fields[1].value-source-mode')
     ).toHaveValue('fixed');
@@ -287,7 +270,10 @@ describe('transform action input editor', () => {
       fireEvent.change(screen.getByDisplayValue('ticketId'), {
         target: { value: 'ticketSummary' },
       });
-      fireEvent.change(screen.getByTestId('mapping-step-build-object-fields[0].value-picker'), {
+      fireEvent.change(screen.getByTestId('mapping-step-build-object-fields[0].value-reference-scope'), {
+        target: { value: 'payload' },
+      });
+      fireEvent.change(screen.getByTestId('mapping-step-build-object-fields[0].value-reference-field'), {
         target: { value: 'payload.ticket.summary' },
       });
       fireEvent.change(screen.getByDisplayValue('Escalate printer issue'), {
@@ -298,7 +284,9 @@ describe('transform action input editor', () => {
     expect(
       document.getElementById('mapping-step-build-object-fields[0].key-literal-str')
     ).toHaveValue('ticketSummary');
-    expect(screen.getByTestId('mock-expression-editor')).toHaveValue('payload.ticket.summary');
+    expect(
+      screen.getByTestId('mapping-step-build-object-fields[0].value-reference-field')
+    ).toHaveValue('payload.ticket.summary');
     expect(screen.getByDisplayValue('Escalate again')).toBeInTheDocument();
   });
 
@@ -349,7 +337,9 @@ describe('transform action input editor', () => {
     expect(
       screen.getByTestId('mapping-step-rename-fields-renames[0].to-source-mode')
     ).toHaveValue('fixed');
-    expect(screen.queryByTestId('mock-expression-editor')).toBeInTheDocument();
+    expect(
+      screen.getByTestId('mapping-step-rename-fields-source-reference-field')
+    ).toHaveValue('vars.ticketResult');
     expect(
       screen.queryByTestId('mapping-step-rename-fields-renames[0].from-picker')
     ).not.toBeInTheDocument();
@@ -428,15 +418,13 @@ describe('transform action input editor', () => {
     expect(
       screen.getByTestId('mapping-step-coalesce-candidates[0]-source-mode')
     ).toHaveValue('reference');
-    expect(screen.getByTestId('mapping-step-coalesce-candidates[0]-picker')).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-step-coalesce-candidates[0]-reference-field')).toBeInTheDocument();
     expect(
       screen.getByTestId('mapping-step-coalesce-candidates[1]-source-mode')
     ).toHaveValue('reference');
-    expect(screen.getByTestId('mapping-step-coalesce-candidates[1]-picker')).toBeInTheDocument();
-
-    const editors = screen.getAllByTestId('mock-expression-editor');
-    expect(editors[0]).toHaveValue('payload.ticket.id');
-    expect(editors[1]).toHaveValue('payload.ticket.summary');
+    expect(screen.getByTestId('mapping-step-coalesce-candidates[1]-reference-field')).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-step-coalesce-candidates[0]-reference-field')).toHaveValue('payload.ticket.id');
+    expect(screen.getByTestId('mapping-step-coalesce-candidates[1]-reference-field')).toHaveValue('payload.ticket.summary');
     expect(
       document.getElementById('mapping-step-coalesce-candidates-literal-json')
     ).not.toBeInTheDocument();
@@ -476,10 +464,10 @@ describe('transform action input editor', () => {
     expect(screen.getByTestId('mapping-step-build-array-items[1]-source-mode')).toHaveValue(
       'reference'
     );
-    expect(screen.getByTestId('mapping-step-build-array-items[0]-picker')).toBeInTheDocument();
-    expect(screen.getByTestId('mapping-step-build-array-items[1]-picker')).toBeInTheDocument();
-    expect(screen.getAllByTestId('mock-expression-editor')[0]).toHaveValue('payload.ticket.id');
-    expect(screen.getAllByTestId('mock-expression-editor')[1]).toHaveValue(
+    expect(screen.getByTestId('mapping-step-build-array-items[0]-reference-field')).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-step-build-array-items[1]-reference-field')).toBeInTheDocument();
+    expect(screen.getByTestId('mapping-step-build-array-items[0]-reference-field')).toHaveValue('payload.ticket.id');
+    expect(screen.getByTestId('mapping-step-build-array-items[1]-reference-field')).toHaveValue(
       'vars.ticketResult.updated'
     );
     expect(

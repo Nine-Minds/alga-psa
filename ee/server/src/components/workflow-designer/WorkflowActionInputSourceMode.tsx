@@ -5,8 +5,7 @@ import React from 'react';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import type { Expr, MappingValue } from '@shared/workflow/runtime/client';
 
-export type WorkflowActionInputSourceModeValue = 'reference' | 'fixed' | 'advanced';
-export type WorkflowActionInputAdvancedModeValue = 'expression' | 'secret';
+export type WorkflowActionInputSourceModeValue = 'reference' | 'fixed';
 export type WorkflowActionInputFieldLike = {
   type?: string;
   enum?: Array<string | number | boolean | null>;
@@ -24,12 +23,6 @@ export type WorkflowActionInputPreservedModeValues = {
 const SOURCE_MODE_OPTIONS = [
   { value: 'reference', label: 'Reference' },
   { value: 'fixed', label: 'Fixed value' },
-  { value: 'advanced', label: 'Advanced' },
-] as const;
-
-const ADVANCED_MODE_OPTIONS = [
-  { value: 'expression', label: 'Expression' },
-  { value: 'secret', label: 'Secret' },
 ] as const;
 
 export function isSimpleFieldReferenceExpression(expression: string | undefined): boolean {
@@ -42,24 +35,17 @@ export function isSimpleFieldReferenceExpression(expression: string | undefined)
 
 export function deriveWorkflowActionInputSourceMode(
   value: MappingValue | undefined
-): {
-  mode: WorkflowActionInputSourceModeValue;
-  advancedMode: WorkflowActionInputAdvancedModeValue;
-} {
+): { mode: WorkflowActionInputSourceModeValue } {
   if (value && typeof value === 'object') {
-    if ('$secret' in value) {
-      return { mode: 'advanced', advancedMode: 'secret' };
-    }
-
     if ('$expr' in value) {
       const expression = (value as Expr).$expr;
       return !expression?.trim() || isSimpleFieldReferenceExpression(expression)
-        ? { mode: 'reference', advancedMode: 'expression' }
-        : { mode: 'advanced', advancedMode: 'expression' };
+        ? { mode: 'reference' }
+        : { mode: 'fixed' };
     }
   }
 
-  return { mode: 'fixed', advancedMode: 'expression' };
+  return { mode: 'fixed' };
 }
 
 export function getDefaultWorkflowActionInputSourceMode(
@@ -92,8 +78,7 @@ export function buildDefaultWorkflowActionInputLiteralValue(
 export function createWorkflowActionInputValueForMode(
   field: WorkflowActionInputFieldLike,
   currentValue: MappingValue | undefined,
-  mode: WorkflowActionInputSourceModeValue,
-  advancedMode: WorkflowActionInputAdvancedModeValue = 'expression'
+  mode: WorkflowActionInputSourceModeValue
 ): MappingValue {
   if (mode === 'reference') {
     if (
@@ -102,20 +87,6 @@ export function createWorkflowActionInputValueForMode(
       '$expr' in currentValue &&
       isSimpleFieldReferenceExpression((currentValue as Expr).$expr)
     ) {
-      return currentValue;
-    }
-    return { $expr: '' };
-  }
-
-  if (mode === 'advanced') {
-    if (advancedMode === 'secret') {
-      if (currentValue && typeof currentValue === 'object' && '$secret' in currentValue) {
-        return currentValue;
-      }
-      return { $secret: '' };
-    }
-
-    if (currentValue && typeof currentValue === 'object' && '$expr' in currentValue) {
       return currentValue;
     }
     return { $expr: '' };
@@ -137,7 +108,6 @@ export function transitionWorkflowActionInputMode(
   field: WorkflowActionInputFieldLike,
   currentValue: MappingValue | undefined,
   nextMode: WorkflowActionInputSourceModeValue,
-  advancedMode: WorkflowActionInputAdvancedModeValue = 'expression',
   preservedValues: WorkflowActionInputPreservedModeValues = {}
 ): WorkflowActionInputPreservedModeValues & { nextValue: MappingValue } {
   const currentMode = deriveWorkflowActionInputSourceMode(currentValue).mode;
@@ -166,23 +136,31 @@ export function transitionWorkflowActionInputMode(
         : currentValue;
 
   return {
-    nextValue: createWorkflowActionInputValueForMode(field, transitionSeedValue, nextMode, advancedMode),
+    nextValue: createWorkflowActionInputValueForMode(field, transitionSeedValue, nextMode),
     preservedFixedValue,
     preservedReferenceValue,
   };
+}
+
+export function isWorkflowActionInputLegacyValue(value: MappingValue | undefined): boolean {
+  if (!value || typeof value !== 'object') return false;
+  if ('$secret' in value) return true;
+  if ('$expr' in value) {
+    const expression = (value as Expr).$expr;
+    return Boolean(expression?.trim()) && !isSimpleFieldReferenceExpression(expression);
+  }
+  return false;
 }
 
 export const WorkflowActionInputSourceMode: React.FC<{
   idPrefix: string;
   value: MappingValue | undefined;
   onModeChange: (mode: WorkflowActionInputSourceModeValue) => void;
-  onAdvancedModeChange: (mode: WorkflowActionInputAdvancedModeValue) => void;
   disabled?: boolean;
 }> = ({
   idPrefix,
   value,
   onModeChange,
-  onAdvancedModeChange,
   disabled,
 }) => {
   const sourceMode = deriveWorkflowActionInputSourceMode(value);
@@ -198,20 +176,7 @@ export const WorkflowActionInputSourceMode: React.FC<{
           disabled={disabled}
           className="w-36"
         />
-        {sourceMode.mode === 'advanced' && (
-          <CustomSelect
-            id={`${idPrefix}-advanced-mode`}
-            options={[...ADVANCED_MODE_OPTIONS]}
-            value={sourceMode.advancedMode}
-            onValueChange={(nextMode) => onAdvancedModeChange(nextMode as WorkflowActionInputAdvancedModeValue)}
-            disabled={disabled}
-            className="w-32"
-          />
-        )}
       </div>
-      <p className="text-[11px] text-gray-400 text-right">
-        Use Advanced only for expressions or secrets.
-      </p>
     </div>
   );
 };

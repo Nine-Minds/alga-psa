@@ -4,10 +4,6 @@ import React from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@alga-psa/tenancy/actions', () => ({
-  listTenantSecrets: vi.fn().mockResolvedValue([]),
-}));
-
 vi.mock('@alga-psa/integrations/actions', () => ({
   getTicketFieldOptions: vi.fn().mockResolvedValue({
     options: {
@@ -64,22 +60,6 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
       ))}
     </select>
   ),
-}));
-
-vi.mock('../expression-editor', () => ({
-  ExpressionEditor: React.forwardRef(function MockExpressionEditor(
-    props: { value?: string; onChange?: (value: string) => void },
-    ref: React.ForwardedRef<HTMLTextAreaElement>
-  ) {
-    return (
-      <textarea
-        ref={ref}
-        data-testid="mock-expression-editor"
-        value={props.value ?? ''}
-        onChange={(event) => props.onChange?.(event.target.value)}
-      />
-    );
-  }),
 }));
 
 import { InputMappingEditor } from '../mapping/InputMappingEditor';
@@ -218,7 +198,6 @@ describe('InputMappingEditor reference mode', () => {
       ));
     });
 
-    expect(screen.getByTestId('mock-expression-editor')).toHaveValue('vars.ticketResult.ticket_id');
     expect(screen.getByTestId('mapping-step-1-summary-reference-scope')).toHaveValue('vars');
     expect(screen.getByTestId('mapping-step-1-summary-reference-step')).toHaveValue('ticketResult');
     expect(screen.getByTestId('mapping-step-1-summary-reference-field')).toHaveValue(
@@ -248,7 +227,6 @@ describe('InputMappingEditor reference mode', () => {
       );
     });
 
-    expect(screen.getByTestId('mock-expression-editor')).toHaveValue('vars.ticketResult.ticket_id');
     expect(screen.getByTestId('mapping-step-1-summary-reference-step')).toHaveValue('ticketResult');
     expect(onChange).not.toHaveBeenCalled();
   });
@@ -499,7 +477,7 @@ describe('InputMappingEditor reference mode', () => {
     ).not.toHaveTextContent('email.subject');
   });
 
-  it('T287: keeps saved advanced expressions editable when they cannot hydrate into structured Reference mode', async () => {
+  it('T287: shows legacy unsupported messaging for saved expressions that cannot hydrate into structured Reference mode', async () => {
     await act(async () => {
       render(
         <InputMappingEditor
@@ -524,14 +502,17 @@ describe('InputMappingEditor reference mode', () => {
     });
 
     expect(
-      screen.getByTestId('mapping-step-advanced-expression-summary-source-mode')
-    ).toHaveValue('advanced');
+      screen.getByText('Legacy mapping no longer supported here')
+    ).toBeInTheDocument();
     expect(
-      screen.getByTestId('mapping-step-advanced-expression-summary-advanced-mode')
-    ).toHaveValue('expression');
-    expect(screen.getByTestId('mock-expression-editor')).toHaveValue(
-      'payload.summary & "-" & meta.traceId'
-    );
+      screen.getByText('payload.summary & "-" & meta.traceId')
+    ).toBeInTheDocument();
+    expect(
+      document.getElementById('mapping-step-advanced-expression-summary-replace-with-reference')
+    ).toBeInTheDocument();
+    expect(
+      document.getElementById('mapping-step-advanced-expression-summary-replace-with-fixed')
+    ).toBeInTheDocument();
   });
 
   it('T334: shows a collapsible browse-sources tree for reference mode and maps the current field when a source is selected', async () => {

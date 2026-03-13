@@ -9,6 +9,7 @@ import {
   createWorkflowActionInputValueForMode,
   deriveWorkflowActionInputSourceMode,
   getDefaultWorkflowActionInputSourceMode,
+  isWorkflowActionInputLegacyValue,
   transitionWorkflowActionInputMode,
   WorkflowActionInputSourceMode,
 } from '../WorkflowActionInputSourceMode';
@@ -18,13 +19,12 @@ afterEach(() => {
 });
 
 describe('WorkflowActionInputSourceMode', () => {
-  it('T107-T110: renders explicit reference, fixed value, and advanced source modes', () => {
+  it('T107-T110: renders explicit reference and fixed value source modes', () => {
     const { rerender } = render(
       <WorkflowActionInputSourceMode
         idPrefix="field"
         value={{ $expr: 'payload.summary' }}
         onModeChange={vi.fn()}
-        onAdvancedModeChange={vi.fn()}
       />
     );
 
@@ -35,83 +35,21 @@ describe('WorkflowActionInputSourceMode', () => {
         idPrefix="field"
         value="literal value"
         onModeChange={vi.fn()}
-        onAdvancedModeChange={vi.fn()}
       />
     );
 
     expect(screen.getByText('Fixed value')).toBeInTheDocument();
-
-    rerender(
-      <WorkflowActionInputSourceMode
-        idPrefix="field"
-        value={{ $secret: 'API_TOKEN' }}
-        onModeChange={vi.fn()}
-        onAdvancedModeChange={vi.fn()}
-      />
-    );
-
-    expect(screen.getByText('Advanced')).toBeInTheDocument();
-    expect(screen.getByText('Secret')).toBeInTheDocument();
   });
 
-  it('T152/T153/T313: rehydrates direct field references into structured Reference mode while reserving Advanced mode for expressions that cannot stay fully structured', () => {
-    expect(deriveWorkflowActionInputSourceMode({ $expr: '' })).toEqual({
-      mode: 'reference',
-      advancedMode: 'expression',
-    });
-    expect(deriveWorkflowActionInputSourceMode({ $expr: 'payload.summary' })).toEqual({
-      mode: 'reference',
-      advancedMode: 'expression',
-    });
-    expect(deriveWorkflowActionInputSourceMode({ $expr: 'ticketItem.id' })).toEqual({
-      mode: 'reference',
-      advancedMode: 'expression',
-    });
+  it('T152/T153/T313: rehydrates direct field references into structured Reference mode and treats non-structured mappings as legacy', () => {
+    expect(deriveWorkflowActionInputSourceMode({ $expr: '' })).toEqual({ mode: 'reference' });
+    expect(deriveWorkflowActionInputSourceMode({ $expr: 'payload.summary' })).toEqual({ mode: 'reference' });
+    expect(deriveWorkflowActionInputSourceMode({ $expr: 'ticketItem.id' })).toEqual({ mode: 'reference' });
     expect(deriveWorkflowActionInputSourceMode({ $expr: 'payload.summary & "-" & meta.traceId' })).toEqual({
-      mode: 'advanced',
-      advancedMode: 'expression',
+      mode: 'fixed',
     });
-  });
-
-  it('T281/T282: keeps Advanced mode available for complex expressions and secret-backed values', () => {
-    const { rerender } = render(
-      <WorkflowActionInputSourceMode
-        idPrefix="advanced-field"
-        value={{ $expr: 'payload.summary & "-" & meta.traceId' }}
-        onModeChange={vi.fn()}
-        onAdvancedModeChange={vi.fn()}
-      />
-    );
-
-    expect(screen.getByText('Advanced')).toBeInTheDocument();
-    expect(screen.getByText('Expression')).toBeInTheDocument();
-
-    rerender(
-      <WorkflowActionInputSourceMode
-        idPrefix="advanced-field"
-        value={{ $secret: 'API_TOKEN' }}
-        onModeChange={vi.fn()}
-        onAdvancedModeChange={vi.fn()}
-      />
-    );
-
-    expect(screen.getByText('Advanced')).toBeInTheDocument();
-    expect(screen.getByText('Secret')).toBeInTheDocument();
-  });
-
-  it('T283: de-emphasizes Advanced mode with escape-hatch guidance in the source-mode UI', () => {
-    render(
-      <WorkflowActionInputSourceMode
-        idPrefix="guided-field"
-        value={{ $expr: 'payload.summary' }}
-        onModeChange={vi.fn()}
-        onAdvancedModeChange={vi.fn()}
-      />
-    );
-
-    expect(
-      screen.getByText('Use Advanced only for expressions or secrets.')
-    ).toBeInTheDocument();
+    expect(isWorkflowActionInputLegacyValue({ $expr: 'payload.summary & "-" & meta.traceId' })).toBe(true);
+    expect(isWorkflowActionInputLegacyValue({ $secret: 'API_TOKEN' })).toBe(true);
   });
 
   it('T111: defaults new editable fields to structured source modes based on field type and metadata', () => {
@@ -124,34 +62,17 @@ describe('WorkflowActionInputSourceMode', () => {
     })).toBe('fixed');
   });
 
-  it('T112/T113/T114/T115: creates reference, fixed, advanced expression, and advanced secret values in the existing mapping contract', () => {
+  it('T112/T113: creates reference and fixed values in the existing mapping contract', () => {
     const stringField = { type: 'string' } as const;
 
-    expect(createWorkflowActionInputValueForMode(stringField, undefined, 'reference', 'expression')).toEqual({
+    expect(createWorkflowActionInputValueForMode(stringField, undefined, 'reference')).toEqual({
       $expr: '',
     });
     expect(createWorkflowActionInputValueForMode(
       { type: 'string', default: 'fallback' },
       undefined,
-      'fixed',
-      'expression'
+      'fixed'
     )).toBe('fallback');
-    expect(createWorkflowActionInputValueForMode(
-      stringField,
-      { $expr: 'payload.summary & "-" & meta.traceId' },
-      'advanced',
-      'expression'
-    )).toEqual({
-      $expr: 'payload.summary & "-" & meta.traceId',
-    });
-    expect(createWorkflowActionInputValueForMode(
-      stringField,
-      undefined,
-      'advanced',
-      'secret'
-    )).toEqual({
-      $secret: '',
-    });
   });
 
   it('builds fixed literal defaults for primitive and object-like fields', () => {
@@ -161,43 +82,40 @@ describe('WorkflowActionInputSourceMode', () => {
     expect(buildDefaultWorkflowActionInputLiteralValue({ type: 'object' })).toEqual({});
   });
 
-  it('T134/T135: preserves fixed nested values and direct references when switching into advanced mode', () => {
+  it('T134/T135: preserves fixed nested values and direct references when switching between fixed and reference modes', () => {
     const nestedLiteral = {
       requester: {
         name: 'Alex',
       },
     };
-    const fixedToAdvanced = transitionWorkflowActionInputMode(
+    const fixedToReference = transitionWorkflowActionInputMode(
       { type: 'object' },
       nestedLiteral,
-      'advanced',
-      'expression'
+      'reference'
     );
 
-    expect(fixedToAdvanced.nextValue).toEqual({ $expr: '' });
-    expect(fixedToAdvanced.preservedFixedValue).toEqual(nestedLiteral);
+    expect(fixedToReference.nextValue).toEqual({ $expr: '' });
+    expect(fixedToReference.preservedFixedValue).toEqual(nestedLiteral);
 
-    const advancedBackToFixed = transitionWorkflowActionInputMode(
+    const referenceBackToFixed = transitionWorkflowActionInputMode(
       { type: 'object' },
-      fixedToAdvanced.nextValue,
+      fixedToReference.nextValue,
       'fixed',
-      'expression',
       {
-        preservedFixedValue: fixedToAdvanced.preservedFixedValue,
+        preservedFixedValue: fixedToReference.preservedFixedValue,
       }
     );
 
-    expect(advancedBackToFixed.nextValue).toEqual(nestedLiteral);
+    expect(referenceBackToFixed.nextValue).toEqual(nestedLiteral);
 
     const directReference = { $expr: 'payload.requester.name' } as const;
-    const referenceToAdvanced = transitionWorkflowActionInputMode(
+    const referenceToFixed = transitionWorkflowActionInputMode(
       { type: 'string' },
       directReference,
-      'advanced',
-      'expression'
+      'fixed'
     );
 
-    expect(referenceToAdvanced.nextValue).toEqual(directReference);
-    expect(referenceToAdvanced.preservedReferenceValue).toEqual(directReference);
+    expect(referenceToFixed.nextValue).toEqual('');
+    expect(referenceToFixed.preservedReferenceValue).toEqual(directReference);
   });
 });

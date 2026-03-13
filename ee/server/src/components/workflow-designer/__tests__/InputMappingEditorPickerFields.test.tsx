@@ -4,10 +4,6 @@ import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@alga-psa/tenancy/actions', () => ({
-  listTenantSecrets: vi.fn().mockResolvedValue([]),
-}));
-
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   __esModule: true,
   default: ({
@@ -136,22 +132,6 @@ vi.mock('@alga-psa/teams/actions', () => ({
       team_name: 'Dispatch',
     },
   ]),
-}));
-
-vi.mock('../expression-editor', () => ({
-  ExpressionEditor: React.forwardRef(function MockExpressionEditor(
-    props: { value?: string; onChange?: (value: string) => void },
-    ref: React.ForwardedRef<HTMLTextAreaElement>
-  ) {
-    return (
-      <textarea
-        ref={ref}
-        data-testid="mock-expression-editor"
-        value={props.value ?? ''}
-        onChange={(event) => props.onChange?.(event.target.value)}
-      />
-    );
-  }),
 }));
 
 import { InputMappingEditor } from '../mapping/InputMappingEditor';
@@ -326,7 +306,7 @@ describe('InputMappingEditor picker-backed fields', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('T167/T168/T191/T192/T193/T194/T195/T196/T197/T198/T199/T309: picker-backed fields can switch to reference or advanced mode and back to fixed without losing picker UI', async () => {
+  it('T167/T168/T191/T192/T193/T194/T195/T196/T197/T198/T199/T309: picker-backed fields can switch to reference and back to fixed without losing picker UI', async () => {
     const changeSpy = vi.fn();
 
     const Harness = () => {
@@ -376,9 +356,6 @@ describe('InputMappingEditor picker-backed fields', () => {
     });
 
     await act(async () => {
-      fireEvent.change(screen.getByTestId('mapping-step-picker-modes-board_id-source-mode'), {
-        target: { value: 'advanced' },
-      });
       fireEvent.change(screen.getByTestId('mapping-step-picker-modes-board_id-source-mode'), {
         target: { value: 'fixed' },
       });

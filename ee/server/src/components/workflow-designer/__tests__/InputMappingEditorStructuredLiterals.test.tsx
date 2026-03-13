@@ -11,6 +11,29 @@ vi.mock('@alga-psa/tenancy/actions', () => ({
   listTenantSecrets: vi.fn(() => new Promise(() => {})),
 }));
 
+vi.mock('@alga-psa/integrations/actions', () => ({
+  getTicketFieldOptions: vi.fn().mockResolvedValue({
+    options: {
+      boards: [],
+      statuses: [],
+      priorities: [],
+      categories: [],
+      clients: [],
+      users: [],
+      locations: [],
+    },
+  }),
+}));
+
+vi.mock('@alga-psa/clients/actions', () => ({
+  getAllContacts: vi.fn().mockResolvedValue([]),
+  getContactsByClient: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@alga-psa/teams/actions', () => ({
+  getTeamsBasic: vi.fn().mockResolvedValue([]),
+}));
+
 const positionsHandlers: MappingPositionsHandlers = {
   registerSourceRef: vi.fn(),
   registerTargetRef: vi.fn(),

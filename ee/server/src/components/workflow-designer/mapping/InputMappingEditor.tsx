@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { ChevronRight, ChevronDown, Plus, Trash2, AlertTriangle, Wand2, Sparkles, RotateCcw } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -9,12 +9,8 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import { validateExpressionSource } from '@shared/workflow/runtime/expressionEngine';
-import { listTenantSecrets } from '@alga-psa/tenancy/actions';
 import type { InputMapping, MappingValue, Expr } from '@shared/workflow/runtime/client';
 import {
-  ExpressionEditor,
-  type ExpressionEditorHandle,
   type ExpressionContext,
   type JsonSchema
 } from '../expression-editor';
@@ -35,107 +31,10 @@ import {
   createWorkflowActionInputValueForMode,
   deriveWorkflowActionInputSourceMode,
   getDefaultWorkflowActionInputSourceMode,
+  isWorkflowActionInputLegacyValue,
   transitionWorkflowActionInputMode,
-  type WorkflowActionInputAdvancedModeValue,
   type WorkflowActionInputSourceModeValue,
 } from '../WorkflowActionInputSourceMode';
-
-/**
- * Extended select option with type information for compatibility filtering
- */
-export interface TypedSelectOption extends SelectOption {
-  /** The data type of this field (e.g., 'string', 'number', 'object') */
-  type?: string;
-}
-
-/**
- * Compatibility group for dropdown options
- */
-interface CompatibilityGroup {
-  compatibility: TypeCompatibility;
-  label: string;
-  options: TypedSelectOption[];
-}
-
-/**
- * Build grouped field options sorted by type compatibility
- *
- * @param options - Available field options
- * @param targetType - The target field type to compare against
- * @returns Grouped and sorted options with compatibility indicators
- */
-function buildCompatibilityGroupedOptions(
-  options: SelectOption[],
-  targetType: string | undefined
-): CompatibilityGroup[] {
-  if (!targetType) {
-    // No target type - just return all options as unknown
-    return [{
-      compatibility: TypeCompatibility.UNKNOWN,
-      label: 'Available Fields',
-      options: options.map(o => ({ ...o }))
-    }];
-  }
-
-  const groups: Record<TypeCompatibility, TypedSelectOption[]> = {
-    [TypeCompatibility.EXACT]: [],
-    [TypeCompatibility.COERCIBLE]: [],
-    [TypeCompatibility.UNKNOWN]: [],
-    [TypeCompatibility.INCOMPATIBLE]: []
-  };
-
-  // Infer types from field paths and group by compatibility
-  for (const option of options) {
-    const inferredType = inferTypeFromPath(option.value);
-    const compatibility = getTypeCompatibility(inferredType, targetType);
-
-    groups[compatibility].push({
-      ...option,
-      type: inferredType,
-      // Add visual indicator to label
-      label: typeof option.label === 'string'
-        ? option.label
-        : option.label
-    });
-  }
-
-  // Build result groups (only include non-empty groups)
-  const result: CompatibilityGroup[] = [];
-
-  if (groups[TypeCompatibility.EXACT].length > 0) {
-    result.push({
-      compatibility: TypeCompatibility.EXACT,
-      label: '✓ Exact Match',
-      options: groups[TypeCompatibility.EXACT]
-    });
-  }
-
-  if (groups[TypeCompatibility.COERCIBLE].length > 0) {
-    result.push({
-      compatibility: TypeCompatibility.COERCIBLE,
-      label: '~ Can Convert',
-      options: groups[TypeCompatibility.COERCIBLE]
-    });
-  }
-
-  if (groups[TypeCompatibility.UNKNOWN].length > 0) {
-    result.push({
-      compatibility: TypeCompatibility.UNKNOWN,
-      label: '? Unknown',
-      options: groups[TypeCompatibility.UNKNOWN]
-    });
-  }
-
-  if (groups[TypeCompatibility.INCOMPATIBLE].length > 0) {
-    result.push({
-      compatibility: TypeCompatibility.INCOMPATIBLE,
-      label: '✗ Incompatible',
-      options: groups[TypeCompatibility.INCOMPATIBLE]
-    });
-  }
-
-  return result;
-}
 
 /**
  * Infer type from a field path
@@ -591,71 +490,6 @@ function buildExpressionContextFromOptions(fieldOptions: SelectOption[]): Expres
   };
 }
 
-/**
- * Flatten grouped options back to a sorted array with visual indicators
- */
-function flattenGroupedOptions(groups: CompatibilityGroup[]): SelectOption[] {
-  const result: SelectOption[] = [];
-
-  for (const group of groups) {
-    // Add group header as a disabled option
-    if (groups.length > 1) {
-      result.push({
-        value: `__group_${group.compatibility}__`,
-        label: group.label,
-        is_inactive: true,
-        className: 'text-xs font-semibold text-gray-500 bg-gray-50 cursor-default'
-      });
-    }
-
-    // Add options with compatibility styling
-    for (const option of group.options) {
-      const classes = getCompatibilityClasses(group.compatibility);
-      result.push({
-        ...option,
-        className: `${option.className || ''} ${classes.text}`.trim()
-      });
-    }
-  }
-
-  return result;
-}
-
-/**
- * §17.3.2 - Type-filtered field picker component
- * Groups and sorts options by type compatibility with target field
- */
-const TypeFilteredFieldPicker: React.FC<{
-  id: string;
-  options: SelectOption[];
-  targetType: string | undefined;
-  onSelect: (path: string) => void;
-  disabled?: boolean;
-}> = ({ id, options, targetType, onSelect, disabled }) => {
-  // Build grouped options by type compatibility
-  const groupedOptions = useMemo(() => {
-    const groups = buildCompatibilityGroupedOptions(options, targetType);
-    return flattenGroupedOptions(groups);
-  }, [options, targetType]);
-
-  return (
-    <CustomSelect
-      id={id}
-      options={groupedOptions}
-      value=""
-      placeholder="Insert field"
-      onValueChange={(value) => {
-        // Skip group headers
-        if (value.startsWith('__group_')) return;
-        onSelect(value);
-      }}
-      allowClear
-      className="w-48"
-      disabled={disabled}
-    />
-  );
-};
-
 const ReferenceScopeSelector: React.FC<{
   idPrefix: string;
   model: ReferenceSourceModel;
@@ -862,18 +696,20 @@ export interface InputMappingEditorProps {
 /**
  * Value type for a mapping entry
  */
-type ValueType = 'expr' | 'secret' | 'literal';
+type ValueType = 'reference' | 'fixed' | 'legacy';
 
 /**
  * Determine the type of a MappingValue
  */
 function getMappingValueType(value: MappingValue | undefined): ValueType {
-  if (!value) return 'literal';
+  if (!value) return 'fixed';
   if (typeof value === 'object' && value !== null) {
-    if ('$expr' in value) return 'expr';
-    if ('$secret' in value) return 'secret';
+    if ('$secret' in value) return 'legacy';
+    if ('$expr' in value) {
+      return isWorkflowActionInputLegacyValue(value) ? 'legacy' : 'reference';
+    }
   }
-  return 'literal';
+  return 'fixed';
 }
 
 /**
@@ -925,7 +761,6 @@ const MappingFieldEditor: React.FC<{
   onChange: (value: MappingValue | undefined) => void;
   rootInputMapping: InputMapping;
   fieldOptions: SelectOption[];
-  secrets: Array<{ name: string; description?: string }>;
   stepId: string;
   disabled?: boolean;
   sourceTypeMap?: Map<string, string>;
@@ -938,16 +773,12 @@ const MappingFieldEditor: React.FC<{
   onChange,
   rootInputMapping,
   fieldOptions,
-  secrets,
   stepId,
   disabled,
   sourceTypeMap,
   expressionContext,
   referenceBrowseContext,
 }) => {
-  const [valueType, setValueType] = useState<ValueType>(() => getMappingValueType(value));
-  const [expressionError, setExpressionError] = useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [expanded, setExpanded] = useState(true);
   const [preservedFixedValue, setPreservedFixedValue] = useState<MappingValue | undefined>(() =>
     deriveWorkflowActionInputSourceMode(value).mode === 'fixed' ? value : undefined
@@ -955,7 +786,7 @@ const MappingFieldEditor: React.FC<{
   const [preservedReferenceValue, setPreservedReferenceValue] = useState<MappingValue | undefined>(() =>
     deriveWorkflowActionInputSourceMode(value).mode === 'reference' ? value : undefined
   );
-  const editorRef = useRef<ExpressionEditorHandle>(null);
+  const valueType = useMemo(() => getMappingValueType(value), [value]);
 
   const resolvedFieldPath = fieldPath ?? field.name;
   const idPrefix = `mapping-${stepId}-${resolvedFieldPath}`;
@@ -964,29 +795,21 @@ const MappingFieldEditor: React.FC<{
     [field.required, field.type, value]
   );
 
-  // Sync valueType when value prop changes externally
-  useEffect(() => {
-    setValueType(getMappingValueType(value));
-  }, [value]);
-
   useEffect(() => {
     const sourceMode = deriveWorkflowActionInputSourceMode(value).mode;
-    if (sourceMode === 'fixed' && value !== undefined) {
+    if (sourceMode === 'fixed' && value !== undefined && valueType === 'fixed') {
       setPreservedFixedValue(value);
     }
-    if (sourceMode === 'reference' && value !== undefined) {
+    if (sourceMode === 'reference' && value !== undefined && valueType === 'reference') {
       setPreservedReferenceValue(value);
     }
-  }, [value]);
+  }, [value, valueType]);
 
   const handleSourceModeChange = useCallback((nextMode: WorkflowActionInputSourceModeValue) => {
-    setExpressionError(null);
-    const currentAdvancedMode: WorkflowActionInputAdvancedModeValue = valueType === 'secret' ? 'secret' : 'expression';
     const transition = transitionWorkflowActionInputMode(
       field,
       value,
       nextMode,
-      currentAdvancedMode,
       {
         preservedFixedValue,
         preservedReferenceValue,
@@ -994,62 +817,16 @@ const MappingFieldEditor: React.FC<{
     );
     setPreservedFixedValue(transition.preservedFixedValue);
     setPreservedReferenceValue(transition.preservedReferenceValue);
-    setValueType(nextMode === 'fixed' ? 'literal' : currentAdvancedMode === 'secret' && nextMode === 'advanced' ? 'secret' : 'expr');
     onChange(transition.nextValue);
   }, [field, onChange, preservedFixedValue, preservedReferenceValue, value, valueType]);
-
-  const handleAdvancedModeChange = useCallback((nextMode: WorkflowActionInputAdvancedModeValue) => {
-    setExpressionError(null);
-    const nextValue = createWorkflowActionInputValueForMode(field, value, 'advanced', nextMode);
-    setValueType(nextMode === 'secret' ? 'secret' : 'expr');
-    onChange(nextValue);
-  }, [field, onChange, value]);
-
-  const handleExpressionChange = useCallback((expr: string) => {
-    try {
-      if (expr.trim().length > 0) {
-        validateExpressionSource(expr);
-      }
-      setExpressionError(null);
-    } catch (err) {
-      setExpressionError(err instanceof Error ? err.message : 'Invalid expression');
-    }
-    onChange({ $expr: expr });
-  }, [onChange]);
-
-  const handleSecretChange = useCallback((secretName: string) => {
-    onChange({ $secret: secretName });
-  }, [onChange]);
 
   const handleLiteralChange = useCallback((literalValue: unknown) => {
     onChange(literalValue as MappingValue);
   }, [onChange]);
 
-  const handleInsertField = useCallback((path: string) => {
-    if (!path) return;
-    if (deriveWorkflowActionInputSourceMode(value).mode === 'reference') {
-      handleExpressionChange(path);
-      return;
-    }
-    // Use Monaco editor's insertAtCursor if available
-    if (editorRef.current) {
-      editorRef.current.insertAtCursor(path);
-    } else {
-      // Fallback for non-Monaco case
-      const current = value && '$expr' in (value as object) ? (value as Expr).$expr ?? '' : '';
-      const next = current ? `${current} ${path}` : path;
-      handleExpressionChange(next);
-    }
-  }, [value, handleExpressionChange]);
-
-  const handleValidationChange = useCallback((errors: string[]) => {
-    setValidationErrors(errors);
-  }, []);
-
-  // §16.2 - Type mismatch warning for expression mappings
   const typeMismatchWarning = useMemo(() => {
     if (
-      valueType !== 'expr' ||
+      valueType !== 'reference' ||
       !value ||
       typeof value !== 'object' ||
       !('$expr' in value)
@@ -1073,7 +850,7 @@ const MappingFieldEditor: React.FC<{
 
   const compatibilityBadge = useMemo(() => {
     if (
-      valueType !== 'expr' ||
+      valueType !== 'reference' ||
       !value ||
       typeof value !== 'object' ||
       !('$expr' in value)
@@ -1099,13 +876,8 @@ const MappingFieldEditor: React.FC<{
     };
   }, [valueType, value, sourceTypeMap, field.type]);
 
-  const secretOptions: SelectOption[] = secrets.map(s => ({
-    value: s.name,
-    label: s.name,
-    ...(s.description && { description: s.description })
-  }));
   const [showBrowseSources, setShowBrowseSources] = useState(false);
-  const currentSourceMode = deriveWorkflowActionInputSourceMode(value).mode;
+  const currentSourceMode = valueType === 'legacy' ? deriveWorkflowActionInputSourceMode(value).mode : valueType;
   const selectedReferencePath = currentSourceMode === 'reference' ? extractPrimaryPath(getDisplayValue(value)) : null;
   const referenceSourceModel = useMemo(
     () => buildReferenceSourceModel(referenceBrowseContext, fieldOptions, expressionContext?.payloadSchema),
@@ -1133,9 +905,9 @@ const MappingFieldEditor: React.FC<{
   }, [currentSourceMode, referenceBrowseContext, selectedReferencePath]);
 
   const handleBrowseSelect = useCallback((path: string) => {
-    handleExpressionChange(path);
+    onChange({ $expr: path });
     setShowBrowseSources(false);
-  }, [handleExpressionChange]);
+  }, [onChange]);
 
   const handleReferenceScopeChange = useCallback((nextScope: ReferenceSourceScope | '') => {
     setSelectedReferenceScope(nextScope);
@@ -1153,8 +925,8 @@ const MappingFieldEditor: React.FC<{
       onChange({ $expr: '' });
       return;
     }
-    handleExpressionChange(path);
-  }, [handleExpressionChange, onChange]);
+    onChange({ $expr: path });
+  }, [onChange]);
 
   return (
     <Card className="p-3 space-y-2">
@@ -1182,61 +954,45 @@ const MappingFieldEditor: React.FC<{
           idPrefix={idPrefix}
           value={value}
           onModeChange={handleSourceModeChange}
-          onAdvancedModeChange={handleAdvancedModeChange}
           disabled={disabled}
         />
       </div>
 
       {expanded && (
         <div className="pl-6 space-y-2">
-          {valueType === 'expr' && (
+          {valueType === 'reference' && (
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
-                {currentSourceMode === 'reference' ? (
-                  <Button
-                    id={`${idPrefix}-browse-sources-toggle`}
-                    variant="ghost"
-                    size="sm"
-                    type="button"
-                    disabled={disabled || !referenceBrowseContext}
-                    onClick={() => setShowBrowseSources((current) => !current)}
-                    className="text-xs text-gray-600 hover:text-gray-900"
-                  >
-                    {showBrowseSources ? (
-                      <ChevronDown className="mr-1 h-3.5 w-3.5" />
-                    ) : (
-                      <ChevronRight className="mr-1 h-3.5 w-3.5" />
-                    )}
-                    Browse sources
-                  </Button>
-                ) : (
-                  <span />
-                )}
-                {currentSourceMode !== 'reference' && (
-                  <TypeFilteredFieldPicker
-                    id={`${idPrefix}-picker`}
-                    options={fieldOptions}
-                    targetType={field.type}
-                    onSelect={handleInsertField}
-                    disabled={disabled}
-                  />
-                )}
+                <Button
+                  id={`${idPrefix}-browse-sources-toggle`}
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  disabled={disabled || !referenceBrowseContext}
+                  onClick={() => setShowBrowseSources((current) => !current)}
+                  className="text-xs text-gray-600 hover:text-gray-900"
+                >
+                  {showBrowseSources ? (
+                    <ChevronDown className="mr-1 h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronRight className="mr-1 h-3.5 w-3.5" />
+                  )}
+                  Browse sources
+                </Button>
               </div>
-              {currentSourceMode === 'reference' && (
-                <ReferenceScopeSelector
-                  idPrefix={idPrefix}
-                  model={referenceSourceModel}
-                  targetType={field.type}
-                  selectedScope={selectedReferenceScope}
-                  selectedStep={selectedReferenceStep}
-                  selectedField={selectedReferencePath}
-                  disabled={disabled}
-                  onScopeChange={handleReferenceScopeChange}
-                  onStepChange={handleReferenceStepChange}
-                  onFieldChange={handleReferenceFieldChange}
-                />
-              )}
-              {currentSourceMode === 'reference' && showBrowseSources && referenceBrowseContext && (
+              <ReferenceScopeSelector
+                idPrefix={idPrefix}
+                model={referenceSourceModel}
+                targetType={field.type}
+                selectedScope={selectedReferenceScope}
+                selectedStep={selectedReferenceStep}
+                selectedField={selectedReferencePath}
+                disabled={disabled}
+                onScopeChange={handleReferenceScopeChange}
+                onStepChange={handleReferenceStepChange}
+                onFieldChange={handleReferenceFieldChange}
+              />
+              {showBrowseSources && referenceBrowseContext && (
                 <SourceDataTree
                   context={referenceBrowseContext}
                   onSelectField={handleBrowseSelect}
@@ -1247,27 +1003,7 @@ const MappingFieldEditor: React.FC<{
                   compact
                 />
               )}
-              {/* §20 - Monaco expression editor with syntax highlighting and autocomplete */}
-              <ExpressionEditor
-                ref={editorRef}
-                value={getDisplayValue(value)}
-                onChange={handleExpressionChange}
-                context={expressionContext}
-                singleLine={false}
-                height={60}
-                hasError={!!expressionError || validationErrors.length > 0}
-                disabled={disabled}
-                onValidationChange={handleValidationChange}
-                ariaLabel={`Expression for ${field.name}`}
-              />
-              {(expressionError || validationErrors.length > 0) && (
-                <div className="flex items-center gap-1 text-xs text-destructive">
-                  <AlertTriangle className="w-3 h-3" />
-                  {expressionError || validationErrors[0]}
-                </div>
-              )}
-              {/* §16.2 - Type mismatch warning */}
-              {!expressionError && typeMismatchWarning && (
+              {typeMismatchWarning && (
                 <WorkflowActionInputTypeHint
                   sourceType={sourceTypeMap?.get(extractPrimaryPath((value as Expr).$expr) ?? '') ?? inferTypeFromPath(extractPrimaryPath((value as Expr).$expr) ?? '')}
                   targetType={field.type}
@@ -1276,39 +1012,46 @@ const MappingFieldEditor: React.FC<{
             </div>
           )}
 
-          {valueType === 'secret' && (
-            <div className="space-y-2">
-              <CustomSelect
-                id={`${idPrefix}-secret`}
-                options={secretOptions}
-                value={getDisplayValue(value)}
-                placeholder="Select a secret..."
-                onValueChange={handleSecretChange}
-                disabled={disabled}
-              />
-              <div className="flex items-center justify-between">
-                {secrets.length === 0 ? (
-                  <p className="text-xs text-gray-500">
-                    No secrets available. Create secrets in Settings → Secrets.
+          {valueType === 'legacy' && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2">
+              <div className="flex items-start gap-2 text-sm text-amber-900">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <div>
+                  <p className="font-medium">Legacy mapping no longer supported here</p>
+                  <p className="text-xs text-amber-800">
+                    This field uses a saved expression or secret. Replace it with a structured reference or a fixed value.
                   </p>
-                ) : (
-                  <p className="text-xs text-gray-400">
-                    Value: <span className="font-mono">••••••••</span>
-                  </p>
-                )}
-                <a
-                  href="/msp/settings?tab=Secrets"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-primary-600 hover:text-primary-700 hover:underline"
+                </div>
+              </div>
+              <pre className="overflow-x-auto rounded bg-white/70 px-2 py-1 text-xs text-amber-900">
+                {getDisplayValue(value)}
+              </pre>
+              <div className="flex gap-2">
+                <Button
+                  id={`${idPrefix}-replace-with-reference`}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={disabled}
+                  onClick={() => handleSourceModeChange('reference')}
                 >
-                  Manage Secrets →
-                </a>
+                  Use reference
+                </Button>
+                <Button
+                  id={`${idPrefix}-replace-with-fixed`}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={disabled}
+                  onClick={() => handleSourceModeChange('fixed')}
+                >
+                  Use fixed value
+                </Button>
               </div>
             </div>
           )}
 
-          {valueType === 'literal' && (
+          {valueType === 'fixed' && (
             <LiteralValueEditor
               value={value as MappingValue}
               onChange={handleLiteralChange}
@@ -1319,7 +1062,6 @@ const MappingFieldEditor: React.FC<{
               fieldChildren={field.children}
               fieldConstraints={field.constraints}
               fieldOptions={fieldOptions}
-              secrets={secrets}
               stepId={stepId}
               idPrefix={idPrefix}
               disabled={disabled}
@@ -1514,7 +1256,6 @@ const LiteralValueEditor: React.FC<{
   fieldChildren?: ActionInputField[];
   fieldConstraints?: ActionInputField['constraints'];
   fieldOptions: SelectOption[];
-  secrets: Array<{ name: string; description?: string }>;
   stepId: string;
   idPrefix: string;
   disabled?: boolean;
@@ -1531,7 +1272,6 @@ const LiteralValueEditor: React.FC<{
   fieldChildren,
   fieldConstraints,
   fieldOptions,
-  secrets,
   stepId,
   idPrefix,
   disabled,
@@ -1766,7 +1506,6 @@ const LiteralValueEditor: React.FC<{
               }}
               rootInputMapping={rootInputMapping}
               fieldOptions={fieldOptions}
-              secrets={secrets}
               stepId={stepId}
               disabled={disabled}
               sourceTypeMap={sourceTypeMap}
@@ -1848,7 +1587,6 @@ const LiteralValueEditor: React.FC<{
                   }}
                   rootInputMapping={rootInputMapping}
                   fieldOptions={fieldOptions}
-                  secrets={secrets}
                   stepId={stepId}
                   disabled={disabled}
                   sourceTypeMap={sourceTypeMap}
@@ -1921,8 +1659,7 @@ const LiteralValueEditor: React.FC<{
         const nextItem = createWorkflowActionInputValueForMode(
           itemField,
           undefined,
-          defaultMode,
-          'expression'
+          defaultMode
         );
         onChange([...rows, nextItem]);
       };
@@ -1946,8 +1683,7 @@ const LiteralValueEditor: React.FC<{
                       nextRows[rowIndex] = createWorkflowActionInputValueForMode(
                         itemField,
                         undefined,
-                        getDefaultWorkflowActionInputSourceMode(itemField),
-                        'expression'
+                        getDefaultWorkflowActionInputSourceMode(itemField)
                       );
                       onChange(nextRows);
                     }}
@@ -1981,7 +1717,6 @@ const LiteralValueEditor: React.FC<{
                 }}
                 rootInputMapping={rootInputMapping}
                 fieldOptions={fieldOptions}
-                secrets={secrets}
                 stepId={stepId}
                 disabled={disabled}
                 sourceTypeMap={sourceTypeMap}
@@ -2117,8 +1852,8 @@ function findAutoMappingSuggestions(
 /**
  * InputMappingEditor component
  *
- * Provides a visual editor for mapping action inputs using expressions,
- * secrets, or literal values.
+ * Provides a visual editor for mapping action inputs using structured references
+ * or literal values.
  */
 export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   value,
@@ -2131,27 +1866,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   expressionContext: providedExpressionContext,
   referenceBrowseContext,
 }) => {
-  const [secrets, setSecrets] = useState<Array<{ name: string; description?: string }>>([]);
   const [showUnmapped, setShowUnmapped] = useState(true);
-
-  // Fetch available secrets
-  useEffect(() => {
-    let mounted = true;
-    listTenantSecrets()
-      .then(secretList => {
-        if (mounted && secretList) {
-          setSecrets(secretList.map(s => ({
-            name: s.name,
-            description: s.description ?? undefined
-          })));
-        }
-      })
-      .catch(err => {
-        console.error('Failed to fetch secrets:', err);
-      });
-
-    return () => { mounted = false; };
-  }, []);
 
   // Separate mapped and unmapped fields
   const { mappedFields, unmappedFields } = useMemo(() => {
@@ -2223,7 +1938,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
     const defaultMode = getDefaultWorkflowActionInputSourceMode(field);
     onChange({
       ...value,
-      [fieldName]: createWorkflowActionInputValueForMode(field, undefined, defaultMode, 'expression'),
+      [fieldName]: createWorkflowActionInputValueForMode(field, undefined, defaultMode),
     });
   }, [onChange, targetFields, value]);
 
@@ -2355,7 +2070,6 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                   onChange={(v) => handleFieldChange(field.name, v)}
                   rootInputMapping={value}
                   fieldOptions={fieldOptions}
-                  secrets={secrets}
                   stepId={stepId}
                   disabled={disabled}
                   sourceTypeMap={sourceTypeMap}
