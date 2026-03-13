@@ -101,7 +101,7 @@
   {
     "id": "F013",
     "description": "Migrate ImportExportSettings.tsx — add id to both tab arrays (3+4 tabs), remove bidirectional maps",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern A"

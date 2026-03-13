@@ -137,3 +137,5 @@ npm run build
 - F011 — Migrated `server/src/components/settings/profile/UserProfile.tsx` to id-based tabs and updated `packages/integrations/src/lib/calendarAvailability.ts` to resolve profile tab ids directly.
 
 - F012 — Replaced SecuritySettingsPage slug/label maps with stable ids, preserving URL sync through direct `?tab=` values.
+
+- F013 — Added ids to both Import/Export tab sets and switched section routing to use section ids directly.
