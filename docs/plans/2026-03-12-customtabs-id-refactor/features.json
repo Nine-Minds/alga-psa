@@ -155,7 +155,7 @@
   {
     "id": "F019",
     "description": "Migrate notifications settings page (notifications/page.tsx) — add id to both tab arrays (3+1), remove bidirectional maps",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Consumer Migration Patterns",
       "Pattern A"
