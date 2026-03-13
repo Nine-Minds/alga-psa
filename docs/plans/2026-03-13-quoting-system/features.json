@@ -511,7 +511,7 @@
   {
     "id": "F060",
     "description": "P2: Totals calculation — optional items excluded from totals when toggled off",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2-FR3"
     ]
