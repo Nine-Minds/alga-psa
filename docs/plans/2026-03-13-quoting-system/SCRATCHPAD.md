@@ -109,6 +109,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) F064 complete — P2: Quote revisions now retain the original `quote_number`, while `listByTenant()` and `QuoteDetail.tsx` format versioned displays as `Q-XXXX vN` when `version > 1`.
 - (2026-03-13) F063 complete — P2: Revising a quote now marks the source version as `superseded` and logs the handoff in quote activities, preserving a clear system-generated revision trail.
 - (2026-03-13) F062 complete — P2: `Quote.createRevision()` now clones every existing `quote_item` into the new revision before recalculating totals, so revised quotes start from the full prior configuration.
 - (2026-03-13) F061 complete — P2: Added `Quote.createRevision()` plus `createQuoteRevision()` action support, creating a new draft quote revision with `version + 1` and a stable root `parent_quote_id` when revising sent or rejected quotes.

@@ -543,7 +543,7 @@
   {
     "id": "F064",
     "description": "P2: Versioning — quote_number consistent across versions, display with version suffix",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2-FR4"
     ]
