@@ -205,3 +205,4 @@ npm run build
 - **T002 complete** — `packages/ui/src/components/CustomTabs.test.tsx` verifies trigger buttons render the visible `label` text while internal matching still uses ids.
 - **T003 complete** — `packages/ui/src/components/CustomTabs.contract.test.ts` and the UI render test verify trigger internals are keyed off `tab.id` rather than `tab.label`.
 - **T004 complete** — The contract test asserts tab content panels use `value={tab.id}`, covering Radix content matching by id.
+- **T005 complete** — The source contract test locks in `key={tab.id}` for trigger and content rendering paths.
