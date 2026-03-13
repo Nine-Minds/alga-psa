@@ -105,6 +105,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) F032 complete — P1: `addQuoteItem` and `updateQuoteItem` preserve explicit `unit_price` values, so quote items can override service catalog default pricing without losing the service metadata linkage.
 - (2026-03-13) F031 complete — P1: The `addQuoteItem` action now exposes service catalog-backed quote item creation end-to-end: callers provide `service_id`, and the quote item model denormalizes service name/SKU/rate/unit defaults before persisting.
 - (2026-03-13) F030 complete — P1: Added `updateQuoteItem`, `removeQuoteItem`, and `reorderQuoteItems` server actions in `packages/billing/src/actions/quoteActions.ts`, all wrapped with `withAuth()`, enforcing `billing:update`, validating item updates with `updateQuoteItemSchema`, and delegating mutation/reorder behavior to the tenant-scoped quote item model.
 - (2026-03-13) F029 complete — P1: Added `addQuoteItem` server action in `packages/billing/src/actions/quoteActions.ts`, wrapped with `withAuth()`, enforcing `billing:update`, validating with `createQuoteItemSchema`, and delegating service catalog denormalization/default pricing to the quote item model.

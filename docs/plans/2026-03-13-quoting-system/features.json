@@ -253,7 +253,7 @@
   {
     "id": "F032",
     "description": "P1: Service catalog integration — rate override on quote item (custom pricing)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR10"
     ]
