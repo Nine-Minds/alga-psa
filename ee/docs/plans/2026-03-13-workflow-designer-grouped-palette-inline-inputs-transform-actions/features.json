@@ -242,49 +242,49 @@
   {
     "id": "F041",
     "description": "Match grouped tiles by contained action label during palette search",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model", "Requirements > Grouped Palette and Designer Action Catalog"]
   },
   {
     "id": "F042",
     "description": "Match grouped tiles by contained actionId during palette search",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F043",
     "description": "Match grouped tiles by contained input field names during palette search",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F044",
     "description": "Match grouped tiles by contained output field names during palette search",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F045",
     "description": "Match grouped tiles by the group label itself during palette search",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F046",
     "description": "Match grouped tiles by the group description itself during palette search",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F047",
     "description": "Search for create-ticket terms should resolve to the Ticket tile rather than a hidden action tile",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "UX / UI Notes > Palette Model"]
   },
   {
     "id": "F048",
     "description": "Search for find-contact terms should resolve to the Contact tile rather than a hidden action tile",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "UX / UI Notes > Palette Model"]
   },
   {
@@ -296,25 +296,25 @@
   {
     "id": "F050",
     "description": "Search results should continue to include control blocks when they match the query",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F051",
     "description": "Empty search state should show the full grouped palette in stable category order",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F052",
     "description": "Search results should preserve stable grouped ordering instead of falling back to arbitrary registry order",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F053",
     "description": "Palette search should include app/plugin tile contents as well as built-in tile contents",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Plugin/App Support", "UX / UI Notes > Palette Model"]
   },
   {
@@ -332,31 +332,31 @@
   {
     "id": "F056",
     "description": "Palette search should continue working for legacy node entries that remain individually rendered",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F057",
     "description": "Palette search should be able to match grouped tiles by singular or plural business object labels",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F058",
     "description": "Palette search should be able to match grouped tiles by common verb-object phrases such as create ticket or assign ticket",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "UX / UI Notes > Palette Model"]
   },
   {
     "id": "F059",
     "description": "Palette search results should not duplicate a grouped tile once per contained action",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {
     "id": "F060",
     "description": "Palette search should clear back to the full grouped catalog without losing selection or drag state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes > Palette Model"]
   },
   {

@@ -73,6 +73,11 @@ import {
   buildWorkflowDesignerActionCatalog,
   type WorkflowDesignerCatalogRecord
 } from '@shared/workflow/runtime/designer/actionCatalog';
+import {
+  buildPaletteSearchIndex,
+  groupPaletteItemsByCategory,
+  matchesPaletteSearchQuery,
+} from './paletteSearch';
 
 import type {
   WorkflowDefinition,
@@ -3023,7 +3028,12 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           outputSummary: outputFields.length > 0
             ? `Returns: ${outputFields.slice(0, 3).join(', ')}${outputFields.length > 3 ? '...' : ''}`
             : undefined,
-          searchableFields: outputFields.join(' ').toLowerCase()
+          searchIndex: buildPaletteSearchIndex([
+            node.id,
+            node.ui?.label,
+            node.ui?.description,
+            ...outputFields
+          ])
         };
       });
 
@@ -3059,7 +3069,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           outputSummary: actionLabels.length > 0
             ? `${actionLabels.slice(0, 3).join(', ')}${actionLabels.length > 3 ? '...' : ''}`
             : 'Choose an action after adding this step',
-          searchableFields: [
+          searchIndex: buildPaletteSearchIndex([
             record.groupKey,
             record.label,
             record.description,
@@ -3067,10 +3077,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             ...actionIds,
             ...inputFields,
             ...outputFields
-          ]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase()
+          ])
         };
       });
 
@@ -3082,64 +3089,19 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       type: block.id,
       sortOrder: 0,
       outputSummary: undefined as string | undefined,
-      searchableFields: ''
+      searchIndex: buildPaletteSearchIndex([block.id, block.label, block.description])
     }));
 
     // Keep generic nodes alongside grouped business tiles for compatibility while the step model transitions.
     const items = [...controlItems, ...groupedActionItems, ...registryItems];
 
     if (!searchTerm) return items;
-    // §16.6 - Search also matches field names
-    return items.filter((item) =>
-      item.label.toLowerCase().includes(searchTerm) ||
-      item.id.toLowerCase().includes(searchTerm) ||
-      item.description.toLowerCase().includes(searchTerm) ||
-      item.searchableFields.includes(searchTerm)
-    );
+    // §16.6 - Search also matches field names and normalized action/group aliases.
+    return items.filter((item) => matchesPaletteSearchQuery(item.searchIndex, searchTerm));
   }, [nodeRegistry, actionRegistry, designerActionCatalog, search]);
 
   const groupedPaletteItems = useMemo(() => {
-    const grouped = paletteItems.reduce<Record<string, typeof paletteItems>>((acc, item) => {
-      const category = item.category;
-      acc[category] = acc[category] || [];
-      acc[category].push(item);
-      return acc;
-    }, {});
-
-    Object.values(grouped).forEach((items) => {
-      items.sort((left, right) => {
-        if ((left.sortOrder ?? 0) !== (right.sortOrder ?? 0)) {
-          return (left.sortOrder ?? 0) - (right.sortOrder ?? 0);
-        }
-        return left.label.localeCompare(right.label);
-      });
-    });
-
-    // Stable, intentional palette ordering.
-    const categoryOrder = [
-      'Control',
-      'Core',
-      'Transform',
-      'Apps',
-      'Email',
-      'Nodes'
-    ];
-
-    // Sort categories: known categories first in order, then others alphabetically
-    const sortedEntries = Object.entries(grouped).sort(([a], [b]) => {
-      const aIndex = categoryOrder.indexOf(a);
-      const bIndex = categoryOrder.indexOf(b);
-      
-      // If both are in the order list, sort by their position
-      if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
-      // If only a is in the order list, it comes first
-      if (aIndex !== -1) return -1;
-      // If only b is in the order list, it comes first
-      if (bIndex !== -1) return 1;
-      return a.localeCompare(b);
-    });
-
-    return Object.fromEntries(sortedEntries);
+    return groupPaletteItemsByCategory(paletteItems);
   }, [paletteItems]);
 
   const handlePipeSelect = (pipePath: string) => {

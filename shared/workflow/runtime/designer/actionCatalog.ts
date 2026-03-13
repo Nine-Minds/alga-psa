@@ -1,7 +1,8 @@
 type JsonSchema = {
+  [key: string]: unknown;
   type?: string | string[];
   properties?: Record<string, JsonSchema>;
-  items?: JsonSchema;
+  items?: JsonSchema | JsonSchema[];
   anyOf?: JsonSchema[];
   oneOf?: JsonSchema[];
   $ref?: string;

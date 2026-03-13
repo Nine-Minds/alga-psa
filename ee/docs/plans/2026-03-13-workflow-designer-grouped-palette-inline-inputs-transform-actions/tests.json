@@ -308,7 +308,7 @@
   {
     "id": "T052",
     "description": "Unit: search results preserve stable grouped ordering",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F052"]
   },
   {
