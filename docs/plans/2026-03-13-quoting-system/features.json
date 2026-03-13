@@ -583,7 +583,7 @@
   {
     "id": "F069",
     "description": "P2: Discount UI — add discount line with type selector, amount/percentage input, target picker",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2-FR2"
     ]

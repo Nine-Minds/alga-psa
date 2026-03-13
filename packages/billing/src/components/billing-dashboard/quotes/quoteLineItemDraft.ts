@@ -133,6 +133,41 @@ export function createCustomDraftQuoteItem(input: {
   };
 }
 
+export function createDraftDiscountQuoteItem(input: {
+  description: string;
+  discount_type: 'percentage' | 'fixed';
+  discount_percentage?: number | null;
+  fixed_amount?: number;
+  applies_to_item_id?: string | null;
+  applies_to_service_id?: string | null;
+}): DraftQuoteItem {
+  return {
+    local_id: buildLocalId(),
+    service_id: null,
+    service_item_kind: null,
+    service_name: null,
+    service_sku: null,
+    billing_method: null,
+    description: input.description,
+    quantity: 1,
+    unit_price: input.discount_type === 'fixed' ? Number(input.fixed_amount ?? 0) : 0,
+    unit_of_measure: null,
+    phase: null,
+    is_optional: false,
+    is_selected: true,
+    is_recurring: false,
+    billing_frequency: null,
+    is_discount: true,
+    discount_type: input.discount_type,
+    discount_percentage: input.discount_type === 'percentage' ? (input.discount_percentage ?? 0) : null,
+    applies_to_item_id: input.applies_to_item_id ?? null,
+    applies_to_service_id: input.applies_to_service_id ?? null,
+    is_taxable: false,
+    tax_region: null,
+    tax_rate: 0,
+  };
+}
+
 function included(item: DraftQuoteItem): boolean {
   return !item.is_optional || item.is_selected !== false;
 }

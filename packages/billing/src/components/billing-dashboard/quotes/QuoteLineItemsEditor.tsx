@@ -8,6 +8,7 @@ import type { CatalogPickerItem } from '../../../actions/serviceActions';
 import ServiceCatalogPicker from '../contracts/ServiceCatalogPicker';
 import {
   createCustomDraftQuoteItem,
+  createDraftDiscountQuoteItem,
   createDraftQuoteItemFromService,
   formatDraftQuoteMoney,
   type DraftQuoteItem,
@@ -30,7 +31,18 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
   const [manualDescription, setManualDescription] = useState('');
   const [manualQuantity, setManualQuantity] = useState('1');
   const [manualUnitPrice, setManualUnitPrice] = useState('0.00');
+  const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
+  const [discountValue, setDiscountValue] = useState('10');
+  const [discountTargetType, setDiscountTargetType] = useState<'quote' | 'item' | 'service'>('quote');
+  const [discountTargetValue, setDiscountTargetValue] = useState('');
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
+
+  const itemTargetOptions = items.filter((item) => !item.is_discount);
+  const serviceTargetOptions = Array.from(new Map(
+    items
+      .filter((item) => !item.is_discount && item.service_id)
+      .map((item) => [item.service_id!, { value: item.service_id!, label: item.service_name || item.description }])
+  ).values());
 
   const updateItem = (localId: string, patch: Partial<DraftQuoteItem>) => {
     onChange(items.map((item) => item.local_id === localId ? { ...item, ...patch } : item));
@@ -84,6 +96,29 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
     setManualDescription('');
     setManualQuantity('1');
     setManualUnitPrice('0.00');
+  };
+
+  const handleAddDiscount = () => {
+    const numericValue = Number.parseFloat(discountValue || '0');
+    if (Number.isNaN(numericValue) || numericValue <= 0) {
+      return;
+    }
+
+    onChange([
+      ...items,
+      createDraftDiscountQuoteItem({
+        description: discountType === 'percentage' ? `Discount (${numericValue}%)` : 'Discount',
+        discount_type: discountType,
+        discount_percentage: discountType === 'percentage' ? Math.round(numericValue) : null,
+        fixed_amount: discountType === 'fixed' ? Math.round(numericValue * 100) : 0,
+        applies_to_item_id: discountTargetType === 'item' ? discountTargetValue || null : null,
+        applies_to_service_id: discountTargetType === 'service' ? discountTargetValue || null : null,
+      }),
+    ]);
+
+    setDiscountValue(discountType === 'percentage' ? '10' : '0.00');
+    setDiscountTargetType('quote');
+    setDiscountTargetValue('');
   };
 
   return (
@@ -140,6 +175,68 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
           disabled={disabled || !manualDescription.trim()}
         >
           Add Custom Item
+        </Button>
+      </div>
+
+      <div className="grid gap-3 rounded-md border border-dashed border-border p-3 md:grid-cols-[160px_140px_180px_minmax(0,1fr)_auto]">
+        <select
+          value={discountType}
+          onChange={(event) => setDiscountType(event.target.value as 'percentage' | 'fixed')}
+          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+          disabled={disabled}
+        >
+          <option value="percentage">Percentage</option>
+          <option value="fixed">Fixed amount</option>
+        </select>
+        <Input
+          type="number"
+          min="0"
+          step={discountType === 'percentage' ? '1' : '0.01'}
+          value={discountValue}
+          onChange={(event) => setDiscountValue(event.target.value)}
+          placeholder={discountType === 'percentage' ? 'Percent' : 'Amount'}
+          disabled={disabled}
+        />
+        <select
+          value={discountTargetType}
+          onChange={(event) => {
+            setDiscountTargetType(event.target.value as 'quote' | 'item' | 'service');
+            setDiscountTargetValue('');
+          }}
+          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+          disabled={disabled}
+        >
+          <option value="quote">Entire quote</option>
+          <option value="item">Specific item</option>
+          <option value="service">Specific service</option>
+        </select>
+        {discountTargetType === 'quote' ? (
+          <div className="flex items-center rounded-md border border-dashed border-border px-3 text-sm text-muted-foreground">
+            Applies to quote subtotal
+          </div>
+        ) : (
+          <select
+            value={discountTargetValue}
+            onChange={(event) => setDiscountTargetValue(event.target.value)}
+            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+            disabled={disabled}
+          >
+            <option value="">Select target</option>
+            {(discountTargetType === 'item' ? itemTargetOptions.map((item) => ({ value: item.quote_item_id ?? item.local_id, label: item.description })) : serviceTargetOptions).map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        )}
+        <Button
+          id="quote-line-items-add-discount"
+          type="button"
+          variant="outline"
+          onClick={handleAddDiscount}
+          disabled={disabled || (discountTargetType !== 'quote' && !discountTargetValue)}
+        >
+          Add Discount
         </Button>
       </div>
 
