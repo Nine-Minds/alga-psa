@@ -277,7 +277,7 @@
   {
     "id": "F035",
     "description": "P1: Recurring/one-time — is_recurring and billing_frequency stored and returned",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P1-FR12"
     ]
