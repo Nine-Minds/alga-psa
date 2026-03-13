@@ -82,6 +82,79 @@ const actionRegistry = [
       },
     },
   },
+  {
+    id: 'transform.build_object',
+    version: 1,
+    ui: {
+      label: 'Build Object',
+      description: 'Construct an object from explicit named inputs.',
+    },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        fields: {
+          type: 'array',
+        },
+      },
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        object: {
+          type: 'object',
+          additionalProperties: true,
+        },
+      },
+    },
+  },
+  {
+    id: 'transform.pick_fields',
+    version: 1,
+    ui: {
+      label: 'Pick Fields',
+      description: 'Select a fixed subset of fields from an object.',
+    },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        source: { type: 'object' },
+        fields: { type: 'array' },
+      },
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        object: {
+          type: 'object',
+          additionalProperties: true,
+        },
+      },
+    },
+  },
+  {
+    id: 'transform.rename_fields',
+    version: 1,
+    ui: {
+      label: 'Rename Fields',
+      description: 'Rename object fields with explicit mapping entries.',
+    },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        source: { type: 'object' },
+        renames: { type: 'array' },
+      },
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        object: {
+          type: 'object',
+          additionalProperties: true,
+        },
+      },
+    },
+  },
 ];
 
 const buildDefinition = (upstreamStep: NodeStep): WorkflowDefinition => ({
@@ -362,6 +435,208 @@ describe('workflow data context', () => {
       properties: {
         text: { type: 'string' },
       },
+    });
+  });
+
+  it('T269: build-object exposes named object fields to downstream references', () => {
+    const definition: WorkflowDefinition = {
+      id: 'workflow-build-object',
+      version: 1,
+      name: 'Build object workflow',
+      payloadSchemaRef: 'system:default',
+      trigger: { type: 'event', eventName: 'ticket.created' },
+      steps: [
+        {
+          id: 'transform-step',
+          type: 'action.call',
+          name: 'Build Object',
+          config: {
+            designerGroupKey: 'transform',
+            designerTileKind: 'transform',
+            actionId: 'transform.build_object',
+            version: 1,
+            saveAs: 'ticketSummary',
+            inputMapping: {
+              fields: [
+                { key: 'ticketId', value: { $expr: 'payload.ticket.id' } },
+                { key: 'urgent', value: true },
+              ],
+            },
+          },
+        },
+        {
+          id: 'downstream-step',
+          type: 'action.call',
+          config: {
+            actionId: 'tickets.create',
+            version: 1,
+          },
+        },
+      ],
+    };
+
+    const context = buildDataContext(
+      definition,
+      'downstream-step',
+      actionRegistry,
+      {
+        type: 'object',
+        properties: {
+          ticket: {
+            type: 'object',
+            properties: {
+              id: { type: 'string' },
+            },
+          },
+        },
+      }
+    );
+
+    expect(context.steps[0]?.outputSchema).toMatchObject({
+      type: 'object',
+      properties: {
+        object: {
+          type: 'object',
+          properties: {
+            ticketId: { type: 'string' },
+            urgent: { type: 'boolean' },
+          },
+        },
+      },
+    });
+    expect(context.steps[0]?.fields[0]).toMatchObject({
+      name: 'object',
+      children: [{ name: 'ticketId' }, { name: 'urgent' }],
+    });
+  });
+
+  it('T270: pick-fields exposes only the selected source fields to downstream references', () => {
+    const definition: WorkflowDefinition = {
+      id: 'workflow-pick-fields',
+      version: 1,
+      name: 'Pick fields workflow',
+      payloadSchemaRef: 'system:default',
+      trigger: { type: 'event', eventName: 'ticket.created' },
+      steps: [
+        {
+          id: 'source-step',
+          type: 'action.call',
+          name: 'Update Ticket',
+          config: {
+            actionId: 'tickets.update_fields',
+            version: 2,
+            saveAs: 'ticketResult',
+          },
+        },
+        {
+          id: 'transform-step',
+          type: 'action.call',
+          name: 'Pick Fields',
+          config: {
+            designerGroupKey: 'transform',
+            designerTileKind: 'transform',
+            actionId: 'transform.pick_fields',
+            version: 1,
+            saveAs: 'pickedTicket',
+            inputMapping: {
+              source: { $expr: 'vars.ticketResult' },
+              fields: ['updated', 'ticket_id'],
+            },
+          },
+        },
+        {
+          id: 'downstream-step',
+          type: 'action.call',
+          config: {
+            actionId: 'tickets.create',
+            version: 1,
+          },
+        },
+      ],
+    };
+
+    const context = buildDataContext(definition, 'downstream-step', actionRegistry, null);
+
+    expect(context.steps[1]?.outputSchema).toMatchObject({
+      type: 'object',
+      properties: {
+        object: {
+          type: 'object',
+          properties: {
+            updated: { type: 'boolean' },
+            ticket_id: { type: 'string' },
+          },
+        },
+      },
+    });
+    expect(context.steps[1]?.fields[0]).toMatchObject({
+      name: 'object',
+      children: [{ name: 'updated' }, { name: 'ticket_id' }],
+    });
+  });
+
+  it('T271: rename-fields exposes renamed output keys to downstream references', () => {
+    const definition: WorkflowDefinition = {
+      id: 'workflow-rename-fields',
+      version: 1,
+      name: 'Rename fields workflow',
+      payloadSchemaRef: 'system:default',
+      trigger: { type: 'event', eventName: 'ticket.created' },
+      steps: [
+        {
+          id: 'source-step',
+          type: 'action.call',
+          name: 'Update Ticket',
+          config: {
+            actionId: 'tickets.update_fields',
+            version: 2,
+            saveAs: 'ticketResult',
+          },
+        },
+        {
+          id: 'transform-step',
+          type: 'action.call',
+          name: 'Rename Fields',
+          config: {
+            designerGroupKey: 'transform',
+            designerTileKind: 'transform',
+            actionId: 'transform.rename_fields',
+            version: 1,
+            saveAs: 'renamedTicket',
+            inputMapping: {
+              source: { $expr: 'vars.ticketResult' },
+              renames: [{ from: 'ticket_id', to: 'ticketId' }],
+            },
+          },
+        },
+        {
+          id: 'downstream-step',
+          type: 'action.call',
+          config: {
+            actionId: 'tickets.create',
+            version: 1,
+          },
+        },
+      ],
+    };
+
+    const context = buildDataContext(definition, 'downstream-step', actionRegistry, null);
+
+    expect(context.steps[1]?.outputSchema).toMatchObject({
+      type: 'object',
+      properties: {
+        object: {
+          type: 'object',
+          properties: {
+            ticketId: { type: 'string' },
+            updated: { type: 'boolean' },
+          },
+        },
+      },
+    });
+    expect(context.steps[1]?.fields[0]).toMatchObject({
+      name: 'object',
+      children: [{ name: 'updated' }, { name: 'ticketId' }],
     });
   });
 });

@@ -68,6 +68,7 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-14) `F079`/`T079` are checklist artifacts rather than pending product work: the workflow designer still has no existing step duplicate/copy affordance in `WorkflowDesigner.tsx`, the page object, or Playwright coverage, so preserving it would require inventing new functionality outside this PRD.
 - (2026-03-14) The transform branch-move Playwright slice needed the same setup ordering as the existing grouped-step parity coverage: insert the movable transform on the root pipe before selecting the control-block branch, then add the branch-local transform after the branch is selected. Trying to switch selection back to root mid-test was creating a harness-only false negative.
 - (2026-03-14) The fairest way to close `F079`/`T079` is to codify the current parity contract rather than leave a permanent false blocker in the middle of the checklist: workflow steps expose drag/delete controls only, so grouped steps preserve the current absence of duplicate/copy behavior.
+- (2026-03-14) Dynamic object transform outputs are inferred most safely in `workflowDataContext.ts`, not by mutating the runtime registry schemas. `transform.build_object`, `transform.pick_fields`, and `transform.rename_fields` all depend on step-local `config.inputMapping` values, so downstream browseable field names have to be derived per step from saved mappings and direct reference paths.
 - (2026-03-14) Reference mode was still injecting placeholder `payload.*` children when no payload schema existed. Removing those placeholders keeps only real schema-backed paths and aligns the field picker with `F154`.
 - (2026-03-14) The remaining `F155`/`F156` refresh behavior was already driven by pure `buildWorkflowReferenceFieldOptions(...)` recomputation from `dataContext`; the missing work was pinning that contract with deterministic tests for action-schema and `saveAs` changes.
 - (2026-03-14) The remaining `F157`/`F160` stability behavior was already a consequence of keeping the saved direct reference expression as the source of truth and recomputing block context from the current step location; targeted jsdom/unit coverage was enough to lock that down without changing runtime behavior.
@@ -259,6 +260,10 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `npx tsc --noEmit -p ee/server/tsconfig.json`
   - `npx eslint ee/server/src/components/workflow-designer/__tests__/WorkflowActionInputSourceMode.test.tsx ee/server/src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts ee/server/src/components/workflow-designer/__tests__/InputMappingEditorReferenceMode.test.tsx ee/server/src/components/workflow-designer/mapping/InputMappingEditor.tsx ee/server/src/__tests__/integration/workflow-designer-basic.playwright.test.ts`
   - `cd ee/server && npx playwright test src/__tests__/integration/workflow-designer-basic.playwright.test.ts -g "T079: grouped action steps preserve the current absence of duplicate behavior|T234: transform grouped steps remain reorderable within the pipeline like existing action.call steps|T234/T235: transform grouped steps remain movable across control-block branches and can be inserted inside control blocks" --reporter=line`
+- (2026-03-14) Validate dynamic transform object-output schemas:
+  - `cd ee/server && npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/workflowDataContext.test.ts --reporter=dot`
+  - `npx tsc --noEmit -p ee/server/tsconfig.json`
+  - `npx eslint ee/server/src/components/workflow-designer/workflowDataContext.ts ee/server/src/components/workflow-designer/__tests__/workflowDataContext.test.ts`
 
 ## Links / References
 
@@ -303,6 +308,11 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - Added Playwright coverage proving transform grouped steps still reorder at the root, can be inserted into control-block branches, and can be dragged from the root pipe into a branch like existing `action.call` steps.
   - Tightened `F079`/`T079` to the real parity contract and added a negative Playwright check proving grouped action steps do not invent a duplicate/copy affordance that the underlying workflow designer still lacks.
   - Marked F079, F234-F235, and T079/T234-T235 implemented.
+- (2026-03-14) Completed the dynamic transform object-output schema slice:
+  - Added step-local transform output inference in `workflowDataContext.ts` so `transform.build_object`, `transform.pick_fields`, and `transform.rename_fields` derive downstream browseable object schemas from their saved `config.inputMapping` values instead of falling back to opaque `record(unknown)` output.
+  - Propagated literal value types and direct-reference source schemas into `build_object`, narrowed `pick_fields` to the selected source properties when the source schema is known, and preserved renamed plus untouched source keys for `rename_fields`.
+  - Added focused data-context tests proving downstream reference browsing now sees named `object.*` children for build-object, only selected keys for pick-fields, and renamed keys for rename-fields.
+  - Marked F269-F271 and T269-T271 implemented.
 - (2026-03-14) Completed the dependent ticket-picker scope slice:
   - Reused the picker metadata from the first ticket-picker batch to narrow contact, location, category, and subcategory fixed-value options from the current fixed upstream client/board/category selections.
   - Added disabled explanatory states when those dependencies are missing or dynamic, while keeping dependent fields free to switch back to Reference mode instead of trapping the builder in Fixed mode.

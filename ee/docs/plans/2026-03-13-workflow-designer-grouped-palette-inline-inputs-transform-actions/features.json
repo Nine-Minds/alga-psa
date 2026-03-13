@@ -1610,19 +1610,19 @@
   {
     "id": "F269",
     "description": "Expose build-object output as an object schema that downstream references can browse",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Reference Source Model"]
   },
   {
     "id": "F270",
     "description": "Expose pick-fields output as an object schema that downstream references can browse",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Reference Source Model"]
   },
   {
     "id": "F271",
     "description": "Expose rename-fields output as an object schema that downstream references can browse using the renamed field names",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Transform Actions", "Requirements > Reference Source Model"]
   },
   {

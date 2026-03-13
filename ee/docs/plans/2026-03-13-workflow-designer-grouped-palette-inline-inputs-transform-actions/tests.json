@@ -1610,19 +1610,19 @@
   {
     "id": "T269",
     "description": "Unit: build-object exposes an object output schema browseable by downstream references",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F269"]
   },
   {
     "id": "T270",
     "description": "Unit: pick-fields exposes an object output schema browseable by downstream references",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F270"]
   },
   {
     "id": "T271",
     "description": "Unit: rename-fields exposes renamed output field names to downstream references",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F271"]
   },
   {

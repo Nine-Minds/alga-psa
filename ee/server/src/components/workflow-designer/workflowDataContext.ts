@@ -87,6 +87,25 @@ type BlockContext = {
   inCatchBlock?: boolean;
 };
 
+const metaGlobalSchema: JsonSchema = {
+  type: 'object',
+  properties: {
+    state: { type: 'string', description: 'Workflow state' },
+    traceId: { type: 'string', description: 'Trace ID' },
+    tags: { type: 'object', description: 'Workflow tags' }
+  }
+};
+
+const errorGlobalSchema: JsonSchema = {
+  type: 'object',
+  properties: {
+    name: { type: 'string', description: 'Error name' },
+    message: { type: 'string', description: 'Error message' },
+    stack: { type: 'string', description: 'Stack trace' },
+    nodePath: { type: 'string', description: 'Error location in workflow' }
+  }
+};
+
 const resolveSchema = (schema: JsonSchema, root?: JsonSchema): JsonSchema => {
   if (schema.$ref && root?.definitions) {
     const refKey = schema.$ref.replace('#/definitions/', '');
@@ -117,6 +136,112 @@ const normalizeSchemaType = (schema?: JsonSchema): string | undefined => {
   }
   return schema.type;
 };
+
+const cloneSchema = (schema?: JsonSchema | null): JsonSchema => {
+  if (!schema) return {};
+  return JSON.parse(JSON.stringify(schema)) as JsonSchema;
+};
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const isExpressionValue = (value: unknown): value is { $expr: string } =>
+  isPlainObject(value) && typeof value.$expr === 'string';
+
+const isSecretValue = (value: unknown): value is { $secret: string } =>
+  isPlainObject(value) && typeof value.$secret === 'string';
+
+const directReferencePattern = /^(?:\$index|[A-Za-z_$][\w$]*)(?:\.[A-Za-z_$][\w$]*)*$/;
+
+const extractDirectReferencePath = (value: unknown): string | null => {
+  if (!isExpressionValue(value)) return null;
+  const trimmed = value.$expr.trim();
+  if (!trimmed) return null;
+  return directReferencePattern.test(trimmed) ? trimmed : null;
+};
+
+const descendSchema = (schema: JsonSchema | null | undefined, parts: string[]): JsonSchema | null => {
+  if (!schema) return null;
+
+  const root = schema;
+  let current: JsonSchema | null = resolveSchema(schema, root);
+
+  for (const part of parts) {
+    if (!current) return null;
+    const resolved = resolveSchema(current, root);
+    const type = normalizeSchemaType(resolved);
+    if (type !== 'object' || !resolved.properties || !(part in resolved.properties)) {
+      return null;
+    }
+    current = resolved.properties[part] ?? null;
+  }
+
+  return current ? resolveSchema(current, root) : null;
+};
+
+const inferSchemaFromLiteralValue = (
+  value: unknown,
+  resolveReferenceSchema: (referencePath: string) => JsonSchema | null
+): JsonSchema => {
+  const directReferencePath = extractDirectReferencePath(value);
+  if (directReferencePath) {
+    return cloneSchema(resolveReferenceSchema(directReferencePath));
+  }
+
+  if (isSecretValue(value)) {
+    return {};
+  }
+
+  if (value === null) {
+    return { type: 'null' };
+  }
+
+  if (Array.isArray(value)) {
+    return {
+      type: 'array',
+      items:
+        value.length === 0 ? {} : inferSchemaFromLiteralValue(value[0], resolveReferenceSchema)
+    };
+  }
+
+  if (isPlainObject(value)) {
+    return {
+      type: 'object',
+      properties: Object.fromEntries(
+        Object.entries(value).map(([key, nestedValue]) => [
+          key,
+          inferSchemaFromLiteralValue(nestedValue, resolveReferenceSchema)
+        ])
+      )
+    };
+  }
+
+  switch (typeof value) {
+    case 'string':
+      return { type: 'string' };
+    case 'number':
+      return { type: Number.isInteger(value) ? 'integer' : 'number' };
+    case 'boolean':
+      return { type: 'boolean' };
+    default:
+      return {};
+  }
+};
+
+const createObjectTransformOutputSchema = (
+  properties: Record<string, JsonSchema>,
+  additionalProperties?: boolean
+): JsonSchema => ({
+  type: 'object',
+  properties: {
+    object: {
+      type: 'object',
+      description: 'Transformed object output',
+      properties,
+      ...(additionalProperties === undefined ? {} : { additionalProperties })
+    }
+  }
+});
 
 export const extractSchemaFields = (schema: JsonSchema, root?: JsonSchema): SchemaField[] => {
   const resolved = schema ? resolveSchema(schema, root) : schema;
@@ -208,8 +333,8 @@ export const buildDataContext = (
     const parts = remainder.split('.').filter(Boolean);
     if (parts.length === 0) return;
 
-    const rootName = parts[0]!;
-    const nested = parts.slice(1);
+    const [rootName, ...nested] = parts;
+    if (!rootName) return;
 
     const nodeStep = step as NodeStep;
     const defaultName = step.type === 'transform.assign' ? 'Assign' : step.type;
@@ -274,6 +399,127 @@ export const buildDataContext = (
     return root;
   };
 
+  const resolveReferenceSchema = (referencePath: string, blockCtx: BlockContext): JsonSchema | null => {
+    const parts = referencePath.split('.').filter(Boolean);
+    if (parts.length === 0) return null;
+
+    if (parts[0] === 'payload') {
+      return descendSchema(payloadSchema, parts.slice(1));
+    }
+
+    if (parts[0] === 'vars' && parts.length >= 2) {
+      const stepOutput = context.steps.find((candidate) => candidate.saveAs === parts[1]);
+      return descendSchema(stepOutput?.outputSchema ?? null, parts.slice(2));
+    }
+
+    if (parts[0] === 'meta') {
+      return descendSchema(metaGlobalSchema, parts.slice(1));
+    }
+
+    if (parts[0] === 'error' && blockCtx.inCatchBlock) {
+      return descendSchema(errorGlobalSchema, parts.slice(1));
+    }
+
+    if (blockCtx.forEach?.itemVar && parts[0] === blockCtx.forEach.itemVar) {
+      const itemSchema =
+        blockCtx.forEach.itemType && blockCtx.forEach.itemType !== 'any'
+          ? ({ type: blockCtx.forEach.itemType } as JsonSchema)
+          : {};
+      return descendSchema(itemSchema, parts.slice(1));
+    }
+
+    if (blockCtx.forEach?.indexVar && parts[0] === blockCtx.forEach.indexVar) {
+      return parts.length === 1 ? { type: 'number' } : null;
+    }
+
+    return null;
+  };
+
+  const inferTransformObjectOutputSchema = (
+    step: NodeStep,
+    actionId: string,
+    fallbackOutputSchema: JsonSchema,
+    blockCtx: BlockContext
+  ): JsonSchema => {
+    const config = (step.config ?? {}) as { inputMapping?: Record<string, unknown> };
+    const inputMapping = config.inputMapping ?? {};
+    const resolveForValue = (value: unknown) => {
+      const directReferencePath = extractDirectReferencePath(value);
+      return directReferencePath ? resolveReferenceSchema(directReferencePath, blockCtx) : null;
+    };
+
+    if (actionId === 'transform.build_object') {
+      const fields = Array.isArray(inputMapping.fields) ? inputMapping.fields : [];
+      const properties: Record<string, JsonSchema> = {};
+
+      fields.forEach((field) => {
+        if (!isPlainObject(field) || typeof field.key !== 'string') return;
+        const key = field.key.trim();
+        if (!key) return;
+        properties[key] = inferSchemaFromLiteralValue(field.value, resolveReferenceSchemaForValue =>
+          resolveReferenceSchema(resolveReferenceSchemaForValue, blockCtx)
+        );
+      });
+
+      return Object.keys(properties).length > 0
+        ? createObjectTransformOutputSchema(properties, false)
+        : fallbackOutputSchema;
+    }
+
+    if (actionId === 'transform.pick_fields') {
+      const selectedFields = Array.isArray(inputMapping.fields)
+        ? inputMapping.fields.filter((field): field is string => typeof field === 'string' && field.trim().length > 0)
+        : [];
+      if (selectedFields.length === 0) {
+        return fallbackOutputSchema;
+      }
+
+      const sourceSchema = resolveForValue(inputMapping.source);
+      const sourceObjectSchema =
+        normalizeSchemaType(sourceSchema ?? undefined) === 'object' ? sourceSchema : null;
+      const properties = Object.fromEntries(
+        selectedFields.map((fieldName) => [
+          fieldName,
+          cloneSchema(sourceObjectSchema?.properties?.[fieldName])
+        ])
+      );
+
+      return createObjectTransformOutputSchema(properties, !sourceObjectSchema);
+    }
+
+    if (actionId === 'transform.rename_fields') {
+      const sourceSchema = resolveForValue(inputMapping.source);
+      const sourceObjectSchema =
+        normalizeSchemaType(sourceSchema ?? undefined) === 'object' ? sourceSchema : null;
+      const properties = sourceObjectSchema?.properties
+        ? Object.fromEntries(
+            Object.entries(sourceObjectSchema.properties).map(([key, schema]) => [key, cloneSchema(schema)])
+          )
+        : {};
+
+      const renames = Array.isArray(inputMapping.renames) ? inputMapping.renames : [];
+      renames.forEach((renameEntry) => {
+        if (!isPlainObject(renameEntry)) return;
+        if (typeof renameEntry.from !== 'string' || typeof renameEntry.to !== 'string') return;
+        const from = renameEntry.from.trim();
+        const to = renameEntry.to.trim();
+        if (!from || !to) return;
+
+        const nextSchema = cloneSchema(properties[from]);
+        properties[to] = nextSchema;
+        if (to !== from) {
+          delete properties[from];
+        }
+      });
+
+      return Object.keys(properties).length > 0
+        ? createObjectTransformOutputSchema(properties, !sourceObjectSchema)
+        : fallbackOutputSchema;
+    }
+
+    return fallbackOutputSchema;
+  };
+
   const walkSteps = (steps: Step[], stopAtId: string, blockCtx: BlockContext): BlockContext | null => {
     for (const step of steps) {
       if (step.id === stopAtId) {
@@ -291,12 +537,16 @@ export const buildDataContext = (
               (config.version === undefined || a.version === config.version)
             );
             if (action?.outputSchema) {
+              const outputSchema =
+                config.actionId.startsWith('transform.')
+                  ? inferTransformObjectOutputSchema(nodeStep, config.actionId, action.outputSchema, blockCtx)
+                  : action.outputSchema;
               context.steps.push({
                 stepId: step.id,
                 stepName: nodeStep.name || action.ui?.label || config.actionId,
                 saveAs: config.saveAs,
-                outputSchema: action.outputSchema,
-                fields: extractSchemaFields(action.outputSchema, action.outputSchema)
+                outputSchema,
+                fields: extractSchemaFields(outputSchema, outputSchema)
               });
             }
           } else {
