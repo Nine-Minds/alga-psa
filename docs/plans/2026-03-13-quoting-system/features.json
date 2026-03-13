@@ -431,7 +431,7 @@
   {
     "id": "F050",
     "description": "P2: Tax calculation — integrate taxService.calculateTax() per quote line item",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P2-FR1"
     ]

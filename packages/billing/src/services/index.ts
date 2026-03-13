@@ -6,6 +6,7 @@
 
 export { TaxService } from './taxService';
 export { BillingEngine } from '../lib/billing/billingEngine';
+export { recalculateQuoteFinancials } from './quoteCalculationService';
 export { ContractLineServiceConfigurationService } from './contractLineServiceConfigurationService';
 export { ClientContractServiceConfigurationService } from './clientContractServiceConfigurationService';
 

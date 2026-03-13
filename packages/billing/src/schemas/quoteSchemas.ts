@@ -85,6 +85,8 @@ const createQuoteItemBaseSchema = z.object({
   applies_to_item_id: z.string().uuid().optional().nullable(),
   applies_to_service_id: z.string().uuid().optional().nullable(),
   is_taxable: z.boolean().default(true),
+  tax_region: z.string().trim().optional().nullable(),
+  tax_rate: z.number().int().min(0).optional().nullable(),
   created_by: z.string().uuid().optional().nullable(),
 });
 

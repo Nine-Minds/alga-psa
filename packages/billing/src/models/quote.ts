@@ -5,6 +5,7 @@ import { deleteEntityWithValidation } from '@alga-psa/core';
 import QuoteItem from './quoteItem';
 import QuoteActivity from './quoteActivity';
 import { canTransitionQuoteStatus } from '../schemas/quoteSchemas';
+import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
 
 export interface QuoteListOptions {
   page?: number;
@@ -254,6 +255,14 @@ const Quote = {
         ? { previous_status: existingQuote.status, next_status: updateData.status }
         : {}
     });
+
+    if (!updatedQuote.is_template) {
+      await recalculateQuoteFinancials(knexOrTrx, tenant, quoteId);
+      const recalculatedQuote = await knexOrTrx('quotes')
+        .where({ tenant, quote_id: quoteId })
+        .first();
+      return recalculatedQuote ?? updatedQuote;
+    }
 
     return updatedQuote;
   },

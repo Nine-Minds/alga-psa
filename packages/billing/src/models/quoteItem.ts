@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import type { IQuoteItem } from '@alga-psa/types';
+import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
 
 function ensureIntegerField(value: unknown, fieldName: string): void {
   if (value !== undefined && value !== null && !Number.isInteger(Number(value))) {
@@ -113,7 +114,13 @@ const QuoteItem = {
       })
       .returning('*');
 
-    return normalizeQuoteItem(createdItem);
+    await recalculateQuoteFinancials(knexOrTrx, tenant, item.quote_id);
+
+    const refreshedItem = await knexOrTrx('quote_items')
+      .where({ tenant, quote_item_id: createdItem.quote_item_id })
+      .first();
+
+    return normalizeQuoteItem(refreshedItem ?? createdItem);
   },
 
   async update(
@@ -153,7 +160,13 @@ const QuoteItem = {
       })
       .returning('*');
 
-    return normalizeQuoteItem(updatedItem);
+    await recalculateQuoteFinancials(knexOrTrx, tenant, existingItem.quote_id);
+
+    const refreshedItem = await knexOrTrx('quote_items')
+      .where({ tenant, quote_item_id: quoteItemId })
+      .first();
+
+    return normalizeQuoteItem(refreshedItem ?? updatedItem);
   },
 
   async delete(
@@ -191,6 +204,8 @@ const QuoteItem = {
       }
     }
 
+    await recalculateQuoteFinancials(knexOrTrx, tenant, existingItem.quote_id);
+
     return true;
   },
 
@@ -209,6 +224,8 @@ const QuoteItem = {
         .where({ tenant, quote_id: quoteId, quote_item_id: quoteItemId })
         .update({ display_order: index });
     }
+
+    await recalculateQuoteFinancials(knexOrTrx, tenant, quoteId);
 
     return QuoteItem.listByQuoteId(knexOrTrx, tenant, quoteId);
   }
