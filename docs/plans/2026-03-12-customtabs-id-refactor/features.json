@@ -58,7 +58,7 @@
   {
     "id": "F008",
     "description": "CustomTabs still renders `tab.label` as display text in trigger buttons",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Internal Component Changes"
     ]

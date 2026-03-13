@@ -127,3 +127,5 @@ npm run build
 - F006 — `beforeTabChange` now sees the same id-based values that Radix and parent callbacks use.
 
 - F007 — Group auto-expand checks now use `tab.id` for both `defaultTab` and controlled `value` lookups.
+
+- F008 — Preserved `tab.label` as the rendered trigger text so display copy stays fully translatable.
