@@ -1077,7 +1077,7 @@ export const exportWorkspaceToInvoiceTemplateAst = (
   const pageNode = root
     ? root.children
         .map((childId) => nodesById.get(childId))
-        .find((child): child is WorkspaceNode => Boolean(child) && child.type === 'page')
+        .find((child): child is WorkspaceNode => child !== undefined && child.type === 'page')
     : undefined;
   const rootSize = getWorkspaceNodeSize(root);
   const pageSize = getWorkspaceNodeSize(pageNode);

@@ -19,6 +19,11 @@ const PaperInvoice: React.FC<PaperInvoiceProps> = ({ children, templateAst, prin
     : resolveInvoiceTemplatePrintSettings({
         printSettings: printSettings ?? undefined,
       });
+  const paperStyle: React.CSSProperties & Record<'--paper-printable-inset', string> = {
+    width: `${resolvedPrintSettings.pageWidthPx}px`,
+    minHeight: `${resolvedPrintSettings.pageHeightPx}px`,
+    '--paper-printable-inset': `${resolvedPrintSettings.marginPx}px`,
+  };
 
   return (
     <div className={styles.paperContainer}>
@@ -26,11 +31,7 @@ const PaperInvoice: React.FC<PaperInvoiceProps> = ({ children, templateAst, prin
         className={styles.paper}
         data-automation-id="paper-invoice-sheet"
         data-paper-preset={resolvedPrintSettings.paperPreset}
-        style={{
-          width: `${resolvedPrintSettings.pageWidthPx}px`,
-          minHeight: `${resolvedPrintSettings.pageHeightPx}px`,
-          ['--paper-printable-inset' as '--paper-printable-inset']: `${resolvedPrintSettings.marginPx}px`,
-        }}
+        style={paperStyle}
       >
         <div className={styles.paperContent} data-automation-id="paper-invoice-content">
           {children}

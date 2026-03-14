@@ -142,11 +142,14 @@ export const resolveInvoicePaperPresetFromDimensions = (
     return null;
   }
 
+  const resolvedWidthPx = Number(widthPx);
+  const resolvedHeightPx = Number(heightPx);
+
   return (
     listInvoicePaperPresets().find(
       (preset) =>
-        Math.abs(preset.widthPx - widthPx) <= tolerancePx &&
-        Math.abs(preset.heightPx - heightPx) <= tolerancePx
+        Math.abs(preset.widthPx - resolvedWidthPx) <= tolerancePx &&
+        Math.abs(preset.heightPx - resolvedHeightPx) <= tolerancePx
     ) ?? null
   );
 };
@@ -202,6 +205,8 @@ export const resolveInvoiceTemplatePrintSettings = (
   const legacyWidthPx = input?.pageWidthPx ?? input?.documentWidthPx;
   const legacyHeightPx = input?.pageHeightPx ?? input?.documentHeightPx;
   if (Number.isFinite(legacyWidthPx) && Number.isFinite(legacyHeightPx)) {
+    const resolvedLegacyWidthPx = Number(legacyWidthPx);
+    const resolvedLegacyHeightPx = Number(legacyHeightPx);
     const legacyMarginMm = clampInvoiceMarginMm(
       Number.isFinite(input?.pagePaddingPx)
         ? pixelsToMillimeters(input?.pagePaddingPx ?? 0)
@@ -215,8 +220,8 @@ export const resolveInvoiceTemplatePrintSettings = (
       },
       'legacy-unresolved',
       {
-        pageWidthPx: Math.max(1, Math.round(legacyWidthPx)),
-        pageHeightPx: Math.max(1, Math.round(legacyHeightPx)),
+        pageWidthPx: Math.max(1, Math.round(resolvedLegacyWidthPx)),
+        pageHeightPx: Math.max(1, Math.round(resolvedLegacyHeightPx)),
         marginPx: Number.isFinite(input?.pagePaddingPx) ? Math.max(0, Math.round(input?.pagePaddingPx ?? 0)) : undefined,
       }
     );
