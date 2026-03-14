@@ -29,6 +29,7 @@ type ColumnInfoMap = Record<string, unknown>;
 let tenantColumns: ColumnInfoMap;
 let userColumns: ColumnInfoMap;
 let boardColumns: ColumnInfoMap;
+let clientColumns: ColumnInfoMap;
 let ticketColumns: ColumnInfoMap;
 let statusColumns: ColumnInfoMap;
 
@@ -58,6 +59,7 @@ async function cleanupTenant(tenantId: string): Promise<void> {
   await db('tickets').where({ tenant: tenantId }).del();
   await db('statuses').where({ tenant: tenantId }).del();
   await db('boards').where({ tenant: tenantId }).del();
+  await db('clients').where({ tenant: tenantId }).del();
   await db('users').where({ tenant: tenantId }).del();
   await db('tenants').where({ tenant: tenantId }).del();
 }
@@ -67,6 +69,7 @@ async function createLegacyFixture(): Promise<LegacyFixture> {
   const userId = uuidv4();
   const boardA = uuidv4();
   const boardB = uuidv4();
+  const clientId = uuidv4();
   const legacyOpenStatusId = uuidv4();
   const legacyClosedStatusId = uuidv4();
 
@@ -124,6 +127,17 @@ async function createLegacyFixture(): Promise<LegacyFixture> {
     },
   ]);
 
+  await db('clients').insert({
+    tenant: tenantId,
+    client_id: clientId,
+    client_name: `Client ${tenantId.slice(0, 8)}`,
+    ...(hasColumn(clientColumns, 'created_at') ? { created_at: db.fn.now() } : {}),
+    ...(hasColumn(clientColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
+    ...(hasColumn(clientColumns, 'is_inactive') ? { is_inactive: false } : {}),
+    ...(hasColumn(clientColumns, 'billing_cycle') ? { billing_cycle: 'monthly' } : {}),
+    ...(hasColumn(clientColumns, 'is_tax_exempt') ? { is_tax_exempt: false } : {}),
+  });
+
   const legacyStatuses = [
     {
       tenant: tenantId,
@@ -180,6 +194,7 @@ async function createLegacyFixture(): Promise<LegacyFixture> {
       ticket_number: `T-${tenantId.slice(0, 6)}-001`,
       title: 'Support ticket',
       board_id: boardA,
+      client_id: clientId,
       status_id: legacyOpenStatusId,
       ...(hasColumn(ticketColumns, 'entered_at') ? { entered_at: db.fn.now() } : {}),
       ...(hasColumn(ticketColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
@@ -190,6 +205,7 @@ async function createLegacyFixture(): Promise<LegacyFixture> {
       ticket_number: `T-${tenantId.slice(0, 6)}-002`,
       title: 'Billing ticket',
       board_id: boardB,
+      client_id: clientId,
       status_id: legacyOpenStatusId,
       ...(hasColumn(ticketColumns, 'entered_at') ? { entered_at: db.fn.now() } : {}),
       ...(hasColumn(ticketColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
@@ -227,6 +243,7 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
     tenantColumns = await db('tenants').columnInfo();
     userColumns = await db('users').columnInfo();
     boardColumns = await db('boards').columnInfo();
+    clientColumns = await db('clients').columnInfo();
     ticketColumns = await db('tickets').columnInfo();
     statusColumns = await db('statuses').columnInfo();
   }, HOOK_TIMEOUT);
