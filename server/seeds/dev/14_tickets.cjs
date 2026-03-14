@@ -17,6 +17,11 @@ exports.seed = async function (knex) {
         return result[idColumn];
     };
 
+    const getTicketStatusId = async (name, boardId) => {
+        if (!boardId) return null;
+        return getId('statuses', { name, board_id: boardId }, 'status_id');
+    };
+
     const getContactId = async (namePattern) => {
         const result = await knex('contacts')
             .where({ tenant })
@@ -34,7 +39,6 @@ exports.seed = async function (knex) {
     const [
         clientEmeraldCityId, clientWonderlandId,
         contactAliceId, contactDorothyId,
-        statusCuriousId, statusAwaitingId, statusUnfoldingId,
         boardUrgentId, boardProjectsId,
         categoryMagicalArtifactsId, categoryCharacterAssistId, categoryRealmMaintenanceId,
         subCategoryEnchantedAccId, subCategoryQuestGuidanceId, subCategoryMagicalInfraId,
@@ -48,9 +52,6 @@ exports.seed = async function (knex) {
         getId('clients', { client_name: 'Wonderland' }, 'client_id'),
         getContactId('alice'),
         getContactId('dorothy'),
-        getId('statuses', { name: 'Curious Beginning' }, 'status_id'),
-        getId('statuses', { name: 'Awaiting Wisdom' }, 'status_id'),
-        getId('statuses', { name: 'Unfolding Adventure' }, 'status_id'),
         getId('boards', { board_name: 'Urgent Matters' }, 'board_id'),
         getId('boards', { board_name: 'Projects' }, 'board_id'),
         getId('categories', { category_name: 'Magical Artifacts' }, 'category_id'),
@@ -72,6 +73,12 @@ exports.seed = async function (knex) {
         getId('users', { username: 'tinman' }, 'user_id'),
         getId('users', { username: 'madhatter' }, 'user_id'),
         getId('users', { username: 'scarecrow' }, 'user_id')
+    ]);
+
+    const [statusCuriousId, statusAwaitingId, statusUnfoldingId] = await Promise.all([
+        getTicketStatusId('Curious Beginning', boardUrgentId),
+        getTicketStatusId('Awaiting Wisdom', boardUrgentId),
+        getTicketStatusId('Unfolding Adventure', boardProjectsId)
     ]);
 
     // Prepare ticket data with resolved IDs
@@ -162,5 +169,4 @@ exports.seed = async function (knex) {
         console.warn('No valid tickets to insert.');
     }
 };
-
 

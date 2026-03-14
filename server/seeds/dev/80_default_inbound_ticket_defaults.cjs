@@ -17,23 +17,22 @@ exports.seed = async function(knex) {
     return result[idColumn];
   };
 
-  // Get default IDs for ticket creation
+  const defaultBoardId =
+    await getDefaultId('boards', { is_default: true }, 'board_id') ||
+    await getDefaultId('boards', {}, 'board_id');
+
+  const defaultStatusId = defaultBoardId
+    ? (
+        await getDefaultId('statuses', { board_id: defaultBoardId, is_default: true, status_type: 'ticket' }, 'status_id') ||
+        await getDefaultId('statuses', { board_id: defaultBoardId, status_type: 'ticket' }, 'status_id')
+      )
+    : null;
+
   const [
-    defaultBoardId,
-    defaultStatusId,
     defaultPriorityId,
     defaultClientId
   ] = await Promise.all([
-    getDefaultId('boards', { is_default: true }, 'board_id') || 
-    getDefaultId('boards', {}, 'board_id'), // Fallback to first board
-    
-    getDefaultId('statuses', { is_default: true, status_type: 'ticket' }, 'status_id') ||
-    getDefaultId('statuses', { status_type: 'ticket' }, 'status_id'), // Fallback to first ticket status
-    
-    // Priorities table doesn't have is_default column, so just get the first one
     getDefaultId('priorities', { item_type: 'ticket' }, 'priority_id'),
-
-    // Prefer a stable demo client if present, otherwise use any client.
     getDefaultId('clients', { client_name: 'Wonderland' }, 'client_id') ||
     getDefaultId('clients', {}, 'client_id')
   ]);

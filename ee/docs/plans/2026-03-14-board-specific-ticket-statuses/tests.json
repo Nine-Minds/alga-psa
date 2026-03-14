@@ -314,13 +314,13 @@
   {
     "id": "T053",
     "description": "Fixture integration: shared test setup creates board-owned ticket statuses instead of tenant-global ticket statuses.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F038"]
   },
   {
     "id": "T054",
     "description": "Workflow harness integration: workflow fixture setup resolves and seeds board-owned ticket statuses correctly for ticket status scenarios.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F038"]
   },
   {

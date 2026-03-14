@@ -49,8 +49,8 @@ describeDb('Workflow worker v2 + inbound email smoke', () => {
     boardId = board.board_id;
 
     const status = await db('statuses')
-      .where({ tenant: tenantId, status_type: 'ticket' })
-      .first<{ status_id: string }>('status_id');
+      .where({ tenant: tenantId, status_type: 'ticket', board_id: boardId })
+      .first<{ status_id: string; board_id: string }>('status_id', 'board_id');
     if (!status?.status_id) throw new Error('Expected seeded ticket status');
     statusId = status.status_id;
 
@@ -143,5 +143,14 @@ describeDb('Workflow worker v2 + inbound email smoke', () => {
     await db('tickets').where({ tenant: tenantId, ticket_id: ticket.ticket_id }).delete();
     await db('email_providers').where({ tenant: tenantId, id: providerId }).delete();
     await db('inbound_ticket_defaults').where({ tenant: tenantId, id: defaultsId }).delete();
+  });
+
+  it('T054: workflow smoke setup resolves a board-owned ticket status for the seeded board', async () => {
+    const status = await db('statuses')
+      .where({ tenant: tenantId, status_id: statusId })
+      .first<{ board_id: string; status_type: string }>('board_id', 'status_type');
+
+    expect(status?.status_type).toBe('ticket');
+    expect(status?.board_id).toBe(boardId);
   });
 });

@@ -86,6 +86,15 @@ export async function withTestSetup(): Promise<TestSetup> {
       role_id: adminRoleId
     });
 
+    const defaultBoardId = faker.string.uuid();
+    await db('boards').insert({
+      board_id: defaultBoardId,
+      tenant: tenantId,
+      board_name: 'Default',
+      is_default: true,
+      display_order: 1
+    });
+
     // Create default statuses for projects and tickets
     const statusTypes = [
       { item_type: 'project', name: 'Planning', order: 1 },
@@ -105,21 +114,13 @@ export async function withTestSetup(): Promise<TestSetup> {
         name: status.name,
         status_type: status.item_type, // Still required as NOT NULL
         item_type: status.item_type, // Also set this for future compatibility
+        ...(status.item_type === 'ticket' ? { board_id: defaultBoardId } : {}),
         order_number: status.order,
         created_by: userId,
         created_at: new Date(),
         is_closed: status.name === 'Completed' || status.name === 'Closed' || status.name === 'Resolved'
       });
     }
-
-    // Create a default board for tickets
-    await db('boards').insert({
-      board_id: faker.string.uuid(),
-      tenant: tenantId,
-      board_name: 'Default',
-      is_default: true,
-      display_order: 1
-    });
     
     // Create default priorities for tickets
     const priorities = [

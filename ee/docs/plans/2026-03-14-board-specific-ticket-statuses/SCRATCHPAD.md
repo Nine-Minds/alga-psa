@@ -35,6 +35,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `TicketService.getTicketStats(...)` grouped counts by `status_name`, which collapses distinct board-owned statuses that reuse the same label.
 - (2026-03-14) `F027`: treat billing renewal ticket status persistence the same way as other board-scoped ticket status saves. Rationale: tenant defaults and contract overrides both already persist `board_id + status_id`, so the safest implementation is to share the same board/status compatibility guard instead of trusting UI state alone.
 - (2026-03-14) `F037`: onboarding and standard reference-data ticket-status imports should enforce board scope at the action boundary, not just in the onboarding UI. Rationale: the import helper is reused outside onboarding, so board ownership has to be written and validated in the shared importer as well.
+- (2026-03-14) `F038` keeps `standard_statuses` unchanged. Rationale: that table is template/reference data, not the live `statuses` rows used by ticket runtime validation, so only real seed/fixture writers needed board scoping changes.
 
 ## Discoveries / Constraints
 
@@ -65,6 +66,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - tenant billing settings can now host a renewal automation card,
   - contract assignment renewal overrides already have an edit surface in `ContractDetail.tsx`,
   - the missing piece was board-scoped status loading and save-time validation.
+- (2026-03-14) Dev seed fallout for board-owned ticket statuses was narrower than the initial grep suggested:
+  - active runtime seeds needed changes in `server/seeds/dev/07_statuses.cjs`, `server/seeds/dev/14_tickets.cjs`, `server/seeds/dev/66_asset_tickets.cjs`, and `server/seeds/dev/80_default_inbound_ticket_defaults.cjs`
+  - `server/seeds/dev/58_populate_standard_statuses.cjs` stayed unchanged because it seeds template/reference rows, not live `statuses`
 - (2026-03-14) Completed `F027` by scoping billing renewal ticket statuses to the selected board:
   - `packages/billing/src/components/settings/billing/RenewalAutomationSettings.tsx` adds a tenant renewal automation card with board-first ticket status selection and clears stale statuses when the board changes.
   - `packages/billing/src/actions/billingSettingsActions.ts` now rejects renewal ticket status saves when the status does not belong to the selected board.
@@ -180,6 +184,17 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - proves `configureTicketing(...)` creates only board-owned ticket statuses for the onboarding-created board and leaves a valid board-local default status behind
   - proves `importReferenceData('statuses', ..., { item_type: 'ticket', board_id })` writes ticket statuses only to the target board and does not treat the same ticket status name on another board as a conflict
   - reran with `cd server && npx vitest run --coverage.enabled false src/test/integration/onboardingBoardTicketStatuses.integration.test.ts --config vitest.config.ts`
+- (2026-03-14) Completed `F038` by moving shared seeds, fixtures, and workflow harness setup to board-owned ticket statuses:
+  - `server/src/test/e2e/utils/e2eTestSetup.ts` and `server/src/test/e2e/fixtures/test-setup.ts` now create a default board before ticket statuses, write `board_id` on seeded ticket statuses, and clean up statuses before boards.
+  - `server/seeds/dev/07_statuses.cjs` now clones the seeded ticket lifecycle onto every seeded board instead of inserting one tenant-global ticket status list.
+  - `server/seeds/dev/14_tickets.cjs`, `server/seeds/dev/66_asset_tickets.cjs`, and `server/seeds/dev/80_default_inbound_ticket_defaults.cjs` now resolve ticket statuses from the relevant board.
+  - `ee/test-data/workflow-harness/_lib/biz-fixture.cjs` plus the inline ticket workflow fixtures now select ticket statuses by `tenant + board_id`.
+- (2026-03-14) Completed `T053` in `server/src/test/e2e/utils/utilities.test.ts`:
+  - verifies the shared e2e environment creates ticket statuses only on the default board and still preserves a valid default status
+  - reran with `cd server && npx vitest run --coverage.enabled false src/test/e2e/utils/utilities.test.ts -t "T053" --config vitest.config.ts`
+- (2026-03-14) Completed `T054` in `server/src/test/integration/workflowWorkerV2.inboundEmailSmoke.integration.test.ts`:
+  - verifies the workflow smoke fixture resolves a ticket status from the seeded board-owned status set
+  - reran with `cd server && npx vitest run --coverage.enabled false src/test/integration/workflowWorkerV2.inboundEmailSmoke.integration.test.ts -t "T054" --config vitest.config.ts`
 - (2026-03-14) Completed `T041`/`T042` in `packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts`:
   - verifies client portal ticket creation resolves the default status from the default board before creating the ticket
   - verifies client portal status updates reject a status from another board and skip the write/event path
@@ -280,6 +295,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run --coverage.enabled false ../packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts --config vitest.config.ts`
 - (2026-03-14) Validate onboarding board-owned ticket statuses:
   - `cd server && npx vitest run --coverage.enabled false src/test/integration/onboardingBoardTicketStatuses.integration.test.ts --config vitest.config.ts`
+- (2026-03-14) Validate seed/fixture board-owned ticket status setup:
+  - `cd server && npx vitest run --coverage.enabled false src/test/e2e/utils/utilities.test.ts -t "T053" --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/workflowWorkerV2.inboundEmailSmoke.integration.test.ts -t "T054" --config vitest.config.ts`
 - (2026-03-14) Validate SLA board-owned pause config and migration coverage:
   - `cd server && npx vitest run --coverage.enabled false src/test/unit/components/SlaPauseSettings.boardOwnedStatuses.test.tsx src/test/unit/migrations/boardSpecificTicketStatusesMigration.test.ts --config vitest.config.ts`
   - `cd server && npx vitest run --coverage.enabled false src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts --config vitest.config.ts`
@@ -343,6 +361,15 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Client portal ticket details page: `server/src/app/client-portal/tickets/[ticketId]/page.tsx`
 - Onboarding ticketing actions: `packages/onboarding/src/actions/onboarding-actions/onboardingActions.ts`
 - Onboarding ticketing step UI: `packages/onboarding/src/components/steps/TicketingConfigStep.tsx`
+- Seeded board-owned ticket statuses: `server/seeds/dev/07_statuses.cjs`
+- Seeded ticket rows with board-owned statuses: `server/seeds/dev/14_tickets.cjs`
+- Seeded asset-linked ticket rows: `server/seeds/dev/66_asset_tickets.cjs`
+- Seeded inbound defaults with board-owned statuses: `server/seeds/dev/80_default_inbound_ticket_defaults.cjs`
+- Shared e2e setup: `server/src/test/e2e/utils/e2eTestSetup.ts`
+- Simplified e2e fixture setup: `server/src/test/e2e/fixtures/test-setup.ts`
+- Workflow harness ticket fixture helper: `ee/test-data/workflow-harness/_lib/biz-fixture.cjs`
+- Seed/fixture board-owned status test: `server/src/test/e2e/utils/utilities.test.ts`
+- Workflow smoke board-owned status test: `server/src/test/integration/workflowWorkerV2.inboundEmailSmoke.integration.test.ts`
 - Reference-data ticket import actions: `packages/reference-data/src/actions/referenceDataActions.ts`
 - Onboarding board-owned status integration test: `server/src/test/integration/onboardingBoardTicketStatuses.integration.test.ts`
 - Workflow ticket action definitions: `shared/workflow/runtime/actions/businessOperations/tickets.ts`

@@ -224,7 +224,7 @@
   {
     "id": "F038",
     "description": "Update seeds, fixtures, and workflow harness setup to create board-owned ticket statuses.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR8"]
   },
   {
