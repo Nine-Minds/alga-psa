@@ -50,6 +50,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `packages/billing/src/actions/renewalsQueueActions.ts`
   - `server/src/lib/jobs/handlers/processRenewalQueueHandler.ts`
 - (2026-03-14) There is no standalone bulk ticket status edit surface in the current ticket dashboard branch; the only ticket bulk action present right now is bulk delete. That means `T032` needs either a future implementation surface or a scoped plan update, not a false claim of coverage.
+- (2026-03-14) There is no repo-backed UI yet that edits `default_billing_settings.renewal_ticket_board_id` / `renewal_ticket_status_id` or the contract-level renewal ticket routing overrides. `F027` is therefore currently blocked on a missing settings surface, even though the underlying persistence columns and queue/runtime readers exist.
 - (2026-03-14) SLA, notifications, surveys, and client portal ticket flows all resolve ticket statuses directly by `status_id`, so they are migration-sensitive:
   - `packages/sla/src/services/slaPauseService.ts`
   - `server/src/lib/eventBus/subscribers/internalNotificationSubscriber.ts`
@@ -141,6 +142,14 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - verifies inbound ticket defaults keep the status picker disabled until a board is selected
   - verifies the form requests only the selected board's statuses and clears a stale status when the board changes
   - reran with `cd server && npx vitest run --coverage.enabled false src/test/unit/components/InboundTicketDefaultsForm.test.tsx --config vitest.config.ts`
+- (2026-03-14) Completed `F031` by scoping client portal ticket status flows to the ticket board:
+  - `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts` now rejects client-portal status updates when the requested `status_id` does not belong to the ticket's `board_id`.
+  - `server/src/app/client-portal/tickets/[ticketId]/page.tsx` now preloads only the selected ticket board's statuses for the standalone details page.
+  - `packages/client-portal/src/components/tickets/TicketList.tsx` now fetches board-owned status menus per ticket board so the list's status-change dropdown stops offering cross-board choices.
+- (2026-03-14) Completed `T041`/`T042` in `packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts`:
+  - verifies client portal ticket creation resolves the default status from the default board before creating the ticket
+  - verifies client portal status updates reject a status from another board and skip the write/event path
+  - reran with `cd server && npx vitest run --coverage.enabled false ../packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts --config vitest.config.ts`
 
 ## Commands / Runbooks
 
@@ -186,6 +195,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd packages/tickets && npx vitest run src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx src/components/__tests__/QuickAddTicket.boardScopedStatuses.test.tsx --config vitest.config.ts`
 - (2026-03-14) Validate inbound ticket defaults board-scoped statuses:
   - `cd server && npx vitest run --coverage.enabled false src/test/unit/components/InboundTicketDefaultsForm.test.tsx --config vitest.config.ts`
+- (2026-03-14) Validate client portal board-scoped status flows:
+  - `cd server && npx vitest run --coverage.enabled false ../packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts --config vitest.config.ts`
 - (2026-03-14) Legacy Quick Add regression note:
   - `cd packages/tickets && npx vitest run src/components/__tests__/ticket-inline-add-prefill.test.tsx --config vitest.config.ts`
   - Current failures in that broader suite are mock-assumption mismatches around board-first status loading and unrelated quick-add helper behavior; they are not yet curated as plan items in this pass.
@@ -222,6 +233,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Inbound ticket field options actions: `packages/integrations/src/actions/email-actions/ticketFieldOptionsActions.ts`
 - Inbound ticket defaults test: `server/src/test/unit/components/InboundTicketDefaultsForm.test.tsx`
 - Client portal ticket actions: `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts`
+- Client portal board status validation test: `packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts`
+- Client portal ticket list UI: `packages/client-portal/src/components/tickets/TicketList.tsx`
+- Client portal ticket details page: `server/src/app/client-portal/tickets/[ticketId]/page.tsx`
 - New status schema migration: `server/migrations/20260314100000_add_board_ownership_to_ticket_statuses.cjs`
 - Migration schema coverage: `server/src/test/unit/migrations/boardSpecificTicketStatusesMigration.test.ts`
 - Clone/remap migration: `server/migrations/20260314113000_clone_global_ticket_statuses_to_boards.cjs`

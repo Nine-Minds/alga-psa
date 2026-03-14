@@ -242,13 +242,13 @@
   {
     "id": "T041",
     "description": "Client portal integration: portal ticket creation uses only statuses valid for the chosen board.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F031"]
   },
   {
     "id": "T042",
     "description": "Client portal integration: portal ticket status update rejects invalid cross-board statuses.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F031"]
   },
   {

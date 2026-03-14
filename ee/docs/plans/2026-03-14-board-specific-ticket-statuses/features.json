@@ -182,7 +182,7 @@
   {
     "id": "F031",
     "description": "Make client portal ticket create and update flows use board-scoped ticket statuses.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR7"]
   },
   {

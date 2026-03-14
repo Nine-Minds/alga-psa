@@ -55,6 +55,7 @@ export function TicketList() {
   const [sortField, setSortField] = useState<string>('entered_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [statusOptions, setStatusOptions] = useState<SelectOption[]>([]);
+  const [boardStatusOptions, setBoardStatusOptions] = useState<Record<string, SelectOption[]>>({});
   const [priorityOptions, setPriorityOptions] = useState<{ value: string; label: string }[]>([]);
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
@@ -183,6 +184,58 @@ export function TicketList() {
 
     loadOptions();
   }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadBoardStatuses = async () => {
+      const uniqueBoardIds = Array.from(
+        new Set(
+          tickets
+            .map((ticket) => ticket.board_id)
+            .filter((boardId): boardId is string => Boolean(boardId))
+        )
+      );
+
+      if (uniqueBoardIds.length === 0) {
+        setBoardStatusOptions({});
+        return;
+      }
+
+      try {
+        const boardStatusEntries = await Promise.all(
+          uniqueBoardIds.map(async (boardId) => {
+            const statuses = await getTicketStatuses(boardId);
+            return [
+              boardId,
+              statuses.map((status): SelectOption => ({
+                value: status.status_id!,
+                label: status.name ?? '',
+                className: status.is_closed ? 'bg-gray-200 text-gray-600' : undefined,
+              })),
+            ] as const;
+          })
+        );
+
+        if (!active) {
+          return;
+        }
+
+        setBoardStatusOptions(Object.fromEntries(boardStatusEntries));
+      } catch (error) {
+        console.error('Failed to load board-scoped client portal statuses:', error);
+        if (active) {
+          setBoardStatusOptions({});
+        }
+      }
+    };
+
+    loadBoardStatuses();
+
+    return () => {
+      active = false;
+    };
+  }, [tickets]);
 
   const loadTickets = useCallback(async () => {
     setLoading(true);
@@ -395,8 +448,7 @@ export function TicketList() {
               <DropdownMenu.Content
                 className="w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
               >
-                {statusOptions
-                  .filter(option => !['all', 'open', 'closed'].includes(option.value))
+                {(record.board_id ? (boardStatusOptions[record.board_id] ?? []) : [])
                   .map((status) => (
                     <DropdownMenu.Item
                       key={status.value}

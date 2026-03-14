@@ -668,6 +668,23 @@ export const updateTicketStatus = withAuth(async (
         throw new Error('Ticket not found');
       }
 
+      if (!ticket.board_id) {
+        throw new Error('Ticket does not have a board');
+      }
+
+      const statusForBoard = await trx('statuses')
+        .where({
+          tenant,
+          status_id: newStatusId,
+          status_type: 'ticket',
+          board_id: ticket.board_id,
+        })
+        .first('status_id');
+
+      if (!statusForBoard) {
+        throw new Error('Selected status is not valid for the ticket board');
+      }
+
       // Get old status for change tracking
       const oldStatusId = ticket.status_id;
 
