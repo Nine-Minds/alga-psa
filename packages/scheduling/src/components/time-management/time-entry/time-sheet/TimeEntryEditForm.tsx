@@ -18,6 +18,7 @@ import { TimeEntryFormProps } from './types';
 import { calculateDuration, formatTimeForInput, parseTimeToDate, getDurationParts } from './utils';
 import { ISO8601String } from '@alga-psa/types';
 import ContractInfoBanner from './ContractInfoBanner';
+import { TimeEntryChangeRequestPanel } from './TimeEntryChangeRequestFeedback';
 
 // Define the expected structure returned by getEligibleContractLinesForUI,
 // including the date fields needed for filtering.
@@ -374,6 +375,8 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
   return (
     <div className="space-y-5">
+      <TimeEntryChangeRequestPanel changeRequests={entry?.change_requests} />
+
       {/* Only show delete button and status for existing entries that have been saved */}
       {(entry?.entry_id && !isNewEntry && isEditable) && (
         <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">

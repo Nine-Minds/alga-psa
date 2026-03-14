@@ -14,6 +14,7 @@ import { BillableLegend } from './BillableLegend';
 import { ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
 import { CommonActions } from '@alga-psa/ui/ui-reflection/actionBuilders';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
+import { TimeEntryChangeRequestIndicator } from './TimeEntryChangeRequestFeedback';
 
 interface TimeSheetListViewProps {
     dates: Date[];
@@ -437,9 +438,15 @@ export function TimeSheetListView({
 
                                                                     {/* Time range */}
                                                                     <td className="py-2 px-3">
-                                                                        <span className="text-sm text-gray-500">
-                                                                            {formatTimeRange(entry.start_time, entry.end_time)}
-                                                                        </span>
+                                                                        <div className="flex flex-col items-start gap-1">
+                                                                            <span className="text-sm text-gray-500">
+                                                                                {formatTimeRange(entry.start_time, entry.end_time)}
+                                                                            </span>
+                                                                            <TimeEntryChangeRequestIndicator
+                                                                                changeRequests={entry.change_requests}
+                                                                                showLabel
+                                                                            />
+                                                                        </div>
                                                                     </td>
 
                                                                     {/* Duration */}

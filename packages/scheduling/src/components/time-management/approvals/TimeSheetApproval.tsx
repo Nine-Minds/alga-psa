@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
+import {
   ITimeSheet, 
   ITimeEntry, 
   ITimeSheetComment, 
@@ -8,7 +8,7 @@ import {
   ITimeEntryWithWorkItem, 
   TimeSheetStatus 
 } from '@alga-psa/types';
-import { addCommentToTimeSheet, fetchTimeSheetComments } from '../../../actions/timeSheetActions';
+import { addCommentToTimeSheet, fetchTimeSheetComments, requestChangesForTimeSheet } from '../../../actions/timeSheetActions';
 import { Check, Clock, Undo, ChevronDown, ChevronUp, Send } from 'lucide-react';
 import { IWorkItem } from '@alga-psa/types';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -32,7 +32,11 @@ interface TimeSheetApprovalProps {
 
 interface TimeEntryDetailPanelProps {
   entry: ITimeEntryWithWorkItem;
-  onUpdateApprovalStatus: (entryId: string, status: TimeSheetStatus) => void;
+  onUpdateApprovalStatus: (
+    entryId: string,
+    status: TimeSheetStatus,
+    changeRequestComment?: string,
+  ) => Promise<void>;
 }
 
 
@@ -70,8 +74,18 @@ const formatDuration = (decimalHours: number) => {
 };
 
 const TimeEntryDetailPanel: React.FC<TimeEntryDetailPanelProps> = ({ entry, onUpdateApprovalStatus }) => {
-  const handleStatusChange = (newStatus: TimeSheetStatus) => {
-    onUpdateApprovalStatus(entry.entry_id as string, newStatus);
+  const [changeRequestComment, setChangeRequestComment] = useState('');
+
+  const handleStatusChange = async (newStatus: TimeSheetStatus) => {
+    await onUpdateApprovalStatus(
+      entry.entry_id as string,
+      newStatus,
+      newStatus === 'CHANGES_REQUESTED' ? changeRequestComment.trim() || undefined : undefined,
+    );
+
+    if (newStatus === 'CHANGES_REQUESTED') {
+      setChangeRequestComment('');
+    }
   };
 
   const statusButtons: Array<{
@@ -107,12 +121,20 @@ const TimeEntryDetailPanel: React.FC<TimeEntryDetailPanelProps> = ({ entry, onUp
           <p className="text-sm whitespace-pre-wrap text-[rgb(var(--color-text-600))] mt-1">{entry.notes}</p>
         </div>
       )}
+      <div className="mb-3">
+        <span className="text-sm font-medium text-[rgb(var(--color-text-900))]">Entry Change Suggestion</span>
+        <TextArea
+          value={changeRequestComment}
+          onChange={(event) => setChangeRequestComment(event.target.value)}
+          placeholder="Tell the employee exactly what to fix on this entry"
+        />
+      </div>
       <div className="flex space-x-2 pt-3 border-t border-[rgb(var(--color-border-200))]">
         {statusButtons.map(({ status, icon: Icon, label, variant }): React.JSX.Element => (
           <Button
             id={`update-status-${status}-btn`}
             key={status}
-            onClick={() => handleStatusChange(status)}
+            onClick={() => void handleStatusChange(status)}
             variant={variant}
             disabled={entry.approval_status === status}
           >
@@ -146,7 +168,11 @@ export function TimeSheetApproval({
     setExpandedEntryId(expandedEntryId === entryId ? null : entryId);
   };
 
-  const handleUpdateApprovalStatus = async (entryId: string, status: TimeSheetStatus) => {
+  const handleUpdateApprovalStatus = async (
+    entryId: string,
+    status: TimeSheetStatus,
+    changeRequestComment?: string,
+  ) => {
     try {
       const entryToUpdate = entriesWithWorkItems.find(entry => entry.entry_id === entryId);
 
@@ -157,7 +183,16 @@ export function TimeSheetApproval({
       await updateTimeEntryApprovalStatus({
         entryId,
         approvalStatus: status,
+        changeRequestComment,
       });
+
+      if (status === 'CHANGES_REQUESTED' && timeSheet.approval_status !== 'CHANGES_REQUESTED') {
+        await requestChangesForTimeSheet(timeSheet.id, currentUser.user_id);
+        setTimeSheet(prevTimeSheet => ({
+          ...prevTimeSheet,
+          approval_status: 'CHANGES_REQUESTED',
+        }));
+      }
 
       setEntriesWithWorkItems(prevEntries =>
         prevEntries.map((entry):ITimeEntryWithWorkItem =>

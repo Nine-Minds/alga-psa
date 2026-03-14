@@ -4,6 +4,7 @@ import { TenantEntity } from '.';
 import type { DateValue, ISO8601String } from '../lib/temporal';
 
 export type TimeSheetStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'CHANGES_REQUESTED';
+export type TimeEntryChangeRequestState = 'unresolved' | 'handled';
 
 export interface ITimePeriodSettings extends TenantEntity {
   time_period_settings_id: string;
@@ -56,6 +57,21 @@ export interface ITimeEntry extends TenantEntity  {
   contract_line_id?: string | null;
   tax_rate_id?: string | null; // ID of the applied tax rate
   tax_percentage?: number | null; // Percentage of the applied tax rate
+  change_requests?: ITimeEntryChangeRequest[];
+  latest_change_request?: ITimeEntryChangeRequest;
+  change_request_state?: TimeEntryChangeRequestState | null;
+}
+
+export interface ITimeEntryChangeRequest extends TenantEntity {
+  change_request_id: string;
+  time_entry_id: string;
+  time_sheet_id: string;
+  comment: string;
+  created_at: ISO8601String;
+  created_by: string;
+  created_by_name?: string;
+  handled_at?: ISO8601String;
+  handled_by?: string;
 }
 
 export interface ITimeSheetComment extends TenantEntity  {

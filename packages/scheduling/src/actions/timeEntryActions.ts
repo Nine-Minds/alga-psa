@@ -17,6 +17,7 @@ import {
   deleteTimeEntry,
   getTimeEntryById
 } from './timeEntryCrudActions';
+import { fetchTimeEntryChangeRequestsForTimeSheet } from './timeEntryChangeRequestActions';
 import {
   fetchWorkItemsForTimeSheet,
   addWorkItem,
@@ -42,6 +43,7 @@ export {
   updateTimeEntryApprovalStatus,
   deleteTimeEntry,
   getTimeEntryById,
+  fetchTimeEntryChangeRequestsForTimeSheet,
   fetchWorkItemsForTimeSheet,
   addWorkItem,
   deleteWorkItem,

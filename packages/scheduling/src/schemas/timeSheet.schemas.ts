@@ -21,6 +21,20 @@ export const timeSheetCommentSchema = tenantSchema.extend({
   user_name: z.string().optional(),
 });
 
+export const timeEntryChangeRequestStateSchema = z.enum(['unresolved', 'handled']);
+
+export const timeEntryChangeRequestSchema = tenantSchema.extend({
+  change_request_id: z.string(),
+  time_entry_id: z.string(),
+  time_sheet_id: z.string(),
+  comment: z.string(),
+  created_at: iso8601Schema,
+  created_by: z.string(),
+  created_by_name: z.string().optional(),
+  handled_at: iso8601Schema.optional(),
+  handled_by: z.string().optional(),
+});
+
 export const timeSheetSchema = tenantSchema.extend({
   id: z.string(),
   period_id: z.string(),
@@ -92,4 +106,7 @@ export const timeEntrySchema = tenantSchema.extend({
   tax_region: z.string().optional(),
   contract_line_id: z.string().nullable().optional(),
   tax_rate_id: z.string().nullable().optional(),
+  change_requests: z.array(timeEntryChangeRequestSchema).optional(),
+  latest_change_request: timeEntryChangeRequestSchema.optional(),
+  change_request_state: timeEntryChangeRequestStateSchema.nullable().optional(),
 });

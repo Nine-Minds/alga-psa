@@ -23,6 +23,7 @@ export type SaveTimeEntryParams = z.infer<typeof saveTimeEntryParamsSchema>;
 export const updateTimeEntryApprovalStatusParamsSchema = z.object({
   entryId: z.string().min(1, 'Time entry ID is required'),
   approvalStatus: timeSheetStatusSchema,
+  changeRequestComment: z.string().trim().optional(),
 });
 
 export type UpdateTimeEntryApprovalStatusParams = z.infer<typeof updateTimeEntryApprovalStatusParamsSchema>;

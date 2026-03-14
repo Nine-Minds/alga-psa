@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import * as React from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { flushSync } from 'react-dom';
 import { createRoot, Root } from 'react-dom/client';
 
@@ -38,9 +38,11 @@ vi.mock('@alga-psa/ui/components/TextArea', () => ({
 
 const addCommentToTimeSheet = vi.fn();
 const fetchTimeSheetComments = vi.fn();
+const requestChangesForTimeSheet = vi.fn();
 vi.mock('../src/actions/timeSheetActions', () => ({
   addCommentToTimeSheet,
   fetchTimeSheetComments,
+  requestChangesForTimeSheet,
 }));
 
 const fetchWorkItemsForTimeSheet = vi.fn();
@@ -65,6 +67,7 @@ describe('TimeSheetApproval', () => {
     fetchTimeSheetComments.mockReset();
     fetchWorkItemsForTimeSheet.mockReset();
     updateTimeEntryApprovalStatus.mockReset();
+    requestChangesForTimeSheet.mockReset();
 
     fetchTimeSheetComments.mockResolvedValue([]);
     fetchWorkItemsForTimeSheet.mockResolvedValue([
@@ -76,13 +79,19 @@ describe('TimeSheetApproval', () => {
       },
     ]);
     updateTimeEntryApprovalStatus.mockResolvedValue(undefined);
+    requestChangesForTimeSheet.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    root.unmount();
+    container.remove();
   });
 
   async function flushUi() {
     await new Promise(resolve => setTimeout(resolve, 0));
   }
 
-  it('updates entry approval status without requiring service_id in the approval drawer flow', async () => {
+  function renderApprovalDrawer() {
     flushSync(() => {
       root.render(React.createElement(TimeSheetApproval, {
         timeSheet: {
@@ -132,6 +141,26 @@ describe('TimeSheetApproval', () => {
         onRequestChanges: vi.fn(),
       }));
     });
+  }
+
+  it('T001: renders a dedicated entry-level change suggestion input', async () => {
+    renderApprovalDrawer();
+
+    await flushUi();
+
+    const toggleButton = container.querySelector('button[title="Show Details"]');
+    if (!toggleButton) {
+      throw new Error('Show Details button not found');
+    }
+    toggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushUi();
+
+    expect(container.textContent).toContain('Entry Change Suggestion');
+    expect(container.querySelector('textarea')?.getAttribute('placeholder')).toContain('Tell the employee exactly what to fix');
+  });
+
+  it('updates entry approval status without requiring service_id in the approval drawer flow', async () => {
+    renderApprovalDrawer();
 
     await flushUi();
     expect(fetchWorkItemsForTimeSheet).toHaveBeenCalledWith('sheet-1');
@@ -155,9 +184,84 @@ describe('TimeSheetApproval', () => {
     expect(updateTimeEntryApprovalStatus).toHaveBeenCalledWith({
       entryId: 'entry-1',
       approvalStatus: 'CHANGES_REQUESTED',
+      changeRequestComment: undefined,
     });
+    expect(requestChangesForTimeSheet).toHaveBeenCalledWith('sheet-1', 'manager-1');
+  });
+
+  it('T002/T033: submits the entry id together with the optional suggestion and still supports an empty suggestion', async () => {
+    renderApprovalDrawer();
+
+    await flushUi();
+
+    const toggleButton = container.querySelector('button[title="Show Details"]');
+    if (!toggleButton) {
+      throw new Error('Show Details button not found');
+    }
+    toggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushUi();
+
+    const suggestionInput = container.querySelector('textarea');
+    if (!suggestionInput) {
+      throw new Error('Suggestion input not found');
+    }
+
+    const valueSetter = Object.getOwnPropertyDescriptor(
+      HTMLTextAreaElement.prototype,
+      'value',
+    )?.set;
+
+    valueSetter?.call(suggestionInput, 'Please break out travel time separately.');
+    suggestionInput.dispatchEvent(new Event('input', { bubbles: true }));
+    suggestionInput.dispatchEvent(new Event('change', { bubbles: true }));
+    await flushUi();
+
+    let requestChangesButton = Array.from(container.querySelectorAll('button')).find(
+      node => node.textContent?.includes('Request Changes'),
+    );
+    if (!requestChangesButton) {
+      throw new Error('Request Changes button not found');
+    }
+    requestChangesButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushUi();
+
+    expect(updateTimeEntryApprovalStatus).toHaveBeenLastCalledWith({
+      entryId: 'entry-1',
+      approvalStatus: 'CHANGES_REQUESTED',
+      changeRequestComment: 'Please break out travel time separately.',
+    });
+
+    updateTimeEntryApprovalStatus.mockClear();
 
     root.unmount();
     container.remove();
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+
+    renderApprovalDrawer();
+    await flushUi();
+
+    const freshToggleButton = container.querySelector('button[title="Show Details"]');
+    if (!freshToggleButton) {
+      throw new Error('Show Details button not found');
+    }
+    freshToggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushUi();
+
+    requestChangesButton = Array.from(container.querySelectorAll('button')).find(
+      node => node.textContent?.includes('Request Changes'),
+    );
+    if (!requestChangesButton) {
+      throw new Error('Request Changes button not found');
+    }
+    requestChangesButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushUi();
+
+    expect(updateTimeEntryApprovalStatus).toHaveBeenLastCalledWith({
+      entryId: 'entry-1',
+      approvalStatus: 'CHANGES_REQUESTED',
+      changeRequestComment: undefined,
+    });
   });
 });
