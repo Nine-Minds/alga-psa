@@ -140,19 +140,19 @@
   {
     "id": "F024",
     "description": "Update package README to include contact operations, field expectations, and output behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F025",
     "description": "Add at least one example workflow that demonstrates the new contact resource.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F026",
     "description": "Update package release notes and docs synchronization tests for the contact CRUD expansion.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Acceptance Criteria (Definition of Done)"]
   }
 ]

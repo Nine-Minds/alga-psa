@@ -17,6 +17,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-14) This work should stay in the `n8n-nodes-alga-psa` package unless implementation uncovers an actual backend gap.
 - (2026-03-14) Contact list stays limited to the agreed core filters (`client_id`, `search_term`, `is_inactive`) even though the API supports broader filtering; this keeps the first pass aligned with the PRD scope.
 - (2026-03-14) Contact list pagination uses dedicated internal parameter names (`contactPage`, `contactLimit`) with the same user-facing labels (`Page`, `Limit`) to avoid conflicting duplicated node parameter names.
+- (2026-03-14) The packaged contact example uses a `Create -> Update` flow so the README demonstrates both the new contact resource and how downstream nodes can consume the returned `contact_name_id`.
 
 ## Discoveries / Constraints
 
@@ -42,6 +43,9 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-14) Validate the implemented contact node surface:
   - `npm run typecheck`
   - `npx vitest run --config vitest.config.ts __tests__/helpers.test.ts __tests__/node-description-loadoptions.test.ts __tests__/node-execute.test.ts`
+- (2026-03-14) Final verification after docs/example updates:
+  - `npm test`
+  - `python3 /Users/roberisaacs/.codex/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-03-14-n8n-contact-crud`
 
 ## Links / References
 
@@ -64,11 +68,6 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
   - `server/src/app/api/v1/contacts/route.ts`
   - `server/src/app/api/v1/contacts/[id]/route.ts`
 
-## Open Questions
-
-- Should the first-pass list UI expose only the agreed core filters, or also the broader contact API filters that already exist?
-- Which example workflow is more useful as the first packaged example: `Create Contact`, or `Create then Update Contact`?
-
 ## Progress Log
 
 - (2026-03-14) Completed `F001` through `F023` and `T001` through `T033`.
@@ -76,3 +75,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
   - Added contact create/update/list parameter groups, `contactId`, client lookup reuse, and contact execute branches for `POST/GET/PUT/DELETE /api/v1/contacts` plus `GET /api/v1/contacts`.
   - Added contact helper builders for create/update/list plus local `phone_numbers` parsing and validation.
   - Extended node description, helper, and execute tests to cover resource exposure, payload/query construction, normalization, delete success objects, ID validation, and continue-on-fail behavior.
+- (2026-03-14) Completed `F024` through `F026` and `T034` through `T037`.
+  - Updated the README operation matrix, contact field guidance, lookup behavior notes, and output expectations.
+  - Added `examples/create-update-contact.workflow.json` and referenced it from the README.
+  - Added a `0.3.0` release-note entry for the first-pass contact CRUD expansion and extended docs-sync tests.

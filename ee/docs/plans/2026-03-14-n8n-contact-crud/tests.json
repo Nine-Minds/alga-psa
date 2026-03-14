@@ -200,25 +200,25 @@
   {
     "id": "T034",
     "description": "Docs: README operation matrix includes contact CRUD operations.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024", "F026"]
   },
   {
     "id": "T035",
     "description": "Docs: README describes contact field scope, lookup behavior, and list/delete output expectations.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024", "F026"]
   },
   {
     "id": "T036",
     "description": "Docs: example workflow file for contact usage is present and referenced by the README.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025", "F024"]
   },
   {
     "id": "T037",
     "description": "Docs: release notes mention the contact CRUD expansion and its first-pass scope.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F026"]
   }
 ]

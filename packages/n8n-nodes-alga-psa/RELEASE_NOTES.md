@@ -1,5 +1,21 @@
 # Release Notes
 
+## 0.3.0
+
+Feature release of the `Alga PSA` n8n community node.
+
+### Added
+
+- First-pass `Contact` CRUD support: `Create`, `Get`, `List`, `Update`, and `Delete`
+- Contact create/update field support for `full_name`, `email`, `client_id`, `role`, `notes`, `is_inactive`, and JSON-authored `phone_numbers`
+- Contact list pagination/filter support for `page`, `limit`, `client_id`, `search_term`, and `is_inactive`
+- Contact workflow example: `examples/create-update-contact.workflow.json`
+
+### Notes
+
+- Contact `client_id` reuses the existing lookup-plus-manual-UUID fallback used by ticket references
+- Contact responses follow the existing node normalization rules for `{ data: ... }`, paginated lists, delete success payloads, and continue-on-fail item errors
+
 ## 0.2.0
 
 Feature release of the `Alga PSA` n8n community node.
