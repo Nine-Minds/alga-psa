@@ -415,7 +415,10 @@ export default function BillingOverview() {
         label: t('tabs.quotes', 'Quotes'),
         content: (
           <div id="quotes-tab">
-            <QuotesTab />
+            <QuotesTab
+              formatCurrency={formatCurrency}
+              formatDate={formatDate}
+            />
           </div>
         ),
       });

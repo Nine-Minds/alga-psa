@@ -11,6 +11,7 @@ import {
   IBillingResult,
   IBucketUsage,
   IService,
+  IQuoteWithClient,
   IUserWithRoles
 } from '@alga-psa/types';
 import {
@@ -22,6 +23,7 @@ import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates'
 import { finalizeInvoice, unfinalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { InvoiceViewModel, IInvoiceTemplate } from '@alga-psa/types';
 import Invoice from '@alga-psa/billing/models/invoice';
+import Quote from '@alga-psa/billing/models/quote';
 import { withAuth } from '@alga-psa/auth';
 import { scheduleInvoiceEmailAction, scheduleInvoiceZipAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { JobService } from '@alga-psa/jobs';
@@ -158,6 +160,32 @@ export const getClientInvoices = withAuth(async (user, { tenant }): Promise<Invo
   } catch (error) {
     console.error('Error fetching client invoices:', error);
     throw new Error('Failed to fetch invoices');
+  }
+});
+
+export const getClientQuotes = withAuth(async (user, { tenant }): Promise<IQuoteWithClient[]> => {
+  const knex = await getConnection(tenant);
+
+  try {
+    const clientId = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const id = await getClientIdFromUser(trx, user, tenant);
+      if (!id) {
+        throw new Error('Unauthorized');
+      }
+
+      const hasAccess = await hasBillingPermission(trx, user, tenant);
+      if (!hasAccess) {
+        throw new Error('Unauthorized to access quote data');
+      }
+
+      return id;
+    });
+
+    const quotes = await Quote.listByClient(knex, tenant, clientId);
+    return quotes.filter((quote) => quote.status && quote.status !== 'draft');
+  } catch (error) {
+    console.error('Error fetching client quotes:', error);
+    throw new Error('Failed to fetch quotes');
   }
 });
 

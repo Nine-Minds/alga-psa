@@ -751,7 +751,7 @@
   {
     "id": "F090",
     "description": "P4: Client portal — QuotesTab with DataTable listing client's quotes (all portal users with billing perms, not just primary contact)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P4-FR4"
     ]
