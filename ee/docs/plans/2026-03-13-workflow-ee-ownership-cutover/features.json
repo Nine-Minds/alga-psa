@@ -170,37 +170,37 @@
   {
     "id": "F029",
     "description": "Workflow bundle import/export behavior remains unchanged after the ownership move.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Behavioral Compatibility Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F030",
     "description": "Workflow designer behavior remains unchanged after the ownership move.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Behavioral Compatibility Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F031",
     "description": "Workflow task inbox and workflow persistence consumers remain behaviorally unchanged after the ownership move.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Behavioral Compatibility Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F032",
     "description": "Workflow streams and event publishing behavior remain unchanged after the ownership move.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Behavioral Compatibility Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F033",
     "description": "AI workflow step behavior remains unchanged while moving AI ownership fully into the EE workflows package.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "Behavioral Compatibility Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F034",
     "description": "The codebase no longer places workflow implementation ownership under the global shared namespace after the cutover lands.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Summary", "Problem", "Acceptance Criteria (Definition of Done)"]
   }
 ]

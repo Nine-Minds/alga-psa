@@ -38,13 +38,13 @@
   {
     "id": "T007",
     "description": "Worker wiring: `services/workflow-worker` builds and typechecks after switching runtime and worker imports to `@alga-psa/workflows`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006", "F011", "F023"]
   },
   {
     "id": "T008",
     "description": "Server wiring: `ee/packages/workflows` builds and typechecks after switching runtime, persistence, bundle, and catalog imports to package-local workflow entrypoints.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007", "F009", "F010", "F015", "F023"]
   },
   {
@@ -68,13 +68,13 @@
   {
     "id": "T012",
     "description": "Streams wiring: packages that publish workflow-owned domain events compile after importing stream helpers from `@alga-psa/workflows/streams/...`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012", "F022", "F023"]
   },
   {
     "id": "T013",
     "description": "Secrets wiring: workflow-specific secret helper consumers compile after importing them from `@alga-psa/workflows/secrets/...`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014", "F023"]
   },
   {
@@ -140,31 +140,31 @@
   {
     "id": "T024",
     "description": "Dependent package migration: billing package compiles after switching workflow-owned stream helpers to `@alga-psa/workflows`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022", "F023"]
   },
   {
     "id": "T025",
     "description": "Dependent package migration: scheduling package compiles after switching workflow-owned stream helpers to `@alga-psa/workflows`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022", "F023"]
   },
   {
     "id": "T026",
     "description": "Dependent package migration: clients package compiles after switching workflow-owned stream helpers to `@alga-psa/workflows`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022", "F023"]
   },
   {
     "id": "T027",
     "description": "Dependent package migration: projects package compiles after switching workflow-owned stream helpers to `@alga-psa/workflows`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022", "F023"]
   },
   {
     "id": "T028",
     "description": "Dependent package migration: documents/storage/notifications-related packages compile after switching workflow-owned stream helpers to `@alga-psa/workflows`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022", "F023"]
   },
   {
@@ -182,91 +182,91 @@
   {
     "id": "T031",
     "description": "Workflow event stream worker coverage still passes for event ingestion and launch behavior after the ownership move.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011", "F028", "F032"]
   },
   {
     "id": "T032",
     "description": "Workflow bundle integration coverage still passes for export/import behavior after the ownership move.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F029"]
   },
   {
     "id": "T033",
     "description": "Workflow designer grouped-step persistence coverage still passes after switching workflow imports to the EE package.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F030"]
   },
   {
     "id": "T034",
     "description": "Workflow designer AI step coverage still passes after AI helpers move into the EE workflows package.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F016", "F017", "F018", "F019", "F033"]
   },
   {
     "id": "T035",
     "description": "Workflow data-context and downstream reference typing coverage still passes after workflow client and AI helper imports move into the EE package.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F015", "F018", "F030", "F033"]
   },
   {
     "id": "T036",
     "description": "AI runtime registration tests still pass after AI action registration moves into the EE workflows package.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017", "F033"]
   },
   {
     "id": "T037",
     "description": "AI schema parsing and validation tests still pass after AI schema helpers move into the EE workflows package.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F019", "F033"]
   },
   {
     "id": "T038",
     "description": "AI output-schema resolution tests still pass after the resolver moves into the EE workflows package.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018", "F033"]
   },
   {
     "id": "T039",
     "description": "AI publish-validation coverage still rejects invalid inline schemas after the ownership move.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019", "F033"]
   },
   {
     "id": "T040",
     "description": "AI runtime publish integration coverage still validates `ai.infer` output behavior after the ownership move.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017", "F018", "F019", "F027", "F033"]
   },
   {
     "id": "T041",
     "description": "Task inbox UI and action coverage still passes after workflow persistence/task interfaces move into the EE workflows package.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009", "F031"]
   },
   {
     "id": "T042",
     "description": "Workflow schedule and event-catalog server actions still pass focused coverage after runtime and persistence imports move into the EE workflows package.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007", "F009", "F027", "F028"]
   },
   {
     "id": "T043",
     "description": "Workflow bundle dependency validation still resolves action, node, and schema dependencies after importing bundle/runtime helpers from the EE workflows package.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F029"]
   },
   {
     "id": "T044",
     "description": "Workflow run launcher and schedule lifecycle coverage still passes after importing workflow runtime and persistence from the EE workflows package.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007", "F009", "F027", "F028"]
   },
   {
     "id": "T045",
     "description": "Workflow-owned stream helper consumers continue to emit the same event payloads after import-path migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012", "F022", "F032"]
   },
   {
@@ -284,25 +284,25 @@
   {
     "id": "T048",
     "description": "Workflow worker/service startup smoke run succeeds after the package ownership move.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006", "F011", "F028"]
   },
   {
     "id": "T049",
     "description": "EE server workflow actions smoke run succeeds after the package ownership move.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007", "F027", "F034"]
   },
   {
     "id": "T050",
     "description": "Workflow designer smoke render succeeds after the package ownership move.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F030"]
   },
   {
     "id": "T051",
     "description": "Repo search confirms workflow implementation ownership no longer sits under `shared/workflow` for active code paths after the cutover.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F034"]
   }
 ]

@@ -11,9 +11,13 @@ import {
   TEST_SCHEMA_REF
 } from '../helpers/workflowRuntimeV2TestHelpers';
 import { importWorkflowBundleV1 } from 'server/src/lib/workflow/bundle/importWorkflowBundleV1';
-import { resetWorkflowRuntimeTables } from '../helpers/workflowRuntimeV2TestUtils';
-import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { ensureWorkflowScheduleStateTable, resetWorkflowRuntimeTables } from '../helpers/workflowRuntimeV2TestUtils';
+import { createTenantKnex, getCurrentTenantId } from '@alga-psa/db';
+import { getCurrentUser } from '@alga-psa/auth';
+import {
+  createTenantKnex as createCompatibilityTenantKnex,
+  getCurrentTenantId as getCompatibilityCurrentTenantId
+} from 'server/src/lib/db';
 import {
   createWorkflowDefinitionAction,
   publishWorkflowDefinitionAction,
@@ -26,22 +30,69 @@ import { POST as importBundleRoute } from 'server/src/app/api/workflow-definitio
 import { stringifyCanonicalJson } from '@alga-psa/workflows/bundle/canonicalJson';
 import { exportWorkflowBundleV1ForWorkflowId } from 'server/src/lib/workflow/bundle/exportWorkflowBundleV1';
 
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(),
+    getCurrentTenantId: vi.fn(),
+    auditLog: vi.fn().mockResolvedValue(undefined)
+  };
+});
+
 vi.mock('server/src/lib/db', () => ({
   createTenantKnex: vi.fn(),
   getCurrentTenantId: vi.fn()
 }));
 
-vi.mock('@alga-psa/users/actions', () => ({
-  getCurrentUser: vi.fn()
-}));
+vi.mock('@alga-psa/auth', () => {
+  const withAuth = (action: (user: any, ctx: { tenant: string }, ...args: any[]) => Promise<any>) =>
+    async (...args: any[]) => action(
+      {
+        user_id: userId,
+        tenant: tenantId,
+        roles: []
+      },
+      { tenant: tenantId },
+      ...args
+    );
+  const withOptionalAuth = (action: (user: any, ctx: { tenant: string }, ...args: any[]) => Promise<any>) =>
+    async (...args: any[]) => action(
+      {
+        user_id: userId,
+        tenant: tenantId,
+        roles: []
+      },
+      { tenant: tenantId },
+      ...args
+    );
+  const withAuthCheck = (action: (user: any, ...args: any[]) => Promise<any>) =>
+    async (...args: any[]) => action(
+      {
+        user_id: userId,
+        tenant: tenantId,
+        roles: []
+      },
+      ...args
+    );
 
-vi.mock('server/src/lib/auth/rbac', () => ({
-  hasPermission: vi.fn().mockResolvedValue(true)
-}));
+  return {
+    withAuth,
+    withOptionalAuth,
+    withAuthCheck,
+    AuthenticationError: class AuthenticationError extends Error {},
+    hasPermission: vi.fn().mockResolvedValue(true),
+    checkMultiplePermissions: vi.fn().mockResolvedValue(true),
+    getCurrentUser: vi.fn(),
+    preCheckDeletion: vi.fn()
+  };
+});
 
 const mockedCreateTenantKnex = vi.mocked(createTenantKnex);
 const mockedGetCurrentTenantId = vi.mocked(getCurrentTenantId);
 const mockedGetCurrentUser = vi.mocked(getCurrentUser);
+const mockedCreateCompatibilityTenantKnex = vi.mocked(createCompatibilityTenantKnex);
+const mockedGetCompatibilityCurrentTenantId = vi.mocked(getCompatibilityCurrentTenantId);
 
 let db: Knex;
 let tenantId: string;
@@ -66,15 +117,19 @@ const normalizeBundleForComparison = (bundle: any) => {
 beforeAll(async () => {
   ensureWorkflowRuntimeV2TestRegistrations();
   db = await createTestDbConnection();
+  await ensureWorkflowScheduleStateTable(db);
 });
 
 beforeEach(async () => {
+  await ensureWorkflowScheduleStateTable(db);
   await resetWorkflowRuntimeTables(db);
   tenantId = uuidv4();
   userId = uuidv4();
   mockedCreateTenantKnex.mockResolvedValue({ knex: db, tenant: tenantId });
   mockedGetCurrentTenantId.mockReturnValue(tenantId);
-  mockedGetCurrentUser.mockResolvedValue({ user_id: userId, roles: [] } as any);
+  mockedCreateCompatibilityTenantKnex.mockResolvedValue({ knex: db, tenant: tenantId });
+  mockedGetCompatibilityCurrentTenantId.mockResolvedValue(tenantId);
+  mockedGetCurrentUser.mockResolvedValue({ user_id: userId, tenant: tenantId, roles: [] } as any);
 });
 
 afterAll(async () => {

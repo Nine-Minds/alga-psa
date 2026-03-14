@@ -1,8 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
-import { registerAiActionsV2 } from '../registerAiActions';
-import * as inferenceService from '../../../../../packages/ee/src/services/workflowInferenceService';
+import { configureWorkflowAiInferenceService, registerAiActionsV2 } from '../registerAiActions';
 
 describe('registerAiActionsV2', () => {
   beforeAll(() => {
@@ -30,12 +29,11 @@ describe('registerAiActionsV2', () => {
     const action = getActionRegistryV2().get('ai.infer', 1);
     expect(action).toBeDefined();
 
-    const inferSpy = vi
-      .spyOn(inferenceService, 'inferWorkflowStructuredOutput')
-      .mockResolvedValueOnce({
+    const inferSpy = vi.fn().mockResolvedValueOnce({
         category: 'billing',
         confidence: 0.82,
       });
+    configureWorkflowAiInferenceService(inferSpy);
 
     const result = await action!.handler(
       { prompt: 'Classify this ticket.' },
@@ -83,5 +81,7 @@ describe('registerAiActionsV2', () => {
       runId: 'run-1',
       stepPath: 'root.steps[0]',
     });
+
+    configureWorkflowAiInferenceService(null);
   });
 });
