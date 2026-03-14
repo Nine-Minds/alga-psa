@@ -663,7 +663,7 @@
   {
     "id": "F079",
     "description": "P3: PDF generation — extend or create service for quote PDFs using Puppeteer pipeline",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P3-FR6"
     ]
