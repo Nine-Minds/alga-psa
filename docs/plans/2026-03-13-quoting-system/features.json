@@ -695,7 +695,7 @@
   {
     "id": "F083",
     "description": "P3: Quote document template model — getTemplates, getStandardTemplates, getAllTemplates, saveTemplate",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P3-FR1"
     ]

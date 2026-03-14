@@ -1,6 +1,7 @@
 import { TenantEntity } from './index';
 import type { ISO8601String } from '../lib/temporal';
 import type { DiscountType, TaxSource } from './invoice.interfaces';
+import type { InvoiceTemplateAst } from '../lib/invoice-template-ast';
 
 export type QuoteStatus =
   | 'draft'
@@ -178,6 +179,23 @@ export interface QuoteViewModel {
   tenant?: QuoteViewModelParty | null;
   line_items: QuoteViewModelLineItem[];
   phases?: QuoteViewModelPhase[];
+}
+
+export type QuoteDocumentTemplateSource = 'standard' | 'custom';
+
+export interface IQuoteDocumentTemplate extends TenantEntity {
+  template_id: string;
+  name: string;
+  version: number;
+  templateAst?: InvoiceTemplateAst | null;
+  isStandard?: boolean;
+  is_default?: boolean;
+  isTenantDefault?: boolean;
+  templateSource?: QuoteDocumentTemplateSource;
+  standard_quote_document_template_code?: string;
+  selectValue?: string;
+  created_at?: ISO8601String;
+  updated_at?: ISO8601String;
 }
 
 export const QUOTE_STATUS_METADATA: Record<QuoteStatus, { label: string; description: string }> = {

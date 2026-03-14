@@ -6,7 +6,7 @@
  */
 
 // Models
-export { Invoice, Contract, Quote, QuoteItem, QuoteActivity } from './models';
+export { Invoice, Contract, Quote, QuoteItem, QuoteActivity, QuoteDocumentTemplate } from './models';
 
 // Components
 export { BillingDashboard, CreditsPage, TemplateRenderer, PurchaseOrderSummaryBanner, AutomaticInvoices, BillingCycles } from './components';
@@ -35,6 +35,9 @@ export type {
   IQuoteActivity,
   IQuoteWithClient,
   IQuoteListItem,
+  IQuoteDocumentTemplate,
+  QuoteDocumentTemplateSource,
+  QuoteViewModel,
   QuoteStatus,
 } from '@alga-psa/types';
 
