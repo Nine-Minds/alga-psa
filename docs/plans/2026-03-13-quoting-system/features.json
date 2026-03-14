@@ -799,7 +799,7 @@
   {
     "id": "F096",
     "description": "P4: Viewed tracking — set viewed_at on first client portal access, log activity",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P4-FR7"
     ]

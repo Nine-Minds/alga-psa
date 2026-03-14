@@ -257,32 +257,41 @@ export const getClientQuoteById = withAuth(async (user, { tenant }, quoteId: str
   const knex = await getConnection(tenant);
 
   try {
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const clientId = await getClientIdFromUser(trx, user, tenant);
-      if (!clientId) {
-        throw new Error('Unauthorized');
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const quote = await getAuthorizedClientQuote(trx, user, tenant, quoteId);
+
+      if (!quote.viewed_at) {
+        const viewedAt = new Date().toISOString();
+
+        const markedViewed = await trx('quotes')
+          .where({ tenant, quote_id: quoteId })
+          .whereNull('viewed_at')
+          .update({
+            viewed_at: viewedAt,
+            updated_at: trx.fn.now(),
+            updated_by: user.user_id,
+          });
+
+        if (markedViewed) {
+          await QuoteActivity.create(trx, tenant, {
+            quote_id: quoteId,
+            activity_type: 'viewed',
+            description: 'Quote viewed by client in portal',
+            performed_by: user.user_id,
+            metadata: {
+              viewed_at: viewedAt,
+            },
+          });
+        }
       }
 
-      const hasAccess = await hasBillingPermission(trx, user, tenant);
-      if (!hasAccess) {
-        throw new Error('Unauthorized to access quote data');
+      const updatedQuote = await Quote.getById(trx, tenant, quoteId);
+      if (!updatedQuote) {
+        throw new Error('Quote not found');
       }
 
-      const quoteCheck = await trx('quotes')
-        .where({ quote_id: quoteId, client_id: clientId, tenant, is_template: false })
-        .whereNot('status', 'draft')
-        .first();
-
-      if (!quoteCheck) {
-        throw new Error('Quote not found or access denied');
-      }
+      return updatedQuote;
     });
-
-    const quote = await Quote.getById(knex, tenant, quoteId);
-    if (!quote) {
-      throw new Error('Quote not found');
-    }
-    return quote;
   } catch (error) {
     console.error('Error fetching client quote details:', error);
     throw new Error('Failed to fetch quote details');

@@ -110,6 +110,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) F096 complete — P4: `getClientQuoteById` now stamps `viewed_at` only on first portal open and records a dedicated `viewed` quote activity, while leaving subsequent views untouched.
 - (2026-03-13) F094 complete — P4: Added `rejectClientQuote` with required rejection comments, persisted `rejected_at`/`rejection_reason`, logged a client rejection activity, and extended the portal quote detail with a reject form and post-rejection summary banner.
 - (2026-03-13) F093a complete — P4: Updated `QuoteDetail.tsx` so accepted quotes surface a review banner plus per-item highlighting for optional items the client selected vs. declined, giving the MSP a clear pre-conversion review state.
 - (2026-03-13) F093 complete — P4: Added `acceptClientQuote` in the client portal actions to persist optional selections, move quotes from `sent` to `accepted`, stamp `accepted_at`/`accepted_by`, and log the selected vs. deselected optional items for MSP review; `QuotesTab.tsx` now exposes an Accept Quote action for sent quotes.
