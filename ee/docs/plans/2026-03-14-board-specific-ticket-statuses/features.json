@@ -32,19 +32,19 @@
   {
     "id": "F006",
     "description": "Remap inbound ticket default status references using board context during migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2", "FR5"]
   },
   {
     "id": "F007",
     "description": "Remap billing renewal default ticket status references using board context during migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2", "FR5"]
   },
   {
     "id": "F008",
     "description": "Remap per-contract renewal ticket status references using board context during migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2", "FR5"]
   },
   {

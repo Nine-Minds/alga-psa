@@ -20,6 +20,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-14) New board creation must let admins either copy statuses from an existing board or create statuses inline.
 - (2026-03-14) `F001`/`F002`: add `statuses.board_id` as nullable first, then enforce ticket ownership after clone/remap. Rationale: current tenant-global ticket rows must survive until the data migration rewrites them.
 - (2026-03-14) `F003`/`F004`/`F005`: keep the legacy tenant-global ticket status rows in place for now and clone from them during migration, because later remap steps still need the old ids to rewrite inbound, billing, and workflow references before the global rows can be retired.
+- (2026-03-14) `F006`/`F007`/`F008`: remap saved status references by joining legacy global ticket statuses to their board-owned clones via `tenant + board_id + status name`. Rationale: the old global status ids remain available during migration, so we can rewrite board-context tables without persisting a separate remap table.
+- (2026-03-14) `T003`/`T004`/`T005`/`T006`: cover the clone/remap migration with a DB-backed integration fixture that seeds one tenant, two boards, two legacy ticket statuses, and board-specific tickets before invoking the migration directly.
 
 ## Discoveries / Constraints
 
@@ -58,6 +60,13 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-14) Local DB-backed integration execution is blocked in this Codex harness:
   - `npx vitest run src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts --coverage=false` fails before test execution because TCP connections to `localhost:5438` are denied with `EPERM`.
   - Direct checks to both `127.0.0.1:55433` and Docker socket access are also denied with `Operation not permitted`, so the new DB integration suite is written but could not be executed here.
+- (2026-03-14) Saved config with explicit board context now has a direct migration path:
+  - `inbound_ticket_defaults.board_id + status_id`
+  - `default_billing_settings.renewal_ticket_board_id + renewal_ticket_status_id`
+  - `client_contracts.renewal_ticket_board_id + renewal_ticket_status_id`
+- (2026-03-14) `F009`/`F010` are the first non-tabular migration slice:
+  - workflow ticket board/status references live inside `workflow_definitions.draft_definition` and `workflow_definition_versions.definition_json`
+  - ticket board/status values can appear as fixed literals or dynamic `inputMapping` expressions in action configs, so safe remap/surfacing needs JSON traversal and explicit unresolved detection rather than a single SQL join
 
 ## Commands / Runbooks
 
@@ -100,6 +109,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Migration schema coverage: `server/src/test/unit/migrations/boardSpecificTicketStatusesMigration.test.ts`
 - Clone/remap migration: `server/migrations/20260314113000_clone_global_ticket_statuses_to_boards.cjs`
 - Clone/remap DB integration coverage: `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts`
+- Board-context status-reference remap migration: `server/migrations/20260314120000_remap_board_context_ticket_status_references.cjs`
 
 ## Open Questions
 
