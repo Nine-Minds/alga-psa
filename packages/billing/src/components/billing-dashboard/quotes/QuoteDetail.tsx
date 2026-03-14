@@ -7,7 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import type { IClient, IContact, IQuote } from '@alga-psa/types';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
-import { deleteQuote, getQuote, listQuoteVersions, updateQuote } from '../../../actions/quoteActions';
+import { deleteQuote, getQuote, listQuoteVersions, resendQuote, sendQuoteReminder, updateQuote } from '../../../actions/quoteActions';
 import { getAllContacts } from '@alga-psa/clients/actions';
 import QuoteStatusBadge from './QuoteStatusBadge';
 
@@ -46,6 +46,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
   const [isLoading, setIsLoading] = useState(true);
   const [isWorking, setIsWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     void loadQuote();
@@ -94,6 +95,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     try {
       setIsWorking(true);
       setError(null);
+      setNotice(null);
       const result = await deleteQuote(quote.quote_id);
 
       if ('permissionError' in result) {
@@ -120,6 +122,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
     try {
       setIsWorking(true);
       setError(null);
+      setNotice(null);
       const result = await updateQuote(quote.quote_id, { status: 'cancelled' });
 
       if ('permissionError' in result) {
@@ -129,6 +132,54 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
       setQuote(result);
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : 'Failed to cancel quote');
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  const handleResendQuote = async () => {
+    if (!quote) {
+      return;
+    }
+
+    try {
+      setIsWorking(true);
+      setError(null);
+      setNotice(null);
+      const result = await resendQuote(quote.quote_id);
+
+      if ('permissionError' in result) {
+        throw new Error(result.permissionError);
+      }
+
+      setQuote(result);
+      setNotice('Quote resent to the configured billing recipients.');
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : 'Failed to resend quote');
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  const handleSendReminder = async () => {
+    if (!quote) {
+      return;
+    }
+
+    try {
+      setIsWorking(true);
+      setError(null);
+      setNotice(null);
+      const result = await sendQuoteReminder(quote.quote_id);
+
+      if ('permissionError' in result) {
+        throw new Error(result.permissionError);
+      }
+
+      setQuote(result);
+      setNotice('Quote reminder sent to the configured billing recipients.');
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : 'Failed to send quote reminder');
     } finally {
       setIsWorking(false);
     }
@@ -154,6 +205,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
         return (
           <>
             <Button id="quote-detail-revise" disabled>Revise</Button>
+            <Button id="quote-detail-resend" variant="outline" onClick={() => void handleResendQuote()} disabled={isWorking}>Resend</Button>
+            <Button id="quote-detail-reminder" variant="outline" onClick={() => void handleSendReminder()} disabled={isWorking}>Send Reminder</Button>
             <Button id="quote-detail-cancel" variant="outline" onClick={() => void handleCancelQuote()} disabled={isWorking}>Cancel</Button>
           </>
         );
@@ -218,6 +271,13 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
             <Button id="quote-detail-view-history" variant="outline" disabled>View History</Button>
           </div>
         </div>
+
+        {notice ? (
+          <Alert>
+            <AlertTitle>Quote Update</AlertTitle>
+            <AlertDescription>{notice}</AlertDescription>
+          </Alert>
+        ) : null}
 
         <section className="grid gap-4 rounded-lg border border-border p-4 md:grid-cols-2 xl:grid-cols-3">
           <div>

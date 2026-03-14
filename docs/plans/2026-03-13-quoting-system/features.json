@@ -807,7 +807,7 @@
   {
     "id": "F097",
     "description": "P4: Resend action on sent quotes and send reminder for approaching expiration",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P4-FR8"
     ]
