@@ -671,7 +671,7 @@
   {
     "id": "F080",
     "description": "P3: PDF generation — store generated PDF in file storage system",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P3-FR6"
     ]

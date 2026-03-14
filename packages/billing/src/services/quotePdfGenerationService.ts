@@ -1,18 +1,27 @@
+import { v4 as uuidv4 } from 'uuid';
 import type { InvoiceTemplateAst } from '@alga-psa/types';
 import type { Page } from 'puppeteer';
+import type { FileStore } from '@alga-psa/storage/types/storage';
 
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 
+import { getFileStoreModelAsync, getStorageProviderFactoryAsync } from '../lib/documentsHelpers';
 import { mapDbQuoteToViewModel } from '../lib/adapters/quoteAdapters';
 import { evaluateInvoiceTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { renderEvaluatedInvoiceTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { getStandardQuoteTemplateAstByCode } from '../lib/quote-template-ast/standardTemplates';
+import Quote from '../models/quote';
 import { browserPoolService } from './browserPoolService';
 
 interface QuotePDFGenerationOptions {
   quoteId: string;
   templateCode?: string;
   templateAst?: InvoiceTemplateAst;
+}
+
+interface QuotePDFStoreOptions extends QuotePDFGenerationOptions {
+  quoteNumber?: string;
+  userId: string;
 }
 
 export class QuotePDFGenerationService {
@@ -25,6 +34,36 @@ export class QuotePDFGenerationService {
   async generatePDF(options: QuotePDFGenerationOptions): Promise<Buffer> {
     const htmlContent = await this.getQuoteHtml(options);
     return this.generatePDFBuffer(htmlContent);
+  }
+
+  async generateAndStore(options: QuotePDFStoreOptions): Promise<FileStore> {
+    const pdfBuffer = await this.generatePDF(options);
+
+    return runWithTenant(this.tenant, async () => {
+      const fileId = uuidv4();
+      const { StorageProviderFactory, generateStoragePath } = await getStorageProviderFactoryAsync();
+      const FileStoreModel = await getFileStoreModelAsync();
+      const { knex } = await createTenantKnex();
+
+      const quoteRecord = await Quote.getById(knex, this.tenant, options.quoteId);
+      const fileStem = options.quoteNumber ?? quoteRecord?.quote_number ?? options.quoteId;
+      const storagePath = generateStoragePath(this.tenant, 'pdfs', `${fileStem}.pdf`);
+
+      const provider = await StorageProviderFactory.createProvider();
+      const uploadResult = await provider.upload(Buffer.from(pdfBuffer), storagePath, {
+        mime_type: 'application/pdf',
+      });
+
+      return FileStoreModel.create(knex, {
+        fileId,
+        file_name: storagePath.split('/').pop()!,
+        original_name: `${fileStem}.pdf`,
+        mime_type: 'application/pdf',
+        file_size: pdfBuffer.length,
+        storage_path: uploadResult.path,
+        uploaded_by_id: options.userId,
+      });
+    });
   }
 
   private async getQuoteHtml(options: QuotePDFGenerationOptions): Promise<string> {
