@@ -384,7 +384,14 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
       steps: [stateSetStep('state-1', 'READY')]
     });
     expect(result.ok).toBe(false);
-    expect(result.errors?.some((err: any) => err.code === 'UNKNOWN_SCHEMA')).toBe(true);
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'PAYLOAD_SCHEMA_REF_UNKNOWN',
+          stepPath: 'root.payloadSchemaRef'
+        })
+      ])
+    );
   });
 
   it('Publish stores payload_schema_json for valid payload schema refs. Mocks: non-target dependencies.', async () => {
@@ -488,7 +495,7 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
           id: 'action-1',
           type: 'action.call',
           config: {
-            actionId: 'test.echo',
+            actionId: 'test.actionProvided',
             version: 1,
             inputMapping: {}
           }
@@ -558,7 +565,7 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
   });
 
   it('Publish accepts workflow trigger metadata and stores it on the version. Mocks: non-target dependencies.', async () => {
-    const trigger = { type: 'event', eventName: 'PING' };
+    const trigger = { type: 'event', eventName: 'PING', sourcePayloadSchemaRef: TEST_SCHEMA_REF };
     const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')], trigger });
     const result = await publishWorkflow(workflowId, 1, {
       id: workflowId,
@@ -804,12 +811,8 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
       steps: [
         {
           id: 'action-1',
-          type: 'action.call',
-          config: {
-            actionId: 'test.echo',
-            version: 1,
-            inputMapping: {}
-          }
+          type: 'unknown.node',
+          config: {}
         }
       ]
     };

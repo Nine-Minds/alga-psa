@@ -170,7 +170,7 @@
   {
     "id": "T029",
     "description": "Workflow runtime unit/integration coverage still passes for publish/execute semantics after the ownership move.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F027", "F034"]
   },
   {

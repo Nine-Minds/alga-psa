@@ -32,6 +32,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-13) `pnpm --filter @alga-psa/workflows build` and `pnpm --filter workflow-worker build` are partially blocked in this workspace because local CLIs like `tsup` and `tsc-alias` are not installed under `node_modules`; targeted TypeScript compilation still works.
 - (2026-03-13) The remaining test-import cleanup was safer after adding deep EE proxy files for the legacy subpaths still used by tests (`runtime/*`, `persistence/*`, `streams/*`, `bundle/canonicalJson`, `actions/emailWorkflowActions`, `adapters/*`) rather than hand-rewriting every test to category-root imports.
 - (2026-03-13) The stale `20250707201500_register_email_processing_workflow.cjs` bootstrap migration was pointing at a nonexistent legacy workflow module. Replacing it with an explicit placeholder throw is lower risk than preserving the broken dynamic import string because later migrations overwrite the DB-stored code anyway.
+- (2026-03-13) The runtime publish contract now reports unknown workflow payload schema refs as `PAYLOAD_SCHEMA_REF_UNKNOWN` on `root.payloadSchemaRef`; older `UNKNOWN_SCHEMA` assertions were stale.
+- (2026-03-13) `test.echo` is no longer a stable "missing required mapping" sentinel for publish validation. `test.actionProvided.key` is the reliable required-input case.
+- (2026-03-13) `startWorkflowRunAction` still revalidates published versions when `validation_status` is missing or errored, but the forced-invalid coverage case must be definition-invalid (for example `unknown.node`) rather than relying on action-mapping ambiguity.
 
 ## Commands / Runbooks
 
@@ -62,6 +65,10 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `rg -n "@shared/workflow|@alga-psa/shared/workflow" . -g '!**/docs/**' -g '!**/dist/**'`
   - `pnpm --filter server exec vitest run src/test/unit/workflowSchemaRegistry.unit.test.ts src/test/unit/email/inboundEmailBodyParsing.test.ts`
   - `pnpm --filter sebastian-ee exec vitest run src/components/workflow-designer/__tests__/workflowDataContext.test.ts`
+- (2026-03-13) Validation used for the runtime compatibility tranche:
+  - `pnpm --filter server exec vitest run src/test/integration/workflowRuntimeV2.publish.integration.test.ts`
+  - `pnpm --filter server exec vitest run src/test/integration/workflowRuntimeV2.control.integration.test.ts`
+  - `pnpm --filter server exec vitest run src/test/unit/workflowRuntimeV2.unit.test.ts`
 
 ## Links / References
 
@@ -102,3 +109,11 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `server/src/test/unit/email/inboundEmailBodyParsing.test.ts` passed through the new `@alga-psa/workflows/actions/emailWorkflowActions` proxy.
   - `server/src/test/unit/workflowSchemaRegistry.unit.test.ts` failed on an existing auth spy expectation (`hasPermission` was not observed), not on import resolution.
   - `ee/server` Vitest resolution is still blocked for `workflowDataContext.test.ts` by unrelated package-entry resolution for `@alga-psa/storage`.
+- (2026-03-13) Completed F027/T029 by fixing stale runtime integration harnesses and publish assertions after the ownership move:
+  - `server/vitest.config.ts` now points `@alga-psa/product-extension-actions` at the real OSS entrypoint and pre-creates `coverage/.tmp` so focused Vitest runs stop failing on harness setup.
+  - `server/src/test/integration/workflowRuntimeV2.control.integration.test.ts` and `server/src/test/integration/workflowRuntimeV2.eventTrigger.integration.test.ts` now mock `@alga-psa/db` and `@alga-psa/auth`, matching the canonical runtime imports.
+  - `server/src/test/integration/workflowRuntimeV2.publish.integration.test.ts` now asserts the current publish/runtime contract (`PAYLOAD_SCHEMA_REF_UNKNOWN`, required mappings on `test.actionProvided`, event triggers with `sourcePayloadSchemaRef`, and revalidation failure via an injected `unknown.node` definition).
+  - Evidence:
+    - `pnpm --filter server exec vitest run src/test/integration/workflowRuntimeV2.publish.integration.test.ts` passed.
+    - `pnpm --filter server exec vitest run src/test/integration/workflowRuntimeV2.control.integration.test.ts` passed.
+    - `pnpm --filter server exec vitest run src/test/unit/workflowRuntimeV2.unit.test.ts` passed.

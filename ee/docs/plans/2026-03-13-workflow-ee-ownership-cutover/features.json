@@ -158,7 +158,7 @@
   {
     "id": "F027",
     "description": "Workflow runtime execution semantics remain unchanged after the ownership move.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Behavioral Compatibility Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
