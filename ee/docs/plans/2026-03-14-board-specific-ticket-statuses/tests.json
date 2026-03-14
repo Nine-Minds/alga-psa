@@ -116,43 +116,43 @@
   {
     "id": "T020",
     "description": "UI validation: board create/edit blocks save if there is no valid open default ticket status.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017"]
   },
   {
     "id": "T021",
     "description": "UI integration: board edit loads only that board's ticket statuses into the embedded board-local status manager.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018"]
   },
   {
     "id": "T022",
     "description": "UI integration: central ticket status settings no longer render ticket status management as an active source of truth.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019"]
   },
   {
     "id": "T023",
     "description": "Unit: board-scoped ticket status create action writes board_id and rejects duplicate ticket status names within the same board only.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {
     "id": "T024",
     "description": "Unit: board-scoped ticket status update action cannot move or mutate a status across boards implicitly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {
     "id": "T025",
     "description": "Unit: board-local ticket status rules preserve exactly one default behavior per board and keep other boards untouched.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {
     "id": "T026",
     "description": "Unit: deleting or closing the final valid default/open ticket status on a board is rejected with a clear validation error.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {

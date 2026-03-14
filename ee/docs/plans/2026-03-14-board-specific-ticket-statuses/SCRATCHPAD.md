@@ -112,6 +112,18 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-14) Completed `T016` with DB-backed update coverage in `server/src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts`:
   - proves `TicketModel.updateTicket(...)` rejects a cross-board status id and leaves the persisted ticket's prior status untouched
   - verified with `cd server && npx vitest run --coverage.enabled false src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts`.
+- (2026-03-14) Completed `F017`/`F018`/`F021` by moving board-local ticket lifecycle editing into board create/edit:
+  - `server/src/components/settings/general/BoardsSettings.tsx` now manages ticket statuses in both create-inline and edit flows, including add/remove/reorder/open-closed/default operations.
+  - Save is blocked until the managed board-local status set contains exactly one open default, which keeps board create and board edit aligned with the PRD's required lifecycle invariant.
+- (2026-03-14) Completed `F019` by retiring the old central ticket status settings surface:
+  - `server/src/components/settings/general/StatusSettings.tsx` now renders an informational handoff to Boards instead of acting as a tenant-global ticket status editor.
+- (2026-03-14) Completed `F020` with board-scoped ticket status actions and model reads:
+  - `packages/tickets/src/models/status.ts` now exposes board-scoped ticket status lookup helpers.
+  - `packages/tickets/src/actions/board-actions/boardTicketStatusActions.ts` now owns board-local ticket status reads plus create/update/delete/save operations, and explicitly rejects implicit cross-board mutation.
+- (2026-03-14) Completed `T020`/`T021`/`T022`/`T023`/`T024`/`T025`/`T026` with focused UI and action coverage:
+  - `server/src/components/settings/general/BoardsSettings.copyStatuses.test.tsx` now covers create-time lifecycle validation and board-edit status loading.
+  - `server/src/components/settings/general/StatusSettings.ticketStatusesRetired.test.tsx` verifies the central status surface is informational only.
+  - `packages/tickets/src/actions/board-actions/boardTicketStatusActions.test.ts` verifies board-local create/update/delete/default rules and duplicate-name scoping.
 
 ## Commands / Runbooks
 
@@ -149,6 +161,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd shared && npx vitest run models/__tests__/ticketModel.boardStatusValidation.test.ts --config vitest.config.ts`
 - (2026-03-14) Run the DB-backed ticket create board/status validation test:
   - `cd server && npx vitest run --coverage.enabled false src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts`
+- (2026-03-14) Validate board-local ticket status management and the retired central status surface:
+  - `cd packages/tickets && npx vitest run src/actions/board-actions/boardTicketStatusActions.test.ts --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/components/settings/general/BoardsSettings.copyStatuses.test.tsx src/components/settings/general/StatusSettings.ticketStatusesRetired.test.tsx --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/boardCopyTicketStatuses.integration.test.ts --config vitest.config.ts`
 
 ## Links / References
 
@@ -162,6 +178,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Board create copy-source test: `server/src/components/settings/general/BoardsSettings.copyStatuses.test.tsx`
 - Board status copy integration: `server/src/test/integration/boardCopyTicketStatuses.integration.test.ts`
 - Board create inline statuses wiring: `server/src/components/settings/general/BoardsSettings.tsx`
+- Board-local ticket status action layer: `packages/tickets/src/actions/board-actions/boardTicketStatusActions.ts`
+- Board-local ticket status action tests: `packages/tickets/src/actions/board-actions/boardTicketStatusActions.test.ts`
+- Retired central ticket status surface: `server/src/components/settings/general/StatusSettings.tsx`
+- Retired central ticket status test: `server/src/components/settings/general/StatusSettings.ticketStatusesRetired.test.tsx`
 - Ticket model default status helper: `shared/models/ticketModel.ts`
 - Ticket create board/status validation integration: `server/src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts`
 - Ticket API service: `server/src/lib/api/services/TicketService.ts`

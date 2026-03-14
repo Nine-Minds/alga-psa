@@ -8,6 +8,7 @@ import BoardsSettings from './BoardsSettings';
 
 const getAllBoardsMock = vi.fn();
 const createBoardMock = vi.fn();
+const getBoardTicketStatusesMock = vi.fn();
 const getAllPrioritiesMock = vi.fn();
 const getAllUsersMock = vi.fn();
 const getSlaPoliciesMock = vi.fn();
@@ -16,6 +17,7 @@ const getTeamsMock = vi.fn();
 vi.mock('@alga-psa/tickets/actions', () => ({
   getAllBoards: (...args: unknown[]) => getAllBoardsMock(...args),
   createBoard: (...args: unknown[]) => createBoardMock(...args),
+  getBoardTicketStatuses: (...args: unknown[]) => getBoardTicketStatusesMock(...args),
   updateBoard: vi.fn(),
   deleteBoard: vi.fn(),
 }));
@@ -89,7 +91,29 @@ vi.mock('@alga-psa/ui/components/Label', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/DataTable', () => ({
-  DataTable: () => <div data-testid="boards-table" />,
+  DataTable: ({
+    data,
+    columns,
+  }: {
+    data: any[];
+    columns: Array<{
+      title: string;
+      dataIndex: string;
+      render?: (value: unknown, record: any) => React.ReactNode;
+    }>;
+  }) => (
+    <div data-testid="boards-table">
+      {data.map((record) => (
+        <div key={record.board_id}>
+          {columns.map((column) => (
+            <div key={`${record.board_id}-${column.dataIndex}`}>
+              {column.render ? column.render(record[column.dataIndex], record) : record[column.dataIndex]}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  ),
 }));
 
 vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
@@ -150,7 +174,7 @@ vi.mock('@alga-psa/ui/components/DropdownMenu', () => ({
   DropdownMenu: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   DropdownMenuContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DropdownMenuItem: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuItem: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
 }));
 
 vi.mock('@alga-psa/ui/components/UserPicker', () => ({
@@ -175,6 +199,7 @@ describe('BoardsSettings ticket status copy flow', () => {
       },
     ]);
     createBoardMock.mockResolvedValue({ board_id: 'board-new' });
+    getBoardTicketStatusesMock.mockResolvedValue([]);
     getAllPrioritiesMock.mockResolvedValue([]);
     getAllUsersMock.mockResolvedValue([]);
     getSlaPoliciesMock.mockResolvedValue([]);
@@ -244,5 +269,80 @@ describe('BoardsSettings ticket status copy flow', () => {
         })
       );
     });
+  });
+
+  it('T020: blocks board save when inline ticket statuses do not contain exactly one open default', async () => {
+    render(<BoardsSettings />);
+
+    await waitFor(() => {
+      expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+
+    fireEvent.click(screen.getByTestId('add-board-button'));
+
+    fireEvent.change(screen.getByLabelText('ticketing.boards.fields.boardName.label'), {
+      target: { value: 'Problem Board' },
+    });
+    fireEvent.change(screen.getByTestId('ticket-status-seed-mode-select'), {
+      target: { value: 'create_inline' },
+    });
+    fireEvent.click(screen.getByTestId('inline-ticket-status-closed-0'));
+
+    expect(screen.getByTestId('ticket-status-validation-error')).toHaveTextContent(
+      'Select exactly one open default ticket status before saving the board.'
+    );
+    expect(screen.getByTestId('save-board-button')).toBeDisabled();
+
+    fireEvent.click(screen.getByTestId('save-board-button'));
+    expect(createBoardMock).not.toHaveBeenCalled();
+  });
+
+  it('T021: board edit loads only the selected board ticket statuses into the embedded manager', async () => {
+    getAllBoardsMock.mockResolvedValue([
+      {
+        board_id: 'board-source',
+        board_name: 'Support',
+        display_order: 10,
+        is_inactive: false,
+      },
+      {
+        board_id: 'board-other',
+        board_name: 'Field Ops',
+        display_order: 20,
+        is_inactive: false,
+      },
+    ]);
+    getBoardTicketStatusesMock.mockResolvedValue([
+      {
+        status_id: 'status-open',
+        name: 'Support Open',
+        is_closed: false,
+        is_default: true,
+        order_number: 10,
+      },
+      {
+        status_id: 'status-closed',
+        name: 'Support Closed',
+        is_closed: true,
+        is_default: false,
+        order_number: 20,
+      },
+    ]);
+
+    render(<BoardsSettings />);
+
+    await waitFor(() => {
+      expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+
+    fireEvent.click(screen.getAllByText('ticketing.boards.actions.edit')[0]);
+
+    await waitFor(() => {
+      expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
+    });
+
+    expect(screen.getByDisplayValue('Support Open')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Support Closed')).toBeInTheDocument();
+    expect(screen.queryByDisplayValue('Field Ops Closed')).not.toBeInTheDocument();
   });
 });

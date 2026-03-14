@@ -98,31 +98,31 @@
   {
     "id": "F017",
     "description": "Enforce board-local status rules during board create/edit, including at least one valid open default status.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR3"]
   },
   {
     "id": "F018",
     "description": "Embed a board-local ticket status manager into board editing.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR3"]
   },
   {
     "id": "F019",
     "description": "Retire the central ticket status settings surface as the source of truth for ticket statuses.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR3"]
   },
   {
     "id": "F020",
     "description": "Scope ticket status CRUD actions and models by board for ticket status operations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR3", "FR7"]
   },
   {
     "id": "F021",
     "description": "Support board-local ticket status reorder, default, open/closed, and delete rules without affecting other boards.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR3"]
   },
   {

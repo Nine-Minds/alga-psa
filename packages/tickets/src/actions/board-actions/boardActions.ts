@@ -9,6 +9,7 @@ import { ItilStandardsService } from '../../services/itilStandardsService';
 import { withAuth } from '@alga-psa/auth';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { v4 as uuidv4 } from 'uuid';
+import { BoardTicketStatusInput, saveBoardTicketStatusesForBoard } from './boardTicketStatusActions';
 
 export interface FindBoardByNameOutput {
   id: string;
@@ -20,62 +21,11 @@ export interface FindBoardByNameOutput {
 
 export interface CreateBoardInput extends Omit<IBoard, 'board_id' | 'tenant'> {
   copy_ticket_statuses_from_board_id?: string | null;
-  ticket_statuses?: Array<{
-    name: string;
-    is_closed: boolean;
-    is_default?: boolean;
-    order_number?: number;
-    color?: string | null;
-    icon?: string | null;
-  }>;
+  ticket_statuses?: BoardTicketStatusInput[];
 }
 
-async function createInlineBoardTicketStatuses(
-  trx: Knex.Transaction,
-  tenant: string,
-  targetBoardId: string,
-  userId: string,
-  ticketStatuses: NonNullable<CreateBoardInput['ticket_statuses']>
-): Promise<number> {
-  const statusColumns = await trx('statuses').columnInfo();
-  const hasStatusColumn = (columnName: string) => Object.prototype.hasOwnProperty.call(statusColumns, columnName);
-  const now = new Date().toISOString();
-  const normalizedStatuses = ticketStatuses
-    .map((status, index) => ({
-      name: status.name.trim(),
-      is_closed: status.is_closed,
-      is_default: status.is_default || false,
-      order_number: status.order_number ?? ((index + 1) * 10),
-      color: status.color || null,
-      icon: status.icon || null,
-    }))
-    .filter((status) => status.name.length > 0);
-
-  if (normalizedStatuses.length === 0) {
-    throw new Error('Add at least one ticket status before saving the board');
-  }
-
-  await trx('statuses').insert(
-    normalizedStatuses.map((status) => ({
-      status_id: uuidv4(),
-      tenant,
-      board_id: targetBoardId,
-      name: status.name,
-      status_type: 'ticket',
-      ...(hasStatusColumn('item_type') ? { item_type: 'ticket' } : {}),
-      is_closed: status.is_closed,
-      is_default: status.is_default,
-      order_number: status.order_number,
-      created_by: userId,
-      ...(hasStatusColumn('is_custom') ? { is_custom: true } : {}),
-      ...(hasStatusColumn('color') ? { color: status.color } : {}),
-      ...(hasStatusColumn('icon') ? { icon: status.icon } : {}),
-      ...(hasStatusColumn('created_at') ? { created_at: now } : {}),
-      ...(hasStatusColumn('updated_at') ? { updated_at: now } : {}),
-    }))
-  );
-
-  return normalizedStatuses.length;
+export interface UpdateBoardInput extends Partial<Omit<IBoard, 'tenant'>> {
+  ticket_statuses?: BoardTicketStatusInput[];
 }
 
 export async function copyBoardTicketStatuses(
@@ -250,7 +200,7 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
       );
 
       if (boardData.ticket_statuses && boardData.ticket_statuses.length > 0) {
-        await createInlineBoardTicketStatuses(
+        await saveBoardTicketStatusesForBoard(
           trx,
           tenant,
           newBoard.board_id,
@@ -510,7 +460,7 @@ export async function deleteBoardLegacy(boardId: string): Promise<boolean> {
   return true;
 }
 
-export const updateBoard = withAuth(async (user, { tenant }, boardId: string, boardData: Partial<Omit<IBoard, 'tenant'>>): Promise<IBoard> => {
+export const updateBoard = withAuth(async (user, { tenant }, boardId: string, boardData: UpdateBoardInput): Promise<IBoard> => {
   const { knex: db } = await createTenantKnex();
 
   try {
@@ -548,9 +498,11 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
         sanitizedData.sla_policy_id = sanitizedData.sla_policy_id || null;
       }
 
+      const { ticket_statuses: ticketStatuses, ...boardUpdateData } = sanitizedData;
+
       const [updatedBoard] = await trx('boards')
         .where({ board_id: boardId, tenant })
-        .update(sanitizedData)
+        .update(boardUpdateData)
         .returning('*');
 
       // Handle ITIL type changes
@@ -573,6 +525,16 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
             (priorityTypeChanged && currentBoard.priority_type === 'itil')) {
           await ItilStandardsService.cleanupUnusedItilStandards(trx, tenant);
         }
+      }
+
+      if (ticketStatuses) {
+        await saveBoardTicketStatusesForBoard(
+          trx,
+          tenant,
+          boardId,
+          user.user_id,
+          ticketStatuses
+        );
       }
 
       return updatedBoard;
