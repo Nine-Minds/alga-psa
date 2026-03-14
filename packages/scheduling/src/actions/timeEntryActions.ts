@@ -13,6 +13,7 @@ import {
 import {
   fetchTimeEntriesForTimeSheet,
   saveTimeEntry,
+  updateTimeEntryApprovalStatus,
   deleteTimeEntry,
   getTimeEntryById
 } from './timeEntryCrudActions';
@@ -38,6 +39,7 @@ export {
   fetchOrCreateTimeSheet,
   fetchTimeEntriesForTimeSheet,
   saveTimeEntry,
+  updateTimeEntryApprovalStatus,
   deleteTimeEntry,
   getTimeEntryById,
   fetchWorkItemsForTimeSheet,

@@ -17,7 +17,9 @@ import {
   fetchTimeEntriesParamsSchema,
   FetchTimeEntriesParams,
   saveTimeEntryParamsSchema,
-  SaveTimeEntryParams
+  SaveTimeEntryParams,
+  updateTimeEntryApprovalStatusParamsSchema,
+  UpdateTimeEntryApprovalStatusParams,
 } from './timeEntrySchemas'; // Import schemas
 import { getClientIdForWorkItem } from './timeEntryHelpers'; // Import helper
 import { computeWorkDateFields, resolveUserTimeZone } from '@alga-psa/db';
@@ -848,6 +850,52 @@ export const saveTimeEntry = withAuth(async (
     }
     throw new Error('Failed to save time entry');
   }
+});
+
+export const updateTimeEntryApprovalStatus = withAuth(async (
+  user,
+  { tenant },
+  params: { entryId: string; approvalStatus: ITimeEntry['approval_status'] }
+): Promise<void> => {
+  const { knex: db } = await createTenantKnex();
+
+  if (!await hasPermission(user, 'timeentry', 'update', db)) {
+    throw new Error('Permission denied: Cannot update time entries');
+  }
+
+  const validatedParams = validateData<UpdateTimeEntryApprovalStatusParams>(
+    updateTimeEntryApprovalStatusParamsSchema,
+    params,
+  );
+
+  const existingEntry = await db('time_entries')
+    .where({
+      entry_id: validatedParams.entryId,
+      tenant,
+    })
+    .select('entry_id', 'user_id', 'invoiced')
+    .first();
+
+  if (!existingEntry) {
+    throw new Error('Time entry not found');
+  }
+
+  await assertCanActOnBehalf(user, tenant, existingEntry.user_id, db);
+
+  if (existingEntry.invoiced) {
+    throw new Error('This time entry has already been invoiced and cannot be modified.');
+  }
+
+  await db('time_entries')
+    .where({
+      entry_id: validatedParams.entryId,
+      tenant,
+    })
+    .update({
+      approval_status: validatedParams.approvalStatus,
+      updated_at: new Date(),
+      updated_by: user.user_id,
+    });
 });
 
 export const deleteTimeEntry = withAuth(async (

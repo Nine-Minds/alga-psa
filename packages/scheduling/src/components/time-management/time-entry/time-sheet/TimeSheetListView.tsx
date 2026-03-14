@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import TimeSheetListViewSkeleton from '@alga-psa/ui/components/skeletons/TimeSheetListViewSkeleton';
-import { Plus, Pencil, ClipboardList, ArrowRight, ChevronDown, ChevronRight, Copy } from 'lucide-react';
+import { Plus, ClipboardList, ArrowRight, ChevronDown, ChevronRight, Copy, ExternalLink } from 'lucide-react';
 import { ITimeEntryWithWorkItemString } from '@alga-psa/types';
 import { IExtendedWorkItem } from '@alga-psa/types';
 import { formatISO, parseISO, format } from 'date-fns';
@@ -410,11 +410,7 @@ export function TimeSheetListView({
                                                                     <td className="py-2 pr-3">
                                                                         <div className="flex items-center gap-2">
                                                                             <span
-                                                                                className="text-sm text-gray-900 hover:text-[rgb(var(--color-primary-500))] truncate cursor-pointer"
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    onWorkItemClick(workItem);
-                                                                                }}
+                                                                                className="text-sm text-gray-900 truncate"
                                                                                 title={workItem.type === 'ticket'
                                                                                     ? `${workItem.ticket_number} - ${workItem.title || workItem.name}`
                                                                                     : workItem.name
@@ -497,16 +493,16 @@ export function TimeSheetListView({
                                                                                     <Copy className="h-4 w-4" />
                                                                                 </Button>
                                                                                 <Button
-                                                                                    id={`edit-entry-${entry.entry_id}`}
+                                                                                    id={`view-work-item-${entry.entry_id}`}
                                                                                     variant="ghost"
                                                                                     size="sm"
                                                                                     onClick={(e) => {
                                                                                         e.stopPropagation();
-                                                                                        handleEntryClick(flatEntry);
+                                                                                        onWorkItemClick(workItem);
                                                                                     }}
-                                                                                    title="Edit entry"
+                                                                                    title="View details"
                                                                                 >
-                                                                                    <Pencil className="h-4 w-4" />
+                                                                                    <ExternalLink className="h-4 w-4" />
                                                                                 </Button>
                                                                             </div>
                                                                         )}

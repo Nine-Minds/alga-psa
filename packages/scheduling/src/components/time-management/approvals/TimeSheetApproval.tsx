@@ -16,7 +16,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { IUser } from '@alga-psa/types';
-import { fetchWorkItemsForTimeSheet, saveTimeEntry } from '../../../actions/timeEntryActions';
+import { fetchWorkItemsForTimeSheet, updateTimeEntryApprovalStatus } from '../../../actions/timeEntryActions';
 import { parseISO } from 'date-fns';
 import { Temporal } from '@js-temporal/polyfill';
 
@@ -70,10 +70,7 @@ const formatDuration = (decimalHours: number) => {
 };
 
 const TimeEntryDetailPanel: React.FC<TimeEntryDetailPanelProps> = ({ entry, onUpdateApprovalStatus }) => {
-  const [approvalStatus, setApprovalStatus] = useState<TimeSheetStatus>(entry.approval_status);
-
   const handleStatusChange = (newStatus: TimeSheetStatus) => {
-    setApprovalStatus(newStatus);
     onUpdateApprovalStatus(entry.entry_id as string, newStatus);
   };
 
@@ -151,24 +148,17 @@ export function TimeSheetApproval({
 
   const handleUpdateApprovalStatus = async (entryId: string, status: TimeSheetStatus) => {
     try {
-      // Find the entry to update
       const entryToUpdate = entriesWithWorkItems.find(entry => entry.entry_id === entryId);
 
       if (!entryToUpdate) {
         throw new Error('Time entry not found');
       }
 
-      // Create an updated entry object
-      const { ...entryWithoutWorkItem } = entryToUpdate;
-      const updatedEntry: ITimeEntry = {
-        ...entryWithoutWorkItem,
-        approval_status: status,
-      };
+      await updateTimeEntryApprovalStatus({
+        entryId,
+        approvalStatus: status,
+      });
 
-      // Call the API to update the time entry
-      await saveTimeEntry(updatedEntry);
-
-      // Update the local state
       setEntriesWithWorkItems(prevEntries =>
         prevEntries.map((entry):ITimeEntryWithWorkItem =>
           entry.entry_id === entryId ? { ...entry, approval_status: status } : entry
