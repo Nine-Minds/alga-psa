@@ -1398,6 +1398,9 @@ export class ChatCompletionsService {
       lines.push(
         `- Active record: ${record.type} | id: ${record.id} | description: ${record.description}`,
       );
+      lines.push(
+        `- Reference resolution: treat phrases like "this ${record.type}" or "the current ${record.type}" as the active record above unless the user clearly says otherwise.`,
+      );
     }
 
     return lines.join('\n');
@@ -2109,6 +2112,15 @@ export class ChatCompletionsService {
       }
       return encodeURIComponent(String(candidate));
     });
+
+    const unresolvedPathParams = Array.from(path.matchAll(/\{([^}]+)\}/g), (match) => match[1]).filter(
+      (segment): segment is string => typeof segment === 'string' && segment.length > 0,
+    );
+    if (unresolvedPathParams.length > 0) {
+      throw new Error(
+        `Unresolved path parameters for ${entry.id}: ${unresolvedPathParams.join(', ')}`,
+      );
+    }
 
     // Include any additional headers/query params provided explicitly
     Object.entries(headerInput).forEach(([key, value]) => {
