@@ -14,7 +14,7 @@ import {
 } from '../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../test-utils/testMocks';
 import { Temporal } from '@js-temporal/polyfill';
-import { BillingEngine } from 'server/src/lib/billing/billingEngine';
+import { BillingEngine } from '@alga-psa/billing/services';
 
 let db: Knex;
 let tenantId: string;

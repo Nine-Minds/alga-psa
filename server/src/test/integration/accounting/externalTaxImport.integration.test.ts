@@ -504,7 +504,7 @@ describe('External Tax Import', () => {
       const { invoiceId } = await createInvoiceWithPendingExternalTax([10000, 5000]);
 
       // Import the invoice service function
-      const { calculateAndDistributeTax } = await import('../../../lib/services/invoiceService');
+      const { calculateAndDistributeTax } = await import('@alga-psa/billing/services/invoiceService');
 
       // Create a mock tax service (shouldn't be called)
       const mockTaxService = {

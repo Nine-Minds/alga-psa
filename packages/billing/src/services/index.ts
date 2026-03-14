@@ -5,6 +5,7 @@
  */
 
 export { TaxService } from './taxService';
+export { BillingEngine } from '../lib/billing/billingEngine';
 export { ContractLineServiceConfigurationService } from './contractLineServiceConfigurationService';
 export { ClientContractServiceConfigurationService } from './clientContractServiceConfigurationService';
 
