@@ -711,7 +711,7 @@
   {
     "id": "F085",
     "description": "P4: Quote email template — 'Quote Sent' with summary, PDF attachment, portal link",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P4-FR2"
     ]

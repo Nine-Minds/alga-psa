@@ -10,6 +10,7 @@ import type { IQuote, IQuoteItem, IQuoteListItem, PaginatedResult } from '@alga-
 import Quote, { type QuoteListOptions } from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
 import QuoteItem from '../models/quoteItem';
+import { buildQuoteSentEmailTemplate } from '../lib/quote-email-templates';
 import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
 import { createQuotePDFGenerationService } from '../services';
 
@@ -437,28 +438,22 @@ export const sendQuote = withAuth(async (
   const pdfBuffer = await createQuotePDFGenerationService(tenant).generatePDF({ quoteId });
   const companyName = tenantRecord?.client_name?.trim() || 'Your Company';
   const resolvedQuoteNumber = quote.quote_number ?? quote.quote_id;
-  const customMessage = input.message?.trim();
-  const subject = input.subject?.trim() || `Quote ${resolvedQuoteNumber} from ${companyName}`;
-  const html = [
-    '<p>Hello,</p>',
-    `<p>Please find quote <strong>${resolvedQuoteNumber}</strong> attached.</p>`,
-    customMessage ? `<p>${customMessage}</p>` : '',
-    `<p>Thank you,<br />${companyName}</p>`,
-  ].join('');
-  const text = [
-    'Hello,',
-    '',
-    `Please find quote ${resolvedQuoteNumber} attached.`,
-    customMessage ? `\n${customMessage}\n` : '',
-    `Thank you,\n${companyName}`,
-  ].join('\n');
+  const portalBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
+  const renderedEmail = buildQuoteSentEmailTemplate({
+    quote,
+    companyName,
+    portalLink,
+    customMessage: input.message,
+  });
+  const subject = input.subject?.trim() || renderedEmail.subject;
 
   const emailResult = await TenantEmailService.getInstance(tenant).sendEmail({
     tenantId: tenant,
     to: recipients,
     subject,
-    html,
-    text,
+    html: renderedEmail.html,
+    text: renderedEmail.text,
     attachments: [
       {
         filename: `Quote_${resolvedQuoteNumber}.pdf`,
