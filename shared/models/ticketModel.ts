@@ -889,6 +889,14 @@ export class TicketModel {
     // Clean up the data before update
     const updateData = cleanNullableFields({ ...validatedData });
     const effectiveBoardId = updateData.board_id || currentTicket.board_id;
+    const isBoardChange =
+      'board_id' in updateData &&
+      !!updateData.board_id &&
+      updateData.board_id !== currentTicket.board_id;
+
+    if (isBoardChange && !updateData.status_id) {
+      throw new Error('Changing the board requires selecting a status for the destination board');
+    }
 
     if (updateData.status_id) {
       const statusResult = effectiveBoardId

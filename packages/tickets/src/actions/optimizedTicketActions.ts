@@ -1590,6 +1590,14 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
     // Check if we're updating the assigned_to field
     const isChangingAssignment = 'assigned_to' in updateData &&
                                 updateData.assigned_to !== currentTicket.assigned_to;
+    const isBoardChange =
+      'board_id' in updateData &&
+      !!updateData.board_id &&
+      updateData.board_id !== currentTicket.board_id;
+
+    if (isBoardChange && !updateData.status_id) {
+      throw new Error('Changing the board requires selecting a status for the destination board');
+    }
 
     // If updating category or subcategory, ensure they are compatible
     if ('subcategory_id' in updateData || 'category_id' in updateData) {

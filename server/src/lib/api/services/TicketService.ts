@@ -494,6 +494,16 @@ export class TicketService extends BaseService<ITicket> {
         }
       });
 
+      const isBoardChange =
+        cleanedData.board_id !== undefined &&
+        cleanedData.board_id !== currentTicket.board_id;
+
+      if (isBoardChange && !cleanedData.status_id) {
+        throw new ValidationError('Validation failed', [
+          { path: ['status_id'], message: 'Changing the board requires selecting a status for the destination board' }
+        ]);
+      }
+
       if (cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id) {
         const effectiveBoardId = cleanedData.board_id ?? currentTicket.board_id;
         const statusResult = effectiveBoardId

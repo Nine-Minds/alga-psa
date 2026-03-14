@@ -80,7 +80,7 @@
   {
     "id": "F014",
     "description": "Require explicit destination-board status selection whenever a ticket board is changed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR4"]
   },
   {

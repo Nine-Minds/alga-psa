@@ -98,7 +98,7 @@
   {
     "id": "T017",
     "description": "UI integration: changing a ticket board clears the current status selection and requires an explicit destination-board status choice.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014", "F024"]
   },
   {
