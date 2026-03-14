@@ -110,7 +110,7 @@
   {
     "id": "T019",
     "description": "UI integration: board creation supports inline ticket status authoring before the board is saved.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016"]
   },
   {

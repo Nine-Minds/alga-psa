@@ -40,8 +40,24 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
+type TicketStatusSeedMode = 'copy_existing' | 'create_inline';
+type InlineTicketStatus = {
+  temp_id: string;
+  name: string;
+  is_closed: boolean;
+  is_default: boolean;
+  order_number: number;
+};
+
 const BoardsSettings: React.FC = () => {
   const { t } = useTranslation('msp/settings');
+  const createInlineTicketStatus = (index: number): InlineTicketStatus => ({
+    temp_id: `inline-status-${Date.now()}-${index}`,
+    name: index === 0 ? 'New' : '',
+    is_closed: false,
+    is_default: index === 0,
+    order_number: (index + 1) * 10,
+  });
   const createEmptyFormData = () => ({
     board_name: '',
     description: '',
@@ -55,7 +71,9 @@ const BoardsSettings: React.FC = () => {
     default_priority_id: '',
     manager_user_id: '',
     sla_policy_id: '',
+    status_seed_mode: 'copy_existing' as TicketStatusSeedMode,
     copy_ticket_statuses_from_board_id: '',
+    inline_ticket_statuses: [] as InlineTicketStatus[],
   });
   const [boards, setBoards] = useState<IBoard[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
@@ -234,6 +252,52 @@ const BoardsSettings: React.FC = () => {
     setError(null);
   };
 
+  const updateInlineTicketStatus = (tempId: string, updates: Partial<InlineTicketStatus>) => {
+    setFormData((prev) => ({
+      ...prev,
+      inline_ticket_statuses: prev.inline_ticket_statuses.map((status) =>
+        status.temp_id === tempId ? { ...status, ...updates } : status
+      ),
+    }));
+  };
+
+  const setInlineDefaultStatus = (tempId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      inline_ticket_statuses: prev.inline_ticket_statuses.map((status) => ({
+        ...status,
+        is_default: status.temp_id === tempId,
+      })),
+    }));
+  };
+
+  const addInlineTicketStatus = () => {
+    setFormData((prev) => ({
+      ...prev,
+      inline_ticket_statuses: [
+        ...prev.inline_ticket_statuses,
+        createInlineTicketStatus(prev.inline_ticket_statuses.length),
+      ],
+    }));
+  };
+
+  const removeInlineTicketStatus = (tempId: string) => {
+    setFormData((prev) => {
+      const remainingStatuses = prev.inline_ticket_statuses.filter((status) => status.temp_id !== tempId);
+      if (remainingStatuses.length > 0 && !remainingStatuses.some((status) => status.is_default)) {
+        remainingStatuses[0] = { ...remainingStatuses[0], is_default: true };
+      }
+
+      return {
+        ...prev,
+        inline_ticket_statuses: remainingStatuses.map((status, index) => ({
+          ...status,
+          order_number: (index + 1) * 10,
+        })),
+      };
+    });
+  };
+
   const handleDeleteBoard = async (force = false, cleanupItil = false) => {
     try {
       const result = await deleteBoard(deleteDialog.boardId, force, cleanupItil);
@@ -304,10 +368,28 @@ const BoardsSettings: React.FC = () => {
       // For new boards, set category_type and priority_type based on ITIL compliance
       const categoryType = editingBoard ? formData.category_type : (formData.is_itil_compliant ? 'itil' : 'custom');
       const priorityType = editingBoard ? formData.priority_type : (formData.is_itil_compliant ? 'itil' : 'custom');
-      const shouldRequireStatusCopySource = !editingBoard && boards.length > 0;
+      const isCreatingBoard = !editingBoard;
+      const isInlineStatusMode = isCreatingBoard && formData.status_seed_mode === 'create_inline';
+      const normalizedInlineTicketStatuses = formData.inline_ticket_statuses
+        .map((status, index) => ({
+          name: status.name.trim(),
+          is_closed: status.is_closed,
+          is_default: status.is_default,
+          order_number: (index + 1) * 10,
+        }))
+        .filter((status) => status.name.length > 0);
+      const shouldRequireStatusCopySource =
+        isCreatingBoard &&
+        formData.status_seed_mode === 'copy_existing' &&
+        boards.length > 0;
 
       if (shouldRequireStatusCopySource && !formData.copy_ticket_statuses_from_board_id) {
         setError('Select an existing board to copy ticket statuses from.');
+        return;
+      }
+
+      if (isInlineStatusMode && normalizedInlineTicketStatuses.length === 0) {
+        setError('Add at least one ticket status before saving the board.');
         return;
       }
 
@@ -339,7 +421,8 @@ const BoardsSettings: React.FC = () => {
           default_priority_id: formData.default_priority_id || null,
           manager_user_id: formData.manager_user_id || null,
           sla_policy_id: formData.sla_policy_id || null,
-          copy_ticket_statuses_from_board_id: formData.copy_ticket_statuses_from_board_id || null
+          copy_ticket_statuses_from_board_id: isInlineStatusMode ? null : (formData.copy_ticket_statuses_from_board_id || null),
+          ticket_statuses: isInlineStatusMode ? normalizedInlineTicketStatuses : undefined,
         });
         toast.success(t('ticketing.boards.messages.success.created'));
       }
@@ -868,6 +951,34 @@ const BoardsSettings: React.FC = () => {
 
             {!editingBoard && (
               <div>
+                <Label htmlFor="ticket-status-seed-mode-select">Ticket status setup</Label>
+                <CustomSelect
+                  id="ticket-status-seed-mode-select"
+                  value={formData.status_seed_mode}
+                  onValueChange={(value) => {
+                    const nextMode = value as TicketStatusSeedMode;
+                    setFormData((prev) => ({
+                      ...prev,
+                      status_seed_mode: nextMode,
+                      inline_ticket_statuses: nextMode === 'create_inline' && prev.inline_ticket_statuses.length === 0
+                        ? [createInlineTicketStatus(0)]
+                        : prev.inline_ticket_statuses,
+                    }));
+                  }}
+                  options={[
+                    { value: 'copy_existing', label: 'Copy from existing board' },
+                    { value: 'create_inline', label: 'Create statuses inline' },
+                  ]}
+                  placeholder="Select a setup mode"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Choose whether this board starts from an existing lifecycle or a new inline status list.
+                </p>
+              </div>
+            )}
+
+            {!editingBoard && formData.status_seed_mode === 'copy_existing' && (
+              <div>
                 <Label htmlFor="copy-ticket-statuses-select">Copy ticket statuses from</Label>
                 <CustomSelect
                   id="copy-ticket-statuses-select"
@@ -889,6 +1000,65 @@ const BoardsSettings: React.FC = () => {
                 <p className="text-xs text-muted-foreground mt-1">
                   New boards clone their ticket lifecycle from an existing board.
                 </p>
+              </div>
+            )}
+
+            {!editingBoard && formData.status_seed_mode === 'create_inline' && (
+              <div className="space-y-3 rounded-md border border-gray-200 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label>Inline ticket statuses</Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Author the board&apos;s initial ticket lifecycle before saving.
+                    </p>
+                  </div>
+                  <Button id="add-inline-ticket-status-button" type="button" variant="outline" onClick={addInlineTicketStatus}>
+                    Add Status
+                  </Button>
+                </div>
+
+                {formData.inline_ticket_statuses.map((status, index) => (
+                  <div key={status.temp_id} className="grid gap-3 rounded-md border border-gray-200 p-3 md:grid-cols-[minmax(0,1fr)_auto_auto_auto] md:items-center">
+                    <div>
+                      <Label htmlFor={`inline-ticket-status-name-${index}`}>Status name</Label>
+                      <Input
+                        id={`inline-ticket-status-name-${index}`}
+                        value={status.name}
+                        onChange={(event) => updateInlineTicketStatus(status.temp_id, { name: event.target.value })}
+                        placeholder="Status name"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={`inline-ticket-status-closed-${index}`}>Closed</Label>
+                      <Switch
+                        id={`inline-ticket-status-closed-${index}`}
+                        checked={status.is_closed}
+                        onCheckedChange={(checked) => updateInlineTicketStatus(status.temp_id, { is_closed: checked })}
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={`inline-ticket-status-default-${index}`}>Default</Label>
+                      <Switch
+                        id={`inline-ticket-status-default-${index}`}
+                        checked={status.is_default}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setInlineDefaultStatus(status.temp_id);
+                          }
+                        }}
+                      />
+                    </div>
+                    <Button
+                      id={`remove-inline-ticket-status-${index}`}
+                      type="button"
+                      variant="ghost"
+                      onClick={() => removeInlineTicketStatus(status.temp_id)}
+                      disabled={formData.inline_ticket_statuses.length === 1}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ))}
               </div>
             )}
 

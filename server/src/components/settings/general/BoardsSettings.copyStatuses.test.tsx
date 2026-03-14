@@ -208,4 +208,41 @@ describe('BoardsSettings ticket status copy flow', () => {
       );
     });
   });
+
+  it('passes inline-authored ticket statuses when creating a board from a new inline lifecycle', async () => {
+    render(<BoardsSettings />);
+
+    await waitFor(() => {
+      expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+
+    fireEvent.click(screen.getByTestId('add-board-button'));
+
+    fireEvent.change(screen.getByLabelText('ticketing.boards.fields.boardName.label'), {
+      target: { value: 'Internal Ops' },
+    });
+    fireEvent.change(screen.getByTestId('ticket-status-seed-mode-select'), {
+      target: { value: 'create_inline' },
+    });
+    fireEvent.change(document.getElementById('inline-ticket-status-name-0') as HTMLInputElement, {
+      target: { value: 'Queued' },
+    });
+    fireEvent.click(screen.getByTestId('add-inline-ticket-status-button'));
+    fireEvent.change(document.getElementById('inline-ticket-status-name-1') as HTMLInputElement, {
+      target: { value: 'Done' },
+    });
+    fireEvent.click(screen.getByTestId('save-board-button'));
+
+    await waitFor(() => {
+      expect(createBoardMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          board_name: 'Internal Ops',
+          ticket_statuses: [
+            expect.objectContaining({ name: 'Queued', is_closed: false, is_default: true, order_number: 10 }),
+            expect.objectContaining({ name: 'Done', is_closed: false, is_default: false, order_number: 20 }),
+          ],
+        })
+      );
+    });
+  });
 });

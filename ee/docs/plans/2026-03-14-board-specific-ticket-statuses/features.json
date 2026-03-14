@@ -92,7 +92,7 @@
   {
     "id": "F016",
     "description": "Extend board creation to support creating board-local statuses inline.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR3"]
   },
   {
