@@ -877,7 +877,13 @@ export class TicketService extends BaseService<ITicket> {
 
     // Execute query
     const tickets = await query
-      .select('t.*', 'comp.client_name', 'cont.full_name as contact_name')
+      .select(
+        't.*',
+        'comp.client_name',
+        'cont.full_name as contact_name',
+        'stat.name as status_name',
+        'stat.is_closed as status_is_closed'
+      )
       .limit(searchData.limit || 25)
       .orderBy('t.entered_at', 'desc');
 
@@ -955,8 +961,8 @@ export class TicketService extends BaseService<ITicket> {
               .andOn('t.tenant', '=', 's.tenant');
         })
         .where('t.tenant', context.tenant)
-        .groupBy('s.name')
-        .select('s.name as status_name', knex.raw('COUNT(*) as count')),
+        .groupBy('s.status_id', 's.name')
+        .select('s.status_id', 's.name as status_name', knex.raw('COUNT(*) as count')),
 
       // Tickets by priority
       knex('tickets as t')
@@ -1007,7 +1013,8 @@ export class TicketService extends BaseService<ITicket> {
       unassigned_tickets: parseInt(totalStats.unassigned_tickets),
       overdue_tickets: 0, // Would need SLA configuration to calculate
       tickets_by_status: statusStats.reduce((acc: any, row: any) => {
-        acc[row.status_name] = parseInt(row.count);
+        const key = row.status_id || row.status_name || 'unknown';
+        acc[key] = parseInt(row.count);
         return acc;
       }, {}),
       tickets_by_priority: priorityStats.reduce((acc: any, row: any) => {

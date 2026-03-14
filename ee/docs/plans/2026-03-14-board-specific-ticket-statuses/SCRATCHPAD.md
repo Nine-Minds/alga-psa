@@ -30,6 +30,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-14) `F025` was too broad once Quick Add landed: narrowed it to the already-shipped Quick Add board-scoped status work, then split follow-up work into `F043` (bulk update surfaces) and `F044` (auxiliary ticket creation helpers). Rationale: there is no standalone bulk ticket status edit UI in this branch today, so the remaining work needs separate traceable items instead of one mixed feature.
 - (2026-03-14) `F028`/`F029`/`F030`: workflow ticket status handling now uses saved board context end-to-end. Authoring pickers depend on fixed `board_id` or `ticket_id`, create/update runtime paths reject cross-board statuses before calling shared ticket writes, and `tickets.close` resolves the closed status from the ticket's own board. Rationale: workflow actions were one of the last places still capable of surfacing or persisting tenant-global ticket status assumptions.
 - (2026-03-14) `F032`/`F033`: public ticket status APIs now expose board-owned ticket statuses only. `/api/v1/tickets/statuses` honors optional `board_id` and always excludes legacy board-less ticket rows, while generic `/api/v1/statuses` requires `board_id` for `type=ticket`, hides legacy ticket rows by id, and the old shared reference-data status CRUD rejects ticket status mutation in favor of board-local status actions.
+- (2026-03-14) `F034`: join-heavy ticket reads were mostly already safe because they join on `status_id`, but two board-owned regressions remained:
+  - `TicketService.search(...)` did not project ticket status metadata at all, so search callers could not reliably see the board-owned status state.
+  - `TicketService.getTicketStats(...)` grouped counts by `status_name`, which collapses distinct board-owned statuses that reuse the same label.
 - (2026-03-14) `F027`: treat billing renewal ticket status persistence the same way as other board-scoped ticket status saves. Rationale: tenant defaults and contract overrides both already persist `board_id + status_id`, so the safest implementation is to share the same board/status compatibility guard instead of trusting UI state alone.
 
 ## Discoveries / Constraints
@@ -194,6 +197,13 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `server/src/test/unit/api/ticketStatusesRoute.boardScope.test.ts` verifies `/api/v1/tickets/statuses` honors `board_id` and excludes legacy board-less ticket statuses.
   - `server/src/test/unit/api/statusService.ticketBoardScope.test.ts` verifies generic ticket status queries require board scope, list only board-owned ticket statuses, and hide legacy global ticket statuses by id.
   - reran with `cd server && npx vitest run --coverage.enabled false src/test/unit/api/ticketStatusesRoute.boardScope.test.ts src/test/unit/api/statusService.ticketBoardScope.test.ts --config vitest.config.ts`
+- (2026-03-14) Completed `F034` by aligning ticket list/search/reporting read surfaces with board-owned ticket statuses:
+  - `server/src/lib/api/services/TicketService.ts` search results now project `status_name` and `status_is_closed` from the joined board-owned status row.
+  - `TicketService.getTicketStats(...)` now groups status counts by `status_id` instead of only by `status_name`, preventing cross-board count collapse when boards reuse the same label.
+- (2026-03-14) Completed `T045`/`T046` in `server/src/test/integration/ticketStatusReadSurfaces.integration.test.ts`:
+  - proves ticket list and search joins return the correct status metadata for tickets on different boards that reuse the same status name
+  - proves grouped ticket stats keep counts separated by board-owned `status_id` instead of collapsing same-name statuses across boards
+  - reran with `cd server && npx vitest run --coverage.enabled false src/test/integration/ticketStatusReadSurfaces.integration.test.ts --config vitest.config.ts`
 
 ## Commands / Runbooks
 
@@ -246,6 +256,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd ee/server && npx vitest run --coverage.enabled false src/components/workflow-designer/__tests__/InputMappingEditorPickerFields.test.tsx --config vitest.config.ts`
 - (2026-03-14) Validate API ticket status board scope in-process:
   - `cd server && npx vitest run --coverage.enabled false src/test/unit/api/ticketStatusesRoute.boardScope.test.ts src/test/unit/api/statusService.ticketBoardScope.test.ts --config vitest.config.ts`
+- (2026-03-14) Validate ticket read/reporting status joins:
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/ticketStatusReadSurfaces.integration.test.ts --config vitest.config.ts`
 - (2026-03-14) API e2e harness note:
   - `cd server && npx vitest run --coverage.enabled false src/test/e2e/api/ticket-statuses.e2e.test.ts src/test/e2e/api/statuses.e2e.test.ts --config vitest.config.ts`
   - In this shell the e2e setup can seed the DB, but the HTTP assertions fail with `fetch failed` because no server is listening on `TEST_API_BASE_URL` / `http://127.0.0.1:3000`.
@@ -299,6 +311,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Generic status query schema: `server/src/lib/api/schemas/status.ts`
 - Ticket statuses route unit test: `server/src/test/unit/api/ticketStatusesRoute.boardScope.test.ts`
 - Generic status API unit test: `server/src/test/unit/api/statusService.ticketBoardScope.test.ts`
+- Ticket read/reporting regression test: `server/src/test/integration/ticketStatusReadSurfaces.integration.test.ts`
 - Billing renewal automation settings UI: `packages/billing/src/components/settings/billing/RenewalAutomationSettings.tsx`
 - Billing renewal settings action validation: `packages/billing/src/actions/billingSettingsActions.ts`
 - Contract renewal assignment guard: `shared/billingClients/clientContracts.ts`

@@ -266,13 +266,13 @@
   {
     "id": "T045",
     "description": "DB-backed integration: ticket list and search joins still return the correct status name/open-closed metadata after board-owned migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F034"]
   },
   {
     "id": "T046",
     "description": "DB-backed integration: ticket reporting and grouped status counts do not mix statuses across boards after migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F034"]
   },
   {
