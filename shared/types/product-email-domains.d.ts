@@ -2,7 +2,7 @@
  * Type declarations for email domain modules
  *
  * NOTE: ManagedDomainService is now accessed via the registry pattern
- * in @alga-psa/shared/workflow/services/managedDomainRegistry.
+ * in @alga-psa/workflows/services.
  * This declaration is kept for backwards compatibility but may be removed.
  */
 

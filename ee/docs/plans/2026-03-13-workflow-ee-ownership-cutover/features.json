@@ -50,19 +50,19 @@
   {
     "id": "F009",
     "description": "Workflow persistence models and interfaces are owned by the EE workflows package and remain available to existing workflow callers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements", "Behavioral Compatibility Requirements"]
   },
   {
     "id": "F010",
     "description": "Workflow bundle helpers and types are owned by the EE workflows package and remain behaviorally compatible.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements", "Behavioral Compatibility Requirements"]
   },
   {
     "id": "F011",
     "description": "Workflow workers are owned by the EE workflows package and keep current startup and run-processing behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements", "Behavioral Compatibility Requirements"]
   },
   {

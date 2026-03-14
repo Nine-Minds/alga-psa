@@ -134,7 +134,7 @@
   {
     "id": "T023",
     "description": "Server helper migration: non-EE server code that initializes workflow runtime or loads workflow persistence compiles after switching to `@alga-psa/workflows`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021", "F023"]
   },
   {
@@ -272,7 +272,7 @@
   {
     "id": "T046",
     "description": "Source-string wiring tests that asserted shared workflow imports are updated to assert EE workflow imports instead.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {

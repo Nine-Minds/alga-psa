@@ -72,10 +72,13 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 ## Progress Log
 
 - (2026-03-13) Completed F001/F002/F003/F004/F005/F006/F007/F008 in one tranche by adding EE workflow category entrypoints, expanding package exports/build entries, shifting runtime bootstrap through `@alga-psa/workflows/runtime`, and rewriting worker, EE package, server, and EE UI callers to the package surface.
+- (2026-03-13) Completed F009/F010/F011 on top of the same tranche because the new `persistence`, `bundle`, and `workers` entrypoints now exist in `ee/packages/workflows/src/*`, active callers were rewired to them, and the worker compile path reached the post-`tsc` tool stage without TypeScript errors.
 - (2026-03-13) Completed F012/F013/F014/F015/F021/F022/F023 in the same tranche by moving stream/event-builder, expression-authoring, secrets, services, client/type, server helper, and dependent package imports to `@alga-psa/workflows/*`, and by adding direct `@alga-psa/workflows` dependencies to touched workspaces.
 - (2026-03-13) Completed F020 by removing the static EE workflow inference import from shared runtime registration. Shared runtime now exposes an injectable AI inference hook, and the EE runtime entrypoint wires that hook before registering AI actions.
 - (2026-03-13) Validation outcome for the first tranche:
   - `pnpm --filter @alga-psa/workflows typecheck` passed.
   - `pnpm --filter workflow-worker build` reached the post-`tsc` tooling stage and then failed because `tsc-alias` is not installed in this workspace.
   - `pnpm --filter @alga-psa/workflows build` is still blocked locally because `tsup` is not installed in this workspace.
+- (2026-03-13) Completed T023 by running `pnpm --filter server typecheck` after the server helper rewrites. The server package typecheck passed with the new `@alga-psa/workflows/*` imports.
+- (2026-03-13) Completed T046 by updating `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts` to assert the new `@alga-psa/workflows/runtime` import string instead of the old shared runtime import strings.
 - (2026-03-13) Remaining shared-workflow references after the first tranche are concentrated in tests, legacy tsconfig aliases, and the system-email-processing workflow migration string path. Those are the next cleanup targets before F024/F025/F026/F034 can be marked complete.
