@@ -165,4 +165,9 @@
 - Additional targeted verification:
   - `npx vitest run --config shared/vitest.config.ts shared/workflow/runtime/actions/__tests__/composeText.test.ts shared/workflow/runtime/actions/__tests__/registerTransformActions.test.ts shared/workflow/runtime/actions/__tests__/actionOutputSchemaResolver.test.ts`
   - `npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/workflowDataContext.test.ts src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts src/components/workflow-designer/__tests__/groupedActionSelection.test.ts src/components/workflow-designer/__tests__/workflowComposeTextUtils.test.ts src/components/workflow-designer/__tests__/WorkflowComposeTextSection.test.tsx src/components/workflow-designer/__tests__/WorkflowComposeTextDocumentEditor.test.tsx src/components/workflow-designer/__tests__/WorkflowDesigner.smoke.test.tsx`
+  - `cd ee/packages/workflows && npx vitest run src/authoring/__tests__/composeTextAuthoring.test.ts --coverage.enabled false`
   - Result: all targeted compose-text runtime and designer tests passed.
+
+- 2026-03-14: Folded package-level authoring helpers into the final checkpoint.
+  - Kept `ee/packages/workflows/src/authoring/composeTextAuthoring.ts` exported from `ee/packages/workflows/src/authoring/index.ts` so non-server authoring consumers can use the same compose-text helper/model conversions.
+  - Verified `ee/packages/workflows/src/authoring/__tests__/composeTextAuthoring.test.ts` passes from the package root.
