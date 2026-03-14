@@ -655,7 +655,7 @@
   {
     "id": "F078",
     "description": "P3: mapDbQuoteToViewModel adapter — fetch and map quote + items + client + contact + tenant data",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P3-FR5"
     ]
