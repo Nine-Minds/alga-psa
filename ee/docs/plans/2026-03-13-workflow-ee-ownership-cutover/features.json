@@ -164,7 +164,7 @@
   {
     "id": "F028",
     "description": "Workflow worker startup, event ingestion, and run-processing behavior remain unchanged after the ownership move.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Behavioral Compatibility Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {

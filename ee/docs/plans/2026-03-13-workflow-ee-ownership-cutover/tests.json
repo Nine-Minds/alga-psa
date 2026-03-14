@@ -176,7 +176,7 @@
   {
     "id": "T030",
     "description": "Workflow worker integration coverage still passes for startup, lease processing, and run execution after the ownership move.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011", "F028"]
   },
   {

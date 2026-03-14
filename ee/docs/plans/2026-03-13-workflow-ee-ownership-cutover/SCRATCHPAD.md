@@ -35,6 +35,9 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
 - (2026-03-13) The runtime publish contract now reports unknown workflow payload schema refs as `PAYLOAD_SCHEMA_REF_UNKNOWN` on `root.payloadSchemaRef`; older `UNKNOWN_SCHEMA` assertions were stale.
 - (2026-03-13) `test.echo` is no longer a stable "missing required mapping" sentinel for publish validation. `test.actionProvided.key` is the reliable required-input case.
 - (2026-03-13) `startWorkflowRunAction` still revalidates published versions when `validation_status` is missing or errored, but the forced-invalid coverage case must be definition-invalid (for example `unknown.node`) rather than relying on action-mapping ambiguity.
+- (2026-03-13) The worker E2E harness had the same stale pre-cutover imports as the runtime suites. `workflowRuntimeV2.e2e.test.ts` needed to mock `@alga-psa/db` and `@alga-psa/auth`, ensure `tenant_workflow_schedule` exists, and insert a real tenant row so direct `event_catalog` writes satisfy FK constraints.
+- (2026-03-13) The email workflow fixture used by worker E2E coverage predates trigger-payload mapping. To publish it through the canonical server action, the test seed now injects `sourcePayloadSchemaRef: payload.InboundEmailReceived.v1` plus an explicit mapping for `emailData`, `providerId`, and `tenantId`.
+- (2026-03-13) The shared inbound-email workflow fixture is version `2`; stale E2E callers were still starting version `1`, which surfaced as `Workflow version not found` after the seed helper moved onto the real create/publish path.
 
 ## Commands / Runbooks
 
@@ -69,6 +72,8 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
   - `pnpm --filter server exec vitest run src/test/integration/workflowRuntimeV2.publish.integration.test.ts`
   - `pnpm --filter server exec vitest run src/test/integration/workflowRuntimeV2.control.integration.test.ts`
   - `pnpm --filter server exec vitest run src/test/unit/workflowRuntimeV2.unit.test.ts`
+- (2026-03-13) Validation used for the worker compatibility tranche:
+  - `pnpm --filter server exec vitest run src/test/e2e/workflowRuntimeV2.e2e.test.ts -t "publish a workflow|event trigger starts workflow run|event.wait pauses run|timeout on event.wait|retryable action failure|idempotent action call|canceling a running workflow|resume a WAITING run"`
 
 ## Links / References
 
@@ -117,3 +122,8 @@ Prefer short bullets. Append new entries as you learn things, and also update ea
     - `pnpm --filter server exec vitest run src/test/integration/workflowRuntimeV2.publish.integration.test.ts` passed.
     - `pnpm --filter server exec vitest run src/test/integration/workflowRuntimeV2.control.integration.test.ts` passed.
     - `pnpm --filter server exec vitest run src/test/unit/workflowRuntimeV2.unit.test.ts` passed.
+- (2026-03-13) Completed F028/T030 by fixing the worker E2E harness to the canonical package boundary and rerunning the worker-focused smoke subset:
+  - `server/src/test/e2e/workflowRuntimeV2.e2e.test.ts` now mocks `@alga-psa/db` and `@alga-psa/auth`, bootstraps `tenant_workflow_schedule`, seeds a tenant row, and publishes the email workflow fixture through the real create/publish actions with explicit trigger mapping.
+  - The worker-focused E2E subset passed with the new package ownership and covers publish/start, event-triggered launch, wait/resume, timeout processing, retry lease handling, idempotent action reuse, cancel-before-resume, and admin resume.
+  - Evidence:
+    - `pnpm --filter server exec vitest run src/test/e2e/workflowRuntimeV2.e2e.test.ts -t "publish a workflow|event trigger starts workflow run|event.wait pauses run|timeout on event.wait|retryable action failure|idempotent action call|canceling a running workflow|resume a WAITING run"` passed (8 tests, 8 skipped).
