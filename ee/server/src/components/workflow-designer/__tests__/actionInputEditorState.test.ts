@@ -234,6 +234,54 @@ describe('action input editor state', () => {
     });
   });
 
+  it('preserves multiline presentation metadata from designer JSON schema fields without changing ordinary strings', () => {
+    const registryWithPrompt: WorkflowDesignerActionRegistryItem[] = [
+      {
+        id: 'ai.infer',
+        version: 1,
+        ui: {
+          label: 'Infer Structured Output',
+          description: 'Generate structured workflow data from a prompt.',
+        },
+        inputSchema: {
+          type: 'object',
+          properties: {
+            prompt: {
+              type: 'string',
+              description: 'Prompt text sent to the configured AI provider',
+              'x-workflow-input-control': 'multiline',
+            },
+            subject: {
+              type: 'string',
+              description: 'Short label used elsewhere',
+            },
+          },
+          required: ['prompt'],
+        },
+        outputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+    ];
+
+    const step: NodeStep = {
+      id: 'step-ai-prompt',
+      type: 'action.call',
+      name: 'AI Prompt',
+      config: {
+        actionId: 'ai.infer',
+        version: 1,
+      },
+    };
+
+    const state = buildActionInputEditorState(step, registryWithPrompt);
+    expect(state.actionInputFields.find((field) => field.name === 'prompt')?.presentation).toEqual({
+      inputControl: 'multiline',
+    });
+    expect(state.actionInputFields.find((field) => field.name === 'subject')?.presentation).toBeUndefined();
+  });
+
   it('T180: picker metadata reaches the chosen action field editor without changing the persisted inputMapping shape', () => {
     const step: NodeStep = {
       id: 'step-picker-persisted',

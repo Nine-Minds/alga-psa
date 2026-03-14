@@ -21,6 +21,7 @@ type JsonSchema = {
   'x-workflow-picker-dependencies'?: string[];
   'x-workflow-picker-fixed-value-hint'?: string;
   'x-workflow-picker-allow-dynamic-reference'?: boolean;
+  'x-workflow-input-control'?: 'multiline';
 };
 
 export type WorkflowDesignerActionRegistryItem = {
@@ -188,6 +189,7 @@ const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSch
       'x-workflow-picker-dependencies'?: string[];
       'x-workflow-picker-fixed-value-hint'?: string;
       'x-workflow-picker-allow-dynamic-reference'?: boolean;
+      'x-workflow-input-control'?: 'multiline';
     };
 
     let children: ActionInputField[] | undefined;
@@ -233,6 +235,12 @@ const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSch
                 : undefined,
           }
         : undefined;
+    const presentation =
+      rawResolved['x-workflow-input-control'] === 'multiline'
+        ? {
+            inputControl: 'multiline' as const,
+          }
+        : undefined;
 
     return {
       name,
@@ -244,6 +252,7 @@ const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSch
       required: isFieldRequired,
       examples: Array.isArray(resolvedProp.examples) ? resolvedProp.examples : undefined,
       picker,
+      presentation,
       enum: resolvedProp.enum,
       default: resolvedProp.default,
       constraints: hasConstraints ? constraints : undefined,

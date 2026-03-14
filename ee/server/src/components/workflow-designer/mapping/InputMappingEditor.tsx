@@ -626,6 +626,9 @@ export interface ActionInputField {
     fixedValueHint?: string;
     allowsDynamicReference?: boolean;
   };
+  presentation?: {
+    inputControl?: 'multiline';
+  };
   enum?: Array<string | number | boolean | null>;
   default?: unknown;
   constraints?: {
@@ -1779,15 +1782,27 @@ const LiteralValueEditor: React.FC<{
 
   // Default to string
   const stringInputType = fieldConstraints?.format === 'email' ? 'email' : 'text';
+  const isMultilineString = field.presentation?.inputControl === 'multiline';
   return wrapNullableEditor(
-    <Input
-      id={`${idPrefix}-literal-str`}
-      type={stringInputType}
-      value={typeof value === 'string' ? value : ''}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder="Enter value..."
-      disabled={disabled}
-    />
+    isMultilineString ? (
+      <TextArea
+        id={`${idPrefix}-literal-str`}
+        value={typeof value === 'string' ? value : ''}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Enter value..."
+        rows={5}
+        disabled={disabled}
+      />
+    ) : (
+      <Input
+        id={`${idPrefix}-literal-str`}
+        type={stringInputType}
+        value={typeof value === 'string' ? value : ''}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Enter value..."
+        disabled={disabled}
+      />
+    )
   );
 };
 

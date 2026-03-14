@@ -206,6 +206,48 @@ describe('transform action input editor', () => {
     });
   });
 
+  it('renders a textarea for fixed multiline string inputs and keeps single-line inputs for ordinary strings', async () => {
+    await act(async () => {
+      render(
+        <InputMappingEditor
+          value={{
+            prompt: 'Line 1\nLine 2',
+            subject: 'Short subject',
+          }}
+          onChange={vi.fn()}
+          targetFields={[
+            {
+              name: 'prompt',
+              type: 'string',
+              required: true,
+              presentation: {
+                inputControl: 'multiline',
+              },
+            },
+            {
+              name: 'subject',
+              type: 'string',
+              required: true,
+            },
+          ]}
+          fieldOptions={[]}
+          stepId="step-multiline-inputs"
+          positionsHandlers={positionsHandlers}
+        />
+      );
+    });
+
+    const promptControl = document.getElementById(
+      'mapping-step-multiline-inputs-prompt-literal-str'
+    );
+    const subjectControl = document.getElementById(
+      'mapping-step-multiline-inputs-subject-literal-str'
+    );
+
+    expect(promptControl?.tagName).toBe('TEXTAREA');
+    expect(subjectControl?.tagName).toBe('INPUT');
+  });
+
   it('T263/T274/T275: build-object supports user-defined keys plus structured references and fixed literals for each field source', async () => {
     await act(async () => {
       render(

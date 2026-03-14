@@ -2,7 +2,7 @@
 
 - Slug: `workflow-multiline-fixed-inputs`
 - Date: `2026-03-14`
-- Status: Draft
+- Status: Implemented
 
 ## Summary
 

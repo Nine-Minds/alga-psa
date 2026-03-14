@@ -2928,6 +2928,37 @@ export const listWorkflowRegistryNodesAction = withAuth(async (user, { tenant })
   }));
 });
 
+const applyWorkflowDesignerInputPresentationMetadata = (
+  actionId: string,
+  version: number,
+  inputSchema: Record<string, unknown>
+): Record<string, unknown> => {
+  if (actionId !== 'ai.infer' || version !== 1) {
+    return inputSchema;
+  }
+
+  const properties = inputSchema.properties;
+  if (!properties || typeof properties !== 'object' || Array.isArray(properties)) {
+    return inputSchema;
+  }
+
+  const prompt = (properties as Record<string, unknown>).prompt;
+  if (!prompt || typeof prompt !== 'object' || Array.isArray(prompt)) {
+    return inputSchema;
+  }
+
+  return {
+    ...inputSchema,
+    properties: {
+      ...(properties as Record<string, unknown>),
+      prompt: {
+        ...(prompt as Record<string, unknown>),
+        'x-workflow-input-control': 'multiline',
+      },
+    },
+  };
+};
+
 const serializeWorkflowRegistryAction = (
   action: ReturnType<ReturnType<typeof getActionRegistryV2>['list']>[number]
 ) => ({
@@ -2937,7 +2968,11 @@ const serializeWorkflowRegistryAction = (
   retryHint: action.retryHint ?? null,
   idempotency: action.idempotency,
   ui: action.ui,
-  inputSchema: zodToWorkflowJsonSchema(action.inputSchema, { name: `${action.id}@${action.version}.input` }),
+  inputSchema: applyWorkflowDesignerInputPresentationMetadata(
+    action.id,
+    action.version,
+    zodToWorkflowJsonSchema(action.inputSchema, { name: `${action.id}@${action.version}.input` })
+  ),
   outputSchema: zodToWorkflowJsonSchema(action.outputSchema, { name: `${action.id}@${action.version}.output` }),
   examples: action.examples ?? null
 });
