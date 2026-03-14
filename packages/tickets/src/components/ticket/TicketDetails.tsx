@@ -49,8 +49,9 @@ import { addTicketResource, getTicketResources, removeTicketResource, assignTeam
 import { getTeamById, getTeams } from '@alga-psa/teams/actions';
 import AgentScheduleDrawer from "./AgentScheduleDrawer";
 import { Button } from "@alga-psa/ui/components/Button";
+import Drawer from '@alga-psa/ui/components/Drawer';
 import { Input } from "@alga-psa/ui/components/Input";
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Mail } from 'lucide-react';
 import { WorkItemType } from "@alga-psa/types";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
 import { PartialBlock, StyledText } from '@blocknote/core';
@@ -216,7 +217,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const { t } = useTranslation('features/tickets');
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
-    const { enabled: emailLogsEnabled } = useFeatureFlag('email-logs', { defaultValue: false });
     const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
 
     useEffect(() => {
@@ -229,6 +229,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const [ticket, setTicket] = useState(initialTicket);
     const [bundle, setBundle] = useState<any>(initialBundle);
+    const [isEmailNotificationLogsDrawerOpen, setIsEmailNotificationLogsDrawerOpen] = useState(false);
     const [conversations, setConversations] = useState<IComment[]>(initialComments);
     const [documents, setDocuments] = useState<any[]>(initialDocuments);
     const [client, setClient] = useState<IClient | null>(initialClient);
@@ -2023,6 +2024,7 @@ const handleClose = () => {
                                     teams={teams}
                                     onAssignTeam={handleAssignTeam}
                                     onClipboardImageUploaded={refreshTicketDocuments}
+                                    onOpenEmailNotificationLogs={() => setIsEmailNotificationLogsDrawerOpen(true)}
                                     additionalAgents={additionalAgents.map(a => ({
                                         user_id: a.additional_user_id || a.assigned_to,
                                         name: availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))
@@ -2069,15 +2071,6 @@ const handleClose = () => {
                             </div>
                         </Suspense>
                         
-                        {emailLogsEnabled ? (
-                            <Suspense fallback={<div id="ticket-email-notifications-skeleton" className="animate-pulse bg-gray-200 h-40 rounded-lg mb-6"></div>}>
-                                <TicketEmailNotifications
-                                    id={`${id}-email-notifications`}
-                                    ticketId={ticket.ticket_id || ''}
-                                />
-                            </Suspense>
-                        ) : null}
-
                         <Suspense fallback={<div id="ticket-documents-skeleton" className="animate-pulse bg-gray-200 h-64 rounded-lg mb-6"></div>}>
                             <TicketDocumentsSection
                                 id={`${id}-documents-section`}
@@ -2151,6 +2144,26 @@ const handleClose = () => {
                     </div>
                 </div>
             </div>
+            <Drawer
+                id={`${id}-email-notification-logs-drawer`}
+                isOpen={isEmailNotificationLogsDrawerOpen}
+                onClose={() => setIsEmailNotificationLogsDrawerOpen(false)}
+                width="48rem"
+            >
+                <div className="space-y-4 pr-8">
+                    <div className="flex items-center gap-2">
+                        <Mail className="h-5 w-5 text-[rgb(var(--color-text-700))]" />
+                        <h2 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">
+                            Email Notification Logs
+                        </h2>
+                    </div>
+                    <TicketEmailNotifications
+                        id={`${id}-email-notifications`}
+                        ticketId={ticket.ticket_id || ''}
+                        variant="flat"
+                    />
+                </div>
+            </Drawer>
         </ReflectionContainer>
     );
 };

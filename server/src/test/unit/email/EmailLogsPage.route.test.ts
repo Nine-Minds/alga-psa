@@ -9,5 +9,6 @@ describe('/msp/email-logs route', () => {
 
     expect(contents).toContain('export default');
     expect(contents).toContain('Email Logs');
+    expect(contents).not.toContain('FeatureFlagPageWrapper');
   });
 });
