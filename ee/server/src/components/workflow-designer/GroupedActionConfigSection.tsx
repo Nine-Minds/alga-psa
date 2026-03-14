@@ -6,7 +6,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Card } from '@alga-psa/ui/components/Card';
 import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import type { WorkflowDesignerCatalogRecord } from '@shared/workflow/runtime/designer/actionCatalog';
+import type { WorkflowDesignerCatalogRecord } from '@alga-psa/workflows/runtime';
 
 const TILE_KIND_LABELS: Record<WorkflowDesignerCatalogRecord['tileKind'], string> = {
   'core-object': 'Core',

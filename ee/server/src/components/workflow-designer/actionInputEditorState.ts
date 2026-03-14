@@ -1,4 +1,4 @@
-import type { InputMapping, MappingValue, Step } from '@shared/workflow/runtime/client';
+import type { InputMapping, MappingValue, Step } from '@alga-psa/workflows/runtime';
 
 import type { ActionInputField } from './mapping';
 

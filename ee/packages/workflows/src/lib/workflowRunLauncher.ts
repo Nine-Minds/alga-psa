@@ -1,10 +1,12 @@
 import type { Knex } from 'knex';
 
-import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
-import type { WorkflowDefinitionVersionRecord } from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
-import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
-import WorkflowRunModelV2 from '@shared/workflow/persistence/workflowRunModelV2';
-import { WorkflowRuntimeV2, getSchemaRegistry } from '@shared/workflow/runtime';
+import {
+  WorkflowDefinitionModelV2,
+  WorkflowDefinitionVersionModelV2,
+  WorkflowRunModelV2,
+  type WorkflowDefinitionVersionRecord,
+} from '@alga-psa/workflows/persistence';
+import { WorkflowRuntimeV2, getSchemaRegistry } from '@alga-psa/workflows/runtime';
 
 const WORKFLOW_RUN_TRIGGER_FIRE_KEY_UNIQUE = 'workflow_runs_trigger_fire_key_unique';
 

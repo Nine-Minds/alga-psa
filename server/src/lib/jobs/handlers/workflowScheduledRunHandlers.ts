@@ -1,4 +1,4 @@
-import WorkflowScheduleStateModel from '@shared/workflow/persistence/workflowScheduleStateModel';
+import { WorkflowScheduleStateModel } from '@alga-psa/workflows/persistence';
 import { createTenantKnex } from 'server/src/lib/db';
 import { launchPublishedWorkflowRun } from '@alga-psa/workflows/lib/workflowRunLauncher';
 import type { BaseJobData } from '../interfaces';

@@ -2,7 +2,7 @@ import { TaskList } from './TaskList';
 import { TaskDetailsComponent } from './TaskDetails';
 import { TaskHistory } from './TaskHistory';
 import { EmbeddedTaskInbox } from './EmbeddedTaskInbox';
-import { WorkflowTaskStatus } from '@alga-psa/shared/workflow/persistence/workflowTaskModel';
+import { WorkflowTaskStatus } from '@alga-psa/workflows/persistence';
 import { useState } from 'react';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';

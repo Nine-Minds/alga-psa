@@ -1,7 +1,7 @@
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 
-import type { WorkflowJsonSchema } from '@shared/workflow/runtime/ai/aiSchema';
+import type { WorkflowJsonSchema } from '@alga-psa/workflows/runtime';
 
 import { resolveChatProvider, type ChatProviderId, type ResolvedChatProvider } from './chatProviderResolver';
 

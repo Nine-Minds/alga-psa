@@ -28,6 +28,7 @@
     "@alga-psa/db": "file:../../packages/db",
     "@alga-psa/sla": "file:../../packages/sla",
     "@alga-psa/shared": "file:../../shared",
+    "@alga-psa/workflows": "*",
     "@js-temporal/polyfill": "^0.4.4",
     "@aws-sdk/client-s3": "^3.984.0",
     "@aws-sdk/s3-request-presigner": "^3.984.0",

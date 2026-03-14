@@ -21,28 +21,31 @@ import {
   isWorkflowOneTimeScheduleTrigger,
   isWorkflowRecurringScheduleTrigger,
   isWorkflowTimeTrigger,
+  resolveActionCallOutputSchema,
+  buildWorkflowDesignerActionCatalog,
+  zodToWorkflowJsonSchema,
   validateWorkflowDefinition,
   validateInputMapping,
   resolveInputMapping,
   createSecretResolverFromProvider,
+  verifySecretsExist,
   type WorkflowTrigger,
   type PublishError
-} from '@shared/workflow/runtime';
-import { resolveActionCallOutputSchema } from '@shared/workflow/runtime/actions/actionOutputSchemaResolver';
-import { buildWorkflowDesignerActionCatalog } from '@shared/workflow/runtime/designer/actionCatalog';
-import { zodToWorkflowJsonSchema } from '@shared/workflow/runtime/jsonSchemaMetadata';
-import { verifySecretsExist } from '@shared/workflow/runtime/validation/publishValidation';
-import { createTenantSecretProvider } from '@alga-psa/shared/workflow/secrets';
-import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
-import WorkflowDefinitionVersionModelV2, { type WorkflowDefinitionVersionRecord } from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
-import WorkflowRunModelV2 from '@shared/workflow/persistence/workflowRunModelV2';
-import WorkflowRunStepModelV2 from '@shared/workflow/persistence/workflowRunStepModelV2';
-import WorkflowRunSnapshotModelV2 from '@shared/workflow/persistence/workflowRunSnapshotModelV2';
-import WorkflowRunWaitModelV2 from '@shared/workflow/persistence/workflowRunWaitModelV2';
-import WorkflowActionInvocationModelV2 from '@shared/workflow/persistence/workflowActionInvocationModelV2';
-import WorkflowRuntimeEventModelV2 from '@shared/workflow/persistence/workflowRuntimeEventModelV2';
-import WorkflowRunLogModelV2 from '@shared/workflow/persistence/workflowRunLogModelV2';
-import type { WorkflowScheduleStateRecord } from '@shared/workflow/persistence/workflowScheduleStateModel';
+} from '@alga-psa/workflows/runtime';
+import { createTenantSecretProvider } from '@alga-psa/workflows/secrets';
+import {
+  WorkflowActionInvocationModelV2,
+  WorkflowDefinitionModelV2,
+  WorkflowDefinitionVersionModelV2,
+  WorkflowRunLogModelV2,
+  WorkflowRunModelV2,
+  WorkflowRunSnapshotModelV2,
+  WorkflowRunStepModelV2,
+  WorkflowRunWaitModelV2,
+  WorkflowRuntimeEventModelV2,
+  type WorkflowDefinitionVersionRecord,
+  type WorkflowScheduleStateRecord,
+} from '@alga-psa/workflows/persistence';
 import { auditLog } from '@alga-psa/db';
 import { analytics } from '@alga-psa/analytics';
 import { EventCatalogModel } from '../models/eventCatalog';

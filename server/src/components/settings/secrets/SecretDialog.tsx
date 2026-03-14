@@ -11,7 +11,7 @@ import {
   updateSecret,
   validateSecretName
 } from '@alga-psa/tenancy/actions';
-import type { TenantSecretMetadata } from '@alga-psa/shared/workflow/secrets';
+import type { TenantSecretMetadata } from '@alga-psa/workflows/secrets';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';

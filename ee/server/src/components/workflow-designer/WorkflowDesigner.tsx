@@ -71,7 +71,7 @@ import {
 import {
   buildWorkflowDesignerActionCatalog,
   type WorkflowDesignerCatalogRecord
-} from '@shared/workflow/runtime/designer/actionCatalog';
+} from '@alga-psa/workflows/runtime';
 import {
   buildPaletteSearchIndex,
   groupPaletteItemsByCategory,
@@ -113,13 +113,13 @@ import type {
   Expr,
   PublishError,
   InputMapping
-} from '@shared/workflow/runtime/client';
-import { WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF } from '@shared/workflow/runtime/client';
+} from '@alga-psa/workflows/runtime';
+import { WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF } from '@alga-psa/workflows/runtime';
 import {
   isWorkflowAiInferAction,
   resolveWorkflowAiSchemaFromConfig,
-} from '@shared/workflow/runtime/ai/aiSchema';
-import { validateExpressionSource } from '@shared/workflow/runtime/expressionEngine';
+} from '@alga-psa/workflows/runtime';
+import { validateExpressionSource } from '@alga-psa/workflows/runtime';
 import { partitionStepExpressionValidations, validateStepExpressions } from './expressionValidation';
 import { useRouter, useSearchParams } from 'next/navigation';
 

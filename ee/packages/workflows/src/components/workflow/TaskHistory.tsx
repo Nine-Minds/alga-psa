@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { WorkflowTaskStatus } from '@alga-psa/shared/workflow/persistence/workflowTaskModel';
-import { TaskHistoryEntry } from '@alga-psa/shared/workflow/persistence/taskInboxInterfaces';
+import { WorkflowTaskStatus, type TaskHistoryEntry } from '@alga-psa/workflows/persistence';
 
 // Simple Spinner component
 function Spinner({ size = "md" }: { size?: "sm" | "md" | "lg" }) {

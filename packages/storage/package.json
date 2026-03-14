@@ -44,7 +44,8 @@
     "@alga-psa/db": "*",
     "@alga-psa/event-bus": "*",
     "@alga-psa/shared": "*",
-    "@alga-psa/validation": "*"
+    "@alga-psa/validation": "*",
+    "@alga-psa/workflows": "*"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

@@ -1,5 +1,4 @@
-import type { InputMapping, NodeStep } from '@shared/workflow/runtime/client';
-import type { WorkflowDesignerCatalogAction } from '@shared/workflow/runtime/designer/actionCatalog';
+import type { InputMapping, NodeStep, WorkflowDesignerCatalogAction } from '@alga-psa/workflows/runtime';
 
 type GroupedActionStepConfig = {
   actionId?: string;

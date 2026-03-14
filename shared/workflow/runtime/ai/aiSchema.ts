@@ -249,7 +249,7 @@ const hydrateSimpleField = (
   }
 
   if (type === 'object') {
-    if (schema.additionalProperties && schema.additionalProperties !== false) {
+    if (schema.additionalProperties !== undefined && schema.additionalProperties !== false) {
       return { ok: false, reason: `Simple mode does not support map-style object fields on ${fieldName}.` };
     }
 
@@ -289,7 +289,7 @@ const hydrateSimpleField = (
     }
 
     if (itemType === 'object') {
-      if (itemSchema.additionalProperties && itemSchema.additionalProperties !== false) {
+      if (itemSchema.additionalProperties !== undefined && itemSchema.additionalProperties !== false) {
         return { ok: false, reason: `Simple mode does not support map-style array object items on ${fieldName}.` };
       }
 

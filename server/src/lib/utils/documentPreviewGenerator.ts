@@ -40,7 +40,7 @@ import { isValidUUID } from '@alga-psa/validation';
 import {
   buildMediaProcessingFailedPayload,
   buildMediaProcessingSucceededPayload,
-} from '@alga-psa/shared/workflow/streams/domainEventBuilders/mediaEventBuilders';
+} from '@alga-psa/workflows/streams';
 
 /**
  * Preview size configuration

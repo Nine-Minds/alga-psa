@@ -6,7 +6,7 @@ import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomS
 import { getAllContacts, getContactsByClient } from '@alga-psa/clients/actions';
 import { getTicketFieldOptions } from '@alga-psa/integrations/actions';
 import { getTeamsBasic } from '@alga-psa/teams/actions';
-import type { InputMapping, MappingValue } from '@shared/workflow/runtime/client';
+import type { InputMapping, MappingValue } from '@alga-psa/workflows/runtime';
 
 export type WorkflowActionInputPickerField = {
   name: string;

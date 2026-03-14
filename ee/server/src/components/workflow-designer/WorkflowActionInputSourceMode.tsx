@@ -3,7 +3,7 @@
 import React from 'react';
 
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import type { Expr, MappingValue } from '@shared/workflow/runtime/client';
+import type { Expr, MappingValue } from '@alga-psa/workflows/runtime';
 
 export type WorkflowActionInputSourceModeValue = 'reference' | 'fixed';
 export type WorkflowActionInputFieldLike = {

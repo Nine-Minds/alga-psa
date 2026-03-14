@@ -43,7 +43,7 @@ import {
   buildProjectTaskDependencyBlockedPayload,
   buildProjectTaskDependencyUnblockedPayload,
   buildProjectTaskStatusChangedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/projectTaskEventBuilders';
+} from '@alga-psa/workflows/streams';
 
 // Helper functions for workflow events
 async function resolveProjectStatusInfo(

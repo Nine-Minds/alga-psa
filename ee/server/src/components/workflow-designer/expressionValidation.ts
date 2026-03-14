@@ -4,7 +4,7 @@ import {
   type SharedExpressionPathOption,
   type SharedExpressionSchemaNode,
   type SharedExpressionValidationDiagnostic,
-} from '@shared/workflow/expression-authoring';
+} from '@alga-psa/workflows/expression-authoring';
 
 export type WorkflowStepOutputValidationContext = {
   saveAs: string;

@@ -6,10 +6,10 @@ import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { EventCatalogModel } from '../models/eventCatalog';
 import {
-  IEventCatalogEntry,
-  ICreateEventCatalogEntry,
-  IUpdateEventCatalogEntry
-} from '@shared/workflow/types/eventCatalog';
+  type ICreateEventCatalogEntry,
+  type IEventCatalogEntry,
+  type IUpdateEventCatalogEntry,
+} from '@alga-psa/workflows/types';
 import { z } from 'zod';
 
 /**

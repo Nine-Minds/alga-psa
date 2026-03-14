@@ -1,4 +1,4 @@
-import { WORKFLOW_BUNDLE_FORMAT, WORKFLOW_BUNDLE_FORMAT_VERSION_V1 } from '@shared/workflow/bundle/workflowBundleV1';
+import { WORKFLOW_BUNDLE_FORMAT, WORKFLOW_BUNDLE_FORMAT_VERSION_V1 } from '@alga-psa/workflows/bundle';
 import { WorkflowBundleImportError } from './workflowBundleImportErrors';
 
 export const validateWorkflowBundleHeaderV1 = (bundle: unknown): void => {
@@ -26,4 +26,3 @@ export const validateWorkflowBundleHeaderV1 = (bundle: unknown): void => {
     );
   }
 };
-

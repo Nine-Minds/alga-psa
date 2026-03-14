@@ -13,7 +13,7 @@ import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import type { ColumnDefinition, DeletionValidationResult } from '@alga-psa/types';
-import type { WorkflowScheduleStateRecord } from '@shared/workflow/persistence/workflowScheduleStateModel';
+import type { WorkflowScheduleStateRecord } from '@alga-psa/workflows/persistence';
 import {
   deleteWorkflowScheduleAction,
   listWorkflowDefinitionsPagedAction,

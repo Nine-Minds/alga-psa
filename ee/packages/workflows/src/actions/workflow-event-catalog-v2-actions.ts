@@ -5,10 +5,14 @@ import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex, auditLog } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { EventCatalogModel } from '../models/eventCatalog';
-import { getSchemaRegistry } from '@shared/workflow/runtime';
-import { initializeWorkflowRuntimeV2 } from '@shared/workflow/runtime/init';
-import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
-import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
+import {
+  getSchemaRegistry,
+  initializeWorkflowRuntimeV2,
+} from '@alga-psa/workflows/runtime';
+import {
+  WorkflowDefinitionModelV2,
+  WorkflowDefinitionVersionModelV2,
+} from '@alga-psa/workflows/persistence';
 import { submitWorkflowEventAction, createWorkflowDefinitionAction, publishWorkflowDefinitionAction } from './workflow-runtime-v2-actions';
 import { createEventCatalogEntry } from '@alga-psa/workflows/actions';
 

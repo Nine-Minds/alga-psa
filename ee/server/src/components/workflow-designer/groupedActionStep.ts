@@ -2,8 +2,8 @@ import {
   getWorkflowDesignerCatalogRecordForAction,
   type WorkflowDesignerCatalogKind,
   type WorkflowDesignerCatalogRecord,
-} from '@shared/workflow/runtime/designer/actionCatalog';
-import type { NodeStep, Step } from '@shared/workflow/runtime/client';
+} from '@alga-psa/workflows/runtime';
+import type { NodeStep, Step } from '@alga-psa/workflows/runtime';
 
 type GroupedActionSelection = {
   actionId?: string;

@@ -42,6 +42,7 @@
     "@alga-psa/types": "*",
     "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",
+    "@alga-psa/workflows": "*",
     "rrule": "^2.7.2",
     "zod": "^3.22.4"
   },

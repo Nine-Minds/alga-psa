@@ -8,7 +8,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import type { InputMapping, MappingValue, Expr } from '@shared/workflow/runtime/client';
+import type { InputMapping, MappingValue, Expr } from '@alga-psa/workflows/runtime';
 import {
   type ExpressionContext,
   type JsonSchema

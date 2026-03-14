@@ -2,7 +2,6 @@ import { getSchemaRegistry } from './registries/schemaRegistry';
 import { registerDefaultNodes } from './nodes/registerDefaultNodes';
 import { registerEmailWorkflowActionsV2 } from './actions/registerEmailWorkflowActions';
 import { registerBusinessOperationsActionsV2 } from './actions/registerBusinessOperationsActions';
-import { registerAiActionsV2 } from './actions/registerAiActions';
 import { registerTransformActionsV2 } from './actions/registerTransformActions';
 import { emailWorkflowPayloadSchema } from './schemas/emailWorkflowSchemas';
 import { emptyWorkflowPayloadSchema, EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF } from './schemas/emptyWorkflowPayloadSchema';
@@ -24,7 +23,6 @@ export function initializeWorkflowRuntimeV2(): void {
   registerDefaultNodes();
   registerEmailWorkflowActionsV2();
   registerBusinessOperationsActionsV2();
-  registerAiActionsV2();
   registerTransformActionsV2();
 
   initialized = true;

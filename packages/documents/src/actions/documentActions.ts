@@ -41,7 +41,7 @@ import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildDocumentAssociatedPayload,
   buildDocumentDetachedPayload,
-} from '@alga-psa/shared/workflow/streams/domainEventBuilders/documentAssociationEventBuilders';
+} from '@alga-psa/workflows/streams';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
