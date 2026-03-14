@@ -727,7 +727,7 @@
   {
     "id": "F087",
     "description": "P4: Quote email template — 'Quote Accepted Confirmation' sent to MSP on client acceptance",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P4-FR2"
     ]

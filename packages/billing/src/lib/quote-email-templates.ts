@@ -104,3 +104,38 @@ export function buildQuoteReminderEmailTemplate({
     ].filter(Boolean).join('\n'),
   };
 }
+
+export function buildQuoteAcceptedConfirmationEmailTemplate({
+  quote,
+  companyName,
+  portalLink,
+  customMessage,
+}: QuoteEmailTemplateInput): { subject: string; html: string; text: string } {
+  const quoteNumber = quote.quote_number ?? quote.quote_id;
+  const formattedAmount = formatCurrency((quote.total_amount ?? 0) / 100, 'en-US', quote.currency_code || 'USD');
+  const acceptedAt = formatQuoteDate(quote.accepted_at ?? null);
+  const trimmedMessage = customMessage?.trim();
+  const resolvedPortalLink = portalLink?.trim();
+  const subject = `Quote ${quoteNumber} was accepted`;
+
+  return {
+    subject,
+    html: [
+      '<p>Hello,</p>',
+      `<p>Quote <strong>${quoteNumber}</strong> has been accepted for <strong>${formattedAmount}</strong>.</p>`,
+      `<p><strong>Accepted On:</strong> ${acceptedAt}</p>`,
+      trimmedMessage ? `<p>${trimmedMessage}</p>` : '',
+      resolvedPortalLink ? `<p>Review the accepted quote: <a href="${resolvedPortalLink}">${resolvedPortalLink}</a></p>` : '',
+      `<p>Thank you,<br />${companyName}</p>`,
+    ].filter(Boolean).join(''),
+    text: [
+      'Hello,',
+      '',
+      `Quote ${quoteNumber} has been accepted for ${formattedAmount}.`,
+      `Accepted On: ${acceptedAt}`,
+      trimmedMessage ? `\n${trimmedMessage}` : '',
+      resolvedPortalLink ? `\nReview online: ${resolvedPortalLink}` : '',
+      `\nThank you,\n${companyName}`,
+    ].filter(Boolean).join('\n'),
+  };
+}
