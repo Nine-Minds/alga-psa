@@ -104,7 +104,7 @@
   {
     "id": "T018",
     "description": "UI integration: board creation supports copying ticket statuses from an existing board and persists a cloned board-local set.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {

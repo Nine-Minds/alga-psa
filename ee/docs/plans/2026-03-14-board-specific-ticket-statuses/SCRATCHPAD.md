@@ -19,6 +19,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-14) Changing a ticket board must require explicit user status reselection. No runtime auto-remap.
 - (2026-03-14) New board creation must let admins either copy statuses from an existing board or create statuses inline.
 - (2026-03-14) Ticket board changes are now blocked in both backend update paths and the `TicketInfo` UI until the user explicitly selects a destination-board status, which prevents the old board's status from being silently retained.
+- (2026-03-14) New board creation now has an explicit copy-source board picker; save passes `copy_ticket_statuses_from_board_id` into `createBoard`, and the action clones board-owned ticket statuses with fresh ids onto the new board.
 - (2026-03-14) `F001`/`F002`: add `statuses.board_id` as nullable first, then enforce ticket ownership after clone/remap. Rationale: current tenant-global ticket rows must survive until the data migration rewrites them.
 - (2026-03-14) `F003`/`F004`/`F005`: keep the legacy tenant-global ticket status rows in place for now and clone from them during migration, because later remap steps still need the old ids to rewrite inbound, billing, and workflow references before the global rows can be retired.
 - (2026-03-14) `F006`/`F007`/`F008`: remap saved status references by joining legacy global ticket statuses to their board-owned clones via `tenant + board_id + status name`. Rationale: the old global status ids remain available during migration, so we can rewrite board-context tables without persisting a separate remap table.
@@ -52,6 +53,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `server/src/lib/eventBus/subscribers/surveySubscriber.ts`
   - `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts`
 - (2026-03-14) `packages/tickets/src/components/ticket/TicketInfo.tsx` already carries pending board/category state locally, so `F014` could be implemented by clearing `pendingChanges.status_id` on board change and disabling save until the new board gets a status.
+- (2026-03-14) `packages/tickets/src/actions/board-actions/boardActions.ts` can own status seeding for board create because it already centralizes transactional board creation and ITIL setup.
 - (2026-03-14) Current schema still enforced tenant-global ticket status uniqueness before this batch:
   - `server/migrations/202409101116_add_status_constraints.cjs`
   - `packages/types/src/interfaces/status.interface.ts`
@@ -128,6 +130,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd packages/tickets && npx vitest run src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx --config vitest.config.ts`
   - `cd shared && npx vitest run models/__tests__/ticketModel.boardStatusValidation.test.ts --config vitest.config.ts`
   - `cd server && npx vitest run --coverage.enabled false src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts --config vitest.config.ts`
+- (2026-03-14) Validate board status copy-on-create:
+  - `cd server && npx vitest run --coverage.enabled false src/components/settings/general/BoardsSettings.copyStatuses.test.tsx --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/boardCopyTicketStatuses.integration.test.ts --config vitest.config.ts`
 - (2026-03-14) Run the board-status migration schema tests directly from the server package:
   - `cd server && npx vitest run src/test/unit/migrations/boardSpecificTicketStatusesMigration.test.ts`
 - (2026-03-14) Repo-level `npm run test:local -- ...` is currently not usable in this shell because the installed `dotenv` CLI rejects `-e ../.env.localtest` as non-boolean.
@@ -150,6 +155,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Ticket status actions: `packages/reference-data/src/actions/status-actions/statusActions.ts`
 - Ticket status model: `packages/tickets/src/models/status.ts`
 - Board actions: `packages/tickets/src/actions/board-actions/boardActions.ts`
+- Board create copy-source test: `server/src/components/settings/general/BoardsSettings.copyStatuses.test.tsx`
+- Board status copy integration: `server/src/test/integration/boardCopyTicketStatuses.integration.test.ts`
 - Ticket model default status helper: `shared/models/ticketModel.ts`
 - Ticket create board/status validation integration: `server/src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts`
 - Ticket API service: `server/src/lib/api/services/TicketService.ts`

@@ -86,7 +86,7 @@
   {
     "id": "F015",
     "description": "Extend board creation to support seeding statuses by copying from an existing board.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR3"]
   },
   {

@@ -42,6 +42,21 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const BoardsSettings: React.FC = () => {
   const { t } = useTranslation('msp/settings');
+  const createEmptyFormData = () => ({
+    board_name: '',
+    description: '',
+    display_order: 0,
+    is_inactive: false,
+    category_type: 'custom' as CategoryType,
+    priority_type: 'custom' as PriorityType,
+    is_itil_compliant: false,
+    default_assigned_to: '',
+    default_assigned_team_id: '',
+    default_priority_id: '',
+    manager_user_id: '',
+    sla_policy_id: '',
+    copy_ticket_statuses_from_board_id: '',
+  });
   const [boards, setBoards] = useState<IBoard[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
   const [teams, setTeams] = useState<ITeam[]>([]);
@@ -110,20 +125,7 @@ const BoardsSettings: React.FC = () => {
   // State for Add/Edit Dialog
   const [showAddEditDialog, setShowAddEditDialog] = useState(false);
   const [editingBoard, setEditingBoard] = useState<IBoard | null>(null);
-  const [formData, setFormData] = useState({
-    board_name: '',
-    description: '',
-    display_order: 0,
-    is_inactive: false,
-    category_type: 'custom' as CategoryType,
-    priority_type: 'custom' as PriorityType,
-    is_itil_compliant: false,
-    default_assigned_to: '',
-    default_assigned_team_id: '',
-    default_priority_id: '',
-    manager_user_id: '',
-    sla_policy_id: ''
-  });
+  const [formData, setFormData] = useState(createEmptyFormData);
   
   // State for Import Dialog
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -214,6 +216,7 @@ const BoardsSettings: React.FC = () => {
   const startEditing = (board: IBoard) => {
     setEditingBoard(board);
     setFormData({
+      ...createEmptyFormData(),
       board_name: board.board_name || '',
       description: board.description || '',
       display_order: board.display_order || 0,
@@ -301,6 +304,12 @@ const BoardsSettings: React.FC = () => {
       // For new boards, set category_type and priority_type based on ITIL compliance
       const categoryType = editingBoard ? formData.category_type : (formData.is_itil_compliant ? 'itil' : 'custom');
       const priorityType = editingBoard ? formData.priority_type : (formData.is_itil_compliant ? 'itil' : 'custom');
+      const shouldRequireStatusCopySource = !editingBoard && boards.length > 0;
+
+      if (shouldRequireStatusCopySource && !formData.copy_ticket_statuses_from_board_id) {
+        setError('Select an existing board to copy ticket statuses from.');
+        return;
+      }
 
       if (editingBoard) {
         await updateBoard(editingBoard.board_id!, {
@@ -329,14 +338,15 @@ const BoardsSettings: React.FC = () => {
           default_assigned_team_id: formData.default_assigned_team_id || null,
           default_priority_id: formData.default_priority_id || null,
           manager_user_id: formData.manager_user_id || null,
-          sla_policy_id: formData.sla_policy_id || null
+          sla_policy_id: formData.sla_policy_id || null,
+          copy_ticket_statuses_from_board_id: formData.copy_ticket_statuses_from_board_id || null
         });
         toast.success(t('ticketing.boards.messages.success.created'));
       }
 
       setShowAddEditDialog(false);
       setEditingBoard(null);
-      setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_assigned_team_id: '', default_priority_id: '', manager_user_id: '', sla_policy_id: '' });
+      setFormData(createEmptyFormData());
       await fetchBoards();
     } catch (error) {
       console.error('Error saving board:', error);
@@ -619,7 +629,7 @@ const BoardsSettings: React.FC = () => {
             id="add-board-button"
             onClick={() => {
               setEditingBoard(null);
-              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_assigned_team_id: '', default_priority_id: '', manager_user_id: '', sla_policy_id: '' });
+              setFormData(createEmptyFormData());
               setShowAddEditDialog(true);
             }}
             className="bg-primary-500 text-white hover:bg-primary-600"
@@ -695,7 +705,7 @@ const BoardsSettings: React.FC = () => {
         onClose={() => {
           setShowAddEditDialog(false);
           setEditingBoard(null);
-          setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_assigned_team_id: '', default_priority_id: '', manager_user_id: '', sla_policy_id: '' });
+          setFormData(createEmptyFormData());
           setError(null);
         }}
         title={editingBoard ? t('ticketing.boards.dialog.editBoard') : t('ticketing.boards.dialog.addBoard')}
@@ -856,6 +866,32 @@ const BoardsSettings: React.FC = () => {
               </p>
             </div>
 
+            {!editingBoard && (
+              <div>
+                <Label htmlFor="copy-ticket-statuses-select">Copy ticket statuses from</Label>
+                <CustomSelect
+                  id="copy-ticket-statuses-select"
+                  value={formData.copy_ticket_statuses_from_board_id}
+                  onValueChange={(value) => setFormData({ ...formData, copy_ticket_statuses_from_board_id: value })}
+                  options={[
+                    { value: '', label: boards.length > 0 ? 'Select a source board' : 'No source boards available' },
+                    ...boards
+                      .slice()
+                      .sort((a, b) => (a.display_order || 0) - (b.display_order || 0) || (a.board_name || '').localeCompare(b.board_name || ''))
+                      .map((board): SelectOption => ({
+                        value: board.board_id || '',
+                        label: board.board_name || 'Unnamed board'
+                      }))
+                  ]}
+                  placeholder="Select a source board"
+                  disabled={boards.length === 0}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  New boards clone their ticket lifecycle from an existing board.
+                </p>
+              </div>
+            )}
+
             {/* ITIL Configuration - Only show for new boards */}
             {!editingBoard && (
               <div className="border-t pt-4 space-y-4">
@@ -891,7 +927,7 @@ const BoardsSettings: React.FC = () => {
             onClick={() => {
               setShowAddEditDialog(false);
               setEditingBoard(null);
-              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false, default_assigned_to: '', default_assigned_team_id: '', default_priority_id: '', manager_user_id: '', sla_policy_id: '' });
+              setFormData(createEmptyFormData());
               setError(null);
             }}
           >

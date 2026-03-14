@@ -1,0 +1,211 @@
+/* @vitest-environment jsdom */
+/// <reference types="@testing-library/jest-dom/vitest" />
+
+import React from 'react';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import BoardsSettings from './BoardsSettings';
+
+const getAllBoardsMock = vi.fn();
+const createBoardMock = vi.fn();
+const getAllPrioritiesMock = vi.fn();
+const getAllUsersMock = vi.fn();
+const getSlaPoliciesMock = vi.fn();
+const getTeamsMock = vi.fn();
+
+vi.mock('@alga-psa/tickets/actions', () => ({
+  getAllBoards: (...args: unknown[]) => getAllBoardsMock(...args),
+  createBoard: (...args: unknown[]) => createBoardMock(...args),
+  updateBoard: vi.fn(),
+  deleteBoard: vi.fn(),
+}));
+
+vi.mock('@alga-psa/reference-data/actions', () => ({
+  getAvailableReferenceData: vi.fn().mockResolvedValue([]),
+  importReferenceData: vi.fn(),
+  checkImportConflicts: vi.fn().mockResolvedValue([]),
+  getAllPriorities: (...args: unknown[]) => getAllPrioritiesMock(...args),
+}));
+
+vi.mock('@alga-psa/user-composition/actions', () => ({
+  getAllUsers: (...args: unknown[]) => getAllUsersMock(...args),
+  getUserAvatarUrlsBatchAction: vi.fn(),
+}));
+
+vi.mock('@alga-psa/sla/actions', () => ({
+  getSlaPolicies: (...args: unknown[]) => getSlaPoliciesMock(...args),
+}));
+
+vi.mock('@alga-psa/teams/actions', () => ({
+  getTeams: (...args: unknown[]) => getTeamsMock(...args),
+  getTeamAvatarUrlsBatchAction: vi.fn(),
+}));
+
+vi.mock('@alga-psa/ui/hooks', () => ({
+  useFeatureFlag: () => ({ enabled: false }),
+}));
+
+vi.mock('react-hot-toast', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
+  handleError: vi.fn(),
+}));
+
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}));
+
+vi.mock('@alga-psa/ui/components/Button', () => ({
+  Button: ({ children, id, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { id: string }) => (
+    <button {...props} data-testid={id}>
+      {children}
+    </button>
+  ),
+}));
+
+vi.mock('@alga-psa/ui/components/Dialog', () => ({
+  Dialog: ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) => (isOpen ? <div>{children}</div> : null),
+  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock('@alga-psa/ui/components/Input', () => ({
+  Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
+}));
+
+vi.mock('@alga-psa/ui/components/Checkbox', () => ({
+  Checkbox: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input type="checkbox" {...props} />,
+}));
+
+vi.mock('@alga-psa/ui/components/Label', () => ({
+  Label: ({ children, htmlFor }: { children: React.ReactNode; htmlFor?: string }) => <label htmlFor={htmlFor}>{children}</label>,
+}));
+
+vi.mock('@alga-psa/ui/components/DataTable', () => ({
+  DataTable: () => <div data-testid="boards-table" />,
+}));
+
+vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
+  ConfirmationDialog: () => null,
+}));
+
+vi.mock('@alga-psa/ui', () => ({
+  DeleteEntityDialog: () => null,
+}));
+
+vi.mock('@alga-psa/ui/components/Alert', () => ({
+  Alert: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  AlertDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock('@alga-psa/ui/components/Switch', () => ({
+  Switch: ({ checked, onCheckedChange, id }: { checked?: boolean; onCheckedChange?: (checked: boolean) => void; id?: string }) => (
+    <input
+      data-testid={id}
+      type="checkbox"
+      checked={checked}
+      onChange={(event) => onCheckedChange?.(event.target.checked)}
+    />
+  ),
+}));
+
+vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
+  __esModule: true,
+  default: ({
+    id,
+    value,
+    options,
+    onValueChange,
+    disabled,
+  }: {
+    id?: string;
+    value?: string;
+    options: Array<{ value: string; label: string }>;
+    onValueChange: (value: string) => void;
+    disabled?: boolean;
+  }) => (
+    <select
+      data-testid={id}
+      disabled={disabled}
+      value={value || ''}
+      onChange={(event) => onValueChange(event.target.value)}
+    >
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  ),
+}));
+
+vi.mock('@alga-psa/ui/components/DropdownMenu', () => ({
+  DropdownMenu: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuItem: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock('@alga-psa/ui/components/UserPicker', () => ({
+  __esModule: true,
+  default: () => <div data-testid="user-picker" />,
+}));
+
+vi.mock('@alga-psa/ui/components/UserAndTeamPicker', () => ({
+  __esModule: true,
+  default: () => <div data-testid="user-team-picker" />,
+}));
+
+describe('BoardsSettings ticket status copy flow', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getAllBoardsMock.mockResolvedValue([
+      {
+        board_id: 'board-source',
+        board_name: 'Support',
+        display_order: 10,
+        is_inactive: false,
+      },
+    ]);
+    createBoardMock.mockResolvedValue({ board_id: 'board-new' });
+    getAllPrioritiesMock.mockResolvedValue([]);
+    getAllUsersMock.mockResolvedValue([]);
+    getSlaPoliciesMock.mockResolvedValue([]);
+    getTeamsMock.mockResolvedValue([]);
+  });
+
+  it('passes the selected source board when creating a board that copies ticket statuses', async () => {
+    render(<BoardsSettings />);
+
+    await waitFor(() => {
+      expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+
+    fireEvent.click(screen.getByTestId('add-board-button'));
+
+    fireEvent.change(screen.getByLabelText('ticketing.boards.fields.boardName.label'), {
+      target: { value: 'Escalations' },
+    });
+    fireEvent.change(screen.getByTestId('copy-ticket-statuses-select'), {
+      target: { value: 'board-source' },
+    });
+
+    fireEvent.click(screen.getByTestId('save-board-button'));
+
+    await waitFor(() => {
+      expect(createBoardMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          board_name: 'Escalations',
+          copy_ticket_statuses_from_board_id: 'board-source',
+        })
+      );
+    });
+  });
+});
