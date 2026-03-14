@@ -69,3 +69,38 @@ export function buildQuoteSentEmailTemplate({
     text: textSections.filter(Boolean).join('\n'),
   };
 }
+
+export function buildQuoteReminderEmailTemplate({
+  quote,
+  companyName,
+  portalLink,
+  customMessage,
+}: QuoteEmailTemplateInput): { subject: string; html: string; text: string } {
+  const quoteNumber = quote.quote_number ?? quote.quote_id;
+  const formattedAmount = formatCurrency((quote.total_amount ?? 0) / 100, 'en-US', quote.currency_code || 'USD');
+  const validUntil = formatQuoteDate(quote.valid_until ?? null);
+  const trimmedMessage = customMessage?.trim();
+  const resolvedPortalLink = portalLink?.trim();
+  const subject = `Reminder: Quote ${quoteNumber} expires on ${validUntil}`;
+
+  return {
+    subject,
+    html: [
+      '<p>Hello,</p>',
+      `<p>This is a reminder that quote <strong>${quoteNumber}</strong> for ${formattedAmount} expires on <strong>${validUntil}</strong>.</p>`,
+      trimmedMessage ? `<p>${trimmedMessage}</p>` : '',
+      resolvedPortalLink
+        ? `<p>Review the quote in the client portal: <a href="${resolvedPortalLink}">${resolvedPortalLink}</a></p>`
+        : '',
+      `<p>Thank you,<br />${companyName}</p>`,
+    ].filter(Boolean).join(''),
+    text: [
+      'Hello,',
+      '',
+      `This is a reminder that quote ${quoteNumber} for ${formattedAmount} expires on ${validUntil}.`,
+      trimmedMessage ? `\n${trimmedMessage}` : '',
+      resolvedPortalLink ? `\nReview online: ${resolvedPortalLink}` : '',
+      `\nThank you,\n${companyName}`,
+    ].filter(Boolean).join('\n'),
+  };
+}

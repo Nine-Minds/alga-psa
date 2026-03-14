@@ -719,7 +719,7 @@
   {
     "id": "F086",
     "description": "P4: Quote email template — 'Quote Reminder' for approaching expiration",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P4-FR2"
     ]
