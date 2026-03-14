@@ -128,19 +128,19 @@
   {
     "id": "F022",
     "description": "Make ticket status picker components board-dependent instead of tenant-global.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR4"]
   },
   {
     "id": "F023",
     "description": "Update ticket create flows so status options remain empty or disabled until a board is chosen.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR4"]
   },
   {
     "id": "F024",
     "description": "Update ticket edit flows to reload valid statuses for the selected board and clear invalid status selections on board change.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR4"]
   },
   {

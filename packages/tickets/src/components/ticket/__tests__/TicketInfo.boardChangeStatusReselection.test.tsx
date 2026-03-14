@@ -2,9 +2,11 @@
 /// <reference types="@testing-library/jest-dom/vitest" />
 
 import React from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import TicketInfo from '../TicketInfo';
+
+const getTicketStatusesMock = vi.fn();
 
 vi.mock('next-auth/react', () => ({
   useSession: () => ({ data: null, status: 'unauthenticated' }),
@@ -146,6 +148,10 @@ vi.mock('@alga-psa/teams/actions', () => ({
   getTeamAvatarUrlsBatchAction: vi.fn(),
 }));
 
+vi.mock('@alga-psa/reference-data/actions', () => ({
+  getTicketStatuses: (...args: unknown[]) => getTicketStatusesMock(...args),
+}));
+
 vi.mock('@alga-psa/tickets/actions', () => ({
   getTicketCategories: vi.fn().mockResolvedValue({ categories: [], boardConfig: { category_type: 'none', priority_type: 'custom', display_itil_impact: false, display_itil_urgency: false } }),
   getTicketCategoriesByBoard: vi.fn().mockResolvedValue({ categories: [], boardConfig: { category_type: 'none', priority_type: 'custom', display_itil_impact: false, display_itil_urgency: false } }),
@@ -169,39 +175,163 @@ vi.mock('../useTicketRichTextUploadSession', () => ({
 }));
 
 describe('TicketInfo board change status reselection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const baseTicket = {
+    ticket_id: 'ticket-1',
+    ticket_number: 'T-1001',
+    title: 'Board-specific status test',
+    status_id: 'status-a',
+    board_id: 'board-a',
+    assigned_to: null,
+    category_id: null,
+    subcategory_id: null,
+    priority_id: 'priority-1',
+    due_date: null,
+    response_state: null,
+    attributes: { description: '' },
+    sla_policy_id: null,
+    sla_paused_at: null,
+    sla_response_at: null,
+    sla_response_due_at: null,
+    sla_resolution_at: null,
+    sla_resolution_due_at: null,
+    sla_started_at: null,
+    entered_at: new Date('2026-03-14T10:00:00.000Z').toISOString(),
+  } as any;
+
+  it('T027: loads ticket status options only for the selected board', async () => {
+    getTicketStatusesMock.mockImplementation(async (boardId: string) => {
+      if (boardId === 'board-a') {
+        return [
+          { status_id: 'status-a', name: 'Board A Default', is_closed: false },
+          { status_id: 'status-a-closed', name: 'Board A Closed', is_closed: true },
+        ];
+      }
+
+      return [{ status_id: 'status-b', name: 'Board B Default', is_closed: false }];
+    });
+
+    render(
+      <TicketInfo
+        id="ticket-info"
+        ticket={baseTicket}
+        conversations={[]}
+        statusOptions={[]}
+        agentOptions={[]}
+        boardOptions={[
+          { value: 'board-a', label: 'Board A' },
+          { value: 'board-b', label: 'Board B' },
+        ]}
+        priorityOptions={[{ value: 'priority-1', label: 'Priority 1' }]}
+        onSelectChange={vi.fn()}
+        onSaveChanges={vi.fn().mockResolvedValue(true)}
+        responseStateTrackingEnabled={false}
+      />
+    );
+
+    await waitFor(() => {
+      expect(getTicketStatusesMock).toHaveBeenCalledWith('board-a');
+    });
+
+    const [statusSelect] = screen.getAllByRole('combobox');
+    const optionLabels = Array.from(statusSelect.querySelectorAll('option')).map((option) => option.textContent);
+
+    expect(optionLabels).toContain('Board A Default');
+    expect(optionLabels).toContain('Board A Closed');
+    expect(optionLabels).not.toContain('Board B Default');
+  });
+
+  it('T028: disables the status picker when no board is selected', async () => {
+    render(
+      <TicketInfo
+        id="ticket-info"
+        ticket={{ ...baseTicket, board_id: null, status_id: null }}
+        conversations={[]}
+        statusOptions={[]}
+        agentOptions={[]}
+        boardOptions={[{ value: 'board-a', label: 'Board A' }]}
+        priorityOptions={[{ value: 'priority-1', label: 'Priority 1' }]}
+        onSelectChange={vi.fn()}
+        onSaveChanges={vi.fn().mockResolvedValue(true)}
+        responseStateTrackingEnabled={false}
+      />
+    );
+
+    const [statusSelect] = screen.getAllByRole('combobox');
+
+    await waitFor(() => {
+      expect(statusSelect).toBeDisabled();
+    });
+    expect(getTicketStatusesMock).not.toHaveBeenCalled();
+  });
+
+  it('T030: reloads board-owned status options when the selected board changes', async () => {
+    getTicketStatusesMock.mockImplementation(async (boardId: string) => {
+      if (boardId === 'board-a') {
+        return [{ status_id: 'status-a', name: 'Board A Default', is_closed: false }];
+      }
+
+      return [
+        { status_id: 'status-b', name: 'Board B Default', is_closed: false },
+        { status_id: 'status-b-waiting', name: 'Board B Waiting', is_closed: false },
+      ];
+    });
+
+    render(
+      <TicketInfo
+        id="ticket-info"
+        ticket={baseTicket}
+        conversations={[]}
+        statusOptions={[]}
+        agentOptions={[]}
+        boardOptions={[
+          { value: 'board-a', label: 'Board A' },
+          { value: 'board-b', label: 'Board B' },
+        ]}
+        priorityOptions={[{ value: 'priority-1', label: 'Priority 1' }]}
+        onSelectChange={vi.fn()}
+        onSaveChanges={vi.fn().mockResolvedValue(true)}
+        responseStateTrackingEnabled={false}
+      />
+    );
+
+    const [statusSelect, boardSelect] = screen.getAllByRole('combobox');
+
+    await waitFor(() => {
+      expect(getTicketStatusesMock).toHaveBeenCalledWith('board-a');
+    });
+
+    fireEvent.change(boardSelect, { target: { value: 'board-b' } });
+
+    await waitFor(() => {
+      expect(getTicketStatusesMock).toHaveBeenCalledWith('board-b');
+    });
+
+    const optionLabels = Array.from(statusSelect.querySelectorAll('option')).map((option) => option.textContent);
+    expect(optionLabels).toContain('Board B Default');
+    expect(optionLabels).toContain('Board B Waiting');
+    expect(optionLabels).not.toContain('Board A Default');
+  });
+
   it('clears the current status and blocks save until a destination-board status is selected', async () => {
+    getTicketStatusesMock.mockImplementation(async (boardId: string) => {
+      if (boardId === 'board-a') {
+        return [{ status_id: 'status-a', name: 'Board A Default', is_closed: false }];
+      }
+
+      return [{ status_id: 'status-b', name: 'Board B Default', is_closed: false }];
+    });
     const onSaveChanges = vi.fn().mockResolvedValue(true);
 
     render(
       <TicketInfo
         id="ticket-info"
-        ticket={{
-          ticket_id: 'ticket-1',
-          ticket_number: 'T-1001',
-          title: 'Board-specific status test',
-          status_id: 'status-a',
-          board_id: 'board-a',
-          assigned_to: null,
-          category_id: null,
-          subcategory_id: null,
-          priority_id: 'priority-1',
-          due_date: null,
-          response_state: null,
-          attributes: { description: '' },
-          sla_policy_id: null,
-          sla_paused_at: null,
-          sla_response_at: null,
-          sla_response_due_at: null,
-          sla_resolution_at: null,
-          sla_resolution_due_at: null,
-          sla_started_at: null,
-          entered_at: new Date('2026-03-14T10:00:00.000Z').toISOString(),
-        } as any}
+        ticket={baseTicket}
         conversations={[]}
-        statusOptions={[
-          { value: 'status-a', label: 'Board A Default' },
-          { value: 'status-b', label: 'Board B Default' },
-        ]}
+        statusOptions={[]}
         agentOptions={[]}
         boardOptions={[
           { value: 'board-a', label: 'Board A' },
@@ -217,12 +347,16 @@ describe('TicketInfo board change status reselection', () => {
     const [statusSelect, boardSelect] = screen.getAllByRole('combobox');
     const saveButton = screen.getByTestId('ticket-info-save-changes-btn');
 
+    await waitFor(() => {
+      expect(getTicketStatusesMock).toHaveBeenCalledWith('board-a');
+    });
     expect(statusSelect).toHaveValue('status-a');
     expect(saveButton).not.toBeDisabled();
 
     fireEvent.change(boardSelect, { target: { value: 'board-b' } });
 
     await waitFor(() => {
+      expect(getTicketStatusesMock).toHaveBeenCalledWith('board-b');
       expect(statusSelect).toHaveValue('');
     });
     expect(screen.getByText('Select a status for the new board before saving.')).toBeInTheDocument();

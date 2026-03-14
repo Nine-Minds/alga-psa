@@ -43,6 +43,7 @@ import type { ITeam } from '@alga-psa/types';
 import { useSession } from 'next-auth/react';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../lib/ticketRichText';
 import { useTicketRichTextUploadSession } from './useTicketRichTextUploadSession';
+import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 
 
 interface TicketInfoProps {
@@ -259,6 +260,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
   // Track loading state for board config
   const [isLoadingBoardConfig, setIsLoadingBoardConfig] = useState(false);
+  const [isLoadingStatusOptions, setIsLoadingStatusOptions] = useState(false);
+  const [boardScopedStatusOptions, setBoardScopedStatusOptions] = useState(statusOptions);
   const fetchingBoardIdRef = useRef<string | null>(null);
   const saveSuccessTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -294,6 +297,48 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     };
     fetchAvatars();
   }, [additionalAgents, ticket.tenant]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadBoardStatuses = async () => {
+      if (!effectiveBoardId) {
+        setBoardScopedStatusOptions([]);
+        setIsLoadingStatusOptions(false);
+        return;
+      }
+
+      setIsLoadingStatusOptions(true);
+      try {
+        const statuses = await getTicketStatuses(effectiveBoardId);
+        if (!isMounted) {
+          return;
+        }
+
+        setBoardScopedStatusOptions(
+          statuses.map((status) => ({
+            value: status.status_id,
+            label: status.name ?? '',
+          }))
+        );
+      } catch (error) {
+        console.error('Error loading board ticket statuses:', error);
+        if (isMounted) {
+          setBoardScopedStatusOptions([]);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingStatusOptions(false);
+        }
+      }
+    };
+
+    loadBoardStatuses();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [effectiveBoardId]);
 
   // Fetch team avatar
   useEffect(() => {
@@ -892,11 +937,11 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               <h5 className="font-bold mb-2">Status</h5>
               <CustomSelect
                 value={pendingStatusValue}
-                options={statusOptions}
+                options={boardScopedStatusOptions}
                 onValueChange={(value) => handlePendingChange('status_id', value)}
                 customStyles={customStyles}
                 className="!w-fit"
-                disabled={workflowLocked}
+                disabled={workflowLocked || !effectiveBoardId || isLoadingStatusOptions}
               />
               {requiresDestinationStatusSelection && (
                 <p className="mt-2 text-sm text-amber-700">

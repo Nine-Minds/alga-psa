@@ -158,25 +158,25 @@
   {
     "id": "T027",
     "description": "Component test: board-dependent ticket status picker loads options for the selected board only.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022"]
   },
   {
     "id": "T028",
     "description": "Component test: board-dependent ticket status picker is empty or disabled when no board is selected.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022", "F023"]
   },
   {
     "id": "T029",
     "description": "UI integration: ticket create flow does not auto-populate a status until a board is selected and then chooses that board's default status only.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   },
   {
     "id": "T030",
     "description": "UI integration: ticket edit flow reloads board-owned statuses when board changes and never shows statuses from other boards.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {

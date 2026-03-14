@@ -33,7 +33,7 @@ export const getStatuses = withAuth(async (_user, { tenant }, type?: ItemType) =
   }
 });
 
-export const getTicketStatuses = withAuth(async (_user, { tenant }) => {
+export const getTicketStatuses = withAuth(async (_user, { tenant }, boardId?: string | null) => {
   try {
     // Get the database connection with tenant
     const {knex: db} = await createTenantKnex();
@@ -44,6 +44,11 @@ export const getTicketStatuses = withAuth(async (_user, { tenant }) => {
         .where({
           tenant,
           status_type: 'ticket' as ItemType
+        })
+        .modify((queryBuilder) => {
+          if (boardId) {
+            queryBuilder.andWhere({ board_id: boardId });
+          }
         })
         .select('*')
         .orderBy('order_number');

@@ -124,6 +124,13 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `server/src/components/settings/general/BoardsSettings.copyStatuses.test.tsx` now covers create-time lifecycle validation and board-edit status loading.
   - `server/src/components/settings/general/StatusSettings.ticketStatusesRetired.test.tsx` verifies the central status surface is informational only.
   - `packages/tickets/src/actions/board-actions/boardTicketStatusActions.test.ts` verifies board-local create/update/delete/default rules and duplicate-name scoping.
+- (2026-03-14) Completed `F022`/`F023`/`F024` by making ticket status options board-dependent in both create and edit ticket flows:
+  - `packages/reference-data/src/actions/status-actions/statusActions.ts` now accepts an optional `boardId` for ticket-status lookups.
+  - `packages/tickets/src/components/QuickAddTicket.tsx` now leaves status options empty until a board is chosen, then fetches that board's statuses and selects only that board's default.
+  - `packages/tickets/src/components/ticket/TicketInfo.tsx` now reloads status options from the currently selected board and disables the picker when no board is in scope.
+- (2026-03-14) Completed `T027`/`T028`/`T029`/`T030` with focused picker coverage:
+  - `packages/tickets/src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx` now verifies board-scoped option loading, empty/disabled state with no board, and board-change option reloading.
+  - `packages/tickets/src/components/__tests__/QuickAddTicket.boardScopedStatuses.test.tsx` verifies create flow status pickers stay empty until a board is selected and then choose that board's default.
 
 ## Commands / Runbooks
 
@@ -165,6 +172,11 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd packages/tickets && npx vitest run src/actions/board-actions/boardTicketStatusActions.test.ts --config vitest.config.ts`
   - `cd server && npx vitest run --coverage.enabled false src/components/settings/general/BoardsSettings.copyStatuses.test.tsx src/components/settings/general/StatusSettings.ticketStatusesRetired.test.tsx --config vitest.config.ts`
   - `cd server && npx vitest run --coverage.enabled false src/test/integration/boardCopyTicketStatuses.integration.test.ts --config vitest.config.ts`
+- (2026-03-14) Validate board-dependent ticket status pickers:
+  - `cd packages/tickets && npx vitest run src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx src/components/__tests__/QuickAddTicket.boardScopedStatuses.test.tsx --config vitest.config.ts`
+- (2026-03-14) Legacy Quick Add regression note:
+  - `cd packages/tickets && npx vitest run src/components/__tests__/ticket-inline-add-prefill.test.tsx --config vitest.config.ts`
+  - Current failures in that broader suite are mock-assumption mismatches around board-first status loading and unrelated quick-add helper behavior; they are not yet curated as plan items in this pass.
 
 ## Links / References
 
@@ -182,6 +194,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Board-local ticket status action tests: `packages/tickets/src/actions/board-actions/boardTicketStatusActions.test.ts`
 - Retired central ticket status surface: `server/src/components/settings/general/StatusSettings.tsx`
 - Retired central ticket status test: `server/src/components/settings/general/StatusSettings.ticketStatusesRetired.test.tsx`
+- Board-scoped status action lookup: `packages/reference-data/src/actions/status-actions/statusActions.ts`
+- Quick Add board-scoped status test: `packages/tickets/src/components/__tests__/QuickAddTicket.boardScopedStatuses.test.tsx`
+- Ticket edit board-scoped status test: `packages/tickets/src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx`
 - Ticket model default status helper: `shared/models/ticketModel.ts`
 - Ticket create board/status validation integration: `server/src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts`
 - Ticket API service: `server/src/lib/api/services/TicketService.ts`
