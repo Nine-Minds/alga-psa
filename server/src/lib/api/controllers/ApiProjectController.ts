@@ -267,6 +267,72 @@ export class ApiProjectController extends ApiBaseController {
   }
 
   /**
+   * Get project task status mappings
+   */
+  getTaskStatusMappings() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiKey = req.headers.get('x-api-key');
+
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+
+        if (!user) {
+          throw new UnauthorizedError('User not found');
+        }
+
+        const apiRequest = req as ApiRequest;
+        apiRequest.context = {
+          userId: keyRecord.user_id,
+          tenant: keyRecord.tenant,
+          user
+        };
+
+        const url = new URL(req.url);
+        const pathParts = url.pathname.split('/');
+        const projectsIndex = pathParts.findIndex(part => part === 'projects');
+        const projectId = pathParts[projectsIndex + 1];
+
+        return await runWithTenant(tenantId!, async () => {
+          const knex = await getConnection(tenantId!);
+          const hasAccess = await hasPermission(user, 'project', 'read', knex);
+          if (!hasAccess) {
+            throw new ForbiddenError('Permission denied: Cannot read project');
+          }
+
+          const mappings = await this.projectService.getProjectTaskStatusMappings(
+            projectId,
+            apiRequest.context!
+          );
+
+          return createSuccessResponse(mappings);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
    * Get project tickets
    */
   getTickets() {
