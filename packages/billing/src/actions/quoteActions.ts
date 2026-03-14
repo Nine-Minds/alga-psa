@@ -3,12 +3,15 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { TenantEmailService } from '@alga-psa/email';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { IQuote, IQuoteItem, IQuoteListItem, PaginatedResult } from '@alga-psa/types';
 import Quote, { type QuoteListOptions } from '../models/quote';
+import QuoteActivity from '../models/quoteActivity';
 import QuoteItem from '../models/quoteItem';
 import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
+import { createQuotePDFGenerationService } from '../services';
 
 type CreateQuoteInput = Omit<
   IQuote,
@@ -39,6 +42,12 @@ type CreateQuoteItemInput = Omit<
 > & Partial<Pick<IQuoteItem, 'display_order'>>;
 
 type UpdateQuoteItemInput = Partial<IQuoteItem>;
+
+interface SendQuoteInput {
+  email_addresses?: string[];
+  subject?: string;
+  message?: string;
+}
 
 const requireBillingCreatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing', 'create')) {
@@ -365,4 +374,124 @@ export const listQuoteVersions = withAuth(async (
 
   const { knex } = await createTenantKnex();
   return await Quote.listVersions(knex, tenant, quoteId);
+});
+
+export const sendQuote = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string,
+  input: SendQuoteInput = {}
+): Promise<IQuote | ActionPermissionError> => {
+  const denied = await requireBillingUpdatePermission(user);
+  if (denied) {
+    return denied;
+  }
+
+  const { knex } = await createTenantKnex();
+  const quote = await Quote.getById(knex, tenant, quoteId);
+
+  if (!quote) {
+    throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
+  }
+
+  if (quote.is_template) {
+    throw new Error('Quote templates cannot be sent to clients');
+  }
+
+  if (quote.status !== 'draft' && quote.status !== ('approved' as any)) {
+    throw new Error('Only draft or approved quotes can be sent');
+  }
+
+  const [contactRecipient, clientRecipient, tenantRecord] = await Promise.all([
+    quote.contact_id
+      ? knex('contacts')
+        .select('email')
+        .where({ tenant, contact_name_id: quote.contact_id })
+        .first<{ email?: string | null }>()
+      : Promise.resolve(null),
+    quote.client_id
+      ? knex('clients')
+        .select('billing_email')
+        .where({ tenant, client_id: quote.client_id })
+        .first<{ billing_email?: string | null }>()
+      : Promise.resolve(null),
+    knex('tenants').select('client_name').where({ tenant }).first<{ client_name?: string | null }>(),
+  ]);
+
+  const recipients = Array.from(
+    new Set(
+      [
+        ...(input.email_addresses ?? []),
+        contactRecipient?.email ?? '',
+        clientRecipient?.billing_email ?? '',
+      ]
+        .map((email) => email.trim())
+        .filter((email) => email.length > 0)
+    )
+  );
+
+  if (recipients.length === 0) {
+    throw new Error('At least one recipient email address is required to send a quote');
+  }
+
+  const pdfBuffer = await createQuotePDFGenerationService(tenant).generatePDF({ quoteId });
+  const companyName = tenantRecord?.client_name?.trim() || 'Your Company';
+  const resolvedQuoteNumber = quote.quote_number ?? quote.quote_id;
+  const customMessage = input.message?.trim();
+  const subject = input.subject?.trim() || `Quote ${resolvedQuoteNumber} from ${companyName}`;
+  const html = [
+    '<p>Hello,</p>',
+    `<p>Please find quote <strong>${resolvedQuoteNumber}</strong> attached.</p>`,
+    customMessage ? `<p>${customMessage}</p>` : '',
+    `<p>Thank you,<br />${companyName}</p>`,
+  ].join('');
+  const text = [
+    'Hello,',
+    '',
+    `Please find quote ${resolvedQuoteNumber} attached.`,
+    customMessage ? `\n${customMessage}\n` : '',
+    `Thank you,\n${companyName}`,
+  ].join('\n');
+
+  const emailResult = await TenantEmailService.getInstance(tenant).sendEmail({
+    tenantId: tenant,
+    to: recipients,
+    subject,
+    html,
+    text,
+    attachments: [
+      {
+        filename: `Quote_${resolvedQuoteNumber}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf',
+      },
+    ],
+    entityType: 'quote',
+    entityId: quoteId,
+    contactId: quote.contact_id ?? undefined,
+    userId: getActorUserId(user) ?? undefined,
+  });
+
+  if (!emailResult.success) {
+    throw new Error(emailResult.error || 'Failed to send quote email');
+  }
+
+  await Quote.update(knex, tenant, quoteId, {
+    status: 'sent',
+    sent_at: new Date().toISOString(),
+    updated_by: getActorUserId(user),
+  });
+
+  await QuoteActivity.create(knex, tenant, {
+    quote_id: quoteId,
+    activity_type: 'sent',
+    description: `Quote sent to ${recipients.join(', ')}`,
+    performed_by: getActorUserId(user),
+    metadata: {
+      recipients,
+      message_id: emailResult.messageId ?? null,
+    },
+  });
+
+  return await Quote.getById(knex, tenant, quoteId) as IQuote;
 });

@@ -703,7 +703,7 @@
   {
     "id": "F084",
     "description": "P4: Server action — sendQuote: validate state, generate PDF, send email to multiple addresses (array), update sent_at and status",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P4-FR1"
     ]
