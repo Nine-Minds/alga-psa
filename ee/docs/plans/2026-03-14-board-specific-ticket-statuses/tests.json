@@ -302,13 +302,13 @@
   {
     "id": "T051",
     "description": "Onboarding integration: onboarding-created boards receive board-owned ticket statuses and a valid board-local default status.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F037"]
   },
   {
     "id": "T052",
     "description": "Import integration: board import/status seed flows create ticket statuses scoped to the target board.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F037"]
   },
   {

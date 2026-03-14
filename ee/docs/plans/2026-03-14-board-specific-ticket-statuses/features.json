@@ -218,7 +218,7 @@
   {
     "id": "F037",
     "description": "Update onboarding and import flows so new ticket statuses are created as board-owned records.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR8"]
   },
   {

@@ -26,7 +26,8 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { createBoard, updateBoard } from '@alga-psa/tickets/actions';
 import { createCategory } from '@alga-psa/tickets/actions';
-import { createStatus, createPriority } from '@alga-psa/reference-data/actions';
+import { createBoardTicketStatus, updateBoardTicketStatus } from '@alga-psa/tickets/actions';
+import { createPriority } from '@alga-psa/reference-data/actions';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
@@ -302,7 +303,16 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
 
   const loadAvailableStatuses = async () => {
     try {
-      const statuses = await getAvailableReferenceData('statuses', { item_type: 'ticket' });
+      const activeBoardId = data.boardId || importedBoards[0]?.board_id;
+      if (!activeBoardId) {
+        setAvailableStatuses([]);
+        return;
+      }
+
+      const statuses = await getAvailableReferenceData('statuses', {
+        item_type: 'ticket',
+        board_id: activeBoardId
+      });
       setAvailableStatuses(statuses);
     } catch (error) {
       console.error('Error loading available statuses:', error);
@@ -488,11 +498,15 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   };
 
   const handleImportStatuses = async () => {
-    if (selectedStatuses.length === 0) return;
+    const activeBoardId = data.boardId || importedBoards[0]?.board_id;
+    if (selectedStatuses.length === 0 || !activeBoardId) return;
     
     setIsImporting(prev => ({ ...prev, statuses: true }));
     try {
-      const result = await importReferenceData('statuses', selectedStatuses, { item_type: 'ticket' });
+      const result = await importReferenceData('statuses', selectedStatuses, {
+        item_type: 'ticket',
+        board_id: activeBoardId
+      });
       setImportResults(prev => ({ ...prev, statuses: { 
         imported: result.imported?.length || 0, 
         skipped: result.skipped?.length || 0 
@@ -510,9 +524,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         if (!hasDefaultStatus && !existingHasDefault) {
           const firstOpenStatus = result.imported.find((s: any) => !s.is_closed);
           if (firstOpenStatus) {
-            // Update the status to be default
-            const { updateStatus } = await import('@alga-psa/reference-data/actions');
-            await updateStatus(firstOpenStatus.status_id, { is_default: true });
+            await updateBoardTicketStatus(activeBoardId, firstOpenStatus.status_id, { is_default: true });
             firstOpenStatus.is_default = true;
             toast.success('First open status automatically set as default', {
               duration: 3000
@@ -1062,8 +1074,12 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       }
       
       // Update status to be default (this will automatically unset others)
-      const { updateStatus } = await import('@alga-psa/reference-data/actions');
-      await updateStatus(statusId, { is_default: true });
+      const boardIdForStatus = status.board_id || data.boardId || importedBoards[0]?.board_id;
+      if (!boardIdForStatus) {
+        toast.error('Select or create a board before changing status defaults.');
+        return;
+      }
+      await updateBoardTicketStatus(boardIdForStatus, statusId, { is_default: true });
       
       // Refresh data from server to get updated default states
       await loadExistingData();
@@ -2161,6 +2177,12 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       }
                       
                       try {
+                        const activeBoardId = data.boardId || importedBoards[0]?.board_id;
+                        if (!activeBoardId) {
+                          toast.error('Select or create a board before adding statuses.');
+                          return;
+                        }
+
                         // Calculate the next order number if not provided or if already in use
                         let orderNumber = statusForm.displayOrder;
                         const maxOrder = importedStatuses.reduce((max, status) => 
@@ -2182,11 +2204,10 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         const isDefault = !statusForm.isClosed && !hasDefaultOpenStatus;
                         
                         // Create actual status in database
-                        const createdStatus = await createStatus({
+                        const createdStatus = await createBoardTicketStatus(activeBoardId, {
                           name: statusForm.name,
                           is_closed: statusForm.isClosed,
                           is_default: isDefault,
-                          status_type: 'ticket',
                           order_number: orderNumber
                         });
                         
