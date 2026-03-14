@@ -17,6 +17,7 @@ describe('Documentation coverage', () => {
     expect(readme).toContain('## Credential Setup');
     expect(readme).toContain('## Operation Matrix');
     expect(readme).toContain('## Ticket Field Requirements');
+    expect(readme).toContain('## Contact Field Requirements');
     expect(readme).toContain('baseUrl');
     expect(readme).toContain('apiKey');
   });
@@ -92,5 +93,57 @@ describe('Documentation coverage', () => {
         (node) => node.parameters?.ticketOperation === 'listComments',
       ),
     ).toBe(true);
+  });
+
+  it('T034: README operation matrix includes contact CRUD operations', () => {
+    const readme = read('README.md');
+
+    expect(readme).toContain('| Contact | Create, Get, List, Update, Delete |');
+  });
+
+  it('T035: README describes contact field scope, lookup behavior, and list/delete output expectations', () => {
+    const readme = read('README.md');
+
+    expect(readme).toContain('full_name');
+    expect(readme).toContain('phone_numbers');
+    expect(readme).toContain('From List');
+    expect(readme).toContain('By ID');
+    expect(readme).toContain('Contact -> List');
+    expect(readme).toContain('Contact -> Delete');
+  });
+
+  it('T036: contact example workflow is present and referenced by the README', () => {
+    const readme = read('README.md');
+    const examplePath = path.join(packageRoot, 'examples/create-update-contact.workflow.json');
+
+    expect(readme).toContain('examples/create-update-contact.workflow.json');
+    expect(existsSync(examplePath)).toBe(true);
+
+    const workflow = JSON.parse(readFileSync(examplePath, 'utf8')) as {
+      nodes: Array<{ parameters?: Record<string, unknown> }>;
+    };
+
+    expect(
+      workflow.nodes.some(
+        (node) => node.parameters?.contactOperation === 'create',
+      ),
+    ).toBe(true);
+    expect(
+      workflow.nodes.some(
+        (node) => node.parameters?.contactOperation === 'update',
+      ),
+    ).toBe(true);
+  });
+
+  it('T037: release notes mention the contact CRUD expansion and its first-pass scope', () => {
+    const releaseNotes = read('RELEASE_NOTES.md');
+
+    expect(releaseNotes).toContain('Contact');
+    expect(releaseNotes).toContain('Create');
+    expect(releaseNotes).toContain('Get');
+    expect(releaseNotes).toContain('List');
+    expect(releaseNotes).toContain('Update');
+    expect(releaseNotes).toContain('Delete');
+    expect(releaseNotes).toContain('phone_numbers');
   });
 });

@@ -12,18 +12,19 @@ function getProperty(node: AlgaPsa, name: string) {
 }
 
 describe('Node description and load options', () => {
-  it('T006: resource selector includes Ticket, Client, Board, Status, and Priority', () => {
+  it('T001: resource selector includes Ticket, Contact, Client, Board, Status, and Priority', () => {
     const node = new AlgaPsa();
     const resource = getProperty(node, 'resource');
     const resourceValues = resource.options?.map((option) => option.value);
 
-    expect(resourceValues).toEqual(['ticket', 'client', 'board', 'status', 'priority']);
+    expect(resourceValues).toEqual(['ticket', 'contact', 'client', 'board', 'status', 'priority']);
   });
 
-  it('T007: operation selectors expose only valid operations per resource', () => {
+  it('T002: operation selectors expose only valid operations per resource', () => {
     const node = new AlgaPsa();
 
     const ticketOperations = getProperty(node, 'ticketOperation').options?.map((o) => o.value);
+    const contactOperations = getProperty(node, 'contactOperation').options?.map((o) => o.value);
     const clientOperations = getProperty(node, 'clientOperation').options?.map((o) => o.value);
     const boardOperations = getProperty(node, 'boardOperation').options?.map((o) => o.value);
     const statusOperations = getProperty(node, 'statusOperation').options?.map((o) => o.value);
@@ -41,10 +42,17 @@ describe('Node description and load options', () => {
       'updateAssignment',
       'delete',
     ]);
+    expect(contactOperations).toEqual(['create', 'get', 'list', 'update', 'delete']);
     expect(clientOperations).toEqual(['list']);
     expect(boardOperations).toEqual(['list']);
     expect(statusOperations).toEqual(['list']);
     expect(priorityOperations).toEqual(['list']);
+  });
+
+  it('T003: node subtitle includes contact operations in the selected operation fallback chain', () => {
+    const node = new AlgaPsa();
+
+    expect(node.description.subtitle).toContain('$parameter["contactOperation"]');
   });
 
   it('T036: client load-options maps API records to label/value list', async () => {
@@ -139,6 +147,93 @@ describe('Node description and load options', () => {
     for (const requiredName of createRequiredNames) {
       expect(() => getProperty(node, requiredName)).not.toThrow();
     }
+  });
+
+  it('T004: contact create keeps full_name as a required top-level field', () => {
+    const node = new AlgaPsa();
+    const fullName = getProperty(node, 'full_name');
+    const createAdditional = getProperty(node, 'contactCreateAdditionalFields');
+    const additionalNames = (createAdditional.options ?? []).map((field) => field.name);
+
+    expect(fullName.required).toBe(true);
+    expect(fullName.displayOptions?.show).toEqual({
+      resource: ['contact'],
+      contactOperation: ['create'],
+    });
+    expect(additionalNames).not.toContain('full_name');
+  });
+
+  it('T005: contact create additional fields expose the supported first-pass contact fields', () => {
+    const node = new AlgaPsa();
+    const createAdditional = getProperty(node, 'contactCreateAdditionalFields');
+    const additionalNames = (createAdditional.options ?? []).map((field) => field.name);
+
+    expect(additionalNames).toEqual([
+      'email',
+      'client_id',
+      'role',
+      'notes',
+      'is_inactive',
+      'phone_numbers',
+    ]);
+  });
+
+  it('T006: contact update additional fields expose the supported first-pass contact fields', () => {
+    const node = new AlgaPsa();
+    const updateAdditional = getProperty(node, 'contactUpdateAdditionalFields');
+    const additionalNames = (updateAdditional.options ?? []).map((field) => field.name);
+
+    expect(additionalNames).toEqual([
+      'full_name',
+      'email',
+      'client_id',
+      'role',
+      'notes',
+      'is_inactive',
+      'phone_numbers',
+    ]);
+  });
+
+  it('T007: contactId is shown only for contact get, update, and delete operations', () => {
+    const node = new AlgaPsa();
+    const contactId = getProperty(node, 'contactId');
+
+    expect(contactId.displayOptions?.show).toEqual({
+      resource: ['contact'],
+      contactOperation: ['get', 'update', 'delete'],
+    });
+  });
+
+  it('T008: contact list inputs expose page, limit, and the agreed core filters', () => {
+    const node = new AlgaPsa();
+    const page = getProperty(node, 'contactPage');
+    const limit = getProperty(node, 'contactLimit');
+    const filters = getProperty(node, 'contactListFilters');
+    const filterNames = (filters.options ?? []).map((field) => field.name);
+
+    expect(page.displayName).toBe('Page');
+    expect(limit.displayName).toBe('Limit');
+    expect(filterNames).toEqual(['client_id', 'search_term', 'is_inactive']);
+  });
+
+  it('T009: contact create client_id supports both lookup and manual UUID entry', () => {
+    const node = new AlgaPsa();
+    const createAdditional = getProperty(node, 'contactCreateAdditionalFields');
+    const clientField = (createAdditional.options ?? []).find((field) => field.name === 'client_id');
+    const modes = clientField?.modes?.map((mode) => mode.name);
+
+    expect(modes).toEqual(['list', 'id']);
+    expect(clientField?.modes?.[0].typeOptions?.searchListMethod).toBe('searchClients');
+  });
+
+  it('T010: contact update client_id supports both lookup and manual UUID entry', () => {
+    const node = new AlgaPsa();
+    const updateAdditional = getProperty(node, 'contactUpdateAdditionalFields');
+    const clientField = (updateAdditional.options ?? []).find((field) => field.name === 'client_id');
+    const modes = clientField?.modes?.map((mode) => mode.name);
+
+    expect(modes).toEqual(['list', 'id']);
+    expect(clientField?.modes?.[0].typeOptions?.searchListMethod).toBe('searchClients');
   });
 
   it('T042: status helper exposes explicit status-type filter options', () => {
