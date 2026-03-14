@@ -179,7 +179,7 @@ async function createFixture(): Promise<TicketCreateFixture> {
   };
 }
 
-describe('Ticket create board/status validation integration', () => {
+describe('Ticket board/status validation integration', () => {
   beforeAll(async () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     process.env.DB_PORT = process.env.DB_PORT || '5432';
@@ -247,5 +247,44 @@ describe('Ticket create board/status validation integration', () => {
     expect(createdTickets).toHaveLength(1);
     expect(createdTickets[0]?.status_id).toBe(fixture.boardAStatusId);
     expect(createdTickets[0]?.board_id).toBe(fixture.boardAId);
+  }, HOOK_TIMEOUT);
+
+  it('T016: ticket update rejects incompatible board/status combinations and preserves the prior status on failure', async () => {
+    const fixture = await createFixture();
+    let ticketId: string | undefined;
+
+    await db.transaction(async (trx) => {
+      const created = await TicketModel.createTicket(
+        {
+          title: 'Ticket to update',
+          description: 'Created before invalid update',
+          client_id: fixture.clientId,
+          board_id: fixture.boardAId,
+          status_id: fixture.boardAStatusId,
+          priority_id: fixture.priorityId,
+          entered_by: fixture.userId,
+        },
+        fixture.tenantId,
+        trx,
+      );
+
+      ticketId = created.ticket_id;
+
+      await expect(
+        TicketModel.updateTicket(
+          created.ticket_id,
+          { status_id: fixture.boardBStatusId },
+          fixture.tenantId,
+          trx,
+        )
+      ).rejects.toThrow('selected status does not belong to the selected board');
+    });
+
+    const persistedTicket = await db('tickets')
+      .where({ tenant: fixture.tenantId, ticket_id: ticketId })
+      .first('status_id', 'board_id');
+
+    expect(persistedTicket?.status_id).toBe(fixture.boardAStatusId);
+    expect(persistedTicket?.board_id).toBe(fixture.boardAId);
   }, HOOK_TIMEOUT);
 });

@@ -888,6 +888,25 @@ export class TicketModel {
 
     // Clean up the data before update
     const updateData = cleanNullableFields({ ...validatedData });
+    const effectiveBoardId = updateData.board_id || currentTicket.board_id;
+
+    if (updateData.status_id) {
+      const statusResult = effectiveBoardId
+        ? await this.validateStatusBelongsToBoard(
+          updateData.status_id,
+          effectiveBoardId,
+          tenant,
+          trx
+        )
+        : {
+          valid: false,
+          error: 'Invalid status: board_id is required when selecting a ticket status'
+        };
+
+      if (!statusResult.valid && statusResult.error) {
+        throw new Error(statusResult.error);
+      }
+    }
 
     // Validate location belongs to the client if provided
     if (!validationOptions.skipLocationValidation && 'location_id' in updateData && updateData.location_id) {

@@ -54,6 +54,38 @@ function createStatusesTrx(statusRows: StatusRow[]) {
   return trx;
 }
 
+function createUpdateTicketTrx(options: {
+  tenant: string;
+  currentTicket: { ticket_id: string; board_id: string; status_id: string; client_id?: string | null; category_id?: string | null };
+  statusRows: StatusRow[];
+}) {
+  const updates: any[] = [];
+
+  const trx: any = vi.fn((table: string) => {
+    if (table === 'statuses') {
+      return createStatusesTrx(options.statusRows)('statuses');
+    }
+
+    if (table === 'tickets') {
+      const where = vi.fn(() => ({
+        first: vi.fn(async () => options.currentTicket),
+        update: vi.fn((data: Record<string, unknown>) => {
+          updates.push(data);
+          return {
+            returning: vi.fn(async () => [{ ...options.currentTicket, ...data }]),
+          };
+        }),
+      }));
+
+      return { where };
+    }
+
+    throw new Error(`Unexpected table in update board-status validation test: ${table}`);
+  });
+
+  return { trx, updates };
+}
+
 describe('TicketModel board-scoped status helpers', () => {
   it('T012: getDefaultStatusId returns the default status for the selected board instead of a tenant-global ticket status', async () => {
     const trx = createStatusesTrx([
@@ -112,5 +144,47 @@ describe('TicketModel board-scoped status helpers', () => {
 
     expect(result.valid).toBe(false);
     expect(result.error).toContain('selected status does not belong to the selected board');
+  });
+
+  it('T015: updateTicket rejects a cross-board status when changing status only', async () => {
+    const { trx, updates } = createUpdateTicketTrx({
+      tenant: 'tenant-1',
+      currentTicket: {
+        ticket_id: '11111111-1111-1111-1111-111111111111',
+        board_id: '22222222-2222-2222-2222-222222222222',
+        status_id: '33333333-3333-3333-3333-333333333333',
+        client_id: '44444444-4444-4444-4444-444444444444',
+        category_id: null,
+      },
+      statusRows: [
+        {
+          tenant: 'tenant-1',
+          status_id: '33333333-3333-3333-3333-333333333333',
+          status_type: 'ticket',
+          board_id: '22222222-2222-2222-2222-222222222222',
+          is_default: true,
+          order_number: 10,
+        },
+        {
+          tenant: 'tenant-1',
+          status_id: '55555555-5555-5555-5555-555555555555',
+          status_type: 'ticket',
+          board_id: '66666666-6666-6666-6666-666666666666',
+          is_default: true,
+          order_number: 10,
+        },
+      ],
+    });
+
+    await expect(
+      TicketModel.updateTicket(
+        '11111111-1111-1111-1111-111111111111',
+        { status_id: '55555555-5555-5555-5555-555555555555' },
+        'tenant-1',
+        trx
+      )
+    ).rejects.toThrow('selected status does not belong to the selected board');
+
+    expect(updates).toHaveLength(0);
   });
 });

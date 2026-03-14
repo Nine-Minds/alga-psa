@@ -495,17 +495,22 @@ export class TicketService extends BaseService<ITicket> {
       });
 
       if (cleanedData.status_id && cleanedData.status_id !== currentTicket.status_id) {
-        const status = await trx('statuses')
-          .where({
-            status_id: cleanedData.status_id,
-            tenant: context.tenant,
-            status_type: 'ticket'
-          })
-          .first();
+        const effectiveBoardId = cleanedData.board_id ?? currentTicket.board_id;
+        const statusResult = effectiveBoardId
+          ? await TicketModel.validateStatusBelongsToBoard(
+            cleanedData.status_id,
+            effectiveBoardId,
+            context.tenant,
+            trx
+          )
+          : {
+            valid: false,
+            error: 'Invalid status: board_id is required when selecting a ticket status'
+          };
 
-        if (!status) {
+        if (!statusResult.valid) {
           throw new ValidationError('Validation failed', [
-            { path: ['status_id'], message: 'Status not found' }
+            { path: ['status_id'], message: statusResult.error || 'Status not found' }
           ]);
         }
       }

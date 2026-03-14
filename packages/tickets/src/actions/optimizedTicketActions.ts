@@ -1608,6 +1608,25 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
       }
     }
 
+    if ('status_id' in updateData && updateData.status_id && updateData.status_id !== currentTicket.status_id) {
+      const effectiveBoardId = updateData.board_id || currentTicket.board_id;
+      const statusResult = effectiveBoardId
+        ? await TicketModel.validateStatusBelongsToBoard(
+          updateData.status_id,
+          effectiveBoardId,
+          tenant,
+          trx
+        )
+        : {
+          valid: false,
+          error: 'Invalid status: board_id is required when selecting a ticket status'
+        };
+
+      if (!statusResult.valid && statusResult.error) {
+        throw new Error(statusResult.error);
+      }
+    }
+
     // Get the status before and after update to check for closure
     const oldStatus = await trx('statuses')
       .where({

@@ -53,8 +53,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-14) Current schema still enforced tenant-global ticket status uniqueness before this batch:
   - `server/migrations/202409101116_add_status_constraints.cjs`
   - `packages/types/src/interfaces/status.interface.ts`
-- (2026-03-14) Ticket update validation still remains board-unaware after the shared create-path fix:
+- (2026-03-14) Ticket board-change UX still remains incomplete after the shared update-path validation fix:
   - `shared/models/ticketModel.ts`
+  - `packages/tickets/src/actions/ticketActions.ts`
+  - `packages/tickets/src/actions/optimizedTicketActions.ts`
   - `server/src/lib/api/services/TicketService.ts`
 - (2026-03-14) Board settings and board actions do not yet seed or manage board-local ticket statuses:
   - `packages/tickets/src/actions/board-actions/boardActions.ts`
@@ -94,6 +96,15 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-14) Completed `T014` with DB-backed create-path coverage in `server/src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts`:
   - seeds two boards with distinct board-owned ticket statuses and proves `TicketModel.createTicket(...)` inserts only for the matching board/status pair
   - verifies the cross-board create attempt throws and leaves only the valid ticket row persisted
+  - verified with `cd server && npx vitest run --coverage.enabled false src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts`.
+- (2026-03-14) Completed `F013` by enforcing board/status compatibility on ticket update paths:
+  - `shared/models/ticketModel.ts` now validates update-time `status_id` changes against the effective board for the ticket.
+  - `packages/tickets/src/actions/ticketActions.ts`, `packages/tickets/src/actions/optimizedTicketActions.ts`, and `server/src/lib/api/services/TicketService.ts` now all reject cross-board ticket status updates instead of validating ticket statuses at tenant scope only.
+- (2026-03-14) Completed `T015` in `shared/models/__tests__/ticketModel.boardStatusValidation.test.ts`:
+  - proves `TicketModel.updateTicket(...)` rejects a status-only update when the new status belongs to a different board
+  - verified with `cd shared && npx vitest run models/__tests__/ticketModel.boardStatusValidation.test.ts --config vitest.config.ts`.
+- (2026-03-14) Completed `T016` with DB-backed update coverage in `server/src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts`:
+  - proves `TicketModel.updateTicket(...)` rejects a cross-board status id and leaves the persisted ticket's prior status untouched
   - verified with `cd server && npx vitest run --coverage.enabled false src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts`.
 
 ## Commands / Runbooks

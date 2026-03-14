@@ -86,13 +86,13 @@
   {
     "id": "T015",
     "description": "Unit: ticket update validation rejects cross-board status ids when changing status only.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {
     "id": "T016",
     "description": "DB-backed integration: ticket update rejects incompatible board/status combinations and preserves prior status on failure.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {
