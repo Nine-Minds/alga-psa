@@ -296,6 +296,54 @@ describe('action input editor state', () => {
     expect(state.actionInputFields.find((field) => field.name === 'subject')?.editor).toBeUndefined();
   });
 
+  it('ignores unsupported unified dialog metadata from designer JSON schema fields', () => {
+    const registryWithUnsupportedDialog: WorkflowDesignerActionRegistryItem[] = [
+      {
+        id: 'notes.compose',
+        version: 1,
+        ui: {
+          label: 'Compose Notes',
+          description: 'Compose notes.',
+        },
+        inputSchema: {
+          type: 'object',
+          properties: {
+            notes: {
+              type: 'string',
+              description: 'Long-form notes',
+              'x-workflow-editor': {
+                kind: 'text',
+                inline: { mode: 'textarea' },
+                dialog: { mode: 'picker-browser' as never },
+              },
+            },
+          },
+        },
+        outputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+    ];
+
+    const step: NodeStep = {
+      id: 'step-unsupported-dialog',
+      type: 'action.call',
+      name: 'Compose Notes',
+      config: {
+        actionId: 'notes.compose',
+        version: 1,
+      },
+    };
+
+    const state = buildActionInputEditorState(step, registryWithUnsupportedDialog);
+    expect(state.actionInputFields.find((field) => field.name === 'notes')?.editor).toEqual({
+      kind: 'text',
+      inline: { mode: 'textarea' },
+      dialog: undefined,
+    });
+  });
+
   it('T180: picker metadata reaches the chosen action field editor without changing the persisted inputMapping shape', () => {
     const step: NodeStep = {
       id: 'step-picker-persisted',

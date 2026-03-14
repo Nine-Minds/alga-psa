@@ -15,7 +15,7 @@ export type WorkflowPickerJsonSchemaMetadata = {
 
 export type WorkflowEditorKind = 'text' | 'picker' | 'color' | 'json' | 'custom';
 export type WorkflowEditorInlineMode = 'input' | 'textarea' | 'picker-summary' | 'swatch';
-export type WorkflowEditorDialogMode = 'large-text' | 'picker-browser' | 'custom';
+export type WorkflowEditorDialogMode = 'large-text';
 
 export type WorkflowEditorJsonSchemaMetadata = {
   kind: WorkflowEditorKind;
@@ -33,19 +33,22 @@ export type WorkflowEditorJsonSchemaMetadata = {
   };
 };
 
-type WorkflowJsonSchemaMetadata = WorkflowPickerJsonSchemaMetadata & {
-  description?: string;
+export type WorkflowJsonSchemaMetadata = WorkflowPickerJsonSchemaMetadata & {
   'x-workflow-editor'?: WorkflowEditorJsonSchemaMetadata;
 };
 
-const hasWorkflowJsonSchemaMetadata = (metadata: WorkflowJsonSchemaMetadata): boolean =>
+type WorkflowJsonSchemaDescriptionPayload = WorkflowJsonSchemaMetadata & {
+  description?: string;
+};
+
+const hasWorkflowJsonSchemaMetadata = (metadata: WorkflowJsonSchemaDescriptionPayload): boolean =>
   Object.values(metadata).some((value) => value !== undefined);
 
 export const buildWorkflowJsonDescription = (
   description: string | undefined,
-  metadata: WorkflowPickerJsonSchemaMetadata = {}
+  metadata: WorkflowJsonSchemaMetadata = {}
 ): string => {
-  const payload: WorkflowJsonSchemaMetadata = {
+  const payload: WorkflowJsonSchemaDescriptionPayload = {
     description,
     ...metadata,
   };
@@ -60,7 +63,7 @@ export const buildWorkflowJsonDescription = (
 export const withWorkflowJsonSchemaMetadata = <T extends ZodTypeAny>(
   schema: T,
   description: string,
-  metadata: WorkflowPickerJsonSchemaMetadata = {}
+  metadata: WorkflowJsonSchemaMetadata = {}
 ): T => schema.describe(buildWorkflowJsonDescription(description, metadata)) as T;
 
 export const buildWorkflowJsonSchemaPostProcess = (

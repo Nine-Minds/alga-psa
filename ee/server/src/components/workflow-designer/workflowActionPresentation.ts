@@ -18,7 +18,7 @@ type JsonSchema = {
       mode?: string;
     };
     dialog?: {
-      mode?: string;
+      mode?: 'large-text';
     };
   };
 };

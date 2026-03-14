@@ -12,9 +12,10 @@ export type WorkflowActionInputPickerField = {
   name: string;
   nullable?: boolean;
   editor?: {
-    kind: 'picker';
+    kind: 'text' | 'picker' | 'color' | 'json' | 'custom';
     dependencies?: string[];
     fixedValueHint?: string;
+    allowsDynamicReference?: boolean;
     picker?: {
       resource: string;
     };

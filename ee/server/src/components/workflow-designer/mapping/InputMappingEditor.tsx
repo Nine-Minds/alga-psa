@@ -633,7 +633,7 @@ export interface ActionInputField {
       mode: 'input' | 'textarea' | 'picker-summary' | 'swatch';
     };
     dialog?: {
-      mode: 'large-text' | 'picker-browser' | 'custom';
+      mode: 'large-text';
     };
     dependencies?: string[];
     fixedValueHint?: string;
@@ -1310,13 +1310,6 @@ const parsePrimitiveList = (
   return { values, errors };
 };
 
-const getDialogEditorButtonLabel = (field: ActionInputField): string => {
-  if (getWorkflowFieldEditor(field)?.dialog?.mode === 'picker-browser') {
-    return 'Browse';
-  }
-  return 'Open editor';
-};
-
 const FixedValueEditorShell: React.FC<{
   field: ActionInputField;
   idPrefix: string;
@@ -1362,7 +1355,7 @@ const FixedValueEditorShell: React.FC<{
             className="gap-1"
           >
             <Expand className="h-3.5 w-3.5" />
-            {getDialogEditorButtonLabel(field)}
+            Open editor
           </Button>
         </div>
       </div>

@@ -112,8 +112,6 @@ const WORKFLOW_INLINE_MODES = new Set<NonNullable<WorkflowEditorJsonSchemaMetada
 
 const WORKFLOW_DIALOG_MODES = new Set<NonNullable<WorkflowEditorJsonSchemaMetadata['dialog']>['mode']>([
   'large-text',
-  'picker-browser',
-  'custom',
 ]);
 
 const normalizeWorkflowEditorMetadata = (

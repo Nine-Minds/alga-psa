@@ -131,7 +131,7 @@ describe('workflow event catalog actions', () => {
     });
     createTenantKnexMock.mockResolvedValue({ knex: knexMock, tenant: 'tenant-1' });
 
-    const result = await listEventCatalogCategoriesV2Action({});
+    const result = await listEventCatalogCategoriesV2Action();
 
     expect(result.categories).toEqual(['Automation', 'Surveys', 'Tickets']);
   });
