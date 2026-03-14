@@ -59,7 +59,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'invoice_payment_links', 'invoice_payments', 'invoice_template_assignments',
 
   // Time tracking
-  'time_sheet_comments', 'time_entries', 'time_sheets',
+  'time_sheet_comments', 'time_entry_change_requests', 'time_entries', 'time_sheets',
 
   // Document details
   'document_block_content', 'document_versions', 'document_content',

@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react';
-import { IExtendedWorkItem, IInteraction } from '@alga-psa/types';
+import { IExtendedWorkItem, IInteraction, IScheduleEntry } from '@alga-psa/types';
 import { getWorkItemById } from '@alga-psa/scheduling/actions';
 import { getCurrentUser, getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import { toast } from 'react-hot-toast';
@@ -30,15 +30,7 @@ interface WorkItemDrawerProps {
     onScheduleUpdate: (updated: ScheduleUpdateData) => Promise<void>;
 }
 
-interface ScheduleUpdateData {
-    entry_id: string;
-    title: string;
-    notes: string;
-    scheduled_start: Date;
-    scheduled_end: Date;
-    assigned_user_ids: string[];
-    status: string;
-}
+type ScheduleUpdateData = Omit<IScheduleEntry, 'tenant'> & { updateType?: string };
 
 function LoadingState(): React.JSX.Element {
     return (
