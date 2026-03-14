@@ -14,43 +14,43 @@
   {
     "id": "T003",
     "description": "DB integration: migration clones every current tenant ticket status to every board and preserves metadata fields.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
     "id": "T004",
     "description": "DB integration: cloned board-owned ticket statuses receive fresh status ids and preserve per-board default/open-closed ordering semantics.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003", "F004"]
   },
   {
     "id": "T005",
     "description": "DB integration: migration remap table or remap logic resolves old global ticket status ids to the correct board-owned replacement by board.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {
     "id": "T006",
     "description": "DB integration: ticket rows are rewritten to the board-owned status id for their current board during migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
     "id": "T007",
     "description": "DB integration: inbound ticket defaults are remapped to board-owned ticket status ids using their stored board id.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {
     "id": "T008",
     "description": "DB integration: tenant billing renewal defaults are remapped to board-owned ticket status ids using renewal_ticket_board_id.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
     "id": "T009",
     "description": "DB integration: contract-level renewal overrides are remapped to board-owned ticket status ids using renewal_ticket_board_id.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {

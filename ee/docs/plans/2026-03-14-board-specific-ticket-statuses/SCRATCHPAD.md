@@ -22,6 +22,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-14) `F003`/`F004`/`F005`: keep the legacy tenant-global ticket status rows in place for now and clone from them during migration, because later remap steps still need the old ids to rewrite inbound, billing, and workflow references before the global rows can be retired.
 - (2026-03-14) `F006`/`F007`/`F008`: remap saved status references by joining legacy global ticket statuses to their board-owned clones via `tenant + board_id + status name`. Rationale: the old global status ids remain available during migration, so we can rewrite board-context tables without persisting a separate remap table.
 - (2026-03-14) `T003`/`T004`/`T005`/`T006`: cover the clone/remap migration with a DB-backed integration fixture that seeds one tenant, two boards, two legacy ticket statuses, and board-specific tickets before invoking the migration directly.
+- (2026-03-14) `F006`/`F007`/`F008`: remap inbound defaults, tenant billing renewal defaults, and contract renewal overrides by joining cloned ticket statuses back to the legacy status name within the saved board context.
+- (2026-03-14) `T007`/`T008`/`T009`: cover board-context remaps with a DB-backed integration fixture that runs the clone migration first, then asserts each persisted configuration surface moves from the legacy global status id to the correct board-owned replacement.
 
 ## Discoveries / Constraints
 
@@ -59,6 +61,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `server/src/components/settings/general/BoardsSettings.tsx`
 - (2026-03-14) Local DB-backed integration execution is blocked in this Codex harness:
   - `npx vitest run src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts --coverage=false` fails before test execution because TCP connections to `localhost:5438` are denied with `EPERM`.
+  - `npx vitest run src/test/integration/boardContextTicketStatusReferenceRemap.integration.test.ts --coverage=false` is blocked by the same `localhost:5438` restriction.
   - Direct checks to both `127.0.0.1:55433` and Docker socket access are also denied with `Operation not permitted`, so the new DB integration suite is written but could not be executed here.
 - (2026-03-14) Saved config with explicit board context now has a direct migration path:
   - `inbound_ticket_defaults.board_id + status_id`
@@ -90,6 +93,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-14) Attempt the DB-backed clone/remap migration suite:
   - `cd server && npx vitest run src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts --coverage=false`
   - If local Postgres is available outside Codex, override the port first, e.g. `DB_PORT=55433 ...`, before rerunning.
+- (2026-03-14) Attempt the board-context status-reference remap suite:
+  - `cd server && npx vitest run src/test/integration/boardContextTicketStatusReferenceRemap.integration.test.ts --coverage=false`
+  - Run it after the clone/remap suite or against a schema that already includes `20260314113000_clone_global_ticket_statuses_to_boards.cjs`.
 
 ## Links / References
 
@@ -111,6 +117,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Clone/remap migration: `server/migrations/20260314113000_clone_global_ticket_statuses_to_boards.cjs`
 - Clone/remap DB integration coverage: `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts`
 - Board-context status-reference remap migration: `server/migrations/20260314120000_remap_board_context_ticket_status_references.cjs`
+- Board-context status-reference integration coverage: `server/src/test/integration/boardContextTicketStatusReferenceRemap.integration.test.ts`
 
 ## Open Questions
 

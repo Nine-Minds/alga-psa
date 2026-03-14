@@ -8,7 +8,10 @@ import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
 const require = createRequire(import.meta.url);
 const HOOK_TIMEOUT = 180_000;
-const migration = require(path.resolve(process.cwd(), 'migrations', '20260314113000_clone_global_ticket_statuses_to_boards.cjs'));
+const cloneMigration = require(path.resolve(process.cwd(), 'migrations', '20260314113000_clone_global_ticket_statuses_to_boards.cjs'));
+const boardContextRemapMigration = require(
+  path.resolve(process.cwd(), 'migrations', '20260314120000_remap_board_context_ticket_status_references.cjs')
+);
 
 let db: Knex;
 const tenantsToCleanup = new Set<string>();
@@ -22,6 +25,7 @@ type LegacyFixture = {
     board_id: string;
     original_status_id: string;
   }>;
+  clientId: string;
 };
 
 type ColumnInfoMap = Record<string, unknown>;
@@ -32,6 +36,9 @@ let boardColumns: ColumnInfoMap;
 let clientColumns: ColumnInfoMap;
 let ticketColumns: ColumnInfoMap;
 let statusColumns: ColumnInfoMap;
+let inboundDefaultsColumns: ColumnInfoMap;
+let defaultBillingSettingsColumns: ColumnInfoMap;
+let clientContractsColumns: ColumnInfoMap;
 
 function hasColumn(columns: ColumnInfoMap, columnName: string): boolean {
   return Object.prototype.hasOwnProperty.call(columns, columnName);
@@ -57,6 +64,9 @@ function projectComparableStatus(status: Record<string, unknown>) {
 
 async function cleanupTenant(tenantId: string): Promise<void> {
   await db('tickets').where({ tenant: tenantId }).del();
+  await db('client_contracts').where({ tenant: tenantId }).del();
+  await db('default_billing_settings').where({ tenant: tenantId }).del();
+  await db('inbound_ticket_defaults').where({ tenant: tenantId }).del();
   await db('statuses').where({ tenant: tenantId }).del();
   await db('boards').where({ tenant: tenantId }).del();
   await db('clients').where({ tenant: tenantId }).del();
@@ -226,13 +236,68 @@ async function createLegacyFixture(): Promise<LegacyFixture> {
       board_id: ticket.board_id,
       original_status_id: ticket.status_id,
     })),
+    clientId,
   };
 }
 
 async function runMigrationForFixture(): Promise<LegacyFixture> {
   const fixture = await createLegacyFixture();
-  await migration.up(db);
+  await cloneMigration.up(db);
   return fixture;
+}
+
+async function seedBoardContextStatusReferences(fixture: LegacyFixture) {
+  const legacyOpenStatusId = fixture.legacyStatuses.find((status) => status.name === 'Open')?.status_id as string;
+  const legacyClosedStatusId = fixture.legacyStatuses.find((status) => status.name === 'Closed')?.status_id as string;
+  const [boardA, boardB] = fixture.boardIds;
+  const inboundDefaultsId = uuidv4();
+  const clientContractId = uuidv4();
+
+  await db('inbound_ticket_defaults').insert({
+    id: inboundDefaultsId,
+    tenant: fixture.tenantId,
+    short_name: `defaults-${fixture.tenantId.slice(0, 8)}`,
+    display_name: `Defaults ${fixture.tenantId.slice(0, 8)}`,
+    board_id: boardA,
+    status_id: legacyOpenStatusId,
+    ...(hasColumn(inboundDefaultsColumns, 'created_at') ? { created_at: db.fn.now() } : {}),
+    ...(hasColumn(inboundDefaultsColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
+    ...(hasColumn(inboundDefaultsColumns, 'is_active') ? { is_active: true } : {}),
+  });
+
+  await db('default_billing_settings').insert({
+    tenant: fixture.tenantId,
+    renewal_ticket_board_id: boardB,
+    renewal_ticket_status_id: legacyOpenStatusId,
+    ...(hasColumn(defaultBillingSettingsColumns, 'created_at') ? { created_at: db.fn.now() } : {}),
+    ...(hasColumn(defaultBillingSettingsColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
+  });
+
+  await db('client_contracts').insert({
+    tenant: fixture.tenantId,
+    client_contract_id: clientContractId,
+    client_id: fixture.clientId,
+    contract_id: uuidv4(),
+    start_date: new Date('2026-03-01T00:00:00.000Z'),
+    renewal_ticket_board_id: boardA,
+    renewal_ticket_status_id: legacyClosedStatusId,
+    ...(hasColumn(clientContractsColumns, 'created_at') ? { created_at: db.fn.now() } : {}),
+    ...(hasColumn(clientContractsColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
+    ...(hasColumn(clientContractsColumns, 'is_active') ? { is_active: true } : {}),
+  });
+
+  return {
+    inboundDefaultsId,
+    clientContractId,
+  };
+}
+
+async function runBoardContextRemapForFixture() {
+  const fixture = await createLegacyFixture();
+  const references = await seedBoardContextStatusReferences(fixture);
+  await cloneMigration.up(db);
+  await boardContextRemapMigration.up(db);
+  return { fixture, references };
 }
 
 describe('Board-specific ticket statuses migration – DB integration', () => {
@@ -246,6 +311,9 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
     clientColumns = await db('clients').columnInfo();
     ticketColumns = await db('tickets').columnInfo();
     statusColumns = await db('statuses').columnInfo();
+    inboundDefaultsColumns = await db('inbound_ticket_defaults').columnInfo();
+    defaultBillingSettingsColumns = await db('default_billing_settings').columnInfo();
+    clientContractsColumns = await db('client_contracts').columnInfo();
   }, HOOK_TIMEOUT);
 
   afterEach(async () => {
@@ -276,7 +344,9 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
 
       const projectedBoardClones = boardClones.map((status) => projectComparableStatus(status));
 
-      expect(projectedBoardClones).toEqual(fixture.legacyStatuses);
+      expect(projectedBoardClones).toEqual(
+        fixture.legacyStatuses.map((status) => projectComparableStatus(status))
+      );
     }
   }, HOOK_TIMEOUT);
 
@@ -357,5 +427,62 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
       expect(clonedStatus?.name).toBe('Open');
       expect(clonedStatus?.board_id).toBe(ticket.board_id);
     }
+  }, HOOK_TIMEOUT);
+
+  it('T007: inbound ticket defaults are remapped to board-owned ticket status ids using board_id', async () => {
+    const { fixture, references } = await runBoardContextRemapForFixture();
+    const [boardA] = fixture.boardIds;
+
+    const remappedDefaults = await db('inbound_ticket_defaults')
+      .where({ tenant: fixture.tenantId, id: references.inboundDefaultsId })
+      .first();
+
+    const expectedStatus = await db('statuses')
+      .where({
+        tenant: fixture.tenantId,
+        board_id: boardA,
+        name: 'Open',
+      })
+      .first();
+
+    expect(remappedDefaults?.status_id).toBe(expectedStatus?.status_id);
+  }, HOOK_TIMEOUT);
+
+  it('T008: tenant billing renewal defaults are remapped to board-owned ticket status ids using renewal_ticket_board_id', async () => {
+    const { fixture } = await runBoardContextRemapForFixture();
+    const [, boardB] = fixture.boardIds;
+
+    const remappedDefaults = await db('default_billing_settings')
+      .where({ tenant: fixture.tenantId })
+      .first();
+
+    const expectedStatus = await db('statuses')
+      .where({
+        tenant: fixture.tenantId,
+        board_id: boardB,
+        name: 'Open',
+      })
+      .first();
+
+    expect(remappedDefaults?.renewal_ticket_status_id).toBe(expectedStatus?.status_id);
+  }, HOOK_TIMEOUT);
+
+  it('T009: contract-level renewal overrides are remapped to board-owned ticket status ids using renewal_ticket_board_id', async () => {
+    const { fixture, references } = await runBoardContextRemapForFixture();
+    const [boardA] = fixture.boardIds;
+
+    const remappedContract = await db('client_contracts')
+      .where({ tenant: fixture.tenantId, client_contract_id: references.clientContractId })
+      .first();
+
+    const expectedStatus = await db('statuses')
+      .where({
+        tenant: fixture.tenantId,
+        board_id: boardA,
+        name: 'Closed',
+      })
+      .first();
+
+    expect(remappedContract?.renewal_ticket_status_id).toBe(expectedStatus?.status_id);
   }, HOOK_TIMEOUT);
 });
