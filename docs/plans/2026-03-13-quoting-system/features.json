@@ -639,7 +639,7 @@
   {
     "id": "F076",
     "description": "P3: Standard quote template — 'standard-quote-default' AST with scope, items, totals, validity, T&C",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P3-FR4"
     ]
