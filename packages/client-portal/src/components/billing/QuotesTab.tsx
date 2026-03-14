@@ -8,7 +8,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import type { ColumnDefinition, IQuote, IQuoteItem, IQuoteWithClient, QuoteStatus } from '@alga-psa/types';
 import { QUOTE_STATUS_METADATA } from '@alga-psa/types';
-import { getClientQuoteById, getClientQuotes, updateClientQuoteSelections } from '@alga-psa/client-portal/actions';
+import { acceptClientQuote, getClientQuoteById, getClientQuotes, updateClientQuoteSelections } from '@alga-psa/client-portal/actions';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { X } from 'lucide-react';
 
@@ -144,6 +144,8 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
   const [selectedQuote, setSelectedQuote] = useState<IQuote | null>(null);
   const [isUpdatingSelections, setIsUpdatingSelections] = useState(false);
   const [selectionError, setSelectionError] = useState<string | null>(null);
+  const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
+  const [decisionError, setDecisionError] = useState<string | null>(null);
 
   const selectedQuoteId = searchParams?.get('quoteId');
 
@@ -158,6 +160,23 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
   }, [selectedQuote]);
 
   const canEditSelections = selectedQuote?.status === 'sent';
+
+  const syncQuoteSummary = (nextQuote: IQuote) => {
+    setQuotes((currentQuotes) => currentQuotes.map((quote) => (
+      quote.quote_id === nextQuote.quote_id
+        ? {
+            ...quote,
+            status: nextQuote.status,
+            subtotal: nextQuote.subtotal,
+            discount_total: nextQuote.discount_total,
+            tax: nextQuote.tax,
+            total_amount: nextQuote.total_amount,
+            accepted_at: nextQuote.accepted_at,
+            accepted_by: nextQuote.accepted_by,
+          }
+        : quote
+    )));
+  };
 
   const updateUrlParams = (params: { [key: string]: string | null }) => {
     const newParams = new URLSearchParams(searchParams?.toString() || '');
@@ -198,6 +217,7 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
     const fetchDetail = async () => {
       try {
         setSelectionError(null);
+        setDecisionError(null);
         const quote = await getClientQuoteById(selectedQuoteId);
         setSelectedQuote(quote);
       } catch (err) {
@@ -227,50 +247,45 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
 
     setSelectionError(null);
     setSelectedQuote(optimisticQuote);
-    setQuotes((currentQuotes) => currentQuotes.map((quote) => (
-      quote.quote_id === optimisticQuote.quote_id
-        ? {
-            ...quote,
-            subtotal: optimisticQuote.subtotal,
-            discount_total: optimisticQuote.discount_total,
-            tax: optimisticQuote.tax,
-            total_amount: optimisticQuote.total_amount,
-          }
-        : quote
-    )));
+    syncQuoteSummary(optimisticQuote);
     setIsUpdatingSelections(true);
 
     try {
       const persistedQuote = await updateClientQuoteSelections(selectedQuote.quote_id, nextSelectedList);
       setSelectedQuote(persistedQuote);
-      setQuotes((currentQuotes) => currentQuotes.map((quote) => (
-        quote.quote_id === persistedQuote.quote_id
-          ? {
-              ...quote,
-              subtotal: persistedQuote.subtotal,
-              discount_total: persistedQuote.discount_total,
-              tax: persistedQuote.tax,
-              total_amount: persistedQuote.total_amount,
-            }
-          : quote
-      )));
+      syncQuoteSummary(persistedQuote);
     } catch (err) {
       console.error('Error updating optional quote selections:', err);
       setSelectedQuote(previousQuote);
-      setQuotes((currentQuotes) => currentQuotes.map((quote) => (
-        quote.quote_id === previousQuote.quote_id
-          ? {
-              ...quote,
-              subtotal: previousQuote.subtotal,
-              discount_total: previousQuote.discount_total,
-              tax: previousQuote.tax,
-              total_amount: previousQuote.total_amount,
-            }
-          : quote
-      )));
+      syncQuoteSummary(previousQuote);
       setSelectionError('Failed to save your optional item selections. Please try again.');
     } finally {
       setIsUpdatingSelections(false);
+    }
+  };
+
+  const handleAcceptQuote = async () => {
+    if (!selectedQuote || selectedQuote.status !== 'sent') {
+      return;
+    }
+
+    const confirmed = window.confirm('Accept this quote with your current optional item selections?');
+    if (!confirmed) {
+      return;
+    }
+
+    setDecisionError(null);
+    setIsSubmittingDecision(true);
+
+    try {
+      const acceptedQuote = await acceptClientQuote(selectedQuote.quote_id, optionalSelectedItemIds);
+      setSelectedQuote(acceptedQuote);
+      syncQuoteSummary(acceptedQuote);
+    } catch (err) {
+      console.error('Error accepting quote:', err);
+      setDecisionError('Failed to accept the quote. Please try again.');
+    } finally {
+      setIsSubmittingDecision(false);
     }
   };
 
@@ -357,6 +372,11 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
             {selectionError && (
               <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                 {selectionError}
+              </div>
+            )}
+            {decisionError && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {decisionError}
               </div>
             )}
 
@@ -483,6 +503,30 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
                 <span>{formatCurrency(selectedQuote.total_amount || 0, selectedQuote.currency_code)}</span>
               </div>
             </div>
+
+            {selectedQuote.status === 'sent' && (
+              <div className="flex flex-col gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-sm font-medium text-emerald-900">Ready to respond?</p>
+                  <p className="text-sm text-emerald-800">
+                    Accepting this quote sends your optional-item selections back to the MSP for review before conversion.
+                  </p>
+                </div>
+                <Button
+                  id="accept-quote-button"
+                  onClick={handleAcceptQuote}
+                  disabled={isUpdatingSelections || isSubmittingDecision}
+                >
+                  {isSubmittingDecision ? 'Accepting…' : 'Accept Quote'}
+                </Button>
+              </div>
+            )}
+
+            {selectedQuote.status === 'accepted' && (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                Quote accepted. Your selected optional items have been shared with the MSP for review.
+              </div>
+            )}
 
             {selectedQuote.terms_and_conditions && (
               <div>

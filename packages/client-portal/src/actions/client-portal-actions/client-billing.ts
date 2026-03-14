@@ -11,6 +11,7 @@ import {
   IBillingResult,
   IBucketUsage,
   IQuote,
+  IQuoteItem,
   IService,
   IQuoteWithClient,
   IUserWithRoles
@@ -25,6 +26,7 @@ import { finalizeInvoice, unfinalizeInvoice } from '@alga-psa/billing/actions/in
 import { InvoiceViewModel, IInvoiceTemplate } from '@alga-psa/types';
 import Invoice from '@alga-psa/billing/models/invoice';
 import Quote from '@alga-psa/billing/models/quote';
+import QuoteActivity from '@alga-psa/billing/models/quoteActivity';
 import { recalculateQuoteFinancials } from '@alga-psa/billing/services';
 import { withAuth } from '@alga-psa/auth';
 import { scheduleInvoiceEmailAction, scheduleInvoiceZipAction } from '@alga-psa/billing/actions/invoiceJobActions';
@@ -76,6 +78,66 @@ async function hasBillingPermission(
     .first();
 
   return !!permissions;
+}
+
+async function getAuthorizedClientQuote(
+  trx: Knex.Transaction,
+  user: IUserWithRoles,
+  tenant: string,
+  quoteId: string,
+  allowedStatuses?: string[]
+): Promise<IQuote> {
+  const clientId = await getClientIdFromUser(trx, user, tenant);
+  if (!clientId) {
+    throw new Error('Unauthorized');
+  }
+
+  const hasAccess = await hasBillingPermission(trx, user, tenant);
+  if (!hasAccess) {
+    throw new Error('Unauthorized to access quote data');
+  }
+
+  const quote = await Quote.getById(trx, tenant, quoteId);
+  if (!quote || quote.client_id !== clientId || quote.is_template || quote.status === 'draft') {
+    throw new Error('Quote not found or access denied');
+  }
+
+  if (allowedStatuses?.length && (!quote.status || !allowedStatuses.includes(quote.status))) {
+    throw new Error('Quote is not in a valid state for this action');
+  }
+
+  return quote;
+}
+
+async function persistOptionalQuoteSelections(
+  trx: Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+  quoteItems: IQuoteItem[],
+  selectedOptionalQuoteItemIds: string[]
+): Promise<{ selectedIds: string[]; deselectedIds: string[] }> {
+  const optionalItems = quoteItems.filter((item) => item.is_optional);
+  const optionalItemIds = new Set(optionalItems.map((item) => item.quote_item_id));
+  const selectedIds = selectedOptionalQuoteItemIds.filter((itemId) => optionalItemIds.has(itemId));
+  const selectedSet = new Set(selectedIds);
+
+  for (const item of optionalItems) {
+    await trx('quote_items')
+      .where({ tenant, quote_item_id: item.quote_item_id })
+      .update({
+        is_selected: selectedSet.has(item.quote_item_id),
+        updated_at: trx.fn.now(),
+      });
+  }
+
+  await recalculateQuoteFinancials(trx, tenant, quoteId);
+
+  return {
+    selectedIds,
+    deselectedIds: optionalItems
+      .map((item) => item.quote_item_id)
+      .filter((itemId) => !selectedSet.has(itemId)),
+  };
 }
 
 export const getClientContractLine = withAuth(async (user, { tenant }): Promise<IClientContractLine | null> => {
@@ -237,40 +299,15 @@ export const updateClientQuoteSelections = withAuth(async (
 
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const clientId = await getClientIdFromUser(trx, user, tenant);
-      if (!clientId) {
-        throw new Error('Unauthorized');
-      }
+      const quote = await getAuthorizedClientQuote(trx, user, tenant, quoteId, ['sent']);
 
-      const hasAccess = await hasBillingPermission(trx, user, tenant);
-      if (!hasAccess) {
-        throw new Error('Unauthorized to access quote data');
-      }
-
-      const quoteCheck = await trx('quotes')
-        .where({ quote_id: quoteId, client_id: clientId, tenant, is_template: false })
-        .whereNot('status', 'draft')
-        .first();
-
-      if (!quoteCheck) {
-        throw new Error('Quote not found or access denied');
-      }
-
-      const optionalItems = await trx('quote_items')
-        .select('quote_item_id')
-        .where({ tenant, quote_id: quoteId, is_optional: true });
-
-      const selectedIds = new Set(selectedOptionalQuoteItemIds);
-      for (const item of optionalItems) {
-        await trx('quote_items')
-          .where({ tenant, quote_item_id: item.quote_item_id })
-          .update({
-            is_selected: selectedIds.has(item.quote_item_id),
-            updated_at: trx.fn.now(),
-          });
-      }
-
-      await recalculateQuoteFinancials(trx, tenant, quoteId);
+      await persistOptionalQuoteSelections(
+        trx,
+        tenant,
+        quoteId,
+        quote.quote_items || [],
+        selectedOptionalQuoteItemIds
+      );
 
       const updatedQuote = await Quote.getById(trx, tenant, quoteId);
       if (!updatedQuote) {
@@ -282,6 +319,58 @@ export const updateClientQuoteSelections = withAuth(async (
   } catch (error) {
     console.error('Error updating client quote selections:', error);
     throw new Error('Failed to update quote selections');
+  }
+});
+
+export const acceptClientQuote = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string,
+  selectedOptionalQuoteItemIds: string[] = []
+): Promise<IQuote> => {
+  const knex = await getConnection(tenant);
+
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const quote = await getAuthorizedClientQuote(trx, user, tenant, quoteId, ['sent']);
+
+      const { selectedIds, deselectedIds } = await persistOptionalQuoteSelections(
+        trx,
+        tenant,
+        quoteId,
+        quote.quote_items || [],
+        selectedOptionalQuoteItemIds
+      );
+
+      const acceptedAt = new Date().toISOString();
+      await Quote.update(trx, tenant, quoteId, {
+        status: 'accepted',
+        accepted_at: acceptedAt,
+        accepted_by: user.user_id,
+        updated_by: user.user_id,
+      });
+
+      await QuoteActivity.create(trx, tenant, {
+        quote_id: quoteId,
+        activity_type: 'accepted',
+        description: 'Quote accepted by client for MSP review',
+        performed_by: user.user_id,
+        metadata: {
+          selected_optional_quote_item_ids: selectedIds,
+          deselected_optional_quote_item_ids: deselectedIds,
+        },
+      });
+
+      const acceptedQuote = await Quote.getById(trx, tenant, quoteId);
+      if (!acceptedQuote) {
+        throw new Error('Quote not found after acceptance');
+      }
+
+      return acceptedQuote;
+    });
+  } catch (error) {
+    console.error('Error accepting client quote:', error);
+    throw new Error('Failed to accept quote');
   }
 });
 

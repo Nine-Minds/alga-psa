@@ -775,7 +775,7 @@
   {
     "id": "F093",
     "description": "P4: Client portal — Accept action: persists optional item selections, sets accepted_at/accepted_by, status → accepted (sends config to MSP for review)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P4-FR6"
     ]
