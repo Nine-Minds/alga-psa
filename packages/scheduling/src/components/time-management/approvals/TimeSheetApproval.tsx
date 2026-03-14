@@ -1,14 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ITimeSheet, 
   ITimeEntry, 
-  ITimeSheetComment, 
-  ITimeSheetApproval, 
   ITimeSheetApprovalView,
   ITimeEntryWithWorkItem, 
   TimeSheetStatus 
 } from '@alga-psa/types';
-import { addCommentToTimeSheet, fetchTimeSheetComments, requestChangesForTimeSheet } from '../../../actions/timeSheetActions';
+import { addCommentToTimeSheet, fetchTimeSheetComments } from '../../../actions/timeSheetActions';
 import { Check, Clock, Undo, ChevronDown, ChevronUp, Send } from 'lucide-react';
 import { IWorkItem } from '@alga-psa/types';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -18,7 +15,10 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { IUser } from '@alga-psa/types';
 import { fetchWorkItemsForTimeSheet, updateTimeEntryApprovalStatus } from '../../../actions/timeEntryActions';
 import { parseISO } from 'date-fns';
-import { Temporal } from '@js-temporal/polyfill';
+import {
+  TimeEntryChangeRequestIndicator,
+  TimeEntryChangeRequestPanel,
+} from '../time-entry/time-sheet/TimeEntryChangeRequestFeedback';
 
 interface TimeSheetApprovalProps {
   timeSheet: ITimeSheetApprovalView;
@@ -121,6 +121,7 @@ const TimeEntryDetailPanel: React.FC<TimeEntryDetailPanelProps> = ({ entry, onUp
           <p className="text-sm whitespace-pre-wrap text-[rgb(var(--color-text-600))] mt-1">{entry.notes}</p>
         </div>
       )}
+      <TimeEntryChangeRequestPanel changeRequests={entry.change_requests} />
       <div className="mb-3">
         <span className="text-sm font-medium text-[rgb(var(--color-text-900))]">Entry Change Suggestion</span>
         <TextArea
@@ -157,8 +158,6 @@ export function TimeSheetApproval({
 }: TimeSheetApprovalProps) {
   const [timeSheet, setTimeSheet] = useState<ITimeSheetApprovalView>(initialTimeSheet);
   const [newComment, setNewComment] = useState('');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [workItems, setWorkItems] = useState<IWorkItem[]>([]);
   const [entriesWithWorkItems, setEntriesWithWorkItems] = useState<ITimeEntryWithWorkItem[]>([]);
   const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
   const [isAddingComment, setIsAddingComment] = useState(false);
@@ -187,7 +186,6 @@ export function TimeSheetApproval({
       });
 
       if (status === 'CHANGES_REQUESTED' && timeSheet.approval_status !== 'CHANGES_REQUESTED') {
-        await requestChangesForTimeSheet(timeSheet.id, currentUser.user_id);
         setTimeSheet(prevTimeSheet => ({
           ...prevTimeSheet,
           approval_status: 'CHANGES_REQUESTED',
@@ -196,7 +194,28 @@ export function TimeSheetApproval({
 
       setEntriesWithWorkItems(prevEntries =>
         prevEntries.map((entry):ITimeEntryWithWorkItem =>
-          entry.entry_id === entryId ? { ...entry, approval_status: status } : entry
+          entry.entry_id === entryId ? {
+            ...entry,
+            approval_status: status,
+            change_requests: status === 'CHANGES_REQUESTED' && changeRequestComment
+              ? [
+                {
+                  change_request_id: `local-${Date.now()}`,
+                  time_entry_id: entryId,
+                  time_sheet_id: entry.time_sheet_id as string,
+                  comment: changeRequestComment,
+                  created_at: new Date().toISOString(),
+                  created_by: currentUser.user_id,
+                  created_by_name: `${currentUser.first_name} ${currentUser.last_name}`.trim(),
+                  tenant: entry.tenant,
+                },
+                ...(entry.change_requests ?? []),
+              ]
+              : entry.change_requests,
+            change_request_state: status === 'CHANGES_REQUESTED'
+              ? 'unresolved'
+              : entry.change_request_state,
+          } : entry
         )
       );
 
@@ -223,7 +242,6 @@ export function TimeSheetApproval({
   useEffect(() => {
     async function fetchWorkItems() {
       const fetchedWorkItems = await fetchWorkItemsForTimeSheet(timeSheet.id);
-      setWorkItems(fetchedWorkItems);
 
       // Combine time entries with work items
       const combinedEntries = timeEntries.map((entry):ITimeEntryWithWorkItem => {
@@ -405,7 +423,10 @@ export function TimeSheetApproval({
                     <td className="py-2.5 pr-3">{new Date(entry.end_time).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</td>
                     <td className="py-2.5 pr-3 font-medium">{formatDuration(entry.billable_duration / 60)}</td>
                     <td className="py-2.5 pr-3 text-center">
-                      <StatusIcon status={entry.approval_status} />
+                      <div className="flex flex-col items-center gap-1">
+                        <StatusIcon status={entry.approval_status} />
+                        <TimeEntryChangeRequestIndicator changeRequests={entry.change_requests} />
+                      </div>
                     </td>
                     <td>
                       <Button

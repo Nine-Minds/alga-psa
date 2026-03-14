@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ZodError } from 'zod';
 
 const createTenantKnexMock = vi.fn();
 const hasPermissionMock = vi.fn();
@@ -7,7 +8,7 @@ const resolveUserTimeZoneMock = vi.fn();
 const computeWorkDateFieldsMock = vi.fn();
 const createTimeEntryChangeRequestRecordMock = vi.fn();
 const fetchTimeEntryChangeRequestsForEntryIdsFromDbMock = vi.fn();
-const markLatestTimeEntryChangeRequestHandledMock = vi.fn();
+const markTimeEntryChangeRequestsHandledMock = vi.fn();
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => fn,
@@ -40,7 +41,7 @@ vi.mock('../src/actions/timeEntryHelpers', () => ({
 vi.mock('../src/actions/timeEntryChangeRequestActions', () => ({
   createTimeEntryChangeRequestRecord: (...args: any[]) => createTimeEntryChangeRequestRecordMock(...args),
   fetchTimeEntryChangeRequestsForEntryIdsFromDb: (...args: any[]) => fetchTimeEntryChangeRequestsForEntryIdsFromDbMock(...args),
-  markLatestTimeEntryChangeRequestHandled: (...args: any[]) => markLatestTimeEntryChangeRequestHandledMock(...args),
+  markTimeEntryChangeRequestsHandled: (...args: any[]) => markTimeEntryChangeRequestsHandledMock(...args),
 }));
 
 type DbStubConfig = {
@@ -338,12 +339,12 @@ describe('time entry change-request action integration', () => {
       },
     );
 
-    expect(markLatestTimeEntryChangeRequestHandledMock).toHaveBeenCalledWith(db, {
+    expect(markTimeEntryChangeRequestsHandledMock).toHaveBeenCalledWith(db, {
       tenant: 'tenant-1',
       timeEntryId: 'entry-1',
       handledBy: 'user-1',
     });
-    expect(markLatestTimeEntryChangeRequestHandledMock).not.toHaveBeenCalledWith(db, {
+    expect(markTimeEntryChangeRequestsHandledMock).not.toHaveBeenCalledWith(db, {
       tenant: 'tenant-1',
       timeEntryId: 'entry-2',
       handledBy: 'user-1',
@@ -401,7 +402,26 @@ describe('time entry change-request action integration', () => {
       },
     );
 
-    expect(markLatestTimeEntryChangeRequestHandledMock).not.toHaveBeenCalled();
+    expect(markTimeEntryChangeRequestsHandledMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects save payloads that omit service_id', async () => {
+    const { saveTimeEntryParamsSchema } = await import('../src/actions/timeEntrySchemas');
+
+    expect(() => saveTimeEntryParamsSchema.parse({
+      entry_id: 'entry-1',
+      work_item_id: 'non-billable',
+      work_item_type: 'non_billable_category',
+      start_time: '2026-03-10T09:00:00.000Z',
+      end_time: '2026-03-10T10:00:00.000Z',
+      created_at: '2026-03-10T09:00:00.000Z',
+      updated_at: '2026-03-10T09:00:00.000Z',
+      billable_duration: 0,
+      notes: 'Updated notes',
+      user_id: 'user-1',
+      approval_status: 'DRAFT',
+      tenant: 'tenant-1',
+    })).toThrowError(ZodError);
   });
 
   it('T012: fetchTimeEntriesForTimeSheet returns entry-level feedback alongside entry data', async () => {

@@ -91,7 +91,9 @@ describe('TimeSheetApproval', () => {
     await new Promise(resolve => setTimeout(resolve, 0));
   }
 
-  function renderApprovalDrawer() {
+  function renderApprovalDrawer(
+    timeEntriesOverride?: Array<Record<string, unknown>>,
+  ) {
     flushSync(() => {
       root.render(React.createElement(TimeSheetApproval, {
         timeSheet: {
@@ -110,7 +112,7 @@ describe('TimeSheetApproval', () => {
             tenant: 'tenant-1',
           },
         },
-        timeEntries: [
+        timeEntries: (timeEntriesOverride as any) ?? [
           {
             entry_id: 'entry-1',
             work_item_id: 'ticket-1',
@@ -186,7 +188,7 @@ describe('TimeSheetApproval', () => {
       approvalStatus: 'CHANGES_REQUESTED',
       changeRequestComment: undefined,
     });
-    expect(requestChangesForTimeSheet).toHaveBeenCalledWith('sheet-1', 'manager-1');
+    expect(requestChangesForTimeSheet).not.toHaveBeenCalled();
   });
 
   it('T002/T033: submits the entry id together with the optional suggestion and still supports an empty suggestion', async () => {
@@ -263,5 +265,93 @@ describe('TimeSheetApproval', () => {
       approvalStatus: 'CHANGES_REQUESTED',
       changeRequestComment: undefined,
     });
+  });
+
+  it('shows existing per-entry feedback in the manager approval drawer', async () => {
+    renderApprovalDrawer([
+      {
+        entry_id: 'entry-1',
+        work_item_id: 'ticket-1',
+        work_item_type: 'ticket',
+        start_time: '2026-03-02T09:00:00.000Z',
+        end_time: '2026-03-02T10:00:00.000Z',
+        created_at: '2026-03-02T10:00:00.000Z',
+        updated_at: '2026-03-02T10:00:00.000Z',
+        billable_duration: 60,
+        notes: 'Needs follow-up',
+        user_id: 'user-1',
+        time_sheet_id: 'sheet-1',
+        approval_status: 'CHANGES_REQUESTED',
+        tenant: 'tenant-1',
+        change_request_state: 'unresolved',
+        change_requests: [
+          {
+            change_request_id: 'cr-1',
+            time_entry_id: 'entry-1',
+            time_sheet_id: 'sheet-1',
+            comment: 'Please split travel time from labor.',
+            created_at: '2026-03-02T11:00:00.000Z',
+            created_by: 'manager-1',
+            created_by_name: 'Grace Hopper',
+            tenant: 'tenant-1',
+          },
+        ],
+      },
+    ]);
+
+    await flushUi();
+
+    expect(container.querySelector('[data-feedback-state="unresolved"]')).not.toBeNull();
+
+    const toggleButton = container.querySelector('button[title="Show Details"]');
+    if (!toggleButton) {
+      throw new Error('Show Details button not found');
+    }
+    toggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushUi();
+
+    expect(container.textContent).toContain('Approver feedback');
+    expect(container.textContent).toContain('Please split travel time from labor.');
+    expect(container.textContent).toContain('Change requested');
+  });
+
+  it('shows newly requested feedback immediately after the manager submits it', async () => {
+    renderApprovalDrawer();
+
+    await flushUi();
+
+    const toggleButton = container.querySelector('button[title="Show Details"]');
+    if (!toggleButton) {
+      throw new Error('Show Details button not found');
+    }
+    toggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushUi();
+
+    const suggestionInput = container.querySelector('textarea');
+    if (!suggestionInput) {
+      throw new Error('Suggestion input not found');
+    }
+
+    const valueSetter = Object.getOwnPropertyDescriptor(
+      HTMLTextAreaElement.prototype,
+      'value',
+    )?.set;
+
+    valueSetter?.call(suggestionInput, 'Please correct the service classification.');
+    suggestionInput.dispatchEvent(new Event('input', { bubbles: true }));
+    suggestionInput.dispatchEvent(new Event('change', { bubbles: true }));
+    await flushUi();
+
+    const requestChangesButton = Array.from(container.querySelectorAll('button')).find(
+      node => node.textContent?.includes('Request Changes'),
+    );
+    if (!requestChangesButton) {
+      throw new Error('Request Changes button not found');
+    }
+    requestChangesButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushUi();
+
+    expect(container.textContent).toContain('Please correct the service classification.');
+    expect(container.querySelector('[data-feedback-state="unresolved"]')).not.toBeNull();
   });
 });

@@ -204,4 +204,94 @@ describe('TimeSheetListView feedback markers', () => {
 
     expect(container.querySelector('[data-feedback-state]')).toBeNull();
   });
+
+  it('re-expands a collapsed day when that day receives unresolved approval feedback', async () => {
+    const onCellClick = vi.fn();
+
+    flushSync(() => {
+      root.render(
+        React.createElement(TimeSheetListView, {
+          ...commonProps,
+          dates: [new Date(2026, 2, 10), new Date(2026, 2, 11)],
+          groupedTimeEntries: {
+            'work-item-1': [
+              createEntry({
+                entry_id: 'entry-1',
+                start_time: '2026-03-10T09:00:00',
+                end_time: '2026-03-10T10:00:00',
+                work_date: '2026-03-10',
+              }),
+              createEntry({
+                entry_id: 'entry-2',
+                start_time: '2026-03-11T09:00:00',
+                end_time: '2026-03-11T10:00:00',
+                work_date: '2026-03-11',
+              }),
+            ],
+          },
+          onCellClick,
+        }),
+      );
+    });
+
+    await flushUi();
+    await flushUi();
+
+    const secondDayHeader = Array.from(container.querySelectorAll('tr')).find((row) =>
+      row.textContent?.includes('Wed, Mar 11'),
+    );
+
+    if (!secondDayHeader) {
+      throw new Error('Expected second day header row');
+    }
+
+    secondDayHeader.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushUi();
+
+    expect(container.querySelector('[data-automation-id="time-entry-row-entry-2"]')).toBeNull();
+
+    flushSync(() => {
+      root.render(
+        React.createElement(TimeSheetListView, {
+          ...commonProps,
+          dates: [new Date(2026, 2, 10), new Date(2026, 2, 11)],
+          groupedTimeEntries: {
+            'work-item-1': [
+              createEntry({
+                entry_id: 'entry-1',
+                start_time: '2026-03-10T09:00:00',
+                end_time: '2026-03-10T10:00:00',
+                work_date: '2026-03-10',
+              }),
+              createEntry({
+                entry_id: 'entry-2',
+                start_time: '2026-03-11T09:00:00',
+                end_time: '2026-03-11T10:00:00',
+                work_date: '2026-03-11',
+                approval_status: 'CHANGES_REQUESTED',
+                change_request_state: 'unresolved',
+                change_requests: [
+                  {
+                    change_request_id: 'cr-2',
+                    time_entry_id: 'entry-2',
+                    time_sheet_id: 'sheet-1',
+                    comment: 'Please clarify the billing split.',
+                    created_at: '2026-03-11T11:00:00.000Z',
+                    created_by: 'manager-1',
+                    tenant: 'tenant-1',
+                  },
+                ],
+              }),
+            ],
+          },
+          onCellClick,
+        }),
+      );
+    });
+
+    await flushUi();
+    await flushUi();
+
+    expect(container.querySelector('[data-automation-id="time-entry-row-entry-2"]')).not.toBeNull();
+  });
 });

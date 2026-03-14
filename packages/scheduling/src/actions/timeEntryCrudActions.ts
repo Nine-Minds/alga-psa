@@ -28,7 +28,7 @@ import { toPlainDate } from '@alga-psa/core';
 import {
   createTimeEntryChangeRequestRecord,
   fetchTimeEntryChangeRequestsForEntryIdsFromDb,
-  markLatestTimeEntryChangeRequestHandled,
+  markTimeEntryChangeRequestsHandled,
 } from './timeEntryChangeRequestActions';
 import { attachTimeEntryChangeRequests } from '../lib/timeEntryChangeRequests';
 
@@ -484,7 +484,7 @@ export const saveTimeEntry = withAuth(async (
             .first('approval_status');
 
           if (timeSheetStatus?.approval_status === 'CHANGES_REQUESTED') {
-            await markLatestTimeEntryChangeRequestHandled(trx, {
+            await markTimeEntryChangeRequestsHandled(trx, {
               tenant,
               timeEntryId: entry_id,
               handledBy: actorUserId,

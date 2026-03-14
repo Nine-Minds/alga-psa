@@ -31,13 +31,13 @@ export function getProminentTimeEntryChangeRequest(
 export function getTimeEntryChangeRequestState(
   changeRequests?: ITimeEntryChangeRequest[],
 ): TimeEntryChangeRequestState | null {
-  const latestChangeRequest = getLatestTimeEntryChangeRequest(changeRequests);
-
-  if (!latestChangeRequest) {
+  if (!changeRequests || changeRequests.length === 0) {
     return null;
   }
 
-  return latestChangeRequest.handled_at ? 'handled' : 'unresolved';
+  return changeRequests.some((changeRequest) => !changeRequest.handled_at)
+    ? 'unresolved'
+    : 'handled';
 }
 
 export function groupTimeEntryChangeRequestsByEntryId(

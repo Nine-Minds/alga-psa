@@ -107,7 +107,7 @@ export async function createTimeEntryChangeRequestRecord(
   });
 }
 
-export async function markLatestTimeEntryChangeRequestHandled(
+export async function markTimeEntryChangeRequestsHandled(
   db: Knex | Knex.Transaction,
   params: {
     tenant: string;
@@ -115,24 +115,12 @@ export async function markLatestTimeEntryChangeRequestHandled(
     handledBy: string;
   },
 ): Promise<void> {
-  const latestUnresolved = await db('time_entry_change_requests')
+  await db('time_entry_change_requests')
     .where({
       tenant: params.tenant,
       time_entry_id: params.timeEntryId,
     })
     .whereNull('handled_at')
-    .orderBy('created_at', 'desc')
-    .first('change_request_id');
-
-  if (!latestUnresolved?.change_request_id) {
-    return;
-  }
-
-  await db('time_entry_change_requests')
-    .where({
-      tenant: params.tenant,
-      change_request_id: latestUnresolved.change_request_id,
-    })
     .update({
       handled_at: db.fn.now(),
       handled_by: params.handledBy,

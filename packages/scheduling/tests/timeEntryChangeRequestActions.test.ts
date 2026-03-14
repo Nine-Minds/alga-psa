@@ -63,24 +63,16 @@ describe('time entry change request action helpers', () => {
     });
   });
 
-  it('T022: markLatestTimeEntryChangeRequestHandled writes handled metadata to the latest unresolved record', async () => {
+  it('T022: markTimeEntryChangeRequestsHandled writes handled metadata to every unresolved record for the entry', async () => {
     const updateMock = vi.fn(async () => undefined);
     const db: any = Object.assign(
       (_table: string) => {
-        const state: { criteria?: Record<string, any> } = {};
         const builder: any = {
-          where(criteria: Record<string, any>) {
-            state.criteria = criteria;
+          where() {
             return builder;
           },
           whereNull() {
             return builder;
-          },
-          orderBy() {
-            return builder;
-          },
-          first() {
-            return Promise.resolve({ change_request_id: 'latest-unresolved' });
           },
           update: updateMock,
         };
@@ -92,9 +84,9 @@ describe('time entry change request action helpers', () => {
       },
     );
 
-    const { markLatestTimeEntryChangeRequestHandled } = await import('../src/actions/timeEntryChangeRequestActions');
+    const { markTimeEntryChangeRequestsHandled } = await import('../src/actions/timeEntryChangeRequestActions');
 
-    await markLatestTimeEntryChangeRequestHandled(db, {
+    await markTimeEntryChangeRequestsHandled(db, {
       tenant: 'tenant-1',
       timeEntryId: 'entry-1',
       handledBy: 'user-1',

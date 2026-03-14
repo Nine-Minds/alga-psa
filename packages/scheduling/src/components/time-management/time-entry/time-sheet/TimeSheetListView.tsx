@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import TimeSheetListViewSkeleton from '@alga-psa/ui/components/skeletons/TimeSheetListViewSkeleton';
@@ -64,6 +64,7 @@ export function TimeSheetListView({
 }: TimeSheetListViewProps): React.JSX.Element {
     const [selectedWorkItemToDelete, setSelectedWorkItemToDelete] = useState<string | null>(null);
     const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+    const previousDayLayoutSignatureRef = useRef<string>('');
     const headerColumnWidths = ['3%', '40%', '15%', '15%', '15%', '12%'] as const;
     const dayColumnWidths = ['3%', '40%', '15%', '15%', '15%', '10%'] as const;
 
@@ -159,11 +160,33 @@ export function TimeSheetListView({
 
     const hasWorkItems = Object.values(workItemsByType).some(items => items.length > 0);
 
-    // Expand all days that have entries on initial load
+    const unresolvedFeedbackDayKeys = useMemo(
+        () => dayGroups
+            .filter((group) => group.entries.some(({ entry }) =>
+                entry.change_request_state === 'unresolved' ||
+                entry.approval_status === 'CHANGES_REQUESTED',
+            ))
+            .map((group) => group.dateKey),
+        [dayGroups],
+    );
+
+    // Expand all populated days on initial layout changes, and always reopen days with unresolved feedback.
     React.useEffect(() => {
-        const daysWithEntries = dayGroups.filter(g => g.entries.length > 0).map(g => g.dateKey);
-        setExpandedDays(new Set(daysWithEntries));
-    }, [dayGroups.length]); // Only run when number of groups changes
+        const dayLayoutSignature = dayGroups.map((group) => group.dateKey).join('|');
+        const daysWithEntries = dayGroups.filter((group) => group.entries.length > 0).map((group) => group.dateKey);
+
+        setExpandedDays((prevExpandedDays) => {
+            const nextExpandedDays = dayLayoutSignature !== previousDayLayoutSignatureRef.current
+                ? new Set(daysWithEntries)
+                : new Set(prevExpandedDays);
+
+            unresolvedFeedbackDayKeys.forEach((dateKey) => nextExpandedDays.add(dateKey));
+
+            return nextExpandedDays;
+        });
+
+        previousDayLayoutSignatureRef.current = dayLayoutSignature;
+    }, [dayGroups, unresolvedFeedbackDayKeys]);
 
     const toggleDay = (dateKey: string) => {
         setExpandedDays(prev => {
