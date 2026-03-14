@@ -220,8 +220,11 @@ describe('transform action input editor', () => {
               name: 'prompt',
               type: 'string',
               required: true,
-              presentation: {
-                inputControl: 'multiline',
+              editor: {
+                kind: 'text',
+                inline: {
+                  mode: 'textarea',
+                },
               },
             },
             {

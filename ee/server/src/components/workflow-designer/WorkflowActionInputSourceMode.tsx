@@ -10,6 +10,9 @@ export type WorkflowActionInputFieldLike = {
   type?: string;
   enum?: Array<string | number | boolean | null>;
   default?: unknown;
+  editor?: {
+    allowsDynamicReference?: boolean;
+  };
   picker?: {
     allowsDynamicReference?: boolean;
   };
@@ -51,7 +54,10 @@ export function deriveWorkflowActionInputSourceMode(
 export function getDefaultWorkflowActionInputSourceMode(
   field: WorkflowActionInputFieldLike
 ): WorkflowActionInputSourceModeValue {
-  if (field.picker && field.picker.allowsDynamicReference === false) {
+  if (
+    (field.editor && field.editor.allowsDynamicReference === false) ||
+    (field.picker && field.picker.allowsDynamicReference === false)
+  ) {
     return 'fixed';
   }
   if (field.enum?.length) {

@@ -12,7 +12,15 @@ type JsonSchema = {
   default?: unknown;
   $ref?: string;
   definitions?: Record<string, JsonSchema>;
-  'x-workflow-input-control'?: 'multiline';
+  'x-workflow-editor'?: {
+    kind?: string;
+    inline?: {
+      mode?: string;
+    };
+    dialog?: {
+      mode?: string;
+    };
+  };
 };
 
 type ActionRegistryLike = {
@@ -28,13 +36,22 @@ const applyAiInferPromptPresentationHint = (schema: JsonSchema): JsonSchema => {
       return target;
     }
 
+    const currentEditor = properties.prompt['x-workflow-editor'];
+    if (currentEditor?.kind === 'text') {
+      return target;
+    }
+
     return {
       ...target,
       properties: {
         ...properties,
         prompt: {
           ...properties.prompt,
-          'x-workflow-input-control': 'multiline',
+          'x-workflow-editor': {
+            kind: 'text',
+            inline: { mode: 'textarea' },
+            dialog: { mode: 'large-text' },
+          },
         },
       },
     };

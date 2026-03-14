@@ -1,4 +1,9 @@
-import type { InputMapping, MappingValue, Step } from '@alga-psa/workflows/runtime';
+import type {
+  InputMapping,
+  MappingValue,
+  Step,
+  WorkflowEditorJsonSchemaMetadata,
+} from '@alga-psa/workflows/runtime';
 
 import type { ActionInputField } from './mapping';
 import { applyWorkflowActionPresentationHints } from './workflowActionPresentation';
@@ -22,7 +27,7 @@ type JsonSchema = {
   'x-workflow-picker-dependencies'?: string[];
   'x-workflow-picker-fixed-value-hint'?: string;
   'x-workflow-picker-allow-dynamic-reference'?: boolean;
-  'x-workflow-input-control'?: 'multiline';
+  'x-workflow-editor'?: WorkflowEditorJsonSchemaMetadata;
 };
 
 export type WorkflowDesignerActionRegistryItem = {
@@ -88,6 +93,91 @@ const normalizeSchemaType = (schema?: JsonSchema): string | undefined => {
     return schema.type.find((value) => value !== 'null') ?? schema.type[0];
   }
   return schema.type;
+};
+
+const WORKFLOW_EDITOR_KINDS = new Set<WorkflowEditorJsonSchemaMetadata['kind']>([
+  'text',
+  'picker',
+  'color',
+  'json',
+  'custom',
+]);
+
+const WORKFLOW_INLINE_MODES = new Set<NonNullable<WorkflowEditorJsonSchemaMetadata['inline']>['mode']>([
+  'input',
+  'textarea',
+  'picker-summary',
+  'swatch',
+]);
+
+const WORKFLOW_DIALOG_MODES = new Set<NonNullable<WorkflowEditorJsonSchemaMetadata['dialog']>['mode']>([
+  'large-text',
+  'picker-browser',
+  'custom',
+]);
+
+const normalizeWorkflowEditorMetadata = (
+  metadata: WorkflowEditorJsonSchemaMetadata | undefined
+): ActionInputField['editor'] | undefined => {
+  if (!metadata || !WORKFLOW_EDITOR_KINDS.has(metadata.kind)) {
+    return undefined;
+  }
+
+  const inline =
+    metadata.inline && WORKFLOW_INLINE_MODES.has(metadata.inline.mode)
+      ? { mode: metadata.inline.mode }
+      : undefined;
+  const dialog =
+    metadata.dialog && WORKFLOW_DIALOG_MODES.has(metadata.dialog.mode)
+      ? { mode: metadata.dialog.mode }
+      : undefined;
+  const pickerResource = metadata.picker?.resource;
+
+  return {
+    kind: metadata.kind,
+    inline,
+    dialog,
+    dependencies: Array.isArray(metadata.dependencies) ? metadata.dependencies : undefined,
+    allowsDynamicReference:
+      typeof metadata.allowsDynamicReference === 'boolean'
+        ? metadata.allowsDynamicReference
+        : undefined,
+    fixedValueHint:
+      typeof metadata.fixedValueHint === 'string' ? metadata.fixedValueHint : undefined,
+    picker:
+      metadata.kind === 'picker' && typeof pickerResource === 'string' && pickerResource.trim().length > 0
+        ? {
+            resource: pickerResource,
+          }
+        : undefined,
+  };
+};
+
+const normalizeLegacyPickerEditorMetadata = (
+  schema: JsonSchema
+): ActionInputField['editor'] | undefined => {
+  if (typeof schema['x-workflow-picker-kind'] !== 'string') {
+    return undefined;
+  }
+
+  return {
+    kind: 'picker',
+    inline: { mode: 'picker-summary' },
+    dependencies: Array.isArray(schema['x-workflow-picker-dependencies'])
+      ? schema['x-workflow-picker-dependencies']
+      : undefined,
+    fixedValueHint:
+      typeof schema['x-workflow-picker-fixed-value-hint'] === 'string'
+        ? schema['x-workflow-picker-fixed-value-hint']
+        : undefined,
+    allowsDynamicReference:
+      typeof schema['x-workflow-picker-allow-dynamic-reference'] === 'boolean'
+        ? schema['x-workflow-picker-allow-dynamic-reference']
+        : undefined,
+    picker: {
+      resource: schema['x-workflow-picker-kind'],
+    },
+  };
 };
 
 const flattenRequiredActionInputFields = (
@@ -190,7 +280,7 @@ const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSch
       'x-workflow-picker-dependencies'?: string[];
       'x-workflow-picker-fixed-value-hint'?: string;
       'x-workflow-picker-allow-dynamic-reference'?: boolean;
-      'x-workflow-input-control'?: 'multiline';
+      'x-workflow-editor'?: WorkflowEditorJsonSchemaMetadata;
     };
 
     let children: ActionInputField[] | undefined;
@@ -219,29 +309,9 @@ const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSch
       itemType,
     };
     const hasConstraints = Object.values(constraints).some((constraint) => constraint !== undefined);
-    const picker =
-      typeof rawResolved['x-workflow-picker-kind'] === 'string'
-        ? {
-            kind: rawResolved['x-workflow-picker-kind'],
-            dependencies: Array.isArray(rawResolved['x-workflow-picker-dependencies'])
-              ? rawResolved['x-workflow-picker-dependencies']
-              : undefined,
-            fixedValueHint:
-              typeof rawResolved['x-workflow-picker-fixed-value-hint'] === 'string'
-                ? rawResolved['x-workflow-picker-fixed-value-hint']
-                : undefined,
-            allowsDynamicReference:
-              typeof rawResolved['x-workflow-picker-allow-dynamic-reference'] === 'boolean'
-                ? rawResolved['x-workflow-picker-allow-dynamic-reference']
-                : undefined,
-          }
-        : undefined;
-    const presentation =
-      rawResolved['x-workflow-input-control'] === 'multiline'
-        ? {
-            inputControl: 'multiline' as const,
-          }
-        : undefined;
+    const editor =
+      normalizeWorkflowEditorMetadata(rawResolved['x-workflow-editor']) ??
+      normalizeLegacyPickerEditorMetadata(rawResolved);
 
     return {
       name,
@@ -252,8 +322,7 @@ const extractActionInputFields = (schema: JsonSchema | undefined, root?: JsonSch
       description: resolvedProp.description,
       required: isFieldRequired,
       examples: Array.isArray(resolvedProp.examples) ? resolvedProp.examples : undefined,
-      picker,
-      presentation,
+      editor,
       enum: resolvedProp.enum,
       default: resolvedProp.default,
       constraints: hasConstraints ? constraints : undefined,

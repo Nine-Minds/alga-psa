@@ -3,10 +3,21 @@ import { z } from 'zod';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
 import type { WorkflowJsonSchema } from '../ai/aiSchema';
 import { isWorkflowAiInferAction, resolveWorkflowAiSchemaFromConfig } from '../ai/aiSchema';
+import { withWorkflowJsonSchemaMetadata } from '../jsonSchemaMetadata';
 import { throwActionError } from './businessOperations/shared';
 
 const aiInferInputSchema = z.object({
-  prompt: z.string().min(1).describe('Prompt text sent to the configured AI provider')
+  prompt: withWorkflowJsonSchemaMetadata(
+    z.string().min(1),
+    'Prompt text sent to the configured AI provider',
+    {
+      'x-workflow-editor': {
+        kind: 'text',
+        inline: { mode: 'textarea' },
+        dialog: { mode: 'large-text' },
+      },
+    }
+  )
 });
 
 const aiInferOutputSchema = z.object({}).passthrough();

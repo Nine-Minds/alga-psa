@@ -192,7 +192,7 @@ describe('action input editor state', () => {
     const initialState = buildActionInputEditorState(step, registry);
     expect(initialState.actionInputFields.find((field) => field.name === 'summary')).toMatchObject({
       type: 'string',
-      picker: undefined,
+      editor: undefined,
     });
 
     const nextStep = applyCatalogActionChoiceToStep(step, updateAction, {
@@ -205,16 +205,20 @@ describe('action input editor state', () => {
     const nextState = buildActionInputEditorState(nextStep, registry);
     expect(nextState.actionInputFields.find((field) => field.name === 'ticket_id')).toMatchObject({
       type: 'integer',
-      picker: {
-        kind: 'ticket',
+      editor: {
+        kind: 'picker',
+        inline: { mode: 'picker-summary' },
         dependencies: ['board_id'],
         fixedValueHint: 'search',
         allowsDynamicReference: true,
+        picker: {
+          resource: 'ticket',
+        },
       },
     });
   });
 
-  it('T165: ActionInputField extraction preserves picker annotations from designer JSON schema fields', () => {
+  it('T165/T002/T003: ActionInputField extraction adapts legacy picker annotations into the unified editor model', () => {
     const step: NodeStep = {
       id: 'step-picker',
       type: 'action.call',
@@ -226,15 +230,19 @@ describe('action input editor state', () => {
     };
 
     const state = buildActionInputEditorState(step, registry);
-    expect(state.actionInputFields.find((field) => field.name === 'ticket_id')?.picker).toEqual({
-      kind: 'ticket',
+    expect(state.actionInputFields.find((field) => field.name === 'ticket_id')?.editor).toEqual({
+      kind: 'picker',
+      inline: { mode: 'picker-summary' },
       dependencies: ['board_id'],
       fixedValueHint: 'search',
       allowsDynamicReference: true,
+      picker: {
+        resource: 'ticket',
+      },
     });
   });
 
-  it('preserves multiline presentation metadata from designer JSON schema fields without changing ordinary strings', () => {
+  it('T001/T003: preserves unified editor metadata from designer JSON schema fields without changing ordinary strings', () => {
     const registryWithPrompt: WorkflowDesignerActionRegistryItem[] = [
       {
         id: 'ai.infer',
@@ -249,7 +257,11 @@ describe('action input editor state', () => {
             prompt: {
               type: 'string',
               description: 'Prompt text sent to the configured AI provider',
-              'x-workflow-input-control': 'multiline',
+              'x-workflow-editor': {
+                kind: 'text',
+                inline: { mode: 'textarea' },
+                dialog: { mode: 'large-text' },
+              },
             },
             subject: {
               type: 'string',
@@ -276,10 +288,12 @@ describe('action input editor state', () => {
     };
 
     const state = buildActionInputEditorState(step, registryWithPrompt);
-    expect(state.actionInputFields.find((field) => field.name === 'prompt')?.presentation).toEqual({
-      inputControl: 'multiline',
+    expect(state.actionInputFields.find((field) => field.name === 'prompt')?.editor).toEqual({
+      kind: 'text',
+      inline: { mode: 'textarea' },
+      dialog: { mode: 'large-text' },
     });
-    expect(state.actionInputFields.find((field) => field.name === 'subject')?.presentation).toBeUndefined();
+    expect(state.actionInputFields.find((field) => field.name === 'subject')?.editor).toBeUndefined();
   });
 
   it('T180: picker metadata reaches the chosen action field editor without changing the persisted inputMapping shape', () => {
@@ -297,11 +311,15 @@ describe('action input editor state', () => {
     };
 
     const state = buildActionInputEditorState(step, registry);
-    expect(state.actionInputFields.find((field) => field.name === 'ticket_id')?.picker).toEqual({
-      kind: 'ticket',
+    expect(state.actionInputFields.find((field) => field.name === 'ticket_id')?.editor).toEqual({
+      kind: 'picker',
+      inline: { mode: 'picker-summary' },
       dependencies: ['board_id'],
       fixedValueHint: 'search',
       allowsDynamicReference: true,
+      picker: {
+        resource: 'ticket',
+      },
     });
     expect(state.inputMapping).toEqual({
       ticket_id: 'ticket-123',
@@ -328,10 +346,14 @@ describe('action input editor state', () => {
     const state = buildActionInputEditorState(step, registry);
     expect(state.actionInputFields.find((field) => field.name === 'channel_id')).toMatchObject({
       type: 'string',
-      picker: {
-        kind: 'client',
+      editor: {
+        kind: 'picker',
+        inline: { mode: 'picker-summary' },
         fixedValueHint: 'select',
         allowsDynamicReference: true,
+        picker: {
+          resource: 'client',
+        },
       },
     });
     expect(state.inputMapping).toEqual({

@@ -8,6 +8,7 @@ export { NodeTypeRegistry, getNodeTypeRegistry } from './registries/nodeTypeRegi
 export { registerWorkflowEmailProvider, getWorkflowEmailProvider, resetWorkflowEmailProvider } from './registries/workflowEmailRegistry';
 export type { WorkflowEmailProvider } from './registries/workflowEmailRegistry';
 export { WorkflowRuntimeV2 } from './runtime/workflowRuntimeV2';
+export * from './jsonSchemaMetadata';
 export {
   validateWorkflowDefinition,
   type PublishValidationResult

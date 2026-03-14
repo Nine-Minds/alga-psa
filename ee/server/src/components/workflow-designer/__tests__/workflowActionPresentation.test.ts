@@ -6,7 +6,7 @@ import {
 } from '../workflowActionPresentation';
 
 describe('workflowActionPresentation', () => {
-  it('adds multiline presentation metadata to ai.infer.prompt', () => {
+  it('adds unified editor metadata to ai.infer.prompt', () => {
     const action = {
       id: 'ai.infer',
       version: 1,
@@ -27,7 +27,11 @@ describe('workflowActionPresentation', () => {
 
     const normalized = applyWorkflowActionPresentationHints(action);
 
-    expect(normalized.inputSchema.properties?.prompt?.['x-workflow-input-control']).toBe('multiline');
+    expect(normalized.inputSchema.properties?.prompt?.['x-workflow-editor']).toEqual({
+      kind: 'text',
+      inline: { mode: 'textarea' },
+      dialog: { mode: 'large-text' },
+    });
   });
 
   it('leaves non-ai actions unchanged', () => {
@@ -79,11 +83,15 @@ describe('workflowActionPresentation', () => {
       },
     ]);
 
-    expect(normalized[0].inputSchema.properties?.prompt?.['x-workflow-input-control']).toBe('multiline');
-    expect(normalized[1].inputSchema.properties?.summary?.['x-workflow-input-control']).toBeUndefined();
+    expect(normalized[0].inputSchema.properties?.prompt?.['x-workflow-editor']).toEqual({
+      kind: 'text',
+      inline: { mode: 'textarea' },
+      dialog: { mode: 'large-text' },
+    });
+    expect(normalized[1].inputSchema.properties?.summary?.['x-workflow-editor']).toBeUndefined();
   });
 
-  it('adds multiline presentation metadata when ai.infer inputSchema is rooted through a named definition', () => {
+  it('adds unified editor metadata when ai.infer inputSchema is rooted through a named definition', () => {
     const action = {
       id: 'ai.infer',
       version: 1,
@@ -105,6 +113,10 @@ describe('workflowActionPresentation', () => {
     const normalized = applyWorkflowActionPresentationHints(action);
     const root = normalized.inputSchema.definitions?.['ai.infer@1.input'];
 
-    expect(root?.properties?.prompt?.['x-workflow-input-control']).toBe('multiline');
+    expect(root?.properties?.prompt?.['x-workflow-editor']).toEqual({
+      kind: 'text',
+      inline: { mode: 'textarea' },
+      dialog: { mode: 'large-text' },
+    });
   });
 });

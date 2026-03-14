@@ -13,8 +13,29 @@ export type WorkflowPickerJsonSchemaMetadata = {
   'x-workflow-picker-allow-dynamic-reference'?: boolean;
 };
 
+export type WorkflowEditorKind = 'text' | 'picker' | 'color' | 'json' | 'custom';
+export type WorkflowEditorInlineMode = 'input' | 'textarea' | 'picker-summary' | 'swatch';
+export type WorkflowEditorDialogMode = 'large-text' | 'picker-browser' | 'custom';
+
+export type WorkflowEditorJsonSchemaMetadata = {
+  kind: WorkflowEditorKind;
+  inline?: {
+    mode: WorkflowEditorInlineMode;
+  };
+  dialog?: {
+    mode: WorkflowEditorDialogMode;
+  };
+  dependencies?: string[];
+  allowsDynamicReference?: boolean;
+  fixedValueHint?: string;
+  picker?: {
+    resource: string;
+  };
+};
+
 type WorkflowJsonSchemaMetadata = WorkflowPickerJsonSchemaMetadata & {
   description?: string;
+  'x-workflow-editor'?: WorkflowEditorJsonSchemaMetadata;
 };
 
 const hasWorkflowJsonSchemaMetadata = (metadata: WorkflowJsonSchemaMetadata): boolean =>
