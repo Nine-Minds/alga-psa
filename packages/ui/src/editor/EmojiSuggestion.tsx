@@ -5,42 +5,10 @@ import { createPortal } from 'react-dom';
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import type { Editor } from '@tiptap/react';
+import { ensureEmojiInit, searchEmoji } from '../lib/emojiSearch';
+import type { EmojiItem } from '../lib/emojiSearch';
 
-// ── Emoji search via emoji-mart ──────────────────────────────────
-let emojiReady = false;
-let emojiInit: Promise<void> | null = null;
-
-async function ensureEmojiInit() {
-  if (emojiReady) return;
-  if (emojiInit) return emojiInit;
-  emojiInit = (async () => {
-    const [{ init }, data] = await Promise.all([
-      import('emoji-mart'),
-      import('@emoji-mart/data'),
-    ]);
-    await init({ data: data.default ?? data });
-    emojiReady = true;
-  })();
-  return emojiInit;
-}
-
-export interface EmojiItem {
-  id: string;
-  native: string;
-  name: string;
-}
-
-async function searchEmoji(query: string): Promise<EmojiItem[]> {
-  await ensureEmojiInit();
-  const { SearchIndex } = await import('emoji-mart');
-  const results = await SearchIndex.search(query);
-  if (!results) return [];
-  return results.slice(0, 30).map((e: any) => ({
-    id: e.id,
-    native: e.skins?.[0]?.native ?? '',
-    name: e.name ?? e.id,
-  }));
-}
+export type { EmojiItem };
 
 // ── ProseMirror plugin that detects :query ────────────────────────
 const EMOJI_PLUGIN_KEY = new PluginKey('emojiSuggestion');

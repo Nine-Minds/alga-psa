@@ -490,6 +490,11 @@ export const deleteComment = withAuth(async (_user, _ctx, id: string) => {
         throw new Error('This comment is system-generated and cannot be deleted.');
       }
 
+      // Delete comment reactions before comment (CitusDB doesn't support ON DELETE CASCADE)
+      await trx('comment_reactions')
+        .where({ tenant, comment_id: id })
+        .delete();
+
       await trx('email_reply_tokens')
         .where({ tenant, comment_id: id })
         .update({ comment_id: null });
