@@ -59,10 +59,6 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-14) Board settings and board actions do not yet seed or manage board-local ticket statuses:
   - `packages/tickets/src/actions/board-actions/boardActions.ts`
   - `server/src/components/settings/general/BoardsSettings.tsx`
-- (2026-03-14) Local DB-backed integration execution is blocked in this Codex harness:
-  - `npx vitest run src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts --coverage=false` fails before test execution because TCP connections to `localhost:5438` are denied with `EPERM`.
-  - `npx vitest run src/test/integration/boardContextTicketStatusReferenceRemap.integration.test.ts --coverage=false` is blocked by the same `localhost:5438` restriction.
-  - Direct checks to both `127.0.0.1:55433` and Docker socket access are also denied with `Operation not permitted`, so the new DB integration suite is written but could not be executed here.
 - (2026-03-14) Saved config with explicit board context now has a direct migration path:
   - `inbound_ticket_defaults.board_id + status_id`
   - `default_billing_settings.renewal_ticket_board_id + renewal_ticket_status_id`
@@ -71,6 +67,13 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-14) `F009`/`F010` are the first non-tabular migration slice:
   - workflow ticket board/status references live inside `workflow_definitions.draft_definition` and `workflow_definition_versions.definition_json`
   - ticket board/status values can appear as fixed literals or dynamic `inputMapping` expressions in action configs, so safe remap/surfacing needs JSON traversal and explicit unresolved detection rather than a single SQL join
+- (2026-03-14) Completed `F009` with a workflow JSON remap migration:
+  - `server/migrations/20260314130000_remap_workflow_ticket_status_references.cjs` traverses workflow v2 `steps` recursively and rewrites fixed literal `status_id` values only when a fixed literal `board_id` is present in the same saved payload.
+  - The remap runs against both `workflow_definitions.draft_definition` and `workflow_definition_versions.definition_json`.
+  - Because workflow tables do not carry `tenant`, the migration derives the legacy-to-board-owned mapping from `statuses` rows using `tenant + name` and applies it via saved `board_id + status_id` pairs.
+- (2026-03-14) Completed `T010` with DB-backed coverage in `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts`:
+  - verifies `tickets.create`, `create_ticket_from_email`, and nested `ticketDefaults.status_id` inside `create_ticket_with_initial_comment` all remap in both workflow drafts and published versions
+  - reran with `cd server && npx vitest run --coverage.enabled false src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts` and confirmed all 8 migration tests pass
 
 ## Commands / Runbooks
 
@@ -91,8 +94,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run src/test/unit/migrations/boardSpecificTicketStatusesMigration.test.ts`
 - (2026-03-14) Repo-level `npm run test:local -- ...` is currently not usable in this shell because the installed `dotenv` CLI rejects `-e ../.env.localtest` as non-boolean.
 - (2026-03-14) Attempt the DB-backed clone/remap migration suite:
-  - `cd server && npx vitest run src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts --coverage=false`
-  - If local Postgres is available outside Codex, override the port first, e.g. `DB_PORT=55433 ...`, before rerunning.
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts`
 - (2026-03-14) Attempt the board-context status-reference remap suite:
   - `cd server && npx vitest run src/test/integration/boardContextTicketStatusReferenceRemap.integration.test.ts --coverage=false`
   - Run it after the clone/remap suite or against a schema that already includes `20260314113000_clone_global_ticket_statuses_to_boards.cjs`.
@@ -118,6 +120,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Clone/remap DB integration coverage: `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts`
 - Board-context status-reference remap migration: `server/migrations/20260314120000_remap_board_context_ticket_status_references.cjs`
 - Board-context status-reference integration coverage: `server/src/test/integration/boardContextTicketStatusReferenceRemap.integration.test.ts`
+- Workflow status-reference remap migration: `server/migrations/20260314130000_remap_workflow_ticket_status_references.cjs`
 
 ## Open Questions
 

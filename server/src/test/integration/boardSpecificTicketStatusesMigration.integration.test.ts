@@ -12,9 +12,13 @@ const cloneMigration = require(path.resolve(process.cwd(), 'migrations', '202603
 const boardContextRemapMigration = require(
   path.resolve(process.cwd(), 'migrations', '20260314120000_remap_board_context_ticket_status_references.cjs')
 );
+const workflowStatusRemapMigration = require(
+  path.resolve(process.cwd(), 'migrations', '20260314130000_remap_workflow_ticket_status_references.cjs')
+);
 
 let db: Knex;
 const tenantsToCleanup = new Set<string>();
+const workflowIdsToCleanup = new Set<string>();
 
 type LegacyFixture = {
   tenantId: string;
@@ -72,6 +76,11 @@ async function cleanupTenant(tenantId: string): Promise<void> {
   await db('clients').where({ tenant: tenantId }).del();
   await db('users').where({ tenant: tenantId }).del();
   await db('tenants').where({ tenant: tenantId }).del();
+}
+
+async function cleanupWorkflow(workflowId: string): Promise<void> {
+  await db('workflow_definition_versions').where({ workflow_id: workflowId }).del();
+  await db('workflow_definitions').where({ workflow_id: workflowId }).del();
 }
 
 async function createLegacyFixture(): Promise<LegacyFixture> {
@@ -300,6 +309,126 @@ async function runBoardContextRemapForFixture() {
   return { fixture, references };
 }
 
+async function seedWorkflowStatusReferences(fixture: LegacyFixture) {
+  const workflowId = uuidv4();
+  const legacyOpenStatusId = fixture.legacyStatuses.find((status) => status.name === 'Open')?.status_id as string;
+  const legacyClosedStatusId = fixture.legacyStatuses.find((status) => status.name === 'Closed')?.status_id as string;
+  const [boardA, boardB] = fixture.boardIds;
+
+  workflowIdsToCleanup.add(workflowId);
+
+  const definition = {
+    id: workflowId,
+    version: 1,
+    name: `Workflow ${workflowId.slice(0, 8)}`,
+    description: 'Board-scoped ticket status remap test',
+    payloadSchemaRef: 'test.workflow.ticket-status-remap',
+    steps: [
+      {
+        id: 'create-ticket',
+        type: 'action.call',
+        name: 'Create Ticket',
+        config: {
+          actionId: 'tickets.create',
+          version: 1,
+          inputMapping: {
+            client_id: fixture.clientId,
+            title: 'Workflow-created ticket',
+            description: 'Created during migration test',
+            board_id: boardA,
+            status_id: legacyOpenStatusId,
+            priority_id: uuidv4(),
+          },
+        },
+      },
+      {
+        id: 'branch',
+        type: 'control.if',
+        condition: { $expr: 'true' },
+        then: [
+          {
+            id: 'create-email-ticket',
+            type: 'action.call',
+            name: 'Create Ticket From Email',
+            config: {
+              actionId: 'create_ticket_from_email',
+              version: 1,
+              inputMapping: {
+                title: 'Inbound email ticket',
+                description: 'Created from email',
+                board_id: boardB,
+                status_id: legacyOpenStatusId,
+                priority_id: uuidv4(),
+              },
+            },
+          },
+        ],
+        else: [],
+      },
+      {
+        id: 'guarded-create',
+        type: 'control.tryCatch',
+        try: [
+          {
+            id: 'create-ticket-with-comment',
+            type: 'action.call',
+            name: 'Create Ticket With Initial Comment',
+            config: {
+              actionId: 'create_ticket_with_initial_comment',
+              version: 1,
+              inputMapping: {
+                emailData: { $expr: 'payload.emailData' },
+                parsedEmail: { $expr: 'payload.parsedEmail' },
+                ticketDefaults: {
+                  board_id: boardA,
+                  status_id: legacyClosedStatusId,
+                  priority_id: uuidv4(),
+                  client_id: fixture.clientId,
+                },
+                targetClientId: fixture.clientId,
+                targetContactId: null,
+                targetLocationId: null,
+              },
+            },
+          },
+        ],
+        catch: [],
+      },
+    ],
+  };
+
+  await db('workflow_definitions').insert({
+    workflow_id: workflowId,
+    name: definition.name,
+    description: definition.description,
+    payload_schema_ref: definition.payloadSchemaRef,
+    draft_definition: definition,
+    draft_version: definition.version,
+    status: 'published',
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+
+  await db('workflow_definition_versions').insert({
+    workflow_id: workflowId,
+    version: definition.version,
+    definition_json: definition,
+    published_at: db.fn.now(),
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+
+  return { workflowId };
+}
+
+async function runWorkflowStatusRemapForFixture() {
+  const fixture = await createLegacyFixture();
+  const references = await seedWorkflowStatusReferences(fixture);
+  await cloneMigration.up(db);
+  await workflowStatusRemapMigration.up(db);
+  return { fixture, references };
+}
+
 describe('Board-specific ticket statuses migration – DB integration', () => {
   beforeAll(async () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
@@ -317,6 +446,11 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
   }, HOOK_TIMEOUT);
 
   afterEach(async () => {
+    for (const workflowId of workflowIdsToCleanup) {
+      await cleanupWorkflow(workflowId);
+      workflowIdsToCleanup.delete(workflowId);
+    }
+
     for (const tenantId of tenantsToCleanup) {
       await cleanupTenant(tenantId);
       tenantsToCleanup.delete(tenantId);
@@ -484,5 +618,38 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
       .first();
 
     expect(remappedContract?.renewal_ticket_status_id).toBe(expectedStatus?.status_id);
+  }, HOOK_TIMEOUT);
+
+  it('T010: saved workflow ticket status references with explicit board context are remapped in draft and published workflow JSON', async () => {
+    const { fixture, references } = await runWorkflowStatusRemapForFixture();
+    const [boardA, boardB] = fixture.boardIds;
+
+    const remappedDraft = await db('workflow_definitions')
+      .where({ workflow_id: references.workflowId })
+      .first('draft_definition');
+    const remappedVersion = await db('workflow_definition_versions')
+      .where({ workflow_id: references.workflowId, version: 1 })
+      .first('definition_json');
+
+    const expectedBoardAOpen = await db('statuses')
+      .where({ tenant: fixture.tenantId, board_id: boardA, name: 'Open' })
+      .first('status_id');
+    const expectedBoardBOpen = await db('statuses')
+      .where({ tenant: fixture.tenantId, board_id: boardB, name: 'Open' })
+      .first('status_id');
+    const expectedBoardAClosed = await db('statuses')
+      .where({ tenant: fixture.tenantId, board_id: boardA, name: 'Closed' })
+      .first('status_id');
+
+    const draftSteps = (remappedDraft?.draft_definition as any)?.steps;
+    const versionSteps = (remappedVersion?.definition_json as any)?.steps;
+
+    expect(draftSteps?.[0]?.config?.inputMapping?.status_id).toBe(expectedBoardAOpen?.status_id);
+    expect(draftSteps?.[1]?.then?.[0]?.config?.inputMapping?.status_id).toBe(expectedBoardBOpen?.status_id);
+    expect(draftSteps?.[2]?.try?.[0]?.config?.inputMapping?.ticketDefaults?.status_id).toBe(expectedBoardAClosed?.status_id);
+
+    expect(versionSteps?.[0]?.config?.inputMapping?.status_id).toBe(expectedBoardAOpen?.status_id);
+    expect(versionSteps?.[1]?.then?.[0]?.config?.inputMapping?.status_id).toBe(expectedBoardBOpen?.status_id);
+    expect(versionSteps?.[2]?.try?.[0]?.config?.inputMapping?.ticketDefaults?.status_id).toBe(expectedBoardAClosed?.status_id);
   }, HOOK_TIMEOUT);
 });

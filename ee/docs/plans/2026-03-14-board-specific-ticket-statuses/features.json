@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "Remap saved workflow ticket status references when board context exists in the stored configuration or action payload.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2", "FR6"]
   },
   {
