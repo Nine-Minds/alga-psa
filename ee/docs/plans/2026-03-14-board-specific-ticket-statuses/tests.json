@@ -62,7 +62,7 @@
   {
     "id": "T011",
     "description": "Migration guard test: persisted ticket status references without safe board context are surfaced as unresolved instead of guessed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010"]
   },
   {

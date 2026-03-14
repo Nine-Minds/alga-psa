@@ -73,7 +73,14 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - Because workflow tables do not carry `tenant`, the migration derives the legacy-to-board-owned mapping from `statuses` rows using `tenant + name` and applies it via saved `board_id + status_id` pairs.
 - (2026-03-14) Completed `T010` with DB-backed coverage in `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts`:
   - verifies `tickets.create`, `create_ticket_from_email`, and nested `ticketDefaults.status_id` inside `create_ticket_with_initial_comment` all remap in both workflow drafts and published versions
-  - reran with `cd server && npx vitest run --coverage.enabled false src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts` and confirmed all 8 migration tests pass
+  - reran with `cd server && npx vitest run --coverage.enabled false src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts`; the suite now passes with 9 migration tests after the later `T011` guard was added
+- (2026-03-14) Completed `F010` with an explicit unresolved-reference guard:
+  - `server/migrations/20260314133000_surface_unresolved_ticket_status_references.cjs` scans workflow drafts and published versions for fixed legacy ticket `status_id` values that still lack literal board context.
+  - The guard throws a migration error containing the workflow id, table, step path, action id, and input path so unresolved references are surfaced before release instead of guessed.
+- (2026-03-14) Completed `T011` in `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts`:
+  - seeds a workflow `tickets.update_fields` step with fixed legacy `patch.status_id` and no board context
+  - verifies the guard migration rejects with a concrete unresolved-reference message and leaves the stored status id unchanged
+  - reran with `cd server && npx vitest run --coverage.enabled false src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts` and confirmed all 9 migration tests pass
 
 ## Commands / Runbooks
 
@@ -121,6 +128,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Board-context status-reference remap migration: `server/migrations/20260314120000_remap_board_context_ticket_status_references.cjs`
 - Board-context status-reference integration coverage: `server/src/test/integration/boardContextTicketStatusReferenceRemap.integration.test.ts`
 - Workflow status-reference remap migration: `server/migrations/20260314130000_remap_workflow_ticket_status_references.cjs`
+- Workflow unresolved-reference guard migration: `server/migrations/20260314133000_surface_unresolved_ticket_status_references.cjs`
 
 ## Open Questions
 

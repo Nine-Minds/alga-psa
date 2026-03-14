@@ -15,6 +15,9 @@ const boardContextRemapMigration = require(
 const workflowStatusRemapMigration = require(
   path.resolve(process.cwd(), 'migrations', '20260314130000_remap_workflow_ticket_status_references.cjs')
 );
+const unresolvedWorkflowGuardMigration = require(
+  path.resolve(process.cwd(), 'migrations', '20260314133000_surface_unresolved_ticket_status_references.cjs')
+);
 
 let db: Knex;
 const tenantsToCleanup = new Set<string>();
@@ -429,6 +432,52 @@ async function runWorkflowStatusRemapForFixture() {
   return { fixture, references };
 }
 
+async function seedUnresolvedWorkflowStatusReference(fixture: LegacyFixture) {
+  const workflowId = uuidv4();
+  const legacyOpenStatusId = fixture.legacyStatuses.find((status) => status.name === 'Open')?.status_id as string;
+
+  workflowIdsToCleanup.add(workflowId);
+
+  const definition = {
+    id: workflowId,
+    version: 1,
+    name: `Workflow ${workflowId.slice(0, 8)} unresolved`,
+    description: 'Legacy ticket status without board context',
+    payloadSchemaRef: 'test.workflow.ticket-status-unresolved',
+    steps: [
+      {
+        id: 'update-ticket',
+        type: 'action.call',
+        name: 'Update Ticket',
+        config: {
+          actionId: 'tickets.update_fields',
+          version: 1,
+          inputMapping: {
+            ticket_id: uuidv4(),
+            patch: {
+              status_id: legacyOpenStatusId,
+            },
+          },
+        },
+      },
+    ],
+  };
+
+  await db('workflow_definitions').insert({
+    workflow_id: workflowId,
+    name: definition.name,
+    description: definition.description,
+    payload_schema_ref: definition.payloadSchemaRef,
+    draft_definition: definition,
+    draft_version: definition.version,
+    status: 'draft',
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+
+  return { workflowId, legacyOpenStatusId };
+}
+
 describe('Board-specific ticket statuses migration – DB integration', () => {
   beforeAll(async () => {
     process.env.APP_ENV = process.env.APP_ENV || 'test';
@@ -651,5 +700,24 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
     expect(versionSteps?.[0]?.config?.inputMapping?.status_id).toBe(expectedBoardAOpen?.status_id);
     expect(versionSteps?.[1]?.then?.[0]?.config?.inputMapping?.status_id).toBe(expectedBoardBOpen?.status_id);
     expect(versionSteps?.[2]?.try?.[0]?.config?.inputMapping?.ticketDefaults?.status_id).toBe(expectedBoardAClosed?.status_id);
+  }, HOOK_TIMEOUT);
+
+  it('T011: legacy workflow ticket status references without safe board context are surfaced instead of guessed', async () => {
+    const fixture = await createLegacyFixture();
+    const references = await seedUnresolvedWorkflowStatusReference(fixture);
+
+    await cloneMigration.up(db);
+    await workflowStatusRemapMigration.up(db);
+
+    await expect(unresolvedWorkflowGuardMigration.up(db)).rejects.toThrow(
+      new RegExp(`${references.workflowId}.*tickets\\.update_fields.*patch\\.status_id`, 's')
+    );
+
+    const unresolvedDraft = await db('workflow_definitions')
+      .where({ workflow_id: references.workflowId })
+      .first('draft_definition');
+
+    expect((unresolvedDraft?.draft_definition as any)?.steps?.[0]?.config?.inputMapping?.patch?.status_id)
+      .toBe(references.legacyOpenStatusId);
   }, HOOK_TIMEOUT);
 });

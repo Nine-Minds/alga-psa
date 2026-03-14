@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "Detect and explicitly surface persisted ticket status references that cannot be remapped safely because board context is missing.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2"]
   },
   {
