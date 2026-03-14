@@ -647,7 +647,7 @@
   {
     "id": "F077",
     "description": "P3: Standard quote template — 'standard-quote-detailed' AST with branding, phase grouping, optional/recurring sections",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P3-FR4"
     ]
