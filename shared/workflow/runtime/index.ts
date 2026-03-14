@@ -13,6 +13,7 @@ export {
   validateWorkflowDefinition,
   type PublishValidationResult
 } from './validation/publishValidation';
+export * from './actions/composeText';
 export {
   validateInputMapping,
   collectSecretRefs,

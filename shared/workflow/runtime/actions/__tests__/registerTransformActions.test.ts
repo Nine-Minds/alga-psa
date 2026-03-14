@@ -12,6 +12,7 @@ describe('registerTransformActionsV2', () => {
   it('T226/T227/T228: registers text transform actions with explicit input and output schemas', () => {
     const registry = getActionRegistryV2();
     const actionIds = [
+      'transform.compose_text',
       'transform.truncate_text',
       'transform.concat_text',
       'transform.replace_text',
@@ -42,6 +43,7 @@ describe('registerTransformActionsV2', () => {
     const registry = getActionRegistryV2();
 
     expect(registry.get('transform.truncate_text', 1)?.outputSchema.safeParse({ text: 'abc' }).success).toBe(true);
+    expect(registry.get('transform.compose_text', 1)?.outputSchema.safeParse({ prompt: 'abc' }).success).toBe(true);
     expect(registry.get('transform.concat_text', 1)?.outputSchema.safeParse({ text: 'abc' }).success).toBe(true);
     expect(registry.get('transform.replace_text', 1)?.outputSchema.safeParse({ text: 'abc' }).success).toBe(true);
     expect(registry.get('transform.split_text', 1)?.outputSchema.safeParse({ items: ['a', 'b'] }).success).toBe(true);
@@ -62,6 +64,7 @@ describe('registerTransformActionsV2', () => {
   it('T241/T244/T245/T246/T247/T248/T249/T250: applies representative text transforms through runtime handlers', async () => {
     const registry = getActionRegistryV2();
 
+    const composeText = registry.get('transform.compose_text', 1);
     const truncate = registry.get('transform.truncate_text', 1);
     const concat = registry.get('transform.concat_text', 1);
     const replace = registry.get('transform.replace_text', 1);
@@ -71,6 +74,47 @@ describe('registerTransformActionsV2', () => {
     const uppercase = registry.get('transform.uppercase_text', 1);
     const trim = registry.get('transform.trim_text', 1);
 
+    const composed = await composeText?.handler(
+      composeText.inputSchema.parse({}),
+      {
+        runId: 'run-1',
+        stepPath: 'root.steps[0]',
+        stepConfig: {
+          actionId: 'transform.compose_text',
+          version: 1,
+          outputs: [
+            {
+              id: 'out-1',
+              label: 'Prompt',
+              stableKey: 'prompt',
+              document: {
+                version: 1,
+                blocks: [
+                  {
+                    type: 'paragraph',
+                    children: [
+                      { type: 'text', text: 'Ticket ' },
+                      { type: 'reference', path: 'payload.ticket.id', label: 'Ticket ID' },
+                    ],
+                  },
+                ],
+              },
+            },
+          ],
+        },
+        tenantId: null,
+        idempotencyKey: 'key',
+        attempt: 1,
+        nowIso: () => '2026-03-14T00:00:00.000Z',
+        env: {},
+        expressionContext: {
+          payload: { ticket: { id: 'T-100' } },
+          vars: {},
+          meta: {},
+          error: undefined,
+        },
+      } as never
+    );
     const truncated = await truncate?.handler(
       truncate.inputSchema.parse({ text: 'workflow designer', maxLength: 12, strategy: 'middle', ellipsis: '...' }),
       {} as never
@@ -104,6 +148,7 @@ describe('registerTransformActionsV2', () => {
       {} as never
     );
 
+    expect(composed).toEqual({ prompt: 'Ticket T-100' });
     expect(truncated).toEqual({ text: 'workf...gner' });
     expect(concatenated).toEqual({ text: 'workflow designer' });
     expect(replaced).toEqual({ text: 'designer workflow' });

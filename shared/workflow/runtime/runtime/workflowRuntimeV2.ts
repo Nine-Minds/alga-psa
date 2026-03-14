@@ -693,6 +693,7 @@ export class WorkflowRuntimeV2 {
             knex,
             run,
             path,
+            env,
             actionId,
             version,
             args,
@@ -750,6 +751,7 @@ export class WorkflowRuntimeV2 {
 
   private expressionContext(env: Envelope) {
     return {
+      ...(env.vars ?? {}),
       payload: env.payload,
       vars: env.vars,
       meta: env.meta,
@@ -761,6 +763,7 @@ export class WorkflowRuntimeV2 {
     knex: Knex,
     run: WorkflowRunRecord,
     stepPath: string,
+    env: Envelope,
     actionId: string,
     version: number,
     args: unknown,
@@ -793,6 +796,7 @@ export class WorkflowRuntimeV2 {
             attempt: 1,
             nowIso: () => new Date().toISOString(),
             env: {},
+            expressionContext: this.expressionContext(env),
             knex
           })
         : generateIdempotencyKey(run.run_id, stepPath, actionId, version, input);
@@ -850,6 +854,7 @@ export class WorkflowRuntimeV2 {
         attempt: invocation.attempt,
         nowIso: () => new Date().toISOString(),
         env: {},
+        expressionContext: this.expressionContext(env),
         knex
       });
       const validatedOutput = action.outputSchema.parse(output);

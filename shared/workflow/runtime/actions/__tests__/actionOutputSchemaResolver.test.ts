@@ -50,4 +50,46 @@ describe('resolveActionCallOutputSchema', () => {
       $ref: expect.stringContaining('test.echo@1.output'),
     });
   });
+
+  it('T023/T024: resolves compose-text outputs from config-derived stable keys instead of the registry catch-all schema', () => {
+    const registry = new ActionRegistry();
+    registry.register({
+      id: 'transform.compose_text',
+      version: 1,
+      inputSchema: z.object({}),
+      outputSchema: z.record(z.string()),
+      sideEffectful: false,
+      idempotency: { mode: 'engineProvided' },
+      handler: async () => ({ prompt: 'ok' }),
+    });
+
+    const composeSchema = resolveActionCallOutputSchema(registry, {
+      actionId: 'transform.compose_text',
+      version: 1,
+      outputs: [
+        {
+          id: 'out-1',
+          label: 'Prompt',
+          stableKey: 'prompt',
+          document: { version: 1, blocks: [] },
+        },
+        {
+          id: 'out-2',
+          label: 'Email Body',
+          stableKey: 'email_body',
+          document: { version: 1, blocks: [] },
+        },
+      ],
+    });
+
+    expect(composeSchema).toEqual({
+      type: 'object',
+      properties: {
+        prompt: { type: 'string', description: 'Prompt' },
+        email_body: { type: 'string', description: 'Email Body' },
+      },
+      required: ['prompt', 'email_body'],
+      additionalProperties: false,
+    });
+  });
 });

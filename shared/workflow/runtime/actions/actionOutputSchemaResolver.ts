@@ -1,6 +1,10 @@
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
 import { isWorkflowAiInferAction, resolveWorkflowAiSchemaFromConfig } from '../ai/aiSchema';
+import {
+  isWorkflowComposeTextAction,
+  resolveComposeTextOutputSchemaFromConfig,
+} from './composeText';
 import type { ActionRegistry } from '../registries/actionRegistry';
 
 export const resolveActionCallOutputSchema = (
@@ -16,6 +20,11 @@ export const resolveActionCallOutputSchema = (
 
   if (isWorkflowAiInferAction(actionId)) {
     return (resolveWorkflowAiSchemaFromConfig(config).schema as Record<string, unknown> | null) ?? null;
+  }
+
+  if (isWorkflowComposeTextAction(actionId)) {
+    const resolved = resolveComposeTextOutputSchemaFromConfig(config);
+    if (resolved) return resolved;
   }
 
   const version = typeof config?.version === 'number' ? config.version : 1;

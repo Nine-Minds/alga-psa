@@ -9,6 +9,8 @@ import type {
 import {
   isWorkflowAiInferAction,
   resolveWorkflowAiSchemaFromConfig,
+  isWorkflowComposeTextAction,
+  resolveComposeTextOutputSchemaFromConfig,
 } from '@alga-psa/workflows/authoring';
 
 export type ActionRegistryItem = {
@@ -445,6 +447,10 @@ export const buildDataContext = (
     fallbackOutputSchema: JsonSchema,
     blockCtx: BlockContext
   ): JsonSchema => {
+    if (isWorkflowComposeTextAction(actionId)) {
+      return (resolveComposeTextOutputSchemaFromConfig(step.config) as JsonSchema | null) ?? fallbackOutputSchema;
+    }
+
     const config = (step.config ?? {}) as { inputMapping?: Record<string, unknown> };
     const inputMapping = config.inputMapping ?? {};
     const resolveForValue = (value: unknown) => {

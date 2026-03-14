@@ -102,6 +102,24 @@ const actionRegistry = [
     },
   },
   {
+    id: 'transform.compose_text',
+    version: 1,
+    ui: {
+      label: 'Compose Text',
+      description: 'Compose markdown text outputs.',
+    },
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+    outputSchema: {
+      type: 'object',
+      additionalProperties: {
+        type: 'string',
+      },
+    },
+  },
+  {
     id: 'transform.build_object',
     version: 1,
     ui: {
@@ -455,6 +473,88 @@ describe('workflow data context', () => {
         text: { type: 'string' },
       },
     });
+  });
+
+  it('T025: compose-text exposes configured stable keys under vars.<saveAs> with string field types', () => {
+    const definition: WorkflowDefinition = {
+      id: 'workflow-compose-text',
+      version: 1,
+      name: 'Compose text workflow',
+      payloadSchemaRef: 'system:default',
+      trigger: { type: 'event', eventName: 'ticket.created' },
+      steps: [
+        {
+          id: 'compose-step',
+          type: 'action.call',
+          name: 'Compose Text',
+          config: {
+            designerGroupKey: 'transform',
+            designerTileKind: 'transform',
+            actionId: 'transform.compose_text',
+            version: 1,
+            saveAs: 'composed',
+            outputs: [
+              {
+                id: 'out-1',
+                label: 'Prompt',
+                stableKey: 'prompt',
+                document: { version: 1, blocks: [] },
+              },
+              {
+                id: 'out-2',
+                label: 'Email Body',
+                stableKey: 'email_body',
+                document: { version: 1, blocks: [] },
+              },
+            ],
+          },
+        },
+        {
+          id: 'downstream-step',
+          type: 'action.call',
+          config: {
+            actionId: 'tickets.create',
+            version: 1,
+          },
+        },
+      ],
+    };
+
+    const context = buildDataContext(definition, 'downstream-step', actionRegistry, null);
+
+    expect(context.steps[0]).toMatchObject({
+      stepId: 'compose-step',
+      saveAs: 'composed',
+      outputSchema: {
+        type: 'object',
+        properties: {
+          prompt: { type: 'string', description: 'Prompt' },
+          email_body: { type: 'string', description: 'Email Body' },
+        },
+      },
+    });
+    expect(context.steps[0]?.fields).toEqual([
+      {
+        name: 'prompt',
+        type: 'string',
+        required: true,
+        nullable: false,
+        description: 'Prompt',
+        defaultValue: undefined,
+        children: undefined,
+        constraints: undefined,
+      },
+      {
+        name: 'email_body',
+        type: 'string',
+        required: true,
+        nullable: false,
+        description: 'Email Body',
+        defaultValue: undefined,
+        children: undefined,
+        constraints: undefined,
+      },
+    ]);
   });
 
   it('T269: build-object exposes named object fields to downstream references', () => {
