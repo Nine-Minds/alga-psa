@@ -53,7 +53,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-14) Current schema still enforced tenant-global ticket status uniqueness before this batch:
   - `server/migrations/202409101116_add_status_constraints.cjs`
   - `packages/types/src/interfaces/status.interface.ts`
-- (2026-03-14) Ticket create/update validation remains board-unaware after the schema batch:
+- (2026-03-14) Ticket update validation still remains board-unaware after the shared create-path fix:
   - `shared/models/ticketModel.ts`
   - `server/src/lib/api/services/TicketService.ts`
 - (2026-03-14) Board settings and board actions do not yet seed or manage board-local ticket statuses:
@@ -81,6 +81,20 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - seeds a workflow `tickets.update_fields` step with fixed legacy `patch.status_id` and no board context
   - verifies the guard migration rejects with a concrete unresolved-reference message and leaves the stored status id unchanged
   - reran with `cd server && npx vitest run --coverage.enabled false src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts` and confirmed all 9 migration tests pass
+- (2026-03-14) Completed `F011` by making ticket default resolution board-aware in shared ticket creation paths:
+  - `shared/models/ticketModel.ts` now resolves a default ticket status only for the selected `board_id` and no longer falls back to tenant-global ticket statuses.
+  - `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts` now asks `TicketModel.getDefaultStatusId(...)` for the default status tied to the client portal's default board instead of querying tenant-global ticket defaults directly.
+- (2026-03-14) Completed `F012` by enforcing board/status compatibility on ticket creation:
+  - `shared/models/ticketModel.ts` now validates that a provided ticket `status_id` belongs to the selected `board_id` before insert.
+  - `TicketModel.createTicket(...)` now auto-fills the selected board's default status when callers omit `status_id`, and rejects create attempts when no board-local default exists.
+- (2026-03-14) Completed `T012` and `T013` with shared unit coverage in `shared/models/__tests__/ticketModel.boardStatusValidation.test.ts`:
+  - `T012` proves `getDefaultStatusId` returns the selected board's default instead of a legacy tenant-global default.
+  - `T013` proves create-time business rule validation rejects a status from a different board.
+  - verified with `cd shared && npx vitest run models/__tests__/ticketModel.boardStatusValidation.test.ts --config vitest.config.ts`.
+- (2026-03-14) Completed `T014` with DB-backed create-path coverage in `server/src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts`:
+  - seeds two boards with distinct board-owned ticket statuses and proves `TicketModel.createTicket(...)` inserts only for the matching board/status pair
+  - verifies the cross-board create attempt throws and leaves only the valid ticket row persisted
+  - verified with `cd server && npx vitest run --coverage.enabled false src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts`.
 
 ## Commands / Runbooks
 
@@ -105,6 +119,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-14) Attempt the board-context status-reference remap suite:
   - `cd server && npx vitest run src/test/integration/boardContextTicketStatusReferenceRemap.integration.test.ts --coverage=false`
   - Run it after the clone/remap suite or against a schema that already includes `20260314113000_clone_global_ticket_statuses_to_boards.cjs`.
+- (2026-03-14) Run the shared board-status helper tests:
+  - `cd shared && npx vitest run models/__tests__/ticketModel.boardStatusValidation.test.ts --config vitest.config.ts`
+- (2026-03-14) Run the DB-backed ticket create board/status validation test:
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts`
 
 ## Links / References
 
@@ -116,6 +134,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Ticket status model: `packages/tickets/src/models/status.ts`
 - Board actions: `packages/tickets/src/actions/board-actions/boardActions.ts`
 - Ticket model default status helper: `shared/models/ticketModel.ts`
+- Ticket create board/status validation integration: `server/src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts`
 - Ticket API service: `server/src/lib/api/services/TicketService.ts`
 - Ticket statuses API route: `server/src/app/api/v1/tickets/statuses/route.ts`
 - Workflow ticket actions: `shared/workflow/runtime/actions/businessOperations/tickets.ts`

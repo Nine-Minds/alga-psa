@@ -62,13 +62,13 @@
   {
     "id": "F011",
     "description": "Make ticket default status resolution board-aware everywhere new tickets are created.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR4"]
   },
   {
     "id": "F012",
     "description": "Validate board and status compatibility on ticket creation paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR4"]
   },
   {

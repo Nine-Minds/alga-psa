@@ -68,19 +68,19 @@
   {
     "id": "T012",
     "description": "Unit: default ticket status helper returns the default status for a specific board, not the tenant-wide first ticket status.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
     "id": "T013",
     "description": "Unit: ticket create validation rejects a status id that belongs to a different board.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
     "id": "T014",
     "description": "DB-backed integration: ticket create succeeds when status_id belongs to the chosen board and fails otherwise.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
