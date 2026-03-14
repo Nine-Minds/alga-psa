@@ -110,6 +110,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) F093a complete — P4: Updated `QuoteDetail.tsx` so accepted quotes surface a review banner plus per-item highlighting for optional items the client selected vs. declined, giving the MSP a clear pre-conversion review state.
 - (2026-03-13) F093 complete — P4: Added `acceptClientQuote` in the client portal actions to persist optional selections, move quotes from `sent` to `accepted`, stamp `accepted_at`/`accepted_by`, and log the selected vs. deselected optional items for MSP review; `QuotesTab.tsx` now exposes an Accept Quote action for sent quotes.
 - (2026-03-13) F092 complete — P4: Added client-portal optional-item toggles in `QuotesTab.tsx` with optimistic client-side total recalculation, persisted `is_selected` updates through `updateClientQuoteSelections`, and quote-list/detail total refresh after each selection change.
 - (2026-03-13) F068 complete — P2: Added `calculateDraftQuoteTotals()` to derive subtotal/discount/tax/total from the in-memory line-item draft state, so the quote form totals refresh immediately as rows are added or edited.

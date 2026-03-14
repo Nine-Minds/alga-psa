@@ -81,6 +81,10 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
 
   const client = useMemo(() => clients.find((entry) => entry.client_id === quote?.client_id) ?? null, [clients, quote?.client_id]);
   const contact = useMemo(() => contacts.find((entry) => entry.contact_name_id === quote?.contact_id) ?? null, [contacts, quote?.contact_id]);
+  const acceptedOptionalItems = useMemo(
+    () => (quote?.quote_items || []).filter((item) => item.is_optional),
+    [quote?.quote_items]
+  );
 
   const handleDelete = async () => {
     if (!quote) {
@@ -290,6 +294,14 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
 
         <section className="space-y-3 rounded-lg border border-border p-4">
           <h3 className="text-base font-semibold">Line Items</h3>
+          {quote.status === 'accepted' && acceptedOptionalItems.length > 0 ? (
+            <Alert>
+              <AlertTitle>Client Configuration Submitted</AlertTitle>
+              <AlertDescription>
+                Review the optional line items below before converting this quote. Selected items are marked as included, and declined items are highlighted for follow-up.
+              </AlertDescription>
+            </Alert>
+          ) : null}
           {quote.quote_items?.length ? (
             <div className="overflow-x-auto rounded-md border border-border">
               <table className="min-w-full divide-y divide-border text-sm">
@@ -303,8 +315,15 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border bg-background">
-                  {quote.quote_items.map((item) => (
-                    <tr key={item.quote_item_id}>
+                  {quote.quote_items.map((item) => {
+                    const showClientSelection = quote.status === 'accepted' && item.is_optional;
+                    const clientSelected = item.is_selected !== false;
+
+                    return (
+                    <tr
+                      key={item.quote_item_id}
+                      className={showClientSelection ? (clientSelected ? 'bg-emerald-50/60' : 'bg-amber-50/70') : undefined}
+                    >
                       <td className="px-3 py-3 align-top">
                         <div className="font-medium text-foreground">{item.description}</div>
                         <div className="text-xs text-muted-foreground">
@@ -314,6 +333,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                           {item.is_optional ? ' • Optional' : ''}
                           {item.is_recurring ? ` • Recurring${item.billing_frequency ? ` (${item.billing_frequency})` : ''}` : ''}
                         </div>
+                        {showClientSelection ? (
+                          <div className={`mt-2 inline-flex rounded-full px-2 py-1 text-xs font-medium ${clientSelected ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                            {clientSelected ? 'Client selected this optional item' : 'Client declined this optional item'}
+                          </div>
+                        ) : null}
                       </td>
                       <td className="px-3 py-3 align-top text-muted-foreground">{item.billing_method || '—'}</td>
                       <td className="px-3 py-3 align-top text-muted-foreground">{item.quantity}</td>
@@ -324,7 +348,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                         {formatCurrency(item.total_price, quote.currency_code || 'USD')}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

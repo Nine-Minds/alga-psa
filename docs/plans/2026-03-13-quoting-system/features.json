@@ -783,7 +783,7 @@
   {
     "id": "F093a",
     "description": "P4: MSP quote detail — highlight client's optional item selections on accepted quotes for MSP review before conversion",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P4-FR6"
     ]
