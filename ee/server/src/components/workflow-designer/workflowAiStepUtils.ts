@@ -1,4 +1,4 @@
-import { isWorkflowAiInferAction } from '@alga-psa/workflows/runtime';
+import { isWorkflowAiInferAction } from '@alga-psa/workflows/authoring';
 
 export const shouldRenderWorkflowAiSchemaSection = (
   stepType: string | null | undefined,

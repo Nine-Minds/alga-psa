@@ -5,11 +5,11 @@ import type {
   IfBlock,
   ForEachBlock,
   TryCatchBlock,
-} from '@alga-psa/workflows/runtime';
+} from '@alga-psa/workflows/runtime/client';
 import {
   isWorkflowAiInferAction,
   resolveWorkflowAiSchemaFromConfig,
-} from '@alga-psa/workflows/runtime';
+} from '@alga-psa/workflows/authoring';
 
 export type ActionRegistryItem = {
   id: string;

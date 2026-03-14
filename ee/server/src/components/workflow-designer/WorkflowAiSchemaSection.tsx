@@ -21,7 +21,7 @@ import {
   type WorkflowAiSimpleField,
   type WorkflowAiSimpleFieldType,
   type WorkflowJsonSchema,
-} from '@alga-psa/workflows/runtime';
+} from '@alga-psa/workflows/authoring';
 
 type WorkflowAiSchemaSectionProps = {
   stepId: string;

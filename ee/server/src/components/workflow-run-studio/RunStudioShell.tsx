@@ -24,8 +24,8 @@ import {
 } from '@alga-psa/workflows/actions';
 import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
-import { type WorkflowDefinition, type Step } from '@alga-psa/workflows/runtime';
-import type { IfBlock, ForEachBlock, TryCatchBlock, NodeStep } from '@alga-psa/workflows/runtime';
+import { type WorkflowDefinition, type Step } from '@alga-psa/workflows/runtime/client';
+import type { IfBlock, ForEachBlock, TryCatchBlock, NodeStep } from '@alga-psa/workflows/runtime/client';
 import {
   PipelineStart,
   PipelineConnector,
