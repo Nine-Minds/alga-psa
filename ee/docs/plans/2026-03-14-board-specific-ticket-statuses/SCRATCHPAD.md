@@ -64,6 +64,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `inbound_ticket_defaults.board_id + status_id`
   - `default_billing_settings.renewal_ticket_board_id + renewal_ticket_status_id`
   - `client_contracts.renewal_ticket_board_id + renewal_ticket_status_id`
+- (2026-03-14) Postgres migration gotcha: in `UPDATE ... FROM`, the target table alias cannot be referenced inside the joined table `ON` clause the way a regular join can. The board-column predicate for the board-context remap migration needs to live in the outer `WHERE` clause instead.
 - (2026-03-14) `F009`/`F010` are the first non-tabular migration slice:
   - workflow ticket board/status references live inside `workflow_definitions.draft_definition` and `workflow_definition_versions.definition_json`
   - ticket board/status values can appear as fixed literals or dynamic `inputMapping` expressions in action configs, so safe remap/surfacing needs JSON traversal and explicit unresolved detection rather than a single SQL join

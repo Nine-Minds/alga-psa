@@ -7,10 +7,10 @@ async function remapBoardScopedStatusReference(knex, tableName, boardColumn, sta
       INNER JOIN statuses AS cloned
         ON cloned.tenant = legacy.tenant
        AND cloned.status_type = 'ticket'
-       AND cloned.board_id = target.${boardColumn}
        AND cloned.name = legacy.name
       WHERE target.tenant = legacy.tenant
         AND target.${boardColumn} IS NOT NULL
+        AND cloned.board_id = target.${boardColumn}
         AND target.${statusColumn} = legacy.status_id
         AND legacy.status_type = 'ticket'
         AND legacy.board_id IS NULL

@@ -16,20 +16,7 @@ const tenantsToCleanup = new Set<string>();
 type LegacyFixture = {
   tenantId: string;
   boardIds: [string, string];
-  legacyStatuses: Array<{
-    status_id: string;
-    name: string;
-    order_number: number;
-    is_default: boolean;
-    is_closed: boolean;
-    color: string | null;
-    icon: string | null;
-    standard_status_id: string | null;
-    item_type: string;
-    status_type: string;
-    is_custom: boolean;
-    created_by: string;
-  }>;
+  legacyStatuses: Array<Record<string, unknown> & { status_id: string }>;
   tickets: Array<{
     ticket_id: string;
     board_id: string;
@@ -43,9 +30,28 @@ let tenantColumns: ColumnInfoMap;
 let userColumns: ColumnInfoMap;
 let boardColumns: ColumnInfoMap;
 let ticketColumns: ColumnInfoMap;
+let statusColumns: ColumnInfoMap;
 
 function hasColumn(columns: ColumnInfoMap, columnName: string): boolean {
   return Object.prototype.hasOwnProperty.call(columns, columnName);
+}
+
+function projectComparableStatus(status: Record<string, unknown>) {
+  return {
+    name: status.name,
+    order_number: status.order_number,
+    is_default: status.is_default,
+    is_closed: status.is_closed,
+    ...(hasColumn(statusColumns, 'color') ? { color: status.color ?? null } : {}),
+    ...(hasColumn(statusColumns, 'icon') ? { icon: status.icon ?? null } : {}),
+    ...(hasColumn(statusColumns, 'standard_status_id')
+      ? { standard_status_id: status.standard_status_id ?? null }
+      : {}),
+    ...(hasColumn(statusColumns, 'item_type') ? { item_type: status.item_type } : {}),
+    ...(hasColumn(statusColumns, 'status_type') ? { status_type: status.status_type } : {}),
+    ...(hasColumn(statusColumns, 'is_custom') ? { is_custom: status.is_custom } : {}),
+    created_by: status.created_by,
+  };
 }
 
 async function cleanupTenant(tenantId: string): Promise<void> {
@@ -122,38 +128,46 @@ async function createLegacyFixture(): Promise<LegacyFixture> {
     {
       tenant: tenantId,
       status_id: legacyOpenStatusId,
-      board_id: null,
+      ...(hasColumn(statusColumns, 'board_id') ? { board_id: null } : {}),
       name: 'Open',
-      status_type: 'ticket',
-      item_type: 'ticket',
+      ...(hasColumn(statusColumns, 'status_type') ? { status_type: 'ticket' } : {}),
+      ...(hasColumn(statusColumns, 'item_type') ? { item_type: 'ticket' } : {}),
       is_closed: false,
       is_default: true,
       order_number: 10,
       created_by: userId,
-      standard_status_id: null,
-      is_custom: true,
-      color: '#22C55E',
-      icon: 'Circle',
-      created_at: new Date('2026-03-10T12:00:00.000Z'),
-      updated_at: new Date('2026-03-10T12:00:00.000Z'),
+      ...(hasColumn(statusColumns, 'standard_status_id') ? { standard_status_id: null } : {}),
+      ...(hasColumn(statusColumns, 'is_custom') ? { is_custom: true } : {}),
+      ...(hasColumn(statusColumns, 'color') ? { color: '#22C55E' } : {}),
+      ...(hasColumn(statusColumns, 'icon') ? { icon: 'Circle' } : {}),
+      ...(hasColumn(statusColumns, 'created_at')
+        ? { created_at: new Date('2026-03-10T12:00:00.000Z') }
+        : {}),
+      ...(hasColumn(statusColumns, 'updated_at')
+        ? { updated_at: new Date('2026-03-10T12:00:00.000Z') }
+        : {}),
     },
     {
       tenant: tenantId,
       status_id: legacyClosedStatusId,
-      board_id: null,
+      ...(hasColumn(statusColumns, 'board_id') ? { board_id: null } : {}),
       name: 'Closed',
-      status_type: 'ticket',
-      item_type: 'ticket',
+      ...(hasColumn(statusColumns, 'status_type') ? { status_type: 'ticket' } : {}),
+      ...(hasColumn(statusColumns, 'item_type') ? { item_type: 'ticket' } : {}),
       is_closed: true,
       is_default: false,
       order_number: 20,
       created_by: userId,
-      standard_status_id: null,
-      is_custom: true,
-      color: '#64748B',
-      icon: 'CheckCircle2',
-      created_at: new Date('2026-03-10T12:05:00.000Z'),
-      updated_at: new Date('2026-03-10T12:05:00.000Z'),
+      ...(hasColumn(statusColumns, 'standard_status_id') ? { standard_status_id: null } : {}),
+      ...(hasColumn(statusColumns, 'is_custom') ? { is_custom: true } : {}),
+      ...(hasColumn(statusColumns, 'color') ? { color: '#64748B' } : {}),
+      ...(hasColumn(statusColumns, 'icon') ? { icon: 'CheckCircle2' } : {}),
+      ...(hasColumn(statusColumns, 'created_at')
+        ? { created_at: new Date('2026-03-10T12:05:00.000Z') }
+        : {}),
+      ...(hasColumn(statusColumns, 'updated_at')
+        ? { updated_at: new Date('2026-03-10T12:05:00.000Z') }
+        : {}),
     },
   ];
 
@@ -189,17 +203,7 @@ async function createLegacyFixture(): Promise<LegacyFixture> {
     boardIds: [boardA, boardB],
     legacyStatuses: legacyStatuses.map((status) => ({
       status_id: status.status_id,
-      name: status.name,
-      order_number: status.order_number,
-      is_default: status.is_default,
-      is_closed: status.is_closed,
-      color: status.color,
-      icon: status.icon,
-      standard_status_id: status.standard_status_id,
-      item_type: status.item_type,
-      status_type: status.status_type,
-      is_custom: status.is_custom,
-      created_by: status.created_by,
+      ...projectComparableStatus(status),
     })),
     tickets: tickets.map((ticket) => ({
       ticket_id: ticket.ticket_id,
@@ -224,6 +228,7 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
     userColumns = await db('users').columnInfo();
     boardColumns = await db('boards').columnInfo();
     ticketColumns = await db('tickets').columnInfo();
+    statusColumns = await db('statuses').columnInfo();
   }, HOOK_TIMEOUT);
 
   afterEach(async () => {
@@ -252,19 +257,7 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
       const boardClones = clonedStatuses.filter((status) => status.board_id === boardId);
       expect(boardClones).toHaveLength(fixture.legacyStatuses.length);
 
-      const projectedBoardClones = boardClones.map((status) => ({
-        name: status.name,
-        order_number: status.order_number,
-        is_default: status.is_default,
-        is_closed: status.is_closed,
-        color: status.color,
-        icon: status.icon,
-        standard_status_id: status.standard_status_id,
-        item_type: status.item_type,
-        status_type: status.status_type,
-        is_custom: status.is_custom,
-        created_by: status.created_by,
-      }));
+      const projectedBoardClones = boardClones.map((status) => projectComparableStatus(status));
 
       expect(projectedBoardClones).toEqual(fixture.legacyStatuses);
     }
