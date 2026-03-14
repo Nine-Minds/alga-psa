@@ -145,14 +145,14 @@
   },
   {
     "id": "F025",
-    "description": "Update quick-add, bulk ticket updates, and other board-aware ticket creation helpers to use board-scoped statuses.",
-    "implemented": false,
+    "description": "Update the quick-add ticket flow to use board-scoped statuses.",
+    "implemented": true,
     "prdRefs": ["FR4", "FR5"]
   },
   {
     "id": "F026",
     "description": "Make inbound ticket defaults choose ticket statuses from the selected board only.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR5"]
   },
   {
@@ -250,5 +250,17 @@
     "description": "Add API and client portal regression coverage for board-scoped ticket status lookup and validation behavior.",
     "implemented": false,
     "prdRefs": ["FR7"]
+  },
+  {
+    "id": "F043",
+    "description": "Update any bulk ticket update surfaces to validate board-scoped status selections.",
+    "implemented": false,
+    "prdRefs": ["FR4", "FR5"]
+  },
+  {
+    "id": "F044",
+    "description": "Update auxiliary board-aware ticket creation helpers such as asset or project-linked ticket creation to use board-scoped statuses.",
+    "implemented": false,
+    "prdRefs": ["FR4", "FR5"]
   }
 ]

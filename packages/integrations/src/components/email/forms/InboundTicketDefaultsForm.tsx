@@ -12,7 +12,7 @@ import {
   createInboundTicketDefaults, 
   updateInboundTicketDefaults 
 } from '@alga-psa/integrations/actions';
-import { getTicketFieldOptions, getCategoriesByBoard } from '@alga-psa/integrations/actions';
+import { getAvailableStatuses, getTicketFieldOptions, getCategoriesByBoard } from '@alga-psa/integrations/actions';
 import type { InboundTicketDefaults, TicketFieldOptions } from '@alga-psa/types';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { PrioritySelect } from '@alga-psa/ui/components';
@@ -62,6 +62,7 @@ export function InboundTicketDefaultsForm({
   
   const [loading, setLoading] = useState(false);
   const [loadingOptions, setLoadingOptions] = useState(true);
+  const [loadingStatuses, setLoadingStatuses] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [clients, setClients] = useState<IClient[]>([]);
@@ -94,6 +95,52 @@ export function InboundTicketDefaultsForm({
     loadCategoriesForBoard();
   }, [formData.board_id]);
 
+  useEffect(() => {
+    let active = true;
+
+    const loadStatusesForBoard = async () => {
+      if (!formData.board_id) {
+        setFieldOptions(prev => ({ ...prev, statuses: [] }));
+        return;
+      }
+
+      try {
+        setLoadingStatuses(true);
+        const { statuses } = await getAvailableStatuses(formData.board_id);
+        if (!active) {
+          return;
+        }
+
+        setFieldOptions(prev => ({ ...prev, statuses }));
+        setFormData(prev => {
+          if (!prev.status_id) {
+            return prev;
+          }
+
+          const hasSelectedStatus = statuses.some(status => status.id === prev.status_id);
+          return hasSelectedStatus ? prev : { ...prev, status_id: '' };
+        });
+      } catch (_err) {
+        if (!active) {
+          return;
+        }
+
+        setFieldOptions(prev => ({ ...prev, statuses: [] }));
+        setFormData(prev => (prev.status_id ? { ...prev, status_id: '' } : prev));
+      } finally {
+        if (active) {
+          setLoadingStatuses(false);
+        }
+      }
+    };
+
+    loadStatusesForBoard();
+
+    return () => {
+      active = false;
+    };
+  }, [formData.board_id]);
+
   // Populate form when editing
   useEffect(() => {
     if (defaults) {
@@ -118,7 +165,11 @@ export function InboundTicketDefaultsForm({
     try {
       setLoadingOptions(true);
       const data = await getTicketFieldOptions();
-      setFieldOptions(data.options);
+      setFieldOptions({
+        ...data.options,
+        statuses: [],
+        categories: [],
+      });
 
       // Hydrate dedicated pickers with richer datasets
       const [allClients, allPriorities, allUsers] = await Promise.all([
@@ -204,6 +255,7 @@ export function InboundTicketDefaultsForm({
       const next = { ...prev, [field]: value } as typeof prev;
       // Clear dependent fields when parents change
       if (field === 'board_id') {
+        next.status_id = '';
         next.category_id = '';
         next.subcategory_id = '';
       }
@@ -319,7 +371,12 @@ export function InboundTicketDefaultsForm({
                 value: s.id, 
                 label: s.name + (s.is_default ? ' (Default)' : '') 
               }))}
-              placeholder="Select status"
+              placeholder={
+                !formData.board_id
+                  ? 'Select board first'
+                  : (loadingStatuses ? 'Loading statuses...' : 'Select status')
+              }
+              disabled={!formData.board_id || loadingStatuses}
             />
           </div>
 

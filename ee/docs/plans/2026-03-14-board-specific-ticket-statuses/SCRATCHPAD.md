@@ -27,6 +27,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-14) `T003`/`T004`/`T005`/`T006`: cover the clone/remap migration with a DB-backed integration fixture that seeds one tenant, two boards, two legacy ticket statuses, and board-specific tickets before invoking the migration directly.
 - (2026-03-14) `F006`/`F007`/`F008`: remap inbound defaults, tenant billing renewal defaults, and contract renewal overrides by joining cloned ticket statuses back to the legacy status name within the saved board context.
 - (2026-03-14) `T007`/`T008`/`T009`: cover board-context remaps with a DB-backed integration fixture that runs the clone migration first, then asserts each persisted configuration surface moves from the legacy global status id to the correct board-owned replacement.
+- (2026-03-14) `F025` was too broad once Quick Add landed: narrowed it to the already-shipped Quick Add board-scoped status work, then split follow-up work into `F043` (bulk update surfaces) and `F044` (auxiliary ticket creation helpers). Rationale: there is no standalone bulk ticket status edit UI in this branch today, so the remaining work needs separate traceable items instead of one mixed feature.
 
 ## Discoveries / Constraints
 
@@ -48,6 +49,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `packages/billing/src/actions/billingSettingsActions.ts`
   - `packages/billing/src/actions/renewalsQueueActions.ts`
   - `server/src/lib/jobs/handlers/processRenewalQueueHandler.ts`
+- (2026-03-14) There is no standalone bulk ticket status edit surface in the current ticket dashboard branch; the only ticket bulk action present right now is bulk delete. That means `T032` needs either a future implementation surface or a scoped plan update, not a false claim of coverage.
 - (2026-03-14) SLA, notifications, surveys, and client portal ticket flows all resolve ticket statuses directly by `status_id`, so they are migration-sensitive:
   - `packages/sla/src/services/slaPauseService.ts`
   - `server/src/lib/eventBus/subscribers/internalNotificationSubscriber.ts`
@@ -131,6 +133,14 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-14) Completed `T027`/`T028`/`T029`/`T030` with focused picker coverage:
   - `packages/tickets/src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx` now verifies board-scoped option loading, empty/disabled state with no board, and board-change option reloading.
   - `packages/tickets/src/components/__tests__/QuickAddTicket.boardScopedStatuses.test.tsx` verifies create flow status pickers stay empty until a board is selected and then choose that board's default.
+- (2026-03-14) Completed `F026` by making inbound ticket defaults board-scoped for statuses:
+  - `packages/integrations/src/components/email/forms/InboundTicketDefaultsForm.tsx` now clears `status_id` when the board changes, disables the status picker until a board is chosen, and reloads only that board's statuses via `getAvailableStatuses(boardId)`.
+  - `packages/integrations/src/actions/email-actions/ticketFieldOptionsActions.ts` now exposes `getAvailableStatuses(boardId)` as a board-filtered ticket-status lookup for inbound-email setup.
+  - `packages/integrations/src/actions/email-actions/inboundTicketDefaultsActions.ts` now rejects saves where `status_id` does not belong to the selected `board_id`.
+- (2026-03-14) Completed `T034` in `server/src/test/unit/components/InboundTicketDefaultsForm.test.tsx`:
+  - verifies inbound ticket defaults keep the status picker disabled until a board is selected
+  - verifies the form requests only the selected board's statuses and clears a stale status when the board changes
+  - reran with `cd server && npx vitest run --coverage.enabled false src/test/unit/components/InboundTicketDefaultsForm.test.tsx --config vitest.config.ts`
 
 ## Commands / Runbooks
 
@@ -174,6 +184,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run --coverage.enabled false src/test/integration/boardCopyTicketStatuses.integration.test.ts --config vitest.config.ts`
 - (2026-03-14) Validate board-dependent ticket status pickers:
   - `cd packages/tickets && npx vitest run src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx src/components/__tests__/QuickAddTicket.boardScopedStatuses.test.tsx --config vitest.config.ts`
+- (2026-03-14) Validate inbound ticket defaults board-scoped statuses:
+  - `cd server && npx vitest run --coverage.enabled false src/test/unit/components/InboundTicketDefaultsForm.test.tsx --config vitest.config.ts`
 - (2026-03-14) Legacy Quick Add regression note:
   - `cd packages/tickets && npx vitest run src/components/__tests__/ticket-inline-add-prefill.test.tsx --config vitest.config.ts`
   - Current failures in that broader suite are mock-assumption mismatches around board-first status loading and unrelated quick-add helper behavior; they are not yet curated as plan items in this pass.
@@ -205,6 +217,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Ticket statuses API route: `server/src/app/api/v1/tickets/statuses/route.ts`
 - Workflow ticket actions: `shared/workflow/runtime/actions/businessOperations/tickets.ts`
 - Billing renewal defaults: `packages/billing/src/actions/billingSettingsActions.ts`
+- Inbound ticket defaults form: `packages/integrations/src/components/email/forms/InboundTicketDefaultsForm.tsx`
+- Inbound ticket defaults actions: `packages/integrations/src/actions/email-actions/inboundTicketDefaultsActions.ts`
+- Inbound ticket field options actions: `packages/integrations/src/actions/email-actions/ticketFieldOptionsActions.ts`
+- Inbound ticket defaults test: `server/src/test/unit/components/InboundTicketDefaultsForm.test.tsx`
 - Client portal ticket actions: `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts`
 - New status schema migration: `server/migrations/20260314100000_add_board_ownership_to_ticket_statuses.cjs`
 - Migration schema coverage: `server/src/test/unit/migrations/boardSpecificTicketStatusesMigration.test.ts`

@@ -182,25 +182,25 @@
   {
     "id": "T031",
     "description": "Regression test: quick add ticket flow uses board-scoped ticket statuses.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   },
   {
     "id": "T032",
     "description": "Regression test: bulk ticket update flow validates board-scoped status selections.",
     "implemented": false,
-    "featureIds": ["F025"]
+    "featureIds": ["F043"]
   },
   {
     "id": "T033",
     "description": "Regression test: auxiliary board-aware ticket creation helpers such as asset or project-linked ticket creation use board-scoped statuses.",
     "implemented": false,
-    "featureIds": ["F025"]
+    "featureIds": ["F044"]
   },
   {
     "id": "T034",
     "description": "UI integration: inbound ticket defaults only offer statuses from the selected board and clear invalid values when board changes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F026"]
   },
   {
