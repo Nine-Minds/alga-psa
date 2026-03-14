@@ -230,37 +230,37 @@
   {
     "id": "F039",
     "description": "Add DB-backed migration coverage proving status clone/remap correctness for tickets and board-context configuration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2"]
   },
   {
     "id": "F040",
     "description": "Add UI and integration coverage for board create/edit status management and required status reselection on board change.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR3", "FR4"]
   },
   {
     "id": "F041",
     "description": "Add workflow and billing regression coverage proving saved ticket-status configuration still resolves after migration remap.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR5", "FR6"]
   },
   {
     "id": "F042",
     "description": "Add API and client portal regression coverage for board-scoped ticket status lookup and validation behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR7"]
   },
   {
     "id": "F043",
     "description": "Update any bulk ticket update surfaces to validate board-scoped status selections.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR4", "FR5"]
   },
   {
     "id": "F044",
     "description": "Update auxiliary board-aware ticket creation helpers such as asset or project-linked ticket creation to use board-scoped statuses.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR4", "FR5"]
   }
 ]

@@ -188,13 +188,13 @@
   {
     "id": "T032",
     "description": "Regression test: bulk ticket update flow validates board-scoped status selections.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F043"]
   },
   {
     "id": "T033",
     "description": "Regression test: auxiliary board-aware ticket creation helpers such as asset or project-linked ticket creation use board-scoped statuses.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F044"]
   },
   {
@@ -326,49 +326,49 @@
   {
     "id": "T055",
     "description": "Migration test suite includes one happy-path DB integration proving clone/remap correctness on a tenant with multiple boards.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F039"]
   },
   {
     "id": "T056",
     "description": "Migration test suite includes one failure/guard case proving unresolved no-board-context references are surfaced explicitly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F039"]
   },
   {
     "id": "T057",
     "description": "Playwright or equivalent UI coverage verifies board create with copied statuses, inline statuses, and board-local status editing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F040"]
   },
   {
     "id": "T058",
     "description": "Playwright or equivalent UI coverage verifies ticket board change requires explicit reselection of a valid destination-board status.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F040"]
   },
   {
     "id": "T059",
     "description": "Workflow regression suite proves migrated saved workflow status references still execute against the intended board-owned ticket statuses.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F041"]
   },
   {
     "id": "T060",
     "description": "Billing regression suite proves migrated tenant and contract renewal defaults still create tickets with the intended board-owned status ids.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F041"]
   },
   {
     "id": "T061",
     "description": "API regression suite proves ticket create/update endpoints reject cross-board status ids and accept valid board-owned status ids.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F042"]
   },
   {
     "id": "T062",
     "description": "Client portal regression suite proves board-scoped ticket status lookups and updates behave correctly after migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F042"]
   }
 ]

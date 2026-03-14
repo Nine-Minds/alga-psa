@@ -195,6 +195,46 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-14) Completed `T054` in `server/src/test/integration/workflowWorkerV2.inboundEmailSmoke.integration.test.ts`:
   - verifies the workflow smoke fixture resolves a ticket status from the seeded board-owned status set
   - reran with `cd server && npx vitest run --coverage.enabled false src/test/integration/workflowWorkerV2.inboundEmailSmoke.integration.test.ts -t "T054" --config vitest.config.ts`
+- (2026-03-14) Completed `F039` as a plan close-out because the existing migration DB integration suite already covers both required cases:
+  - `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts` already contains the multi-board clone/remap happy path (`T003`) and the unresolved no-board-context guard (`T011`)
+  - `T055`/`T056` therefore map to existing coverage rather than requiring a new migration suite
+- (2026-03-14) Completed `T055`/`T056` by revalidating the existing migration integration suite:
+  - reran the targeted happy-path and guard cases in `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts`
+  - confirmed the suite already proves both clone/remap correctness and explicit unresolved-reference surfacing
+- (2026-03-14) Completed `F040` as a plan close-out because the existing UI/component coverage already exercises the required board-local status management and board-change reselection behavior:
+  - `server/src/components/settings/general/BoardsSettings.copyStatuses.test.tsx` covers board create/edit lifecycle rules and board-local status editing
+  - `packages/tickets/src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx` covers explicit status reselection after a board change
+- (2026-03-14) Completed `F041` as a plan close-out because the existing migration, billing, and workflow suites already prove remapped saved configuration still resolves under board-owned statuses:
+  - `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts` covers billing and workflow remap persistence (`T008`/`T009`/`T010`/`T011`)
+  - `shared/workflow/runtime/actions/__tests__/ticketWorkflowBoardStatusRuntime.test.ts` and `packages/billing/tests/*.boardScoped*` cover runtime/use-site validation after remap
+- (2026-03-14) Completed `F042` as a plan close-out because the existing API and client portal suites already cover the board-scoped lookup and validation regressions:
+  - `server/src/test/unit/api/ticketStatusesRoute.boardScope.test.ts` and `server/src/test/unit/api/statusService.ticketBoardScope.test.ts` cover API board scope
+  - `packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts` covers client portal create/update validation
+- (2026-03-14) Completed `F043` as a no-op scope close-out because this branch does not currently contain a ticket bulk-update surface:
+  - `packages/tickets/src/components/TicketingDashboard.tsx` only exposes bulk delete for tickets
+  - `server/src/test/e2e/api/tickets.e2e.test.ts` still treats `/api/v1/tickets/bulk-update` as optional and accepts `404`/`405`, which confirms there is no shipped bulk ticket status edit path to harden in this branch
+- (2026-03-14) Completed `F044` by scoping the remaining auxiliary ticket creation helper to board-owned ticket statuses:
+  - `packages/assets/src/components/CreateTicketFromAssetButton.tsx` now loads ticket statuses only for the active board, clears stale `status_id` values as soon as the board changes, and disables the status picker when no board is in scope.
+  - Project-linked ticket creation did not need new changes because `packages/projects/src/components/TaskTicketLinks.tsx` already routes through the board-scoped `QuickAddTicket` flow.
+- (2026-03-14) Completed `T033` in `packages/assets/src/components/CreateTicketFromAssetButton.boardScopedStatuses.test.tsx`:
+  - verifies the asset ticket dialog loads statuses with `getTicketStatuses(boardId)` instead of a tenant-global lookup
+  - verifies changing boards swaps the available status options and submit persists only the destination board's status id
+  - reran with `cd packages/assets && npx vitest run src/components/CreateTicketFromAssetButton.boardScopedStatuses.test.tsx --config vitest.config.ts`
+- (2026-03-14) Completed `T032` as a no-op scope close-out because there is no ticket bulk-update flow in this branch:
+  - `packages/tickets/src/components/TicketingDashboard.tsx` exposes only bulk delete
+  - `server/src/test/e2e/api/tickets.e2e.test.ts` still treats `/api/v1/tickets/bulk-update` as optional and accepts `404`/`405`
+- (2026-03-14) Completed `T057`/`T058` via equivalent UI/component coverage already present in the branch:
+  - `server/src/components/settings/general/BoardsSettings.copyStatuses.test.tsx` verifies board create with copied statuses, inline statuses, and board-local status editing
+  - `packages/tickets/src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx` verifies explicit status reselection after a board change
+- (2026-03-14) Completed `T059` via the existing workflow remap and runtime regression suites:
+  - `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts` proves migrated saved workflow status references are remapped onto board-owned status ids
+  - `shared/workflow/runtime/actions/__tests__/ticketWorkflowBoardStatusRuntime.test.ts` and `server/src/test/integration/workflowWorkerV2.inboundEmailSmoke.integration.test.ts` cover execution against board-owned ticket statuses after remap
+- (2026-03-14) Completed `T060` via the existing billing remap and renewal routing regression suites:
+  - `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts` proves tenant and contract renewal defaults remap to board-owned ticket status ids
+  - `packages/billing/tests/RenewalAutomationSettings.boardScopedStatuses.test.tsx`, `packages/billing/tests/billingSettingsActions.boardScopedRenewalStatus.test.ts`, `shared/billingClients/__tests__/clientContracts.boardScopedRenewalStatus.test.ts`, and `server/src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts` together prove renewal ticket routing keeps using the intended board-owned board/status pair
+- (2026-03-14) Completed `T061`/`T062` via the existing API/service and client portal regression suites:
+  - `server/src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts` proves valid board-owned create/update pairs succeed and cross-board pairs fail without persisting
+  - `server/src/test/unit/api/ticketStatusesRoute.boardScope.test.ts`, `server/src/test/unit/api/statusService.ticketBoardScope.test.ts`, and `packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts` cover the board-scoped lookup and client portal validation paths
 - (2026-03-14) Completed `T041`/`T042` in `packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts`:
   - verifies client portal ticket creation resolves the default status from the default board before creating the ticket
   - verifies client portal status updates reject a status from another board and skip the write/event path
@@ -298,6 +338,28 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-14) Validate seed/fixture board-owned ticket status setup:
   - `cd server && npx vitest run --coverage.enabled false src/test/e2e/utils/utilities.test.ts -t "T053" --config vitest.config.ts`
   - `cd server && npx vitest run --coverage.enabled false src/test/integration/workflowWorkerV2.inboundEmailSmoke.integration.test.ts -t "T054" --config vitest.config.ts`
+- (2026-03-14) Revalidate the existing migration integration coverage used to close `F039`:
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts -t "T003" --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts -t "T011" --config vitest.config.ts`
+- (2026-03-14) Revalidate the existing UI/API coverage used to close `F040`/`F042`:
+  - `cd server && npx vitest run --coverage.enabled false src/components/settings/general/BoardsSettings.copyStatuses.test.tsx --config vitest.config.ts`
+  - `cd packages/tickets && npx vitest run src/components/ticket/__tests__/TicketInfo.boardChangeStatusReselection.test.tsx --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/unit/api/ticketStatusesRoute.boardScope.test.ts src/test/unit/api/statusService.ticketBoardScope.test.ts ../packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts --config vitest.config.ts`
+- (2026-03-14) Revalidate the existing workflow/billing coverage used to close `F041`:
+  - `cd shared && npx vitest run workflow/runtime/actions/__tests__/registerTicketActionPickerMetadata.test.ts workflow/runtime/actions/__tests__/ticketWorkflowBoardStatusRuntime.test.ts --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false ../packages/billing/tests/billingSettingsActions.boardScopedRenewalStatus.test.ts ../packages/billing/tests/RenewalAutomationSettings.boardScopedStatuses.test.tsx ../packages/billing/tests/ContractDetail.assignmentRenewalSettings.wiring.test.ts --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts --config vitest.config.ts`
+- (2026-03-14) Verify whether a ticket bulk-update surface exists before implementing `F043`:
+  - `rg -n "bulk[-_ ]update|bulk update|bulkUpdate|bulk_update|/bulk-update|Bulk" packages/tickets server shared ee -g '!**/node_modules/**'`
+  - `sed -n '1,260p' packages/tickets/src/components/TicketingDashboard.tsx`
+  - `sed -n '850,905p' server/src/test/e2e/api/tickets.e2e.test.ts`
+- (2026-03-14) Validate asset-linked ticket creation board-scoped statuses:
+  - `cd packages/assets && npx vitest run src/components/CreateTicketFromAssetButton.boardScopedStatuses.test.tsx --config vitest.config.ts`
+  - `cd packages/assets && npx vitest run --config vitest.config.ts`
+  - The package-wide assets run still trips the pre-existing contract failure in `src/components/QuickAddAsset.quick-add-client.contract.test.ts` (`open={isQuickAddClientOpen}` no longer matches the current quick-add client API shape); the new board-scoped asset ticket test itself passes.
+- (2026-03-14) Revalidate the remaining test checklist close-outs:
+  - `cd server && npx vitest run --coverage.enabled false src/lib/jobs/tests/renewalQueueScheduling.wiring.test.ts --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts --config vitest.config.ts`
 - (2026-03-14) Validate SLA board-owned pause config and migration coverage:
   - `cd server && npx vitest run --coverage.enabled false src/test/unit/components/SlaPauseSettings.boardOwnedStatuses.test.tsx src/test/unit/migrations/boardSpecificTicketStatusesMigration.test.ts --config vitest.config.ts`
   - `cd server && npx vitest run --coverage.enabled false src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts --config vitest.config.ts`
@@ -388,6 +450,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Billing renewal UI test: `packages/billing/tests/RenewalAutomationSettings.boardScopedStatuses.test.tsx`
 - Billing renewal action test: `packages/billing/tests/billingSettingsActions.boardScopedRenewalStatus.test.ts`
 - Shared contract renewal validation test: `shared/billingClients/__tests__/clientContracts.boardScopedRenewalStatus.test.ts`
+- Asset-linked ticket creation helper: `packages/assets/src/components/CreateTicketFromAssetButton.tsx`
+- Asset-linked ticket board scope regression test: `packages/assets/src/components/CreateTicketFromAssetButton.boardScopedStatuses.test.tsx`
 - New status schema migration: `server/migrations/20260314100000_add_board_ownership_to_ticket_statuses.cjs`
 - Migration schema coverage: `server/src/test/unit/migrations/boardSpecificTicketStatusesMigration.test.ts`
 - Clone/remap migration: `server/migrations/20260314113000_clone_global_ticket_statuses_to_boards.cjs`
