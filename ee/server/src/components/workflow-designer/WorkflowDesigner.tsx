@@ -79,6 +79,7 @@ import {
 } from './paletteSearch';
 import { ActionSchemaReference } from './ActionSchemaReference';
 import { WorkflowAiSchemaSection } from './WorkflowAiSchemaSection';
+import { WorkflowComposeTextSection } from './WorkflowComposeTextSection';
 import { buildDataContext } from './workflowDataContext';
 import {
   applyGroupedActionSelectionToStep,
@@ -118,6 +119,8 @@ import type {
 import { WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF } from '@alga-psa/workflows/authoring';
 import {
   isWorkflowAiInferAction,
+  isWorkflowComposeTextAction,
+  resolveComposeTextOutputSchemaFromConfig,
   resolveWorkflowAiSchemaFromConfig,
 } from '@alga-psa/workflows/authoring';
 import { validateExpressionSource } from '@alga-psa/workflows/authoring';
@@ -5034,13 +5037,22 @@ const StepConfigPanel: React.FC<{
     [step, designerActionCatalog]
   );
   const isAiInferStep = shouldRenderWorkflowAiSchemaSection(step.type, selectedAction?.id);
-  const resolvedAiOutputSchema = useMemo(
-    () =>
-      (isAiInferStep && actionCallConfig
-        ? (resolveWorkflowAiSchemaFromConfig(actionCallConfig).schema as JsonSchema | null)
-        : null),
-    [actionCallConfig, isAiInferStep]
-  );
+  const isComposeTextStep = step.type === 'action.call' && isWorkflowComposeTextAction(selectedAction?.id);
+  const resolvedActionOutputSchema = useMemo(() => {
+    if (!actionCallConfig) {
+      return null;
+    }
+
+    if (isAiInferStep) {
+      return resolveWorkflowAiSchemaFromConfig(actionCallConfig).schema as JsonSchema | null;
+    }
+
+    if (isComposeTextStep) {
+      return resolveComposeTextOutputSchemaFromConfig(actionCallConfig) as JsonSchema | null;
+    }
+
+    return null;
+  }, [actionCallConfig, isAiInferStep, isComposeTextStep]);
 
   const saveAs = step.type === 'action.call'
     ? ((step as NodeStep).config as { saveAs?: string } | undefined)?.saveAs
@@ -5069,6 +5081,20 @@ const StepConfigPanel: React.FC<{
     aiOutputSchemaMode: 'simple' | 'advanced';
     aiOutputSchema?: Record<string, unknown>;
     aiOutputSchemaText?: string;
+  }) => {
+    const nodeStep = step as NodeStep;
+    const existingConfig = nodeStep.config as Record<string, unknown> | undefined;
+    onChange({
+      ...nodeStep,
+      config: {
+        ...existingConfig,
+        ...patch,
+      }
+    });
+  }, [step, onChange]);
+  const handleComposeTextChange = useCallback((patch: {
+    version: number;
+    outputs: unknown[];
   }) => {
     const nodeStep = step as NodeStep;
     const existingConfig = nodeStep.config as Record<string, unknown> | undefined;
@@ -5406,6 +5432,7 @@ const StepConfigPanel: React.FC<{
                 'designerGroupKey',
                 'designerTileKind',
                 'designerAppKey',
+                'outputs',
                 'aiOutputSchemaMode',
                 'aiOutputSchema',
                 'aiOutputSchemaText',
@@ -5441,13 +5468,24 @@ const StepConfigPanel: React.FC<{
         />
       )}
 
+      {step.type === 'action.call' && isComposeTextStep && (
+        <WorkflowComposeTextSection
+          stepId={step.id}
+          saveAs={saveAs}
+          config={actionCallConfig}
+          dataContext={dataContext}
+          disabled={!editable}
+          onChange={handleComposeTextChange}
+        />
+      )}
+
       {/* §16.1 - Action Schema Reference for action.call steps */}
       {step.type === 'action.call' && (
         <div className="mt-4 pt-4 border-t border-gray-200">
           <ActionSchemaReference
             action={selectedAction}
             saveAs={saveAs}
-            outputSchemaOverride={resolvedAiOutputSchema}
+            outputSchemaOverride={resolvedActionOutputSchema}
             onCopyPath={handleCopyPath}
           />
         </div>

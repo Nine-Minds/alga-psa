@@ -92,4 +92,66 @@ describe('resolveActionCallOutputSchema', () => {
       additionalProperties: false,
     });
   });
+
+  it('T024: updates compose-text output schemas when outputs change while keeping stable-key paths deterministic', () => {
+    const registry = new ActionRegistry();
+    registry.register({
+      id: 'transform.compose_text',
+      version: 1,
+      inputSchema: z.object({}),
+      outputSchema: z.record(z.string()),
+      sideEffectful: false,
+      idempotency: { mode: 'engineProvided' },
+      handler: async () => ({ prompt: 'ok' }),
+    });
+
+    const renamedSchema = resolveActionCallOutputSchema(registry, {
+      actionId: 'transform.compose_text',
+      version: 1,
+      outputs: [
+        {
+          id: 'out-1',
+          label: 'Customer Prompt',
+          stableKey: 'prompt',
+          document: { version: 1, blocks: [] },
+        },
+      ],
+    });
+    const expandedSchema = resolveActionCallOutputSchema(registry, {
+      actionId: 'transform.compose_text',
+      version: 1,
+      outputs: [
+        {
+          id: 'out-1',
+          label: 'Customer Prompt',
+          stableKey: 'prompt',
+          document: { version: 1, blocks: [] },
+        },
+        {
+          id: 'out-2',
+          label: 'Summary',
+          stableKey: 'summary',
+          document: { version: 1, blocks: [] },
+        },
+      ],
+    });
+
+    expect(renamedSchema).toEqual({
+      type: 'object',
+      properties: {
+        prompt: { type: 'string', description: 'Customer Prompt' },
+      },
+      required: ['prompt'],
+      additionalProperties: false,
+    });
+    expect(expandedSchema).toEqual({
+      type: 'object',
+      properties: {
+        prompt: { type: 'string', description: 'Customer Prompt' },
+        summary: { type: 'string', description: 'Summary' },
+      },
+      required: ['prompt', 'summary'],
+      additionalProperties: false,
+    });
+  });
 });

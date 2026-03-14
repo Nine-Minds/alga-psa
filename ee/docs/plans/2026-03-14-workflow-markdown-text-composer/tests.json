@@ -26,7 +26,7 @@
   {
     "id": "T005",
     "description": "Unit: editing an output label preserves the existing stable key by default.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006", "F016"]
   },
   {
@@ -62,19 +62,19 @@
   {
     "id": "T011",
     "description": "Unit: BlockNote-to-template serialization preserves literal text, inline references, and supported markdown-safe formatting without emitting BlockNote node shapes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009", "F012", "F028"]
   },
   {
     "id": "T012",
     "description": "Unit: template-to-BlockNote hydration restores inline reference placeholders and supported markdown-safe formatting for authoring round-trip.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012", "F013"]
   },
   {
     "id": "T013",
     "description": "Unit: the constrained editor schema omits media and other unsupported content node types.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014", "F028"]
   },
   {
@@ -140,7 +140,7 @@
   {
     "id": "T024",
     "description": "Unit: dynamic output schema resolution for compose-text updates when outputs are added, removed, or renamed while stable keys remain unchanged.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006", "F024"]
   },
   {
@@ -152,115 +152,115 @@
   {
     "id": "T026",
     "description": "Unit: workflow reference browsing labels compose-text outputs using the author-facing label while navigating through the stable key path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F025"]
   },
   {
     "id": "T027",
     "description": "Component: the dedicated compose-text editor renders an output list and allows selecting among multiple outputs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012", "F015"]
   },
   {
     "id": "T028",
     "description": "Component: authors can add a new composed output and receive a generated stable key from the initial label.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015", "F016"]
   },
   {
     "id": "T029",
     "description": "Component: authors can reorder composed outputs without changing the stable key of an existing output.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015", "F016"]
   },
   {
     "id": "T030",
     "description": "Component: the editor shows the stable key and a copyable downstream reference path for each output.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F025"]
   },
   {
     "id": "T031",
     "description": "Component: inserting a reference from the workflow source browser creates an inline reference chip in the constrained editor.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013", "F017"]
   },
   {
     "id": "T032",
     "description": "Component: deleting an inline reference chip removes the corresponding reference node from the serialized template document.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013", "F012"]
   },
   {
     "id": "T033",
     "description": "Component: unsupported media insertion affordances are absent from the compose-text editor UI.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014", "F028"]
   },
   {
     "id": "T034",
     "description": "Component: duplicate labels produce inline validation feedback in the compose-text editor.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007", "F018"]
   },
   {
     "id": "T035",
     "description": "Component: duplicate stable keys produce inline validation feedback in the compose-text editor.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F018"]
   },
   {
     "id": "T036",
     "description": "Component: invalid manual stable-key edits or explicit key regenerations are surfaced clearly to the author if that control is exposed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006", "F016", "F018"]
   },
   {
     "id": "T037",
     "description": "Integration: publish-time workflow validation uses the config-derived compose-text output schema rather than a generic object when validating downstream references.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023", "F024", "F025"]
   },
   {
     "id": "T038",
     "description": "Integration: an AI prompt field can consume `vars.<saveAs>.<stableKey>` from a compose-text step through ordinary reference mode with no prompt-specific wiring.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025", "F026", "F027"]
   },
   {
     "id": "T039",
     "description": "Integration: an email or notification text field can consume `vars.<saveAs>.<stableKey>` from a compose-text step through ordinary reference mode with no consumer-specific wiring.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025", "F026", "F027"]
   },
   {
     "id": "T040",
     "description": "Integration: compose-text step execution succeeds end to end with multiple outputs, mixed literal content, markdown-safe formatting, and inline references.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003", "F019", "F020", "F022"]
   },
   {
     "id": "T041",
     "description": "Integration: compose-text step execution fails the entire step rather than partially succeeding when one output contains a missing reference.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021", "F022"]
   },
   {
     "id": "T042",
     "description": "Regression: existing transform actions continue to register, validate, and expose downstream output fields unchanged after compose-text is added.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F023"]
   },
   {
     "id": "T043",
     "description": "Regression: authoring and runtime behavior for `ai.infer` remain unchanged when no compose-text step is present.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002", "F026", "F027"]
   },
   {
     "id": "T044",
     "description": "Regression: persisted compose-text step config does not contain BlockNote node-type artifacts or media payloads after editor round-trip.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009", "F014", "F028"]
   }
 ]

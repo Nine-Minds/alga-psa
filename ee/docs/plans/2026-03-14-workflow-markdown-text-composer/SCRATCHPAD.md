@@ -137,3 +137,32 @@
 - Targeted lint:
   - `pnpm eslint shared/workflow/runtime/actions/composeText.ts shared/workflow/runtime/actions/registerTransformActions.ts shared/workflow/runtime/actions/actionOutputSchemaResolver.ts shared/workflow/runtime/registries/actionRegistry.ts shared/workflow/runtime/runtime/workflowRuntimeV2.ts shared/workflow/runtime/nodes/registerDefaultNodes.ts ee/server/src/components/workflow-designer/workflowDataContext.ts shared/workflow/runtime/actions/__tests__/composeText.test.ts shared/workflow/runtime/actions/__tests__/registerTransformActions.test.ts shared/workflow/runtime/actions/__tests__/actionOutputSchemaResolver.test.ts ee/server/src/components/workflow-designer/__tests__/workflowDataContext.test.ts`
   - Result: warnings only from pre-existing broad files; no new eslint errors in the touched code.
+
+## Implementation Log Continued
+
+- 2026-03-14: Completed designer/editor milestone covering `F006`, `F012`-`F018`, `F026`-`F028`.
+  - Added `ee/server/src/components/workflow-designer/workflowComposeTextUtils.ts` for empty-output creation, stable-key/reference-path helpers, template-document serialization/hydration, and shared authoring validation.
+  - Added `ee/server/src/components/workflow-designer/WorkflowComposeTextDocumentEditor.tsx` as a constrained BlockNote authoring surface with a custom inline `workflowReference` chip and a markdown-safe schema subset only.
+  - Added `ee/server/src/components/workflow-designer/WorkflowComposeTextSection.tsx` as the dedicated compose-text action editor with output list management, label/key controls, copyable downstream paths, inline validation, and reference insertion from `SourceDataTree`.
+  - Wired the dedicated section into `ee/server/src/components/workflow-designer/WorkflowDesigner.tsx` so compose-text remains action-specific and ordinary consumer fields continue using the existing generic reference mode.
+  - Updated `ee/server/src/components/workflow-designer/workflowReferenceOptions.ts` so downstream browsing keeps stable-key paths while surfacing author-facing output labels.
+  - Updated `ee/server/src/components/workflow-designer/groupedActionSelection.ts` so switching grouped action types clears stale AI-only and compose-text-only config payloads deterministically.
+- Decision: expose manual stable-key editing plus an explicit regenerate affordance, but keep label edits non-destructive by default.
+  - Rationale: downstream references must stay stable across label changes, yet authors still need a recovery path when the generated key is poor.
+  - Consequence: the UI treats label and stable key as separate fields and only regenerates the key on deliberate author action.
+- Decision: keep reference insertion constrained to the existing workflow source browser instead of supporting arbitrary inline path typing in the editor.
+  - Rationale: that preserves the “simple references only” scope, reuses existing browsing UX, and avoids inventing a second validation path.
+  - Consequence: invalid reference insertion is limited mostly to unsupported editor locations such as code blocks, which now produce explicit authoring feedback.
+
+- 2026-03-14: Completed test milestone covering `T005`, `T011`-`T013`, `T024`, `T026`-`T044`.
+  - Added `ee/server/src/components/workflow-designer/__tests__/workflowComposeTextUtils.test.ts` for stable-key preservation, template serialization/hydration, schema-subset enforcement, and persisted-config regression coverage.
+  - Added `ee/server/src/components/workflow-designer/__tests__/WorkflowComposeTextSection.test.tsx` for multi-output list UX, add/reorder flows, key/path display, reference insertion/removal serialization, and inline validation coverage.
+  - Added `ee/server/src/components/workflow-designer/__tests__/WorkflowComposeTextDocumentEditor.test.tsx` for inline reference insertion and unsupported BlockNote-affordance removal.
+  - Extended `shared/workflow/runtime/actions/__tests__/actionOutputSchemaResolver.test.ts` for config-derived schema updates when output labels change but stable keys do not.
+  - Extended `ee/server/src/components/workflow-designer/__tests__/groupedActionSelection.test.ts` and `workflowReferenceOptions.test.ts` for grouped-action cleanup and author-label reference browsing behavior.
+  - Existing runtime registration/execution tests plus downstream vars-context tests now cover the ordinary-reference integration path for AI/email-like consumers without any consumer-specific compose-text wiring.
+
+- Additional targeted verification:
+  - `npx vitest run --config shared/vitest.config.ts shared/workflow/runtime/actions/__tests__/composeText.test.ts shared/workflow/runtime/actions/__tests__/registerTransformActions.test.ts shared/workflow/runtime/actions/__tests__/actionOutputSchemaResolver.test.ts`
+  - `npx vitest run --config vitest.config.ts src/components/workflow-designer/__tests__/workflowDataContext.test.ts src/components/workflow-designer/__tests__/workflowReferenceOptions.test.ts src/components/workflow-designer/__tests__/groupedActionSelection.test.ts src/components/workflow-designer/__tests__/workflowComposeTextUtils.test.ts src/components/workflow-designer/__tests__/WorkflowComposeTextSection.test.tsx src/components/workflow-designer/__tests__/WorkflowComposeTextDocumentEditor.test.tsx src/components/workflow-designer/__tests__/WorkflowDesigner.smoke.test.tsx`
+  - Result: all targeted compose-text runtime and designer tests passed.

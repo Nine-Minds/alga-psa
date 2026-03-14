@@ -194,6 +194,10 @@ vi.mock('../WorkflowAiSchemaSection', () => ({
   WorkflowAiSchemaSection: () => <div data-testid="workflow-ai-schema-smoke" />
 }));
 
+vi.mock('../WorkflowComposeTextSection', () => ({
+  WorkflowComposeTextSection: () => <div data-testid="workflow-compose-text-smoke" />
+}));
+
 vi.mock('../GroupedActionConfigSection', () => ({
   GroupedActionConfigSection: () => <div data-testid="grouped-action-config-smoke" />
 }));

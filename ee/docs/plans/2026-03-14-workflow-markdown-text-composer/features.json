@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "Preserve stable reference-safe keys across later label edits unless the author explicitly regenerates them.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
   },
   {
@@ -68,43 +68,43 @@
   {
     "id": "F012",
     "description": "Provide a constrained BlockNote-based editor surface for compose-text authoring that hydrates from the template document model and serializes back to it.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "UX / UI Notes", "Architecture"]
   },
   {
     "id": "F013",
     "description": "Add a custom inline reference placeholder node to the constrained editor so references appear as inline chips instead of raw placeholder strings.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Architecture"]
   },
   {
     "id": "F014",
     "description": "Restrict the compose-text editor to markdown-safe authoring features and remove media, attachments, tables, and other unsupported BlockNote affordances.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Non-goals", "UX / UI Notes", "Requirements > Functional Requirements"]
   },
   {
     "id": "F015",
     "description": "Provide dedicated output-list authoring controls for adding, removing, reordering, and selecting multiple composed outputs within one step.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "UX / UI Notes"]
   },
   {
     "id": "F016",
     "description": "Provide authoring controls for editing freeform output labels and surfacing the generated stable reference-safe keys alongside copyable reference paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Data / API / Integrations"]
   },
   {
     "id": "F017",
     "description": "Let authors insert references into compose-text outputs from the existing workflow source/reference browser instead of typing reference paths manually.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Users and Primary Flows", "UX / UI Notes", "Architecture"]
   },
   {
     "id": "F018",
     "description": "Surface inline authoring validation for duplicate labels, duplicate stable keys, and invalid or unsupported reference insertions in the compose-text editor.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Requirements > Functional Requirements"]
   },
   {
@@ -152,19 +152,19 @@
   {
     "id": "F026",
     "description": "Ensure consuming action fields such as AI prompts and email content can use compose-text outputs through ordinary reference mapping without adding field-specific integration logic.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Problem", "Goals", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F027",
     "description": "Keep compose-text authoring confined to the dedicated transform action editor rather than embedding the composer directly into consuming field editors in this phase.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Non-goals", "UX / UI Notes"]
   },
   {
     "id": "F028",
     "description": "Maintain a clean separation where BlockNote is an authoring-only surface and no BlockNote node shapes or storage concepts leak into persisted workflow step config or runtime outputs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements > Non-functional Requirements", "Acceptance Criteria (Definition of Done)"]
   }
 ]

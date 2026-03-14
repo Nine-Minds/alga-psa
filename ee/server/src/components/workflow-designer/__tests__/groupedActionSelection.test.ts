@@ -33,6 +33,15 @@ const truncateTextAction: WorkflowDesignerCatalogAction = {
   outputFieldNames: ['text'],
 };
 
+const composeTextAction: WorkflowDesignerCatalogAction = {
+  id: 'transform.compose_text',
+  version: 1,
+  label: 'Compose Text',
+  description: 'Compose markdown text outputs.',
+  inputFieldNames: [],
+  outputFieldNames: [],
+};
+
 describe('grouped action selection helpers', () => {
   it('T086/T093/T094/T096/T302: preserves valid mappings, drops stale mappings, refreshes auto names, and updates the auto-managed step label when the grouped action changes', () => {
     const step: NodeStep = {
@@ -168,5 +177,53 @@ describe('grouped action selection helpers', () => {
       version: 1,
       saveAs: 'transform_truncate_text',
     });
+  });
+
+  it('clears action-specific AI and compose-text config when switching to a different grouped action', () => {
+    const step: NodeStep = {
+      id: 'step-compose',
+      type: 'action.call',
+      name: 'Compose Text',
+      config: {
+        designerGroupKey: 'transform',
+        designerTileKind: 'transform',
+        actionId: 'transform.compose_text',
+        version: 1,
+        saveAs: 'transform_compose_text',
+        outputs: [
+          {
+            id: 'out-1',
+            label: 'Prompt',
+            stableKey: 'prompt',
+            document: { version: 1, blocks: [] },
+          },
+        ],
+        aiOutputSchemaMode: 'simple',
+        aiOutputSchema: {
+          type: 'object',
+          properties: {
+            summary: { type: 'string' },
+          },
+        },
+      },
+    };
+
+    const nextStep = applyCatalogActionChoiceToStep(step, truncateTextAction, {
+      generateSaveAsName,
+      currentGroupLabel: 'Transform',
+      currentActionLabel: composeTextAction.label,
+      nextGroupLabel: 'Transform',
+    });
+
+    expect(nextStep.config).toMatchObject({
+      designerGroupKey: 'transform',
+      designerTileKind: 'transform',
+      actionId: 'transform.truncate_text',
+      version: 1,
+      saveAs: 'transform_truncate_text',
+    });
+    expect(nextStep.config).not.toHaveProperty('outputs');
+    expect(nextStep.config).not.toHaveProperty('aiOutputSchemaMode');
+    expect(nextStep.config).not.toHaveProperty('aiOutputSchema');
   });
 });

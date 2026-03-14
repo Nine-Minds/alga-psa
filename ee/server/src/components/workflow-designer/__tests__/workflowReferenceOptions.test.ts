@@ -258,4 +258,28 @@ describe('workflow reference options', () => {
       'Build Object'
     );
   });
+
+  it('T026: compose-text output fields use stable-key paths while surfacing author-facing labels in downstream reference browsing', () => {
+    const options = buildWorkflowReferenceFieldOptions(payloadSchema, {
+      ...baseDataContext,
+      steps: [
+        {
+          stepId: 'compose-step',
+          stepName: 'Compose Text',
+          saveAs: 'composed',
+          outputSchema: {
+            type: 'object',
+            properties: {
+              prompt: { type: 'string', description: 'Prompt' },
+              email_body: { type: 'string', description: 'Email Body' },
+            },
+          },
+          fields: [],
+        },
+      ],
+    });
+
+    expect(options.find((option) => option.value === 'vars.composed.prompt')?.label).toContain('Prompt');
+    expect(options.find((option) => option.value === 'vars.composed.email_body')?.label).toContain('Email Body');
+  });
 });
