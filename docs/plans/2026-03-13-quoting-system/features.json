@@ -767,7 +767,7 @@
   {
     "id": "F092",
     "description": "P4: Client portal — optional item toggle switches with client-side total recalculation and server-side persistence of selections (is_selected)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P4-FR5"
     ]

@@ -5,9 +5,10 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
-import type { ColumnDefinition, IQuote, IQuoteWithClient, QuoteStatus } from '@alga-psa/types';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import type { ColumnDefinition, IQuote, IQuoteItem, IQuoteWithClient, QuoteStatus } from '@alga-psa/types';
 import { QUOTE_STATUS_METADATA } from '@alga-psa/types';
-import { getClientQuoteById, getClientQuotes } from '@alga-psa/client-portal/actions';
+import { getClientQuoteById, getClientQuotes, updateClientQuoteSelections } from '@alga-psa/client-portal/actions';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { X } from 'lucide-react';
 
@@ -28,6 +29,111 @@ const STATUS_VARIANTS: Record<QuoteStatus, BadgeVariant> = {
   archived: 'outline',
 };
 
+function itemIsIncluded(item: IQuoteItem): boolean {
+  return !item.is_optional || item.is_selected !== false;
+}
+
+function getQuoteItemAmount(item: IQuoteItem): number {
+  return Number(item.total_price ?? (Number(item.quantity ?? 0) * Number(item.unit_price ?? 0)));
+}
+
+function getScopedDiscountBaseAmount(
+  item: IQuoteItem,
+  baseSubtotal: number,
+  baseItemTotals: Map<string, number>,
+  baseServiceTotals: Map<string, number>
+): number {
+  if (item.applies_to_item_id) {
+    return baseItemTotals.get(item.applies_to_item_id) ?? 0;
+  }
+
+  if (item.applies_to_service_id) {
+    return baseServiceTotals.get(item.applies_to_service_id) ?? 0;
+  }
+
+  return baseSubtotal;
+}
+
+function getResolvedQuoteItemAmount(
+  item: IQuoteItem,
+  baseSubtotal: number,
+  baseItemTotals: Map<string, number>,
+  baseServiceTotals: Map<string, number>
+): number {
+  if (!item.is_discount) {
+    return getQuoteItemAmount(item);
+  }
+
+  const scopedBaseAmount = getScopedDiscountBaseAmount(item, baseSubtotal, baseItemTotals, baseServiceTotals);
+  if (item.discount_type === 'percentage') {
+    return Math.round(scopedBaseAmount * ((Number(item.discount_percentage) || 0) / 100));
+  }
+
+  return getQuoteItemAmount(item);
+}
+
+function calculateQuoteTotals(items: IQuoteItem[]): Pick<IQuote, 'subtotal' | 'discount_total' | 'tax' | 'total_amount'> {
+  const includedBaseItems = items.filter((item) => !item.is_discount && itemIsIncluded(item));
+  const baseSubtotal = includedBaseItems.reduce((sum, item) => sum + getQuoteItemAmount(item), 0);
+  const baseItemTotals = new Map(includedBaseItems.map((item) => [item.quote_item_id, getQuoteItemAmount(item)]));
+  const baseServiceTotals = new Map<string, number>();
+
+  for (const item of includedBaseItems) {
+    if (!item.service_id) {
+      continue;
+    }
+
+    baseServiceTotals.set(item.service_id, (baseServiceTotals.get(item.service_id) ?? 0) + getQuoteItemAmount(item));
+  }
+
+  let subtotal = 0;
+  let discountTotal = 0;
+  let tax = 0;
+
+  for (const item of items) {
+    if (!itemIsIncluded(item)) {
+      continue;
+    }
+
+    const resolvedAmount = getResolvedQuoteItemAmount(item, baseSubtotal, baseItemTotals, baseServiceTotals);
+
+    if (item.is_discount) {
+      discountTotal += resolvedAmount;
+      continue;
+    }
+
+    subtotal += resolvedAmount;
+    if (item.is_taxable !== false && item.tax_rate) {
+      tax += Math.round(resolvedAmount * (Number(item.tax_rate) / 100));
+    }
+  }
+
+  return {
+    subtotal,
+    discount_total: discountTotal,
+    tax,
+    total_amount: subtotal - discountTotal + tax,
+  };
+}
+
+function applyOptionalSelections(
+  quote: IQuote,
+  selectedOptionalQuoteItemIds: string[]
+): IQuote {
+  const selectedIds = new Set(selectedOptionalQuoteItemIds);
+  const quoteItems = (quote.quote_items || []).map((item) => (
+    item.is_optional
+      ? { ...item, is_selected: selectedIds.has(item.quote_item_id) }
+      : item
+  ));
+
+  return {
+    ...quote,
+    quote_items: quoteItems,
+    ...calculateQuoteTotals(quoteItems),
+  };
+}
+
 const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, formatDate }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -36,8 +142,22 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedQuote, setSelectedQuote] = useState<IQuote | null>(null);
+  const [isUpdatingSelections, setIsUpdatingSelections] = useState(false);
+  const [selectionError, setSelectionError] = useState<string | null>(null);
 
   const selectedQuoteId = searchParams?.get('quoteId');
+
+  const optionalSelectedItemIds = useMemo(() => {
+    if (!selectedQuote?.quote_items) {
+      return [];
+    }
+
+    return selectedQuote.quote_items
+      .filter((item) => item.is_optional && item.is_selected !== false)
+      .map((item) => item.quote_item_id);
+  }, [selectedQuote]);
+
+  const canEditSelections = selectedQuote?.status === 'sent';
 
   const updateUrlParams = (params: { [key: string]: string | null }) => {
     const newParams = new URLSearchParams(searchParams?.toString() || '');
@@ -77,6 +197,7 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
 
     const fetchDetail = async () => {
       try {
+        setSelectionError(null);
         const quote = await getClientQuoteById(selectedQuoteId);
         setSelectedQuote(quote);
       } catch (err) {
@@ -87,6 +208,71 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
 
     fetchDetail();
   }, [selectedQuoteId]);
+
+  const handleSelectionToggle = async (quoteItemId: string, checked: boolean) => {
+    if (!selectedQuote) {
+      return;
+    }
+
+    const nextSelectedIds = new Set(optionalSelectedItemIds);
+    if (checked) {
+      nextSelectedIds.add(quoteItemId);
+    } else {
+      nextSelectedIds.delete(quoteItemId);
+    }
+
+    const nextSelectedList = Array.from(nextSelectedIds);
+    const previousQuote = selectedQuote;
+    const optimisticQuote = applyOptionalSelections(previousQuote, nextSelectedList);
+
+    setSelectionError(null);
+    setSelectedQuote(optimisticQuote);
+    setQuotes((currentQuotes) => currentQuotes.map((quote) => (
+      quote.quote_id === optimisticQuote.quote_id
+        ? {
+            ...quote,
+            subtotal: optimisticQuote.subtotal,
+            discount_total: optimisticQuote.discount_total,
+            tax: optimisticQuote.tax,
+            total_amount: optimisticQuote.total_amount,
+          }
+        : quote
+    )));
+    setIsUpdatingSelections(true);
+
+    try {
+      const persistedQuote = await updateClientQuoteSelections(selectedQuote.quote_id, nextSelectedList);
+      setSelectedQuote(persistedQuote);
+      setQuotes((currentQuotes) => currentQuotes.map((quote) => (
+        quote.quote_id === persistedQuote.quote_id
+          ? {
+              ...quote,
+              subtotal: persistedQuote.subtotal,
+              discount_total: persistedQuote.discount_total,
+              tax: persistedQuote.tax,
+              total_amount: persistedQuote.total_amount,
+            }
+          : quote
+      )));
+    } catch (err) {
+      console.error('Error updating optional quote selections:', err);
+      setSelectedQuote(previousQuote);
+      setQuotes((currentQuotes) => currentQuotes.map((quote) => (
+        quote.quote_id === previousQuote.quote_id
+          ? {
+              ...quote,
+              subtotal: previousQuote.subtotal,
+              discount_total: previousQuote.discount_total,
+              tax: previousQuote.tax,
+              total_amount: previousQuote.total_amount,
+            }
+          : quote
+      )));
+      setSelectionError('Failed to save your optional item selections. Please try again.');
+    } finally {
+      setIsUpdatingSelections(false);
+    }
+  };
 
   const quoteColumns: ColumnDefinition<IQuoteWithClient>[] = useMemo(() => [
     {
@@ -168,6 +354,12 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
           </div>
 
           <div className="space-y-6 p-4">
+            {selectionError && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {selectionError}
+              </div>
+            )}
+
             <div className="grid gap-4 md:grid-cols-4">
               <div>
                 <p className="text-xs font-medium uppercase text-gray-500">Status</p>
@@ -202,6 +394,13 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
 
             <div>
               <h4 className="mb-2 text-sm font-semibold text-gray-900">Line Items</h4>
+              {selectedQuote.quote_items?.some((item) => item.is_optional) && (
+                <p className="mb-3 text-sm text-gray-600">
+                  {canEditSelections
+                    ? 'Toggle optional items to preview your preferred quote total before responding.'
+                    : 'Optional item selections are locked once the quote is no longer awaiting your response.'}
+                </p>
+              )}
               <div className="overflow-x-auto rounded-md border">
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
                   <thead className="bg-gray-50">
@@ -213,13 +412,33 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
-                    {(selectedQuote.quote_items || []).map((item) => (
-                      <tr key={item.quote_item_id}>
+                    {(selectedQuote.quote_items || []).map((item) => {
+                      const isIncluded = itemIsIncluded(item);
+
+                      return (
+                        <tr key={item.quote_item_id} className={!isIncluded ? 'bg-amber-50/40' : undefined}>
                         <td className="px-3 py-2 text-gray-900">
                           <div className="flex flex-col gap-1">
                             <span>{item.description}</span>
                             {item.is_optional && (
-                              <span className="text-xs text-amber-600">Optional item</span>
+                              <div className="flex flex-wrap items-center gap-2 text-xs text-amber-700">
+                                <span>Optional item</span>
+                                <span aria-hidden="true">•</span>
+                                <span>{item.is_selected !== false ? 'Included in total' : 'Excluded from total'}</span>
+                              </div>
+                            )}
+                            {item.is_optional && (
+                              <div className="pt-1">
+                                <Switch
+                                  id={`quote-item-${item.quote_item_id}-selection`}
+                                  checked={item.is_selected !== false}
+                                  disabled={!canEditSelections || isUpdatingSelections}
+                                  onCheckedChange={(checked) => handleSelectionToggle(item.quote_item_id, checked)}
+                                  className="data-[state=checked]:bg-primary-500"
+                                  label={item.is_selected !== false ? 'Include' : 'Exclude'}
+                                  size="sm"
+                                />
+                              </div>
                             )}
                           </div>
                         </td>
@@ -227,14 +446,23 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
                         <td className="px-3 py-2 text-gray-700">
                           {formatCurrency(item.unit_price || 0, selectedQuote.currency_code)}
                         </td>
-                        <td className="px-3 py-2 text-gray-900">
-                          {formatCurrency(item.total_price || 0, selectedQuote.currency_code)}
+                        <td className={`px-3 py-2 ${isIncluded ? 'text-gray-900' : 'text-amber-700'}`}>
+                          <div className="flex flex-col gap-1">
+                            <span>{formatCurrency(item.total_price || 0, selectedQuote.currency_code)}</span>
+                            {!isIncluded && (
+                              <span className="text-xs">Not counted in current total</span>
+                            )}
+                          </div>
                         </td>
-                      </tr>
-                    ))}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
+              {isUpdatingSelections && (
+                <p className="mt-2 text-sm text-gray-500">Saving optional item selections…</p>
+              )}
             </div>
 
             <div className="grid gap-2 md:max-w-sm md:ml-auto">

@@ -25,6 +25,7 @@ import { finalizeInvoice, unfinalizeInvoice } from '@alga-psa/billing/actions/in
 import { InvoiceViewModel, IInvoiceTemplate } from '@alga-psa/types';
 import Invoice from '@alga-psa/billing/models/invoice';
 import Quote from '@alga-psa/billing/models/quote';
+import { recalculateQuoteFinancials } from '@alga-psa/billing/services';
 import { withAuth } from '@alga-psa/auth';
 import { scheduleInvoiceEmailAction, scheduleInvoiceZipAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { JobService } from '@alga-psa/jobs';
@@ -223,6 +224,64 @@ export const getClientQuoteById = withAuth(async (user, { tenant }, quoteId: str
   } catch (error) {
     console.error('Error fetching client quote details:', error);
     throw new Error('Failed to fetch quote details');
+  }
+});
+
+export const updateClientQuoteSelections = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string,
+  selectedOptionalQuoteItemIds: string[]
+): Promise<IQuote> => {
+  const knex = await getConnection(tenant);
+
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await getClientIdFromUser(trx, user, tenant);
+      if (!clientId) {
+        throw new Error('Unauthorized');
+      }
+
+      const hasAccess = await hasBillingPermission(trx, user, tenant);
+      if (!hasAccess) {
+        throw new Error('Unauthorized to access quote data');
+      }
+
+      const quoteCheck = await trx('quotes')
+        .where({ quote_id: quoteId, client_id: clientId, tenant, is_template: false })
+        .whereNot('status', 'draft')
+        .first();
+
+      if (!quoteCheck) {
+        throw new Error('Quote not found or access denied');
+      }
+
+      const optionalItems = await trx('quote_items')
+        .select('quote_item_id')
+        .where({ tenant, quote_id: quoteId, is_optional: true });
+
+      const selectedIds = new Set(selectedOptionalQuoteItemIds);
+      for (const item of optionalItems) {
+        await trx('quote_items')
+          .where({ tenant, quote_item_id: item.quote_item_id })
+          .update({
+            is_selected: selectedIds.has(item.quote_item_id),
+            updated_at: trx.fn.now(),
+          });
+      }
+
+      await recalculateQuoteFinancials(trx, tenant, quoteId);
+
+      const updatedQuote = await Quote.getById(trx, tenant, quoteId);
+      if (!updatedQuote) {
+        throw new Error('Quote not found after updating selections');
+      }
+
+      return updatedQuote;
+    });
+  } catch (error) {
+    console.error('Error updating client quote selections:', error);
+    throw new Error('Failed to update quote selections');
   }
 });
 

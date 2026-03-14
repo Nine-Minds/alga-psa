@@ -34,6 +34,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 
 ## Discoveries / Constraints
 
+- (2026-03-13) Client portal optional-item toggles can reuse the quote financial recalculation service on the server, but the portal still needs a mirrored lightweight totals calculation client-side for immediate feedback before the persisted response returns.
 - (2026-03-13) Billing package Vitest config needed additional aliases for `@alga-psa/auth`, `@alga-psa/core`, `@alga-psa/db`, and `@alga-psa/ui` so quote action tests can import package-local server-action dependencies.
 
 - (2026-03-13) `invoice_charges.quantity` is BIGINT (integer), not decimal — changed in migration `20250225165701`.
@@ -109,6 +110,7 @@ Keep a lightweight, continuously-updated log of discoveries and decisions made w
 - (2026-03-13) Archived quotes: visible via status filter dropdown in quote list. Filter options include All, Drafts, Sent, Accepted, etc., plus Archived. No separate tab.
 
 ## Delivery Log
+- (2026-03-13) F092 complete — P4: Added client-portal optional-item toggles in `QuotesTab.tsx` with optimistic client-side total recalculation, persisted `is_selected` updates through `updateClientQuoteSelections`, and quote-list/detail total refresh after each selection change.
 - (2026-03-13) F068 complete — P2: Added `calculateDraftQuoteTotals()` to derive subtotal/discount/tax/total from the in-memory line-item draft state, so the quote form totals refresh immediately as rows are added or edited.
 - (2026-03-13) F067 complete — P2: Added dedicated totals sections to both `QuoteForm.tsx` and `QuoteDetail.tsx`, surfacing subtotal, discounts, tax, and grand total with consistent currency formatting.
 - (2026-03-13) F066 complete — P2: `QuoteDetail.tsx` now loads `listQuoteVersions()` and renders version buttons for the whole revision chain, letting users hop between quote versions directly from the detail screen.
