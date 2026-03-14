@@ -7,6 +7,13 @@ import {
 
 const mockActions: WorkflowDesignerCatalogSourceAction[] = [
   {
+    id: 'ai.infer',
+    version: 1,
+    ui: { label: 'Infer Structured Output', description: 'Generate JSON from a prompt', category: 'AI', icon: 'ai' },
+    inputSchema: { type: 'object', properties: { prompt: { type: 'string' } }, required: ['prompt'] },
+    outputSchema: { type: 'object', properties: {} }
+  },
+  {
     id: 'tickets.create',
     version: 1,
     ui: { label: 'Create Ticket', description: 'Create a ticket', category: 'Business Operations' },
@@ -145,6 +152,18 @@ describe('workflow designer action catalog', () => {
       'transform.slugify_text',
       'transform.truncate_text'
     ]);
+  });
+
+  it('T001/T298: AI serializes as a stable built-in catalog record backed by ai.infer', () => {
+    expect(catalog.find((record) => record.groupKey === 'ai')).toMatchObject({
+      groupKey: 'ai',
+      tileKind: 'ai',
+      label: 'AI',
+      iconToken: 'ai',
+      defaultActionId: 'ai.infer',
+      allowedActionIds: ['ai.infer']
+    });
+    expect(getWorkflowDesignerCatalogRecordForAction(catalog, 'ai.infer')?.groupKey).toBe('ai');
   });
 
   it('T240: new transform actions join the shared Transform group without extra designer wiring', () => {

@@ -590,6 +590,147 @@ describe('workflow bundle v1 import/export', () => {
     expect(normalizeBundleForComparison(exported2)).toEqual(normalizeBundleForComparison(exported1));
   });
 
+  it('T032/T033/T045: AI inline schema config round-trips through bundle export/import without creating schema-ref dependencies', async () => {
+    const aiStepConfig = {
+      designerGroupKey: 'ai',
+      designerTileKind: 'ai',
+      actionId: 'ai.infer',
+      version: 1,
+      saveAs: 'classificationResult',
+      inputMapping: {
+        prompt: { $expr: 'payload.foo' },
+      },
+      aiOutputSchemaMode: 'advanced',
+      aiOutputSchemaText: JSON.stringify({
+        type: 'object',
+        properties: {
+          category: { type: 'string' },
+          confidence: { type: 'number' },
+        },
+        required: ['category'],
+        additionalProperties: false,
+      }, null, 2),
+      aiOutputSchema: {
+        type: 'object',
+        properties: {
+          category: { type: 'string' },
+          confidence: { type: 'number' },
+        },
+        required: ['category'],
+        additionalProperties: false,
+      },
+    };
+    const bundle = {
+      format: 'alga-psa.workflow-bundle',
+      formatVersion: 1,
+      exportedAt: new Date().toISOString(),
+      workflows: [
+        {
+          key: 'test.ai-bundle-roundtrip',
+          metadata: {
+            name: 'AI Bundle Round Trip',
+            description: null,
+            payloadSchemaRef: TEST_SCHEMA_REF,
+            payloadSchemaMode: 'pinned',
+            pinnedPayloadSchemaRef: TEST_SCHEMA_REF,
+            trigger: null,
+            isSystem: false,
+            isVisible: true,
+            isPaused: false,
+            concurrencyLimit: null,
+            autoPauseOnFailure: false,
+            failureRateThreshold: null,
+            failureRateMinRuns: null,
+            retentionPolicyOverride: null,
+          },
+          dependencies: {
+            actions: [{ actionId: 'ai.infer', version: 1 }],
+            nodeTypes: ['action.call'],
+            schemaRefs: [TEST_SCHEMA_REF],
+          },
+          draft: {
+            draftVersion: 1,
+            definition: {
+              id: uuidv4(),
+              ...buildWorkflowDefinition({
+                steps: [
+                  {
+                    id: 'ai-step',
+                    type: 'action.call',
+                    config: aiStepConfig,
+                  },
+                  returnStep('done'),
+                ],
+                payloadSchemaRef: TEST_SCHEMA_REF,
+              }),
+            },
+          },
+          publishedVersions: [
+            {
+              version: 1,
+              definition: {
+                id: uuidv4(),
+                ...buildWorkflowDefinition({
+                  steps: [
+                    {
+                      id: 'ai-step',
+                      type: 'action.call',
+                      config: aiStepConfig,
+                    },
+                    returnStep('done'),
+                  ],
+                  payloadSchemaRef: TEST_SCHEMA_REF,
+                }),
+              },
+              payloadSchemaJson: null,
+            },
+          ],
+        },
+      ],
+    };
+
+    const imported = await importWorkflowBundleV1(db, bundle);
+    const exported1 = await exportWorkflowBundleV1ForWorkflowId(db, imported.createdWorkflows[0].workflowId);
+    const exportedWorkflow = exported1.workflows[0];
+
+    expect(exportedWorkflow?.dependencies.actions).toEqual(
+      expect.arrayContaining([{ actionId: 'ai.infer', version: 1 }])
+    );
+    expect(exportedWorkflow?.dependencies.schemaRefs).toEqual([TEST_SCHEMA_REF]);
+    expect(exportedWorkflow?.draft.definition.steps[0]).toMatchObject({
+      type: 'action.call',
+      config: {
+        actionId: 'ai.infer',
+        aiOutputSchemaMode: 'advanced',
+        inputMapping: {
+          prompt: { $expr: 'payload.foo' },
+        },
+        aiOutputSchema: {
+          type: 'object',
+          properties: {
+            category: { type: 'string' },
+            confidence: { type: 'number' },
+          },
+        },
+      },
+    });
+    expect(exportedWorkflow?.publishedVersions[0]?.definition.steps[0]).toMatchObject({
+      type: 'action.call',
+      config: {
+        actionId: 'ai.infer',
+        aiOutputSchemaMode: 'advanced',
+      },
+    });
+
+    await resetWorkflowRuntimeTables(db);
+
+    const reimported = await importWorkflowBundleV1(db, exported1);
+    const importedWorkflowId = reimported.createdWorkflows[0].workflowId;
+    const exported2 = await exportWorkflowBundleV1ForWorkflowId(db, importedWorkflowId);
+
+    expect(normalizeBundleForComparison(exported2)).toEqual(normalizeBundleForComparison(exported1));
+  });
+
   it('imported workflow can be executed end-to-end using Workflow Runtime V2', async () => {
     const bundle = {
       format: 'alga-psa.workflow-bundle',

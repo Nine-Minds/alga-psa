@@ -6,6 +6,10 @@ import type {
   ForEachBlock,
   TryCatchBlock,
 } from '@shared/workflow/runtime/client';
+import {
+  isWorkflowAiInferAction,
+  resolveWorkflowAiSchemaFromConfig,
+} from '@shared/workflow/runtime/ai/aiSchema';
 
 export type ActionRegistryItem = {
   id: string;
@@ -540,7 +544,9 @@ export const buildDataContext = (
               const outputSchema =
                 config.actionId.startsWith('transform.')
                   ? inferTransformObjectOutputSchema(nodeStep, config.actionId, action.outputSchema, blockCtx)
-                  : action.outputSchema;
+                  : isWorkflowAiInferAction(config.actionId)
+                    ? (resolveWorkflowAiSchemaFromConfig(config).schema ?? {})
+                    : action.outputSchema;
               context.steps.push({
                 stepId: step.id,
                 stepName: nodeStep.name || action.ui?.label || config.actionId,

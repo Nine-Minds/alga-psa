@@ -175,6 +175,37 @@ describe('workflow reference options', () => {
     );
   });
 
+  it('T024: AI output fields appear in downstream reference browsing under vars.<saveAs>', () => {
+    const options = buildWorkflowReferenceFieldOptions(payloadSchema, {
+      ...baseDataContext,
+      steps: [
+        {
+          stepId: 'ai-step',
+          stepName: 'Infer',
+          saveAs: 'classificationResult',
+          outputSchema: {
+            type: 'object',
+            properties: {
+              category: { type: 'string' },
+              next_action: {
+                type: 'object',
+                properties: {
+                  label: { type: 'string' },
+                },
+              },
+            },
+          },
+          fields: [],
+        },
+      ],
+    });
+
+    const values = options.map((option) => option.value);
+    expect(values).toContain('vars.classificationResult');
+    expect(values).toContain('vars.classificationResult.category');
+    expect(values).toContain('vars.classificationResult.next_action.label');
+  });
+
   it('T280: object and value transform outputs participate in downstream reference pickers like business outputs', () => {
     const options = buildWorkflowReferenceFieldOptions(payloadSchema, {
       ...baseDataContext,

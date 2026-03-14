@@ -28,6 +28,7 @@ import {
   type WorkflowTrigger,
   type PublishError
 } from '@shared/workflow/runtime';
+import { resolveActionCallOutputSchema } from '@shared/workflow/runtime/actions/actionOutputSchemaResolver';
 import { buildWorkflowDesignerActionCatalog } from '@shared/workflow/runtime/designer/actionCatalog';
 import { zodToWorkflowJsonSchema } from '@shared/workflow/runtime/jsonSchemaMetadata';
 import { verifySecretsExist } from '@shared/workflow/runtime/validation/publishValidation';
@@ -846,8 +847,7 @@ const computeValidation = async (params: {
           // Track outputs for vars.* typing
           if (saveAs) {
             if (step.type === 'action.call' && actionId) {
-              const defn = registry.get(actionId, actionVersion ?? 1);
-              const out = defn?.outputSchema ? (zodToJsonSchema(defn.outputSchema, { name: `${actionId}@${actionVersion ?? 1}.output` }) as any) : null;
+              const out = resolveActionCallOutputSchema(registry as any, cfg as any);
               if (out) varsSchemas.set(saveAs, out);
             }
           }

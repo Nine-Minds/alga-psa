@@ -135,4 +135,112 @@ describe('workflow reference context', () => {
     expect(baseLookup.has('error.message')).toBe(false);
     expect(catchLookup.get('error.message')).toBe('string');
   });
+
+  it('T025: expression autocomplete context includes nested AI vars fields', () => {
+    const aiContext = buildWorkflowReferenceExpressionContext({
+      ...dataContext,
+      steps: [
+        {
+          stepId: 'ai-step',
+          stepName: 'Infer',
+          saveAs: 'classificationResult',
+          outputSchema: {
+            type: 'object',
+            properties: {
+              category: { type: 'string' },
+              next_action: {
+                type: 'object',
+                properties: {
+                  label: { type: 'string' },
+                },
+              },
+            },
+          },
+          fields: [
+            {
+              name: 'category',
+              type: 'string',
+              required: true,
+              nullable: false,
+            },
+            {
+              name: 'next_action',
+              type: 'object',
+              required: false,
+              nullable: false,
+              children: [
+                {
+                  name: 'label',
+                  type: 'string',
+                  required: true,
+                  nullable: false,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const lookup = buildWorkflowReferenceSourceTypeLookup(
+      {
+        ...dataContext,
+        steps: [
+          {
+            stepId: 'ai-step',
+            stepName: 'Infer',
+            saveAs: 'classificationResult',
+            outputSchema: {
+              type: 'object',
+              properties: {
+                category: { type: 'string' },
+                next_action: {
+                  type: 'object',
+                  properties: {
+                    label: { type: 'string' },
+                  },
+                },
+              },
+            },
+            fields: [
+              {
+                name: 'category',
+                type: 'string',
+                required: true,
+                nullable: false,
+              },
+              {
+                name: 'next_action',
+                type: 'object',
+                required: false,
+                nullable: false,
+                children: [
+                  {
+                    name: 'label',
+                    type: 'string',
+                    required: true,
+                    nullable: false,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      'payload'
+    );
+
+    expect(aiContext.varsSchema).toMatchObject({
+      type: 'object',
+      properties: {
+        classificationResult: {
+          type: 'object',
+          properties: {
+            category: { type: 'string' },
+          },
+        },
+      },
+    });
+    expect(lookup.get('vars.classificationResult.category')).toBe('string');
+    expect(lookup.get('vars.classificationResult.next_action.label')).toBe('string');
+  });
 });

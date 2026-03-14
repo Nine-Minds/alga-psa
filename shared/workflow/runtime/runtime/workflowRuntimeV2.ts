@@ -682,9 +682,26 @@ export class WorkflowRuntimeV2 {
       tenantId: run.tenant_id,
       nowIso: () => new Date().toISOString(),
       actions: {
-        call: async (actionId: string, version: number, args: any, options?: { idempotencyKey?: string }) => {
+        call: async (
+          actionId: string,
+          version: number,
+          args: any,
+          options?: { idempotencyKey?: string; stepConfig?: unknown }
+        ) => {
           const redactions = env.meta.redactions ?? [];
-          return this.executeAction(knex, run, path, actionId, version, args, options?.idempotencyKey, run.tenant_id, redactions, stepRecord.step_id);
+          return this.executeAction(
+            knex,
+            run,
+            path,
+            actionId,
+            version,
+            args,
+            options?.idempotencyKey,
+            run.tenant_id,
+            redactions,
+            stepRecord.step_id,
+            options?.stepConfig
+          );
         }
       },
       publishWait: async (wait: { type: 'event' | 'human'; key?: string; eventName?: string; timeoutAt?: string; payload?: unknown }) => {
@@ -750,7 +767,8 @@ export class WorkflowRuntimeV2 {
     providedIdempotencyKey?: string,
     tenantId?: string | null,
     redactions: string[] = [],
-    stepId?: string | null
+    stepId?: string | null,
+    stepConfig?: unknown
   ): Promise<unknown> {
     const actionRegistry = getActionRegistryV2();
     const action = actionRegistry.get(actionId, version);
@@ -769,6 +787,7 @@ export class WorkflowRuntimeV2 {
         ? action.idempotency.key(input, {
             runId: run.run_id,
             stepPath,
+            stepConfig,
             tenantId,
             idempotencyKey: '',
             attempt: 1,
@@ -825,6 +844,7 @@ export class WorkflowRuntimeV2 {
       const output = await action.handler(input, {
         runId: run.run_id,
         stepPath,
+        stepConfig,
         tenantId,
         idempotencyKey,
         attempt: invocation.attempt,

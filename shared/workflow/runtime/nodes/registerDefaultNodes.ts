@@ -45,8 +45,11 @@ const actionCallSchema = z.object({
   inputMapping: inputMappingSchema.optional().default({}),
   saveAs: z.string().optional(),
   designerGroupKey: z.string().min(1).optional(),
-  designerTileKind: z.enum(['core-object', 'transform', 'app']).optional(),
+  designerTileKind: z.enum(['core-object', 'transform', 'app', 'ai']).optional(),
   designerAppKey: z.string().min(1).optional(),
+  aiOutputSchemaMode: z.enum(['simple', 'advanced']).optional(),
+  aiOutputSchema: z.record(z.unknown()).optional(),
+  aiOutputSchemaText: z.string().optional(),
   onError: z.object({
     policy: z.enum(['fail', 'continue'])
   }).optional(),
@@ -192,7 +195,10 @@ export function registerDefaultNodes(): void {
           ? String(await resolveExpressions(config.idempotencyKey, exprContext))
           : undefined;
 
-        const output = await ctx.actions.call(config.actionId, config.version, resolvedArgs, { idempotencyKey });
+        const output = await ctx.actions.call(config.actionId, config.version, resolvedArgs, {
+          idempotencyKey,
+          stepConfig: config,
+        });
         if (config.saveAs) {
           return applyAssignments(env, {
             [normalizeAssignmentPath(config.saveAs)]: output

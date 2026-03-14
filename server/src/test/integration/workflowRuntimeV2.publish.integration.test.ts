@@ -971,6 +971,95 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     expect((lastSnapshot.envelope_json as any).payload.output.value).toBe('ok');
   });
 
+  it('T041: ai.infer runtime output is still validated by the action output contract before persistence', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [
+        {
+          id: 'ai-step',
+          type: 'action.call',
+          config: {
+            actionId: 'ai.infer',
+            version: 1,
+            inputMapping: {
+              prompt: 'Classify this ticket',
+            },
+            saveAs: 'payload.classification',
+            aiOutputSchemaMode: 'simple',
+            aiOutputSchema: {
+              type: 'object',
+              properties: {
+                category: { type: 'string' },
+              },
+              required: ['category'],
+              additionalProperties: false,
+            },
+          },
+        },
+      ],
+    });
+    await publishWorkflow(workflowId, 1);
+    stubAction('ai.infer', 1, async () => 'invalid-output');
+
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    const record = await WorkflowRunModelV2.getById(db, run.runId);
+
+    expect(record?.status).toBe('FAILED');
+  });
+
+  it('T042: ai.infer outputs saved with saveAs are available to later steps through vars.<saveAs>', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [
+        {
+          id: 'ai-step',
+          type: 'action.call',
+          config: {
+            actionId: 'ai.infer',
+            version: 1,
+            inputMapping: {
+              prompt: 'Classify this ticket',
+            },
+            saveAs: 'classificationResult',
+            aiOutputSchemaMode: 'simple',
+            aiOutputSchema: {
+              type: 'object',
+              properties: {
+                category: { type: 'string' },
+                next_action: {
+                  type: 'object',
+                  properties: {
+                    label: { type: 'string' },
+                  },
+                  required: ['label'],
+                  additionalProperties: false,
+                },
+              },
+              required: ['category'],
+              additionalProperties: false,
+            },
+          },
+        },
+        assignStep('assign-1', {
+          'payload.aiCategory': { $expr: 'vars.classificationResult.category' },
+          'payload.aiLabel': { $expr: 'vars.classificationResult.next_action.label' },
+        }),
+      ],
+    });
+    await publishWorkflow(workflowId, 1);
+    stubAction('ai.infer', 1, async () => ({
+      category: 'billing',
+      next_action: {
+        label: 'Escalate',
+      },
+    }));
+
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    const snapshots = await listWorkflowRunStepsAction({ runId: run.runId });
+    const lastSnapshot = snapshots.snapshots[snapshots.snapshots.length - 1];
+
+    expect((lastSnapshot.envelope_json as any).payload.aiCategory).toBe('billing');
+    expect((lastSnapshot.envelope_json as any).payload.aiLabel).toBe('Escalate');
+  });
+
   it('onError=continue records error and continues to next step. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
       steps: [

@@ -30,6 +30,7 @@ export type ActionDef<I, O> = {
 export type ActionContext = {
   runId: string;
   stepPath: string;
+  stepConfig?: unknown;
   tenantId?: string | null;
   idempotencyKey: string;
   attempt: number;

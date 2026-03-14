@@ -109,4 +109,30 @@ describe('ActionSchemaReference', () => {
     expect(screen.getByText('items')).toBeInTheDocument();
     expect(screen.getAllByText(/vars\.splitText/)).toHaveLength(2);
   });
+
+  it('T022: output schema previews prefer an AI step override over the static registry schema', () => {
+    render(
+      <ActionSchemaReference
+        action={action}
+        saveAs="classificationResult"
+        outputSchemaOverride={{
+          type: 'object',
+          properties: {
+            category: {
+              type: 'string',
+              description: 'Predicted category',
+            },
+          },
+          required: ['category'],
+        }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'View schema details' }));
+    fireEvent.click(screen.getByRole('button', { name: /Output Schema/i }));
+
+    expect(screen.getByText('category')).toBeInTheDocument();
+    expect(screen.queryByText('ticket_id')).not.toBeInTheDocument();
+    expect(screen.getAllByText(/vars\.classificationResult/)).toHaveLength(2);
+  });
 });
