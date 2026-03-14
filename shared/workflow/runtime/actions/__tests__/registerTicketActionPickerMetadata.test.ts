@@ -49,7 +49,7 @@ describe('ticket workflow picker metadata', () => {
     expect(createProperties.board_id?.['x-workflow-picker-kind']).toBe('board');
     expect(createProperties.board_id?.['x-workflow-picker-dependencies']).toBeUndefined();
     expect(createProperties.status_id?.['x-workflow-picker-kind']).toBe('ticket-status');
-    expect(createProperties.status_id?.['x-workflow-picker-dependencies']).toBeUndefined();
+    expect(createProperties.status_id?.['x-workflow-picker-dependencies']).toEqual(['board_id']);
     expect(createProperties.priority_id?.['x-workflow-picker-kind']).toBe('ticket-priority');
     expect(createProperties.priority_id?.['x-workflow-picker-dependencies']).toBeUndefined();
     expect(createProperties.assigned_to?.['x-workflow-picker-kind']).toBe('user');
@@ -69,7 +69,7 @@ describe('ticket workflow picker metadata', () => {
     expect(assignAssigneeProperties.id?.['x-workflow-picker-kind']).toBe('user-or-team');
 
     expect(updatePatchProperties.status_id?.['x-workflow-picker-kind']).toBe('ticket-status');
-    expect(updatePatchProperties.status_id?.['x-workflow-picker-dependencies']).toBeUndefined();
+    expect(updatePatchProperties.status_id?.['x-workflow-picker-dependencies']).toEqual(['ticket_id']);
     expect(updatePatchProperties.priority_id?.['x-workflow-picker-kind']).toBe('ticket-priority');
     expect(updatePatchProperties.priority_id?.['x-workflow-picker-dependencies']).toBeUndefined();
     expect(updatePatchProperties.assigned_to?.['x-workflow-picker-kind']).toBe('user');

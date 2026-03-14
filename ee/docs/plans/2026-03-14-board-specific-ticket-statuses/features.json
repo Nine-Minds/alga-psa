@@ -164,19 +164,19 @@
   {
     "id": "F028",
     "description": "Make workflow ticket action authoring use board-aware ticket status pickers and dependencies.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR6"]
   },
   {
     "id": "F029",
     "description": "Enforce board/status compatibility in workflow runtime ticket create and update operations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR6"]
   },
   {
     "id": "F030",
     "description": "Make workflow ticket close/default/open status resolution use board-owned ticket statuses.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR6"]
   },
   {
@@ -188,13 +188,13 @@
   {
     "id": "F032",
     "description": "Convert ticket status lookup APIs into board-scoped ticket status lookups.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR7"]
   },
   {
     "id": "F033",
     "description": "Update generic status APIs and shared status actions so ticket statuses are no longer treated as tenant-global.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR7"]
   },
   {

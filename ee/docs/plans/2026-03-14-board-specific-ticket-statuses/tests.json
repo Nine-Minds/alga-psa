@@ -212,31 +212,31 @@
   {
     "id": "T036",
     "description": "Workflow designer test: ticket create/update status pickers depend on the selected board and do not expose tenant-global ticket statuses.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F028"]
   },
   {
     "id": "T037",
     "description": "Workflow runtime test: ticket create action rejects a status id that does not belong to the chosen board.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F029"]
   },
   {
     "id": "T038",
     "description": "Workflow runtime test: ticket update action rejects a cross-board status id when patching board/status fields.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F029"]
   },
   {
     "id": "T039",
     "description": "Workflow runtime test: ticket close helper resolves the closed ticket status from the ticket's current board-owned statuses.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F030"]
   },
   {
     "id": "T040",
     "description": "Workflow runtime test: board-aware default/open status helpers do not fall back to another board's ticket statuses.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F030"]
   },
   {
@@ -254,13 +254,13 @@
   {
     "id": "T043",
     "description": "API contract test: ticket status lookup API requires or honors board scope and returns only statuses for that board.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F032"]
   },
   {
     "id": "T044",
     "description": "API contract test: generic status list/read endpoints no longer expose tenant-global ticket status behavior for ticket use cases.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F033"]
   },
   {
