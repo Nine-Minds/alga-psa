@@ -5,7 +5,7 @@ import net from 'node:net';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
-// shared/workflow/actions/emailWorkflowActions imports the event-bus publisher module at load time.
+// @alga-psa/workflows/actions/emailWorkflowActions imports the event-bus publisher module at load time.
 // In unit/integration tests we don't need the real publisher implementation (and dist artifacts may not exist),
 // so we stub it.
 vi.mock('@alga-psa/event-bus/publishers', () => ({
@@ -76,9 +76,9 @@ describeDb('resolve_inbound_ticket_context (integration)', () => {
     if (!user?.user_id) throw new Error('Expected seeded user');
     enteredByUserId = user.user_id;
 
-    const { getActionRegistryV2 } = await import('@alga-psa/shared/workflow/runtime');
+    const { getActionRegistryV2 } = await import('@alga-psa/workflows/runtime');
     const { registerEmailWorkflowActionsV2 } = await import(
-      '@alga-psa/shared/workflow/runtime/actions/registerEmailWorkflowActions'
+      '@alga-psa/workflows/runtime/actions/registerEmailWorkflowActions'
     );
 
     actionRegistry = getActionRegistryV2();

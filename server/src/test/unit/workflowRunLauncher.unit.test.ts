@@ -12,7 +12,7 @@ const {
   createRunMock: vi.fn()
 }));
 
-vi.mock('@shared/workflow/persistence/workflowDefinitionModelV2', () => ({
+vi.mock('@alga-psa/workflows/persistence/workflowDefinitionModelV2', () => ({
   default: {
     getById: vi.fn(async () => ({
       workflow_id: 'workflow-1',
@@ -23,7 +23,7 @@ vi.mock('@shared/workflow/persistence/workflowDefinitionModelV2', () => ({
   }
 }));
 
-vi.mock('@shared/workflow/persistence/workflowDefinitionVersionModelV2', () => ({
+vi.mock('@alga-psa/workflows/persistence/workflowDefinitionVersionModelV2', () => ({
   default: {
     listByWorkflow: vi.fn(async () => ([{
       workflow_id: 'workflow-1',
@@ -48,15 +48,15 @@ vi.mock('@shared/workflow/persistence/workflowDefinitionVersionModelV2', () => (
   }
 }));
 
-vi.mock('@shared/workflow/persistence/workflowRunModelV2', () => ({
+vi.mock('@alga-psa/workflows/persistence/workflowRunModelV2', () => ({
   default: {
     create: (...args: unknown[]) => createRunMock(...args),
     getByTriggerFireKey: (...args: unknown[]) => getByTriggerFireKeyMock(...args)
   }
 }));
 
-vi.mock('@shared/workflow/runtime', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@shared/workflow/runtime')>();
+vi.mock('@alga-psa/workflows/runtime', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/workflows/runtime')>();
   class WorkflowRuntimeV2Mock {
     async startRun(...args: unknown[]) {
       return startRunMock(...args);

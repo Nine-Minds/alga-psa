@@ -9,7 +9,7 @@ import type { ExpressionEditorHandle } from '../ExpressionEditor';
 const insertTextIntoMonacoEditorMock = vi.fn();
 
 const fakeModel = {
-  uri: { toString: () => 'inmemory://workflow-expression-smoke' },
+  uri: { toString: () => 'inmemory:/workflow-expression-smoke' },
   getValue: () => '',
 };
 
@@ -49,7 +49,7 @@ const fakeMonaco = {
   },
 } as unknown as typeof monaco;
 
-vi.mock('@shared/workflow/expression-authoring', () => ({
+vi.mock('@alga-psa/workflows/expression-authoring', () => ({
   insertTextIntoMonacoEditor: (...args: unknown[]) => insertTextIntoMonacoEditorMock(...args),
 }));
 

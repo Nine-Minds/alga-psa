@@ -4,7 +4,7 @@ import {
   buildGroupedActionStepConfig,
   getGroupedActionCatalogRecordForStep,
 } from '../groupedActionStep';
-import type { WorkflowDesignerCatalogRecord } from '@shared/workflow/runtime/designer/actionCatalog';
+import type { WorkflowDesignerCatalogRecord } from '@alga-psa/workflows/runtime/designer/actionCatalog';
 
 const catalog: WorkflowDesignerCatalogRecord[] = [
   {

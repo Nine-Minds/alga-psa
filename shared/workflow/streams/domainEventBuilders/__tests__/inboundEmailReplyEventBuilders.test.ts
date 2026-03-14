@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { inboundEmailReplyReceivedEventPayloadSchema } from '@shared/workflow/runtime/schemas/communicationsEventSchemas';
-import { buildWorkflowPayload } from '@shared/workflow/streams/workflowEventPublishHelpers';
+import { inboundEmailReplyReceivedEventPayloadSchema } from '@alga-psa/workflows/runtime/schemas/communicationsEventSchemas';
+import { buildWorkflowPayload } from '@alga-psa/workflows/streams/workflowEventPublishHelpers';
 import { buildInboundEmailReplyReceivedPayload } from '../inboundEmailReplyEventBuilders';
 
 describe('buildInboundEmailReplyReceivedPayload', () => {

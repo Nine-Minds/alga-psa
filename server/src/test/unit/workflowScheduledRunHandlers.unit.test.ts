@@ -12,7 +12,7 @@ vi.mock('server/src/lib/db', () => ({
   createTenantKnex: vi.fn(async (tenantId: string) => ({ knex: knexMock, tenant: tenantId }))
 }));
 
-vi.mock('@shared/workflow/persistence/workflowScheduleStateModel', () => ({
+vi.mock('@alga-psa/workflows/persistence/workflowScheduleStateModel', () => ({
   default: {
     getById: vi.fn(async (_knex: unknown, scheduleId: string) => (
       scheduleRecord?.id === scheduleId ? scheduleRecord : null
@@ -38,7 +38,7 @@ vi.mock('@alga-psa/workflows/lib/workflowRunLauncher', () => ({
 import {
   workflowOneTimeScheduledRunHandler,
   workflowRecurringScheduledRunHandler
-} from 'server/src/lib/jobs/handlers/workflowScheduledRunHandlers';
+} from 'server/src/lib/jobs/handlers-psa/workflowsScheduledRunHandlers';
 
 describe('Workflow scheduled run handlers', () => {
   beforeEach(() => {

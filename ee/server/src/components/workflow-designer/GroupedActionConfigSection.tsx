@@ -12,6 +12,7 @@ const TILE_KIND_LABELS: Record<WorkflowDesignerCatalogRecord['tileKind'], string
   'core-object': 'Core',
   transform: 'Transform',
   app: 'App',
+  ai: 'AI',
 };
 
 export const buildGroupedActionSelectOptions = (

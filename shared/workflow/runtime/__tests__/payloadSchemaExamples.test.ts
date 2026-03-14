@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { getSchemaRegistry, initializeWorkflowRuntimeV2 } from '@shared/workflow/runtime';
+import { getSchemaRegistry, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';
 
 function resolveLocalRef(root: any, schema: any): any {
   if (!schema || typeof schema !== 'object') {

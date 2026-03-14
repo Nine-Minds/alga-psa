@@ -30,6 +30,10 @@
       "import": "./src/runtime/index.ts",
       "types": "./src/runtime/index.ts"
     },
+    "./runtime/*": {
+      "import": "./src/runtime/*.ts",
+      "types": "./src/runtime/*.ts"
+    },
     "./workers": {
       "import": "./src/workers/index.ts",
       "types": "./src/workers/index.ts"
@@ -38,13 +42,25 @@
       "import": "./src/persistence/index.ts",
       "types": "./src/persistence/index.ts"
     },
+    "./persistence/*": {
+      "import": "./src/persistence/*.ts",
+      "types": "./src/persistence/*.ts"
+    },
     "./bundle": {
       "import": "./src/bundle/index.ts",
       "types": "./src/bundle/index.ts"
     },
+    "./bundle/*": {
+      "import": "./src/bundle/*.ts",
+      "types": "./src/bundle/*.ts"
+    },
     "./streams": {
       "import": "./src/streams/index.ts",
       "types": "./src/streams/index.ts"
+    },
+    "./streams/*": {
+      "import": "./src/streams/*.ts",
+      "types": "./src/streams/*.ts"
     },
     "./expression-authoring": {
       "import": "./src/expression-authoring/index.ts",
@@ -57,6 +73,10 @@
     "./services": {
       "import": "./src/services/index.ts",
       "types": "./src/services/index.ts"
+    },
+    "./adapters/*": {
+      "import": "./src/adapters/*.ts",
+      "types": "./src/adapters/*.ts"
     },
     "./types": {
       "import": "./src/types/index.ts",

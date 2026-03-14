@@ -18,6 +18,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import {
   extractSchemaFields,
   type ActionRegistryItem,
+  type JsonSchema,
   type SchemaField,
 } from './workflowDataContext';
 

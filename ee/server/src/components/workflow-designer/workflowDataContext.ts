@@ -545,7 +545,7 @@ export const buildDataContext = (
                 config.actionId.startsWith('transform.')
                   ? inferTransformObjectOutputSchema(nodeStep, config.actionId, action.outputSchema, blockCtx)
                   : isWorkflowAiInferAction(config.actionId)
-                    ? (resolveWorkflowAiSchemaFromConfig(config).schema ?? {})
+                    ? ((resolveWorkflowAiSchemaFromConfig(config).schema ?? {}) as JsonSchema)
                     : action.outputSchema;
               context.steps.push({
                 stepId: step.id,

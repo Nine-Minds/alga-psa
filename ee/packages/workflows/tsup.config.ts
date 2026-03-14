@@ -1,20 +1,7 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: {
-    index: 'src/index.ts',
-    'actions/index': 'src/actions/index.ts',
-    'components/index': 'src/components/index.ts',
-    'runtime/index': 'src/runtime/index.ts',
-    'workers/index': 'src/workers/index.ts',
-    'persistence/index': 'src/persistence/index.ts',
-    'bundle/index': 'src/bundle/index.ts',
-    'streams/index': 'src/streams/index.ts',
-    'expression-authoring/index': 'src/expression-authoring/index.ts',
-    'secrets/index': 'src/secrets/index.ts',
-    'services/index': 'src/services/index.ts',
-    'types/index': 'src/types/index.ts',
-  },
+  entry: ['src/**/*.ts', 'src/**/*.tsx'],
   format: ['esm', 'cjs'],
   dts: false,
   bundle: false,

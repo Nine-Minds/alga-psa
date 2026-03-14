@@ -21,11 +21,11 @@ import {
   listWorkflowDefinitionsAction,
   publishWorkflowDefinitionAction
 } from '@alga-psa/workflows/actions';
-import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
-import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
-import { getSchemaRegistry } from '@shared/workflow/runtime';
-import type { WorkflowDefinition } from '@shared/workflow/runtime/client';
-import type { PublishError } from '@shared/workflow/runtime/types';
+import WorkflowDefinitionModelV2 from '@alga-psa/workflows/persistence/workflowDefinitionModelV2';
+import WorkflowDefinitionVersionModelV2 from '@alga-psa/workflows/persistence/workflowDefinitionVersionModelV2';
+import { getSchemaRegistry } from '@alga-psa/workflows/runtime';
+import type { WorkflowDefinition } from '@alga-psa/workflows/runtime/client';
+import type { PublishError } from '@alga-psa/workflows/runtime/types';
 import {
   exportWorkflowBundleV1ForWorkflowId
 } from 'server/src/lib/workflow/bundle/exportWorkflowBundleV1';

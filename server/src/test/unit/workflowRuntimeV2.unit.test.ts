@@ -3,15 +3,15 @@ import { z } from 'zod';
 import {
   compileExpression,
   validateExpressionSource
-} from '@shared/workflow/runtime/expressionEngine';
-import { resolveExpressions } from '@shared/workflow/runtime/utils/expressionResolver';
-import { applyAssignments } from '@shared/workflow/runtime/utils/assignmentUtils';
-import { applyRedactions, enforceSnapshotSize } from '@shared/workflow/runtime/utils/redactionUtils';
-import { computeBackoffMs } from '@shared/workflow/runtime/utils/retryUtils';
-import { buildStepsPath, parseNodePath } from '@shared/workflow/runtime/utils/nodePathUtils';
-import { validateWorkflowDefinition } from '@shared/workflow/runtime/validation/publishValidation';
-import { getSchemaRegistry, getNodeTypeRegistry } from '@shared/workflow/runtime';
-import { generateIdempotencyKey } from '@shared/workflow/runtime/utils/idempotencyUtils';
+} from '@alga-psa/workflows/runtime/expressionEngine';
+import { resolveExpressions } from '@alga-psa/workflows/runtime/utils/expressionResolver';
+import { applyAssignments } from '@alga-psa/workflows/runtime/utils/assignmentUtils';
+import { applyRedactions, enforceSnapshotSize } from '@alga-psa/workflows/runtime/utils/redactionUtils';
+import { computeBackoffMs } from '@alga-psa/workflows/runtime/utils/retryUtils';
+import { buildStepsPath, parseNodePath } from '@alga-psa/workflows/runtime/utils/nodePathUtils';
+import { validateWorkflowDefinition } from '@alga-psa/workflows/runtime/validation/publishValidation';
+import { getSchemaRegistry, getNodeTypeRegistry } from '@alga-psa/workflows/runtime';
+import { generateIdempotencyKey } from '@alga-psa/workflows/runtime/utils/idempotencyUtils';
 import { ensureWorkflowRuntimeV2TestRegistrations, TEST_SCHEMA_REF } from '../helpers/workflowRuntimeV2TestHelpers';
 
 const baseEnv = {

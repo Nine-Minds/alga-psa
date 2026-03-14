@@ -93,6 +93,9 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
 
 const cloneSchema = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
+const getHydrationError = (hydrated: HydratedSimpleFieldsResult): string =>
+  'reason' in hydrated ? hydrated.reason : 'Simple mode could not hydrate the schema.';
+
 const normalizeMode = (value: unknown): WorkflowAiSchemaMode | null =>
   value === 'simple' || value === 'advanced' ? value : null;
 
@@ -491,7 +494,8 @@ export const validateWorkflowAiSchema = (
   if (mode === 'simple') {
     const hydrated = hydrateSimpleFieldsFromSchemaInternal(schema);
     if (!hydrated.ok) {
-      return [hydrated.reason];
+      const hydrationError = getHydrationError(hydrated);
+      return [hydrationError];
     }
   }
 

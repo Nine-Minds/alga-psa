@@ -14,14 +14,14 @@ import {
   resumeWorkflowRunAction,
   cancelWorkflowRunAction
 } from '@alga-psa/workflows/actions';
-import { WorkflowRuntimeV2 } from '@shared/workflow/runtime';
-import { getActionRegistryV2, getSchemaRegistry } from '@shared/workflow/runtime';
-import WorkflowRunModelV2 from '@shared/workflow/persistence/workflowRunModelV2';
-import WorkflowRunStepModelV2 from '@shared/workflow/persistence/workflowRunStepModelV2';
-import WorkflowRunWaitModelV2 from '@shared/workflow/persistence/workflowRunWaitModelV2';
-import WorkflowActionInvocationModelV2 from '@shared/workflow/persistence/workflowActionInvocationModelV2';
-import WorkflowRunSnapshotModelV2 from '@shared/workflow/persistence/workflowRunSnapshotModelV2';
-import { WorkflowRuntimeV2Worker } from '@shared/workflow/workers';
+import { WorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';
+import { getActionRegistryV2, getSchemaRegistry } from '@alga-psa/workflows/runtime';
+import WorkflowRunModelV2 from '@alga-psa/workflows/persistence/workflowRunModelV2';
+import WorkflowRunStepModelV2 from '@alga-psa/workflows/persistence/workflowRunStepModelV2';
+import WorkflowRunWaitModelV2 from '@alga-psa/workflows/persistence/workflowRunWaitModelV2';
+import WorkflowActionInvocationModelV2 from '@alga-psa/workflows/persistence/workflowActionInvocationModelV2';
+import WorkflowRunSnapshotModelV2 from '@alga-psa/workflows/persistence/workflowRunSnapshotModelV2';
+import { WorkflowRuntimeV2Worker } from '@alga-psa/workflows/workers';
 import {
   ensureWorkflowRuntimeV2TestRegistrations,
   buildWorkflowDefinition,

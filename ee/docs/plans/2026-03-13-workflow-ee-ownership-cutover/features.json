@@ -92,25 +92,25 @@
   {
     "id": "F016",
     "description": "AI schema helpers are owned by the EE workflows package rather than a shared workflow path.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements > Functional Requirements"]
   },
   {
     "id": "F017",
     "description": "AI workflow action registration is owned by the EE workflows package rather than a shared workflow path.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements > Functional Requirements"]
   },
   {
     "id": "F018",
     "description": "AI-aware action output schema resolution is owned by the EE workflows package rather than a shared workflow path.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements > Functional Requirements"]
   },
   {
     "id": "F019",
     "description": "AI-aware workflow publish validation is owned by the EE workflows package rather than a shared workflow path.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements > Functional Requirements"]
   },
   {
@@ -140,19 +140,19 @@
   {
     "id": "F024",
     "description": "Workflow-related wiring tests and source-string assertions are updated to the EE workflows package import paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Risks", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F025",
     "description": "No non-doc imports remain from `@shared/workflow*` after the hard cut.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {
     "id": "F026",
     "description": "No non-doc imports remain from `@alga-psa/shared/workflow*` after the hard cut.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Goals", "Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
   },
   {

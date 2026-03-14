@@ -23,7 +23,7 @@ import {
 import { NextRequest } from 'next/server';
 import { GET as exportBundleRoute } from 'server/src/app/api/workflow-definitions/[workflowId]/export/route';
 import { POST as importBundleRoute } from 'server/src/app/api/workflow-definitions/import/route';
-import { stringifyCanonicalJson } from '@shared/workflow/bundle/canonicalJson';
+import { stringifyCanonicalJson } from '@alga-psa/workflows/bundle/canonicalJson';
 import { exportWorkflowBundleV1ForWorkflowId } from 'server/src/lib/workflow/bundle/exportWorkflowBundleV1';
 
 vi.mock('server/src/lib/db', () => ({

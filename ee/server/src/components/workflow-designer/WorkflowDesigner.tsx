@@ -5029,7 +5029,10 @@ const StepConfigPanel: React.FC<{
   );
   const isAiInferStep = shouldRenderWorkflowAiSchemaSection(step.type, selectedAction?.id);
   const resolvedAiOutputSchema = useMemo(
-    () => (isAiInferStep && actionCallConfig ? resolveWorkflowAiSchemaFromConfig(actionCallConfig).schema : null),
+    () =>
+      (isAiInferStep && actionCallConfig
+        ? (resolveWorkflowAiSchemaFromConfig(actionCallConfig).schema as JsonSchema | null)
+        : null),
     [actionCallConfig, isAiInferStep]
   );
 

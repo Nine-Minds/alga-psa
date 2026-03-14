@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import type { Step } from '@shared/workflow/runtime';
+import type { Step } from '@alga-psa/workflows/runtime';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
 import { rollbackTenant } from '../../lib/testing/tenant-creation';
 import type { TenantTestData } from '../../lib/testing/tenant-test-factory';

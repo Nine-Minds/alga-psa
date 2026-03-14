@@ -104,12 +104,6 @@
       "@alga-psa/email/*": [
         "../packages/email/src/*"
       ],
-      "@shared/workflow": [
-        "../shared/workflow"
-      ],
-      "@shared/workflow/*": [
-        "../shared/workflow/*"
-      ],
       "@alga-psa/core": [
         "../packages/core/src"
       ],

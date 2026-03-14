@@ -42,6 +42,11 @@ type DerivedSectionState = {
   fallbackMessage: string | null;
 };
 
+const getHydrationError = (
+  hydrated: ReturnType<typeof hydrateWorkflowAiSimpleFields>
+): string =>
+  'reason' in hydrated ? hydrated.reason : 'This schema cannot be represented in simple mode.';
+
 const SIMPLE_FIELD_TYPE_OPTIONS: Array<{ value: WorkflowAiSimpleFieldType; label: string }> = [
   { value: 'string', label: 'String' },
   { value: 'number', label: 'Number' },
@@ -124,7 +129,9 @@ const deriveSectionState = (config?: Record<string, unknown>): DerivedSectionSta
 
   if (storedMode === 'simple') {
     const schemaToHydrate = storedSchema ?? resolved.schema;
-    const hydrated = schemaToHydrate ? hydrateWorkflowAiSimpleFields(schemaToHydrate) : { ok: true as const, fields: [] };
+    const hydrated = schemaToHydrate
+      ? hydrateWorkflowAiSimpleFields(schemaToHydrate)
+      : ({ ok: true as const, fields: [] } satisfies ReturnType<typeof hydrateWorkflowAiSimpleFields>);
     if (hydrated.ok) {
       return {
         mode: 'simple',
@@ -135,11 +142,13 @@ const deriveSectionState = (config?: Record<string, unknown>): DerivedSectionSta
       };
     }
 
+    const hydrationError = getHydrationError(hydrated);
+
     return {
       mode: 'advanced',
       fields: [],
       advancedText: fallbackText,
-      validationErrors: resolved.errors.length > 0 ? resolved.errors : [hydrated.reason],
+      validationErrors: resolved.errors.length > 0 ? resolved.errors : [hydrationError],
       fallbackMessage: 'This saved schema uses advanced JSON Schema features, so it is shown in Advanced mode.',
     };
   }
@@ -149,10 +158,7 @@ const deriveSectionState = (config?: Record<string, unknown>): DerivedSectionSta
     fields: [],
     advancedText: resolved.schemaText ?? fallbackText,
     validationErrors: resolved.errors,
-    fallbackMessage:
-      storedMode === 'simple'
-        ? 'This saved schema uses advanced JSON Schema features, so it is shown in Advanced mode.'
-        : null,
+    fallbackMessage: null,
   };
 };
 
@@ -387,7 +393,8 @@ export const WorkflowAiSchemaSection: React.FC<WorkflowAiSchemaSectionProps> = (
       if (currentAdvancedSchema.schema) {
         const hydrated = hydrateWorkflowAiSimpleFields(currentAdvancedSchema.schema);
         if (!hydrated.ok) {
-          setFallbackMessage(hydrated.reason);
+          const hydrationError = getHydrationError(hydrated);
+          setFallbackMessage(hydrationError);
           return;
         }
         emitSimpleMode(hydrated.fields);

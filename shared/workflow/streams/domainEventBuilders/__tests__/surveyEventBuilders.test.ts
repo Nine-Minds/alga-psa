@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '@shared/workflow/streams/workflowEventPublishHelpers';
+import { buildWorkflowPayload } from '@alga-psa/workflows/streams/workflowEventPublishHelpers';
 import {
   csatAlertTriggeredEventPayloadSchema,
   surveyExpiredEventPayloadSchema,
   surveyReminderSentEventPayloadSchema,
   surveyResponseReceivedEventPayloadSchema,
   surveySentEventPayloadSchema,
-} from '@shared/workflow/runtime/schemas/communicationsEventSchemas';
+} from '@alga-psa/workflows/runtime/schemas/communicationsEventSchemas';
 import {
   buildCsatAlertTriggeredPayload,
   buildSurveyExpiredPayload,

@@ -4,8 +4,8 @@ import {
   emailComplaintReceivedEventPayloadSchema,
   emailDeliveredEventPayloadSchema,
   emailUnsubscribedEventPayloadSchema,
-} from '@shared/workflow/runtime/schemas/communicationsEventSchemas';
-import { buildWorkflowPayload } from '@shared/workflow/streams/workflowEventPublishHelpers';
+} from '@alga-psa/workflows/runtime/schemas/communicationsEventSchemas';
+import { buildWorkflowPayload } from '@alga-psa/workflows/streams/workflowEventPublishHelpers';
 import {
   buildEmailBouncedPayload,
   buildEmailComplaintReceivedPayload,

@@ -2,37 +2,37 @@
   {
     "id": "T001",
     "description": "Package/build: `@alga-psa/workflows` exports the runtime, workers, persistence, bundle, streams, expression-authoring, secrets, services, and types entrypoints required by current callers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F002", "F003"]
   },
   {
     "id": "T002",
     "description": "Typecheck: root/server/EE server/workflow worker tsconfigs resolve `@alga-psa/workflows/*` imports without relying on shared workflow aliases.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {
     "id": "T003",
     "description": "Import audit: repo source files outside docs contain no imports from `@shared/workflow` after the cutover.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   },
   {
     "id": "T004",
     "description": "Import audit: repo source files outside docs contain no imports from `@alga-psa/shared/workflow` after the cutover.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F026"]
   },
   {
     "id": "T005",
     "description": "Runtime bootstrap: the workflow worker initializes workflow runtime through the EE workflows package entrypoint.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005", "F006"]
   },
   {
     "id": "T006",
     "description": "Runtime bootstrap: workflow server actions initialize runtime through the EE workflows package entrypoint.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005", "F007"]
   },
   {
@@ -50,19 +50,19 @@
   {
     "id": "T009",
     "description": "UI wiring: workflow designer and related EE UI code typecheck after switching client, expression, catalog, and AI imports to `@alga-psa/workflows`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F013", "F015", "F016"]
   },
   {
     "id": "T010",
     "description": "Persistence wiring: task inbox and workflow persistence consumers compile after importing workflow models and interfaces from the EE workflows package.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009", "F031"]
   },
   {
     "id": "T011",
     "description": "Bundle wiring: workflow bundle import/export code compiles after importing bundle types and helpers from the EE workflows package.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F029"]
   },
   {
@@ -80,55 +80,55 @@
   {
     "id": "T014",
     "description": "Expression-authoring wiring: existing editor consumers compile after importing workflow expression helpers from the EE workflows package.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013", "F030"]
   },
   {
     "id": "T015",
     "description": "Client/type wiring: workflow client/type consumers compile after importing them from the EE workflows package.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015", "F030"]
   },
   {
     "id": "T016",
     "description": "AI ownership: AI schema helpers compile and are imported from the EE workflows package rather than shared workflow paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016", "F033"]
   },
   {
     "id": "T017",
     "description": "AI ownership: AI action registration compiles and is imported from the EE workflows package rather than shared workflow paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017", "F033"]
   },
   {
     "id": "T018",
     "description": "AI ownership: AI-aware output-schema resolution compiles and is imported from the EE workflows package rather than shared workflow paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F018", "F033"]
   },
   {
     "id": "T019",
     "description": "AI ownership: AI-aware publish validation compiles and is imported from the EE workflows package rather than shared workflow paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F019", "F033"]
   },
   {
     "id": "T020",
     "description": "Boundary audit: shared/core workflow code no longer imports the EE workflow inference service after the cutover.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020", "F034"]
   },
   {
     "id": "T021",
     "description": "Boundary audit: no application code depends on shared workflow runtime entrypoints after the cutover.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F025", "F034"]
   },
   {
     "id": "T022",
     "description": "Boundary audit: no application code depends on shared workflow streams, persistence, bundle, or expression-authoring entrypoints after the cutover.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012", "F013", "F014", "F025", "F026", "F034"]
   },
   {
@@ -278,7 +278,7 @@
   {
     "id": "T047",
     "description": "Package manifest checks confirm every new `@alga-psa/workflows` consumer has the dependency declared where required.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   },
   {

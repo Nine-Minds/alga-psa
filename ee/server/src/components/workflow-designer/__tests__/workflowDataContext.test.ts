@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { buildDataContext } from '../workflowDataContext';
 import { applyCatalogActionChoiceToStep } from '../groupedActionSelection';
-import type { NodeStep, WorkflowDefinition } from '@shared/workflow/runtime/client';
-import type { WorkflowDesignerCatalogAction } from '@shared/workflow/runtime/designer/actionCatalog';
+import type { NodeStep, WorkflowDefinition } from '@alga-psa/workflows/runtime/client';
+import type { WorkflowDesignerCatalogAction } from '@alga-psa/workflows/runtime/designer/actionCatalog';
 
 const generateSaveAsName = (actionId: string) => actionId.replace(/\./g, '_');
 

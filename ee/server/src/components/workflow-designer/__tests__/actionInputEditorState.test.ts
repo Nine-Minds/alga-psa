@@ -5,8 +5,8 @@ import {
   buildActionInputEditorState,
   type WorkflowDesignerActionRegistryItem,
 } from '../actionInputEditorState';
-import type { NodeStep } from '@shared/workflow/runtime/client';
-import type { WorkflowDesignerCatalogAction } from '@shared/workflow/runtime/designer/actionCatalog';
+import type { NodeStep } from '@alga-psa/workflows/runtime/client';
+import type { WorkflowDesignerCatalogAction } from '@alga-psa/workflows/runtime/designer/actionCatalog';
 
 const generateSaveAsName = (actionId: string) => actionId.replace(/\./g, '_');
 

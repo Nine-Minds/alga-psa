@@ -5,7 +5,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { GroupedActionConfigSection, buildGroupedActionSelectOptions } from '../GroupedActionConfigSection';
-import type { WorkflowDesignerCatalogRecord } from '@shared/workflow/runtime/designer/actionCatalog';
+import type { WorkflowDesignerCatalogRecord } from '@alga-psa/workflows/runtime/designer/actionCatalog';
 
 const ticketRecord: WorkflowDesignerCatalogRecord = {
   groupKey: 'ticket',
