@@ -14,19 +14,19 @@
   {
     "id": "F003",
     "description": "Clone current tenant-wide ticket statuses once per board during migration, preserving metadata and assigning new status ids.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2"]
   },
   {
     "id": "F004",
     "description": "Build a deterministic migration remap from old global ticket status ids to new board-owned ticket status ids by board.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2"]
   },
   {
     "id": "F005",
     "description": "Remap existing ticket rows to the new board-owned ticket status ids during migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR2"]
   },
   {

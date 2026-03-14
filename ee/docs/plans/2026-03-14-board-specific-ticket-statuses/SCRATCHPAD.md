@@ -19,6 +19,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-14) Changing a ticket board must require explicit user status reselection. No runtime auto-remap.
 - (2026-03-14) New board creation must let admins either copy statuses from an existing board or create statuses inline.
 - (2026-03-14) `F001`/`F002`: add `statuses.board_id` as nullable first, then enforce ticket ownership after clone/remap. Rationale: current tenant-global ticket rows must survive until the data migration rewrites them.
+- (2026-03-14) `F003`/`F004`/`F005`: keep the legacy tenant-global ticket status rows in place for now and clone from them during migration, because later remap steps still need the old ids to rewrite inbound, billing, and workflow references before the global rows can be retired.
 
 ## Discoveries / Constraints
 
@@ -54,6 +55,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-14) Board settings and board actions do not yet seed or manage board-local ticket statuses:
   - `packages/tickets/src/actions/board-actions/boardActions.ts`
   - `server/src/components/settings/general/BoardsSettings.tsx`
+- (2026-03-14) Local DB-backed integration execution is blocked in this Codex harness:
+  - `npx vitest run src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts --coverage=false` fails before test execution because TCP connections to `localhost:5438` are denied with `EPERM`.
+  - Direct checks to both `127.0.0.1:55433` and Docker socket access are also denied with `Operation not permitted`, so the new DB integration suite is written but could not be executed here.
 
 ## Commands / Runbooks
 
@@ -73,6 +77,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-14) Run the board-status migration schema tests directly from the server package:
   - `cd server && npx vitest run src/test/unit/migrations/boardSpecificTicketStatusesMigration.test.ts`
 - (2026-03-14) Repo-level `npm run test:local -- ...` is currently not usable in this shell because the installed `dotenv` CLI rejects `-e ../.env.localtest` as non-boolean.
+- (2026-03-14) Attempt the DB-backed clone/remap migration suite:
+  - `cd server && npx vitest run src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts --coverage=false`
+  - If local Postgres is available outside Codex, override the port first, e.g. `DB_PORT=55433 ...`, before rerunning.
 
 ## Links / References
 
@@ -91,6 +98,8 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Client portal ticket actions: `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts`
 - New status schema migration: `server/migrations/20260314100000_add_board_ownership_to_ticket_statuses.cjs`
 - Migration schema coverage: `server/src/test/unit/migrations/boardSpecificTicketStatusesMigration.test.ts`
+- Clone/remap migration: `server/migrations/20260314113000_clone_global_ticket_statuses_to_boards.cjs`
+- Clone/remap DB integration coverage: `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts`
 
 ## Open Questions
 
