@@ -735,7 +735,7 @@
   {
     "id": "F088",
     "description": "P4: Email logging — log sent quote emails in email_sending_logs with entity_type='quote'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P4-FR3"
     ]
