@@ -95,6 +95,7 @@ import { WorkflowStepSaveOutputSection } from './WorkflowStepSaveOutputSection';
 import { WorkflowActionInputSection } from './WorkflowActionInputSection';
 import { buildWorkflowReferenceFieldOptions } from './workflowReferenceOptions';
 import { shouldRenderWorkflowAiSchemaSection } from './workflowAiStepUtils';
+import { applyWorkflowActionPresentationHintsToList } from './workflowActionPresentation';
 import {
   DEFAULT_WORKFLOW_DESIGNER_SIDEBAR_WIDTH,
   getWorkflowDesignerSidebarWidthFromDrag,
@@ -1919,7 +1920,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         throw new Error('Failed to load workflow registries');
       }
       if (overrides?.registryNodes || overrides?.registryActions) {
-        const overrideActions = (overrides.registryActions ?? []) as ActionRegistryItem[];
+        const overrideActions = applyWorkflowActionPresentationHintsToList(
+          (overrides.registryActions ?? []) as ActionRegistryItem[]
+        );
         setNodeRegistry((overrides.registryNodes ?? []) as NodeRegistryItem[]);
         setActionRegistry(overrideActions);
         setDesignerActionCatalog(buildWorkflowDesignerActionCatalog(overrideActions));
@@ -1946,8 +1949,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         listWorkflowRegistryActionsAction(),
         listWorkflowDesignerActionCatalogAction()
       ]);
+      const normalizedActions = applyWorkflowActionPresentationHintsToList(
+        (actions ?? []) as unknown as ActionRegistryItem[]
+      );
       setNodeRegistry((nodes ?? []) as unknown as NodeRegistryItem[]);
-      setActionRegistry((actions ?? []) as unknown as ActionRegistryItem[]);
+      setActionRegistry(normalizedActions);
       setDesignerActionCatalog((catalog ?? []) as WorkflowDesignerCatalogRecord[]);
       try {
         const schemaList = await listWorkflowSchemaRefsAction();

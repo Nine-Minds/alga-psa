@@ -1,6 +1,7 @@
 import type { InputMapping, MappingValue, Step } from '@alga-psa/workflows/runtime';
 
 import type { ActionInputField } from './mapping';
+import { applyWorkflowActionPresentationHints } from './workflowActionPresentation';
 
 type JsonSchema = {
   type?: string | string[];
@@ -292,7 +293,7 @@ export const buildActionInputEditorState = (
   actionRegistry: WorkflowDesignerActionRegistryItem[]
 ): ActionInputEditorState => {
   const config = asRecord(step.config);
-  const selectedAction =
+  const selectedActionBase =
     step.type === 'action.call'
       ? getActionFromRegistry(
           typeof config?.actionId === 'string' ? config.actionId : undefined,
@@ -300,6 +301,9 @@ export const buildActionInputEditorState = (
           actionRegistry
         )
       : undefined;
+  const selectedAction = selectedActionBase
+    ? applyWorkflowActionPresentationHints(selectedActionBase)
+    : undefined;
   const actionInputFields = selectedAction?.inputSchema
     ? extractActionInputFields(selectedAction.inputSchema, selectedAction.inputSchema)
     : [];
