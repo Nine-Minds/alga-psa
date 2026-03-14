@@ -19,6 +19,11 @@ interface QuotePDFGenerationOptions {
   templateAst?: InvoiceTemplateAst;
 }
 
+interface QuoteTemplatePreview {
+  html: string;
+  css: string;
+}
+
 interface QuotePDFStoreOptions extends QuotePDFGenerationOptions {
   quoteNumber?: string;
   userId: string;
@@ -34,6 +39,10 @@ export class QuotePDFGenerationService {
   async generatePDF(options: QuotePDFGenerationOptions): Promise<Buffer> {
     const htmlContent = await this.getQuoteHtml(options);
     return this.generatePDFBuffer(htmlContent);
+  }
+
+  async renderPreview(options: QuotePDFGenerationOptions): Promise<QuoteTemplatePreview> {
+    return this.renderQuoteTemplate(options);
   }
 
   async generateAndStore(options: QuotePDFStoreOptions): Promise<FileStore> {
@@ -67,6 +76,11 @@ export class QuotePDFGenerationService {
   }
 
   private async getQuoteHtml(options: QuotePDFGenerationOptions): Promise<string> {
+    const rendered = await this.renderQuoteTemplate(options);
+    return `<!doctype html><html><head><meta charset=\"utf-8\" /><style>${rendered.css}</style></head><body>${rendered.html}</body></html>`;
+  }
+
+  private async renderQuoteTemplate(options: QuotePDFGenerationOptions): Promise<QuoteTemplatePreview> {
     return runWithTenant(this.tenant, async () => {
       const { knex } = await createTenantKnex();
       const quoteViewModel = await mapDbQuoteToViewModel(knex, this.tenant, options.quoteId);
@@ -86,9 +100,7 @@ export class QuotePDFGenerationService {
         templateAst,
         quoteViewModel as unknown as Record<string, unknown>
       );
-      const rendered = await renderEvaluatedInvoiceTemplateAst(templateAst, evaluation);
-
-      return `<!doctype html><html><head><meta charset=\"utf-8\" /><style>${rendered.css}</style></head><body>${rendered.html}</body></html>`;
+      return renderEvaluatedInvoiceTemplateAst(templateAst, evaluation);
     });
   }
 

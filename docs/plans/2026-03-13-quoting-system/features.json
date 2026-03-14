@@ -679,7 +679,7 @@
   {
     "id": "F081",
     "description": "P3: Quote preview — in-browser rendering using AST evaluator + React renderer",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P3-FR7"
     ]
