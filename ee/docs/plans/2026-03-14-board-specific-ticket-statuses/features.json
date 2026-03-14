@@ -212,7 +212,7 @@
   {
     "id": "F036",
     "description": "Update notification, survey, and other ticket event subscribers to resolve remapped board-owned ticket statuses correctly.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR8"]
   },
   {

@@ -100,7 +100,7 @@ describe('Survey trigger dispatch integration', () => {
     await db('projects').where({ tenant: tenantId }).delete().catch(() => undefined);
     await db('contacts').where({ tenant: tenantId }).delete().catch(() => undefined);
     await db('clients').where({ tenant: tenantId }).delete().catch(() => undefined);
-    await db('statuses').where({ tenant: tenantId, status_id: statusId }).delete().catch(() => undefined);
+    await db('statuses').where({ tenant: tenantId }).delete().catch(() => undefined);
     await db('tenants').where({ tenant: tenantId }).delete().catch(() => undefined);
 
     state.currentTenantId = null;

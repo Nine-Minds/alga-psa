@@ -21,6 +21,9 @@ const unresolvedWorkflowGuardMigration = require(
 const slaPauseConfigRemapMigration = require(
   path.resolve(process.cwd(), 'migrations', '20260314134000_remap_sla_pause_ticket_status_configs.cjs')
 );
+const surveyTriggerStatusRemapMigration = require(
+  path.resolve(process.cwd(), 'migrations', '20260314135000_remap_survey_trigger_ticket_status_references.cjs')
+);
 
 let db: Knex;
 const tenantsToCleanup = new Set<string>();
@@ -75,6 +78,8 @@ function projectComparableStatus(status: Record<string, unknown>) {
 async function cleanupTenant(tenantId: string): Promise<void> {
   await db('tickets').where({ tenant: tenantId }).del();
   await db('status_sla_pause_config').where({ tenant: tenantId }).del();
+  await db('survey_triggers').where({ tenant: tenantId }).del();
+  await db('survey_templates').where({ tenant: tenantId }).del();
   await db('client_contracts').where({ tenant: tenantId }).del();
   await db('default_billing_settings').where({ tenant: tenantId }).del();
   await db('inbound_ticket_defaults').where({ tenant: tenantId }).del();
@@ -325,6 +330,44 @@ async function seedLegacySlaPauseConfig(fixture: LegacyFixture) {
     pauses_sla: true,
     created_at: new Date('2026-03-10T12:10:00.000Z')
   });
+}
+
+async function seedLegacySurveyTriggerReference(fixture: LegacyFixture) {
+  const legacyClosedStatusId = fixture.legacyStatuses.find((status) => status.name === 'Closed')?.status_id as string;
+  const templateId = uuidv4();
+  const triggerId = uuidv4();
+
+  await db('survey_templates').insert({
+    tenant: fixture.tenantId,
+    template_id: templateId,
+    template_name: `Survey ${templateId.slice(0, 8)}`,
+    is_default: true,
+    rating_type: 'stars',
+    rating_scale: 5,
+    rating_labels: { '1': 'Poor', '5': 'Great' },
+    prompt_text: 'How was the ticket?',
+    comment_prompt: 'Tell us more',
+    thank_you_text: 'Thanks!',
+    enabled: true,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+
+  await db('survey_triggers').insert({
+    tenant: fixture.tenantId,
+    trigger_id: triggerId,
+    template_id: templateId,
+    trigger_type: 'ticket_closed',
+    trigger_conditions: {
+      board_id: [fixture.boardIds[0]],
+      status_id: [legacyClosedStatusId],
+    },
+    enabled: true,
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
+  });
+
+  return { triggerId, legacyClosedStatusId };
 }
 
 async function seedWorkflowStatusReferences(fixture: LegacyFixture) {
@@ -759,5 +802,36 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
 
     expect((unresolvedDraft?.draft_definition as any)?.steps?.[0]?.config?.inputMapping?.patch?.status_id)
       .toBe(references.legacyOpenStatusId);
+  }, HOOK_TIMEOUT);
+
+  it('T050: survey trigger conditions are remapped to the board-owned ticket status ids for their configured board', async () => {
+    const fixture = await runMigrationForFixture();
+    const references = await seedLegacySurveyTriggerReference(fixture);
+
+    await surveyTriggerStatusRemapMigration.up(db);
+
+    const remappedTrigger = await db('survey_triggers')
+      .where({ tenant: fixture.tenantId, trigger_id: references.triggerId })
+      .first<{ trigger_conditions: Record<string, unknown> | string | null }>('trigger_conditions');
+
+    const remappedConditions =
+      typeof remappedTrigger?.trigger_conditions === 'string'
+        ? JSON.parse(remappedTrigger.trigger_conditions)
+        : remappedTrigger?.trigger_conditions ?? {};
+    const remappedStatusIds = Array.isArray((remappedConditions as any).status_id)
+      ? (remappedConditions as any).status_id
+      : [];
+
+    const expectedClosedStatus = await db('statuses')
+      .where({
+        tenant: fixture.tenantId,
+        board_id: fixture.boardIds[0],
+        name: 'Closed',
+        status_type: 'ticket',
+      })
+      .first<{ status_id: string }>('status_id');
+
+    expect(remappedStatusIds).toEqual([expectedClosedStatus?.status_id]);
+    expect(remappedStatusIds).not.toContain(references.legacyClosedStatusId);
   }, HOOK_TIMEOUT);
 });

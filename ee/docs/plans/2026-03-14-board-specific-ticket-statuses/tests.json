@@ -290,13 +290,13 @@
   {
     "id": "T049",
     "description": "Notification integration: internal notification subscriber resolves old/new board-owned ticket status names correctly after migration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F036"]
   },
   {
     "id": "T050",
     "description": "Survey integration: survey trigger conditions continue to match remapped board-owned ticket status ids correctly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F036"]
   },
   {

@@ -164,6 +164,10 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `packages/client-portal/src/actions/client-portal-actions/client-tickets.ts` now rejects client-portal status updates when the requested `status_id` does not belong to the ticket's `board_id`.
   - `server/src/app/client-portal/tickets/[ticketId]/page.tsx` now preloads only the selected ticket board's statuses for the standalone details page.
   - `packages/client-portal/src/components/tickets/TicketList.tsx` now fetches board-owned status menus per ticket board so the list's status-change dropdown stops offering cross-board choices.
+- (2026-03-14) Completed `F036`/`T049`/`T050` by tightening downstream subscriber coverage and remapping saved survey trigger status filters:
+  - `server/migrations/20260314135000_remap_survey_trigger_ticket_status_references.cjs` now rewrites legacy ticket `survey_triggers.trigger_conditions.status_id` values to board-owned ticket status ids using the saved `board_id` filter when present, and deterministically expands across all cloned boards when the trigger was intentionally board-agnostic.
+  - `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts` now covers survey trigger remap persistence for migrated board-specific ticket statuses.
+  - `server/src/test/integration/internal-notifications/eventSubscribers.integration.test.ts` now proves ticket update notifications still resolve old/new board-owned status names, and its query stub now supports the `whereNotNull` calls used by the subscriber's assignee lookup.
 - (2026-03-14) Completed `T041`/`T042` in `packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts`:
   - verifies client portal ticket creation resolves the default status from the default board before creating the ticket
   - verifies client portal status updates reject a status from another board and skip the write/event path
@@ -275,6 +279,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run --coverage.enabled false src/test/unit/api/ticketStatusesRoute.boardScope.test.ts src/test/unit/api/statusService.ticketBoardScope.test.ts --config vitest.config.ts`
 - (2026-03-14) Validate ticket read/reporting status joins:
   - `cd server && npx vitest run --coverage.enabled false src/test/integration/ticketStatusReadSurfaces.integration.test.ts --config vitest.config.ts`
+- (2026-03-14) Validate subscriber and survey remap regressions:
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/internal-notifications/eventSubscribers.integration.test.ts -t "creates status change notifications for ticket updated events" --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts --config vitest.config.ts`
 - (2026-03-14) API e2e harness note:
   - `cd server && npx vitest run --coverage.enabled false src/test/e2e/api/ticket-statuses.e2e.test.ts src/test/e2e/api/statuses.e2e.test.ts --config vitest.config.ts`
   - In this shell the e2e setup can seed the DB, but the HTTP assertions fail with `fetch failed` because no server is listening on `TEST_API_BASE_URL` / `http://127.0.0.1:3000`.
@@ -344,6 +351,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Board-context status-reference integration coverage: `server/src/test/integration/boardContextTicketStatusReferenceRemap.integration.test.ts`
 - Workflow status-reference remap migration: `server/migrations/20260314130000_remap_workflow_ticket_status_references.cjs`
 - Workflow unresolved-reference guard migration: `server/migrations/20260314133000_surface_unresolved_ticket_status_references.cjs`
+- Survey trigger status-reference remap migration: `server/migrations/20260314135000_remap_survey_trigger_ticket_status_references.cjs`
 
 ## Open Questions
 
