@@ -389,6 +389,15 @@ const applyResolvedPrintSettingsToNodes = (
       marginMm: typeof settings.marginMm === 'number' ? settings.marginMm : current.marginMm,
     },
   });
+  if (
+    current.paperPreset === resolved.paperPreset &&
+    current.marginMm === resolved.marginMm &&
+    current.pageWidthPx === resolved.pageWidthPx &&
+    current.pageHeightPx === resolved.pageHeightPx &&
+    current.marginPx === resolved.marginPx
+  ) {
+    return nodes;
+  }
 
   return nodes.map((node) => {
     if (node.type !== 'document' && node.type !== 'page') {

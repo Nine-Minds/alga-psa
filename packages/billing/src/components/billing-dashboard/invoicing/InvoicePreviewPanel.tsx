@@ -138,11 +138,9 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   };
 
   // Calculate scale based on container width
-  // Standard US Letter size is 8.5" x 11" = 816px x 1056px at 96 DPI
-  // We'll use 816px as our base width
-  // A4 paper height is 1123px + padding/container (~1200px total)
-  const baseInvoiceWidth = resolvedPreviewPrintSettings.pageWidthPx;
-  const baseInvoiceHeight = resolvedPreviewPrintSettings.pageHeightPx;
+  const paperShellChromePx = 24;
+  const baseInvoiceWidth = resolvedPreviewPrintSettings.pageWidthPx + paperShellChromePx;
+  const baseInvoiceHeight = resolvedPreviewPrintSettings.pageHeightPx + paperShellChromePx;
   const scale = containerWidth > 0 ? Math.min(containerWidth / baseInvoiceWidth, 1) : 1;
 
   if (!invoiceId) {
@@ -271,7 +269,7 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
               )}
             </div>
 
-            <div className="mb-4 max-h-[600px] overflow-y-auto overflow-x-hidden">
+            <div className="mb-4 max-h-[600px] overflow-y-auto overflow-x-auto">
               <div
                 style={{
                   width: `${baseInvoiceWidth * scale}px`,

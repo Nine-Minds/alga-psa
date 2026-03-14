@@ -147,10 +147,10 @@ describe('server PDFGenerationService print settings', () => {
       format: 'Legal',
       printBackground: true,
       margin: {
-        top: '18mm',
-        right: '18mm',
-        bottom: '18mm',
-        left: '18mm',
+        top: '0mm',
+        right: '0mm',
+        bottom: '0mm',
+        left: '0mm',
       },
     });
   });
@@ -239,10 +239,10 @@ describe('server PDFGenerationService print settings', () => {
       format: 'Letter',
       printBackground: true,
       margin: {
-        top: '16mm',
-        right: '16mm',
-        bottom: '16mm',
-        left: '16mm',
+        top: '0mm',
+        right: '0mm',
+        bottom: '0mm',
+        left: '0mm',
       },
     });
   });

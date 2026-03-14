@@ -97,10 +97,10 @@ describe('invoice print preset registry', () => {
       format: 'A4',
       printBackground: true,
       margin: {
-        top: '12mm',
-        right: '12mm',
-        bottom: '12mm',
-        left: '12mm',
+        top: '0mm',
+        right: '0mm',
+        bottom: '0mm',
+        left: '0mm',
       },
     });
   });
@@ -116,10 +116,10 @@ describe('invoice print preset registry', () => {
       format: 'Letter',
       printBackground: true,
       margin: {
-        top: '10.58mm',
-        right: '10.58mm',
-        bottom: '10.58mm',
-        left: '10.58mm',
+        top: '0mm',
+        right: '0mm',
+        bottom: '0mm',
+        left: '0mm',
       },
     });
   });

@@ -90,10 +90,10 @@ describe('billing PDFGenerationService print settings', () => {
       format: 'Legal',
       printBackground: true,
       margin: {
-        top: '18mm',
-        right: '18mm',
-        bottom: '18mm',
-        left: '18mm',
+        top: '0mm',
+        right: '0mm',
+        bottom: '0mm',
+        left: '0mm',
       },
     });
   });
@@ -133,10 +133,10 @@ describe('billing PDFGenerationService print settings', () => {
       format: 'A4',
       printBackground: true,
       margin: {
-        top: '12mm',
-        right: '12mm',
-        bottom: '12mm',
-        left: '12mm',
+        top: '0mm',
+        right: '0mm',
+        bottom: '0mm',
+        left: '0mm',
       },
     });
   });
@@ -174,10 +174,10 @@ describe('billing PDFGenerationService print settings', () => {
       format: 'Letter',
       printBackground: true,
       margin: {
-        top: '10.58mm',
-        right: '10.58mm',
-        bottom: '10.58mm',
-        left: '10.58mm',
+        top: '0mm',
+        right: '0mm',
+        bottom: '0mm',
+        left: '0mm',
       },
     });
   });

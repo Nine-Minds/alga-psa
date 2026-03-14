@@ -32,6 +32,17 @@ Working notes for adding named paper presets and configurable page margins to th
 - (2026-03-14) The server-side PDF service hard-codes `A4` plus explicit `10mm` margins, while the package-level billing PDF service hard-codes `A4` without an explicit margin block.
 - (2026-03-14) The current renderer/preview path already respects exported inline width/height/padding styles, so print settings can reuse existing AST/style plumbing instead of inventing a separate render pipeline.
 - (2026-03-14) The AST already has template metadata, but schema/types only currently cover `templateName`, `description`, `locale`, and `currencyCode`.
+- (2026-03-14) Review follow-up: invoice margins must be treated as part of the template HTML/CSS box model, not duplicated as extra Puppeteer print-area margins, otherwise PDF output shrinks relative to preview.
+- (2026-03-14) Review follow-up: unmatched legacy page dimensions should round-trip without silently persisting fallback `Letter` print metadata on save.
+- (2026-03-14) Review follow-up: the billing PDF path must resolve print options from the same canonical AST used to render invoice HTML, not from a potentially stale list payload.
+
+## Completed Work
+
+- (2026-03-14) Fixed invoice PDF parity so AST-backed invoice PDFs use zero Puppeteer margins and rely on template page padding for the printable inset, while generic document PDFs keep their existing default margin behavior.
+- (2026-03-14) Hardened the billing PDF path to fetch canonical template AST when the list-selected template payload does not carry it, ensuring HTML rendering and PDF print options derive from the same template settings.
+- (2026-03-14) Preserved unmatched legacy page dimensions during AST import/export instead of silently writing fallback `Letter` metadata for templates that do not map to a supported named preset.
+- (2026-03-14) Fixed designer margin input behavior so blank drafts no longer commit `0mm`, and no-op print setting commits no longer create extra history entries.
+- (2026-03-14) Adjusted invoice preview scaling to reserve space for the paper shell chrome so the selected sheet frame is not clipped in the preview panel.
 - (2026-03-14) `exportWorkspace()` strips runtime `props.size`, so first-class print settings must update authored `style.width` / `style.height` and page `layout.padding` in addition to runtime `size` / `baseSize`.
 - (2026-03-14) Workspace AST import/export is the key persistence seam for print settings: import can infer or honor explicit metadata, while export can always write canonical `metadata.printSettings` back to the AST.
 - (2026-03-14) `packages/ui` `Input` does not forward the `id` prop directly to the underlying `<input>`, so component tests for the margin control should target the `spinbutton` role rather than `getElementById(...)`.

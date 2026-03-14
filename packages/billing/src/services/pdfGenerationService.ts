@@ -7,7 +7,7 @@ import type { InvoiceTemplateAst } from '@alga-psa/types';
 import { getStorageProviderFactoryAsync, getFileStoreModelAsync } from '../lib/documentsHelpers';
 
 import { getInvoiceForRendering } from '../actions/invoiceQueries';
-import { getInvoiceTemplates, renderTemplateOnServer } from '../actions/invoiceTemplates';
+import { getInvoiceTemplate, getInvoiceTemplates, renderTemplateOnServer } from '../actions/invoiceTemplates';
 import { mapDbInvoiceToWasmViewModel } from '../lib/adapters/invoiceAdapters';
 import { resolveInvoicePdfPrintOptionsFromAst } from '../lib/invoice-template-ast/printSettings';
 import { browserPoolService } from './browserPoolService';
@@ -113,7 +113,11 @@ export class PDFGenerationService {
       }
 
       const selectedTemplate = templates.find((entry: any) => entry.template_id === templateId) ?? null;
-      const templateAst = (selectedTemplate?.templateAst ?? null) as InvoiceTemplateAst | null;
+      let templateAst = (selectedTemplate?.templateAst ?? null) as InvoiceTemplateAst | null;
+      if (!templateAst && templateId) {
+        const canonicalTemplate = await getInvoiceTemplate(templateId);
+        templateAst = (canonicalTemplate?.templateAst ?? null) as InvoiceTemplateAst | null;
+      }
 
       const invoiceViewModel = mapDbInvoiceToWasmViewModel(dbInvoiceData);
       const rendered = await renderTemplateOnServer(templateId, invoiceViewModel, {

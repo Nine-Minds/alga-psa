@@ -149,4 +149,31 @@ describe('workspaceAst print settings', () => {
       padding: `${Math.round(millimetersToPixels(15))}px`,
     });
   });
+
+  it('preserves unmatched legacy dimensions without persisting fallback print metadata on export', () => {
+    const workspace = importInvoiceTemplateAstToWorkspace(
+      createLegacyAst({
+        documentWidth: 900,
+        documentHeight: 1100,
+        pageWidth: 900,
+        pageHeight: 1100,
+        pagePadding: 37,
+      }) as any
+    );
+    const documentNode = workspace.nodesById['designer-document-root'];
+    const pageNode = workspace.nodesById['page-wrapper'];
+
+    expect(documentNode.props.metadata).not.toHaveProperty('printSettings');
+    expect(pageNode.props.style).toMatchObject({ width: '900px', height: '1100px' });
+    expect(pageNode.props.layout).toMatchObject({ padding: '37px' });
+
+    const ast = exportWorkspaceToInvoiceTemplateAst(workspace);
+    expect(ast.metadata?.printSettings).toBeUndefined();
+    expect(ast.layout.style?.inline).toMatchObject({ width: '900px', height: '1100px' });
+    expect(ast.layout.children?.[0]?.style?.inline).toMatchObject({
+      width: '900px',
+      height: '1100px',
+      padding: '37px',
+    });
+  });
 });

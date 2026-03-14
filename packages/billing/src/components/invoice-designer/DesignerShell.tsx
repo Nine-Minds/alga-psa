@@ -1734,15 +1734,14 @@ export const DesignerShell: React.FC = () => {
   const handleMarginDraftChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const nextValue = event.target.value;
     setPrintMarginDraft(nextValue);
-    const numeric = Number(nextValue);
-    if (Number.isFinite(numeric)) {
-      applyPrintSettings({
-        marginMm: clampInvoiceMarginMm(numeric),
-      });
-    }
   };
 
   const commitMarginDraft = () => {
+    if (printMarginDraft.trim().length === 0) {
+      setPrintMarginDraft(`${currentPrintSettings.marginMm}`);
+      return;
+    }
+
     const numeric = Number(printMarginDraft);
     if (!Number.isFinite(numeric)) {
       setPrintMarginDraft(`${currentPrintSettings.marginMm}`);

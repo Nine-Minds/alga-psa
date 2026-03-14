@@ -31,7 +31,7 @@ export interface InvoicePrintResolutionInput {
 }
 
 export interface ResolvedInvoiceTemplatePrintSettings extends InvoiceTemplatePrintSettings {
-  source: 'explicit' | 'inferred' | 'fallback';
+  source: 'explicit' | 'inferred' | 'fallback' | 'legacy-unresolved';
   preset: InvoicePaperPresetDefinition;
   pageWidthPx: number;
   pageHeightPx: number;
@@ -49,6 +49,7 @@ export interface InvoicePdfPrintOptions {
     left: string;
   };
   printBackground: true;
+  preferCSSPageSize?: boolean;
 }
 
 export const INVOICE_PRINT_MARGIN_MM_RANGE = {
@@ -152,20 +153,23 @@ export const resolveInvoicePaperPresetFromDimensions = (
 
 const createResolvedInvoiceTemplatePrintSettings = (
   settings: InvoiceTemplatePrintSettings,
-  source: ResolvedInvoiceTemplatePrintSettings['source']
+  source: ResolvedInvoiceTemplatePrintSettings['source'],
+  overrides?: Partial<Pick<ResolvedInvoiceTemplatePrintSettings, 'pageWidthPx' | 'pageHeightPx' | 'marginPx'>>
 ): ResolvedInvoiceTemplatePrintSettings => {
   const preset = INVOICE_PAPER_PRESET_REGISTRY[settings.paperPreset];
-  const marginPx = Math.round(millimetersToPixels(settings.marginMm));
+  const marginPx = overrides?.marginPx ?? Math.round(millimetersToPixels(settings.marginMm));
+  const pageWidthPx = overrides?.pageWidthPx ?? preset.widthPx;
+  const pageHeightPx = overrides?.pageHeightPx ?? preset.heightPx;
 
   return {
     ...settings,
     source,
     preset,
-    pageWidthPx: preset.widthPx,
-    pageHeightPx: preset.heightPx,
+    pageWidthPx,
+    pageHeightPx,
     marginPx,
-    printableWidthPx: Math.max(1, preset.widthPx - marginPx * 2),
-    printableHeightPx: Math.max(1, preset.heightPx - marginPx * 2),
+    printableWidthPx: Math.max(1, pageWidthPx - marginPx * 2),
+    printableHeightPx: Math.max(1, pageHeightPx - marginPx * 2),
   };
 };
 
@@ -195,6 +199,29 @@ export const resolveInvoiceTemplatePrintSettings = (
     );
   }
 
+  const legacyWidthPx = input?.pageWidthPx ?? input?.documentWidthPx;
+  const legacyHeightPx = input?.pageHeightPx ?? input?.documentHeightPx;
+  if (Number.isFinite(legacyWidthPx) && Number.isFinite(legacyHeightPx)) {
+    const legacyMarginMm = clampInvoiceMarginMm(
+      Number.isFinite(input?.pagePaddingPx)
+        ? pixelsToMillimeters(input?.pagePaddingPx ?? 0)
+        : DEFAULT_INVOICE_PRINT_SETTINGS.marginMm
+    );
+
+    return createResolvedInvoiceTemplatePrintSettings(
+      {
+        paperPreset: DEFAULT_INVOICE_PRINT_SETTINGS.paperPreset,
+        marginMm: legacyMarginMm,
+      },
+      'legacy-unresolved',
+      {
+        pageWidthPx: Math.max(1, Math.round(legacyWidthPx)),
+        pageHeightPx: Math.max(1, Math.round(legacyHeightPx)),
+        marginPx: Number.isFinite(input?.pagePaddingPx) ? Math.max(0, Math.round(input?.pagePaddingPx ?? 0)) : undefined,
+      }
+    );
+  }
+
   return createResolvedInvoiceTemplatePrintSettings(DEFAULT_INVOICE_PRINT_SETTINGS, 'fallback');
 };
 
@@ -202,15 +229,14 @@ export const resolveInvoicePdfPrintOptions = (
   input: InvoicePrintResolutionInput | null | undefined
 ): InvoicePdfPrintOptions => {
   const resolved = resolveInvoiceTemplatePrintSettings(input);
-  const margin = `${resolved.marginMm}mm`;
 
   return {
     format: resolved.paperPreset,
     margin: {
-      top: margin,
-      right: margin,
-      bottom: margin,
-      left: margin,
+      top: '0mm',
+      right: '0mm',
+      bottom: '0mm',
+      left: '0mm',
     },
     printBackground: true,
   };

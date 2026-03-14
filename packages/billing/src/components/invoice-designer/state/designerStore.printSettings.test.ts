@@ -89,4 +89,15 @@ describe('designerStore print settings', () => {
     });
     expect(getNodeLayout(pageNode!)?.padding).toBe(`${expected.marginPx}px`);
   });
+
+  it('does not append history for no-op print settings applications', () => {
+    const before = useInvoiceDesignerStore.getState().historyIndex;
+
+    useInvoiceDesignerStore.getState().applyPrintSettings({
+      paperPreset: 'Letter',
+      marginMm: DEFAULT_INVOICE_PRINT_SETTINGS.marginMm,
+    });
+
+    expect(useInvoiceDesignerStore.getState().historyIndex).toBe(before);
+  });
 });

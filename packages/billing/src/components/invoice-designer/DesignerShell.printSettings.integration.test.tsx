@@ -90,6 +90,7 @@ describe('DesignerShell print settings controls', () => {
 
     const marginInput = screen.getByRole('spinbutton') as HTMLInputElement;
     fireEvent.change(marginInput, { target: { value: '18' } });
+    fireEvent.blur(marginInput);
 
     await waitFor(() => {
       const state = useInvoiceDesignerStore.getState();
@@ -105,6 +106,7 @@ describe('DesignerShell print settings controls', () => {
 
     const marginInput = screen.getByRole('spinbutton') as HTMLInputElement;
     fireEvent.change(marginInput, { target: { value: '99' } });
+    fireEvent.blur(marginInput);
 
     await waitFor(() => {
       const state = useInvoiceDesignerStore.getState();
@@ -115,5 +117,25 @@ describe('DesignerShell print settings controls', () => {
     });
 
     expect(marginInput.value).toBe('50');
+  });
+
+  it('treats a blank margin field as a transient draft and restores the current margin on blur', async () => {
+    render(<DesignerShell />);
+
+    const marginInput = screen.getByRole('spinbutton') as HTMLInputElement;
+    const initialHistoryIndex = useInvoiceDesignerStore.getState().historyIndex;
+    fireEvent.change(marginInput, { target: { value: '' } });
+
+    expect(marginInput.value).toBe('');
+    expect(useInvoiceDesignerStore.getState().historyIndex).toBe(initialHistoryIndex);
+
+    fireEvent.blur(marginInput);
+
+    await waitFor(() => {
+      expect(marginInput.value).toBe('10.58');
+      const documentNode = useInvoiceDesignerStore.getState().nodes.find((node) => node.type === 'document');
+      expect((documentNode?.props.metadata as any)?.printSettings?.marginMm).toBe(10.58);
+      expect(useInvoiceDesignerStore.getState().historyIndex).toBe(initialHistoryIndex);
+    });
   });
 });
