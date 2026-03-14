@@ -206,7 +206,7 @@
   {
     "id": "F035",
     "description": "Update SLA pause configuration and SLA ticket reporting to use board-owned ticket statuses without behavior regression.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR8"]
   },
   {

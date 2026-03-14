@@ -168,6 +168,17 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - verifies client portal ticket creation resolves the default status from the default board before creating the ticket
   - verifies client portal status updates reject a status from another board and skip the write/event path
   - reran with `cd server && npx vitest run --coverage.enabled false ../packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts --config vitest.config.ts`
+- (2026-03-14) Completed `F035` for SLA pause config and reporting compatibility with board-owned ticket statuses:
+  - `server/migrations/20260314134000_remap_sla_pause_ticket_status_configs.cjs` clones legacy `status_sla_pause_config` rows onto each board-owned clone of the matching ticket status name, then deletes the legacy global ticket-status configs.
+  - `packages/sla/src/actions/slaPauseConfigActions.ts` now filters pause configs to board-owned ticket statuses, rejects writes against legacy/global ticket status ids, and exposes board-qualified ticket status options for the SLA settings UI.
+  - `packages/sla/src/components/SlaPauseSettings.tsx` now loads board-owned ticket statuses directly from SLA actions and renders duplicate status names with board context so pause rules stay unambiguous across boards.
+  - SLA integration fixtures now seed board-owned ticket statuses in `server/src/test/integration/sla/slaPauseService.integration.test.ts` and `server/src/test/integration/sla/slaReportingService.integration.test.ts`, and the reporting suite now includes a same-name cross-board closed/open regression case.
+- (2026-03-14) Completed `T047`/`T048` with focused SLA coverage:
+  - `server/src/test/unit/components/SlaPauseSettings.boardOwnedStatuses.test.tsx` verifies the SLA pause settings UI shows duplicate ticket status names with board labels and saves only the changed board-owned `status_id`.
+  - `server/src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts` now verifies the SLA pause config migration remaps a legacy ticket status rule onto every board-owned clone.
+  - `server/src/test/unit/migrations/boardSpecificTicketStatusesMigration.test.ts` asserts the SLA pause config remap migration exists and keeps the legacy/global cleanup logic in place.
+  - `server/src/test/integration/sla/slaPauseConfigActions.integration.test.ts` adds regression assertions for rejecting legacy/global ticket status ids and hiding legacy configs from the returned board-owned config list, and the same suite also covers same-name cross-board pause evaluation via distinct board-owned `status_id` values.
+  - DB-backed SLA integration suites are still locally blocked in this shell because the server test database port (`127.0.0.1:5438` / `::1:5438`) is not reachable and fails with `EPERM`, so only the unit/component coverage above was rerun here.
 - (2026-03-14) Completed `F028` by making workflow ticket status authoring board-aware:
   - `shared/workflow/runtime/actions/businessOperations/tickets.ts` now declares `ticket-status` picker dependencies on `board_id` for `tickets.create` and `ticket_id` for `tickets.update_fields`.
   - `ee/server/src/components/workflow-designer/WorkflowActionInputFixedPicker.tsx` now resolves `ticket-status` options from the selected fixed board or from the fixed ticket's board instead of using tenant-global ticket statuses.
@@ -251,6 +262,12 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run --coverage.enabled false src/test/unit/components/InboundTicketDefaultsForm.test.tsx --config vitest.config.ts`
 - (2026-03-14) Validate client portal board-scoped status flows:
   - `cd server && npx vitest run --coverage.enabled false ../packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts --config vitest.config.ts`
+- (2026-03-14) Validate SLA board-owned pause config and migration coverage:
+  - `cd server && npx vitest run --coverage.enabled false src/test/unit/components/SlaPauseSettings.boardOwnedStatuses.test.tsx src/test/unit/migrations/boardSpecificTicketStatusesMigration.test.ts --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/boardSpecificTicketStatusesMigration.integration.test.ts --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/sla/slaPauseService.integration.test.ts src/test/integration/sla/slaReportingService.integration.test.ts --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false src/test/integration/sla/slaPauseConfigActions.integration.test.ts --config vitest.config.ts`
+  - In this shell, the broader SLA DB suites are not currently reliable: `slaPauseService.integration.test.ts` / `slaReportingService.integration.test.ts` tripped shared DB bootstrap issues (`duplicate key value violates unique constraint "pg_database_datname_index"` and `ROLLBACK - Connection terminated unexpectedly`), and `slaPauseConfigActions.integration.test.ts` still expects a `server` database plus older `priorities.priority_order` fixture columns.
 - (2026-03-14) Validate workflow ticket status authoring + runtime:
   - `cd shared && npx vitest run workflow/runtime/actions/__tests__/registerTicketActionPickerMetadata.test.ts workflow/runtime/actions/__tests__/ticketWorkflowBoardStatusRuntime.test.ts --config vitest.config.ts`
   - `cd ee/server && npx vitest run --coverage.enabled false src/components/workflow-designer/__tests__/InputMappingEditorPickerFields.test.tsx --config vitest.config.ts`

@@ -18,6 +18,9 @@ const workflowStatusRemapMigration = require(
 const unresolvedWorkflowGuardMigration = require(
   path.resolve(process.cwd(), 'migrations', '20260314133000_surface_unresolved_ticket_status_references.cjs')
 );
+const slaPauseConfigRemapMigration = require(
+  path.resolve(process.cwd(), 'migrations', '20260314134000_remap_sla_pause_ticket_status_configs.cjs')
+);
 
 let db: Knex;
 const tenantsToCleanup = new Set<string>();
@@ -71,6 +74,7 @@ function projectComparableStatus(status: Record<string, unknown>) {
 
 async function cleanupTenant(tenantId: string): Promise<void> {
   await db('tickets').where({ tenant: tenantId }).del();
+  await db('status_sla_pause_config').where({ tenant: tenantId }).del();
   await db('client_contracts').where({ tenant: tenantId }).del();
   await db('default_billing_settings').where({ tenant: tenantId }).del();
   await db('inbound_ticket_defaults').where({ tenant: tenantId }).del();
@@ -310,6 +314,17 @@ async function runBoardContextRemapForFixture() {
   await cloneMigration.up(db);
   await boardContextRemapMigration.up(db);
   return { fixture, references };
+}
+
+async function seedLegacySlaPauseConfig(fixture: LegacyFixture) {
+  const legacyOpenStatusId = fixture.legacyStatuses.find((status) => status.name === 'Open')?.status_id as string;
+
+  await db('status_sla_pause_config').insert({
+    tenant: fixture.tenantId,
+    status_id: legacyOpenStatusId,
+    pauses_sla: true,
+    created_at: new Date('2026-03-10T12:10:00.000Z')
+  });
 }
 
 async function seedWorkflowStatusReferences(fixture: LegacyFixture) {
@@ -667,6 +682,31 @@ describe('Board-specific ticket statuses migration – DB integration', () => {
       .first();
 
     expect(remappedContract?.renewal_ticket_status_id).toBe(expectedStatus?.status_id);
+  }, HOOK_TIMEOUT);
+
+  it('remaps legacy SLA pause configs onto each board-owned clone of the configured ticket status', async () => {
+    const fixture = await createLegacyFixture();
+    await seedLegacySlaPauseConfig(fixture);
+
+    await cloneMigration.up(db);
+    await slaPauseConfigRemapMigration.up(db);
+
+    const clonedOpenStatuses = await db('statuses')
+      .where({ tenant: fixture.tenantId, status_type: 'ticket', name: 'Open' })
+      .whereNotNull('board_id')
+      .select('status_id')
+      .orderBy('status_id');
+
+    const remappedConfigs = await db('status_sla_pause_config')
+      .where({ tenant: fixture.tenantId })
+      .select('status_id', 'pauses_sla')
+      .orderBy('status_id');
+
+    expect(remappedConfigs).toHaveLength(clonedOpenStatuses.length);
+    expect(remappedConfigs.every((config) => config.pauses_sla === true)).toBe(true);
+    expect(remappedConfigs.map((config) => config.status_id)).toEqual(
+      clonedOpenStatuses.map((status) => status.status_id)
+    );
   }, HOOK_TIMEOUT);
 
   it('T010: saved workflow ticket status references with explicit board context are remapped in draft and published workflow JSON', async () => {

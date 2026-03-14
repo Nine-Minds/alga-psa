@@ -278,13 +278,13 @@
   {
     "id": "T047",
     "description": "SLA integration: pause configuration UI and persistence continue to work with board-owned ticket statuses.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F035"]
   },
   {
     "id": "T048",
     "description": "SLA integration: reporting and pause evaluation continue to resolve remapped board-owned ticket statuses correctly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F035"]
   },
   {

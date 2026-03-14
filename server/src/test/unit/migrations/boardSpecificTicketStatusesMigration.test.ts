@@ -11,6 +11,9 @@ describe('board-specific ticket statuses migration', () => {
   const migration = readRepoFile(
     'server/migrations/20260314100000_add_board_ownership_to_ticket_statuses.cjs'
   );
+  const slaPauseConfigMigration = readRepoFile(
+    'server/migrations/20260314134000_remap_sla_pause_ticket_status_configs.cjs'
+  );
 
   it('T001: adds nullable board ownership support for statuses without forcing non-ticket rows onto boards', () => {
     expect(migration).toContain("table.uuid('board_id').nullable()");
@@ -33,5 +36,15 @@ describe('board-specific ticket statuses migration', () => {
     expect(migration).toContain("WHERE status_type <> 'ticket'");
     expect(migration).toContain('CREATE UNIQUE INDEX statuses_non_ticket_order_unique_idx');
     expect(migration).toContain('CREATE INDEX statuses_ticket_board_lookup_idx');
+  });
+
+  it('clones legacy SLA pause config rows onto board-owned ticket statuses and removes legacy ticket-status configs', () => {
+    expect(slaPauseConfigMigration).toContain("knex('status_sla_pause_config as cfg')");
+    expect(slaPauseConfigMigration).toContain(".where('legacy.status_type', 'ticket')");
+    expect(slaPauseConfigMigration).toContain(".whereNull('legacy.board_id')");
+    expect(slaPauseConfigMigration).toContain(".whereNotNull('board_id')");
+    expect(slaPauseConfigMigration).toContain(".onConflict(['tenant', 'status_id'])");
+    expect(slaPauseConfigMigration).toContain('deleteLegacyTicketStatusConfigs');
+    expect(slaPauseConfigMigration).toContain('deleteBoardOwnedTicketStatusConfigs');
   });
 });
