@@ -791,7 +791,7 @@
   {
     "id": "F094",
     "description": "P4: Client portal — Reject action with comment field: sets rejected_at, rejection_reason, status → rejected",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P4-FR6"
     ]

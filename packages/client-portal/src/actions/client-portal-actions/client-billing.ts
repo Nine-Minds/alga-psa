@@ -374,6 +374,54 @@ export const acceptClientQuote = withAuth(async (
   }
 });
 
+export const rejectClientQuote = withAuth(async (
+  user,
+  { tenant },
+  quoteId: string,
+  rejectionReason: string
+): Promise<IQuote> => {
+  const knex = await getConnection(tenant);
+  const trimmedReason = rejectionReason.trim();
+
+  if (!trimmedReason) {
+    throw new Error('A rejection comment is required');
+  }
+
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await getAuthorizedClientQuote(trx, user, tenant, quoteId, ['sent']);
+
+      const rejectedAt = new Date().toISOString();
+      await Quote.update(trx, tenant, quoteId, {
+        status: 'rejected',
+        rejected_at: rejectedAt,
+        rejection_reason: trimmedReason,
+        updated_by: user.user_id,
+      });
+
+      await QuoteActivity.create(trx, tenant, {
+        quote_id: quoteId,
+        activity_type: 'rejected',
+        description: 'Quote rejected by client',
+        performed_by: user.user_id,
+        metadata: {
+          rejection_reason: trimmedReason,
+        },
+      });
+
+      const rejectedQuote = await Quote.getById(trx, tenant, quoteId);
+      if (!rejectedQuote) {
+        throw new Error('Quote not found after rejection');
+      }
+
+      return rejectedQuote;
+    });
+  } catch (error) {
+    console.error('Error rejecting client quote:', error);
+    throw new Error('Failed to reject quote');
+  }
+});
+
 /**
  * Get invoice details by ID
  */

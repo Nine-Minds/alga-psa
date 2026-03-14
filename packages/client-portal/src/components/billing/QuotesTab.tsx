@@ -6,9 +6,10 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import type { ColumnDefinition, IQuote, IQuoteItem, IQuoteWithClient, QuoteStatus } from '@alga-psa/types';
 import { QUOTE_STATUS_METADATA } from '@alga-psa/types';
-import { acceptClientQuote, getClientQuoteById, getClientQuotes, updateClientQuoteSelections } from '@alga-psa/client-portal/actions';
+import { acceptClientQuote, getClientQuoteById, getClientQuotes, rejectClientQuote, updateClientQuoteSelections } from '@alga-psa/client-portal/actions';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { X } from 'lucide-react';
 
@@ -146,6 +147,7 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
   const [selectionError, setSelectionError] = useState<string | null>(null);
   const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
   const [decisionError, setDecisionError] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const selectedQuoteId = searchParams?.get('quoteId');
 
@@ -218,6 +220,7 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
       try {
         setSelectionError(null);
         setDecisionError(null);
+        setRejectionReason('');
         const quote = await getClientQuoteById(selectedQuoteId);
         setSelectedQuote(quote);
       } catch (err) {
@@ -281,9 +284,41 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
       const acceptedQuote = await acceptClientQuote(selectedQuote.quote_id, optionalSelectedItemIds);
       setSelectedQuote(acceptedQuote);
       syncQuoteSummary(acceptedQuote);
+      setRejectionReason('');
     } catch (err) {
       console.error('Error accepting quote:', err);
       setDecisionError('Failed to accept the quote. Please try again.');
+    } finally {
+      setIsSubmittingDecision(false);
+    }
+  };
+
+  const handleRejectQuote = async () => {
+    if (!selectedQuote || selectedQuote.status !== 'sent') {
+      return;
+    }
+
+    if (!rejectionReason.trim()) {
+      setDecisionError('Please add a short comment before rejecting this quote.');
+      return;
+    }
+
+    const confirmed = window.confirm('Reject this quote and send your comment to the MSP?');
+    if (!confirmed) {
+      return;
+    }
+
+    setDecisionError(null);
+    setIsSubmittingDecision(true);
+
+    try {
+      const rejectedQuote = await rejectClientQuote(selectedQuote.quote_id, rejectionReason);
+      setSelectedQuote(rejectedQuote);
+      syncQuoteSummary(rejectedQuote);
+      setRejectionReason('');
+    } catch (err) {
+      console.error('Error rejecting quote:', err);
+      setDecisionError('Failed to reject the quote. Please try again.');
     } finally {
       setIsSubmittingDecision(false);
     }
@@ -505,26 +540,59 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
             </div>
 
             {selectedQuote.status === 'sent' && (
-              <div className="flex flex-col gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="text-sm font-medium text-emerald-900">Ready to respond?</p>
-                  <p className="text-sm text-emerald-800">
-                    Accepting this quote sends your optional-item selections back to the MSP for review before conversion.
-                  </p>
+              <div className="space-y-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+                <div className="md:flex md:items-center md:justify-between md:gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-emerald-900">Ready to respond?</p>
+                    <p className="text-sm text-emerald-800">
+                      Accepting this quote sends your optional-item selections back to the MSP for review before conversion.
+                    </p>
+                  </div>
+                  <Button
+                    id="accept-quote-button"
+                    onClick={handleAcceptQuote}
+                    disabled={isUpdatingSelections || isSubmittingDecision}
+                  >
+                    {isSubmittingDecision ? 'Submitting…' : 'Accept Quote'}
+                  </Button>
                 </div>
-                <Button
-                  id="accept-quote-button"
-                  onClick={handleAcceptQuote}
-                  disabled={isUpdatingSelections || isSubmittingDecision}
-                >
-                  {isSubmittingDecision ? 'Accepting…' : 'Accept Quote'}
-                </Button>
+
+                <div className="space-y-2 rounded-md border border-amber-200 bg-white/70 p-3">
+                  <p className="text-sm font-medium text-emerald-900">Ready to respond?</p>
+                  <p className="text-sm text-gray-700">
+                    If this quote does not work for you, leave a short comment so the MSP can revise it.
+                  </p>
+                  <TextArea
+                    id="reject-quote-comment"
+                    value={rejectionReason}
+                    onChange={(event) => setRejectionReason(event.target.value)}
+                    placeholder="Tell the MSP what needs to change"
+                    disabled={isUpdatingSelections || isSubmittingDecision}
+                    className="min-h-24 bg-white"
+                  />
+                  <div className="flex justify-end">
+                    <Button
+                      id="reject-quote-button"
+                      variant="outline"
+                      onClick={handleRejectQuote}
+                      disabled={isUpdatingSelections || isSubmittingDecision}
+                    >
+                      {isSubmittingDecision ? 'Submitting…' : 'Reject Quote'}
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
 
             {selectedQuote.status === 'accepted' && (
               <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
                 Quote accepted. Your selected optional items have been shared with the MSP for review.
+              </div>
+            )}
+
+            {selectedQuote.status === 'rejected' && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                Quote rejected{selectedQuote.rejection_reason ? `: ${selectedQuote.rejection_reason}` : '.'}
               </div>
             )}
 
