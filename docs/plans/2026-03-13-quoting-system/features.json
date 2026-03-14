@@ -743,7 +743,7 @@
   {
     "id": "F089",
     "description": "P4: Client portal — add 'Quotes' tab to BillingOverview.tsx (lazy loaded), accessible to all users with billing permissions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P4-FR4"
     ]

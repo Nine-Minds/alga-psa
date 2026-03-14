@@ -57,6 +57,17 @@ const InvoicesTab = dynamic(() => import('./InvoicesTab'), {
   </div>
 });
 
+const QuotesTab = dynamic(() => import('./QuotesTab'), {
+  loading: () => <div id="quotes-tab-skeleton" className="animate-pulse p-4">
+    <div className="h-10 bg-gray-200 rounded w-full mb-4"></div>
+    <div className="space-y-3">
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className="h-12 bg-gray-200 rounded w-full"></div>
+      ))}
+    </div>
+  </div>
+});
+
 const HoursByServiceTab = dynamic(() => import('./HoursByServiceTab'), {
   loading: () => <div id="hours-service-tab-skeleton" className="animate-pulse p-4">
     <div className="h-24 bg-gray-200 rounded w-full mb-4"></div>
@@ -96,7 +107,7 @@ export default function BillingOverview() {
 
   // Determine initial tab from URL parameter
   const initialTab = useMemo(() => {
-    if (tabParam && ['overview', 'invoices', 'hours-by-service', 'usage-metrics'].includes(tabParam)) {
+    if (tabParam && ['overview', 'invoices', 'quotes', 'hours-by-service', 'usage-metrics'].includes(tabParam)) {
       return tabParam;
     }
     return DEFAULT_BILLING_TAB;
@@ -148,7 +159,7 @@ export default function BillingOverview() {
 
   // Update active tab when URL parameter changes
   useEffect(() => {
-    const targetTab = tabParam && ['overview', 'invoices', 'hours-by-service', 'usage-metrics'].includes(tabParam)
+    const targetTab = tabParam && ['overview', 'invoices', 'quotes', 'hours-by-service', 'usage-metrics'].includes(tabParam)
       ? tabParam
       : DEFAULT_BILLING_TAB;
     if (targetTab !== currentTab) {
@@ -395,6 +406,16 @@ export default function BillingOverview() {
               formatCurrency={formatCurrency}
               formatDate={formatDate}
             />
+          </div>
+        ),
+      });
+
+      tabsArray.push({
+        id: 'quotes',
+        label: t('tabs.quotes', 'Quotes'),
+        content: (
+          <div id="quotes-tab">
+            <QuotesTab />
           </div>
         ),
       });
