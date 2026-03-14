@@ -687,7 +687,7 @@
   {
     "id": "F082",
     "description": "P3: Template selection — per-quote template_id override, tenant default, standard fallback",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P3-FR8"
     ]

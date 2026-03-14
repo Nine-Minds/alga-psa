@@ -10,6 +10,7 @@ import { mapDbQuoteToViewModel } from '../lib/adapters/quoteAdapters';
 import { evaluateInvoiceTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { renderEvaluatedInvoiceTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { getStandardQuoteTemplateAstByCode } from '../lib/quote-template-ast/standardTemplates';
+import { resolveQuoteTemplateAst } from '../lib/quote-template-ast/templateSelection';
 import Quote from '../models/quote';
 import { browserPoolService } from './browserPoolService';
 
@@ -89,8 +90,10 @@ export class QuotePDFGenerationService {
         throw new Error(`Quote ${options.quoteId} not found`);
       }
 
-      const templateAst =
-        options.templateAst ?? getStandardQuoteTemplateAstByCode(options.templateCode ?? 'standard-quote-default');
+      const templateAst = options.templateAst
+        ?? (options.templateCode
+          ? getStandardQuoteTemplateAstByCode(options.templateCode)
+          : (await resolveQuoteTemplateAst(knex, this.tenant, options.quoteId)).templateAst);
 
       if (!templateAst) {
         throw new Error('No quote template AST available for PDF generation');
