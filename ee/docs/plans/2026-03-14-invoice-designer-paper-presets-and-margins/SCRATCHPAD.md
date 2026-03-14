@@ -17,6 +17,9 @@ Working notes for adding named paper presets and configurable page margins to th
 - (2026-03-14) Shared print-setting identifiers use Puppeteer-compatible preset names directly: `Letter`, `A4`, and `Legal`. This keeps AST metadata, UI labels, and PDF `format` values aligned without a second mapping layer.
 - (2026-03-14) Default template print settings remain visually backward-compatible with the existing designer by using `Letter` plus the legacy `40px` page padding converted to `10.58mm`.
 - (2026-03-14) Uniform page margins are clamped to a conservative `0-50mm` range in the shared utility and schema. This is permissive for normal print layouts while preventing obviously broken geometry.
+- (2026-03-14) Shared AST-based print-settings resolution now lives in `packages/billing/src/lib/invoice-template-ast/printSettings.ts` so preview shells and both PDF services can infer the same paper preset/margin from explicit metadata or legacy width/height/padding.
+- (2026-03-14) `PaperInvoice` should prefer full `templateAst` input over raw `printSettings` so legacy templates without explicit metadata still preview at the correct sheet size and printable inset.
+- (2026-03-14) Server-side document PDFs keep their pre-existing `A4 + 10mm` defaults; only invoice-template PDF flows were switched to the shared invoice print-settings resolver in this plan.
 
 ## Discoveries / Constraints
 
@@ -31,6 +34,8 @@ Working notes for adding named paper presets and configurable page margins to th
 - (2026-03-14) The AST already has template metadata, but schema/types only currently cover `templateName`, `description`, `locale`, and `currencyCode`.
 - (2026-03-14) `exportWorkspace()` strips runtime `props.size`, so first-class print settings must update authored `style.width` / `style.height` and page `layout.padding` in addition to runtime `size` / `baseSize`.
 - (2026-03-14) Workspace AST import/export is the key persistence seam for print settings: import can infer or honor explicit metadata, while export can always write canonical `metadata.printSettings` back to the AST.
+- (2026-03-14) `packages/ui` `Input` does not forward the `id` prop directly to the underlying `<input>`, so component tests for the margin control should target the `spinbutton` role rather than `getElementById(...)`.
+- (2026-03-14) Focused PDF service tests emit secret-file warnings in this worktree because `.env.localtest` falls back from `secrets/db_password_server` to env vars; the tests still pass and do not indicate a print-settings regression.
 
 ## Commands / Runbooks
 
@@ -54,6 +59,8 @@ Working notes for adding named paper presets and configurable page margins to th
 - (2026-03-14) Focused validation for the shared print-settings/model slice:
   - `cd server && npx vitest run --config vitest.config.ts ../packages/billing/src/lib/invoice-template-ast/printSettings.test.ts ../packages/billing/src/lib/invoice-template-ast/schema.test.ts ../packages/billing/src/components/invoice-designer/ast/workspaceAst.printSettings.test.ts ../packages/billing/src/components/invoice-designer/state/designerStore.printSettings.test.ts`
   - `cd server && npx vitest run --config vitest.config.ts ../packages/billing/src/components/invoice-designer/ast/workspaceAst.test.ts ../packages/billing/src/components/invoice-designer/state/designerStore.exportWorkspace.test.ts ../packages/billing/src/components/invoice-designer/state/designerStore.exportWorkspace.canonical.test.ts ../packages/billing/src/components/invoice-designer/state/designerStore.loadWorkspace.legacy.test.ts`
+- (2026-03-14) Focused validation for designer UI, preview shell, and PDF resolver wiring:
+  - `cd server && npx vitest run --config vitest.config.ts ../packages/billing/src/lib/invoice-template-ast/printSettings.test.ts ../packages/billing/src/components/invoice-designer/state/designerStore.printSettings.test.ts ../packages/billing/src/components/invoice-designer/DesignerShell.printSettings.integration.test.tsx ../packages/billing/src/components/invoice-designer/canvas/DesignCanvas.printSettings.integration.test.tsx ../packages/billing/src/components/billing-dashboard/PaperInvoice.printSettings.test.tsx ../packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx ../packages/billing/src/services/pdfGenerationService.printSettings.test.ts ../server/src/services/pdf-generation.service.printSettings.test.ts`
 
 ## Links / References
 
@@ -85,7 +92,21 @@ Working notes for adding named paper presets and configurable page margins to th
 - (2026-03-14) Completed `F004` by round-tripping explicit print settings through workspace AST import/export so reopened designer workspaces keep canonical template-level print metadata.
 - (2026-03-14) Completed `F005` by adding `applyPrintSettings` in `designerStore.ts` to update document/page runtime size, baseSize, authored width/height, page padding, and document metadata together.
 - (2026-03-14) Completed `F006` by bootstrapping new designer workspaces and component schema defaults from the shared default print settings instead of fixed hard-coded geometry.
+- (2026-03-14) Completed `F007` / `F008` / `F009` by wiring a no-selection page-setup inspector in `packages/billing/src/components/invoice-designer/DesignerShell.tsx` and driving live paper-preset / margin updates into `DesignCanvas` geometry and ruler extents via `applyPrintSettings`.
+- (2026-03-14) Completed `F010` / `F011` by teaching `PaperInvoice` and preview consumers (`DesignerVisualWorkspace.tsx`, `InvoicePreviewPanel.tsx`, `InvoiceTemplateManager.tsx`) to resolve sheet size and printable inset from the template AST, including legacy inference.
+- (2026-03-14) Completed `F012` by adding shared AST-based print-resolution / PDF-options helpers in `packages/billing/src/lib/invoice-template-ast/printSettings.ts`.
+- (2026-03-14) Completed `F013` / `F014` / `F015` by switching both invoice PDF services to shared AST-derived PDF print options and verifying the two services pass identical `page.pdf(...)` options for the same template settings.
+- (2026-03-14) Completed `F016` by covering legacy no-metadata fallback through existing load/save tests plus new preview-shell and billing PDF-service fallback coverage.
+- (2026-03-14) Completed `F017` by adding focused regression coverage for designer page-setup controls, canvas reshaping, preview shell sizing, authoritative preview export, shared PDF option resolution, both PDF services, and legacy fallback behavior.
 - (2026-03-14) Completed `T001` / `T002` with shared preset registry coverage in `packages/billing/src/lib/invoice-template-ast/printSettings.test.ts`.
 - (2026-03-14) Completed `T003` / `T004` / `T005` with AST schema validation coverage for valid print metadata, unknown presets, and out-of-range margins in `packages/billing/src/lib/invoice-template-ast/schema.test.ts`.
 - (2026-03-14) Completed `T006` / `T007` / `T008` / `T009` / `T010` with workspace AST print-settings inference and round-trip coverage in `packages/billing/src/components/invoice-designer/ast/workspaceAst.printSettings.test.ts`.
 - (2026-03-14) Completed `T012` / `T013` / `T014` / `T015` with designer-store print-settings coverage in `packages/billing/src/components/invoice-designer/state/designerStore.printSettings.test.ts`.
+- (2026-03-14) Completed `T016` / `T017` / `T018` / `T019` / `T020` in `packages/billing/src/components/invoice-designer/DesignerShell.printSettings.integration.test.tsx`.
+- (2026-03-14) Completed `T021` in `packages/billing/src/components/invoice-designer/canvas/DesignCanvas.printSettings.integration.test.tsx`.
+- (2026-03-14) Completed `T022` / `T023` / `T024` with explicit and legacy preview-shell coverage in `packages/billing/src/components/billing-dashboard/PaperInvoice.printSettings.test.tsx`.
+- (2026-03-14) Completed `T025` in `packages/billing/src/components/invoice-designer/DesignerVisualWorkspace.test.tsx`.
+- (2026-03-14) Completed `T026` / `T027` in `packages/billing/src/lib/invoice-template-ast/printSettings.test.ts`.
+- (2026-03-14) Completed `T028` / `T030` / `T031` in `server/src/services/pdf-generation.service.printSettings.test.ts`.
+- (2026-03-14) Completed `T029` / `T032` / `T033` in `packages/billing/src/services/pdfGenerationService.printSettings.test.ts`.
+- (2026-03-14) Completed `T034` by running the focused regression suite spanning schema, workspace/store, designer shell, design canvas, preview shell, preview workspace, and both PDF services.

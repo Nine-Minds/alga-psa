@@ -39,3 +39,8 @@ export {
   type BatchImportResult,
   type ReconciliationResult
 } from './externalTaxImportService';
+export {
+  resolveInvoicePdfPrintOptionsFromAst,
+  resolveInvoicePrintResolutionInputFromAst,
+  resolveInvoiceTemplatePrintSettingsFromAst,
+} from '../lib/invoice-template-ast/printSettings';

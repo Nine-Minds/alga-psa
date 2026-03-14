@@ -3,6 +3,7 @@
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { millimetersToPixels } from '@alga-psa/types';
 import { useInvoiceDesignerStore } from './state/designerStore';
 import { DesignerVisualWorkspace } from './DesignerVisualWorkspace';
 import type { DesignerNode } from './state/designerStore';
@@ -12,6 +13,7 @@ const getInvoiceForRenderingMock = vi.fn();
 const mapDbInvoiceToWasmViewModelMock = vi.fn();
 const runAuthoritativeInvoiceTemplatePreviewMock = vi.fn();
 const templateRendererMock = vi.fn();
+const paperInvoiceMock = vi.fn();
 
 vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
   fetchInvoicesPaginated: (...args: unknown[]) => fetchInvoicesPaginatedMock(...args),
@@ -28,9 +30,10 @@ vi.mock('@alga-psa/billing/actions/invoiceTemplatePreview', () => ({
 }));
 
 vi.mock('../billing-dashboard/PaperInvoice', () => ({
-  default: ({ children }: { children: React.ReactNode }) => (
-    <div data-automation-id="paper-invoice-mock">{children}</div>
-  ),
+  default: (props: { children: React.ReactNode; templateAst?: unknown }) => {
+    paperInvoiceMock(props);
+    return <div data-automation-id="paper-invoice-mock">{props.children}</div>;
+  },
 }));
 
 vi.mock('../billing-dashboard/TemplateRenderer', () => ({
@@ -151,6 +154,7 @@ describe('DesignerVisualWorkspace', () => {
     mapDbInvoiceToWasmViewModelMock.mockReset();
     runAuthoritativeInvoiceTemplatePreviewMock.mockReset();
     templateRendererMock.mockReset();
+    paperInvoiceMock.mockReset();
     fetchInvoicesPaginatedMock.mockResolvedValue(buildInvoiceListResult());
     getInvoiceForRenderingMock.mockResolvedValue({ invoice_id: 'inv-1' });
     mapDbInvoiceToWasmViewModelMock.mockReturnValue({
@@ -225,6 +229,40 @@ describe('DesignerVisualWorkspace', () => {
     expect(screen.queryByText('Designer Shell')).toBeNull();
     expect(document.querySelector('[data-automation-id=\"paper-invoice-mock\"]')).toBeTruthy();
     expect(document.querySelector('[data-automation-id=\"template-renderer-mock\"]')).toBeTruthy();
+  });
+
+  it('exports page width, height, and padding from resolved print settings into the authoritative preview template', async () => {
+    seedBoundField('invoice.number');
+    act(() => {
+      useInvoiceDesignerStore.getState().applyPrintSettings({
+        paperPreset: 'A4',
+        marginMm: 12,
+      });
+    });
+
+    renderWorkspace('preview');
+
+    await waitFor(() => expect(runAuthoritativeInvoiceTemplatePreviewMock).toHaveBeenCalled());
+    await waitFor(() => expect(templateRendererMock).toHaveBeenCalled());
+
+    const previewTemplateAst = templateRendererMock.mock.calls.at(-1)?.[0]?.template?.templateAst;
+    const pageSection = previewTemplateAst?.layout?.children?.[0];
+
+    expect(previewTemplateAst?.metadata?.printSettings).toEqual({
+      paperPreset: 'A4',
+      marginMm: 12,
+    });
+    expect(previewTemplateAst?.layout?.style?.inline?.width).toBe('794px');
+    expect(previewTemplateAst?.layout?.style?.inline?.height).toBe('1123px');
+    expect(pageSection?.style?.inline?.width).toBe('794px');
+    expect(pageSection?.style?.inline?.height).toBe('1123px');
+    expect(pageSection?.style?.inline?.padding).toBe(`${Math.round(millimetersToPixels(12))}px`);
+
+    const paperInvoiceProps = paperInvoiceMock.mock.calls.at(-1)?.[0];
+    expect(paperInvoiceProps?.templateAst?.metadata?.printSettings).toEqual({
+      paperPreset: 'A4',
+      marginMm: 12,
+    });
   });
 
   it('forces TemplateRenderer rerender on manual rerun even without workspace deltas', async () => {

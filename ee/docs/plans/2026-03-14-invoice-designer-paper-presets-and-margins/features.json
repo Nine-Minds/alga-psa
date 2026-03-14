@@ -55,7 +55,7 @@
   {
     "id": "F007",
     "description": "Add reachable designer UI controls for selecting a named paper preset without requiring direct page-node selection",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -64,7 +64,7 @@
   {
     "id": "F008",
     "description": "Add reachable designer UI controls for editing a uniform margin value in millimeters with validation and safe bounds",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -73,7 +73,7 @@
   {
     "id": "F009",
     "description": "Update the design canvas, artboard bounds, and rulers to derive page dimensions from resolved print settings instead of fixed page constants alone",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Goals"
@@ -82,7 +82,7 @@
   {
     "id": "F010",
     "description": "Update the preview paper shell to derive visible sheet size and printable inset from resolved print settings instead of hard-coded CSS dimensions and padding",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Requirements"
@@ -91,7 +91,7 @@
   {
     "id": "F011",
     "description": "Ensure authoritative preview export/render uses the resolved page size and margin so preview content matches configured print settings",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Goals"
@@ -100,7 +100,7 @@
   {
     "id": "F012",
     "description": "Introduce a shared PDF print-options resolver that converts template print settings into Puppeteer `format` and uniform `margin` options",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Data / API / Integrations"
@@ -109,7 +109,7 @@
   {
     "id": "F013",
     "description": "Wire `server/src/services/pdf-generation.service.ts` to the shared print-options resolver instead of hard-coded `A4` and fixed margin defaults",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ]
@@ -117,7 +117,7 @@
   {
     "id": "F014",
     "description": "Wire `packages/billing/src/services/pdfGenerationService.ts` to the shared print-options resolver instead of hard-coded `A4` defaults",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements"
     ]
@@ -125,7 +125,7 @@
   {
     "id": "F015",
     "description": "Keep both current invoice PDF generation paths behaviorally consistent for the same template print settings",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements",
       "Problem"
@@ -134,7 +134,7 @@
   {
     "id": "F016",
     "description": "Preserve existing templates without explicit print metadata through load, preview, save, and PDF generation without a database migration",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Requirements"
@@ -143,7 +143,7 @@
   {
     "id": "F017",
     "description": "Add focused regression coverage for schema validation, workspace round-trips, canvas reshape, preview shell sizing, and both PDF print-settings paths",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Acceptance Criteria (Definition of Done)"
     ]
