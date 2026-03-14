@@ -759,7 +759,7 @@
   {
     "id": "F091",
     "description": "P4: Client portal — QuoteDetail view with full line items, totals, T&C",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "P4-FR5"
     ]

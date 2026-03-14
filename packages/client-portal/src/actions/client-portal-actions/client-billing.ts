@@ -10,6 +10,7 @@ import {
   IClientContractLine,
   IBillingResult,
   IBucketUsage,
+  IQuote,
   IService,
   IQuoteWithClient,
   IUserWithRoles
@@ -186,6 +187,42 @@ export const getClientQuotes = withAuth(async (user, { tenant }): Promise<IQuote
   } catch (error) {
     console.error('Error fetching client quotes:', error);
     throw new Error('Failed to fetch quotes');
+  }
+});
+
+export const getClientQuoteById = withAuth(async (user, { tenant }, quoteId: string): Promise<IQuote> => {
+  const knex = await getConnection(tenant);
+
+  try {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await getClientIdFromUser(trx, user, tenant);
+      if (!clientId) {
+        throw new Error('Unauthorized');
+      }
+
+      const hasAccess = await hasBillingPermission(trx, user, tenant);
+      if (!hasAccess) {
+        throw new Error('Unauthorized to access quote data');
+      }
+
+      const quoteCheck = await trx('quotes')
+        .where({ quote_id: quoteId, client_id: clientId, tenant, is_template: false })
+        .whereNot('status', 'draft')
+        .first();
+
+      if (!quoteCheck) {
+        throw new Error('Quote not found or access denied');
+      }
+    });
+
+    const quote = await Quote.getById(knex, tenant, quoteId);
+    if (!quote) {
+      throw new Error('Quote not found');
+    }
+    return quote;
+  } catch (error) {
+    console.error('Error fetching client quote details:', error);
+    throw new Error('Failed to fetch quote details');
   }
 });
 
