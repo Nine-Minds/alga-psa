@@ -158,7 +158,7 @@
   {
     "id": "F027",
     "description": "Make billing renewal settings choose ticket statuses from the selected board only.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR5"]
   },
   {

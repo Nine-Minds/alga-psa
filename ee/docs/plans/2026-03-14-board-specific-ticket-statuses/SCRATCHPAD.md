@@ -28,6 +28,7 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - (2026-03-14) `F006`/`F007`/`F008`: remap inbound defaults, tenant billing renewal defaults, and contract renewal overrides by joining cloned ticket statuses back to the legacy status name within the saved board context.
 - (2026-03-14) `T007`/`T008`/`T009`: cover board-context remaps with a DB-backed integration fixture that runs the clone migration first, then asserts each persisted configuration surface moves from the legacy global status id to the correct board-owned replacement.
 - (2026-03-14) `F025` was too broad once Quick Add landed: narrowed it to the already-shipped Quick Add board-scoped status work, then split follow-up work into `F043` (bulk update surfaces) and `F044` (auxiliary ticket creation helpers). Rationale: there is no standalone bulk ticket status edit UI in this branch today, so the remaining work needs separate traceable items instead of one mixed feature.
+- (2026-03-14) `F027`: treat billing renewal ticket status persistence the same way as other board-scoped ticket status saves. Rationale: tenant defaults and contract overrides both already persist `board_id + status_id`, so the safest implementation is to share the same board/status compatibility guard instead of trusting UI state alone.
 
 ## Discoveries / Constraints
 
@@ -51,6 +52,18 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `server/src/lib/jobs/handlers/processRenewalQueueHandler.ts`
 - (2026-03-14) There is no standalone bulk ticket status edit surface in the current ticket dashboard branch; the only ticket bulk action present right now is bulk delete. That means `T032` needs either a future implementation surface or a scoped plan update, not a false claim of coverage.
 - (2026-03-14) There is no repo-backed UI yet that edits `default_billing_settings.renewal_ticket_board_id` / `renewal_ticket_status_id` or the contract-level renewal ticket routing overrides. `F027` is therefore currently blocked on a missing settings surface, even though the underlying persistence columns and queue/runtime readers exist.
+- (2026-03-14) The earlier `F027` blocker was stale on this branch:
+  - tenant billing settings can now host a renewal automation card,
+  - contract assignment renewal overrides already have an edit surface in `ContractDetail.tsx`,
+  - the missing piece was board-scoped status loading and save-time validation.
+- (2026-03-14) Completed `F027` by scoping billing renewal ticket statuses to the selected board:
+  - `packages/billing/src/components/settings/billing/RenewalAutomationSettings.tsx` adds a tenant renewal automation card with board-first ticket status selection and clears stale statuses when the board changes.
+  - `packages/billing/src/actions/billingSettingsActions.ts` now rejects renewal ticket status saves when the status does not belong to the selected board.
+  - `shared/billingClients/clientContracts.ts` now applies the same guard to contract assignment create/update paths, and `packages/billing/src/components/billing-dashboard/contracts/ContractDetail.tsx` exposes board-scoped renewal ticket board/status controls for per-assignment overrides.
+- (2026-03-14) Completed `T035` with focused billing coverage:
+  - `packages/billing/tests/RenewalAutomationSettings.boardScopedStatuses.test.tsx` verifies tenant billing renewal settings only load statuses for the selected board, disable status selection until a board is chosen, and clear stale status values on board change before save.
+  - `packages/billing/tests/billingSettingsActions.boardScopedRenewalStatus.test.ts` verifies save-time validation rejects a stale cross-board renewal status pair.
+  - `shared/billingClients/__tests__/clientContracts.boardScopedRenewalStatus.test.ts` covers the shared contract-assignment guard so per-contract renewal overrides cannot persist mismatched board/status ids.
 - (2026-03-14) SLA, notifications, surveys, and client portal ticket flows all resolve ticket statuses directly by `status_id`, so they are migration-sensitive:
   - `packages/sla/src/services/slaPauseService.ts`
   - `server/src/lib/eventBus/subscribers/internalNotificationSubscriber.ts`
@@ -197,6 +210,9 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
   - `cd server && npx vitest run --coverage.enabled false src/test/unit/components/InboundTicketDefaultsForm.test.tsx --config vitest.config.ts`
 - (2026-03-14) Validate client portal board-scoped status flows:
   - `cd server && npx vitest run --coverage.enabled false ../packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts --config vitest.config.ts`
+- (2026-03-14) Validate billing renewal defaults board-scoped statuses:
+  - `cd shared && npx vitest run billingClients/__tests__/clientContracts.boardScopedRenewalStatus.test.ts --config vitest.config.ts`
+  - `cd server && npx vitest run --coverage.enabled false ../packages/billing/tests/billingSettingsActions.boardScopedRenewalStatus.test.ts ../packages/billing/tests/RenewalAutomationSettings.boardScopedStatuses.test.tsx ../packages/billing/tests/ContractDetail.assignmentRenewalSettings.wiring.test.ts --config vitest.config.ts`
 - (2026-03-14) Legacy Quick Add regression note:
   - `cd packages/tickets && npx vitest run src/components/__tests__/ticket-inline-add-prefill.test.tsx --config vitest.config.ts`
   - Current failures in that broader suite are mock-assumption mismatches around board-first status loading and unrelated quick-add helper behavior; they are not yet curated as plan items in this pass.
@@ -236,6 +252,13 @@ Prefer short bullets. Append new entries as you learn things, and also *update e
 - Client portal board status validation test: `packages/client-portal/src/actions/client-portal-actions/client-tickets.boardStatusValidation.test.ts`
 - Client portal ticket list UI: `packages/client-portal/src/components/tickets/TicketList.tsx`
 - Client portal ticket details page: `server/src/app/client-portal/tickets/[ticketId]/page.tsx`
+- Billing renewal automation settings UI: `packages/billing/src/components/settings/billing/RenewalAutomationSettings.tsx`
+- Billing renewal settings action validation: `packages/billing/src/actions/billingSettingsActions.ts`
+- Contract renewal assignment guard: `shared/billingClients/clientContracts.ts`
+- Contract renewal assignment edit UI: `packages/billing/src/components/billing-dashboard/contracts/ContractDetail.tsx`
+- Billing renewal UI test: `packages/billing/tests/RenewalAutomationSettings.boardScopedStatuses.test.tsx`
+- Billing renewal action test: `packages/billing/tests/billingSettingsActions.boardScopedRenewalStatus.test.ts`
+- Shared contract renewal validation test: `shared/billingClients/__tests__/clientContracts.boardScopedRenewalStatus.test.ts`
 - New status schema migration: `server/migrations/20260314100000_add_board_ownership_to_ticket_statuses.cjs`
 - Migration schema coverage: `server/src/test/unit/migrations/boardSpecificTicketStatusesMigration.test.ts`
 - Clone/remap migration: `server/migrations/20260314113000_clone_global_ticket_statuses_to_boards.cjs`

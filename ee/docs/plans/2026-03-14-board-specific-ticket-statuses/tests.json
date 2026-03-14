@@ -206,7 +206,7 @@
   {
     "id": "T035",
     "description": "UI integration: billing renewal defaults only offer statuses from the selected board and reject stale cross-board ids on save.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F027"]
   },
   {
