@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { aggregateReactions, validateEmoji } from '@alga-psa/types';
 import type { IReactionsBatchResult } from '@alga-psa/types';
@@ -19,21 +19,23 @@ export const toggleCommentReaction = withAuth(async (
   const { knex: db } = await createTenantKnex();
   const userId = user.user_id;
 
-  const existing = await db('comment_reactions')
-    .where({ tenant, comment_id: commentId, user_id: userId, emoji })
-    .first();
+  return withTransaction(db, async (trx) => {
+    const existing = await trx('comment_reactions')
+      .where({ tenant, comment_id: commentId, user_id: userId, emoji })
+      .first();
 
-  if (existing) {
-    await db('comment_reactions')
-      .where({ tenant, reaction_id: existing.reaction_id })
-      .del();
-    return { added: false };
-  }
+    if (existing) {
+      await trx('comment_reactions')
+        .where({ tenant, reaction_id: existing.reaction_id })
+        .del();
+      return { added: false };
+    }
 
-  await db('comment_reactions')
-    .insert({ tenant, comment_id: commentId, user_id: userId, emoji });
+    await trx('comment_reactions')
+      .insert({ tenant, comment_id: commentId, user_id: userId, emoji });
 
-  return { added: true };
+    return { added: true };
+  });
 });
 
 /**

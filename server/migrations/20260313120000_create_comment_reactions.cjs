@@ -31,6 +31,7 @@ exports.up = async function(knex) {
       indexName: 'uq_comment_reactions_user_emoji'
     });
     table.index(['tenant', 'comment_id'], 'idx_comment_reactions_comment');
+    table.index(['tenant', 'comment_id', 'created_at'], 'idx_comment_reactions_comment_created');
   });
 
   // ── Project task comment reactions ──
@@ -56,6 +57,7 @@ exports.up = async function(knex) {
       indexName: 'uq_task_comment_reactions_user_emoji'
     });
     table.index(['tenant', 'task_comment_id'], 'idx_task_comment_reactions_comment');
+    table.index(['tenant', 'task_comment_id', 'created_at'], 'idx_task_comment_reactions_comment_created');
   });
 
   // ── Citus distribution ──
