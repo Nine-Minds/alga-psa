@@ -1358,6 +1358,108 @@ export const deleteTickets = withAuth(async (user, { tenant }, ticketIds: string
   return { deletedIds, failed };
 });
 
+export const moveTicketsToBoard = withAuth(async (
+  user,
+  { tenant },
+  ticketIds: string[],
+  destinationBoardId: string,
+  destinationStatusId: string
+): Promise<{
+  movedIds: string[];
+  failed: Array<{ ticketId: string; message: string }>;
+}> => {
+  const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
+
+  if (uniqueIds.length === 0) {
+    return { movedIds: [], failed: [] };
+  }
+
+  const { knex: ticketKnex } = await createTenantKnex();
+
+  const { tenant: tenantAlias } = { tenant };
+  const movedIds: string[] = [];
+  const failed: Array<{ ticketId: string; message: string }> = [];
+
+  let resolvedStatusId = destinationStatusId;
+
+  try {
+    resolvedStatusId = await withTransaction(ticketKnex, async (trx: Knex.Transaction) => {
+      if (!destinationStatusId) {
+        const defaultStatusId = await TicketModel.getDefaultStatusId(tenantAlias, trx, destinationBoardId);
+        if (!defaultStatusId) {
+          throw new Error('No default ticket status configured for the selected board');
+        }
+        return defaultStatusId;
+      }
+
+      const statusValidation = await TicketModel.validateStatusBelongsToBoard(
+        destinationStatusId,
+        destinationBoardId,
+        tenantAlias,
+        trx
+      );
+
+      if (!statusValidation.valid) {
+        throw new Error(statusValidation.error || 'Invalid destination status');
+      }
+
+      return destinationStatusId;
+    });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Destination board or status is invalid';
+    return {
+      movedIds: [],
+      failed: uniqueIds.map((ticketId) => ({ ticketId, message })),
+    };
+  }
+
+  for (const ticketId of uniqueIds) {
+    try {
+      await withTransaction(ticketKnex, async (trx: Knex.Transaction) => {
+        if (!await hasPermission(user, 'ticket', 'update', trx)) {
+          throw new Error('Permission denied: Cannot update ticket');
+        }
+
+        const currentTicket = await trx('tickets')
+          .where({ ticket_id: ticketId, tenant: tenantAlias })
+          .first();
+
+        if (!currentTicket) {
+          throw new Error('Ticket not found');
+        }
+
+        const isBoardChange = currentTicket.board_id !== destinationBoardId;
+        const updateData: Record<string, any> = {
+          board_id: destinationBoardId,
+          status_id: resolvedStatusId,
+        };
+
+        if (isBoardChange) {
+          updateData.category_id = null;
+          updateData.subcategory_id = null;
+        }
+
+        await trx('tickets')
+          .where({ ticket_id: ticketId, tenant: tenantAlias })
+          .update(updateData);
+      });
+
+      movedIds.push(ticketId);
+    } catch (error: unknown) {
+      failed.push({
+        ticketId,
+        message: error instanceof Error ? error.message : 'Failed to move ticket',
+      });
+    }
+  }
+
+  if (movedIds.length > 0) {
+    revalidatePath('/msp/tickets');
+  }
+
+  return { movedIds, failed };
+});
+
 export const getScheduledHoursForTicket = withAuth(async (user, { tenant }, ticketId: string): Promise<IAgentSchedule[]> => {
   try {
     const {knex: db} = await createTenantKnex();

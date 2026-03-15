@@ -1,0 +1,153 @@
+[
+  {
+    "id": "T001",
+    "description": "UI: the ticket dashboard shows `Move to Board` when at least one ticket is selected and the user can update tickets.",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "UI: the ticket dashboard does not expose an actionable `Move to Board` control when the user lacks update permission.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F011"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "UI: opening bulk move shows the selected ticket summary and destination board and status controls.",
+    "implemented": true,
+    "featureIds": [
+      "F002"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "UI: choosing a destination board reloads the status picker with only statuses valid for that board.",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "UI: choosing a destination board preselects that board's default status.",
+    "implemented": true,
+    "featureIds": [
+      "F004"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "UI: the user can replace the preselected default with another valid destination-board status before confirming.",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "UI: confirmation stays disabled until a destination board is selected.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "UI: confirmation stays disabled and the dialog explains the problem when the selected destination board has no valid statuses.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Integration DB-backed: bulk move updates a ticket's `board_id` and uses the destination board's default status when no override is provided.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F008",
+      "F009"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Integration DB-backed: bulk move uses the explicitly selected destination status when the user overrides the default.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F009"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Integration DB-backed: bulk move clears `category_id` and `subcategory_id` for successfully moved tickets.",
+    "implemented": true,
+    "featureIds": [
+      "F010"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Integration DB-backed: bulk move rejects a destination status that does not belong to the chosen destination board.",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Integration DB-backed: bulk move returns partial success when one selected ticket can be moved and another fails validation.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F013"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Integration DB-backed: bulk move returns per-ticket permission failures instead of moving unauthorized tickets.",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F013"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "UI: partial-success bulk move keeps only failed tickets selected and shows per-ticket failure messages in the dialog.",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "UI: full-success bulk move closes the dialog and clears the dashboard selection.",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "UI: after successful moves, the dashboard refreshes so moved tickets disappear when they no longer satisfy the active filters.",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Regression: bulk delete behavior remains unchanged after adding the bulk move action to the dashboard header.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
+  }
+]

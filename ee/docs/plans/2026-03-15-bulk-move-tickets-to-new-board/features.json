@@ -1,0 +1,135 @@
+[
+  {
+    "id": "F001",
+    "description": "Ticket dashboard shows a `Move to Board` bulk action when one or more tickets are selected and the user can update tickets.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Invoking `Move to Board` opens a bulk move dialog that lists the selected tickets and provides destination board and status controls.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "The bulk move dialog loads only statuses valid for the selected destination board.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Selecting a destination board automatically preselects that board's default status in the bulk move dialog.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "The bulk move dialog allows the user to override the preselected destination status with another valid status for that board.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "The bulk move dialog disables confirmation until a destination board and valid destination status are available and while the move is processing.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "A bulk move server action processes selected tickets individually and returns moved ids plus per-ticket failures.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "For each successful bulk move, the ticket's `board_id` is updated to the chosen destination board.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "For each successful bulk move, the ticket's `status_id` is updated to the user-selected or default status valid for the destination board.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "For each successful bulk move, the ticket's `category_id` and `subcategory_id` are cleared.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "The server-side bulk move path enforces ticket update permission checks for each ticket.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "The server-side bulk move path rejects destination statuses that are not valid for the selected destination board.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "On partial success, the bulk move dialog stays open, shows per-ticket failure messages, and keeps only failed tickets selected.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Requirements > Functional Requirements"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "On full success, the bulk move dialog closes and clears the current selection.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "After successful moves, the dashboard refreshes or updates so tickets no longer matching the current filters are removed from view.",
+    "implemented": true
+    "prdRefs": [
+      "Requirements > Functional Requirements",
+      "Acceptance Criteria (Definition of Done)"
+    ]
+  }
+]
