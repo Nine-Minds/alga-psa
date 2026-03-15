@@ -393,6 +393,7 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
                   </div>
                 </div>
                 <Button
+                  id={`${stepId}-compose-text-copy-path`}
                   type="button"
                   size="sm"
                   variant="outline"
@@ -414,6 +415,7 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
                   </p>
                 </div>
                 <Button
+                  id={`${stepId}-compose-text-insert-reference`}
                   type="button"
                   size="sm"
                   variant="outline"

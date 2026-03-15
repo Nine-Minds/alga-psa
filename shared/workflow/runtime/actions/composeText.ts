@@ -47,6 +47,10 @@ export type ComposeTextOutput = {
   document: TemplateDocument;
 };
 
+type ComposeTextValidationResult =
+  | { ok: true; outputs: ComposeTextOutput[] }
+  | { ok: false; errors: string[] };
+
 type ComposeTextConfigLike = {
   actionId?: unknown;
   version?: unknown;
@@ -244,12 +248,12 @@ export const getComposeTextOutputsFromConfig = (
 ): ComposeTextOutput[] | null => {
   const outputs = (config as ComposeTextConfigLike | null | undefined)?.outputs;
   const parsed = composeTextOutputsSchema.safeParse(outputs);
-  return parsed.success ? parsed.data : null;
+  return parsed.success ? (parsed.data as ComposeTextOutput[]) : null;
 };
 
 export const validateComposeTextConfig = (
   config: unknown
-): { ok: true; outputs: ComposeTextOutput[] } | { ok: false; errors: string[] } => {
+): ComposeTextValidationResult => {
   const raw = (config as ComposeTextConfigLike | null | undefined) ?? {};
   if (!isWorkflowComposeTextAction(raw.actionId)) {
     return { ok: false, errors: ['Compose Text config requires actionId "transform.compose_text".'] };
@@ -269,7 +273,7 @@ export const validateComposeTextConfig = (
     };
   }
 
-  return { ok: true, outputs: parsed.data };
+  return { ok: true, outputs: parsed.data as ComposeTextOutput[] };
 };
 
 export const resolveComposeTextOutputSchemaFromConfig = (
@@ -450,7 +454,7 @@ export const renderComposeTextOutputs = async (
   expressionContext?: ExpressionContext
 ): Promise<Record<string, string>> => {
   const validation = validateComposeTextConfig(config);
-  if (!validation.ok) {
+  if (validation.ok === false) {
     throw {
       category: 'ValidationError',
       code: 'INVALID_COMPOSE_TEXT_CONFIG',

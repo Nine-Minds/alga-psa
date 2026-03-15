@@ -35,7 +35,7 @@ describe('composeText helpers', () => {
 
     expect(valid).toMatchObject({ ok: true });
     expect(invalid).toMatchObject({ ok: false });
-    if (!invalid.ok) {
+    if (invalid.ok === false) {
       expect(invalid.errors[0]).toContain('at least one output');
     }
   });

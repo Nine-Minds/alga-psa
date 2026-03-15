@@ -22,6 +22,7 @@ import {
   defaultBlockSpecs,
   defaultInlineContentSpecs,
   defaultStyleSpecs,
+  type PartialBlock,
 } from '@blocknote/core';
 import { RiCodeBoxLine, RiH1, RiH2, RiH3, RiListOrdered, RiListUnordered, RiQuoteText, RiText } from 'react-icons/ri';
 
@@ -145,7 +146,7 @@ export const WorkflowComposeTextDocumentEditor = forwardRef<
 
   useEffect(() => {
     return editor.onChange(() => {
-      onChange(serializeComposeTextBlocksToDocument(editor.document));
+      onChange(serializeComposeTextBlocksToDocument(editor.document as PartialBlock[]));
     });
   }, [editor, onChange]);
 

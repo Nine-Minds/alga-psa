@@ -89,7 +89,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const coerceTemplateDocument = (value: unknown): TemplateDocument => {
   const parsed = templateDocumentSchema.safeParse(value);
   if (parsed.success) {
-    return parsed.data;
+    return parsed.data as TemplateDocument;
   }
 
   const raw = (value as LooseTemplateDocument | null | undefined) ?? {};
@@ -269,51 +269,48 @@ const serializeBlockContent = (content: unknown): TemplateInlineNode[] => {
 
 export const serializeComposeTextBlocksToDocument = (
   blocks: PartialBlock[]
-): TemplateDocument => ({
-  version: 1,
-  blocks: blocks.flatMap((block) => {
+): TemplateDocument => {
+  const templateBlocks = blocks.flatMap<TemplateDocument['blocks'][number]>((block) => {
     const rawBlock = block as LooseBlock;
-    const blockType = typeof rawBlock.type === 'string'
-      ? blockNoteTypeToTemplateType[rawBlock.type]
-      : undefined;
 
-    if (!blockType) {
-      return [];
+    switch (rawBlock.type) {
+      case 'paragraph':
+        return [{ type: 'paragraph' as const, children: serializeBlockContent(rawBlock.content) }];
+      case 'bulletListItem':
+        return [{ type: 'bullet_list_item' as const, children: serializeBlockContent(rawBlock.content) }];
+      case 'numberedListItem':
+        return [{ type: 'ordered_list_item' as const, children: serializeBlockContent(rawBlock.content) }];
+      case 'quote':
+        return [{ type: 'blockquote' as const, children: serializeBlockContent(rawBlock.content) }];
+      case 'codeBlock': {
+        const inlineText = serializeBlockContent(rawBlock.content)
+          .filter(
+            (node): node is Extract<TemplateInlineNode, { type: 'text' }> =>
+              node.type === 'text'
+          )
+          .map((node) => node.text)
+          .join('');
+
+        return [{ type: 'code_block' as const, text: inlineText }];
+      }
+      case 'heading': {
+        const level = rawBlock.props?.level;
+        return [{
+          type: 'heading' as const,
+          level: level === 2 || level === 3 ? level : 1,
+          children: serializeBlockContent(rawBlock.content),
+        }];
+      }
+      default:
+        return [];
     }
+  });
 
-    if (blockType === 'code_block') {
-      const inlineText = serializeBlockContent(rawBlock.content)
-        .filter(
-          (node): node is Extract<TemplateInlineNode, { type: 'text' }> =>
-            node.type === 'text'
-        )
-        .map((node) => node.text)
-        .join('');
-
-      return [{
-        type: 'code_block' as const,
-        text: inlineText,
-      }];
-    }
-
-    if (blockType === 'heading') {
-      const level = rawBlock.props?.level;
-      return [{
-        type: 'heading' as const,
-        level: level === 2 || level === 3 ? level : 1,
-        children: serializeBlockContent(rawBlock.content),
-      }];
-    }
-
-    return [{
-      type: blockType as Exclude<
-        TemplateDocument['blocks'][number]['type'],
-        'heading' | 'code_block'
-      >,
-      children: serializeBlockContent(rawBlock.content),
-    }];
-  }),
-});
+  return {
+    version: 1,
+    blocks: templateBlocks,
+  };
+};
 
 const buildBlockNoteTextContent = (
   node: Extract<TemplateInlineNode, { type: 'text' }>
@@ -353,7 +350,7 @@ const hydrateInlineContent = (children: TemplateInlineNode[]) => {
   return children.map((child) => {
     if (child.type === 'reference') {
       return {
-        type: COMPOSE_TEXT_REFERENCE_INLINE_CONTENT_TYPE as const,
+        type: COMPOSE_TEXT_REFERENCE_INLINE_CONTENT_TYPE,
         props: {
           path: child.path,
           label: child.label,
@@ -372,34 +369,46 @@ export const hydrateComposeTextDocumentToBlocks = (
     return [{
       type: 'paragraph',
       content: '',
-    }];
+    }] as PartialBlock[];
   }
 
   return document.blocks.map((block) => {
-    const type = templateTypeToBlockNoteType[block.type];
-
-    if (block.type === 'code_block') {
-      return {
-        type,
-        content: block.text,
-      };
+    switch (block.type) {
+      case 'paragraph':
+        return {
+          type: 'paragraph',
+          content: hydrateInlineContent(block.children),
+        };
+      case 'bullet_list_item':
+        return {
+          type: 'bulletListItem',
+          content: hydrateInlineContent(block.children),
+        };
+      case 'ordered_list_item':
+        return {
+          type: 'numberedListItem',
+          content: hydrateInlineContent(block.children),
+        };
+      case 'blockquote':
+        return {
+          type: 'quote',
+          content: hydrateInlineContent(block.children),
+        };
+      case 'code_block':
+        return {
+          type: 'codeBlock',
+          content: block.text,
+        };
+      case 'heading':
+        return {
+          type: 'heading',
+          props: {
+            level: block.level,
+          },
+          content: hydrateInlineContent(block.children),
+        };
     }
-
-    if (block.type === 'heading') {
-      return {
-        type,
-        props: {
-          level: block.level,
-        },
-        content: hydrateInlineContent(block.children),
-      };
-    }
-
-    return {
-      type,
-      content: hydrateInlineContent(block.children),
-    };
-  });
+  }) as PartialBlock[];
 };
 
 export const validateComposeTextOutputs = (
