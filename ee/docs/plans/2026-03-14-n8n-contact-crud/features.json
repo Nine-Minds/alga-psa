@@ -1,0 +1,158 @@
+[
+  {
+    "id": "F001",
+    "description": "Add `contact` to the Alga PSA node resource selector.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "UX / UI Notes"]
+  },
+  {
+    "id": "F002",
+    "description": "Add a `contactOperation` selector with `create`, `get`, `list`, `update`, and `delete` values.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "UX / UI Notes"]
+  },
+  {
+    "id": "F003",
+    "description": "Update the node subtitle/description logic so contact operations render consistently with existing resource operations.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F004",
+    "description": "Add `Contact -> Create` required field handling for `full_name`.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "UX / UI Notes"]
+  },
+  {
+    "id": "F005",
+    "description": "Add `Contact -> Create` optional fields for `email`, `client_id`, `role`, `notes`, `is_inactive`, and `phone_numbers`.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F006",
+    "description": "Add `Contact -> Update` optional fields for `full_name`, `email`, `client_id`, `role`, `notes`, `is_inactive`, and `phone_numbers`.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F007",
+    "description": "Add `contactId` input handling for `Contact -> Get`, `Update`, and `Delete`.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "UX / UI Notes"]
+  },
+  {
+    "id": "F008",
+    "description": "Add `Contact -> List` pagination and filter inputs for `page`, `limit`, `client_id`, `search_term`, and `is_inactive`.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "UX / UI Notes"]
+  },
+  {
+    "id": "F009",
+    "description": "Reuse client lookup resourceLocator behavior with manual UUID fallback for contact `client_id` fields.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "UX / UI Notes"]
+  },
+  {
+    "id": "F010",
+    "description": "Add a contact create payload builder that maps the agreed core fields to the `/api/v1/contacts` API contract.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F011",
+    "description": "Add a contact update payload builder that sends only provided contact fields and omits empty values.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F012",
+    "description": "Add a contact list query builder for pagination and core filters.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F013",
+    "description": "Add `phone_numbers` parsing and validation helpers aligned with the contact API schema.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Data / API / Integrations", "Security / Permissions"]
+  },
+  {
+    "id": "F014",
+    "description": "Implement `Contact -> Create` execution using `POST /api/v1/contacts`.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F015",
+    "description": "Implement `Contact -> Get` execution using `GET /api/v1/contacts/{id}`.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F016",
+    "description": "Implement `Contact -> List` execution using `GET /api/v1/contacts` and preserve pagination metadata in output.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F017",
+    "description": "Implement `Contact -> Update` execution using `PUT /api/v1/contacts/{id}`.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F018",
+    "description": "Implement `Contact -> Delete` execution using `DELETE /api/v1/contacts/{id}` and normalized delete success output.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F019",
+    "description": "Validate `contactId` as non-empty UUID before sending get, update, or delete requests.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F020",
+    "description": "Preserve existing success normalization behavior for contact CRUD responses and list outputs.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F021",
+    "description": "Preserve existing continue-on-fail behavior for contact CRUD operations with item-level error objects.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Non-functional Requirements"]
+  },
+  {
+    "id": "F022",
+    "description": "Extend node description/load-option tests to cover the contact resource and client lookup behavior.",
+    "implemented": true,
+    "prdRefs": ["Non-functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F023",
+    "description": "Extend execute and helper tests to cover contact payloads, list behavior, ID validation, and `phone_numbers` validation.",
+    "implemented": true,
+    "prdRefs": ["Non-functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F024",
+    "description": "Update package README to include contact operations, field expectations, and output behavior.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F025",
+    "description": "Add at least one example workflow that demonstrates the new contact resource.",
+    "implemented": true,
+    "prdRefs": ["Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F026",
+    "description": "Update package release notes and docs synchronization tests for the contact CRUD expansion.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  }
+]

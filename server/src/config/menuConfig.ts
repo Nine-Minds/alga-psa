@@ -152,9 +152,12 @@ export const navigationSections: NavigationSection[] = [
         ]
       },
       {
-        name: 'Job Monitoring',
+        name: 'System Monitoring',
         icon: LayoutDashboard,
-        href: '/msp/jobs'
+        subItems: [
+          { name: 'Job Monitoring', icon: LayoutDashboard, href: '/msp/jobs' },
+          { name: 'Email Logs', icon: Mail, href: '/msp/email-logs' },
+        ]
       },
       {
         name: 'Extensions',

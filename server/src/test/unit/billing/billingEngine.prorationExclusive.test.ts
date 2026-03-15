@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { BillingEngine } from 'server/src/lib/billing/billingEngine';
+import { BillingEngine } from '@alga-psa/billing/services';
 import type { IBillingPeriod } from 'server/src/interfaces/billing.interfaces';
 
 vi.mock('@/lib/db/db');

@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  buildContactCreatePayload,
+  buildContactListQuery,
+  buildContactUpdatePayload,
   formatAlgaApiError,
   normalizeSuccessResponse,
+  parseContactPhoneNumbers,
 } from '../nodes/AlgaPsa/helpers';
 import { buildAlgaApiRequestOptions } from '../nodes/AlgaPsa/transport';
 
@@ -143,5 +147,115 @@ describe('Transport and normalization helpers', () => {
     expect(parsed.message).toBe('Validation failed');
     expect(parsed.statusCode).toBe(400);
     expect(parsed.details).toEqual([{ path: ['status_id'], message: 'Invalid UUID' }]);
+  });
+
+  it('T011: contact create payload builder maps full_name and omits absent optional fields', () => {
+    const payload = buildContactCreatePayload({
+      fullName: 'Ada Lovelace',
+      additionalFields: {},
+    });
+
+    expect(payload).toEqual({ full_name: 'Ada Lovelace' });
+  });
+
+  it('T012: contact create payload builder includes scalar optional fields when present', () => {
+    const payload = buildContactCreatePayload({
+      fullName: 'Ada Lovelace',
+      additionalFields: {
+        email: 'ada@example.com',
+        client_id: '00000000-0000-0000-0000-000000000001',
+        role: 'CTO',
+        notes: 'Primary automation contact',
+        is_inactive: true,
+      },
+    });
+
+    expect(payload).toEqual({
+      full_name: 'Ada Lovelace',
+      email: 'ada@example.com',
+      client_id: '00000000-0000-0000-0000-000000000001',
+      role: 'CTO',
+      notes: 'Primary automation contact',
+      is_inactive: true,
+    });
+  });
+
+  it('T013: contact update payload builder includes only provided update fields', () => {
+    const payload = buildContactUpdatePayload({
+      full_name: 'Updated Contact',
+      email: '',
+      client_id: '00000000-0000-0000-0000-000000000002',
+      notes: 'Updated via n8n',
+    });
+
+    expect(payload).toEqual({
+      full_name: 'Updated Contact',
+      client_id: '00000000-0000-0000-0000-000000000002',
+      notes: 'Updated via n8n',
+    });
+  });
+
+  it('T014: contact list query builder serializes pagination and core filters correctly', () => {
+    const query = buildContactListQuery({
+      page: 3,
+      limit: 50,
+      filters: {
+        client_id: '00000000-0000-0000-0000-000000000003',
+        search_term: 'ada',
+        is_inactive: false,
+      },
+    });
+
+    expect(query).toEqual({
+      page: 3,
+      limit: 50,
+      client_id: '00000000-0000-0000-0000-000000000003',
+      search_term: 'ada',
+      is_inactive: false,
+    });
+  });
+
+  it('T015: phone_numbers parser accepts a valid JSON array of contact phone-number objects', () => {
+    const parsed = parseContactPhoneNumbers(
+      JSON.stringify([
+        {
+          phone_number: '+1-206-555-0100',
+          canonical_type: 'mobile',
+          is_default: true,
+          display_order: 0,
+        },
+      ]),
+    );
+
+    expect(parsed).toEqual([
+      {
+        phone_number: '+1-206-555-0100',
+        canonical_type: 'mobile',
+        is_default: true,
+        display_order: 0,
+      },
+    ]);
+  });
+
+  it('T016: phone_numbers parser rejects malformed JSON before any request is sent', () => {
+    expect(() => parseContactPhoneNumbers('[{')).toThrow('phone_numbers must be valid JSON');
+  });
+
+  it('T017: phone_numbers parser rejects non-array JSON values before any request is sent', () => {
+    expect(() => parseContactPhoneNumbers('{"phone_number":"+1-206-555-0100"}')).toThrow(
+      'phone_numbers must be a JSON array',
+    );
+  });
+
+  it('T018: phone_numbers parser rejects array entries that are missing phone_number', () => {
+    expect(() =>
+      parseContactPhoneNumbers(
+        JSON.stringify([
+          {
+            canonical_type: 'mobile',
+          },
+        ]),
+      ),
+    ).toThrow('phone_numbers[0].phone_number is required');
   });
 });

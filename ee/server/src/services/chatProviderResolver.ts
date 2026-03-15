@@ -54,7 +54,11 @@ const getGoogleAuth = (): GoogleAuth => {
   return googleAuthClient;
 };
 
-const readGoogleCloudAccessToken = async (): Promise<string | undefined> => {
+const readConfiguredGoogleCloudAccessToken = async (): Promise<string | undefined> => {
+  return readSecret('GOOGLE_CLOUD_ACCESS_TOKEN');
+};
+
+const readGoogleAdcAccessToken = async (): Promise<string | undefined> => {
   const auth = getGoogleAuth();
   const client = await auth.getClient();
   const tokenResponse = await client.getAccessToken();
@@ -123,12 +127,40 @@ const resolveVertexProvider = async (): Promise<ResolvedChatProvider> => {
       ? 'zai-org/glm-5-maas'
       : configuredModel ?? VERTEX_DEFAULT_MODEL;
 
-  const resolveBearerToken = async (): Promise<string> => {
-    const refreshedToken = await readGoogleCloudAccessToken();
-    if (refreshedToken) {
-      return refreshedToken;
+  const resolvePrimaryBearerToken = async (): Promise<{
+    token: string;
+    source: 'configured' | 'adc';
+  }> => {
+    const configuredToken = await readConfiguredGoogleCloudAccessToken();
+    if (configuredToken) {
+      return {
+        token: configuredToken,
+        source: 'configured',
+      };
     }
+
+    const adcToken = await readGoogleAdcAccessToken();
+    if (adcToken) {
+      return {
+        token: adcToken,
+        source: 'adc',
+      };
+    }
+
     throw new Error('Vertex provider requires Google ADC credentials.');
+  };
+
+  const fetchWithBearerToken = async (
+    input: RequestInfo | URL,
+    init: RequestInit | undefined,
+    bearerToken: string,
+  ): Promise<Response> => {
+    const headers = new Headers(init?.headers ?? {});
+    headers.set('Authorization', `Bearer ${bearerToken}`);
+    return fetch(input, {
+      ...(init ?? {}),
+      headers,
+    });
   };
 
   return {
@@ -139,12 +171,22 @@ const resolveVertexProvider = async (): Promise<ResolvedChatProvider> => {
       baseURL,
       fetch: async (...args: unknown[]) => {
         const [input, init] = args as [RequestInfo | URL, RequestInit | undefined];
-        const headers = new Headers(init?.headers ?? {});
-        headers.set('Authorization', `Bearer ${await resolveBearerToken()}`);
-        return fetch(input, {
-          ...(init ?? {}),
-          headers,
-        });
+        const primaryAuth = await resolvePrimaryBearerToken();
+        const primaryResponse = await fetchWithBearerToken(input, init, primaryAuth.token);
+
+        if (primaryResponse.status !== 401 || primaryAuth.source !== 'configured') {
+          return primaryResponse;
+        }
+
+        const adcToken = await readGoogleAdcAccessToken();
+        if (!adcToken || adcToken === primaryAuth.token) {
+          return primaryResponse;
+        }
+
+        console.warn(
+          '[chatProviderResolver] Vertex request received 401 with configured GOOGLE_CLOUD_ACCESS_TOKEN; retrying with ADC.',
+        );
+        return fetchWithBearerToken(input, init, adcToken);
       },
     }),
     requestOverrides: {

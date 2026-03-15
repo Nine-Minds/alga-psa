@@ -8,13 +8,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_categories_service",
     "method": "get",
     "path": "/api/v1/categories/service",
-    "displayName": "List Service Categories",
+    "displayName": "List service categories",
     "summary": "List service categories",
     "description": "Returns a paginated list of service categories within the current tenant.",
     "tags": [
       "Service Categories"
     ],
-    "rbacResource": "service-category",
     "approvalRequired": false,
     "parameters": [
       {
@@ -176,6 +175,338 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       }
     ]
+  },
+  {
+    "id": "get-_api_v1_projects_id_taskstatusmappings",
+    "method": "get",
+    "path": "/api/v1/projects/{id}/task-status-mappings",
+    "displayName": "List project task status mappings",
+    "summary": "List project task status mappings",
+    "description": "Returns the task status mappings configured for the specified project. Use this endpoint to translate a human-readable status label such as \"In Progress\" into a project_status_mapping_id UUID before updating a task.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Project UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/ProjectTaskStatusMappingApiResponse"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "playbooks": [
+      "Call this before updating a project task when the user names a status like \"In Progress\" instead of providing a project_status_mapping_id.",
+      "Match against custom_name, status_name, or name, then use the returned project_status_mapping_id UUID in PUT /api/v1/projects/tasks/{taskId}."
+    ],
+    "examples": [
+      {
+        "name": "List task statuses for the active project",
+        "request": {
+          "params": {
+            "id": "11111111-1111-1111-1111-111111111111"
+          }
+        },
+        "notes": "Use the returned mappings to resolve the user’s requested status label to a project_status_mapping_id."
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_projects_id_tasks",
+    "method": "get",
+    "path": "/api/v1/projects/{id}/tasks",
+    "displayName": "List project tasks",
+    "summary": "List project tasks",
+    "description": "Returns all tasks for the specified project UUID. Use this endpoint to identify a task by task_name before fetching or updating it.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Project UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/ProjectTaskApiResponse"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "playbooks": [
+      "When the user says \"this project\" and the current app context includes an active project record, use that project UUID for {id}.",
+      "Use this endpoint to find the target task by task_name within a known project before calling the single-task or update endpoint."
+    ],
+    "examples": [
+      {
+        "name": "List tasks for the active project",
+        "request": {
+          "params": {
+            "id": "11111111-1111-1111-1111-111111111111"
+          }
+        },
+        "notes": "Use the active project UUID from app context when the user refers to \"this project\"."
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_projects_id_phases_phaseid_tasks",
+    "method": "get",
+    "path": "/api/v1/projects/{id}/phases/{phaseId}/tasks",
+    "displayName": "List project phase tasks",
+    "summary": "List project phase tasks",
+    "description": "Returns all tasks for the specified project phase. Both id and phaseId must be UUID path parameters.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Project UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project UUID."
+        }
+      },
+      {
+        "name": "phaseId",
+        "in": "path",
+        "required": true,
+        "description": "Project phase UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project phase UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/ProjectTaskApiResponse"
+          }
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "playbooks": [
+      "Call this only when you already know both the project UUID and phase UUID.",
+      "Do not send placeholder strings for id or phaseId. Both path parameters must be UUIDs."
+    ]
+  },
+  {
+    "id": "get-_api_v1_projects_tasks_taskid",
+    "method": "get",
+    "path": "/api/v1/projects/tasks/{taskId}",
+    "displayName": "Get project task",
+    "summary": "Get project task",
+    "description": "Returns a single project task by its task UUID.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "taskId",
+        "in": "path",
+        "required": true,
+        "description": "Project task UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project task UUID."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ProjectTaskApiResponse"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "playbooks": [
+      "Use this endpoint only after you have already identified the concrete taskId UUID.",
+      "Do not call it with a task name or an unresolved {taskId} placeholder."
+    ],
+    "examples": [
+      {
+        "name": "Fetch one project task",
+        "request": {
+          "params": {
+            "taskId": "22222222-2222-2222-2222-222222222222"
+          }
+        },
+        "notes": "The taskId path parameter must be a UUID from a prior API response or active UI context."
+      }
+    ]
+  },
+  {
+    "id": "put-_api_v1_projects_tasks_taskid",
+    "method": "put",
+    "path": "/api/v1/projects/tasks/{taskId}",
+    "displayName": "Update project task",
+    "summary": "Update project task",
+    "description": "Updates a project task by task UUID. Use project_status_mapping_id when changing task status, and only send fields defined in the request schema.",
+    "tags": [
+      "Projects"
+    ],
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "taskId",
+        "in": "path",
+        "required": true,
+        "description": "Project task UUID.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Project task UUID."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "task_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "description": {
+          "type": "string"
+        },
+        "assigned_to": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "estimated_hours": {
+          "type": "number",
+          "minimum": 0
+        },
+        "due_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "priority_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "task_type_key": {
+          "type": "string",
+          "default": "general"
+        },
+        "project_status_mapping_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "wbs_code": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Payload for updating a project task. To change task status, send project_status_mapping_id as a UUID. This endpoint does not accept project_id, phase_id, or human-readable status names."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/components/schemas/ProjectTaskApiResponse"
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "playbooks": [
+      "If the user specifies a status label instead of a UUID, first call GET /api/v1/projects/{id}/task-status-mappings to resolve the correct project_status_mapping_id for that project.",
+      "To change task status, send project_status_mapping_id as a UUID. Do not send a plain status label like \"In Progress\" in the request body.",
+      "This public API does not accept project_id or phase_id in the update payload, so do not use it for moving a task to a different project or phase."
+    ],
+    "examples": [
+      {
+        "name": "Update a project task status mapping",
+        "request": {
+          "params": {
+            "taskId": "22222222-2222-2222-2222-222222222222"
+          },
+          "body": {
+            "project_status_mapping_id": "33333333-3333-3333-3333-333333333333"
+          }
+        },
+        "notes": "Only use a concrete project_status_mapping_id UUID that you already obtained from authoritative context."
+      }
+    ]
+  },
+  {
+    "id": "delete-_api_v1_projects_tasks_taskid",
+    "method": "delete",
+    "path": "/api/v1/projects/tasks/{taskId}",
+    "displayName": "DELETE v1",
+    "summary": "DELETE v1",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+    "tags": [
+      "projects"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {}
+    }
   },
   {
     "id": "get-_api_auth_google_callback",
@@ -409,25 +740,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_documents_download_fileid",
     "method": "get",
     "path": "/api/documents/download/{fileId}",
-    "displayName": "Download Document File by File ID",
-    "summary": "Download binary file content by file ID",
-    "description": "Downloads file-backed document content from storage using fileId. This does not return in-app BlockNote or document_content text.",
+    "displayName": "GET documents",
+    "summary": "GET documents",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "documents"
     ],
     "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "fileId",
-        "in": "path",
-        "required": true,
-        "description": "External file identifier to download.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
+    "parameters": [],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -454,53 +774,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_documents_documentid_download",
     "method": "get",
     "path": "/api/documents/{documentId}/download",
-    "displayName": "Download Document by Document ID",
-    "summary": "Download binary file content by document ID",
-    "description": "Downloads file-backed document content for a document. If file_id is null, use GET /api/documents/{documentId}/content to read in-app content.",
+    "displayName": "GET documents",
+    "summary": "GET documents",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "documents"
     ],
     "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "documentId",
-        "in": "path",
-        "required": true,
-        "description": "Document identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_documents_documentid_content",
-    "method": "get",
-    "path": "/api/documents/{documentId}/content",
-    "displayName": "Get Document In-App Content",
-    "summary": "Retrieve BlockNote or text content for a document",
-    "description": "Returns in-app document content from document_block_content and document_content tables, including extracted_text for BlockNote documents. Use this when file_id is null or when you need readable document text.",
-    "tags": [
-      "documents"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "documentId",
-        "in": "path",
-        "required": true,
-        "description": "Document identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
+    "parameters": [],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -5551,239 +5832,17 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "get-_api_v1_projects",
     "method": "get",
     "path": "/api/v1/projects",
-    "displayName": "List Projects",
-    "summary": "List projects",
-    "description": "Returns a paginated list of projects for the current tenant. Supports filtering by client, status, assignment, and name.",
+    "displayName": "GET v1",
+    "summary": "GET v1",
+    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
-      "Projects"
+      "projects"
     ],
-    "rbacResource": "project",
-    "approvalRequired": true,
-    "parameters": [
-      {
-        "name": "page",
-        "in": "query",
-        "required": false,
-        "description": "Pagination page number (default 1).",
-        "schema": {
-          "type": "integer",
-          "minimum": 1
-        }
-      },
-      {
-        "name": "limit",
-        "in": "query",
-        "required": false,
-        "description": "Pagination size (max 100, default 25).",
-        "schema": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 100
-        }
-      },
-      {
-        "name": "sort",
-        "in": "query",
-        "required": false,
-        "description": "Sort field (default created_at).",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "order",
-        "in": "query",
-        "required": false,
-        "description": "Sort direction asc or desc (default desc).",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "asc",
-            "desc"
-          ]
-        }
-      },
-      {
-        "name": "project_name",
-        "in": "query",
-        "required": false,
-        "description": "Filter by project name (partial match).",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "client_id",
-        "in": "query",
-        "required": false,
-        "description": "Filter by client identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "status",
-        "in": "query",
-        "required": false,
-        "description": "Filter by project status identifier or key.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "assigned_to",
-        "in": "query",
-        "required": false,
-        "description": "Filter by assigned user identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "is_inactive",
-        "in": "query",
-        "required": false,
-        "description": "When true, include inactive projects.",
-        "schema": {
-          "type": "boolean"
-        }
-      }
-    ],
+    "approvalRequired": false,
+    "parameters": [],
     "responseBodySchema": {
       "type": "object",
-      "properties": {
-        "data": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "project_id": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "client_id": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "project_name": {
-                "type": "string"
-              },
-              "description": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "start_date": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "format": "date-time"
-              },
-              "end_date": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "format": "date-time"
-              },
-              "created_at": {
-                "type": "string",
-                "format": "date-time"
-              },
-              "updated_at": {
-                "type": "string",
-                "format": "date-time"
-              },
-              "wbs_code": {
-                "type": "string"
-              },
-              "is_inactive": {
-                "type": "boolean"
-              },
-              "status": {
-                "type": "string"
-              },
-              "assigned_to": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "format": "uuid"
-              },
-              "contact_name_id": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "format": "uuid"
-              },
-              "budgeted_hours": {
-                "type": [
-                  "number",
-                  "null"
-                ]
-              },
-              "tenant": {
-                "type": "string",
-                "format": "uuid"
-              },
-              "client_name": {
-                "type": "string"
-              },
-              "status_name": {
-                "type": "string"
-              },
-              "is_closed": {
-                "type": "boolean"
-              },
-              "contact_name": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "project_id",
-              "client_id",
-              "project_name",
-              "created_at",
-              "updated_at",
-              "wbs_code",
-              "is_inactive",
-              "status",
-              "tenant"
-            ]
-          }
-        },
-        "pagination": {
-          "type": "object",
-          "properties": {
-            "page": {
-              "type": "integer"
-            },
-            "limit": {
-              "type": "integer"
-            },
-            "total": {
-              "type": "integer"
-            },
-            "totalPages": {
-              "type": "integer"
-            },
-            "hasNext": {
-              "type": "boolean"
-            },
-            "hasPrev": {
-              "type": "boolean"
-            }
-          }
-        },
-        "meta": {
-          "type": "object"
-        }
-      }
+      "properties": {}
     },
     "playbooks": [
       "projects/list-basic"
@@ -5925,61 +5984,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/projects/stats",
     "displayName": "GET v1",
     "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "projects"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_projects_tasks_taskid",
-    "method": "get",
-    "path": "/api/v1/projects/tasks/{taskId}",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "projects"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "put-_api_v1_projects_tasks_taskid",
-    "method": "put",
-    "path": "/api/v1/projects/tasks/{taskId}",
-    "displayName": "PUT v1",
-    "summary": "PUT v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "projects"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {}
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "delete-_api_v1_projects_tasks_taskid",
-    "method": "delete",
-    "path": "/api/v1/projects/tasks/{taskId}",
-    "displayName": "DELETE v1",
-    "summary": "DELETE v1",
     "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "projects"
@@ -6149,40 +6153,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/projects/{id}/phases/{phaseId}",
     "displayName": "DELETE v1",
     "summary": "DELETE v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "projects"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_projects_id_phases_phaseid_tasks",
-    "method": "get",
-    "path": "/api/v1/projects/{id}/phases/{phaseId}/tasks",
-    "displayName": "GET v1",
-    "summary": "GET v1",
-    "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
-    "tags": [
-      "projects"
-    ],
-    "approvalRequired": false,
-    "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_projects_id_tasks",
-    "method": "get",
-    "path": "/api/v1/projects/{id}/tasks",
-    "displayName": "GET v1",
-    "summary": "GET v1",
     "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
     "tags": [
       "projects"
@@ -8561,36 +8531,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "approvalRequired": false,
     "parameters": [],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "id": "get-_api_v1_tickets_id_documents",
-    "method": "get",
-    "path": "/api/v1/tickets/{id}/documents",
-    "displayName": "List Ticket Documents",
-    "summary": "List documents attached to a ticket",
-    "description": "Returns document metadata associated with the specified ticket. Some documents are in-app documents with null file_id; for those, call GET /api/documents/{documentId}/content to retrieve actual text/block content.",
-    "tags": [
-      "tickets",
-      "documents"
-    ],
-    "rbacResource": "ticket",
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Ticket identifier.",
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      }
-    ],
     "responseBodySchema": {
       "type": "object",
       "properties": {}
@@ -11606,465 +11546,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "type": "object",
       "properties": {}
     }
-  },
-  {
-    "id": "get-_api_extstorage_install_installid_namespace_records",
-    "method": "get",
-    "path": "/api/ext-storage/install/{installId}/{namespace}/records",
-    "displayName": "List records in a namespace",
-    "summary": "List records in a namespace",
-    "tags": [
-      "Extension Storage"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "installId",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "namespace",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128
-        }
-      },
-      {
-        "name": "limit",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 100
-        }
-      },
-      {
-        "name": "cursor",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      },
-      {
-        "name": "keyPrefix",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "maxLength": 256
-        }
-      },
-      {
-        "name": "includeValues",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "boolean"
-        }
-      },
-      {
-        "name": "includeMetadata",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": "boolean"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "items": {
-          "type": "array",
-          "items": {
-            "$ref": "#/components/schemas/ExtStorageListItem"
-          }
-        },
-        "nextCursor": {
-          "type": [
-            "string",
-            "null"
-          ]
-        }
-      },
-      "required": [
-        "items",
-        "nextCursor"
-      ]
-    }
-  },
-  {
-    "id": "post-_api_extstorage_install_installid_namespace_records",
-    "method": "post",
-    "path": "/api/ext-storage/install/{installId}/{namespace}/records",
-    "displayName": "Bulk insert/update records",
-    "summary": "Bulk insert/update records",
-    "tags": [
-      "Extension Storage"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "installId",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "namespace",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "key": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 256
-              },
-              "value": {},
-              "metadata": {
-                "type": "object",
-                "additionalProperties": {}
-              },
-              "ttlSeconds": {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              },
-              "ifRevision": {
-                "type": "integer",
-                "minimum": 0
-              },
-              "schemaVersion": {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              }
-            },
-            "required": [
-              "key"
-            ]
-          },
-          "minItems": 1
-        }
-      },
-      "required": [
-        "items"
-      ]
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "namespace": {
-          "type": "string"
-        },
-        "items": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "key": {
-                "type": "string"
-              },
-              "revision": {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              },
-              "ttlExpiresAt": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "format": "date-time"
-              }
-            },
-            "required": [
-              "key",
-              "revision",
-              "ttlExpiresAt"
-            ]
-          }
-        }
-      },
-      "required": [
-        "namespace",
-        "items"
-      ]
-    }
-  },
-  {
-    "id": "get-_api_extstorage_install_installid_namespace_records_key",
-    "method": "get",
-    "path": "/api/ext-storage/install/{installId}/{namespace}/records/{key}",
-    "displayName": "Get a record by key",
-    "summary": "Get a record by key",
-    "tags": [
-      "Extension Storage"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "installId",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "namespace",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128
-        }
-      },
-      {
-        "name": "key",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 256
-        }
-      },
-      {
-        "name": "if-revision-match",
-        "in": "header",
-        "required": false,
-        "schema": {
-          "type": "string"
-        }
-      }
-    ],
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "namespace": {
-          "type": "string"
-        },
-        "key": {
-          "type": "string"
-        },
-        "revision": {
-          "type": "integer",
-          "exclusiveMinimum": 0
-        },
-        "value": {},
-        "metadata": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "ttlExpiresAt": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "namespace",
-        "key",
-        "revision",
-        "metadata",
-        "ttlExpiresAt",
-        "createdAt",
-        "updatedAt"
-      ]
-    }
-  },
-  {
-    "id": "put-_api_extstorage_install_installid_namespace_records_key",
-    "method": "put",
-    "path": "/api/ext-storage/install/{installId}/{namespace}/records/{key}",
-    "displayName": "Create or update a record by key",
-    "summary": "Create or update a record by key",
-    "tags": [
-      "Extension Storage"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "installId",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "namespace",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128
-        }
-      },
-      {
-        "name": "key",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 256
-        }
-      }
-    ],
-    "requestBodySchema": {
-      "type": "object",
-      "properties": {
-        "value": {},
-        "metadata": {
-          "type": "object",
-          "additionalProperties": {}
-        },
-        "ttlSeconds": {
-          "type": "integer",
-          "exclusiveMinimum": 0
-        },
-        "ifRevision": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "schemaVersion": {
-          "type": "integer",
-          "exclusiveMinimum": 0
-        }
-      }
-    },
-    "responseBodySchema": {
-      "type": "object",
-      "properties": {
-        "namespace": {
-          "type": "string"
-        },
-        "key": {
-          "type": "string"
-        },
-        "revision": {
-          "type": "integer",
-          "exclusiveMinimum": 0
-        },
-        "ttlExpiresAt": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "date-time"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "namespace",
-        "key",
-        "revision",
-        "ttlExpiresAt",
-        "createdAt",
-        "updatedAt"
-      ]
-    }
-  },
-  {
-    "id": "delete-_api_extstorage_install_installid_namespace_records_key",
-    "method": "delete",
-    "path": "/api/ext-storage/install/{installId}/{namespace}/records/{key}",
-    "displayName": "Delete a record by key",
-    "summary": "Delete a record by key",
-    "tags": [
-      "Extension Storage"
-    ],
-    "approvalRequired": false,
-    "parameters": [
-      {
-        "name": "installId",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "format": "uuid"
-        }
-      },
-      {
-        "name": "namespace",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128
-        }
-      },
-      {
-        "name": "key",
-        "in": "path",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 256
-        }
-      },
-      {
-        "name": "ifRevision",
-        "in": "query",
-        "required": false,
-        "schema": {
-          "type": [
-            "integer",
-            "null"
-          ],
-          "minimum": 0
-        }
-      }
-    ]
   }
 ];
 

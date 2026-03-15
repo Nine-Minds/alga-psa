@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import type { InvoiceTemplateAst } from '@alga-psa/types';
-import { INVOICE_TEMPLATE_AST_VERSION } from '@alga-psa/types';
+import {
+  INVOICE_PRINT_MARGIN_MM_RANGE,
+  INVOICE_PAPER_PRESET_IDS,
+  INVOICE_TEMPLATE_AST_VERSION,
+} from '@alga-psa/types';
 
 // Conservative allowlist for any identifier we emit into CSS selectors or custom property names.
 // Note: these are embedded into selectors with a prefix (`.ast-...`) and custom properties with `--...`.
@@ -11,6 +15,11 @@ const cssIdentifierSchema = z
   .regex(CSS_SAFE_IDENTIFIER_REGEX, { message: 'Invalid CSS identifier.' });
 
 const valueFormatSchema = z.enum(['text', 'number', 'currency', 'date']);
+const paperPresetSchema = z.enum(INVOICE_PAPER_PRESET_IDS);
+const printSettingsSchema = z.object({
+  paperPreset: paperPresetSchema,
+  marginMm: z.number().min(INVOICE_PRINT_MARGIN_MM_RANGE.min).max(INVOICE_PRINT_MARGIN_MM_RANGE.max),
+}).strict();
 
 const styleDeclarationSchema = z.object({
   display: z.string().optional(),
@@ -427,6 +436,7 @@ export const invoiceTemplateAstSchema = z.object({
     description: z.string().optional(),
     locale: z.string().optional(),
     currencyCode: z.string().optional(),
+    printSettings: printSettingsSchema.optional(),
   }).strict().optional(),
   styles: z.object({
     tokens: z.record(cssIdentifierSchema, z.object({

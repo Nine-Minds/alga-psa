@@ -25,7 +25,7 @@ import { ResponseStateDisplay } from '../ResponseStateSelect';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from '@alga-psa/tickets/actions';
 import { ItilLabels, calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
-import { Pencil, Check, X, HelpCircle, Save, AlertCircle, PauseCircle, Users } from 'lucide-react';
+import { Pencil, Check, X, HelpCircle, Save, AlertCircle, PauseCircle, Users, Mail } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
@@ -77,6 +77,7 @@ interface TicketInfoProps {
   teams?: ITeam[];
   onAssignTeam?: (teamId: string) => Promise<void>;
   onClipboardImageUploaded?: () => Promise<void> | void;
+  onOpenEmailNotificationLogs?: () => void;
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
@@ -108,6 +109,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   teams = [],
   onAssignTeam,
   onClipboardImageUploaded,
+  onOpenEmailNotificationLogs,
 }) => {
   const { data: session } = useSession();
   const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
@@ -1424,6 +1426,21 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           {/* Save Changes Button - matching contracts behavior */}
           <div className="flex items-center gap-3 mt-6 pt-4 border-t border-gray-200">
             {renderProjectTaskActions?.({ ticket, additionalAgents })}
+            {ticket.ticket_id && onOpenEmailNotificationLogs ? (
+              <Tooltip content="View email notification logs">
+                <Button
+                  id={`${id}-open-email-notification-logs`}
+                  type="button"
+                  variant="soft"
+                  size="icon"
+                  onClick={onOpenEmailNotificationLogs}
+                  aria-label="View email notification logs"
+                  className="h-9 w-9"
+                >
+                  <Mail className="w-4 h-4" />
+                </Button>
+              </Tooltip>
+            ) : null}
             <div className="flex-1" />
             <Button
               id={`${id}-cancel-btn`}

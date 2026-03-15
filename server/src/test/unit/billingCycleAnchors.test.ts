@@ -3,7 +3,7 @@ import {
   getBillingPeriodForDate,
   getNextBillingBoundaryAfter,
   normalizeAnchorSettingsForCycle,
-} from 'server/src/lib/billing/billingCycleAnchors';
+} from '@alga-psa/billing/lib/billing/billingCycleAnchors';
 
 describe('billingCycleAnchors', () => {
   it('monthly anchor day=10 produces current period with end exclusive (2026-01-09 => 2025-12-10..2026-01-10)', () => {

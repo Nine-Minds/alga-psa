@@ -97,7 +97,7 @@ import {
   IClientContractLineSettings
 } from '../../../interfaces/billing.interfaces';
 
-import { BillingEngine as BillingEngineClass } from '../../billing/billingEngine';
+import { BillingEngine as BillingEngineClass } from '@alga-psa/billing/services';
 
 /**
  * HATEOAS Link interface for API discoverability

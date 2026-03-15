@@ -10,7 +10,6 @@ import { IDocument } from 'server/src/interfaces/document.interface';
 import { TICKET_ORIGINS } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
-import { NumberingService } from 'server/src/lib/services/numberingService';
 import { getEventBus } from 'server/src/lib/eventBus';
 import { getEmailEventChannel } from '@alga-psa/notifications';
 import { NotFoundError, ValidationError } from '../middleware/apiMiddleware';

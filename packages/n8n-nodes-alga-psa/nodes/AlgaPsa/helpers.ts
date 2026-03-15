@@ -148,6 +148,141 @@ export function buildTicketUpdatePayload(additionalFields: IDataObject = {}): ID
   return compactObject(payload);
 }
 
+function normalizeOptionalUuid(value: unknown, fieldName: string): string | undefined {
+  if (value === undefined || value === null || String(value).trim() === '') {
+    return undefined;
+  }
+
+  return ensureUuid(value, fieldName);
+}
+
+function normalizeJsonInput(value: unknown, fieldName: string): unknown {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  const raw = value.trim();
+  if (!raw) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error(`${fieldName} must be valid JSON`);
+  }
+}
+
+export function parseContactPhoneNumbers(value: unknown): IDataObject[] | undefined {
+  const parsed = normalizeJsonInput(value, 'phone_numbers');
+
+  if (parsed === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(parsed)) {
+    throw new Error('phone_numbers must be a JSON array');
+  }
+
+  return parsed.map((entry, index) => {
+    if (!isObject(entry)) {
+      throw new Error(`phone_numbers[${index}] must be an object`);
+    }
+
+    const phoneNumber = ensureNonEmpty(entry.phone_number, `phone_numbers[${index}].phone_number`);
+    const contactPhoneNumberId = normalizeOptionalUuid(
+      entry.contact_phone_number_id,
+      `phone_numbers[${index}].contact_phone_number_id`,
+    );
+    const canonicalType =
+      entry.canonical_type === undefined || entry.canonical_type === null
+        ? undefined
+        : ensureNonEmpty(entry.canonical_type, `phone_numbers[${index}].canonical_type`);
+    const customType =
+      entry.custom_type === undefined || entry.custom_type === null
+        ? undefined
+        : ensureNonEmpty(entry.custom_type, `phone_numbers[${index}].custom_type`);
+
+    if (entry.is_default !== undefined && typeof entry.is_default !== 'boolean') {
+      throw new Error(`phone_numbers[${index}].is_default must be a boolean`);
+    }
+
+    if (
+      entry.display_order !== undefined &&
+      (!Number.isInteger(entry.display_order) || Number(entry.display_order) < 0)
+    ) {
+      throw new Error(`phone_numbers[${index}].display_order must be a non-negative integer`);
+    }
+
+    const isDefault =
+      entry.is_default === undefined ? undefined : (entry.is_default as boolean);
+    const displayOrder =
+      entry.display_order === undefined ? undefined : Number(entry.display_order);
+
+    return compactObject({
+      contact_phone_number_id: contactPhoneNumberId,
+      phone_number: phoneNumber,
+      canonical_type: canonicalType,
+      custom_type: customType,
+      is_default: isDefault,
+      display_order: displayOrder,
+    });
+  });
+}
+
+export function buildContactCreatePayload(input: {
+  fullName: string;
+  additionalFields?: IDataObject;
+}): IDataObject {
+  const additional = input.additionalFields ?? {};
+  const clientId = normalizeOptionalUuid(additional.client_id, 'client_id');
+
+  return compactObject({
+    full_name: input.fullName,
+    email: additional.email,
+    client_id: clientId,
+    role: additional.role,
+    notes: additional.notes,
+    is_inactive: additional.is_inactive,
+    phone_numbers: parseContactPhoneNumbers(additional.phone_numbers),
+  });
+}
+
+export function buildContactUpdatePayload(additionalFields: IDataObject = {}): IDataObject {
+  const clientId = normalizeOptionalUuid(additionalFields.client_id, 'client_id');
+
+  return compactObject({
+    full_name: additionalFields.full_name,
+    email: additionalFields.email,
+    client_id: clientId,
+    role: additionalFields.role,
+    notes: additionalFields.notes,
+    is_inactive: additionalFields.is_inactive,
+    phone_numbers: parseContactPhoneNumbers(additionalFields.phone_numbers),
+  });
+}
+
+export function buildContactListQuery(input: {
+  page: number;
+  limit: number;
+  filters?: IDataObject;
+}): IDataObject {
+  const filters = input.filters ?? {};
+  const clientId = normalizeOptionalUuid(filters.client_id, 'client_id');
+
+  return compactObject({
+    page: input.page,
+    limit: input.limit,
+    client_id: clientId,
+    search_term: filters.search_term,
+    is_inactive: filters.is_inactive,
+  });
+}
+
 export function buildTicketListQuery(input: {
   page: number;
   limit: number;

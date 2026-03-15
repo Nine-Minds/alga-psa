@@ -217,6 +217,21 @@ export const projectTaskResponseSchema = z.object({
   status_name: z.string().optional()
 });
 
+export const projectTaskStatusMappingResponseSchema = z.object({
+  project_status_mapping_id: uuidSchema,
+  project_id: uuidSchema,
+  status_id: uuidSchema.nullable().optional(),
+  standard_status_id: uuidSchema.nullable().optional(),
+  is_standard: z.boolean(),
+  custom_name: z.string().nullable(),
+  display_order: z.number(),
+  is_visible: z.boolean(),
+  tenant: uuidSchema,
+  status_name: z.string(),
+  name: z.string(),
+  is_closed: z.boolean(),
+});
+
 // Project task checklist schemas
 export const createTaskChecklistItemSchema = z.object({
   item_text: z.string().min(1, 'Item text is required'),
