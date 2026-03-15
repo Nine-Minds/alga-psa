@@ -252,7 +252,7 @@
   {
     "id": "T031",
     "description": "`findContactByEmailAddress` returns a contact when only an additional email matches the lookup address.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
@@ -260,7 +260,7 @@
   {
     "id": "T032",
     "description": "`createOrFindContactByEmail` creates a new contact with the email stored in `contacts.email` and no child rows when no match exists.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]

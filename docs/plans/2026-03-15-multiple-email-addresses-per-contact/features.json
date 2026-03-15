@@ -171,7 +171,7 @@
   {
     "id": "F020",
     "description": "Update shared `findContactByEmailAddress` and `createOrFindContactByEmail` helpers to search both primary and additional emails while creating new contacts with only a primary email in `contacts.email`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-13",
       "FR-15"

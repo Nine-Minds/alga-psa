@@ -231,4 +231,18 @@ Working memory for adding multiple email addresses to contacts using a compatibi
 - Gotchas discovered:
   - Import updates that match by an additional email need pre-normalization before calling `ContactModel.updateContact`, otherwise the model correctly rejects a raw primary-email change that has not been expressed as a promote/swap.
   - When the import row promotes an existing additional email to primary, the import layer must omit the old primary from the incoming additional-email list because the model appends the demoted primary row transactionally during the swap.
+
+## Update (2026-03-15, shared lookup helpers)
+- Completed `F020` and flipped `T031` and `T032` to implemented.
+- Updated `ContactModel.getContactByEmail` so shared lookup now resolves contacts by either:
+  - `contacts.email`
+  - `contact_additional_email_addresses.normalized_email_address`
+- Updated `findContactByEmailAddress` in `packages/clients/src/actions/queryActions.ts` to defer to the shared model helper instead of running a primary-only SQL query.
+- `createOrFindContactByEmail` now inherits the hybrid lookup behavior through `ContactModel.getContactByEmail` while still creating new contacts with only a primary email on `contacts.email` when no match exists.
+- Added DB-backed regression coverage in `server/src/test/integration/contactEmailLookup.integration.test.ts` for:
+  - additional-email lookup through `findContactByEmailAddress`
+  - primary-only creation through `createOrFindContactByEmail`
+  - existing-contact reuse through `createOrFindContactByEmail` when only an additional email matches
+- Verification runbook used:
+  - `cd server && pnpm vitest run src/test/integration/contactEmailLookup.integration.test.ts --coverage=false`
   - A focused rerun of `server/src/test/integration/contactCsvPhoneImportExport.integration.test.ts` is still blocked in this Codex harness because Postgres on `127.0.0.1:5438` is not reachable (`EPERM` before test setup), so the DB-backed import regression remains in place but was not executable here.

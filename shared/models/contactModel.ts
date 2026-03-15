@@ -1172,16 +1172,30 @@ export class ContactModel {
     tenant: string,
     trx: Knex.Transaction
   ): Promise<IContact | null> {
+    const normalizedEmail = normalizeEmailAddress(email);
+
     const contact = await trx('contacts')
-      .where({ email: email.toLowerCase(), tenant })
+      .where({ email: normalizedEmail, tenant })
       .first<ContactRecord>();
 
-    if (!contact) {
+    if (contact) {
+      const [hydrated] = await this.hydrateContactsWithPhoneNumbers([contact], tenant, trx);
+      return hydrated as IContact;
+    }
+
+    const additionalEmailMatch = await trx('contact_additional_email_addresses')
+      .select('contact_name_id')
+      .where({
+        tenant,
+        normalized_email_address: normalizedEmail,
+      })
+      .first<{ contact_name_id: string }>();
+
+    if (!additionalEmailMatch?.contact_name_id) {
       return null;
     }
 
-    const [hydrated] = await this.hydrateContactsWithPhoneNumbers([contact], tenant, trx);
-    return hydrated as IContact;
+    return this.getContactById(additionalEmailMatch.contact_name_id, tenant, trx);
   }
 
   static async contactExists(
