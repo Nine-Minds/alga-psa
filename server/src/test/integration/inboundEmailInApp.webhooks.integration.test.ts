@@ -2226,7 +2226,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
   });
 
   it('Attachments: attachment failure does not prevent ticket creation', async () => {
-    const emailActions = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
+    const emailActions = await import('@alga-psa/workflows/actions/emailWorkflowActions');
     const spy = vi.spyOn(emailActions, 'processEmailAttachment').mockRejectedValueOnce(new Error('boom'));
 
     const providerId = uuidv4();
@@ -2275,7 +2275,7 @@ describeDb('Inbound email in-app processing via webhooks (integration)', () => {
   });
 
   it('Attachments: attachment failure does not prevent reply comment creation', async () => {
-    const emailActions = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
+    const emailActions = await import('@alga-psa/workflows/actions/emailWorkflowActions');
     const spy = vi.spyOn(emailActions, 'processEmailAttachment').mockRejectedValueOnce(new Error('boom'));
 
     const providerId = uuidv4();

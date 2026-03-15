@@ -6,13 +6,13 @@ import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { getFormRegistry, getFormValidationService } from '@shared/task-inbox';
 import {
-  FormRegistrationParams,
-  FormUpdateParams,
-  FormSearchParams,
+  type FormRegistrationParams,
+  type FormUpdateParams,
+  type FormSearchParams,
   FormStatus,
-  FormWithSchema,
-  IFormDefinition
-} from '@shared/workflow/persistence/formRegistryInterfaces';
+  type FormWithSchema,
+  type IFormDefinition
+} from '@alga-psa/workflows/persistence';
 import { createTag, findTagsByEntityId, findAllTagsByType, deleteTag } from '@alga-psa/tags/actions';
 import type { ITag } from '@alga-psa/types';
 

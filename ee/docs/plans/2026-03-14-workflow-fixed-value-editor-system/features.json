@@ -1,0 +1,44 @@
+[
+  {
+    "id": "F001",
+    "description": "Define a unified workflow fixed-value editor contract that subsumes today’s picker metadata and supports both inline and dialog editing surfaces.",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Proposed Editor Contract", "Architecture"]
+  },
+  {
+    "id": "F002",
+    "description": "Add a normalization layer that maps legacy picker metadata into the unified editor contract for designer use.",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Architecture", "Rollout / Migration"]
+  },
+  {
+    "id": "F003",
+    "description": "Expose the unified editor configuration on workflow action input fields so downstream rendering uses one model.",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Architecture"]
+  },
+  {
+    "id": "F004",
+    "description": "Refactor the fixed-value renderer to use a single editor shell that can host inline-only, dialog-only, or inline-plus-dialog editor surfaces.",
+    "implemented": true,
+    "prdRefs": ["Requirements", "UX / UI Notes", "Architecture"]
+  },
+  {
+    "id": "F005",
+    "description": "Support a prompt text editor that offers both inline multiline editing and a larger dialog-based editing experience from the same field metadata.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Requirements", "UX / UI Notes"]
+  },
+  {
+    "id": "F006",
+    "description": "Preserve existing ticket/client-style picker behavior by routing those fields through the unified editor system via a compatibility adapter.",
+    "implemented": true,
+    "prdRefs": ["Requirements", "Rollout / Migration", "Risks"]
+  },
+  {
+    "id": "F007",
+    "description": "Add a migration path so prompt can adopt the new contract first while picker-backed fields migrate incrementally.",
+    "implemented": true,
+    "prdRefs": ["Rollout / Migration", "Acceptance Criteria"]
+  }
+]

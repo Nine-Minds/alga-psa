@@ -13,7 +13,7 @@ import React, { useMemo } from 'react';
 import { type DataTreeContext, type DataField } from './SourceDataTree';
 import { InputMappingEditor, type ActionInputField } from './InputMappingEditor';
 import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import type { InputMapping } from '@shared/workflow/runtime/client';
+import type { InputMapping } from '@alga-psa/workflows/runtime';
 import type { ExpressionContext } from '../expression-editor';
 import {
   buildWorkflowReferenceExpressionContext,

@@ -21,11 +21,11 @@ import {
   listWorkflowDefinitionsAction,
   publishWorkflowDefinitionAction
 } from '@alga-psa/workflows/actions';
-import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
-import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
-import { getSchemaRegistry } from '@shared/workflow/runtime';
-import type { WorkflowDefinition } from '@shared/workflow/runtime/client';
-import type { PublishError } from '@shared/workflow/runtime/types';
+import WorkflowDefinitionModelV2 from '@alga-psa/workflows/persistence/workflowDefinitionModelV2';
+import WorkflowDefinitionVersionModelV2 from '@alga-psa/workflows/persistence/workflowDefinitionVersionModelV2';
+import { getSchemaRegistry } from '@alga-psa/workflows/runtime';
+import type { WorkflowDefinition } from '@alga-psa/workflows/runtime/client';
+import type { PublishError } from '@alga-psa/workflows/runtime/types';
 import {
   exportWorkflowBundleV1ForWorkflowId
 } from 'server/src/lib/workflow/bundle/exportWorkflowBundleV1';
@@ -59,6 +59,25 @@ let tenantId: string;
 let userId: string;
 
 const dataContextActionRegistry = [
+  {
+    id: 'ai.infer',
+    version: 1,
+    ui: {
+      label: 'Infer Structured Output',
+      description: 'Generate structured workflow data from a prompt.'
+    },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        prompt: { type: 'string' }
+      },
+      required: ['prompt']
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {}
+    }
+  },
   {
     id: 'transform.build_object',
     version: 1,
@@ -241,6 +260,79 @@ const buildChangedActionInvalidDefinition = (workflowId: string): WorkflowDefini
             value: { $expr: 'payload.foo' }
           },
           saveAs: 'changedResult'
+        }
+      }
+    ]
+  })
+});
+
+const buildAiDefinition = (workflowId: string): WorkflowDefinition => ({
+  id: workflowId,
+  ...buildWorkflowDefinition({
+    name: 'AI grouped workflow',
+    payloadSchemaRef: TEST_SCHEMA_REF,
+    steps: [
+      {
+        id: 'ai-step',
+        type: 'action.call',
+        name: 'Infer Classification',
+        config: {
+          designerGroupKey: 'ai',
+          designerTileKind: 'ai',
+          actionId: 'ai.infer',
+          version: 1,
+          saveAs: 'classificationResult',
+          inputMapping: {
+            prompt: { $expr: 'payload.foo' }
+          },
+          aiOutputSchemaMode: 'advanced',
+          aiOutputSchemaText: JSON.stringify({
+            type: 'object',
+            properties: {
+              category: { type: 'string' },
+              next_action: {
+                type: 'object',
+                properties: {
+                  label: { type: 'string' },
+                },
+                required: ['label'],
+                additionalProperties: false,
+              },
+            },
+            required: ['category'],
+            additionalProperties: false,
+          }, null, 2),
+          aiOutputSchema: {
+            type: 'object',
+            properties: {
+              category: { type: 'string' },
+              next_action: {
+                type: 'object',
+                properties: {
+                  label: { type: 'string' },
+                },
+                required: ['label'],
+                additionalProperties: false,
+              },
+            },
+            required: ['category'],
+            additionalProperties: false,
+          },
+        }
+      },
+      {
+        id: 'downstream-step',
+        type: 'action.call',
+        name: 'Echo Result',
+        config: {
+          designerAppKey: 'app:test',
+          designerTileKind: 'app',
+          actionId: 'test.echo',
+          version: 1,
+          inputMapping: {
+            value: { $expr: 'vars.classificationResult.next_action.label' }
+          },
+          saveAs: 'echoResult'
         }
       }
     ]
@@ -582,5 +674,34 @@ describe('workflow designer grouped-step persistence', () => {
         }
       }
     });
+  });
+
+  it('T008/T020/T031: AI grouped drafts preserve prompt, schema mode, and inline output schema through save and reload', async () => {
+    const created = await createWorkflowDefinitionAction({
+      key: 'test.ai-grouped-persistence',
+      definition: {
+        id: uuidv4(),
+        ...buildWorkflowDefinition({
+          name: 'Initial AI grouped workflow',
+          payloadSchemaRef: TEST_SCHEMA_REF,
+          steps: [stateSetStep('state-1', 'READY')]
+        })
+      }
+    });
+
+    const definition = buildAiDefinition(created.workflowId);
+    await updateWorkflowDefinitionDraftAction({
+      workflowId: created.workflowId,
+      definition
+    });
+
+    const listed = await listWorkflowDefinitionsAction();
+    const reloadedDraft = listed.find((workflow) => workflow.workflow_id === created.workflowId);
+    expect(reloadedDraft?.draft_definition).toEqual(definition);
+
+    const summary = summarizeDataContext(reloadedDraft?.draft_definition as WorkflowDefinition);
+    expect(summary).toEqual([
+      { saveAs: 'classificationResult', fields: ['category', 'next_action'] },
+    ]);
   });
 });

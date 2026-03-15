@@ -175,6 +175,37 @@ describe('workflow reference options', () => {
     );
   });
 
+  it('T024: AI output fields appear in downstream reference browsing under vars.<saveAs>', () => {
+    const options = buildWorkflowReferenceFieldOptions(payloadSchema, {
+      ...baseDataContext,
+      steps: [
+        {
+          stepId: 'ai-step',
+          stepName: 'Infer',
+          saveAs: 'classificationResult',
+          outputSchema: {
+            type: 'object',
+            properties: {
+              category: { type: 'string' },
+              next_action: {
+                type: 'object',
+                properties: {
+                  label: { type: 'string' },
+                },
+              },
+            },
+          },
+          fields: [],
+        },
+      ],
+    });
+
+    const values = options.map((option) => option.value);
+    expect(values).toContain('vars.classificationResult');
+    expect(values).toContain('vars.classificationResult.category');
+    expect(values).toContain('vars.classificationResult.next_action.label');
+  });
+
   it('T280: object and value transform outputs participate in downstream reference pickers like business outputs', () => {
     const options = buildWorkflowReferenceFieldOptions(payloadSchema, {
       ...baseDataContext,
@@ -226,5 +257,29 @@ describe('workflow reference options', () => {
     expect(options.find((option) => option.value === 'vars.ticketSummary')?.label).toContain(
       'Build Object'
     );
+  });
+
+  it('T026: compose-text output fields use stable-key paths while surfacing author-facing labels in downstream reference browsing', () => {
+    const options = buildWorkflowReferenceFieldOptions(payloadSchema, {
+      ...baseDataContext,
+      steps: [
+        {
+          stepId: 'compose-step',
+          stepName: 'Compose Text',
+          saveAs: 'composed',
+          outputSchema: {
+            type: 'object',
+            properties: {
+              prompt: { type: 'string', description: 'Prompt' },
+              email_body: { type: 'string', description: 'Email Body' },
+            },
+          },
+          fields: [],
+        },
+      ],
+    });
+
+    expect(options.find((option) => option.value === 'vars.composed.prompt')?.label).toContain('Prompt');
+    expect(options.find((option) => option.value === 'vars.composed.email_body')?.label).toContain('Email Body');
   });
 });

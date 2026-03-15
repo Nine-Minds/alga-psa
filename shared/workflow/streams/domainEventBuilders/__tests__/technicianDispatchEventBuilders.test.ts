@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildWorkflowPayload } from '@shared/workflow/streams/workflowEventPublishHelpers';
+import { buildWorkflowPayload } from '@alga-psa/workflows/streams/workflowEventPublishHelpers';
 import {
   technicianArrivedEventPayloadSchema,
   technicianCheckedOutEventPayloadSchema,
   technicianDispatchedEventPayloadSchema,
   technicianEnRouteEventPayloadSchema,
-} from '@shared/workflow/runtime/schemas/schedulingEventSchemas';
+} from '@alga-psa/workflows/runtime/schemas/schedulingEventSchemas';
 import {
   buildTechnicianArrivedPayload,
   buildTechnicianCheckedOutPayload,

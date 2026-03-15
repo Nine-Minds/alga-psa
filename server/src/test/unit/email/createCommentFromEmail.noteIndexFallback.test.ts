@@ -36,11 +36,11 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: (...args: any[]) => publishWorkflowEventMock(...args),
 }));
 
-vi.mock('@alga-psa/shared/workflow/adapters/workflowEventPublisher', () => ({
+vi.mock('@alga-psa/workflows/adapters/workflowEventPublisher', () => ({
   WorkflowEventPublisher: class WorkflowEventPublisher {},
 }));
 
-vi.mock('@alga-psa/shared/workflow/adapters/workflowAnalyticsTracker', () => ({
+vi.mock('@alga-psa/workflows/adapters/workflowAnalyticsTracker', () => ({
   WorkflowAnalyticsTracker: class WorkflowAnalyticsTracker {},
 }));
 
@@ -60,7 +60,7 @@ describe('createCommentFromEmail note_index overflow fallback', () => {
       )
       .mockResolvedValueOnce({ comment_id: 'comment-2' });
 
-    const { createCommentFromEmail } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
+    const { createCommentFromEmail } = await import('@alga-psa/workflows/actions/emailWorkflowActions');
     const contentWithDataImage =
       'Intro <img src="data:image/png;base64,' + 'A'.repeat(6_000) + '" /> outro';
 
@@ -85,7 +85,7 @@ describe('createCommentFromEmail note_index overflow fallback', () => {
       .mockRejectedValueOnce(new Error('string is too long for tsvector'))
       .mockResolvedValueOnce({ comment_id: 'comment-3' });
 
-    const { createCommentFromEmail } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
+    const { createCommentFromEmail } = await import('@alga-psa/workflows/actions/emailWorkflowActions');
     const commentId = await createCommentFromEmail(
       {
         ticket_id: 'ticket-2',

@@ -1,10 +1,10 @@
 import { BaseModel } from './BaseModel';
 import type { Knex } from 'knex';
-import { 
-  IEventCatalogEntry, 
-  ICreateEventCatalogEntry, 
-  IUpdateEventCatalogEntry 
-} from '@shared/workflow/types/eventCatalog';
+import {
+  type ICreateEventCatalogEntry,
+  type IEventCatalogEntry,
+  type IUpdateEventCatalogEntry,
+} from '@alga-psa/workflows/types';
 
 /**
  * Model for event catalog entries

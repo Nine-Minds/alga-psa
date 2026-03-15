@@ -8,19 +8,19 @@ const {
   createLogMock: vi.fn()
 }));
 
-vi.mock('@shared/workflow/persistence/workflowRunModelV2', () => ({
+vi.mock('@alga-psa/workflows/persistence/workflowRunModelV2', () => ({
   default: {
     create: (...args: unknown[]) => createRunMock(...args)
   }
 }));
 
-vi.mock('@shared/workflow/persistence/workflowRunLogModelV2', () => ({
+vi.mock('@alga-psa/workflows/persistence/workflowRunLogModelV2', () => ({
   default: {
     create: (...args: unknown[]) => createLogMock(...args)
   }
 }));
 
-import { WorkflowRuntimeV2 } from '@shared/workflow/runtime';
+import { WorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';
 
 describe('Workflow run trigger provenance', () => {
   const knexMock = {};

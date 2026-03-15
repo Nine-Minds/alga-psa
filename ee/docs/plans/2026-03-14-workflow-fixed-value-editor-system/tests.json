@@ -1,0 +1,62 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: unified editor normalization maps new editor metadata into a normalized field editor model.",
+    "implemented": true,
+    "featureIds": ["F001", "F003"]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: legacy picker metadata is adapted into the unified editor model without losing dependencies, fixed-value hints, or dynamic-reference flags.",
+    "implemented": true,
+    "featureIds": ["F002", "F006"]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: action input field extraction exposes the unified editor model on fields consumed by the workflow designer.",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T004",
+    "description": "Component: the fixed-value editor shell renders the correct inline editor for a field configured with an inline text surface.",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T005",
+    "description": "Component: the fixed-value editor shell renders a popout affordance when a dialog editor surface is configured.",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T006",
+    "description": "Component: prompt fields render an inline multiline editor plus a dialog-launch control from the unified editor metadata.",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T007",
+    "description": "Component: the prompt dialog editor opens with the current value, allows editing, and writes the updated value back to the field.",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T008",
+    "description": "Regression: existing ticket/client-style picker-backed fields still render and function through the unified editor adapter path.",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T009",
+    "description": "Regression: fixed/reference/expression mode switching continues to work with unified editor-backed fields.",
+    "implemented": true,
+    "featureIds": ["F004", "F006"]
+  },
+  {
+    "id": "T010",
+    "description": "Integration/UI: a workflow author can edit a prompt inline and in the larger dialog without losing the saved fixed value.",
+    "implemented": true,
+    "featureIds": ["F005", "F007"]
+  }
+]

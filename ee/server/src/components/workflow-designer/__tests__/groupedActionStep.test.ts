@@ -4,9 +4,19 @@ import {
   buildGroupedActionStepConfig,
   getGroupedActionCatalogRecordForStep,
 } from '../groupedActionStep';
-import type { WorkflowDesignerCatalogRecord } from '@shared/workflow/runtime/designer/actionCatalog';
+import type { WorkflowDesignerCatalogRecord } from '@alga-psa/workflows/runtime/designer/actionCatalog';
 
 const catalog: WorkflowDesignerCatalogRecord[] = [
+  {
+    groupKey: 'ai',
+    label: 'AI',
+    iconToken: 'ai',
+    tileKind: 'ai',
+    allowedActionIds: ['ai.infer'],
+    defaultActionId: 'ai.infer',
+    description: 'AI actions',
+    actions: [],
+  },
   {
     groupKey: 'ticket',
     label: 'Ticket',
@@ -86,7 +96,7 @@ describe('workflow designer grouped action step helpers', () => {
   });
 
   it('T085: grouped steps can preselect a declared default action when one is supplied during insertion', () => {
-    const ticketRecord = catalog[0];
+    const ticketRecord = catalog.find((record) => record.groupKey === 'ticket');
     expect(ticketRecord.defaultActionId).toBe('tickets.create');
     expect(
       buildGroupedActionStepConfig(
@@ -122,6 +132,26 @@ describe('workflow designer grouped action step helpers', () => {
     expect((step.config as Record<string, unknown>).actionId).toBeUndefined();
   });
 
+  it('T003/T304: AI grouped steps insert as action.call with runtime action fields and additive AI metadata', () => {
+    expect(
+      buildGroupedActionStepConfig(
+        {
+          actionId: 'ai.infer',
+          actionVersion: 1,
+          groupKey: 'ai',
+          tileKind: 'ai',
+        },
+        { generateSaveAsName: () => 'aiInferResult' }
+      )
+    ).toEqual({
+      actionId: 'ai.infer',
+      version: 1,
+      saveAs: 'aiInferResult',
+      designerGroupKey: 'ai',
+      designerTileKind: 'ai',
+    });
+  });
+
   it('T233: legacy transform action.call steps infer the Transform group from actionId during hydration', () => {
     expect(
       getGroupedActionCatalogRecordForStep(
@@ -138,6 +168,15 @@ describe('workflow designer grouped action step helpers', () => {
         catalog
       )?.groupKey
     ).toBe('ticket');
+  });
+
+  it('T004/T305: legacy AI action.call steps infer the AI group from actionId during hydration', () => {
+    expect(
+      getGroupedActionCatalogRecordForStep(
+        { type: 'action.call', config: { actionId: 'ai.infer' } },
+        catalog
+      )?.groupKey
+    ).toBe('ai');
   });
 
   it('T075: legacy action.call app steps infer their app scope from actionId during hydration', () => {

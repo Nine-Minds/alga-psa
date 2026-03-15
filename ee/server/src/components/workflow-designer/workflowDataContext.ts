@@ -5,7 +5,13 @@ import type {
   IfBlock,
   ForEachBlock,
   TryCatchBlock,
-} from '@shared/workflow/runtime/client';
+} from '@alga-psa/workflows/runtime/client';
+import {
+  isWorkflowAiInferAction,
+  resolveWorkflowAiSchemaFromConfig,
+  isWorkflowComposeTextAction,
+  resolveComposeTextOutputSchemaFromConfig,
+} from '@alga-psa/workflows/authoring';
 
 export type ActionRegistryItem = {
   id: string;
@@ -441,6 +447,10 @@ export const buildDataContext = (
     fallbackOutputSchema: JsonSchema,
     blockCtx: BlockContext
   ): JsonSchema => {
+    if (isWorkflowComposeTextAction(actionId)) {
+      return (resolveComposeTextOutputSchemaFromConfig(step.config) as JsonSchema | null) ?? fallbackOutputSchema;
+    }
+
     const config = (step.config ?? {}) as { inputMapping?: Record<string, unknown> };
     const inputMapping = config.inputMapping ?? {};
     const resolveForValue = (value: unknown) => {
@@ -540,7 +550,9 @@ export const buildDataContext = (
               const outputSchema =
                 config.actionId.startsWith('transform.')
                   ? inferTransformObjectOutputSchema(nodeStep, config.actionId, action.outputSchema, blockCtx)
-                  : action.outputSchema;
+                  : isWorkflowAiInferAction(config.actionId)
+                    ? ((resolveWorkflowAiSchemaFromConfig(config).schema ?? {}) as JsonSchema)
+                    : action.outputSchema;
               context.steps.push({
                 stepId: step.id,
                 stepName: nodeStep.name || action.ui?.label || config.actionId,

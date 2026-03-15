@@ -1,5 +1,8 @@
 import { defineConfig } from 'vitest/config';
+import fs from 'node:fs';
 import path from 'path';
+
+fs.mkdirSync(path.resolve(__dirname, './coverage/.tmp'), { recursive: true });
 
 export default defineConfig({
   test: {
@@ -98,7 +101,7 @@ export default defineConfig({
       { find: /^@alga-psa\/onboarding\/(.*)$/, replacement: path.resolve(__dirname, '../packages/onboarding/src/$1') },
       { find: /^@alga-psa\/tickets$/, replacement: path.resolve(__dirname, '../packages/tickets/src/index.ts') },
       { find: /^@alga-psa\/tickets\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tickets/src/$1') },
-      { find: /^@alga-psa\/product-extension-actions$/, replacement: path.resolve(__dirname, '../packages/product-extension-actions/src/index.ts') },
+      { find: /^@alga-psa\/product-extension-actions$/, replacement: path.resolve(__dirname, '../packages/product-extension-actions/oss/entry.ts') },
       { find: /^@alga-psa\/tags$/, replacement: path.resolve(__dirname, '../packages/tags/src/index.ts') },
       { find: /^@alga-psa\/tags\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tags/src/$1') },
       { find: /^@alga-psa\/scheduling$/, replacement: path.resolve(__dirname, '../packages/scheduling/src/index.ts') },

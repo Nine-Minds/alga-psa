@@ -8,6 +8,10 @@ import type { Envelope } from '../types';
 import { safeSerialize } from '../utils/redactionUtils';
 import { parseEmailBodyWithFallback, renderCommentBlocksWithFallback } from './utils/emailNodes';
 import { getFormValidationService } from '@shared/task-inbox';
+import {
+  composeTextOutputsSchema,
+  isWorkflowComposeTextAction,
+} from '../actions/composeText';
 
 function normalizeAssignmentPath(path: string): string {
   const trimmed = path.trim();
@@ -43,15 +47,36 @@ const actionCallSchema = z.object({
   actionId: z.string().min(1),
   version: z.number().int().positive(),
   inputMapping: inputMappingSchema.optional().default({}),
+  outputs: z.array(z.unknown()).optional(),
   saveAs: z.string().optional(),
   designerGroupKey: z.string().min(1).optional(),
-  designerTileKind: z.enum(['core-object', 'transform', 'app']).optional(),
+  designerTileKind: z.enum(['core-object', 'transform', 'app', 'ai']).optional(),
   designerAppKey: z.string().min(1).optional(),
+  aiOutputSchemaMode: z.enum(['simple', 'advanced']).optional(),
+  aiOutputSchema: z.record(z.unknown()).optional(),
+  aiOutputSchemaText: z.string().optional(),
   onError: z.object({
     policy: z.enum(['fail', 'continue'])
   }).optional(),
   idempotencyKey: exprSchema.optional()
-}).strict();
+}).strict().superRefine((config, ctx) => {
+  if (!isWorkflowComposeTextAction(config.actionId)) {
+    return;
+  }
+
+  const parsed = composeTextOutputsSchema.safeParse(config.outputs);
+  if (parsed.success) {
+    return;
+  }
+
+  parsed.error.issues.forEach((issue) => {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: issue.message,
+      path: issue.path.length > 0 ? ['outputs', ...issue.path] : ['outputs'],
+    });
+  });
+});
 
 const emailParseBodySchema = z.object({
   text: exprSchema.optional(),
@@ -192,7 +217,10 @@ export function registerDefaultNodes(): void {
           ? String(await resolveExpressions(config.idempotencyKey, exprContext))
           : undefined;
 
-        const output = await ctx.actions.call(config.actionId, config.version, resolvedArgs, { idempotencyKey });
+        const output = await ctx.actions.call(config.actionId, config.version, resolvedArgs, {
+          idempotencyKey,
+          stepConfig: config,
+        });
         if (config.saveAs) {
           return applyAssignments(env, {
             [normalizeAssignmentPath(config.saveAs)]: output

@@ -2,9 +2,12 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll, afterEach, vi } 
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
-import { resetWorkflowRuntimeTables } from '../helpers/workflowRuntimeV2TestUtils';
-import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import {
+  ensureWorkflowScheduleStateTable,
+  resetWorkflowRuntimeTables
+} from '../helpers/workflowRuntimeV2TestUtils';
+import { createTenantKnex, getCurrentTenantId } from '@alga-psa/db';
+import { getCurrentUser } from '@alga-psa/auth';
 import {
   createWorkflowDefinitionAction,
   publishWorkflowDefinitionAction,
@@ -14,14 +17,14 @@ import {
   resumeWorkflowRunAction,
   cancelWorkflowRunAction
 } from '@alga-psa/workflows/actions';
-import { WorkflowRuntimeV2 } from '@shared/workflow/runtime';
-import { getActionRegistryV2, getSchemaRegistry } from '@shared/workflow/runtime';
-import WorkflowRunModelV2 from '@shared/workflow/persistence/workflowRunModelV2';
-import WorkflowRunStepModelV2 from '@shared/workflow/persistence/workflowRunStepModelV2';
-import WorkflowRunWaitModelV2 from '@shared/workflow/persistence/workflowRunWaitModelV2';
-import WorkflowActionInvocationModelV2 from '@shared/workflow/persistence/workflowActionInvocationModelV2';
-import WorkflowRunSnapshotModelV2 from '@shared/workflow/persistence/workflowRunSnapshotModelV2';
-import { WorkflowRuntimeV2Worker } from '@shared/workflow/workers';
+import { WorkflowRuntimeV2 } from '@alga-psa/workflows/runtime';
+import { getActionRegistryV2, getSchemaRegistry } from '@alga-psa/workflows/runtime';
+import WorkflowRunModelV2 from '@alga-psa/workflows/persistence/workflowRunModelV2';
+import WorkflowRunStepModelV2 from '@alga-psa/workflows/persistence/workflowRunStepModelV2';
+import WorkflowRunWaitModelV2 from '@alga-psa/workflows/persistence/workflowRunWaitModelV2';
+import WorkflowActionInvocationModelV2 from '@alga-psa/workflows/persistence/workflowActionInvocationModelV2';
+import WorkflowRunSnapshotModelV2 from '@alga-psa/workflows/persistence/workflowRunSnapshotModelV2';
+import { WorkflowRuntimeV2Worker } from '@alga-psa/workflows/workers';
 import {
   ensureWorkflowRuntimeV2TestRegistrations,
   buildWorkflowDefinition,
@@ -39,18 +42,58 @@ import {
   TEST_SCHEMA_REF
 } from '../helpers/workflowRuntimeV2TestHelpers';
 
-vi.mock('server/src/lib/db', () => ({
-  createTenantKnex: vi.fn(),
-  getCurrentTenantId: vi.fn()
-}));
+vi.mock('@alga-psa/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return {
+    ...actual,
+    createTenantKnex: vi.fn(),
+    getCurrentTenantId: vi.fn(),
+    auditLog: vi.fn().mockResolvedValue(undefined)
+  };
+});
 
-vi.mock('@alga-psa/users/actions', () => ({
-  getCurrentUser: vi.fn()
-}));
+vi.mock('@alga-psa/auth', () => {
+  const withAuth = (action: (user: any, ctx: { tenant: string }, ...args: any[]) => Promise<any>) =>
+    async (...args: any[]) => action(
+      {
+        user_id: userId,
+        tenant: tenantId,
+        roles: []
+      },
+      { tenant: tenantId },
+      ...args
+    );
+  const withOptionalAuth = (action: (user: any, ctx: { tenant: string }, ...args: any[]) => Promise<any>) =>
+    async (...args: any[]) => action(
+      {
+        user_id: userId,
+        tenant: tenantId,
+        roles: []
+      },
+      { tenant: tenantId },
+      ...args
+    );
+  const withAuthCheck = (action: (user: any, ...args: any[]) => Promise<any>) =>
+    async (...args: any[]) => action(
+      {
+        user_id: userId,
+        tenant: tenantId,
+        roles: []
+      },
+      ...args
+    );
 
-vi.mock('server/src/lib/auth/rbac', () => ({
-  hasPermission: vi.fn().mockResolvedValue(true)
-}));
+  return {
+    withAuth,
+    withOptionalAuth,
+    withAuthCheck,
+    AuthenticationError: class AuthenticationError extends Error {},
+    hasPermission: vi.fn().mockResolvedValue(true),
+    checkMultiplePermissions: vi.fn().mockResolvedValue(true),
+    getCurrentUser: vi.fn(),
+    preCheckDeletion: vi.fn()
+  };
+});
 
 const mockedCreateTenantKnex = vi.mocked(createTenantKnex);
 const mockedGetCurrentTenantId = vi.mocked(getCurrentTenantId);
@@ -94,9 +137,11 @@ async function publishWorkflow(workflowId: string, version: number, definition?:
 beforeAll(async () => {
   ensureWorkflowRuntimeV2TestRegistrations();
   db = await createTestDbConnection();
+  await ensureWorkflowScheduleStateTable(db);
 });
 
 beforeEach(async () => {
+  await ensureWorkflowScheduleStateTable(db);
   await resetWorkflowRuntimeTables(db);
   tenantId = uuidv4();
   userId = uuidv4();

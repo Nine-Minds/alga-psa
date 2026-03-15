@@ -165,9 +165,9 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
     if (!user?.user_id) throw new Error('Expected seeded user');
     enteredByUserId = user.user_id;
 
-    const { getActionRegistryV2 } = await import('@alga-psa/shared/workflow/runtime');
+    const { getActionRegistryV2 } = await import('@alga-psa/workflows/runtime');
     const { registerEmailWorkflowActionsV2 } = await import(
-      '@alga-psa/shared/workflow/runtime/actions/registerEmailWorkflowActions'
+      '@alga-psa/workflows/runtime/actions/registerEmailWorkflowActions'
     );
     actionRegistry = getActionRegistryV2();
     if (!actionRegistry.get('resolve_inbound_ticket_context', 1)) {

@@ -1,0 +1,266 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: `transform.compose_text` is registered in the runtime action registry with Transform-category metadata.",
+    "implemented": true,
+    "featureIds": ["F001", "F002"]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: compose-text input schema accepts multiple outputs with document payloads and rejects missing `outputs` arrays.",
+    "implemented": true,
+    "featureIds": ["F003", "F004"]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: stable keys are generated from freeform labels using a reference-safe format.",
+    "implemented": true,
+    "featureIds": ["F004", "F005"]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: stable-key generation disambiguates collisions when two labels normalize to the same reference-safe token.",
+    "implemented": true,
+    "featureIds": ["F005", "F008"]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: editing an output label preserves the existing stable key by default.",
+    "implemented": true,
+    "featureIds": ["F006", "F016"]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: empty output labels are rejected by compose-text authoring validation.",
+    "implemented": true,
+    "featureIds": ["F007", "F018"]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: duplicate output labels in the same step are rejected by compose-text authoring validation.",
+    "implemented": true,
+    "featureIds": ["F007", "F018"]
+  },
+  {
+    "id": "T008",
+    "description": "Unit: duplicate stable keys in the same step are rejected by compose-text validation.",
+    "implemented": true,
+    "featureIds": ["F008", "F018"]
+  },
+  {
+    "id": "T009",
+    "description": "Unit: compose-text rejects template document nodes that fall outside the supported markdown-safe block and inline subset.",
+    "implemented": true,
+    "featureIds": ["F009", "F010"]
+  },
+  {
+    "id": "T010",
+    "description": "Unit: template document validation accepts simple reference nodes and rejects non-simple expression-like paths.",
+    "implemented": true,
+    "featureIds": ["F010", "F011"]
+  },
+  {
+    "id": "T011",
+    "description": "Unit: BlockNote-to-template serialization preserves literal text, inline references, and supported markdown-safe formatting without emitting BlockNote node shapes.",
+    "implemented": true,
+    "featureIds": ["F009", "F012", "F028"]
+  },
+  {
+    "id": "T012",
+    "description": "Unit: template-to-BlockNote hydration restores inline reference placeholders and supported markdown-safe formatting for authoring round-trip.",
+    "implemented": true,
+    "featureIds": ["F012", "F013"]
+  },
+  {
+    "id": "T013",
+    "description": "Unit: the constrained editor schema omits media and other unsupported content node types.",
+    "implemented": true,
+    "featureIds": ["F014", "F028"]
+  },
+  {
+    "id": "T014",
+    "description": "Unit: markdown rendering emits paragraphs and hard breaks correctly from the template document model.",
+    "implemented": true,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T015",
+    "description": "Unit: markdown rendering emits bullet and ordered list structure correctly from supported template blocks.",
+    "implemented": true,
+    "featureIds": ["F010", "F019"]
+  },
+  {
+    "id": "T016",
+    "description": "Unit: markdown rendering emits supported inline marks such as bold, italic, code, and links correctly around literal text.",
+    "implemented": true,
+    "featureIds": ["F010", "F019"]
+  },
+  {
+    "id": "T017",
+    "description": "Unit: runtime composition resolves simple payload references into markdown output text.",
+    "implemented": true,
+    "featureIds": ["F019", "F020"]
+  },
+  {
+    "id": "T018",
+    "description": "Unit: runtime composition resolves prior-step output references into markdown output text.",
+    "implemented": true,
+    "featureIds": ["F019", "F020", "F025"]
+  },
+  {
+    "id": "T019",
+    "description": "Unit: runtime composition fails when a referenced payload value is missing and includes output-key context.",
+    "implemented": true,
+    "featureIds": ["F020", "F021"]
+  },
+  {
+    "id": "T020",
+    "description": "Unit: runtime composition fails when a referenced prior-step output value is missing and includes reference-path context.",
+    "implemented": true,
+    "featureIds": ["F020", "F021"]
+  },
+  {
+    "id": "T021",
+    "description": "Unit: compose-text returns a plain object of markdown strings keyed by stable keys when multiple outputs succeed.",
+    "implemented": true,
+    "featureIds": ["F003", "F022"]
+  },
+  {
+    "id": "T022",
+    "description": "Unit: static output schema for compose-text accepts string-valued object results without requiring a fixed compile-time field list.",
+    "implemented": true,
+    "featureIds": ["F022", "F023"]
+  },
+  {
+    "id": "T023",
+    "description": "Unit: dynamic output schema resolution for compose-text produces an object schema with one string property per configured stable key.",
+    "implemented": true,
+    "featureIds": ["F023", "F024"]
+  },
+  {
+    "id": "T024",
+    "description": "Unit: dynamic output schema resolution for compose-text updates when outputs are added, removed, or renamed while stable keys remain unchanged.",
+    "implemented": true,
+    "featureIds": ["F006", "F024"]
+  },
+  {
+    "id": "T025",
+    "description": "Unit: workflow data-context building surfaces compose-text outputs under `vars.<saveAs>.<stableKey>` with string field types.",
+    "implemented": true,
+    "featureIds": ["F024", "F025"]
+  },
+  {
+    "id": "T026",
+    "description": "Unit: workflow reference browsing labels compose-text outputs using the author-facing label while navigating through the stable key path.",
+    "implemented": true,
+    "featureIds": ["F016", "F025"]
+  },
+  {
+    "id": "T027",
+    "description": "Component: the dedicated compose-text editor renders an output list and allows selecting among multiple outputs.",
+    "implemented": true,
+    "featureIds": ["F012", "F015"]
+  },
+  {
+    "id": "T028",
+    "description": "Component: authors can add a new composed output and receive a generated stable key from the initial label.",
+    "implemented": true,
+    "featureIds": ["F015", "F016"]
+  },
+  {
+    "id": "T029",
+    "description": "Component: authors can reorder composed outputs without changing the stable key of an existing output.",
+    "implemented": true,
+    "featureIds": ["F015", "F016"]
+  },
+  {
+    "id": "T030",
+    "description": "Component: the editor shows the stable key and a copyable downstream reference path for each output.",
+    "implemented": true,
+    "featureIds": ["F016", "F025"]
+  },
+  {
+    "id": "T031",
+    "description": "Component: inserting a reference from the workflow source browser creates an inline reference chip in the constrained editor.",
+    "implemented": true,
+    "featureIds": ["F013", "F017"]
+  },
+  {
+    "id": "T032",
+    "description": "Component: deleting an inline reference chip removes the corresponding reference node from the serialized template document.",
+    "implemented": true,
+    "featureIds": ["F013", "F012"]
+  },
+  {
+    "id": "T033",
+    "description": "Component: unsupported media insertion affordances are absent from the compose-text editor UI.",
+    "implemented": true,
+    "featureIds": ["F014", "F028"]
+  },
+  {
+    "id": "T034",
+    "description": "Component: duplicate labels produce inline validation feedback in the compose-text editor.",
+    "implemented": true,
+    "featureIds": ["F007", "F018"]
+  },
+  {
+    "id": "T035",
+    "description": "Component: duplicate stable keys produce inline validation feedback in the compose-text editor.",
+    "implemented": true,
+    "featureIds": ["F008", "F018"]
+  },
+  {
+    "id": "T036",
+    "description": "Component: invalid manual stable-key edits or explicit key regenerations are surfaced clearly to the author if that control is exposed.",
+    "implemented": true,
+    "featureIds": ["F006", "F016", "F018"]
+  },
+  {
+    "id": "T037",
+    "description": "Integration: publish-time workflow validation uses the config-derived compose-text output schema rather than a generic object when validating downstream references.",
+    "implemented": true,
+    "featureIds": ["F023", "F024", "F025"]
+  },
+  {
+    "id": "T038",
+    "description": "Integration: an AI prompt field can consume `vars.<saveAs>.<stableKey>` from a compose-text step through ordinary reference mode with no prompt-specific wiring.",
+    "implemented": true,
+    "featureIds": ["F025", "F026", "F027"]
+  },
+  {
+    "id": "T039",
+    "description": "Integration: an email or notification text field can consume `vars.<saveAs>.<stableKey>` from a compose-text step through ordinary reference mode with no consumer-specific wiring.",
+    "implemented": true,
+    "featureIds": ["F025", "F026", "F027"]
+  },
+  {
+    "id": "T040",
+    "description": "Integration: compose-text step execution succeeds end to end with multiple outputs, mixed literal content, markdown-safe formatting, and inline references.",
+    "implemented": true,
+    "featureIds": ["F003", "F019", "F020", "F022"]
+  },
+  {
+    "id": "T041",
+    "description": "Integration: compose-text step execution fails the entire step rather than partially succeeding when one output contains a missing reference.",
+    "implemented": true,
+    "featureIds": ["F021", "F022"]
+  },
+  {
+    "id": "T042",
+    "description": "Regression: existing transform actions continue to register, validate, and expose downstream output fields unchanged after compose-text is added.",
+    "implemented": true,
+    "featureIds": ["F001", "F023"]
+  },
+  {
+    "id": "T043",
+    "description": "Regression: authoring and runtime behavior for `ai.infer` remain unchanged when no compose-text step is present.",
+    "implemented": true,
+    "featureIds": ["F002", "F026", "F027"]
+  },
+  {
+    "id": "T044",
+    "description": "Regression: persisted compose-text step config does not contain BlockNote node-type artifacts or media payloads after editor round-trip.",
+    "implemented": true,
+    "featureIds": ["F009", "F014", "F028"]
+  }
+]

@@ -40,7 +40,7 @@ import {
   insertTextIntoValue,
   validateSourcePaths,
   type ExpressionMode,
-} from '@shared/workflow/expression-authoring';
+} from '@alga-psa/workflows/expression-authoring';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import type { LucideIcon } from 'lucide-react';
 import {

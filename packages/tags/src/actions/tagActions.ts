@@ -15,7 +15,7 @@ import {
   buildTagDefinitionCreatedPayload,
   buildTagDefinitionUpdatedPayload,
   buildTagRemovedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/tagEventBuilders';
+} from '@alga-psa/workflows/streams';
 
 /** Map tagged entity types to their permission resource equivalents */
 const ENTITY_PERMISSION_MAP: Partial<Record<TaggedEntityType, string>> = {

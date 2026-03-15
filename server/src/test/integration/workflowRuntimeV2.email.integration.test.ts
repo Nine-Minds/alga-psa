@@ -8,11 +8,11 @@ import { resetWorkflowRuntimeTables } from '../helpers/workflowRuntimeV2TestUtil
 import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { startWorkflowRunAction } from '@alga-psa/workflows/actions';
-import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
-import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
-import WorkflowRunModelV2 from '@shared/workflow/persistence/workflowRunModelV2';
-import WorkflowRunSnapshotModelV2 from '@shared/workflow/persistence/workflowRunSnapshotModelV2';
-import { getActionRegistryV2, getSchemaRegistry } from '@shared/workflow/runtime';
+import WorkflowDefinitionModelV2 from '@alga-psa/workflows/persistence/workflowDefinitionModelV2';
+import WorkflowDefinitionVersionModelV2 from '@alga-psa/workflows/persistence/workflowDefinitionVersionModelV2';
+import WorkflowRunModelV2 from '@alga-psa/workflows/persistence/workflowRunModelV2';
+import WorkflowRunSnapshotModelV2 from '@alga-psa/workflows/persistence/workflowRunSnapshotModelV2';
+import { getActionRegistryV2, getSchemaRegistry } from '@alga-psa/workflows/runtime';
 import {
   ensureWorkflowRuntimeV2TestRegistrations
 } from '../helpers/workflowRuntimeV2TestHelpers';

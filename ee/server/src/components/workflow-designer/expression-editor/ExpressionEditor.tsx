@@ -20,7 +20,7 @@ import { registerCompletionProvider, type ExpressionContext, type JsonSchema } f
 import { registerHoverProvider } from './hoverProvider';
 import { registerSignatureHelpProvider } from './signatureHelpProvider';
 import { createDiagnosticsProvider, validateExpression } from './diagnosticsProvider';
-import { insertTextIntoMonacoEditor } from '@shared/workflow/expression-authoring';
+import { insertTextIntoMonacoEditor } from '@alga-psa/workflows/expression-authoring';
 import { normalizeInsertedText } from './insertionText';
 
 /**

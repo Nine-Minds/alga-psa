@@ -5,7 +5,7 @@ import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildNotificationDeliveredPayload,
   buildNotificationFailedPayload,
-} from '@shared/workflow/streams/domainEventBuilders/notificationEventBuilders';
+} from '@alga-psa/workflows/streams';
 import { deliverTeamsNotification } from './teamsNotificationDelivery';
 
 /**

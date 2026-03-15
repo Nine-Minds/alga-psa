@@ -1,5 +1,11 @@
 import { z } from 'zod';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
+import {
+  COMPOSE_TEXT_ACTION_ID,
+  COMPOSE_TEXT_VERSION,
+  composeTextResultSchema,
+  renderComposeTextOutputs,
+} from './composeText';
 
 const coerceText = (value: unknown): string => {
   if (value === null || value === undefined) return '';
@@ -56,6 +62,22 @@ function truncateText(
 
 export function registerTransformActionsV2(): void {
   const registry = getActionRegistryV2();
+
+  registry.register({
+    id: COMPOSE_TEXT_ACTION_ID,
+    version: COMPOSE_TEXT_VERSION,
+    inputSchema: z.object({}).strict(),
+    outputSchema: composeTextResultSchema,
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Compose Text',
+      category: 'Transform',
+      description: 'Compose one or more markdown text outputs from literal content and workflow references.'
+    },
+    handler: async (_input, ctx) =>
+      renderComposeTextOutputs(ctx.stepConfig, ctx.expressionContext)
+  });
 
   registry.register({
     id: 'transform.truncate_text',

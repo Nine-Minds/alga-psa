@@ -6,11 +6,20 @@ import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomS
 import { getAllContacts, getContactsByClient } from '@alga-psa/clients/actions';
 import { getTicketFieldOptions } from '@alga-psa/integrations/actions';
 import { getTeamsBasic } from '@alga-psa/teams/actions';
-import type { InputMapping, MappingValue } from '@shared/workflow/runtime/client';
+import type { InputMapping, MappingValue } from '@alga-psa/workflows/runtime';
 
 export type WorkflowActionInputPickerField = {
   name: string;
   nullable?: boolean;
+  editor?: {
+    kind: 'text' | 'picker' | 'color' | 'json' | 'custom';
+    dependencies?: string[];
+    fixedValueHint?: string;
+    allowsDynamicReference?: boolean;
+    picker?: {
+      resource: string;
+    };
+  };
   picker?: {
     kind: string;
     dependencies?: string[];
@@ -288,7 +297,7 @@ const getWorkflowPickerPlaceholder = (
     return explanation;
   }
 
-  const hint = field.picker?.fixedValueHint?.trim();
+  const hint = field.editor?.fixedValueHint?.trim() ?? field.picker?.fixedValueHint?.trim();
   if (hint) {
     return hint;
   }
@@ -316,10 +325,13 @@ export const WorkflowActionInputFixedPicker: React.FC<{
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadedDependencySignature, setLoadedDependencySignature] = useState<string | null>(null);
 
-  const pickerKind = field.picker?.kind;
+  const pickerKind = field.editor?.picker?.resource ?? field.picker?.kind;
   const dependencyResolutions = useMemo(
-    () => (field.picker?.dependencies ?? []).map((dependency) => resolveDependency(rootInputMapping, dependency)),
-    [field.picker?.dependencies, rootInputMapping]
+    () =>
+      (field.editor?.dependencies ?? field.picker?.dependencies ?? []).map((dependency) =>
+        resolveDependency(rootInputMapping, dependency)
+      ),
+    [field.editor?.dependencies, field.picker?.dependencies, rootInputMapping]
   );
   const disabledExplanation = useMemo(
     () => (pickerKind ? buildDisabledExplanation(pickerKind, dependencyResolutions) : undefined),

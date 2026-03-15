@@ -1,0 +1,50 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: action input schema extraction preserves the multiline presentation hint on string fields.",
+    "implemented": true,
+    "featureIds": ["F001", "F002"]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: action input schema extraction leaves fields without the multiline hint unchanged.",
+    "implemented": true,
+    "featureIds": ["F002", "F004"]
+  },
+  {
+    "id": "T003",
+    "description": "Component: fixed-value editor renders a TextArea for a string field marked with the multiline hint.",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T004",
+    "description": "Component: fixed-value editor continues rendering a single-line Input for ordinary string fields without the hint.",
+    "implemented": true,
+    "featureIds": ["F003", "F004"]
+  },
+  {
+    "id": "T005",
+    "description": "Component: nullable multiline string fields still support null/value switching without losing the textarea editor.",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T006",
+    "description": "Registry/unit: ai.infer prompt schema is annotated with the multiline presentation hint.",
+    "implemented": false,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T007",
+    "description": "Integration/UI: workflow designer shows the ai.infer prompt fixed-value control as a multiline textarea.",
+    "implemented": true,
+    "featureIds": ["F003", "F005"]
+  },
+  {
+    "id": "T008",
+    "description": "Regression: workflow designer startup and bundle compilation remain clean after introducing the authoring-side multiline hint.",
+    "implemented": true,
+    "featureIds": ["F006"]
+  }
+]

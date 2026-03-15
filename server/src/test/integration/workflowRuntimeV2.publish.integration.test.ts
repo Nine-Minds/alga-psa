@@ -22,13 +22,13 @@ import {
   getWorkflowRunAction,
   listWorkflowRunStepsAction
 } from '@alga-psa/workflows/actions';
-import WorkflowDefinitionVersionModelV2 from '@shared/workflow/persistence/workflowDefinitionVersionModelV2';
-import WorkflowDefinitionModelV2 from '@shared/workflow/persistence/workflowDefinitionModelV2';
-import WorkflowRunModelV2 from '@shared/workflow/persistence/workflowRunModelV2';
-import WorkflowRunStepModelV2 from '@shared/workflow/persistence/workflowRunStepModelV2';
-import WorkflowRunWaitModelV2 from '@shared/workflow/persistence/workflowRunWaitModelV2';
-import WorkflowRuntimeEventModelV2 from '@shared/workflow/persistence/workflowRuntimeEventModelV2';
-import { WorkflowRuntimeV2, getActionRegistryV2, getNodeTypeRegistry, getSchemaRegistry } from '@shared/workflow/runtime';
+import WorkflowDefinitionVersionModelV2 from '@alga-psa/workflows/persistence/workflowDefinitionVersionModelV2';
+import WorkflowDefinitionModelV2 from '@alga-psa/workflows/persistence/workflowDefinitionModelV2';
+import WorkflowRunModelV2 from '@alga-psa/workflows/persistence/workflowRunModelV2';
+import WorkflowRunStepModelV2 from '@alga-psa/workflows/persistence/workflowRunStepModelV2';
+import WorkflowRunWaitModelV2 from '@alga-psa/workflows/persistence/workflowRunWaitModelV2';
+import WorkflowRuntimeEventModelV2 from '@alga-psa/workflows/persistence/workflowRuntimeEventModelV2';
+import { WorkflowRuntimeV2, getActionRegistryV2, getNodeTypeRegistry, getSchemaRegistry } from '@alga-psa/workflows/runtime';
 import {
   ensureWorkflowRuntimeV2TestRegistrations,
   buildWorkflowDefinition,
@@ -384,7 +384,14 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
       steps: [stateSetStep('state-1', 'READY')]
     });
     expect(result.ok).toBe(false);
-    expect(result.errors?.some((err: any) => err.code === 'UNKNOWN_SCHEMA')).toBe(true);
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'PAYLOAD_SCHEMA_REF_UNKNOWN',
+          stepPath: 'root.payloadSchemaRef'
+        })
+      ])
+    );
   });
 
   it('Publish stores payload_schema_json for valid payload schema refs. Mocks: non-target dependencies.', async () => {
@@ -488,7 +495,7 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
           id: 'action-1',
           type: 'action.call',
           config: {
-            actionId: 'test.echo',
+            actionId: 'test.actionProvided',
             version: 1,
             inputMapping: {}
           }
@@ -558,7 +565,7 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
   });
 
   it('Publish accepts workflow trigger metadata and stores it on the version. Mocks: non-target dependencies.', async () => {
-    const trigger = { type: 'event', eventName: 'PING' };
+    const trigger = { type: 'event', eventName: 'PING', sourcePayloadSchemaRef: TEST_SCHEMA_REF };
     const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')], trigger });
     const result = await publishWorkflow(workflowId, 1, {
       id: workflowId,
@@ -804,12 +811,8 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
       steps: [
         {
           id: 'action-1',
-          type: 'action.call',
-          config: {
-            actionId: 'test.echo',
-            version: 1,
-            inputMapping: {}
-          }
+          type: 'unknown.node',
+          config: {}
         }
       ]
     };
@@ -969,6 +972,95 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     const snapshots = await listWorkflowRunStepsAction({ runId: run.runId });
     const lastSnapshot = snapshots.snapshots[snapshots.snapshots.length - 1];
     expect((lastSnapshot.envelope_json as any).payload.output.value).toBe('ok');
+  });
+
+  it('T041: ai.infer runtime output is still validated by the action output contract before persistence', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [
+        {
+          id: 'ai-step',
+          type: 'action.call',
+          config: {
+            actionId: 'ai.infer',
+            version: 1,
+            inputMapping: {
+              prompt: 'Classify this ticket',
+            },
+            saveAs: 'payload.classification',
+            aiOutputSchemaMode: 'simple',
+            aiOutputSchema: {
+              type: 'object',
+              properties: {
+                category: { type: 'string' },
+              },
+              required: ['category'],
+              additionalProperties: false,
+            },
+          },
+        },
+      ],
+    });
+    await publishWorkflow(workflowId, 1);
+    stubAction('ai.infer', 1, async () => 'invalid-output');
+
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    const record = await WorkflowRunModelV2.getById(db, run.runId);
+
+    expect(record?.status).toBe('FAILED');
+  });
+
+  it('T042: ai.infer outputs saved with saveAs are available to later steps through vars.<saveAs>', async () => {
+    const workflowId = await createDraftWorkflow({
+      steps: [
+        {
+          id: 'ai-step',
+          type: 'action.call',
+          config: {
+            actionId: 'ai.infer',
+            version: 1,
+            inputMapping: {
+              prompt: 'Classify this ticket',
+            },
+            saveAs: 'classificationResult',
+            aiOutputSchemaMode: 'simple',
+            aiOutputSchema: {
+              type: 'object',
+              properties: {
+                category: { type: 'string' },
+                next_action: {
+                  type: 'object',
+                  properties: {
+                    label: { type: 'string' },
+                  },
+                  required: ['label'],
+                  additionalProperties: false,
+                },
+              },
+              required: ['category'],
+              additionalProperties: false,
+            },
+          },
+        },
+        assignStep('assign-1', {
+          'payload.aiCategory': { $expr: 'vars.classificationResult.category' },
+          'payload.aiLabel': { $expr: 'vars.classificationResult.next_action.label' },
+        }),
+      ],
+    });
+    await publishWorkflow(workflowId, 1);
+    stubAction('ai.infer', 1, async () => ({
+      category: 'billing',
+      next_action: {
+        label: 'Escalate',
+      },
+    }));
+
+    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
+    const snapshots = await listWorkflowRunStepsAction({ runId: run.runId });
+    const lastSnapshot = snapshots.snapshots[snapshots.snapshots.length - 1];
+
+    expect((lastSnapshot.envelope_json as any).payload.aiCategory).toBe('billing');
+    expect((lastSnapshot.envelope_json as any).payload.aiLabel).toBe('Escalate');
   });
 
   it('onError=continue records error and continues to next step. Mocks: non-target dependencies.', async () => {

@@ -60,7 +60,7 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 
 import { InputMappingEditor } from '../mapping/InputMappingEditor';
 import type { MappingPositionsHandlers } from '../mapping/useMappingPositions';
-import type { InputMapping } from '@shared/workflow/runtime/client';
+import type { InputMapping } from '@alga-psa/workflows/runtime/client';
 
 const positionsHandlers: MappingPositionsHandlers = {
   registerSourceRef: vi.fn(),
@@ -204,6 +204,51 @@ describe('transform action input editor', () => {
         screen.getByText('Type "object" is incompatible with expected "string"')
       ).toBeInTheDocument();
     });
+  });
+
+  it('renders a textarea for fixed multiline string inputs and keeps single-line inputs for ordinary strings', async () => {
+    await act(async () => {
+      render(
+        <InputMappingEditor
+          value={{
+            prompt: 'Line 1\nLine 2',
+            subject: 'Short subject',
+          }}
+          onChange={vi.fn()}
+          targetFields={[
+            {
+              name: 'prompt',
+              type: 'string',
+              required: true,
+              editor: {
+                kind: 'text',
+                inline: {
+                  mode: 'textarea',
+                },
+              },
+            },
+            {
+              name: 'subject',
+              type: 'string',
+              required: true,
+            },
+          ]}
+          fieldOptions={[]}
+          stepId="step-multiline-inputs"
+          positionsHandlers={positionsHandlers}
+        />
+      );
+    });
+
+    const promptControl = document.getElementById(
+      'mapping-step-multiline-inputs-prompt-literal-str'
+    );
+    const subjectControl = document.getElementById(
+      'mapping-step-multiline-inputs-subject-literal-str'
+    );
+
+    expect(promptControl?.tagName).toBe('TEXTAREA');
+    expect(subjectControl?.tagName).toBe('INPUT');
   });
 
   it('T263/T274/T275: build-object supports user-defined keys plus structured references and fixed literals for each field source', async () => {

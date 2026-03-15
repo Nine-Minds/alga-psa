@@ -1,14 +1,21 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { ChevronRight, ChevronDown, Plus, Trash2, AlertTriangle, Wand2, Sparkles, RotateCcw } from 'lucide-react';
+import { ChevronRight, ChevronDown, Plus, Trash2, AlertTriangle, Wand2, Sparkles, RotateCcw, Expand } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@alga-psa/ui/components/Dialog';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
-import type { InputMapping, MappingValue, Expr } from '@shared/workflow/runtime/client';
+import type { InputMapping, MappingValue, Expr } from '@alga-psa/workflows/runtime';
 import {
   type ExpressionContext,
   type JsonSchema
@@ -620,11 +627,29 @@ export interface ActionInputField {
   description?: string;
   required?: boolean;
   examples?: unknown[];
+  editor?: {
+    kind: 'text' | 'picker' | 'color' | 'json' | 'custom';
+    inline?: {
+      mode: 'input' | 'textarea' | 'picker-summary' | 'swatch';
+    };
+    dialog?: {
+      mode: 'large-text';
+    };
+    dependencies?: string[];
+    fixedValueHint?: string;
+    allowsDynamicReference?: boolean;
+    picker?: {
+      resource: string;
+    };
+  };
   picker?: {
     kind: string;
     dependencies?: string[];
     fixedValueHint?: string;
     allowsDynamicReference?: boolean;
+  };
+  presentation?: {
+    inputControl?: 'multiline';
   };
   enum?: Array<string | number | boolean | null>;
   default?: unknown;
@@ -641,6 +666,34 @@ export interface ActionInputField {
   };
   children?: ActionInputField[];
 }
+
+const getWorkflowFieldEditor = (field: ActionInputField): NonNullable<ActionInputField['editor']> | undefined => {
+  if (field.editor) {
+    return field.editor;
+  }
+
+  if (field.picker?.kind) {
+    return {
+      kind: 'picker',
+      inline: { mode: 'picker-summary' },
+      dependencies: field.picker.dependencies,
+      fixedValueHint: field.picker.fixedValueHint,
+      allowsDynamicReference: field.picker.allowsDynamicReference,
+      picker: {
+        resource: field.picker.kind,
+      },
+    };
+  }
+
+  if (field.presentation?.inputControl === 'multiline') {
+    return {
+      kind: 'text',
+      inline: { mode: 'textarea' },
+    };
+  }
+
+  return undefined;
+};
 
 /**
  * Props for the InputMappingEditor component
@@ -1257,6 +1310,103 @@ const parsePrimitiveList = (
   return { values, errors };
 };
 
+const FixedValueEditorShell: React.FC<{
+  field: ActionInputField;
+  idPrefix: string;
+  value: MappingValue | undefined;
+  onChange: (value: MappingValue) => void;
+  disabled?: boolean;
+  inlineEditor?: React.ReactNode;
+}> = ({ field, idPrefix, value, onChange, disabled, inlineEditor }) => {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [draftValue, setDraftValue] = useState('');
+  const dialogMode = getWorkflowFieldEditor(field)?.dialog?.mode;
+
+  useEffect(() => {
+    if (!isDialogOpen) return;
+    setDraftValue(typeof value === 'string' ? value : '');
+  }, [isDialogOpen, value]);
+
+  const hasDialogEditor = dialogMode === 'large-text';
+
+  if (!hasDialogEditor) {
+    return <>{inlineEditor}</>;
+  }
+
+  const openDialog = () => setIsDialogOpen(true);
+  const closeDialog = () => setIsDialogOpen(false);
+  const applyDialogValue = () => {
+    onChange(draftValue);
+    closeDialog();
+  };
+
+  return (
+    <>
+      <div className="space-y-2">
+        {inlineEditor}
+        <div className="flex justify-end">
+          <Button
+            id={`${idPrefix}-dialog-open`}
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={openDialog}
+            disabled={disabled}
+            className="gap-1"
+          >
+            <Expand className="h-3.5 w-3.5" />
+            Open editor
+          </Button>
+        </div>
+      </div>
+      <Dialog
+        id={`${idPrefix}-dialog`}
+        isOpen={isDialogOpen}
+        onClose={closeDialog}
+        title={`Edit ${field.name}`}
+        className="max-w-4xl"
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit {field.name}</DialogTitle>
+            <DialogDescription>
+              Use the larger editor for longer fixed-value content.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <TextArea
+              id={`${idPrefix}-dialog-textarea`}
+              value={draftValue}
+              onChange={(event) => setDraftValue(event.target.value)}
+              rows={18}
+              disabled={disabled}
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                id={`${idPrefix}-dialog-cancel`}
+                type="button"
+                variant="outline"
+                onClick={closeDialog}
+                disabled={disabled}
+              >
+                Cancel
+              </Button>
+              <Button
+                id={`${idPrefix}-dialog-save`}
+                type="button"
+                onClick={applyDialogValue}
+                disabled={disabled}
+              >
+                Apply
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+};
+
 const LiteralValueEditor: React.FC<{
   value: MappingValue | undefined;
   onChange: (value: MappingValue) => void;
@@ -1290,7 +1440,9 @@ const LiteralValueEditor: React.FC<{
   expressionContext,
   referenceBrowseContext,
 }) => {
-  const hasPickerEditor = Boolean(field.picker?.kind);
+  const fieldEditor = getWorkflowFieldEditor(field);
+  const inlineEditorMode = fieldEditor?.inline?.mode;
+  const hasPickerEditor = fieldEditor?.kind === 'picker' && inlineEditorMode === 'picker-summary';
   const hasStructuredObjectEditor = fieldType === 'object' && (fieldChildren?.length ?? 0) > 0;
   const hasStructuredArrayObjectEditor = fieldType === 'array' && (fieldChildren?.length ?? 0) > 0;
   const hasStructuredPrimitiveArrayEditor =
@@ -1380,13 +1532,22 @@ const LiteralValueEditor: React.FC<{
   // Handle enum fields
   if (hasPickerEditor) {
     return wrapNullableEditor(
-      <WorkflowActionInputFixedPicker
+      <FixedValueEditorShell
         field={field}
-        value={typeof value === 'string' ? value : null}
-        onChange={(nextValue) => onChange(nextValue)}
         idPrefix={idPrefix}
-        rootInputMapping={rootInputMapping}
+        value={value}
+        onChange={onChange}
         disabled={disabled}
+        inlineEditor={
+          <WorkflowActionInputFixedPicker
+            field={field}
+            value={typeof value === 'string' ? value : null}
+            onChange={(nextValue) => onChange(nextValue)}
+            idPrefix={idPrefix}
+            rootInputMapping={rootInputMapping}
+            disabled={disabled}
+          />
+        }
       />
     );
   }
@@ -1779,7 +1940,20 @@ const LiteralValueEditor: React.FC<{
 
   // Default to string
   const stringInputType = fieldConstraints?.format === 'email' ? 'email' : 'text';
-  return wrapNullableEditor(
+  const isMultilineString = inlineEditorMode === 'textarea';
+  const showSingleLineStringInput =
+    inlineEditorMode === 'input' ||
+    (!fieldEditor?.inline && fieldEditor?.dialog === undefined);
+  const inlineStringEditor = isMultilineString ? (
+    <TextArea
+      id={`${idPrefix}-literal-str`}
+      value={typeof value === 'string' ? value : ''}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder="Enter value..."
+      rows={5}
+      disabled={disabled}
+    />
+  ) : showSingleLineStringInput ? (
     <Input
       id={`${idPrefix}-literal-str`}
       type={stringInputType}
@@ -1787,6 +1961,16 @@ const LiteralValueEditor: React.FC<{
       onChange={(e) => onChange(e.target.value)}
       placeholder="Enter value..."
       disabled={disabled}
+    />
+  ) : null;
+  return wrapNullableEditor(
+    <FixedValueEditorShell
+      field={field}
+      idPrefix={idPrefix}
+      value={value}
+      onChange={onChange}
+      disabled={disabled}
+      inlineEditor={inlineStringEditor}
     />
   );
 };

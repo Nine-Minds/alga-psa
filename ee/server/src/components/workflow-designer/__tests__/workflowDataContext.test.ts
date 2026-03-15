@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { buildDataContext } from '../workflowDataContext';
 import { applyCatalogActionChoiceToStep } from '../groupedActionSelection';
-import type { NodeStep, WorkflowDefinition } from '@shared/workflow/runtime/client';
-import type { WorkflowDesignerCatalogAction } from '@shared/workflow/runtime/designer/actionCatalog';
+import type { NodeStep, WorkflowDefinition } from '@alga-psa/workflows/runtime/client';
+import type { WorkflowDesignerCatalogAction } from '@alga-psa/workflows/runtime/designer/actionCatalog';
 
 const generateSaveAsName = (actionId: string) => actionId.replace(/\./g, '_');
 
@@ -17,6 +17,25 @@ const updateAction: WorkflowDesignerCatalogAction = {
 };
 
 const actionRegistry = [
+  {
+    id: 'ai.infer',
+    version: 1,
+    ui: {
+      label: 'Infer Structured Output',
+      description: 'Generate structured workflow data from a prompt.',
+    },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        prompt: { type: 'string' },
+      },
+      required: ['prompt'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
   {
     id: 'tickets.create',
     version: 1,
@@ -79,6 +98,24 @@ const actionRegistry = [
       type: 'object',
       properties: {
         text: { type: 'string' },
+      },
+    },
+  },
+  {
+    id: 'transform.compose_text',
+    version: 1,
+    ui: {
+      label: 'Compose Text',
+      description: 'Compose markdown text outputs.',
+    },
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+    outputSchema: {
+      type: 'object',
+      additionalProperties: {
+        type: 'string',
       },
     },
   },
@@ -438,6 +475,88 @@ describe('workflow data context', () => {
     });
   });
 
+  it('T025: compose-text exposes configured stable keys under vars.<saveAs> with string field types', () => {
+    const definition: WorkflowDefinition = {
+      id: 'workflow-compose-text',
+      version: 1,
+      name: 'Compose text workflow',
+      payloadSchemaRef: 'system:default',
+      trigger: { type: 'event', eventName: 'ticket.created' },
+      steps: [
+        {
+          id: 'compose-step',
+          type: 'action.call',
+          name: 'Compose Text',
+          config: {
+            designerGroupKey: 'transform',
+            designerTileKind: 'transform',
+            actionId: 'transform.compose_text',
+            version: 1,
+            saveAs: 'composed',
+            outputs: [
+              {
+                id: 'out-1',
+                label: 'Prompt',
+                stableKey: 'prompt',
+                document: { version: 1, blocks: [] },
+              },
+              {
+                id: 'out-2',
+                label: 'Email Body',
+                stableKey: 'email_body',
+                document: { version: 1, blocks: [] },
+              },
+            ],
+          },
+        },
+        {
+          id: 'downstream-step',
+          type: 'action.call',
+          config: {
+            actionId: 'tickets.create',
+            version: 1,
+          },
+        },
+      ],
+    };
+
+    const context = buildDataContext(definition, 'downstream-step', actionRegistry, null);
+
+    expect(context.steps[0]).toMatchObject({
+      stepId: 'compose-step',
+      saveAs: 'composed',
+      outputSchema: {
+        type: 'object',
+        properties: {
+          prompt: { type: 'string', description: 'Prompt' },
+          email_body: { type: 'string', description: 'Email Body' },
+        },
+      },
+    });
+    expect(context.steps[0]?.fields).toEqual([
+      {
+        name: 'prompt',
+        type: 'string',
+        required: true,
+        nullable: false,
+        description: 'Prompt',
+        defaultValue: undefined,
+        children: undefined,
+        constraints: undefined,
+      },
+      {
+        name: 'email_body',
+        type: 'string',
+        required: true,
+        nullable: false,
+        description: 'Email Body',
+        defaultValue: undefined,
+        children: undefined,
+        constraints: undefined,
+      },
+    ]);
+  });
+
   it('T269: build-object exposes named object fields to downstream references', () => {
     const definition: WorkflowDefinition = {
       id: 'workflow-build-object',
@@ -638,5 +757,94 @@ describe('workflow data context', () => {
       name: 'object',
       children: [{ name: 'updated' }, { name: 'ticketId' }],
     });
+  });
+
+  it('T023/T024/T025/T026: AI steps contribute resolved inline output schemas to downstream vars context immediately', () => {
+    const definition: WorkflowDefinition = {
+      id: 'workflow-ai',
+      version: 1,
+      name: 'AI workflow',
+      payloadSchemaRef: 'system:default',
+      trigger: { type: 'event', eventName: 'ticket.created' },
+      steps: [
+        {
+          id: 'ai-step',
+          type: 'action.call',
+          name: 'Infer',
+          config: {
+            designerGroupKey: 'ai',
+            designerTileKind: 'ai',
+            actionId: 'ai.infer',
+            version: 1,
+            saveAs: 'classificationResult',
+            aiOutputSchemaMode: 'simple',
+            aiOutputSchema: {
+              type: 'object',
+              properties: {
+                category: { type: 'string' },
+                confidence: { type: 'number' },
+                next_action: {
+                  type: 'object',
+                  properties: {
+                    label: { type: 'string' },
+                  },
+                  required: ['label'],
+                  additionalProperties: false,
+                },
+              },
+              required: ['category'],
+              additionalProperties: false,
+            },
+          },
+        },
+        {
+          id: 'downstream-step',
+          type: 'action.call',
+          config: {
+            actionId: 'tickets.create',
+            version: 1,
+          },
+        },
+      ],
+    };
+
+    const context = buildDataContext(definition, 'downstream-step', actionRegistry, null);
+
+    expect(context.steps[0]).toMatchObject({
+      stepId: 'ai-step',
+      saveAs: 'classificationResult',
+      outputSchema: {
+        type: 'object',
+        properties: {
+          category: { type: 'string' },
+          confidence: { type: 'number' },
+        },
+      },
+    });
+    expect(context.steps[0]?.fields).toEqual([
+      { name: 'category', type: 'string', required: true, nullable: false, description: undefined, defaultValue: undefined, children: undefined, constraints: undefined },
+      { name: 'confidence', type: 'number', required: false, nullable: false, description: undefined, defaultValue: undefined, children: undefined, constraints: undefined },
+      {
+        name: 'next_action',
+        type: 'object',
+        required: false,
+        nullable: false,
+        description: undefined,
+        defaultValue: undefined,
+        children: [
+          {
+            name: 'label',
+            type: 'string',
+            required: true,
+            nullable: false,
+            description: undefined,
+            defaultValue: undefined,
+            children: undefined,
+            constraints: undefined,
+          },
+        ],
+        constraints: undefined,
+      },
+    ]);
   });
 });

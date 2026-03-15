@@ -13,7 +13,7 @@ export type PaletteTooltipItem = {
   actionVersion?: number;
   groupKey?: string;
   iconToken?: string;
-  tileKind?: 'core-object' | 'transform' | 'app';
+  tileKind?: 'core-object' | 'transform' | 'app' | 'ai';
 };
 
 const PaletteTooltip: React.FC<{

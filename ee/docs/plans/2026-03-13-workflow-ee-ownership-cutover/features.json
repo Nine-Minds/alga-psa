@@ -1,0 +1,206 @@
+[
+  {
+    "id": "F001",
+    "description": "`@alga-psa/workflows` is the canonical module root for workflow-owned code after the cutover.",
+    "implemented": true,
+    "prdRefs": ["Summary", "Goals", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F002",
+    "description": "The EE workflows package exports deep entrypoints for runtime, workers, persistence, bundle, streams, expression-authoring, secrets, services, and types that cover current caller needs.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F003",
+    "description": "The EE workflows package build configuration emits the expanded workflow entrypoints required by server, worker, and package consumers.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations", "Risks"]
+  },
+  {
+    "id": "F004",
+    "description": "TypeScript path aliases in root, server, EE server, and workflow worker configs resolve the EE workflows package as the canonical workflow namespace.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F005",
+    "description": "Workflow runtime bootstrap is owned and invoked through the EE workflows package rather than a shared workflow namespace.",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F006",
+    "description": "Workflow worker entrypoints import runtime and worker helpers exclusively from `@alga-psa/workflows`.",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F007",
+    "description": "EE workflow server actions import workflow runtime, validation, persistence, bundle, and catalog helpers exclusively from `@alga-psa/workflows`.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Behavioral Compatibility Requirements"]
+  },
+  {
+    "id": "F008",
+    "description": "Workflow designer and related EE UI code import workflow client, catalog, expression, and AI helpers exclusively from `@alga-psa/workflows`.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F009",
+    "description": "Workflow persistence models and interfaces are owned by the EE workflows package and remain available to existing workflow callers.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Behavioral Compatibility Requirements"]
+  },
+  {
+    "id": "F010",
+    "description": "Workflow bundle helpers and types are owned by the EE workflows package and remain behaviorally compatible.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Behavioral Compatibility Requirements"]
+  },
+  {
+    "id": "F011",
+    "description": "Workflow workers are owned by the EE workflows package and keep current startup and run-processing behavior.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Behavioral Compatibility Requirements"]
+  },
+  {
+    "id": "F012",
+    "description": "Workflow streams and domain-event builder helpers are owned by the EE workflows package and keep current signatures and payload behavior.",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Requirements > Functional Requirements", "Behavioral Compatibility Requirements"]
+  },
+  {
+    "id": "F013",
+    "description": "Workflow-specific expression-authoring helpers are owned by the EE workflows package and continue to support existing UI/editor consumers.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F014",
+    "description": "Workflow-specific secrets and services are owned by the EE workflows package and remain available to existing runtime and integration callers.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F015",
+    "description": "Workflow client and type surfaces are owned by the EE workflows package and preserve existing consumer contracts.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Behavioral Compatibility Requirements"]
+  },
+  {
+    "id": "F016",
+    "description": "AI schema helpers are owned by the EE workflows package rather than a shared workflow path.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F017",
+    "description": "AI workflow action registration is owned by the EE workflows package rather than a shared workflow path.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F018",
+    "description": "AI-aware action output schema resolution is owned by the EE workflows package rather than a shared workflow path.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F019",
+    "description": "AI-aware workflow publish validation is owned by the EE workflows package rather than a shared workflow path.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F020",
+    "description": "Shared/core workflow code no longer imports EE-only AI services after the cutover.",
+    "implemented": true,
+    "prdRefs": ["Problem", "Goals", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F021",
+    "description": "Server code outside the EE workflows package that invokes workflow-owned runtime or persistence helpers imports them from `@alga-psa/workflows`.",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F022",
+    "description": "Packages outside the workflow module that emit workflow-owned domain events import those helpers from `@alga-psa/workflows/streams/...`.",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Requirements > Functional Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F023",
+    "description": "Package manifests are updated anywhere a direct `@alga-psa/workflows` dependency becomes required by the import move.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F024",
+    "description": "Workflow-related wiring tests and source-string assertions are updated to the EE workflows package import paths.",
+    "implemented": true,
+    "prdRefs": ["Risks", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F025",
+    "description": "No non-doc imports remain from `@shared/workflow*` after the hard cut.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F026",
+    "description": "No non-doc imports remain from `@alga-psa/shared/workflow*` after the hard cut.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F027",
+    "description": "Workflow runtime execution semantics remain unchanged after the ownership move.",
+    "implemented": true,
+    "prdRefs": ["Behavioral Compatibility Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F028",
+    "description": "Workflow worker startup, event ingestion, and run-processing behavior remain unchanged after the ownership move.",
+    "implemented": true,
+    "prdRefs": ["Behavioral Compatibility Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F029",
+    "description": "Workflow bundle import/export behavior remains unchanged after the ownership move.",
+    "implemented": true,
+    "prdRefs": ["Behavioral Compatibility Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F030",
+    "description": "Workflow designer behavior remains unchanged after the ownership move.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Behavioral Compatibility Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F031",
+    "description": "Workflow task inbox and workflow persistence consumers remain behaviorally unchanged after the ownership move.",
+    "implemented": true,
+    "prdRefs": ["Behavioral Compatibility Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F032",
+    "description": "Workflow streams and event publishing behavior remain unchanged after the ownership move.",
+    "implemented": true,
+    "prdRefs": ["Behavioral Compatibility Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F033",
+    "description": "AI workflow step behavior remains unchanged while moving AI ownership fully into the EE workflows package.",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Behavioral Compatibility Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F034",
+    "description": "The codebase no longer places workflow implementation ownership under the global shared namespace after the cutover lands.",
+    "implemented": true,
+    "prdRefs": ["Summary", "Problem", "Acceptance Criteria (Definition of Done)"]
+  }
+]

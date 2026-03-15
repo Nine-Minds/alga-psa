@@ -1,0 +1,170 @@
+[
+  {
+    "id": "F001",
+    "description": "Register a new `transform.compose_text` action in the standard workflow transform catalog.",
+    "implemented": true,
+    "prdRefs": ["Summary", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F002",
+    "description": "Place `transform.compose_text` in the Transform category with action metadata that makes it discoverable as a standard reusable transform rather than an AI-specific feature.",
+    "implemented": true,
+    "prdRefs": ["Problem", "Goals", "Users and Primary Flows"]
+  },
+  {
+    "id": "F003",
+    "description": "Define a persisted compose-text step config that stores multiple outputs in one step.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Data / API / Integrations"]
+  },
+  {
+    "id": "F004",
+    "description": "Represent each composed output with a freeform author label, stable reference-safe key, and Alga-owned template document payload.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Requirements > Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F005",
+    "description": "Generate a unique stable reference-safe key automatically when an output is created from its freeform label.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F006",
+    "description": "Preserve stable reference-safe keys across later label edits unless the author explicitly regenerates them.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F007",
+    "description": "Validate compose-text outputs so labels are non-empty and unique within a step.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F008",
+    "description": "Validate compose-text outputs so stable reference-safe keys are non-empty, unique, and safe for downstream workflow path usage.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Non-functional Requirements"]
+  },
+  {
+    "id": "F009",
+    "description": "Define an Alga-owned template document model for markdown-capable text composition that is independent of BlockNote storage formats.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Requirements > Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F010",
+    "description": "Limit the template document model to markdown-compatible text structures and inline reference nodes rather than arbitrary rich-document concepts.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Non-functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F011",
+    "description": "Support simple workflow references as inline template nodes without permitting arbitrary expressions or nested transform definitions inside the composer.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F012",
+    "description": "Provide a constrained BlockNote-based editor surface for compose-text authoring that hydrates from the template document model and serializes back to it.",
+    "implemented": true,
+    "prdRefs": ["Goals", "UX / UI Notes", "Architecture"]
+  },
+  {
+    "id": "F013",
+    "description": "Add a custom inline reference placeholder node to the constrained editor so references appear as inline chips instead of raw placeholder strings.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Architecture"]
+  },
+  {
+    "id": "F014",
+    "description": "Restrict the compose-text editor to markdown-safe authoring features and remove media, attachments, tables, and other unsupported BlockNote affordances.",
+    "implemented": true,
+    "prdRefs": ["Non-goals", "UX / UI Notes", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F015",
+    "description": "Provide dedicated output-list authoring controls for adding, removing, reordering, and selecting multiple composed outputs within one step.",
+    "implemented": true,
+    "prdRefs": ["Goals", "UX / UI Notes"]
+  },
+  {
+    "id": "F016",
+    "description": "Provide authoring controls for editing freeform output labels and surfacing the generated stable reference-safe keys alongside copyable reference paths.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Data / API / Integrations"]
+  },
+  {
+    "id": "F017",
+    "description": "Let authors insert references into compose-text outputs from the existing workflow source/reference browser instead of typing reference paths manually.",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "UX / UI Notes", "Architecture"]
+  },
+  {
+    "id": "F018",
+    "description": "Surface inline authoring validation for duplicate labels, duplicate stable keys, and invalid or unsupported reference insertions in the compose-text editor.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F019",
+    "description": "Render the Alga-owned template document model to markdown strings at runtime rather than leaking BlockNote JSON or placeholder syntax into workflow execution.",
+    "implemented": true,
+    "prdRefs": ["Summary", "Goals", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F020",
+    "description": "Resolve reference nodes in compose-text outputs against normal workflow runtime context during execution.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Architecture"]
+  },
+  {
+    "id": "F021",
+    "description": "Fail compose-text execution explicitly when any referenced value is missing and include enough context to identify the failing output and reference.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F022",
+    "description": "Return compose-text results as a plain object of markdown strings keyed by stable reference-safe keys.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F023",
+    "description": "Provide a publish-time/runtime output schema strategy for compose-text that accepts markdown-string objects while remaining compatible with action registry validation.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F024",
+    "description": "Extend dynamic action output schema resolution so compose-text exposes configured markdown string fields rather than a generic catch-all object.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Architecture", "Data / API / Integrations"]
+  },
+  {
+    "id": "F025",
+    "description": "Extend workflow data-context building and downstream reference browsing so compose-text outputs appear under `vars.<saveAs>.<stableKey>` with the correct field types.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F026",
+    "description": "Ensure consuming action fields such as AI prompts and email content can use compose-text outputs through ordinary reference mapping without adding field-specific integration logic.",
+    "implemented": true,
+    "prdRefs": ["Problem", "Goals", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F027",
+    "description": "Keep compose-text authoring confined to the dedicated transform action editor rather than embedding the composer directly into consuming field editors in this phase.",
+    "implemented": true,
+    "prdRefs": ["Non-goals", "UX / UI Notes"]
+  },
+  {
+    "id": "F028",
+    "description": "Maintain a clean separation where BlockNote is an authoring-only surface and no BlockNote node shapes or storage concepts leak into persisted workflow step config or runtime outputs.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Requirements > Non-functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  }
+]

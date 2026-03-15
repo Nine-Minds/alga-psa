@@ -5,8 +5,8 @@ import {
   buildActionInputEditorState,
   type WorkflowDesignerActionRegistryItem,
 } from '../actionInputEditorState';
-import type { NodeStep } from '@shared/workflow/runtime/client';
-import type { WorkflowDesignerCatalogAction } from '@shared/workflow/runtime/designer/actionCatalog';
+import type { NodeStep } from '@alga-psa/workflows/runtime/client';
+import type { WorkflowDesignerCatalogAction } from '@alga-psa/workflows/runtime/designer/actionCatalog';
 
 const generateSaveAsName = (actionId: string) => actionId.replace(/\./g, '_');
 
@@ -192,7 +192,7 @@ describe('action input editor state', () => {
     const initialState = buildActionInputEditorState(step, registry);
     expect(initialState.actionInputFields.find((field) => field.name === 'summary')).toMatchObject({
       type: 'string',
-      picker: undefined,
+      editor: undefined,
     });
 
     const nextStep = applyCatalogActionChoiceToStep(step, updateAction, {
@@ -205,16 +205,20 @@ describe('action input editor state', () => {
     const nextState = buildActionInputEditorState(nextStep, registry);
     expect(nextState.actionInputFields.find((field) => field.name === 'ticket_id')).toMatchObject({
       type: 'integer',
-      picker: {
-        kind: 'ticket',
+      editor: {
+        kind: 'picker',
+        inline: { mode: 'picker-summary' },
         dependencies: ['board_id'],
         fixedValueHint: 'search',
         allowsDynamicReference: true,
+        picker: {
+          resource: 'ticket',
+        },
       },
     });
   });
 
-  it('T165: ActionInputField extraction preserves picker annotations from designer JSON schema fields', () => {
+  it('T165/T002/T003: ActionInputField extraction adapts legacy picker annotations into the unified editor model', () => {
     const step: NodeStep = {
       id: 'step-picker',
       type: 'action.call',
@@ -226,11 +230,117 @@ describe('action input editor state', () => {
     };
 
     const state = buildActionInputEditorState(step, registry);
-    expect(state.actionInputFields.find((field) => field.name === 'ticket_id')?.picker).toEqual({
-      kind: 'ticket',
+    expect(state.actionInputFields.find((field) => field.name === 'ticket_id')?.editor).toEqual({
+      kind: 'picker',
+      inline: { mode: 'picker-summary' },
       dependencies: ['board_id'],
       fixedValueHint: 'search',
       allowsDynamicReference: true,
+      picker: {
+        resource: 'ticket',
+      },
+    });
+  });
+
+  it('T001/T003: preserves unified editor metadata from designer JSON schema fields without changing ordinary strings', () => {
+    const registryWithPrompt: WorkflowDesignerActionRegistryItem[] = [
+      {
+        id: 'ai.infer',
+        version: 1,
+        ui: {
+          label: 'Infer Structured Output',
+          description: 'Generate structured workflow data from a prompt.',
+        },
+        inputSchema: {
+          type: 'object',
+          properties: {
+            prompt: {
+              type: 'string',
+              description: 'Prompt text sent to the configured AI provider',
+              'x-workflow-editor': {
+                kind: 'text',
+                inline: { mode: 'textarea' },
+                dialog: { mode: 'large-text' },
+              },
+            },
+            subject: {
+              type: 'string',
+              description: 'Short label used elsewhere',
+            },
+          },
+          required: ['prompt'],
+        },
+        outputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+    ];
+
+    const step: NodeStep = {
+      id: 'step-ai-prompt',
+      type: 'action.call',
+      name: 'AI Prompt',
+      config: {
+        actionId: 'ai.infer',
+        version: 1,
+      },
+    };
+
+    const state = buildActionInputEditorState(step, registryWithPrompt);
+    expect(state.actionInputFields.find((field) => field.name === 'prompt')?.editor).toEqual({
+      kind: 'text',
+      inline: { mode: 'textarea' },
+      dialog: { mode: 'large-text' },
+    });
+    expect(state.actionInputFields.find((field) => field.name === 'subject')?.editor).toBeUndefined();
+  });
+
+  it('ignores unsupported unified dialog metadata from designer JSON schema fields', () => {
+    const registryWithUnsupportedDialog: WorkflowDesignerActionRegistryItem[] = [
+      {
+        id: 'notes.compose',
+        version: 1,
+        ui: {
+          label: 'Compose Notes',
+          description: 'Compose notes.',
+        },
+        inputSchema: {
+          type: 'object',
+          properties: {
+            notes: {
+              type: 'string',
+              description: 'Long-form notes',
+              'x-workflow-editor': {
+                kind: 'text',
+                inline: { mode: 'textarea' },
+                dialog: { mode: 'picker-browser' as never },
+              },
+            },
+          },
+        },
+        outputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+    ];
+
+    const step: NodeStep = {
+      id: 'step-unsupported-dialog',
+      type: 'action.call',
+      name: 'Compose Notes',
+      config: {
+        actionId: 'notes.compose',
+        version: 1,
+      },
+    };
+
+    const state = buildActionInputEditorState(step, registryWithUnsupportedDialog);
+    expect(state.actionInputFields.find((field) => field.name === 'notes')?.editor).toEqual({
+      kind: 'text',
+      inline: { mode: 'textarea' },
+      dialog: undefined,
     });
   });
 
@@ -249,11 +359,15 @@ describe('action input editor state', () => {
     };
 
     const state = buildActionInputEditorState(step, registry);
-    expect(state.actionInputFields.find((field) => field.name === 'ticket_id')?.picker).toEqual({
-      kind: 'ticket',
+    expect(state.actionInputFields.find((field) => field.name === 'ticket_id')?.editor).toEqual({
+      kind: 'picker',
+      inline: { mode: 'picker-summary' },
       dependencies: ['board_id'],
       fixedValueHint: 'search',
       allowsDynamicReference: true,
+      picker: {
+        resource: 'ticket',
+      },
     });
     expect(state.inputMapping).toEqual({
       ticket_id: 'ticket-123',
@@ -280,10 +394,14 @@ describe('action input editor state', () => {
     const state = buildActionInputEditorState(step, registry);
     expect(state.actionInputFields.find((field) => field.name === 'channel_id')).toMatchObject({
       type: 'string',
-      picker: {
-        kind: 'client',
+      editor: {
+        kind: 'picker',
+        inline: { mode: 'picker-summary' },
         fixedValueHint: 'select',
         allowsDynamicReference: true,
+        picker: {
+          resource: 'client',
+        },
       },
     });
     expect(state.inputMapping).toEqual({

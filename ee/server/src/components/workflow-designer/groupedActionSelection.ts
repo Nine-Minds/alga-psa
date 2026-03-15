@@ -1,5 +1,8 @@
-import type { InputMapping, NodeStep } from '@shared/workflow/runtime/client';
-import type { WorkflowDesignerCatalogAction } from '@shared/workflow/runtime/designer/actionCatalog';
+import type { InputMapping, NodeStep, WorkflowDesignerCatalogAction } from '@alga-psa/workflows/runtime';
+import {
+  isWorkflowAiInferAction,
+  isWorkflowComposeTextAction,
+} from '@alga-psa/workflows/authoring';
 
 type GroupedActionStepConfig = {
   actionId?: string;
@@ -86,6 +89,16 @@ export const applyCatalogActionChoiceToStep = (
     if (shouldRefreshSaveAs) {
       delete nextConfig.saveAs;
     }
+  }
+
+  const nextActionId = nextAction?.id;
+  if (!isWorkflowAiInferAction(nextActionId)) {
+    delete nextConfig.aiOutputSchemaMode;
+    delete nextConfig.aiOutputSchema;
+    delete nextConfig.aiOutputSchemaText;
+  }
+  if (!isWorkflowComposeTextAction(nextActionId)) {
+    delete nextConfig.outputs;
   }
 
   const currentName = step.name?.trim() ?? '';

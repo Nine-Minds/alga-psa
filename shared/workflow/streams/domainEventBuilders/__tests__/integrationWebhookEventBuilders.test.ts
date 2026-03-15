@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { integrationWebhookReceivedEventPayloadSchema } from '@shared/workflow/runtime/schemas/integrationEventSchemas';
-import { buildWorkflowPayload } from '@shared/workflow/streams/workflowEventPublishHelpers';
+import { integrationWebhookReceivedEventPayloadSchema } from '@alga-psa/workflows/runtime/schemas/integrationEventSchemas';
+import { buildWorkflowPayload } from '@alga-psa/workflows/streams/workflowEventPublishHelpers';
 import {
   buildIntegrationWebhookReceivedPayload,
   sanitizeIntegrationWebhookRawPayload,

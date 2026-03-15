@@ -14,7 +14,7 @@ import {
   UpdateTenantSecretInput,
   createTenantSecretProvider,
   SECRET_PERMISSIONS
-} from '@alga-psa/shared/workflow/secrets';
+} from '@alga-psa/workflows/secrets';
 
 /**
  * List all secrets for the current tenant.

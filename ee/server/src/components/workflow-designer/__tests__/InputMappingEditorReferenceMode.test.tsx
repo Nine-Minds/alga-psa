@@ -65,7 +65,7 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 import { InputMappingEditor } from '../mapping/InputMappingEditor';
 import type { MappingPositionsHandlers } from '../mapping/useMappingPositions';
 import type { DataTreeContext } from '../mapping/SourceDataTree';
-import type { InputMapping } from '@shared/workflow/runtime/client';
+import type { InputMapping } from '@alga-psa/workflows/runtime/client';
 
 const positionsHandlers: MappingPositionsHandlers = {
   registerSourceRef: vi.fn(),

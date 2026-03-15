@@ -4,59 +4,36 @@ const {
   startRunMock,
   executeRunMock,
   getByTriggerFireKeyMock,
-  createRunMock
+  createRunMock,
+  getWorkflowByIdMock,
+  listWorkflowVersionsMock,
+  getWorkflowVersionMock
 } = vi.hoisted(() => ({
   startRunMock: vi.fn(),
   executeRunMock: vi.fn(),
   getByTriggerFireKeyMock: vi.fn(),
-  createRunMock: vi.fn()
+  createRunMock: vi.fn(),
+  getWorkflowByIdMock: vi.fn(),
+  listWorkflowVersionsMock: vi.fn(),
+  getWorkflowVersionMock: vi.fn()
 }));
 
-vi.mock('@shared/workflow/persistence/workflowDefinitionModelV2', () => ({
-  default: {
-    getById: vi.fn(async () => ({
-      workflow_id: 'workflow-1',
-      is_paused: false,
-      concurrency_limit: null,
-      payload_schema_ref: null
-    }))
-  }
-}));
-
-vi.mock('@shared/workflow/persistence/workflowDefinitionVersionModelV2', () => ({
-  default: {
-    listByWorkflow: vi.fn(async () => ([{
-      workflow_id: 'workflow-1',
-      version: 5,
-      definition_json: {
-        id: 'workflow-1',
-        version: 5,
-        name: 'Workflow',
-        steps: []
-      }
-    }])),
-    getByWorkflowAndVersion: vi.fn(async () => ({
-      workflow_id: 'workflow-1',
-      version: 5,
-      definition_json: {
-        id: 'workflow-1',
-        version: 5,
-        name: 'Workflow',
-        steps: []
-      }
-    }))
-  }
-}));
-
-vi.mock('@shared/workflow/persistence/workflowRunModelV2', () => ({
-  default: {
+vi.mock('@alga-psa/workflows/persistence', () => ({
+  WorkflowDefinitionModelV2: {
+    getById: (...args: unknown[]) => getWorkflowByIdMock(...args)
+  },
+  WorkflowDefinitionVersionModelV2: {
+    listByWorkflow: (...args: unknown[]) => listWorkflowVersionsMock(...args),
+    getByWorkflowAndVersion: (...args: unknown[]) => getWorkflowVersionMock(...args)
+  },
+  WorkflowRunModelV2: {
     create: (...args: unknown[]) => createRunMock(...args),
     getByTriggerFireKey: (...args: unknown[]) => getByTriggerFireKeyMock(...args)
   }
 }));
 
-vi.mock('@shared/workflow/runtime', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@shared/workflow/runtime')>();
+vi.mock('@alga-psa/workflows/runtime', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/workflows/runtime')>();
   class WorkflowRuntimeV2Mock {
     async startRun(...args: unknown[]) {
       return startRunMock(...args);
@@ -69,7 +46,13 @@ vi.mock('@shared/workflow/runtime', async (importOriginal) => {
 
   return {
     ...actual,
-    WorkflowRuntimeV2: WorkflowRuntimeV2Mock
+    WorkflowRuntimeV2: WorkflowRuntimeV2Mock,
+    getSchemaRegistry: () => ({
+      has: () => false,
+      get: () => ({
+        safeParse: () => ({ success: true })
+      })
+    })
   };
 });
 
@@ -96,6 +79,36 @@ describe('Workflow run launcher', () => {
     executeRunMock.mockReset();
     getByTriggerFireKeyMock.mockReset();
     createRunMock.mockReset();
+    getWorkflowByIdMock.mockReset();
+    listWorkflowVersionsMock.mockReset();
+    getWorkflowVersionMock.mockReset();
+
+    getWorkflowByIdMock.mockResolvedValue({
+      workflow_id: 'workflow-1',
+      is_paused: false,
+      concurrency_limit: null,
+      payload_schema_ref: null
+    });
+    listWorkflowVersionsMock.mockResolvedValue([{
+      workflow_id: 'workflow-1',
+      version: 5,
+      definition_json: {
+        id: 'workflow-1',
+        version: 5,
+        name: 'Workflow',
+        steps: []
+      }
+    }]);
+    getWorkflowVersionMock.mockResolvedValue({
+      workflow_id: 'workflow-1',
+      version: 5,
+      definition_json: {
+        id: 'workflow-1',
+        version: 5,
+        name: 'Workflow',
+        steps: []
+      }
+    });
     createRunMock.mockImplementation(async (_knex: unknown, data: Record<string, unknown>) => ({
       run_id: 'run-created',
       workflow_version: data.workflow_version,

@@ -13,8 +13,6 @@
       "@shared/*": ["shared/*"],
       "@alga-psa/shared": ["shared"],
       "@alga-psa/shared/*": ["shared/*"],
-      "@shared/workflow": ["shared/workflow"],
-      "@shared/workflow/*": ["shared/workflow/*"],
       "@shared/extension-utils": ["shared/extension-utils"],
       "@shared/extension-utils/*": ["shared/extension-utils/*"],
       "@shared/lib": ["shared/lib"],

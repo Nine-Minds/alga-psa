@@ -13,7 +13,7 @@ import {
   Zap, Database, Link, Workflow, Mail, Send, Inbox, MailOpen,
   FileText, Layers, Box, Cog, Terminal, Globe, Search, GripVertical,
   // Business operations icons
-  MessageSquare, Edit, UserPlus, CheckCircle, Paperclip, Building, Users,
+  MessageSquare, Edit, UserPlus, CheckCircle, Paperclip, Building, Users, Bot,
   Bell, Calendar, SquareCheck, StickyNote, ClipboardList
 } from 'lucide-react';
 import {
@@ -71,13 +71,15 @@ import {
 import {
   buildWorkflowDesignerActionCatalog,
   type WorkflowDesignerCatalogRecord
-} from '@shared/workflow/runtime/designer/actionCatalog';
+} from '@alga-psa/workflows/authoring';
 import {
   buildPaletteSearchIndex,
   groupPaletteItemsByCategory,
   matchesPaletteSearchQuery,
 } from './paletteSearch';
 import { ActionSchemaReference } from './ActionSchemaReference';
+import { WorkflowAiSchemaSection } from './WorkflowAiSchemaSection';
+import { WorkflowComposeTextSection } from './WorkflowComposeTextSection';
 import { buildDataContext } from './workflowDataContext';
 import {
   applyGroupedActionSelectionToStep,
@@ -93,6 +95,8 @@ import { WorkflowStepNameField } from './WorkflowStepNameField';
 import { WorkflowStepSaveOutputSection } from './WorkflowStepSaveOutputSection';
 import { WorkflowActionInputSection } from './WorkflowActionInputSection';
 import { buildWorkflowReferenceFieldOptions } from './workflowReferenceOptions';
+import { shouldRenderWorkflowAiSchemaSection } from './workflowAiStepUtils';
+import { applyWorkflowActionPresentationHintsToList } from './workflowActionPresentation';
 import {
   DEFAULT_WORKFLOW_DESIGNER_SIDEBAR_WIDTH,
   getWorkflowDesignerSidebarWidthFromDrag,
@@ -111,9 +115,15 @@ import type {
   Expr,
   PublishError,
   InputMapping
-} from '@shared/workflow/runtime/client';
-import { WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF } from '@shared/workflow/runtime/client';
-import { validateExpressionSource } from '@shared/workflow/runtime/expressionEngine';
+} from '@alga-psa/workflows/runtime/client';
+import { WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF } from '@alga-psa/workflows/authoring';
+import {
+  isWorkflowAiInferAction,
+  isWorkflowComposeTextAction,
+  resolveComposeTextOutputSchemaFromConfig,
+  resolveWorkflowAiSchemaFromConfig,
+} from '@alga-psa/workflows/authoring';
+import { validateExpressionSource } from '@alga-psa/workflows/authoring';
 import { partitionStepExpressionValidations, validateStepExpressions } from './expressionValidation';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -1913,7 +1923,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         throw new Error('Failed to load workflow registries');
       }
       if (overrides?.registryNodes || overrides?.registryActions) {
-        const overrideActions = (overrides.registryActions ?? []) as ActionRegistryItem[];
+        const overrideActions = applyWorkflowActionPresentationHintsToList(
+          (overrides.registryActions ?? []) as ActionRegistryItem[]
+        );
         setNodeRegistry((overrides.registryNodes ?? []) as NodeRegistryItem[]);
         setActionRegistry(overrideActions);
         setDesignerActionCatalog(buildWorkflowDesignerActionCatalog(overrideActions));
@@ -1940,8 +1952,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         listWorkflowRegistryActionsAction(),
         listWorkflowDesignerActionCatalogAction()
       ]);
+      const normalizedActions = applyWorkflowActionPresentationHintsToList(
+        (actions ?? []) as unknown as ActionRegistryItem[]
+      );
       setNodeRegistry((nodes ?? []) as unknown as NodeRegistryItem[]);
-      setActionRegistry((actions ?? []) as unknown as ActionRegistryItem[]);
+      setActionRegistry(normalizedActions);
       setDesignerActionCatalog((catalog ?? []) as WorkflowDesignerCatalogRecord[]);
       try {
         const schemaList = await listWorkflowSchemaRefsAction();
@@ -2545,7 +2560,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     actionVersion?: number;
     groupKey?: string;
     groupLabel?: string;
-    tileKind?: 'core-object' | 'transform' | 'app';
+    tileKind?: 'core-object' | 'transform' | 'app' | 'ai';
   } | null>(null);
 
   const handleDragStart = (start: { draggableId: string; source: { droppableId: string } }) => {
@@ -2772,6 +2787,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             ? 'Core'
             : record.tileKind === 'transform'
               ? 'Transform'
+              : record.tileKind === 'ai'
+                ? 'AI'
               : 'Apps',
           type: 'action.call' as Step['type'],
           groupKey: record.groupKey,
@@ -2878,6 +2895,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         case 'time': return <Clock className={iconClass} />;
         case 'crm': return <StickyNote className={iconClass} />;
         case 'transform': return <Settings className={iconClass} />;
+        case 'ai': return <Bot className={iconClass} />;
         case 'app': return <Box className={iconClass} />;
         default: return <Box className={iconClass} />;
       }
@@ -2988,7 +3006,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                         actionVersion?: number;
                         groupKey?: string;
                         groupLabel?: string;
-                        tileKind?: 'core-object' | 'transform' | 'app';
+                        tileKind?: 'core-object' | 'transform' | 'app' | 'ai';
                       };
                       return (
                         <PaletteItemWithTooltip
@@ -5011,10 +5029,30 @@ const StepConfigPanel: React.FC<{
     [step, actionRegistry]
   );
   const selectedAction = actionInputEditorState.selectedAction;
+  const actionCallConfig = step.type === 'action.call'
+    ? ((step as NodeStep).config as Record<string, unknown> | undefined)
+    : undefined;
   const groupedActionRecord = useMemo(
     () => getGroupedActionCatalogRecordForStep(step, designerActionCatalog),
     [step, designerActionCatalog]
   );
+  const isAiInferStep = shouldRenderWorkflowAiSchemaSection(step.type, selectedAction?.id);
+  const isComposeTextStep = step.type === 'action.call' && isWorkflowComposeTextAction(selectedAction?.id);
+  const resolvedActionOutputSchema = useMemo(() => {
+    if (!actionCallConfig) {
+      return null;
+    }
+
+    if (isAiInferStep) {
+      return resolveWorkflowAiSchemaFromConfig(actionCallConfig).schema as JsonSchema | null;
+    }
+
+    if (isComposeTextStep) {
+      return resolveComposeTextOutputSchemaFromConfig(actionCallConfig) as JsonSchema | null;
+    }
+
+    return null;
+  }, [actionCallConfig, isAiInferStep, isComposeTextStep]);
 
   const saveAs = step.type === 'action.call'
     ? ((step as NodeStep).config as { saveAs?: string } | undefined)?.saveAs
@@ -5036,6 +5074,35 @@ const StepConfigPanel: React.FC<{
       config: {
         ...existingConfig,
         inputMapping: Object.keys(mapping).length > 0 ? mapping : undefined
+      }
+    });
+  }, [step, onChange]);
+  const handleAiSchemaChange = useCallback((patch: {
+    aiOutputSchemaMode: 'simple' | 'advanced';
+    aiOutputSchema?: Record<string, unknown>;
+    aiOutputSchemaText?: string;
+  }) => {
+    const nodeStep = step as NodeStep;
+    const existingConfig = nodeStep.config as Record<string, unknown> | undefined;
+    onChange({
+      ...nodeStep,
+      config: {
+        ...existingConfig,
+        ...patch,
+      }
+    });
+  }, [step, onChange]);
+  const handleComposeTextChange = useCallback((patch: {
+    version: number;
+    outputs: unknown[];
+  }) => {
+    const nodeStep = step as NodeStep;
+    const existingConfig = nodeStep.config as Record<string, unknown> | undefined;
+    onChange({
+      ...nodeStep,
+      config: {
+        ...existingConfig,
+        ...patch,
       }
     });
   }, [step, onChange]);
@@ -5365,6 +5432,10 @@ const StepConfigPanel: React.FC<{
                 'designerGroupKey',
                 'designerTileKind',
                 'designerAppKey',
+                'outputs',
+                'aiOutputSchemaMode',
+                'aiOutputSchema',
+                'aiOutputSchemaText',
               ]
             : []}
           sectionTitle={step.type === 'action.call' ? 'Step settings' : undefined}
@@ -5388,12 +5459,33 @@ const StepConfigPanel: React.FC<{
         />
       )}
 
+      {step.type === 'action.call' && isAiInferStep && (
+        <WorkflowAiSchemaSection
+          stepId={step.id}
+          config={actionCallConfig}
+          disabled={!editable}
+          onChange={handleAiSchemaChange}
+        />
+      )}
+
+      {step.type === 'action.call' && isComposeTextStep && (
+        <WorkflowComposeTextSection
+          stepId={step.id}
+          saveAs={saveAs}
+          config={actionCallConfig}
+          dataContext={dataContext}
+          disabled={!editable}
+          onChange={handleComposeTextChange}
+        />
+      )}
+
       {/* §16.1 - Action Schema Reference for action.call steps */}
       {step.type === 'action.call' && (
         <div className="mt-4 pt-4 border-t border-gray-200">
           <ActionSchemaReference
             action={selectedAction}
             saveAs={saveAs}
+            outputSchemaOverride={resolvedActionOutputSchema}
             onCopyPath={handleCopyPath}
           />
         </div>

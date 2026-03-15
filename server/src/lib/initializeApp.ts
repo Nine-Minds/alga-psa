@@ -25,7 +25,7 @@ import { JobStatus } from 'server/src/types/job';
 import { initializeNotificationAccumulator, shutdownNotificationAccumulator } from './eventBus/subscribers/ticketEmailSubscriber';
 import { DelayedEmailQueue, TenantEmailService, StaticTemplateProcessor, EmailProviderManager, TokenBucketRateLimiter, BucketConfig, sendPasswordResetEmail, getSystemEmailService } from '@alga-psa/email';
 import { registerAuthEmailProvider } from '@alga-psa/auth';
-import { registerWorkflowEmailProvider } from '@alga-psa/shared/workflow/runtime';
+import { registerWorkflowEmailProvider } from '@alga-psa/workflows/runtime';
 import { registerWorkflowScheduleJobRunner } from '@alga-psa/workflows/lib/jobRunnerProvider';
 import { getRedisClient } from '../config/redisConfig';
 import { registerEnterpriseStorageProviders } from './storage/registerEnterpriseStorageProviders';

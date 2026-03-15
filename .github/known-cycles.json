@@ -1,6 +1,17 @@
 {
   "cycles": [
+    "@alga-psa/auth -> @alga-psa/ee-stubs -> @alga-psa/shared -> @alga-psa/storage",
+    "@alga-psa/auth -> @alga-psa/ee-stubs -> @alga-psa/shared -> @alga-psa/storage -> @alga-psa/workflows -> @alga-psa/user-composition",
+    "@alga-psa/auth -> @alga-psa/ee-stubs -> @alga-psa/shared -> @alga-psa/workflows -> @alga-psa/user-composition",
+    "@alga-psa/clients -> @alga-psa/portal-shared -> @alga-psa/tenancy -> @alga-psa/workflows -> @alga-psa/scheduling",
+    "@alga-psa/clients -> @alga-psa/sla -> @alga-psa/notifications -> @alga-psa/workflows -> @alga-psa/scheduling",
+    "@alga-psa/clients -> @alga-psa/workflows -> @alga-psa/scheduling",
     "@alga-psa/documents -> @alga-psa/tags",
+    "@alga-psa/documents -> @alga-psa/tags -> @alga-psa/workflows -> @alga-psa/scheduling -> @alga-psa/teams",
+    "@alga-psa/documents -> @alga-psa/workflows -> @alga-psa/scheduling -> @alga-psa/teams",
+    "@alga-psa/projects -> @alga-psa/workflows -> @alga-psa/scheduling",
+    "@alga-psa/scheduling -> @alga-psa/tickets -> @alga-psa/workflows",
+    "@alga-psa/scheduling -> @alga-psa/workflows",
     "@alga-psa/shared -> @alga-psa/storage",
     "@product/settings-extensions -> sebastian-ee -> server",
     "sebastian-ee -> server"

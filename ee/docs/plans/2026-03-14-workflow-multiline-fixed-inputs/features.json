@@ -1,0 +1,38 @@
+[
+  {
+    "id": "F001",
+    "description": "Define a presentation-only workflow input schema hint for multiline fixed-value editing.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F002",
+    "description": "Preserve the multiline hint when workflow action input schemas are converted into designer action input field metadata.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F003",
+    "description": "Render a TextArea instead of a single-line Input for fixed string values when the multiline hint is present.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "UX / UI Notes"]
+  },
+  {
+    "id": "F004",
+    "description": "Keep all non-hinted string fields on the existing single-line fixed-value input path.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Non-goals"]
+  },
+  {
+    "id": "F005",
+    "description": "Apply the multiline hint to the ai.infer prompt input schema only in this first pass.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Functional Requirements"]
+  },
+  {
+    "id": "F006",
+    "description": "Keep the change EE-only and avoid any runtime execution or persistence behavior changes.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Non-functional Requirements"]
+  }
+]
