@@ -28,7 +28,7 @@ vi.mock('@blocknote/react', async () => {
       insertInlineContent: insertInlineContentMock,
       onChange: () => () => undefined,
     })),
-    FormattingToolbarController: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+    BlockNoteViewEditor: () => <div data-testid="blocknote-view-editor" />,
     FormattingToolbar: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
     BlockTypeSelect: () => <button type="button">Block type</button>,
     BasicTextStyleButton: ({ basicTextStyle }: { basicTextStyle: string }) => <button type="button">{basicTextStyle}</button>,
@@ -66,7 +66,15 @@ describe('WorkflowComposeTextDocumentEditor', () => {
       filePanel: false,
       tableHandles: false,
       formattingToolbar: false,
+      renderEditor: false,
     }));
+
+    expect(screen.getByRole('button', { name: 'Block type' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'bold' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'italic' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'code' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'link' })).toBeInTheDocument();
+    expect(screen.getByTestId('blocknote-view-editor')).toBeInTheDocument();
 
     expect(ref.current?.insertReference({
       path: 'payload.ticket.id',
@@ -87,4 +95,3 @@ describe('WorkflowComposeTextDocumentEditor', () => {
     expect(screen.getByTestId('blocknote-view-props')).toBeInTheDocument();
   });
 });
-

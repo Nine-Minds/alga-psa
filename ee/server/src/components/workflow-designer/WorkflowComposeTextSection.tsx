@@ -210,7 +210,7 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
       id={`workflow-step-compose-text-${stepId}`}
       className="mt-4 space-y-4 rounded-md border border-gray-200 bg-gray-50/60 p-4"
     >
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col items-start gap-3">
         <div>
           <div className="text-sm font-semibold text-gray-800">Compose text outputs</div>
           <p className="text-xs text-gray-500">
@@ -229,7 +229,7 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
         </Button>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
+      <div className="space-y-4">
         <Card className="space-y-2 border border-gray-200 bg-white p-3">
           {outputs.map((output, index) => {
             const outputErrors = findOutputErrors(output.id, validationErrors);
@@ -314,7 +314,7 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
 
         {selectedOutput && (
           <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+            <div className="space-y-4">
               <Input
                 id={`${stepId}-compose-text-label`}
                 label="Output label"
@@ -343,7 +343,7 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
                     }));
                   }}
                 />
-                <div className="flex items-center justify-between gap-3 text-xs text-gray-500">
+                <div className="flex flex-col items-start gap-2 text-xs text-gray-500">
                   <span>
                     {isValidComposeTextStableKey(selectedOutput.stableKey)
                       ? 'Downstream-safe key'
@@ -385,7 +385,7 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
             )}
 
             <Card className="border border-gray-200 bg-white p-3">
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col items-start gap-3">
                 <div>
                   <div className="text-xs font-semibold text-gray-700">Downstream reference path</div>
                   <div className="font-mono text-xs text-gray-600">
@@ -406,7 +406,7 @@ export const WorkflowComposeTextSection: React.FC<WorkflowComposeTextSectionProp
             </Card>
 
             <Card className="space-y-3 border border-gray-200 bg-white p-3">
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col items-start gap-3">
                 <div>
                   <div className="text-xs font-semibold text-gray-700">Compose content</div>
                   <p className="text-xs text-gray-500">

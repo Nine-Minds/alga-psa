@@ -8,10 +8,10 @@ import React, {
 } from 'react';
 import {
   BasicTextStyleButton,
+  BlockNoteViewEditor,
   BlockTypeSelect,
   CreateLinkButton,
   FormattingToolbar,
-  FormattingToolbarController,
   createReactInlineContentSpec,
   useCreateBlockNote,
 } from '@blocknote/react';
@@ -161,10 +161,14 @@ export const WorkflowComposeTextDocumentEditor = forwardRef<
           filePanel={false}
           emojiPicker={false}
           formattingToolbar={false}
-          className="min-h-[240px]"
           theme="light"
+          renderEditor={false}
+          className="overflow-hidden [&_.bn-editor]:min-h-[240px]"
         >
-          <FormattingToolbarController formattingToolbar={ComposeTextFormattingToolbar} />
+          <div className="border-b border-gray-200 bg-gray-50 px-3 py-2">
+            <ComposeTextFormattingToolbar />
+          </div>
+          <BlockNoteViewEditor />
         </BlockNoteView>
       </div>
       <p className="text-xs text-gray-500">
