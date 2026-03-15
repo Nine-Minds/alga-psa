@@ -244,7 +244,7 @@
   {
     "id": "F028",
     "description": "Update integration and client-lookup helpers that resolve contacts by email so they search both the primary email column and additional-email rows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-12",
       "FR-15",

@@ -41,6 +41,23 @@ function buildDefaultPhoneNumbers(phone?: string) {
   }];
 }
 
+async function getClientNameById(
+  trx: Knex.Transaction,
+  tenant: string,
+  clientId: string | null | undefined
+): Promise<string> {
+  if (!clientId) {
+    return '';
+  }
+
+  const client = await trx('clients')
+    .select('client_name')
+    .where({ client_id: clientId, tenant })
+    .first<{ client_name?: string | null }>();
+
+  return client?.client_name ?? '';
+}
+
 export const getIntegrationClients = withAuth(async (
   _user,
   { tenant },
@@ -70,26 +87,15 @@ export const findIntegrationContactByEmailAddress = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const baseContact = await trx('contacts')
-      .select('contacts.*', 'clients.client_name')
-      .leftJoin('clients', function joinClients() {
-        this.on('contacts.client_id', '=', 'clients.client_id')
-          .andOn('clients.tenant', '=', 'contacts.tenant');
-      })
-      .where({
-        'contacts.email': email.toLowerCase(),
-        'contacts.tenant': tenant,
-      })
-      .first();
+    const baseContact = await ContactModel.getContactByEmail(email, tenant, trx);
 
     if (!baseContact) {
       return null;
     }
 
-    const [hydratedContact] = await ContactModel.hydrateContactsWithPhoneNumbers([baseContact as any], tenant, trx);
     return {
-      ...hydratedContact,
-      client_name: (baseContact as { client_name?: string | null }).client_name ?? null,
+      ...baseContact,
+      client_name: await getClientNameById(trx, tenant, baseContact.client_id),
     };
   });
 
@@ -110,32 +116,22 @@ export const createOrFindIntegrationContactByEmail = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const existingBaseContact = await trx('contacts')
-      .select('contacts.*', 'clients.client_name')
-      .leftJoin('clients', function joinClients() {
-        this.on('contacts.client_id', '=', 'clients.client_id')
-          .andOn('clients.tenant', '=', 'contacts.tenant');
-      })
-      .where({
-        'contacts.email': input.email.toLowerCase(),
-        'contacts.tenant': tenant,
-      })
-      .first();
+    const existingBaseContact = await ContactModel.getContactByEmail(input.email, tenant, trx);
 
     if (existingBaseContact) {
+      const existingClientName = await getClientNameById(trx, tenant, existingBaseContact.client_id);
+
       if (existingBaseContact.client_id !== input.clientId) {
         if (!existingBaseContact.client_id) {
           throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system without a client assignment');
         }
-        throw new Error(`EMAIL_EXISTS: This email is already associated with ${existingBaseContact.client_name || 'another client'}`);
+        throw new Error(`EMAIL_EXISTS: This email is already associated with ${existingClientName || 'another client'}`);
       }
-
-      const [existingContact] = await ContactModel.hydrateContactsWithPhoneNumbers([existingBaseContact as any], tenant, trx);
 
       return {
         contact: {
-          ...(existingContact as IContact),
-          client_name: existingBaseContact.client_name || '',
+          ...(existingBaseContact as IContact),
+          client_name: existingClientName,
         },
         isNew: false,
       };

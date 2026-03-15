@@ -351,3 +351,18 @@ Working memory for adding multiple email addresses to contacts using a compatibi
   - `packages/n8n-nodes-alga-psa/__tests__/docs.test.ts`
 - Verification runbook used:
   - `cd packages/n8n-nodes-alga-psa && ../../node_modules/.bin/vitest run --config vitest.config.ts __tests__/helpers.test.ts __tests__/node-description-loadoptions.test.ts __tests__/node-execute.test.ts __tests__/docs.test.ts`
+
+## Update (2026-03-15, integration contact email lookup)
+- Completed `F028` and flipped `T043` to implemented.
+- Updated `packages/integrations/src/actions/clientLookupActions.ts` so integration contact lookup now routes through `ContactModel.getContactByEmail` instead of querying only `contacts.email`.
+- This broadens both:
+  - `findIntegrationContactByEmailAddress`
+  - `createOrFindIntegrationContactByEmail`
+  to resolve contacts when the requested email matches an additional-email row while still returning the primary/default `contacts.email` on the hydrated contact object.
+- Confirmed the higher-level integration email helper inherits the same behavior because `packages/integrations/src/actions/email-actions/emailActions.ts#findContactByEmail` still delegates into the client lookup helper.
+- Added focused coverage:
+  - `packages/integrations/src/actions/clientLookupActions.emailLookup.test.ts`
+- Verification runbooks used:
+  - `cd packages/integrations && ../../node_modules/.bin/vitest run src/actions/clientLookupActions.emailLookup.test.ts`
+- Constraint observed:
+  - `node_modules/.bin/tsc -p packages/integrations/tsconfig.json --noEmit` currently fails in pre-existing shared-model code under `shared/models/contactModel.ts` because `ContactEmailAddressInput` typing there does not include `normalized_email_address` / `normalized_custom_type`. This check is not blocked by the `F028` package changes themselves.

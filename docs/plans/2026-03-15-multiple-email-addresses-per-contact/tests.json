@@ -349,7 +349,7 @@
   {
     "id": "T043",
     "description": "Integration and client-lookup helpers resolve contacts when only an additional email matches.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
