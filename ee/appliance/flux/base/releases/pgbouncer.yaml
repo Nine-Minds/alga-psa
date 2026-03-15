@@ -5,6 +5,7 @@ metadata:
   namespace: alga-system
 spec:
   interval: 10m
+  timeout: 30m
   dependsOn:
     - name: alga-core
   releaseName: pgbouncer
