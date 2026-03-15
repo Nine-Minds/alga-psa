@@ -180,15 +180,12 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
 
     const isAdHoc = workItem.type === 'ad_hoc';
 
-    // Skip service validation for ad_hoc items
-    const isBillable = entry.billable_duration > 0;
-    if (!isAdHoc && isBillable) {
-      // Validate required fields for billable entries
-      if (!entry.service_id) {
-        toast.error('Please select a service for billable entries');
-        return;
-      }
+    if (!entry.service_id?.trim()) {
+      toast.error('Please select a service before saving time entries');
+      return;
+    }
 
+    if (!isAdHoc) {
       const selectedService = services.find(s => s.id === entry.service_id);
       if (!selectedService) {
         toast.error('Invalid service selected');

@@ -1,0 +1,122 @@
+[
+  {
+    "id": "F001",
+    "description": "Approval entry detail panels include a dedicated per-entry change suggestion input separate from timesheet-level comments.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F002",
+    "description": "Approvers can request changes on a specific time entry while saving an entry-specific change suggestion in the same action.",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F003",
+    "description": "Entry-specific change suggestions are stored separately from general timesheet comments.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F004",
+    "description": "Each entry feedback record stores authorship, timestamps, and handled metadata needed to determine unresolved versus handled state.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F005",
+    "description": "The system preserves multiple entry feedback records across repeated review cycles instead of overwriting prior feedback.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F006",
+    "description": "The employee-facing time entry editor shows the latest relevant approver feedback prominently when an entry has change feedback.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F007",
+    "description": "The employee-facing time entry editor provides an expandable history of entry-level approver feedback.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F008",
+    "description": "Timesheet employee views load enough per-entry feedback data to power the editor, list view, and grid view indicators.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Requirements > Non-functional Requirements"]
+  },
+  {
+    "id": "F009",
+    "description": "The timesheet list view shows a passive unresolved-feedback marker for entries with outstanding change suggestions.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F010",
+    "description": "The timesheet list view shows a passive handled-feedback marker for entries whose latest requested change has been addressed.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F011",
+    "description": "The timesheet grid view shows an X marker on entry blocks with unresolved change suggestions.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F012",
+    "description": "The timesheet grid view shows a check marker on entry blocks whose latest requested change has been handled and awaits re-review.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F013",
+    "description": "List and grid feedback markers are passive only and do not replace existing row or cell editing interactions.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Users and Primary Flows"]
+  },
+  {
+    "id": "F014",
+    "description": "Saving an edited entry during the CHANGES_REQUESTED flow automatically marks the latest unresolved feedback for that entry as handled.",
+    "implemented": true,
+    "prdRefs": ["Users and Primary Flows", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F015",
+    "description": "Editing one entry only marks feedback handled for that same entry and leaves feedback for other entries unchanged.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F016",
+    "description": "A later approver change request on an already handled entry creates a new unresolved feedback record while preserving history.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F017",
+    "description": "Existing timesheet-level comments remain visible and separate from entry-level feedback throughout the approval flow.",
+    "implemented": true,
+    "prdRefs": ["Non-goals", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F018",
+    "description": "Only approval-authorized users can create per-entry feedback records through the approval workflow.",
+    "implemented": true,
+    "prdRefs": ["Security / Permissions", "Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F019",
+    "description": "Employees and delegated editors can see per-entry feedback only through the same authorized timesheet access paths as the associated entries.",
+    "implemented": true,
+    "prdRefs": ["Security / Permissions", "Users and Primary Flows"]
+  },
+  {
+    "id": "F020",
+    "description": "Entries with no per-entry feedback render unchanged in the approval drawer, editor, list view, and grid view.",
+    "implemented": true,
+    "prdRefs": ["Requirements > Non-functional Requirements", "Rollout / Migration"]
+  }
+]
