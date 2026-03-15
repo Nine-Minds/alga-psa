@@ -69,7 +69,9 @@ exports.up = async function(knex) {
   `);
 
   if (citusFn.rows?.[0]?.exists) {
-    for (const table of ['comment_reactions', 'project_task_comment_reactions']) {
+    // project_task_comments must be distributed before we can distribute
+    // project_task_comment_reactions (Citus requires referenced tables to be distributed)
+    for (const table of ['project_task_comments', 'comment_reactions', 'project_task_comment_reactions']) {
       const alreadyDistributed = await knex.raw(`
         SELECT EXISTS (
           SELECT 1 FROM pg_dist_partition
