@@ -123,4 +123,29 @@ describe('RightSidebarContent history toggle', () => {
     expect(screen.getByRole('button', { name: 'Show chat history' })).toBeInTheDocument();
     expect(listCurrentUserChatsAction).toHaveBeenCalledTimes(1);
   });
+
+  it('exposes a visible hide button that closes the sidebar', () => {
+    const setIsOpen = vi.fn();
+
+    render(
+      <RightSidebarContent
+        isOpen
+        setIsOpen={setIsOpen}
+        clientUrl="https://example.invalid"
+        accountId="account-1"
+        messages={[]}
+        userRole="admin"
+        userId="user-1"
+        selectedAccount="account-1"
+        handleSelectAccount={vi.fn()}
+        auth_token="token"
+        setChatTitle={vi.fn()}
+        isTitleLocked={false}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hide chat sidebar' }));
+
+    expect(setIsOpen).toHaveBeenCalledWith(false);
+  });
 });

@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Chat } from '../chat/Chat';
 import * as Collapsible from '@radix-ui/react-collapsible';
-import { History, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
+import { History, MoreHorizontal, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@alga-psa/ui/components/DropdownMenu';
@@ -169,6 +169,10 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
     }
 
     resetChatSession();
+  };
+
+  const handleHideSidebar = () => {
+    setIsOpen(false);
   };
 
   void auth_token;
@@ -341,6 +345,14 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
                     title="Start new chat"
                   >
                     <Plus className="h-4 w-4" />
+                  </button>
+                  <button
+                    className="rounded p-1.5 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
+                    onClick={handleHideSidebar}
+                    aria-label="Hide chat sidebar"
+                    title="Hide chat"
+                  >
+                    <X className="h-4 w-4" />
                   </button>
                 </div>
               </div>
