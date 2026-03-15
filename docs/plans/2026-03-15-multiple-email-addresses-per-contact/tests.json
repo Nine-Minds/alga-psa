@@ -1,0 +1,290 @@
+[
+  {
+    "id": "T001",
+    "description": "Migration converts an existing contact scalar email into one default email row and removes the scalar email column.",
+    "implemented": false,
+    "featureIds": ["F002", "F003"]
+  },
+  {
+    "id": "T002",
+    "description": "Migration skips contacts with null email and does not create empty email rows.",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T003",
+    "description": "Database uniqueness rejects two contacts in the same tenant using the same normalized email address.",
+    "implemented": false,
+    "featureIds": ["F002", "F005"]
+  },
+  {
+    "id": "T004",
+    "description": "Database allows the same normalized email address to exist in different tenants.",
+    "implemented": false,
+    "featureIds": ["F002", "F005"]
+  },
+  {
+    "id": "T005",
+    "description": "Contact-model validation accepts a single default canonical email row.",
+    "implemented": false,
+    "featureIds": ["F001", "F004"]
+  },
+  {
+    "id": "T006",
+    "description": "Contact-model validation rejects email collections with no default row when rows are present.",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T007",
+    "description": "Contact-model validation rejects email collections with more than one default row.",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T008",
+    "description": "Contact-model validation rejects duplicate custom email labels within a contact payload when labels normalize to the same value.",
+    "implemented": false,
+    "featureIds": ["F004", "F009"]
+  },
+  {
+    "id": "T009",
+    "description": "Contact-model validation rejects malformed email addresses in email rows.",
+    "implemented": false,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T010",
+    "description": "Contact create persists multiple email rows and derives `default_email_address` and `default_email_type` correctly.",
+    "implemented": false,
+    "featureIds": ["F004", "F006", "F028"]
+  },
+  {
+    "id": "T011",
+    "description": "Contact update replaces previous email rows, keeps one default, and rehydrates the derived default summary correctly.",
+    "implemented": false,
+    "featureIds": ["F006", "F028"]
+  },
+  {
+    "id": "T012",
+    "description": "Contact lookup by any stored email row returns the owning contact.",
+    "implemented": false,
+    "featureIds": ["F006", "F007", "F028"]
+  },
+  {
+    "id": "T013",
+    "description": "Contact search by email matches secondary email rows and returns the contact with its default email summary.",
+    "implemented": false,
+    "featureIds": ["F007", "F012", "F028"]
+  },
+  {
+    "id": "T014",
+    "description": "Custom email label suggestions list tenant-scoped labels currently used across contacts.",
+    "implemented": false,
+    "featureIds": ["F002", "F009"]
+  },
+  {
+    "id": "T015",
+    "description": "Unused custom email label definitions can be identified after the last referencing row is removed.",
+    "implemented": false,
+    "featureIds": ["F002", "F009"]
+  },
+  {
+    "id": "T016",
+    "description": "ContactEmailAddressesEditor normalizes draft rows so exactly one default row remains selected.",
+    "implemented": false,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T017",
+    "description": "ContactEmailAddressesEditor compacts empty rows before submit.",
+    "implemented": false,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T018",
+    "description": "ContactEmailAddressesEditor supports canonical label selection and custom label entry with suggestions.",
+    "implemented": false,
+    "featureIds": ["F008", "F009"]
+  },
+  {
+    "id": "T019",
+    "description": "QuickAddContact saves a normalized multi-email payload and blocks submit when email-row validation fails.",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T020",
+    "description": "ContactDetailsEdit saves the normalized email collection and no longer depends on a scalar contact email input.",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T021",
+    "description": "Contact detail view renders all email rows and marks the default row distinctly.",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T022",
+    "description": "Contacts list renders the derived default email summary and not a scalar database email field.",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T023",
+    "description": "ClientContactsList renders the derived default email summary for each contact.",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T024",
+    "description": "ContactPicker search results show and resolve by default email while matching secondary email rows.",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T025",
+    "description": "Shared inbound email service resolves a contact from a secondary email row and returns both matched sender email and default email summary.",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T026",
+    "description": "Inbound email processing preserves contact authorship on exact sender-email match from a non-default email row.",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T027",
+    "description": "Inbound email processing uses the contact default email when building outbound follow-up context after matching a secondary sender email.",
+    "implemented": false,
+    "featureIds": ["F014", "F017"]
+  },
+  {
+    "id": "T028",
+    "description": "Workflow `findContactByEmail` resolves contacts through stored email rows instead of scalar contact email.",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T029",
+    "description": "Workflow/runtime contact output schema includes `email_addresses`, `default_email_address`, and `default_email_type`.",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T030",
+    "description": "Email-processing workflow mapping distinguishes matched sender email from default outbound email.",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T031",
+    "description": "Ticket email subscriber sends requester notifications to the default contact email after contact resolution.",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T032",
+    "description": "Ticket email subscriber handles contacts with secondary matched email rows without sending to the secondary address unless it is also default.",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T033",
+    "description": "Survey sending resolves the contact default email and fails clearly when the contact has no email rows.",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T034",
+    "description": "Invoice sending resolves billing contact email through the contact default email before falling back to billing_email.",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T035",
+    "description": "Watch-list contact selection uses the resolved default email from the chosen contact.",
+    "implemented": false,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T036",
+    "description": "Portal invitation sends to the contact default email and updates when the contact default changes before a new invite is created.",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T037",
+    "description": "Portal recovery contact checks resolve against any stored contact email row.",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T038",
+    "description": "Contact-driven registration helpers resolve a contact from any stored email row and use the default email for invite/login semantics.",
+    "implemented": false,
+    "featureIds": ["F021", "F022"]
+  },
+  {
+    "id": "T039",
+    "description": "REST contact create schema accepts `email_addresses` and rejects legacy scalar contact email payloads.",
+    "implemented": false,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T040",
+    "description": "REST contact response schema returns multi-email data plus derived default email summary.",
+    "implemented": false,
+    "featureIds": ["F023", "F024"]
+  },
+  {
+    "id": "T041",
+    "description": "Contact API search/filter by email matches secondary email rows.",
+    "implemented": false,
+    "featureIds": ["F023", "F024"]
+  },
+  {
+    "id": "T042",
+    "description": "Ticket API response contact-email summary is derived from the contact default email row.",
+    "implemented": false,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T043",
+    "description": "n8n contact create/update helper parsing supports multi-email payloads and validates row structure before request dispatch.",
+    "implemented": false,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T044",
+    "description": "n8n outbound contact payload generation includes normalized `email_addresses` rows in requests.",
+    "implemented": false,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T045",
+    "description": "Integration contact lookup actions resolve contacts through stored email rows and remain unique per tenant.",
+    "implemented": false,
+    "featureIds": ["F026"]
+  },
+  {
+    "id": "T046",
+    "description": "Existing factories and shared helpers build contacts with `email_addresses` rather than scalar email.",
+    "implemented": false,
+    "featureIds": ["F027"]
+  },
+  {
+    "id": "T047",
+    "description": "DB-backed happy-path integration covers create -> update -> lookup-by-secondary-email -> default-email readback for a contact.",
+    "implemented": false,
+    "featureIds": ["F028"]
+  },
+  {
+    "id": "T048",
+    "description": "DB-backed guard integration rejects updating a contact to use an email address already assigned to another contact in the same tenant.",
+    "implemented": false,
+    "featureIds": ["F005", "F028"]
+  }
+]

@@ -1,0 +1,170 @@
+[
+  {
+    "id": "F001",
+    "description": "Add contact email row types to shared contact interfaces, replacing scalar contact email with `email_addresses`, `default_email_address`, and `default_email_type`.",
+    "implemented": false,
+    "prdRefs": ["FR-01", "FR-22"]
+  },
+  {
+    "id": "F002",
+    "description": "Create database tables and constraints for contact email rows and tenant-scoped custom email label definitions.",
+    "implemented": false,
+    "prdRefs": ["FR-01", "FR-02", "FR-04", "FR-06"]
+  },
+  {
+    "id": "F003",
+    "description": "Add a migration that converts existing scalar contact email values into one default email row per contact and removes the scalar database column.",
+    "implemented": false,
+    "prdRefs": ["FR-07"]
+  },
+  {
+    "id": "F004",
+    "description": "Implement shared contact-model validation for multi-email rows, including canonical/custom label validation, exactly-one-default enforcement, and row ordering.",
+    "implemented": false,
+    "prdRefs": ["FR-03", "FR-04", "FR-05"]
+  },
+  {
+    "id": "F005",
+    "description": "Enforce tenant-wide uniqueness on normalized email addresses in both create and update contact flows.",
+    "implemented": false,
+    "prdRefs": ["FR-06"]
+  },
+  {
+    "id": "F006",
+    "description": "Implement contact-model persistence helpers to replace and hydrate email rows and derive default email summary fields on reads.",
+    "implemented": false,
+    "prdRefs": ["FR-01", "FR-02", "FR-22"]
+  },
+  {
+    "id": "F007",
+    "description": "Update contact search and lookup paths to match any stored email row instead of a scalar contact email column.",
+    "implemented": false,
+    "prdRefs": ["FR-11", "FR-12", "FR-14"]
+  },
+  {
+    "id": "F008",
+    "description": "Create a shared `ContactEmailAddressesEditor` component modeled on `ContactPhoneNumbersEditor`, including row add/remove/reorder/default behavior.",
+    "implemented": false,
+    "prdRefs": ["FR-08"]
+  },
+  {
+    "id": "F009",
+    "description": "Support canonical email labels `work`, `personal`, `billing`, and `other`, plus custom labels with tenant suggestion lookup and cleanup behavior.",
+    "implemented": false,
+    "prdRefs": ["FR-03", "FR-04"]
+  },
+  {
+    "id": "F010",
+    "description": "Wire the contact create dialog to save normalized multi-email rows instead of a scalar email field.",
+    "implemented": false,
+    "prdRefs": ["FR-08"]
+  },
+  {
+    "id": "F011",
+    "description": "Wire contact edit/detail screens to save and render multi-email rows and remove scalar contact-email editing.",
+    "implemented": false,
+    "prdRefs": ["FR-08", "FR-09"]
+  },
+  {
+    "id": "F012",
+    "description": "Update contact list and client contact list screens to display the derived default email summary.",
+    "implemented": false,
+    "prdRefs": ["FR-10"]
+  },
+  {
+    "id": "F013",
+    "description": "Update contact pickers and search result payloads to return and display default-email summaries from the multi-email model.",
+    "implemented": false,
+    "prdRefs": ["FR-10", "FR-11"]
+  },
+  {
+    "id": "F014",
+    "description": "Update inbound email shared services to match contacts by any stored email row and return both matched sender email and default email context.",
+    "implemented": false,
+    "prdRefs": ["FR-12", "FR-13"]
+  },
+  {
+    "id": "F015",
+    "description": "Update workflow email actions and runtime email-processing actions to resolve contacts through the email-row model.",
+    "implemented": false,
+    "prdRefs": ["FR-14", "FR-15"]
+  },
+  {
+    "id": "F016",
+    "description": "Update workflow/runtime contact payload schemas to expose `email_addresses`, `default_email_address`, and `default_email_type`.",
+    "implemented": false,
+    "prdRefs": ["FR-15", "FR-22"]
+  },
+  {
+    "id": "F017",
+    "description": "Update the email-processing workflow definition so matched sender email and default outbound email are mapped distinctly.",
+    "implemented": false,
+    "prdRefs": ["FR-13", "FR-15"]
+  },
+  {
+    "id": "F018",
+    "description": "Update ticket email subscriber logic to resolve requester/default contact email from the multi-email model.",
+    "implemented": false,
+    "prdRefs": ["FR-16"]
+  },
+  {
+    "id": "F019",
+    "description": "Update project notifications, surveys, and invoice-contact sends to use the resolved default contact email.",
+    "implemented": false,
+    "prdRefs": ["FR-17", "FR-18"]
+  },
+  {
+    "id": "F020",
+    "description": "Update watch-list contact selection and related picker logic to use default-email summaries from the multi-email model.",
+    "implemented": false,
+    "prdRefs": ["FR-10", "FR-17"]
+  },
+  {
+    "id": "F021",
+    "description": "Update portal invitation, portal recovery, and contact-driven registration flows so contact default email is the canonical invite/login address.",
+    "implemented": false,
+    "prdRefs": ["FR-19"]
+  },
+  {
+    "id": "F022",
+    "description": "Update auth-adjacent contact verification and registration helpers to resolve contacts by any stored email row.",
+    "implemented": false,
+    "prdRefs": ["FR-19"]
+  },
+  {
+    "id": "F023",
+    "description": "Update REST contact schemas and contact API services to accept and return the multi-email contact contract.",
+    "implemented": false,
+    "prdRefs": ["FR-20", "FR-22"]
+  },
+  {
+    "id": "F024",
+    "description": "Update ticket/contact API response schemas that currently expose scalar contact email summaries to derive them from the default email row.",
+    "implemented": false,
+    "prdRefs": ["FR-20", "FR-22"]
+  },
+  {
+    "id": "F025",
+    "description": "Update n8n contact create/update/list support to use the multi-email contract instead of scalar contact email.",
+    "implemented": false,
+    "prdRefs": ["FR-21"]
+  },
+  {
+    "id": "F026",
+    "description": "Update integration helpers and email/contact lookup actions to resolve contacts through stored email rows.",
+    "implemented": false,
+    "prdRefs": ["FR-21"]
+  },
+  {
+    "id": "F027",
+    "description": "Update test fixtures, factories, and helper builders that currently construct contacts with scalar email.",
+    "implemented": false,
+    "prdRefs": ["FR-01", "FR-22"]
+  },
+  {
+    "id": "F028",
+    "description": "Add representative DB-backed migration/model coverage for multi-email contact creation, update, lookup, and uniqueness.",
+    "implemented": false,
+    "prdRefs": ["FR-06", "FR-07"]
+  }
+]
