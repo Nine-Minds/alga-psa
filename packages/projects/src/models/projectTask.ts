@@ -213,6 +213,18 @@ const ProjectTaskModel = {
           .andWhere('tenant', tenant)
           .del();
 
+        // Delete task comment reactions before comments (CitusDB doesn't support ON DELETE CASCADE)
+        const taskCommentIds = await trx('project_task_comments')
+          .where('task_id', taskId)
+          .andWhere('tenant', tenant)
+          .pluck('task_comment_id');
+        if (taskCommentIds.length > 0) {
+          await trx('project_task_comment_reactions')
+            .where('tenant', tenant)
+            .whereIn('task_comment_id', taskCommentIds)
+            .del();
+        }
+
         // Delete task comments
         await trx('project_task_comments')
           .where('task_id', taskId)

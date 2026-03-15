@@ -14,6 +14,8 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
+import { ReactionDisplay } from '@alga-psa/ui/components/ReactionDisplay';
+import type { IAggregatedReaction } from '@alga-psa/types';
 import { getCommentResponseSource } from '../../lib/responseSource';
 import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { resolveCommentAuthor } from '../../lib/commentAuthorResolution';
@@ -37,6 +39,9 @@ interface CommentItemProps {
   onDelete: (comment: IComment) => void;
   hideInternalTab?: boolean;
   uploadFile?: (file: File, blockId?: string) => Promise<string>;
+  reactions?: IAggregatedReaction[];
+  onToggleReaction?: (commentId: string, emoji: string) => void;
+  userNames?: Record<string, string>;
 }
 
 function getInboundSenderIdentity(
@@ -108,7 +113,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
   onEdit,
   onDelete,
   hideInternalTab = false,
-  uploadFile
+  uploadFile,
+  reactions,
+  onToggleReaction,
+  userNames,
 }) => {
   const { t } = useTranslation('features/tickets');
   const [isInternalToggle, setIsInternalToggle] = useState(conversation.is_internal ?? false);
@@ -270,7 +278,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
 
   return (
-    <div {...withDataAutomationId({ id: commentId })} className="rounded-lg p-2 mb-2 shadow-sm border border-gray-200 dark:border-[rgb(var(--color-border-200))] hover:border-gray-300 dark:hover:border-[rgb(var(--color-border-300))] bg-white dark:bg-[rgb(var(--color-card))]">
+    <div {...withDataAutomationId({ id: commentId })} className="group/comment rounded-lg p-2 mb-2 shadow-sm border border-gray-200 dark:border-[rgb(var(--color-border-200))] hover:border-gray-300 dark:hover:border-[rgb(var(--color-border-300))] bg-white dark:bg-[rgb(var(--color-card))]">
       <div className="flex items-start mb-1">
         <div className="mr-2">
           {/* Conditionally render UserAvatar or ContactAvatar */}
@@ -406,6 +414,15 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 </div>
               );
             })()
+          )}
+          {reactions && onToggleReaction && (
+            <ReactionDisplay
+              id={`${commentId}-reactions`}
+              reactions={reactions}
+              onToggle={(emoji) => onToggleReaction(conversation.comment_id!, emoji)}
+              onAdd={(emoji) => onToggleReaction(conversation.comment_id!, emoji)}
+              userNames={userNames}
+            />
           )}
         </div>
       </div>

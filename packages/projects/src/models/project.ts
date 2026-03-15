@@ -286,6 +286,18 @@ const ProjectModel = {
           .del();
       }
 
+      // Delete task comment reactions before comments (CitusDB doesn't support ON DELETE CASCADE)
+      if (phaseIds.length > 0) {
+        const commentIdsSubquery = trx('project_task_comments')
+          .select('task_comment_id')
+          .whereIn('task_id', taskIdsSubquery)
+          .andWhere('tenant', tenant);
+        await trx('project_task_comment_reactions')
+          .whereIn('task_comment_id', commentIdsSubquery)
+          .andWhere('tenant', tenant)
+          .del();
+      }
+
       // Delete task comments
       if (phaseIds.length > 0) {
         await trx('project_task_comments')
@@ -511,6 +523,16 @@ const ProjectModel = {
           this.whereIn('predecessor_task_id', taskIdsSubquery)
             .orWhereIn('successor_task_id', taskIdsSubquery);
         })
+        .andWhere('tenant', tenant)
+        .del();
+
+      // Delete task comment reactions before comments (CitusDB doesn't support ON DELETE CASCADE)
+      const commentIdsSubquery = trx('project_task_comments')
+        .select('task_comment_id')
+        .whereIn('task_id', taskIdsSubquery)
+        .andWhere('tenant', tenant);
+      await trx('project_task_comment_reactions')
+        .whereIn('task_comment_id', commentIdsSubquery)
         .andWhere('tenant', tenant)
         .del();
 

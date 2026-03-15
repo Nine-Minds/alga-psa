@@ -13,19 +13,27 @@ import { IProjectTaskCommentWithUser } from '@alga-psa/types';
 import { updateTaskComment, deleteTaskComment } from '../actions/projectTaskCommentActions';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
+import { ReactionDisplay } from '@alga-psa/ui/components/ReactionDisplay';
+import type { IAggregatedReaction } from '@alga-psa/types';
 
 interface TaskCommentProps {
   comment: IProjectTaskCommentWithUser;
   onUpdate: () => void;
   onDelete: () => void;
   currentUserId?: string;
+  reactions?: IAggregatedReaction[];
+  onToggleReaction?: (taskCommentId: string, emoji: string) => void;
+  userNames?: Record<string, string>;
 }
 
 const TaskComment: React.FC<TaskCommentProps> = ({
   comment,
   onUpdate,
   onDelete,
-  currentUserId
+  currentUserId,
+  reactions,
+  onToggleReaction,
+  userNames,
 }) => {
   const { t } = useTranslation('common');
   const [isEditing, setIsEditing] = useState(false);
@@ -154,7 +162,7 @@ const TaskComment: React.FC<TaskCommentProps> = ({
   return (
     <div
       {...withDataAutomationId({ id: commentId })}
-      className="rounded-lg p-2 mb-2 shadow-sm border border-gray-200 dark:border-[rgb(var(--color-border-200))] hover:border-gray-300 dark:hover:border-[rgb(var(--color-border-300))] bg-white dark:bg-[rgb(var(--color-card))]"
+      className="group/comment rounded-lg p-2 mb-2 shadow-sm border border-gray-200 dark:border-[rgb(var(--color-border-200))] hover:border-gray-300 dark:hover:border-[rgb(var(--color-border-300))] bg-white dark:bg-[rgb(var(--color-card))]"
     >
       <div className="flex items-start mb-1">
         <div className="mr-2">
@@ -261,6 +269,15 @@ const TaskComment: React.FC<TaskCommentProps> = ({
                 content={displayContent as any}
               />
             </div>
+          )}
+          {reactions && onToggleReaction && (
+            <ReactionDisplay
+              id={`${commentId}-reactions`}
+              reactions={reactions}
+              onToggle={(emoji) => onToggleReaction(comment.taskCommentId, emoji)}
+              onAdd={(emoji) => onToggleReaction(comment.taskCommentId, emoji)}
+              userNames={userNames}
+            />
           )}
         </div>
       </div>

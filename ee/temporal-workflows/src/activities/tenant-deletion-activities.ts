@@ -45,7 +45,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Task/project details
   'task_checklist_items', 'project_task_dependencies', 'task_resources',
-  'project_ticket_links', 'project_task_comments',
+  'project_ticket_links', 'project_task_comment_reactions', 'project_task_comments',
   'project_materials', 'ticket_materials',
 
   // Project template details
@@ -69,7 +69,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'ticket_bundle_mirrors',
 
   // Messages and comments
-  'comments',
+  'comment_reactions', 'comments',
   'gmail_processed_history', 'email_processed_attachments', 'email_processed_messages',
   'email_reply_tokens', 'email_sending_logs', 'email_rate_limits',
 

@@ -236,6 +236,11 @@ export const deleteTaskComment = withAuth(async (
       }
     }
 
+    // Delete reactions before comment (CitusDB doesn't support ON DELETE CASCADE)
+    await trx('project_task_comment_reactions')
+      .where({ task_comment_id: taskCommentId, tenant })
+      .del();
+
     // Hard delete
     await trx('project_task_comments')
       .where({ task_comment_id: taskCommentId, tenant })
