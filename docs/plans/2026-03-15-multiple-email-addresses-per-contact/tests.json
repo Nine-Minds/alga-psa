@@ -357,7 +357,7 @@
   {
     "id": "T044",
     "description": "External sync adapters preserve `contacts.email` as the default billing/summary address while understanding additional emails where lookup logic requires them.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]

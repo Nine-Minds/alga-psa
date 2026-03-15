@@ -254,7 +254,7 @@
   {
     "id": "F029",
     "description": "Update external sync, import, and export adapters only where contact parsing or lookup-by-email must understand additional contact emails, while preserving `contacts.email` as the default summary/send address.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-17",
       "FR-19"

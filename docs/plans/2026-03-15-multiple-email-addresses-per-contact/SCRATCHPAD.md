@@ -366,3 +366,14 @@ Working memory for adding multiple email addresses to contacts using a compatibi
   - `cd packages/integrations && ../../node_modules/.bin/vitest run src/actions/clientLookupActions.emailLookup.test.ts`
 - Constraint observed:
   - `node_modules/.bin/tsc -p packages/integrations/tsconfig.json --noEmit` currently fails in pre-existing shared-model code under `shared/models/contactModel.ts` because `ContactEmailAddressInput` typing there does not include `normalized_email_address` / `normalized_custom_type`. This check is not blocked by the `F028` package changes themselves.
+
+## Update (2026-03-15, external sync email compatibility)
+- Completed `F029` and flipped `T044` to implemented.
+- Audited the remaining external sync/import/export adapter surface after `F028`:
+  - no remaining adapter-specific contact lookup path was bypassing the shared integration contact-email helpers
+  - `packages/integrations/src/services/xeroCsvClientSyncService.ts` does not resolve contact email aliases directly; it operates on client billing/summary email fields
+- Made the compatibility boundary explicit by extracting `getClientSummaryEmail` inside `packages/integrations/src/services/xeroCsvClientSyncService.ts` and keeping export behavior anchored on the client's primary billing/summary email before any location fallback.
+- Added focused regression coverage:
+  - `packages/integrations/src/services/xeroCsvClientSyncService.emailSummary.test.ts`
+- Verification runbook used:
+  - `cd packages/integrations && ../../node_modules/.bin/vitest run src/services/xeroCsvClientSyncService.emailSummary.test.ts`
