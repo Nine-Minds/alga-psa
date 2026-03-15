@@ -365,7 +365,7 @@
   {
     "id": "T045",
     "description": "Factories, seeds, and test helpers can create contacts with primary-email labels and additional-email rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]

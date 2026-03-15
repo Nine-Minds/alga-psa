@@ -1,6 +1,7 @@
 import { TestContext } from '../../../../test-utils/testContext';
 import { createTenant, createClient } from '../../../../test-utils/testDataFactory';
 import { v4 as uuidv4 } from 'uuid';
+import { ContactModel, type CreateContactInput } from '@alga-psa/shared/models/contactModel';
 
 export interface EmailScenario {
   tenant: { tenant: string };
@@ -92,27 +93,28 @@ export class EmailTestFactory {
     email: string;
     first_name: string;
     last_name: string;
+    primary_email_canonical_type?: CreateContactInput['primary_email_canonical_type'];
+    primary_email_custom_type?: string | null;
+    additional_email_addresses?: CreateContactInput['additional_email_addresses'];
   }, tenantId: string): Promise<EmailScenario['contact']> {
-    const contactId = uuidv4();
-    const now = new Date().toISOString();
-
-    const contact = {
-      tenant: tenantId,
-      contact_name_id: contactId,
-      client_id: clientId,
-      email: contactData.email,
+    const createdContact = await this.context.db.transaction((trx) => ContactModel.createContact({
       full_name: `${contactData.first_name} ${contactData.last_name}`,
-      is_inactive: false,
-      created_at: now,
-      updated_at: now
-    };
-
-    await this.context.db('contacts').insert(contact);
-    this.createdResources.contacts.push(contactId);
+      email: contactData.email,
+      primary_email_canonical_type:
+        contactData.primary_email_canonical_type ?? (contactData.primary_email_custom_type ? null : 'work'),
+      primary_email_custom_type: contactData.primary_email_custom_type ?? undefined,
+      additional_email_addresses: (contactData.additional_email_addresses ?? []).map((row, index) => ({
+        ...row,
+        display_order: row.display_order ?? index,
+      })),
+      client_id: clientId,
+      is_inactive: false
+    }), tenantId);
+    this.createdResources.contacts.push(createdContact.contact_name_id);
 
     return {
-      contact_name_id: contactId,
-      email: contactData.email,
+      contact_name_id: createdContact.contact_name_id,
+      email: createdContact.email,
       first_name: contactData.first_name,
       last_name: contactData.last_name,
       client_id: clientId

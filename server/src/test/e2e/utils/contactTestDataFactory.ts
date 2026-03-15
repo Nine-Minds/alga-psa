@@ -1,6 +1,7 @@
 import { Knex } from 'knex';
 import { faker } from '@faker-js/faker';
 import { ContactModel, type CreateContactInput, type UpdateContactInput } from '@alga-psa/shared/models/contactModel';
+import type { ContactEmailAddressInput, ContactEmailCanonicalType } from '@alga-psa/shared/interfaces/contact.interfaces';
 import type { IContact } from '@alga-psa/types';
 
 /**
@@ -16,6 +17,9 @@ export interface CreateContactOptions {
   client_id?: string | null;
   phone_number?: string | null;
   email?: string;
+  primary_email_canonical_type?: ContactEmailCanonicalType | null;
+  primary_email_custom_type?: string | null;
+  additional_email_addresses?: ContactEmailAddressInput[];
   role?: string | null;
   is_inactive?: boolean;
   notes?: string | null;
@@ -34,6 +38,15 @@ function buildPhoneNumbers(phoneNumber?: string | null): CreateContactInput['pho
   }];
 }
 
+function buildAdditionalEmailAddresses(
+  rows?: ContactEmailAddressInput[]
+): CreateContactInput['additional_email_addresses'] {
+  return (rows ?? []).map((row, index) => ({
+    ...row,
+    display_order: row.display_order ?? index,
+  }));
+}
+
 /**
  * Generate random contact data
  */
@@ -42,6 +55,10 @@ export function generateContactData(options: CreateContactOptions = {}): Omit<Cr
     full_name: options.full_name || faker.person.fullName(),
     phone_number: options.phone_number !== undefined ? options.phone_number : faker.phone.number(),
     email: options.email || faker.internet.email().toLowerCase(),
+    primary_email_canonical_type:
+      options.primary_email_canonical_type ?? (options.primary_email_custom_type ? null : 'work'),
+    primary_email_custom_type: options.primary_email_custom_type ?? null,
+    additional_email_addresses: buildAdditionalEmailAddresses(options.additional_email_addresses),
     role: options.role !== undefined ? options.role : faker.person.jobTitle(),
     is_inactive: options.is_inactive ?? false,
     notes: options.notes !== undefined ? options.notes : faker.lorem.sentence()
@@ -65,6 +82,10 @@ export async function createTestContact(
   return db.transaction((trx) => ContactModel.createContact({
     full_name: contactData.full_name || '',
     email: contactData.email || '',
+    primary_email_canonical_type:
+      contactData.primary_email_canonical_type ?? (contactData.primary_email_custom_type ? null : 'work'),
+    primary_email_custom_type: contactData.primary_email_custom_type || undefined,
+    additional_email_addresses: buildAdditionalEmailAddresses(contactData.additional_email_addresses),
     client_id: options.client_id !== undefined ? options.client_id || undefined : undefined,
     phone_numbers: buildPhoneNumbers(contactData.phone_number),
     role: contactData.role || undefined,
@@ -256,6 +277,15 @@ export async function updateTestContact(
       ...('client_id' in updates ? { client_id: updates.client_id || undefined } : {}),
       ...('phone_number' in updates ? { phone_numbers: buildPhoneNumbers(updates.phone_number) } : {}),
       ...('email' in updates ? { email: updates.email || undefined } : {}),
+      ...('primary_email_canonical_type' in updates
+        ? { primary_email_canonical_type: updates.primary_email_canonical_type ?? null }
+        : {}),
+      ...('primary_email_custom_type' in updates
+        ? { primary_email_custom_type: updates.primary_email_custom_type || undefined }
+        : {}),
+      ...('additional_email_addresses' in updates
+        ? { additional_email_addresses: buildAdditionalEmailAddresses(updates.additional_email_addresses) }
+        : {}),
       ...('role' in updates ? { role: updates.role || undefined } : {}),
       ...('is_inactive' in updates ? { is_inactive: updates.is_inactive } : {}),
       ...('notes' in updates ? { notes: updates.notes || undefined } : {}),

@@ -20,6 +20,7 @@ exports.seed = async function seed(knex) {
                 .select('client_id')
                 .first(),
             email: 'dorothy@oz.com',
+            primary_email_canonical_type: 'work',
             created_at: knex.fn.now(),
             updated_at: knex.fn.now()
         },
@@ -35,6 +36,20 @@ exports.seed = async function seed(knex) {
                 .select('client_id')
                 .first(),
             email: 'alice@wonderland.com',
+            primary_email_canonical_type: 'personal',
+            created_at: knex.fn.now(),
+            updated_at: knex.fn.now()
+        }
+    ]);
+
+    await knex('contact_additional_email_addresses').insert([
+        {
+            tenant: tenant.tenant,
+            contact_additional_email_address_id: randomUUID(),
+            contact_name_id: dorothyContactId,
+            email_address: 'dorothy.billing@oz.com',
+            canonical_type: 'billing',
+            display_order: 0,
             created_at: knex.fn.now(),
             updated_at: knex.fn.now()
         }

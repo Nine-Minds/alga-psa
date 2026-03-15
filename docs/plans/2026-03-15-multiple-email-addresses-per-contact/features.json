@@ -263,7 +263,7 @@
   {
     "id": "F030",
     "description": "Update factories, seeds, fixtures, and shared test helpers to create contacts with a labeled primary email and optional additional-email rows.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-19",
       "FR-20"
