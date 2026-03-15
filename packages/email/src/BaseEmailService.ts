@@ -19,6 +19,9 @@ export interface EmailSendResult {
   error?: string;
   queued?: boolean;      // true if queued for later delivery due to rate limiting
   retryCount?: number;   // current retry attempt (0 = first attempt)
+  providerId?: string;
+  providerType?: string;
+  metadata?: Record<string, any>;
 }
 
 export interface ITemplateProcessor {
@@ -203,7 +206,10 @@ export abstract class BaseEmailService {
       return {
         success: result.success,
         messageId: result.messageId,
-        error: result.error
+        error: result.error,
+        providerId: result.providerId,
+        providerType: result.providerType,
+        metadata: result.metadata
       };
     } catch (error) {
       // Best-effort: log provider failure if we made it to message construction.
@@ -234,7 +240,9 @@ export abstract class BaseEmailService {
       logger.error(`[${this.getServiceName()}] Failed to send email:`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
+        providerId: this.emailProvider?.providerId,
+        providerType: this.emailProvider?.providerType
       };
     }
   }
