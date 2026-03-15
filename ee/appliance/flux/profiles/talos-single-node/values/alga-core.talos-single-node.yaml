@@ -50,8 +50,11 @@ redis:
     size: 20Gi
     storageClass: local-path
 
+persistence:
+  keepPvcOnUninstall: true
+
 pgbouncer:
-  enabled: true
+  enabled: false
   service:
     name: pgbouncer
     port: 6432

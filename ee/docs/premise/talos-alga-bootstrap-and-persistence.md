@@ -47,8 +47,11 @@ The appliance may route normal application traffic through PgBouncer, but bootst
 
 The durable rule is:
 
-- runtime application connections may use PgBouncer
+- `alga-core` bootstrap and server startup should use direct Postgres in the appliance profile
+- worker and auxiliary services may use PgBouncer after `alga-core` is healthy
 - database creation, schema creation, and admin migration steps should talk directly to Postgres
+
+This avoids a bootstrap cycle where the core application waits on a PgBouncer service that is itself modeled as a downstream dependency of the core release.
 
 ## App Startup Gate
 
@@ -76,6 +79,8 @@ The single-node appliance currently expects persistent volumes for:
 - optionally Temporal persistence
 
 If those PVCs survive, a restart should return to service without reseeding. If they are deleted, the stack should be treated as a fresh environment again.
+
+For the appliance profile, uninstall and remediation flows should preserve PVCs by default. Failed first-install attempts should not trigger destructive PVC cleanup hooks.
 
 ## Fresh Install Expectations
 
