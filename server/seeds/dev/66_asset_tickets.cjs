@@ -9,10 +9,6 @@ exports.seed = async function(knex) {
         .whereIn('client_name', ['Emerald City', 'Wonderland'])
         .select('client_id', 'client_name');
 
-    const statuses = await knex('statuses')
-        .whereIn('name', ['Curious Beginning', 'Unfolding Adventure'])
-        .select('status_id', 'name');
-    
     const mainCategory = await knex('categories')
         .where({ category_name: 'Realm Maintenance' })
         .first();
@@ -24,6 +20,11 @@ exports.seed = async function(knex) {
     const board = await knex('boards')
         .where({ board_name: 'Urgent Matters' })
         .first();
+
+    const statuses = board ? await knex('statuses')
+        .where({ tenant: tenant.tenant, board_id: board.board_id })
+        .whereIn('name', ['Curious Beginning', 'Unfolding Adventure'])
+        .select('status_id', 'name') : [];
 
     const priority = await knex('priorities')
         .where({ priority_name: 'Enchanted Emergency' })

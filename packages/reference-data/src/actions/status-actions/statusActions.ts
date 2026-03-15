@@ -8,7 +8,7 @@ import { deleteEntityWithValidation } from '@alga-psa/core';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import { IStatus, ItemType } from '@alga-psa/types';
 
-export const getStatuses = withAuth(async (_user, { tenant }, type?: ItemType) => {
+export const getStatuses = withAuth(async (_user, { tenant }, type?: ItemType, boardId?: string | null) => {
   try {
     // Get the database connection with tenant
     const {knex: db} = await createTenantKnex();
@@ -23,6 +23,12 @@ export const getStatuses = withAuth(async (_user, { tenant }, type?: ItemType) =
       // Add type filter if specified
       if (type) {
         query.where({ status_type: type });
+        if (type === ('ticket' as ItemType)) {
+          query.whereNotNull('board_id');
+          if (boardId) {
+            query.andWhere({ board_id: boardId });
+          }
+        }
       }
 
       return await query;
@@ -33,7 +39,7 @@ export const getStatuses = withAuth(async (_user, { tenant }, type?: ItemType) =
   }
 });
 
-export const getTicketStatuses = withAuth(async (_user, { tenant }) => {
+export const getTicketStatuses = withAuth(async (_user, { tenant }, boardId?: string | null) => {
   try {
     // Get the database connection with tenant
     const {knex: db} = await createTenantKnex();
@@ -44,6 +50,11 @@ export const getTicketStatuses = withAuth(async (_user, { tenant }) => {
         .where({
           tenant,
           status_type: 'ticket' as ItemType
+        })
+        .modify((queryBuilder) => {
+          if (boardId) {
+            queryBuilder.andWhere({ board_id: boardId });
+          }
         })
         .select('*')
         .orderBy('order_number');
@@ -59,6 +70,10 @@ export const getTicketStatuses = withAuth(async (_user, { tenant }) => {
 export const createStatus = withAuth(async (user, { tenant }, statusData: Omit<IStatus, 'status_id' | 'tenant'>): Promise<IStatus> => {
   if (!statusData.name || statusData.name.trim() === '') {
     throw new Error('Status name is required');
+  }
+
+  if (statusData.status_type === ('ticket' as ItemType)) {
+    throw new Error('Ticket statuses must be managed from board settings');
   }
 
   const {knex: db} = await createTenantKnex();
@@ -155,25 +170,29 @@ export const updateStatus = withAuth(async (_user, { tenant }, statusId: string,
   const {knex: db} = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const currentStatus = await trx<IStatus>('statuses')
+        .where({
+          tenant,
+          status_id: statusId
+        })
+        .first();
+
+      if (!currentStatus) {
+        throw new Error('Status not found');
+      }
+
+      const effectiveStatusType = statusData.status_type || currentStatus.status_type;
+      if (effectiveStatusType === ('ticket' as ItemType)) {
+        throw new Error('Ticket statuses must be managed from board settings');
+      }
+
       // Check if new name conflicts with existing status
       if (statusData.name) {
-        // Get current status to know its type if no new type provided
-        const currentStatus = await trx<IStatus>('statuses')
-          .where({
-            tenant,
-            status_id: statusId
-          })
-          .first();
-
-        if (!currentStatus) {
-          throw new Error('Status not found');
-        }
-
         const existingStatus = await trx('statuses')
           .where({
             tenant,
             name: statusData.name,
-            status_type: statusData.status_type || currentStatus.status_type
+            status_type: effectiveStatusType
           })
           .whereNot('status_id', statusId)
           .first();
@@ -311,6 +330,24 @@ export const deleteStatus = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
+    const currentStatus = await knex<IStatus>('statuses')
+      .where({
+        tenant,
+        status_id: statusId,
+      })
+      .first();
+
+    if (currentStatus?.status_type === ('ticket' as ItemType)) {
+      return {
+        success: false,
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Ticket statuses must be managed from board settings',
+        dependencies: [],
+        alternatives: []
+      };
+    }
+
     const result = await deleteEntityWithValidation('status', statusId, knex, tenant, async (trx, tenantId) => {
       const deletedCount = await trx('statuses')
         .where({

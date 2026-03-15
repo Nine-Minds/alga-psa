@@ -132,6 +132,8 @@ function createQueryBuilder(queue: QueryQueue) {
     return builder;
   });
   builder.whereIn = vi.fn(() => builder);
+  builder.whereNotNull = vi.fn(() => builder);
+  builder.whereNull = vi.fn(() => builder);
   builder.orderBy = vi.fn(() => builder);
   builder.limit = vi.fn(() => builder);
   builder.offset = vi.fn(() => builder);
@@ -427,6 +429,7 @@ describe('internal notification event handling', () => {
     const ticketId = uuidv4();
     const performerId = uuidv4();
     const assignedUserId = uuidv4();
+    const boardId = uuidv4();
     const oldStatusId = uuidv4();
     const newStatusId = uuidv4();
 
@@ -439,6 +442,9 @@ describe('internal notification event handling', () => {
           assigned_to: assignedUserId,
           contact_name_id: null,
           tenant: tenantId
+        },
+        {
+          assigned_to: assignedUserId
         }
       ],
       users: [
@@ -448,9 +454,20 @@ describe('internal notification event handling', () => {
           last_name: 'Tech'
         }
       ],
+      ticket_resources: [[]],
       statuses: [
-        { name: 'Open' },
-        { name: 'Resolved' }
+        {
+          tenant: tenantId,
+          board_id: boardId,
+          status_id: oldStatusId,
+          name: 'Open'
+        },
+        {
+          tenant: tenantId,
+          board_id: boardId,
+          status_id: newStatusId,
+          name: 'Resolved'
+        }
       ]
     });
 
@@ -476,7 +493,13 @@ describe('internal notification event handling', () => {
 
     await eventBus.publish(event, { channel: 'internal-notifications' });
 
-    expect(getCallByTemplate('ticket-status-changed')?.user_id).toBe(assignedUserId);
+    expect(getCallByTemplate('ticket-status-changed')).toMatchObject({
+      user_id: assignedUserId,
+      data: expect.objectContaining({
+        oldStatus: 'Open',
+        newStatus: 'Resolved',
+      }),
+    });
 
     await unregisterInternalNotificationSubscriber();
   });

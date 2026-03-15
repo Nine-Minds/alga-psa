@@ -1,0 +1,374 @@
+[
+  {
+    "id": "T001",
+    "description": "Migration schema test: statuses gains board ownership support for ticket statuses without changing non-ticket status shapes.",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "Migration schema test: board-scoped ticket status uniqueness/index definitions exist and board lookups use them.",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T003",
+    "description": "DB integration: migration clones every current tenant ticket status to every board and preserves metadata fields.",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T004",
+    "description": "DB integration: cloned board-owned ticket statuses receive fresh status ids and preserve per-board default/open-closed ordering semantics.",
+    "implemented": true,
+    "featureIds": ["F003", "F004"]
+  },
+  {
+    "id": "T005",
+    "description": "DB integration: migration remap table or remap logic resolves old global ticket status ids to the correct board-owned replacement by board.",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T006",
+    "description": "DB integration: ticket rows are rewritten to the board-owned status id for their current board during migration.",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T007",
+    "description": "DB integration: inbound ticket defaults are remapped to board-owned ticket status ids using their stored board id.",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T008",
+    "description": "DB integration: tenant billing renewal defaults are remapped to board-owned ticket status ids using renewal_ticket_board_id.",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T009",
+    "description": "DB integration: contract-level renewal overrides are remapped to board-owned ticket status ids using renewal_ticket_board_id.",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T010",
+    "description": "Workflow migration test: saved workflow ticket status references with explicit board context are remapped to board-owned status ids.",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T011",
+    "description": "Migration guard test: persisted ticket status references without safe board context are surfaced as unresolved instead of guessed.",
+    "implemented": true,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T012",
+    "description": "Unit: default ticket status helper returns the default status for a specific board, not the tenant-wide first ticket status.",
+    "implemented": true,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T013",
+    "description": "Unit: ticket create validation rejects a status id that belongs to a different board.",
+    "implemented": true,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T014",
+    "description": "DB-backed integration: ticket create succeeds when status_id belongs to the chosen board and fails otherwise.",
+    "implemented": true,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T015",
+    "description": "Unit: ticket update validation rejects cross-board status ids when changing status only.",
+    "implemented": true,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T016",
+    "description": "DB-backed integration: ticket update rejects incompatible board/status combinations and preserves prior status on failure.",
+    "implemented": true,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T017",
+    "description": "UI integration: changing a ticket board clears the current status selection and requires an explicit destination-board status choice.",
+    "implemented": true,
+    "featureIds": ["F014", "F024"]
+  },
+  {
+    "id": "T018",
+    "description": "UI integration: board creation supports copying ticket statuses from an existing board and persists a cloned board-local set.",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T019",
+    "description": "UI integration: board creation supports inline ticket status authoring before the board is saved.",
+    "implemented": true,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T020",
+    "description": "UI validation: board create/edit blocks save if there is no valid open default ticket status.",
+    "implemented": true,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T021",
+    "description": "UI integration: board edit loads only that board's ticket statuses into the embedded board-local status manager.",
+    "implemented": true,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T022",
+    "description": "UI integration: central ticket status settings no longer render ticket status management as an active source of truth.",
+    "implemented": true,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T023",
+    "description": "Unit: board-scoped ticket status create action writes board_id and rejects duplicate ticket status names within the same board only.",
+    "implemented": true,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T024",
+    "description": "Unit: board-scoped ticket status update action cannot move or mutate a status across boards implicitly.",
+    "implemented": true,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T025",
+    "description": "Unit: board-local ticket status rules preserve exactly one default behavior per board and keep other boards untouched.",
+    "implemented": true,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T026",
+    "description": "Unit: deleting or closing the final valid default/open ticket status on a board is rejected with a clear validation error.",
+    "implemented": true,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T027",
+    "description": "Component test: board-dependent ticket status picker loads options for the selected board only.",
+    "implemented": true,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T028",
+    "description": "Component test: board-dependent ticket status picker is empty or disabled when no board is selected.",
+    "implemented": true,
+    "featureIds": ["F022", "F023"]
+  },
+  {
+    "id": "T029",
+    "description": "UI integration: ticket create flow does not auto-populate a status until a board is selected and then chooses that board's default status only.",
+    "implemented": true,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T030",
+    "description": "UI integration: ticket edit flow reloads board-owned statuses when board changes and never shows statuses from other boards.",
+    "implemented": true,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T031",
+    "description": "Regression test: quick add ticket flow uses board-scoped ticket statuses.",
+    "implemented": true,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T032",
+    "description": "Regression test: bulk ticket update flow validates board-scoped status selections.",
+    "implemented": true,
+    "featureIds": ["F043"]
+  },
+  {
+    "id": "T033",
+    "description": "Regression test: auxiliary board-aware ticket creation helpers such as asset or project-linked ticket creation use board-scoped statuses.",
+    "implemented": true,
+    "featureIds": ["F044"]
+  },
+  {
+    "id": "T034",
+    "description": "UI integration: inbound ticket defaults only offer statuses from the selected board and clear invalid values when board changes.",
+    "implemented": true,
+    "featureIds": ["F026"]
+  },
+  {
+    "id": "T035",
+    "description": "UI integration: billing renewal defaults only offer statuses from the selected board and reject stale cross-board ids on save.",
+    "implemented": true,
+    "featureIds": ["F027"]
+  },
+  {
+    "id": "T036",
+    "description": "Workflow designer test: ticket create/update status pickers depend on the selected board and do not expose tenant-global ticket statuses.",
+    "implemented": true,
+    "featureIds": ["F028"]
+  },
+  {
+    "id": "T037",
+    "description": "Workflow runtime test: ticket create action rejects a status id that does not belong to the chosen board.",
+    "implemented": true,
+    "featureIds": ["F029"]
+  },
+  {
+    "id": "T038",
+    "description": "Workflow runtime test: ticket update action rejects a cross-board status id when patching board/status fields.",
+    "implemented": true,
+    "featureIds": ["F029"]
+  },
+  {
+    "id": "T039",
+    "description": "Workflow runtime test: ticket close helper resolves the closed ticket status from the ticket's current board-owned statuses.",
+    "implemented": true,
+    "featureIds": ["F030"]
+  },
+  {
+    "id": "T040",
+    "description": "Workflow runtime test: board-aware default/open status helpers do not fall back to another board's ticket statuses.",
+    "implemented": true,
+    "featureIds": ["F030"]
+  },
+  {
+    "id": "T041",
+    "description": "Client portal integration: portal ticket creation uses only statuses valid for the chosen board.",
+    "implemented": true,
+    "featureIds": ["F031"]
+  },
+  {
+    "id": "T042",
+    "description": "Client portal integration: portal ticket status update rejects invalid cross-board statuses.",
+    "implemented": true,
+    "featureIds": ["F031"]
+  },
+  {
+    "id": "T043",
+    "description": "API contract test: ticket status lookup API requires or honors board scope and returns only statuses for that board.",
+    "implemented": true,
+    "featureIds": ["F032"]
+  },
+  {
+    "id": "T044",
+    "description": "API contract test: generic status list/read endpoints no longer expose tenant-global ticket status behavior for ticket use cases.",
+    "implemented": true,
+    "featureIds": ["F033"]
+  },
+  {
+    "id": "T045",
+    "description": "DB-backed integration: ticket list and search joins still return the correct status name/open-closed metadata after board-owned migration.",
+    "implemented": true,
+    "featureIds": ["F034"]
+  },
+  {
+    "id": "T046",
+    "description": "DB-backed integration: ticket reporting and grouped status counts do not mix statuses across boards after migration.",
+    "implemented": true,
+    "featureIds": ["F034"]
+  },
+  {
+    "id": "T047",
+    "description": "SLA integration: pause configuration UI and persistence continue to work with board-owned ticket statuses.",
+    "implemented": true,
+    "featureIds": ["F035"]
+  },
+  {
+    "id": "T048",
+    "description": "SLA integration: reporting and pause evaluation continue to resolve remapped board-owned ticket statuses correctly.",
+    "implemented": true,
+    "featureIds": ["F035"]
+  },
+  {
+    "id": "T049",
+    "description": "Notification integration: internal notification subscriber resolves old/new board-owned ticket status names correctly after migration.",
+    "implemented": true,
+    "featureIds": ["F036"]
+  },
+  {
+    "id": "T050",
+    "description": "Survey integration: survey trigger conditions continue to match remapped board-owned ticket status ids correctly.",
+    "implemented": true,
+    "featureIds": ["F036"]
+  },
+  {
+    "id": "T051",
+    "description": "Onboarding integration: onboarding-created boards receive board-owned ticket statuses and a valid board-local default status.",
+    "implemented": true,
+    "featureIds": ["F037"]
+  },
+  {
+    "id": "T052",
+    "description": "Import integration: board import/status seed flows create ticket statuses scoped to the target board.",
+    "implemented": true,
+    "featureIds": ["F037"]
+  },
+  {
+    "id": "T053",
+    "description": "Fixture integration: shared test setup creates board-owned ticket statuses instead of tenant-global ticket statuses.",
+    "implemented": true,
+    "featureIds": ["F038"]
+  },
+  {
+    "id": "T054",
+    "description": "Workflow harness integration: workflow fixture setup resolves and seeds board-owned ticket statuses correctly for ticket status scenarios.",
+    "implemented": true,
+    "featureIds": ["F038"]
+  },
+  {
+    "id": "T055",
+    "description": "Migration test suite includes one happy-path DB integration proving clone/remap correctness on a tenant with multiple boards.",
+    "implemented": true,
+    "featureIds": ["F039"]
+  },
+  {
+    "id": "T056",
+    "description": "Migration test suite includes one failure/guard case proving unresolved no-board-context references are surfaced explicitly.",
+    "implemented": true,
+    "featureIds": ["F039"]
+  },
+  {
+    "id": "T057",
+    "description": "Playwright or equivalent UI coverage verifies board create with copied statuses, inline statuses, and board-local status editing.",
+    "implemented": true,
+    "featureIds": ["F040"]
+  },
+  {
+    "id": "T058",
+    "description": "Playwright or equivalent UI coverage verifies ticket board change requires explicit reselection of a valid destination-board status.",
+    "implemented": true,
+    "featureIds": ["F040"]
+  },
+  {
+    "id": "T059",
+    "description": "Workflow regression suite proves migrated saved workflow status references still execute against the intended board-owned ticket statuses.",
+    "implemented": true,
+    "featureIds": ["F041"]
+  },
+  {
+    "id": "T060",
+    "description": "Billing regression suite proves migrated tenant and contract renewal defaults still create tickets with the intended board-owned status ids.",
+    "implemented": true,
+    "featureIds": ["F041"]
+  },
+  {
+    "id": "T061",
+    "description": "API regression suite proves ticket create/update endpoints reject cross-board status ids and accept valid board-owned status ids.",
+    "implemented": true,
+    "featureIds": ["F042"]
+  },
+  {
+    "id": "T062",
+    "description": "Client portal regression suite proves board-scoped ticket status lookups and updates behave correctly after migration.",
+    "implemented": true,
+    "featureIds": ["F042"]
+  }
+]

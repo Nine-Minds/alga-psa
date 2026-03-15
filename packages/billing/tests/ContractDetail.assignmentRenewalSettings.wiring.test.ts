@@ -12,6 +12,8 @@ describe('ContractDetail assignment renewal settings wiring', () => {
     expect(source).toContain('assignment-renewal-mode-');
     expect(source).toContain('assignment-notice-period-');
     expect(source).toContain('assignment-renewal-term-');
+    expect(source).toContain('assignment-renewal-ticket-board-');
+    expect(source).toContain('assignment-renewal-ticket-status-');
   });
 
   it('persists edited renewal fields on save', () => {
@@ -19,6 +21,7 @@ describe('ContractDetail assignment renewal settings wiring', () => {
     expect(source).toContain('updatePayload.renewal_mode');
     expect(source).toContain('updatePayload.notice_period_days');
     expect(source).toContain('updatePayload.renewal_term_months');
+    expect(source).toContain('updatePayload.renewal_ticket_board_id');
+    expect(source).toContain('updatePayload.renewal_ticket_status_id');
   });
 });
-

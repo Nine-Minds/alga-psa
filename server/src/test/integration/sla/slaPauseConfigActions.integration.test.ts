@@ -28,6 +28,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
   } = TestContext.createHelpers();
 
   let context: TestContext;
+  let testBoardId: string;
   let testStatusId: string;
 
   beforeAll(async () => {
@@ -37,7 +38,8 @@ describe('SLA Pause Config Actions Integration Tests', () => {
         'tickets',
         'status_sla_pause_config',
         'sla_settings',
-        'statuses'
+        'statuses',
+        'boards'
       ]
     });
 
@@ -59,9 +61,17 @@ describe('SLA Pause Config Actions Integration Tests', () => {
     });
 
     // Create a test status for the pause config tests
+    testBoardId = uuidv4();
+    await context.db('boards').insert({
+      tenant: context.tenantId,
+      board_id: testBoardId,
+      board_name: 'SLA Test Board'
+    });
+
     const statusResult = await context.db('statuses')
       .insert({
         tenant: context.tenantId,
+        board_id: testBoardId,
         name: 'Test Status',
         status_type: 'ticket',
         order_number: 1,
@@ -157,6 +167,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       const status2Result = await context.db('statuses')
         .insert({
           tenant: context.tenantId,
+          board_id: testBoardId,
           name: 'Another Status',
           status_type: 'ticket',
           order_number: 2,
@@ -228,6 +239,53 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       const deleted = await deleteStatusSlaPauseConfig(uuidv4());
       expect(deleted).toBe(false);
     });
+
+    it('rejects legacy tenant-global ticket statuses for pause config writes', async () => {
+      const legacyStatusId = uuidv4();
+
+      await context.db('statuses').insert({
+        tenant: context.tenantId,
+        status_id: legacyStatusId,
+        name: 'Legacy Pending',
+        status_type: 'ticket',
+        order_number: 99,
+        is_closed: false,
+        created_by: context.userId
+      });
+
+      await expect(setStatusSlaPauseConfig(legacyStatusId, true)).rejects.toThrow(
+        'board-owned ticket status'
+      );
+    });
+
+    it('filters legacy tenant-global ticket configs out of returned config lists', async () => {
+      const legacyStatusId = uuidv4();
+
+      await context.db('statuses').insert({
+        tenant: context.tenantId,
+        status_id: legacyStatusId,
+        name: 'Legacy Waiting',
+        status_type: 'ticket',
+        order_number: 100,
+        is_closed: false,
+        created_by: context.userId
+      });
+
+      await context.db('status_sla_pause_config').insert({
+        tenant: context.tenantId,
+        config_id: uuidv4(),
+        status_id: legacyStatusId,
+        pauses_sla: true
+      });
+
+      await setStatusSlaPauseConfig(testStatusId, true);
+
+      const configs = await getStatusSlaPauseConfigs();
+      const configStatusIds = configs.map((config) => config.status_id);
+
+      expect(configStatusIds).toContain(testStatusId);
+      expect(configStatusIds).not.toContain(legacyStatusId);
+    });
   });
 
   // ============================================================================
@@ -238,6 +296,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       const status2Result = await context.db('statuses')
         .insert({
           tenant: context.tenantId,
+          board_id: testBoardId,
           name: 'Bulk Status 2',
           status_type: 'ticket',
           order_number: 2,
@@ -249,6 +308,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       const status3Result = await context.db('statuses')
         .insert({
           tenant: context.tenantId,
+          board_id: testBoardId,
           name: 'Bulk Status 3',
           status_type: 'ticket',
           order_number: 3,
@@ -286,6 +346,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       const status2Result = await context.db('statuses')
         .insert({
           tenant: context.tenantId,
+          board_id: testBoardId,
           name: 'New Bulk Status',
           status_type: 'ticket',
           order_number: 2,
@@ -353,6 +414,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
           tenant: context.tenantId,
           ticket_number: 'TEST-001',
           title: 'Test Ticket',
+          board_id: testBoardId,
           company_id: context.clientId,
           status_id: testStatusId,
           priority_id: testPriorityId,
@@ -476,6 +538,58 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       expect(result.paused).toBe(false);
       expect(result.reason).toBeNull();
     });
+
+    it('T048: pause evaluation follows board-owned status ids even when two boards use the same status name', async () => {
+      const secondBoardId = uuidv4();
+      const secondStatusId = uuidv4();
+      const secondTicketId = uuidv4();
+
+      await context.db('boards').insert({
+        tenant: context.tenantId,
+        board_id: secondBoardId,
+        board_name: 'Secondary SLA Board'
+      });
+
+      await context.db('statuses').insert({
+        tenant: context.tenantId,
+        board_id: secondBoardId,
+        status_id: secondStatusId,
+        name: 'Test Status',
+        status_type: 'ticket',
+        order_number: 1,
+        is_closed: false,
+        created_by: context.userId
+      });
+
+      await context.db('tickets').insert({
+        tenant: context.tenantId,
+        ticket_id: secondTicketId,
+        ticket_number: 'TEST-001-B',
+        title: 'Second Board Ticket',
+        board_id: secondBoardId,
+        company_id: context.clientId,
+        status_id: secondStatusId,
+        priority_id: testPriorityId,
+        category_id: testCategoryId,
+        channel_id: (
+          await context.db('channels')
+            .select('channel_id')
+            .where({ tenant: context.tenantId })
+            .first()
+        )!.channel_id,
+        entered_by: context.userId,
+        response_state: 'not_set'
+      });
+
+      await updateSlaSettings({ pause_on_awaiting_client: false });
+      await setStatusSlaPauseConfig(testStatusId, true);
+
+      const primaryBoardResult = await shouldSlaBePaused(testTicketId);
+      const secondaryBoardResult = await shouldSlaBePaused(secondTicketId);
+
+      expect(primaryBoardResult).toEqual({ paused: true, reason: 'status_pause' });
+      expect(secondaryBoardResult).toEqual({ paused: false, reason: null });
+    });
   });
 
   // ============================================================================
@@ -519,6 +633,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
           tenant: context.tenantId,
           ticket_number: 'TEST-002',
           title: 'Combined Test Ticket',
+          board_id: testBoardId,
           company_id: context.clientId,
           status_id: testStatusId,
           priority_id: testPriorityId,
@@ -590,6 +705,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
       const pendingStatusResult = await context.db('statuses')
         .insert({
           tenant: context.tenantId,
+          board_id: testBoardId,
           name: 'Pending External',
           status_type: 'ticket',
           order_number: 5,
@@ -665,6 +781,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
 
       // Insert config for different tenant directly
       const otherTenantId = uuidv4();
+      const otherBoardId = uuidv4();
       const otherStatusId = uuidv4();
 
       await context.db('tenants').insert({
@@ -673,8 +790,15 @@ describe('SLA Pause Config Actions Integration Tests', () => {
         email: 'other-config@test.com'
       });
 
+      await context.db('boards').insert({
+        tenant: otherTenantId,
+        board_id: otherBoardId,
+        board_name: 'Other Config Board'
+      });
+
       await context.db('statuses').insert({
         tenant: otherTenantId,
+        board_id: otherBoardId,
         status_id: otherStatusId,
         name: 'Other Tenant Status',
         status_type: 'ticket',
@@ -699,6 +823,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
 
     it('should not be able to get other tenant status config', async () => {
       const otherTenantId = uuidv4();
+      const otherBoardId = uuidv4();
       const otherStatusId = uuidv4();
 
       await context.db('tenants').insert({
@@ -707,8 +832,15 @@ describe('SLA Pause Config Actions Integration Tests', () => {
         email: 'isolated@test.com'
       });
 
+      await context.db('boards').insert({
+        tenant: otherTenantId,
+        board_id: otherBoardId,
+        board_name: 'Isolated Config Board'
+      });
+
       await context.db('statuses').insert({
         tenant: otherTenantId,
+        board_id: otherBoardId,
         status_id: otherStatusId,
         name: 'Isolated Status',
         status_type: 'ticket',
@@ -730,6 +862,7 @@ describe('SLA Pause Config Actions Integration Tests', () => {
 
     it('should not affect other tenant when deleting config', async () => {
       const otherTenantId = uuidv4();
+      const otherBoardId = uuidv4();
       const otherStatusId = uuidv4();
 
       await context.db('tenants').insert({
@@ -738,8 +871,15 @@ describe('SLA Pause Config Actions Integration Tests', () => {
         email: 'delete-test@test.com'
       });
 
+      await context.db('boards').insert({
+        tenant: otherTenantId,
+        board_id: otherBoardId,
+        board_name: 'Delete Test Board'
+      });
+
       await context.db('statuses').insert({
         tenant: otherTenantId,
+        board_id: otherBoardId,
         status_id: otherStatusId,
         name: 'Delete Test Status',
         status_type: 'ticket',

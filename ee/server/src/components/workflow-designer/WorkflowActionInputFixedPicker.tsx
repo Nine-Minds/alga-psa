@@ -4,8 +4,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { getAllContacts, getContactsByClient } from '@alga-psa/clients/actions';
-import { getTicketFieldOptions } from '@alga-psa/integrations/actions';
+import { getAvailableStatuses, getTicketFieldOptions } from '@alga-psa/integrations/actions';
 import { getTeamsBasic } from '@alga-psa/teams/actions';
+import { getTicketById } from '@alga-psa/tickets/actions';
 import type { InputMapping, MappingValue } from '@shared/workflow/runtime/client';
 
 export type WorkflowActionInputPickerField = {
@@ -42,6 +43,10 @@ const TICKET_PICKER_DEPENDENCY_HINTS: Partial<Record<string, Record<string, stri
   },
   'ticket-category': {
     board_id: 'Choose a fixed Board first to load category options.',
+  },
+  'ticket-status': {
+    board_id: 'Choose a fixed Board first to load status options.',
+    ticket_id: 'Choose a fixed Ticket first to load status options.',
   },
   'ticket-subcategory': {
     board_id: 'Choose a fixed Board first to load subcategory options.',
@@ -158,6 +163,28 @@ const loadWorkflowPickerOptions = async (
   dependencies: DependencyResolution[]
 ): Promise<WorkflowPickerOption[]> => {
   switch (kind) {
+    case 'ticket-status': {
+      const fixedBoard = dependencies.find((dependency) => dependency.path === 'board_id');
+      const fixedTicket = dependencies.find((dependency) => dependency.path === 'ticket_id');
+      let boardId: string | null = null;
+
+      if (fixedBoard?.status === 'fixed' && fixedBoard.value) {
+        boardId = fixedBoard.value;
+      } else if (fixedTicket?.status === 'fixed' && fixedTicket.value) {
+        const ticket = await getTicketById(fixedTicket.value);
+        boardId = ticket?.board_id ?? null;
+      }
+
+      if (!boardId) {
+        return [];
+      }
+
+      const { statuses } = await getAvailableStatuses(boardId);
+      return statuses.map((status) => ({
+        value: status.id,
+        label: status.name,
+      }));
+    }
     case 'contact': {
       const fixedClient = dependencies.find((dependency) => dependency.path === 'client_id');
       const contacts = fixedClient?.status === 'fixed' && fixedClient.value

@@ -124,9 +124,9 @@ describe('SLA Pause Service Integration Tests', () => {
     boardId = await createBoard(db, tenantId, 'Pause Test Board');
 
     // Create statuses
-    statusOpenId = await createStatus(db, tenantId, 'Open', false);
-    statusPendingId = await createStatus(db, tenantId, 'Pending', false);
-    statusClosedId = await createStatus(db, tenantId, 'Closed', true);
+    statusOpenId = await createStatus(db, tenantId, boardId, 'Open', false);
+    statusPendingId = await createStatus(db, tenantId, boardId, 'Pending', false);
+    statusClosedId = await createStatus(db, tenantId, boardId, 'Closed', true);
 
     // Create priority
     priorityHighId = await createPriority(db, tenantId, 'High', 1, internalUserId);
@@ -755,11 +755,18 @@ async function createBoard(db: Knex, tenant: string, name: string): Promise<stri
   return boardId;
 }
 
-async function createStatus(db: Knex, tenant: string, name: string, isClosed: boolean): Promise<string> {
+async function createStatus(
+  db: Knex,
+  tenant: string,
+  boardId: string,
+  name: string,
+  isClosed: boolean
+): Promise<string> {
   const statusId = uuidv4();
   await db('statuses').insert({
     tenant,
     status_id: statusId,
+    board_id: boardId,
     name,
     is_closed: isClosed,
     status_type: 'ticket',

@@ -71,7 +71,12 @@ export function registerTicketActions(): void {
         'client-location',
         ['client_id']
       ),
-      status_id: withWorkflowPicker(uuidSchema, 'Status id', 'ticket-status'),
+      status_id: withWorkflowPicker(
+        uuidSchema.optional(),
+        'Status id',
+        'ticket-status',
+        ['board_id']
+      ),
       priority_id: withWorkflowPicker(uuidSchema, 'Priority id', 'ticket-priority'),
       assigned_to: withWorkflowPicker(
         uuidSchema.nullable().optional(),
@@ -146,6 +151,25 @@ export function registerTicketActions(): void {
       };
       if (input.tags?.length) mergedAttributes.tags = input.tags;
       if (input.custom_fields) mergedAttributes.custom_fields = input.custom_fields;
+
+      if (input.status_id) {
+        const status = await tx.trx('statuses')
+          .where({
+            tenant: tx.tenantId,
+            status_id: input.status_id,
+            status_type: 'ticket',
+            board_id: input.board_id
+          })
+          .first();
+
+        if (!status) {
+          throwActionError(ctx, {
+            category: 'ValidationError',
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid status_id for selected board'
+          });
+        }
+      }
 
       let created: any;
       try {
@@ -286,7 +310,7 @@ export function registerTicketActions(): void {
         ticket_number: created.ticket_number,
         url: (created as any).url ?? null,
         created_at: created.entered_at,
-        status_id: input.status_id,
+        status_id: created.status_id,
         priority_id: input.priority_id
       };
     })
@@ -383,7 +407,8 @@ export function registerTicketActions(): void {
         status_id: withWorkflowPicker(
           uuidSchema.optional(),
           'New status id',
-          'ticket-status'
+          'ticket-status',
+          ['ticket_id']
         ),
         priority_id: withWorkflowPicker(
           uuidSchema.optional(),
@@ -456,9 +481,20 @@ export function registerTicketActions(): void {
       }
 
       if (input.patch.status_id) {
-        const status = await tx.trx('statuses').where({ tenant: tx.tenantId, status_id: input.patch.status_id, status_type: 'ticket' }).first();
+        const status = await tx.trx('statuses')
+          .where({
+            tenant: tx.tenantId,
+            status_id: input.patch.status_id,
+            status_type: 'ticket',
+            board_id: current.board_id,
+          })
+          .first();
         if (!status) {
-          throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Invalid status_id for ticket' });
+          throwActionError(ctx, {
+            category: 'ValidationError',
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid status_id for selected board'
+          });
         }
       }
       if (input.patch.priority_id) {
@@ -793,7 +829,14 @@ export function registerTicketActions(): void {
       }
 
       const currentStatus = ticket.status_id
-        ? await tx.trx('statuses').where({ tenant: tx.tenantId, status_id: ticket.status_id }).first()
+        ? await tx.trx('statuses')
+          .where({
+            tenant: tx.tenantId,
+            status_id: ticket.status_id,
+            status_type: 'ticket',
+            board_id: ticket.board_id,
+          })
+          .first()
         : null;
       if (currentStatus?.is_closed) {
         throwActionError(ctx, { category: 'ActionError', code: 'CONFLICT', message: 'Ticket is already in a closed status', details: { status_id: ticket.status_id } });
@@ -801,7 +844,11 @@ export function registerTicketActions(): void {
 
       // Choose a closed status.
       const closedStatus = await tx.trx('statuses')
-        .where({ tenant: tx.tenantId, status_type: 'ticket' })
+        .where({
+          tenant: tx.tenantId,
+          status_type: 'ticket',
+          board_id: ticket.board_id,
+        })
         .andWhere('is_closed', true)
         .orderBy('is_default', 'desc')
         .orderBy('order_number', 'asc')
@@ -810,7 +857,7 @@ export function registerTicketActions(): void {
         throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'No closed ticket status configured' });
       }
 
-      const nowIso = new Date().toISOString();
+      const nowIso = ctx.nowIso();
 
       // Update ticket closure fields.
       await tx.trx('tickets')

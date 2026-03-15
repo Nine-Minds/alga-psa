@@ -23,7 +23,16 @@ export const statusResponseSchema = z.object({
 // Status list query schema
 export const statusListQuerySchema = paginationQuerySchema.extend({
   type: z.enum(['ticket', 'project', 'project_task', 'interaction']).optional(),
-  search: z.string().optional()
+  search: z.string().optional(),
+  board_id: uuidSchema.optional(),
+}).superRefine((value, ctx) => {
+  if (value.type === 'ticket' && value.board_id === undefined) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['board_id'],
+      message: 'board_id is required when querying ticket statuses',
+    });
+  }
 });
 
 // Export types
