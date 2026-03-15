@@ -2,11 +2,21 @@
 
 This directory owns appliance-specific assets and automation for Alga PSA.
 
+For the stable operating model and generic Talos appliance assumptions, start with:
+
+- `ee/docs/premise/README.md`
+- `ee/docs/premise/talos-release-model.md`
+- `ee/docs/premise/talos-host-configuration.md`
+- `ee/docs/premise/talos-gitops-bootstrap.md`
+- `ee/docs/premise/talos-alga-bootstrap-and-persistence.md`
+- `ee/docs/premise/talos-operations-and-troubleshooting.md`
+
 Current responsibilities:
 
 - Flux deployment profiles under `flux/`
 - Talos Image Factory schematics under `schematics/`
 - Talos/appliance release metadata under `releases/`
+- Storage prerequisites under `manifests/`
 - Appliance helper scripts under `scripts/`
 
 ## Talos image scaffolding
@@ -47,26 +57,51 @@ The build script writes:
 
 The release manifest couples the Talos version, schematic ID, ISO URL/checksum, and installer image so later bootstrap flows can consume one deterministic contract.
 
-## Appliance bootstrap
+## Guided appliance bootstrap
 
-Use `ee/appliance/scripts/bootstrap-site.sh` to apply the Talos single-node Flux profile.
+Use `ee/appliance/scripts/bootstrap-appliance.sh` as the primary operator entrypoint.
 
-The bootstrap script requires explicit image tags for each Alga application image:
+It can:
 
-- `--alga-core-tag`
-- `--workflow-worker-tag`
-- `--email-service-tag`
-- `--temporal-worker-tag`
+- generate and persist Talos machine config for a fresh node
+- bootstrap Talos and write durable `talosconfig` and `kubeconfig`
+- install the local-path storage prerequisite and verify it
+- install Flux and point it at `ee/appliance/flux/base`
+- render runtime values with explicit per-service image tags
+- create or reuse the shared application secret
+- wait for the first-run `alga-core` bootstrap job and app rollout
 
-If you omit them in interactive mode, the script prompts for each one individually. It does not default application images to `latest`.
+Example fresh bring-up:
+
+```bash
+ee/appliance/scripts/bootstrap-appliance.sh \
+  --release-version 0.0.1 \
+  --node-ip 192.168.64.5 \
+  --hostname alga-appliance \
+  --interface enp0s1 \
+  --network-mode dhcp \
+  --repo-url https://github.com/Nine-Minds/alga-psa.git \
+  --repo-branch feature/on-prem-enterprise-helm-install \
+  --alga-core-tag 1b0a9c0b \
+  --workflow-worker-tag 61e4a00e \
+  --email-service-tag 61e4a00e \
+  --temporal-worker-tag 61e4a00e
+```
+
+If you already have a running cluster and kubeconfig, the same script can be used with `--kubeconfig` to skip Talos first-boot work.
+
+`ee/appliance/scripts/bootstrap-site.sh` remains as a compatibility wrapper around `bootstrap-appliance.sh`.
+
+## Support bundles
+
+Use `ee/appliance/scripts/collect-support-bundle.sh` to export the standard diagnostics package for support.
 
 Example:
 
 ```bash
-ee/appliance/scripts/bootstrap-site.sh \
-  --kubeconfig /path/to/kubeconfig \
-  --alga-core-tag 61e4a00e \
-  --workflow-worker-tag 61e4a00e \
-  --email-service-tag 61e4a00e \
-  --temporal-worker-tag 61e4a00e
+ee/appliance/scripts/collect-support-bundle.sh \
+  --kubeconfig ~/nm-kube-config/alga-psa/talos/appliance-single-node/kubeconfig \
+  --talosconfig ~/nm-kube-config/alga-psa/talos/appliance-single-node/talosconfig \
+  --node-ip 192.168.64.5 \
+  --site-id appliance-single-node
 ```

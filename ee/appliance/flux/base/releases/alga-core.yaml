@@ -20,7 +20,7 @@ spec:
       interval: 10m
       sourceRef:
         kind: GitRepository
-        name: flux-system
+        name: alga-appliance
         namespace: flux-system
   valuesFrom:
     - kind: ConfigMap
