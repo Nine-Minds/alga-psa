@@ -38,7 +38,7 @@ vi.mock('../../../components/layout/Body', () => ({
 }));
 
 vi.mock('../../../components/layout/RightSidebar', () => ({
-  default: ({
+  default: function MockRightSidebar({
     isOpen,
     onRequestClose,
     onInterruptibleStateChange,
@@ -48,7 +48,7 @@ vi.mock('../../../components/layout/RightSidebar', () => ({
     onRequestClose?: () => void;
     onInterruptibleStateChange?: (isInterruptible: boolean) => void;
     onRegisterCancelHandler?: (cancelHandler: (() => void) | null) => void;
-  }) => {
+  }) {
     React.useEffect(() => {
       onInterruptibleStateChange?.(isOpen && sidebarIsInterruptible);
       onRegisterCancelHandler?.(isOpen ? mockCancelHandler : null);

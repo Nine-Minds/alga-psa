@@ -610,6 +610,7 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
         <DialogFooter>
           <div className="mt-4 flex justify-end gap-2">
             <Button
+              id="rename-chat-cancel"
               variant="outline"
               onClick={() => {
                 setRenameTargetChat(null);
@@ -620,6 +621,7 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
               Cancel
             </Button>
             <Button
+              id="rename-chat-save"
               onClick={() => void handleRenameSubmit()}
               disabled={isRenamingChat || renameValue.trim().length === 0}
             >
