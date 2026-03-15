@@ -7,7 +7,7 @@ import Spinner from '@alga-psa/ui/components/Spinner';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { createClientTicket } from '@alga-psa/client-portal/actions';
 import { getClientTicketFormData } from '@alga-psa/tickets/actions/ticketFormActions';
-import { IPriority } from '@alga-psa/types';
+import { IPriority, IBoard } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -22,6 +22,10 @@ interface ClientAddTicketProps {
 export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAddTicketProps) {
   const { t } = useTranslation('features/tickets');
   const { t: tCommon } = useTranslation('common');
+  const noBoardsAvailableMessage = t(
+    'create.noBoardsAvailable',
+    'No ticket boards are available for your account. Contact your administrator.'
+  );
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -30,6 +34,8 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
   const [description, setDescription] = useState('');
   const [priorityId, setPriorityId] = useState('');
   const [priorities, setPriorities] = useState<IPriority[]>([]);
+  const [boards, setBoards] = useState<IBoard[]>([]);
+  const [boardId, setBoardId] = useState('');
 
   useEffect(() => {
     if (!open) {
@@ -43,7 +49,15 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
       setIsLoading(true);
       try {
         const formData = await getClientTicketFormData();
+        const portalBoards = formData.boards as IBoard[] | undefined;
+        const mappedBoards = portalBoards || [];
+        setBoards(mappedBoards);
         setPriorities(formData.priorities as IPriority[]);
+        if (mappedBoards.length > 0) {
+          setBoardId((mappedBoards[0] as IBoard).board_id);
+        } else {
+          setBoardId('');
+        }
       } catch (error) {
         console.error('Error fetching form data:', error);
       } finally {
@@ -74,12 +88,14 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
   };
 
   const validateForm = () => {
-    const validationErrors: string[] = [];
-    if (!title.trim()) validationErrors.push(t('create.errors.titleRequired'));
-    if (!description.trim()) validationErrors.push(t('create.errors.descriptionRequired'));
-    if (!priorityId) validationErrors.push(t('create.errors.priorityRequired'));
-    return validationErrors;
-  };
+      const validationErrors: string[] = [];
+      if (!title.trim()) validationErrors.push(t('create.errors.titleRequired'));
+      if (!description.trim()) validationErrors.push(t('create.errors.descriptionRequired'));
+      if (!priorityId) validationErrors.push(t('create.errors.priorityRequired'));
+      if (boards.length > 0 && !boardId) validationErrors.push(t('create.errors.boardRequired'));
+      if (boards.length === 0) validationErrors.push(t('messages.noDefaultBoard'));
+      return validationErrors;
+    };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,6 +112,9 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
       formData.append('title', title);
       formData.append('description', description);
       formData.append('priority_id', priorityId);
+      if (boardId) {
+        formData.append('board_id', boardId);
+      }
 
       await createClientTicket(formData);
       resetForm();
@@ -113,6 +132,7 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
           'Not authenticated': t('messages.notAuthenticated'),
           'User ID not found in session': t('messages.userNotFound'),
           'Tenant not found in session. Please log out and log back in.': t('messages.tenantNotFound'),
+          'Selected visibility group does not allow any boards': noBoardsAvailableMessage,
         };
         errorMessage = errorMap[error.message] || error.message;
       }
@@ -129,6 +149,15 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
         label: priority.priority_name
       })),
     [priorities]
+  );
+
+  const memoizedBoardOptions = useMemo(
+    () =>
+      boards.map((board) => ({
+        value: board.board_id,
+        label: board.board_name
+      })),
+    [boards]
   );
 
   return (
@@ -171,6 +200,25 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
                 placeholder={t('create.descriptionPlaceholder')}
               />
 
+              {boards.length > 0 ? (
+                <div className="relative z-10">
+                  <CustomSelect
+                    id="client-ticket-board"
+                    value={boardId}
+                    onValueChange={(value) => {
+                      setBoardId(value);
+                      clearErrorIfSubmitted();
+                    }}
+                    options={memoizedBoardOptions}
+                    placeholder={t('create.boardPlaceholder')}
+                  />
+                </div>
+              ) : (
+                <Alert>
+                  <AlertDescription>{noBoardsAvailableMessage}</AlertDescription>
+                </Alert>
+              )}
+
               <div className="relative z-10">
                 <CustomSelect
                   id="client-ticket-priority"
@@ -197,7 +245,7 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
                   id="submit-ticket-button"
                   type="submit"
                   variant="default"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || boards.length === 0}
                 >
                   {isSubmitting ? t('create.submitting') : t('create.submit')}
                 </Button>

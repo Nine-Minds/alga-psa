@@ -21,6 +21,7 @@
     "titlePlaceholder": "Titolo del ticket",
     "descriptionPlaceholder": "Descrivi il tuo problema...",
     "priorityPlaceholder": "Seleziona priorità",
+    "noBoardsAvailable": "No ticket boards are available for your account. Contact your administrator.",
     "submit": "Crea ticket",
     "submitting": "Creazione in corso...",
     "errors": {

@@ -1,0 +1,230 @@
+[
+  {
+    "id": "T001",
+    "description": "Migration: creates the per-client visibility groups table with tenant and client ownership fields.",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "Migration: creates the group-to-board membership table with tenant-scoped references.",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T003",
+    "description": "Migration: adds the single-group contact assignment field or equivalent structure with `NULL` representing unrestricted access.",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T004",
+    "description": "Migration/backward compatibility: existing contacts and portal users remain unrestricted when no group assignment exists.",
+    "implemented": true,
+    "featureIds": ["F004", "F008"]
+  },
+  {
+    "id": "T005",
+    "description": "Integration: effective board resolver returns unrestricted access when a contact has no assigned group.",
+    "implemented": true,
+    "featureIds": ["F005", "F008"]
+  },
+  {
+    "id": "T006",
+    "description": "Integration: effective board resolver returns exactly the assigned group's allowed board IDs for a restricted contact.",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T007",
+    "description": "Guard: effective board resolver rejects or ignores groups that belong to a different client or tenant.",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T008",
+    "description": "Integration: client portal ticket list only returns tickets from boards in the assigned visibility group.",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T009",
+    "description": "Regression: client portal ticket list still returns all client tickets for an unassigned contact.",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T010",
+    "description": "Integration: client portal ticket detail succeeds for a ticket on a visible board.",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T011",
+    "description": "Guard: client portal ticket detail rejects direct access to a ticket on a hidden board.",
+    "implemented": true,
+    "featureIds": ["F009"]
+  },
+  {
+    "id": "T012",
+    "description": "Guard: client portal ticket documents or comments cannot be loaded for a ticket on a hidden board.",
+    "implemented": true,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T013",
+    "description": "Integration: client portal ticket creation form only lists allowed boards for a restricted contact.",
+    "implemented": true,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T014",
+    "description": "Integration: client portal ticket creation default board selection stays within the allowed board set.",
+    "implemented": true,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T015",
+    "description": "Guard: client portal ticket creation rejects a disallowed board even if the board ID is submitted manually.",
+    "implemented": true,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T016",
+    "description": "Regression: unassigned contacts can still create tickets using the current unrestricted behavior.",
+    "implemented": true,
+    "featureIds": ["F004", "F012"]
+  },
+  {
+    "id": "T017",
+    "description": "Integration: ticket-backed dashboard counts or summaries only include boards visible to the current restricted contact.",
+    "implemented": true,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T018",
+    "description": "UI/action: client portal admin can list visibility groups for their own client.",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T019",
+    "description": "Guard: non-admin client portal users are denied access to visibility group listing actions and UI.",
+    "implemented": true,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T020",
+    "description": "Guard: client portal admins cannot list or fetch visibility groups for a different client.",
+    "implemented": true,
+    "featureIds": ["F014", "F018"]
+  },
+  {
+    "id": "T021",
+    "description": "UI/action: client portal admin can create a visibility group with selected board membership.",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T022",
+    "description": "UI/action: client portal admin can edit a group's name and board membership.",
+    "implemented": true,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T023",
+    "description": "Guard: client portal admin cannot add boards from another client or tenant to a visibility group.",
+    "implemented": true,
+    "featureIds": ["F015", "F006"]
+  },
+  {
+    "id": "T024",
+    "description": "UI/action: client portal admin can assign a visibility group to a contact in the same client.",
+    "implemented": true,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T025",
+    "description": "UI/action: client portal admin can clear a contact's assignment back to unrestricted full access.",
+    "implemented": true,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T026",
+    "description": "Guard: client portal admin cannot assign a group from one client to a contact in another client.",
+    "implemented": true,
+    "featureIds": ["F016", "F006"]
+  },
+  {
+    "id": "T027",
+    "description": "Lifecycle: a contact without a portal user can receive a visibility group assignment before invitation or account creation.",
+    "implemented": true,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T028",
+    "description": "Lifecycle: a preconfigured contact assignment is still effective after the portal user account is created and linked to that contact.",
+    "implemented": true,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T029",
+    "description": "UI/action: MSP staff can view and replace the effective visibility group from the PSA contact portal tab.",
+    "implemented": true,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T030",
+    "description": "UI/action: MSP staff can create and edit per-client visibility groups from the PSA-side management flow.",
+    "implemented": true,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T031",
+    "description": "Integration: when MSP staff replace a contact assignment, the new group is immediately reflected in client portal ticket visibility.",
+    "implemented": true,
+    "featureIds": ["F021", "F019"]
+  },
+  {
+    "id": "T032",
+    "description": "Integration: when a client portal admin changes the same contact assignment later, the latest assignment wins without lock semantics.",
+    "implemented": true,
+    "featureIds": ["F021", "F016"]
+  },
+  {
+    "id": "T033",
+    "description": "Guard: deleting a group that is currently assigned to one or more contacts is blocked with a clear error response.",
+    "implemented": true,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T034",
+    "description": "Happy path: deleting an unassigned visibility group succeeds.",
+    "implemented": true,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T035",
+    "description": "Localization: English client portal locale contains every new board-visibility group key used by the client portal admin UI.",
+    "implemented": true,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T036",
+    "description": "Localization parity: `de`, `es`, `fr`, `it`, `nl`, `pl`, `xx`, and `yy` client portal locale files contain the same new board-visibility keys as `en`.",
+    "implemented": true,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T037",
+    "description": "UI: an assigned group with zero boards yields a localized empty state and hides or disables ticket creation for the restricted portal user.",
+    "implemented": true,
+    "featureIds": ["F011", "F024"]
+  },
+  {
+    "id": "T038",
+    "description": "Regression: existing portal invitation and client portal onboarding flows still work when no board visibility group is assigned.",
+    "implemented": true,
+    "featureIds": ["F004", "F017"]
+  }
+]

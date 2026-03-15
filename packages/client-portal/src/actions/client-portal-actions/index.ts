@@ -8,5 +8,6 @@ export * from './client-project-details';
 export * from './client-projects';
 export * from './client-tickets';
 export * from './clientUserActions';
+export * from './visibilityGroupActions';
 export * from './dashboard';
 export * from './notificationActivities';

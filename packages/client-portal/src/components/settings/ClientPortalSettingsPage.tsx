@@ -6,16 +6,17 @@ import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
 import { ClientDetailsSettings } from './ClientDetailsSettings';
 import { UserManagementSettings } from './UserManagementSettings';
 import ClientAccount from '../account/ClientAccount';
+import { VisibilityGroupsSettings } from './VisibilityGroupsSettings';
 import { DrawerProvider, DrawerOutlet } from "@alga-psa/ui";
 import { checkClientPortalPermissions } from '@alga-psa/client-portal/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 // Tab identifiers (stable, locale-independent keys)
-type TabId = 'account' | 'client-details' | 'user-management';
+type TabId = 'account' | 'client-details' | 'user-management' | 'visibility-groups';
 
 // Valid URL slugs
-const VALID_TAB_SLUGS: TabId[] = ['account', 'client-details', 'user-management'];
+const VALID_TAB_SLUGS: TabId[] = ['account', 'client-details', 'user-management', 'visibility-groups'];
 const DEFAULT_TAB: TabId = 'account';
 
 export default function ClientPortalSettingsPage() {
@@ -26,6 +27,7 @@ export default function ClientPortalSettingsPage() {
   const hydrationReadyRef = useRef(false);
 
   const [hasUserManagementAccess, setHasUserManagementAccess] = useState(false);
+  const [hasVisibilityGroupAccess, setHasVisibilityGroupAccess] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   // Determine initial tab from URL or default
@@ -75,6 +77,7 @@ export default function ClientPortalSettingsPage() {
     const checkPermissions = async () => {
       const permissions = await checkClientPortalPermissions();
       setHasUserManagementAccess(permissions.hasUserManagementAccess);
+      setHasVisibilityGroupAccess(permissions.hasVisibilityGroupAccess);
       setIsLoading(false);
     };
     checkPermissions();
@@ -111,6 +114,14 @@ export default function ClientPortalSettingsPage() {
       id: 'user-management',
       label: tProfile('clientSettings.tabs.userManagement'),
       content: <UserManagementSettings />
+    });
+  }
+
+  if (hasVisibilityGroupAccess) {
+    tabs.push({
+      id: 'visibility-groups',
+      label: tProfile('clientSettings.tabs.visibilityGroups'),
+      content: <VisibilityGroupsSettings />
     });
   }
 

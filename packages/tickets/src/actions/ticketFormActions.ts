@@ -10,6 +10,7 @@ import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
+import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility';
 
 export interface TicketFormData {
   users: IUser[];
@@ -97,22 +98,47 @@ export const getClientTicketFormData = withAuth(async (_user, { tenant }): Promi
   try {
     const { knex: db } = await createTenantKnex();
 
-    // Get the default board for client portal tickets
-    const defaultBoard = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const board = await trx('boards')
-        .select('board_id', 'priority_type')
-        .where({ tenant, is_default: true })
+    const boards = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const userRecord = await trx('users')
+        .where({ user_id: _user.user_id, tenant })
         .first();
 
-      return board;
+      if (!userRecord?.contact_id) {
+        throw new Error('User not associated with a contact');
+      }
+
+      const visibility = await getClientContactVisibilityContext(
+        trx,
+        tenant,
+        userRecord.contact_id
+      );
+
+      const allowedBoards = visibility.visibleBoardIds === null
+        ? await trx('boards').where({ tenant }).select('board_id', 'board_name')
+        : visibility.visibleBoardIds.length === 0
+          ? []
+          : await trx('boards')
+            .where({ tenant })
+            .whereIn('board_id', visibility.visibleBoardIds)
+            .select('board_id', 'board_name');
+
+      return allowedBoards;
     });
 
-    if (!defaultBoard) {
-      throw new Error('No default board found for client portal tickets');
+    if (boards.length === 0) {
+      return {
+        priorities: [],
+        users: [],
+        boards,
+        statuses: [],
+        clients: [],
+      };
     }
 
+    const defaultBoard = boards[0];
+
     // Get priorities filtered by the default board's priority type
-    const priorities = await getPrioritiesByBoardType(defaultBoard.board_id, 'ticket').catch((error: unknown) => {
+      const priorities = await getPrioritiesByBoardType(defaultBoard.board_id, 'ticket').catch((error: unknown) => {
       console.error('Error fetching priorities for default board:', error);
       return [];
     });
@@ -121,7 +147,7 @@ export const getClientTicketFormData = withAuth(async (_user, { tenant }): Promi
       priorities,
       // Other fields are not needed for client portal ticket creation
       users: [],
-      boards: [],
+      boards,
       statuses: [],
       clients: [],
     };

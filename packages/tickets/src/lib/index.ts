@@ -18,11 +18,18 @@ export {
   TicketMobileEditorBridgeClient,
 } from './ticketMobileEditorBridge';
 export { TicketMobileEditorRuntime } from './ticketMobileEditorRuntime';
+export {
+  applyVisibilityBoardFilter,
+  getClientContactVisibilityContext,
+  VISIBILITY_GROUP_MISMATCH_ERROR,
+  VISIBILITY_GROUP_MISSING_ERROR,
+} from './clientPortalVisibility';
 export type {
   CommentContactAuthor,
   CommentUserAuthor,
   ResolvedCommentAuthor,
 } from './commentAuthorResolution';
+export type { ContactVisibilityContext } from './clientPortalVisibility';
 export type { TicketMobileEditorBridgeClientOptions } from './ticketMobileEditorBridge';
 export type {
   TicketMobileEditorCommand,

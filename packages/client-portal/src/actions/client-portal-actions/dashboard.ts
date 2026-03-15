@@ -6,6 +6,10 @@ import { Knex } from 'knex';
 import { headers } from 'next/headers.js';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+import {
+  applyVisibilityBoardFilter,
+  getClientContactVisibilityContext
+} from '@alga-psa/tickets/lib';
 
 export interface DashboardMetrics {
   openTickets: number;
@@ -51,16 +55,20 @@ export const getDashboardMetrics = withAuth(async (
       }
 
       const clientId = contact.client_id;
+      const visibility = await getClientContactVisibilityContext(trx, tenant, user.contact_id);
 
-      const [[ticketCount], [projectCount], [invoiceCount], [assetCount]] = await Promise.all([
+        const [[ticketCount], [projectCount], [invoiceCount], [assetCount]] = await Promise.all([
         // Get open tickets count
-        trx('tickets')
-          .where({
-            'tickets.tenant': tenant,
-            'tickets.client_id': clientId,
-            'is_closed': false
-          })
-          .count('ticket_id as count'),
+        applyVisibilityBoardFilter(
+          trx('tickets')
+            .where({
+              'tickets.tenant': tenant,
+              'tickets.client_id': clientId,
+              'is_closed': false
+            }),
+          visibility.visibleBoardIds,
+          'tickets.board_id'
+        ).count('ticket_id as count'),
 
         // Get active projects count
         trx('projects')
@@ -138,6 +146,7 @@ export const getRecentActivity = withAuth(async (
       }
 
       const clientId = contact.client_id;
+      const visibility = await getClientContactVisibilityContext(trx, tenant, user.contact_id);
 
       // Get recent tickets with their initial descriptions
       const tickets = await trx('tickets')
@@ -153,6 +162,9 @@ export const getRecentActivity = withAuth(async (
         .where({
           'tickets.tenant': tenant,
           'tickets.client_id': clientId
+        })
+        .modify((queryBuilder: Knex.QueryBuilder) => {
+          applyVisibilityBoardFilter(queryBuilder, visibility.visibleBoardIds, 'tickets.board_id');
         })
         .orderBy('tickets.updated_at', 'desc')
         .limit(3);

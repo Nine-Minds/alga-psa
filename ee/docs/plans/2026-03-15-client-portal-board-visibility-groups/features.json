@@ -1,0 +1,146 @@
+[
+  {
+    "id": "F001",
+    "description": "Add a per-client `client_portal_visibility_groups` data structure keyed by tenant and client.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Functional Requirements"]
+  },
+  {
+    "id": "F002",
+    "description": "Add a `client_portal_visibility_group_boards` membership structure that maps each visibility group to its allowed boards.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Functional Requirements"]
+  },
+  {
+    "id": "F003",
+    "description": "Add a single-group assignment field or equivalent one-to-one assignment structure for contacts, where `NULL` means full access.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Functional Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F004",
+    "description": "Keep existing contacts and portal users unrestricted by default after migration so no board visibility changes occur until an assignment is added.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Rollout / Migration", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F005",
+    "description": "Introduce a shared server-side resolver that computes the effective visible board set for a portal contact from contact assignment and group membership.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations", "Security / Permissions"]
+  },
+  {
+    "id": "F006",
+    "description": "Ensure the effective board resolver enforces tenant and client scoping so contacts cannot resolve groups or boards outside their own client context.",
+    "implemented": true,
+    "prdRefs": ["Security / Permissions", "Non-functional Requirements"]
+  },
+  {
+    "id": "F007",
+    "description": "Filter client portal ticket list results to allowed boards when a contact has an assigned visibility group.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F008",
+    "description": "Leave client portal ticket list behavior unchanged for contacts with no assigned visibility group.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F009",
+    "description": "Reject client portal ticket detail access when the requested ticket belongs to a board that is not visible to the current contact.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Security / Permissions", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F010",
+    "description": "Require ticket-adjacent client portal detail loaders, such as ticket documents or comments, to inherit the same hidden-board guard.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F011",
+    "description": "Restrict client portal ticket creation board options and default board selection to the boards allowed by the assigned visibility group.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "UX / UI Notes"]
+  },
+  {
+    "id": "F012",
+    "description": "Reject client portal ticket creation requests that submit a board outside the effective visibility set.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Security / Permissions", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F013",
+    "description": "Apply the same effective board filter to client portal ticket-backed dashboard counts or summaries that surface ticket data.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Goals"]
+  },
+  {
+    "id": "F014",
+    "description": "Add a client portal admin-only UI for listing per-client visibility groups with localized labels, counts, and empty states.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Goals"]
+  },
+  {
+    "id": "F015",
+    "description": "Add client portal admin create and edit flows for group name and board membership within the admin's own client.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Functional Requirements"]
+  },
+  {
+    "id": "F016",
+    "description": "Add client portal admin assignment controls that assign or clear a single visibility group for a contact in the same client.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Functional Requirements"]
+  },
+  {
+    "id": "F017",
+    "description": "Allow client portal admins to preconfigure visibility for a contact even when that contact does not yet have a portal user account, because assignment is contact-based.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Users and Primary Flows"]
+  },
+  {
+    "id": "F018",
+    "description": "Hide client portal group-management UI from non-admin portal users and deny access to the related admin actions server-side.",
+    "implemented": true,
+    "prdRefs": ["Security / Permissions", "UX / UI Notes"]
+  },
+  {
+    "id": "F019",
+    "description": "Extend the PSA contact portal tab so MSP staff can view and replace the effective visibility group for a contact.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Goals"]
+  },
+  {
+    "id": "F020",
+    "description": "Provide MSP CRUD for the same per-client visibility groups from the PSA-side flow.",
+    "implemented": true,
+    "prdRefs": ["Goals", "UX / UI Notes"]
+  },
+  {
+    "id": "F021",
+    "description": "Use last-write-wins behavior for MSP and client-admin assignment changes without introducing lock semantics in v1.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F022",
+    "description": "Block deletion of a visibility group that is still assigned to one or more contacts, returning a clear user-facing error.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  },
+  {
+    "id": "F023",
+    "description": "Allow deletion of an unassigned visibility group.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F024",
+    "description": "Add all new client portal strings to every supported `client-portal.json` locale file using the repo's existing localization pattern.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Non-functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  }
+]

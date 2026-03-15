@@ -21,6 +21,7 @@
     "titlePlaceholder": "Titel van ticket",
     "descriptionPlaceholder": "Beschrijf je probleem...",
     "priorityPlaceholder": "Selecteer prioriteit",
+    "noBoardsAvailable": "No ticket boards are available for your account. Contact your administrator.",
     "submit": "Ticket aanmaken",
     "submitting": "Bezig met aanmaken...",
     "errors": {
