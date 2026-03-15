@@ -126,6 +126,30 @@ Working memory for adding multiple email addresses to contacts using a compatibi
   - `shared/models/__tests__/contactInterfaceParity.test.ts` for contract parity between shared interfaces and `@alga-psa/types`.
 - Decision made to model primary email label metadata as explicit columns on `contacts` and use child rows for additional emails only.
 - Constraint to keep: keep `contacts.email` as authoritative default and compatibility boundary for downstream consumers.
+- Completed shared email editor milestone:
+  - Added `packages/clients/src/components/contacts/ContactEmailAddressesEditor.tsx` with:
+    - pinned primary/default row
+    - additional row add/remove/reorder/promote behavior
+    - canonical plus custom label editing
+    - helper exports for normalize/compact/reorder/promote/validate flows
+  - Validation now allows reuse of the same custom label across rows because labels are tenant-scoped reusable definitions, not per-contact unique values.
+  - Added focused helper coverage in `packages/clients/src/components/contacts/ContactEmailAddressesEditor.test.ts`.
+  - Added jsdom interaction coverage in `server/src/test/unit/contacts/ContactEmailAddressesEditor.test.tsx`.
+- Commands run for the shared editor milestone:
+  - `../../node_modules/.bin/vitest run src/components/contacts/ContactEmailAddressesEditor.test.ts --coverage=false` from `packages/clients`
+  - `cd server && pnpm vitest run src/test/unit/contacts/ContactEmailAddressesEditor.test.tsx --coverage=false`
+- Completed contact-surface wiring milestone:
+  - `ContactDetailsEdit.tsx` now edits and saves the hybrid email payload through `ContactEmailAddressesEditor`, validates it on submit, and sends compacted email rows through `updateContact`.
+  - `ContactDetailsView.tsx` now renders the primary/default email distinctly and lists additional email addresses with labels underneath.
+  - `QuickAddContact.tsx` now authors the hybrid email payload, including additional email rows, through the shared editor before calling `addContact`.
+  - `QuickAddClient.tsx` inline contact creation now authors the same hybrid email payload before calling `createClientContact`.
+  - `contactActions.tsx` now forwards primary-email label metadata and additional email rows through `addContact`, `updateContact`, and `createClientContact`.
+- Added coverage for the contact-surface wiring milestone:
+  - `server/src/test/unit/contacts/ContactDetailsEmailAddresses.contract.test.ts`
+  - `server/src/test/unit/contacts/QuickAddContact.phoneNumbers.test.tsx`
+  - `server/src/test/unit/contacts/QuickAddClient.phoneNumbers.test.tsx`
+- Commands run for the contact-surface wiring milestone:
+  - `cd server && pnpm vitest run src/test/unit/contacts/ContactEmailAddressesEditor.test.tsx src/test/unit/contacts/ContactDetailsEmailAddresses.contract.test.ts src/test/unit/contacts/QuickAddContact.phoneNumbers.test.tsx src/test/unit/contacts/QuickAddClient.phoneNumbers.test.tsx --coverage=false`
 
 ## Update (2026-03-15, validation/persistence block)
 - Completed `F008` through `F011` in the shared contact model and flipped `T008` through `T016` to implemented.

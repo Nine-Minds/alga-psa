@@ -10,7 +10,7 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { TextArea } from "@alga-psa/ui/components/TextArea";
 import { addContact, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import type { ContactPhoneNumberInput, IClient } from '@alga-psa/types';
+import type { ContactPhoneNumberInput, CreateContactInput, IClient } from '@alga-psa/types';
 import QuickAddClient from '../clients/QuickAddClient';
 import { IContact } from '@alga-psa/types';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -29,6 +29,15 @@ import ContactPhoneNumbersEditor, {
   compactContactPhoneNumbers,
   validateContactPhoneNumbers,
 } from './ContactPhoneNumbersEditor';
+import ContactEmailAddressesEditor, {
+  compactContactEmailAddresses,
+  validateContactEmailAddresses,
+} from './ContactEmailAddressesEditor';
+
+type QuickAddContactEmailState = Pick<
+  CreateContactInput,
+  'email' | 'primary_email_canonical_type' | 'primary_email_custom_type' | 'additional_email_addresses'
+>;
 
 interface QuickAddContactProps {
   isOpen: boolean;
@@ -66,9 +75,15 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
 }) => {
   const { toast } = useToast();
   const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
+  const [emailState, setEmailState] = useState<QuickAddContactEmailState>({
+    email: '',
+    primary_email_canonical_type: 'work',
+    primary_email_custom_type: null,
+    additional_email_addresses: [],
+  });
   const [phoneNumbers, setPhoneNumbers] = useState<ContactPhoneNumberInput[]>([]);
   const [phoneValidationErrors, setPhoneValidationErrors] = useState<string[]>([]);
+  const [emailValidationErrors, setEmailValidationErrors] = useState<string[]>([]);
   const [customPhoneTypeSuggestions, setCustomPhoneTypeSuggestions] = useState<string[]>([]);
   const [clientId, setClientId] = useState<string | null>(null);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('all');
@@ -122,9 +137,15 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       setError(null);
     } else {
       setFullName('');
-      setEmail('');
+      setEmailState({
+        email: '',
+        primary_email_canonical_type: 'work',
+        primary_email_custom_type: null,
+        additional_email_addresses: [],
+      });
       setPhoneNumbers([]);
       setPhoneValidationErrors([]);
+      setEmailValidationErrors([]);
       if (!selectedClientId) {
         setClientId(null);
       }
@@ -238,10 +259,11 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       validationMessages.push(nameError);
     }
 
-    const emailError = validateField('contact_email', email, true);
-    if (emailError) {
-      fieldValidationErrors.contact_email = emailError;
-      validationMessages.push(emailError);
+    const currentEmailErrors = validateContactEmailAddresses(emailState);
+    setEmailValidationErrors(currentEmailErrors);
+    if (currentEmailErrors.length > 0) {
+      fieldValidationErrors.contact_email = currentEmailErrors[0]!;
+      validationMessages.push(...currentEmailErrors);
     }
 
     const currentPhoneErrors = validateContactPhoneNumbers(phoneNumbers);
@@ -276,10 +298,11 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
 
     try {
       setError(null); // Clear any existing errors
+      const sanitizedEmails = compactContactEmailAddresses(emailState);
       const sanitizedPhoneNumbers = compactContactPhoneNumbers(phoneNumbers);
       const contactData = {
         full_name: fullName.trim(),
-        email: email.trim(),
+        ...sanitizedEmails,
         phone_numbers: sanitizedPhoneNumbers,
         client_id: clientId || undefined,
         is_inactive: isInactive,
@@ -441,31 +464,19 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
               )}
             </div>
             <div>
-              <Label htmlFor="email">Email *</Label>
-              <Input
+              <ContactEmailAddressesEditor
                 id="quick-add-contact-email"
-                type="email"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  // Clear error when user starts typing
+                value={emailState}
+                onChange={(value) => {
+                  setEmailState(value);
                   if (fieldErrors.contact_email) {
                     setFieldErrors(prev => ({ ...prev, contact_email: '' }));
                   }
-                  // Immediately validate if user enters only spaces
-                  if (/^\s+$/.test(e.target.value)) {
-                    setFieldErrors(prev => ({ ...prev, contact_email: 'Email address cannot contain only spaces' }));
-                  }
                 }}
-                onBlur={() => {
-                  validateField('contact_email', email, false);
-                }}
-                required
-                className={fieldErrors.contact_email ? 'border-red-500' : ''}
+                customTypeSuggestions={[]}
+                errorMessages={hasAttemptedSubmit ? emailValidationErrors : undefined}
+                onValidationChange={setEmailValidationErrors}
               />
-              {fieldErrors.contact_email && (
-                <p className="text-sm text-red-600 mt-1">{fieldErrors.contact_email}</p>
-              )}
             </div>
             <div>
               <ContactPhoneNumbersEditor
@@ -583,7 +594,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
               type="button"
               onClick={handleSubmit}
               disabled={false}
-              className={!fullName.trim() || !email.trim() || Object.values(fieldErrors).some(error => error) ? 'opacity-50' : ''}
+              className={!fullName.trim() || !emailState.email.trim() || Object.values(fieldErrors).some(error => error) ? 'opacity-50' : ''}
             >
               Add Contact
             </Button>

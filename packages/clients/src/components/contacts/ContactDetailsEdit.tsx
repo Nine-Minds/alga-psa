@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import type { ContactPhoneNumberInput, IClient, IContact, ITag } from '@alga-psa/types';
+import type { ContactPhoneNumberInput, CreateContactInput, IClient, IContact, ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
@@ -21,6 +21,15 @@ import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/
 import ContactAvatarUpload from './ContactAvatarUpload';
 import { getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
 import ContactPhoneNumbersEditor, { compactContactPhoneNumbers, validateContactPhoneNumbers } from './ContactPhoneNumbersEditor';
+import ContactEmailAddressesEditor, {
+  compactContactEmailAddresses,
+  validateContactEmailAddresses,
+} from './ContactEmailAddressesEditor';
+
+type EditableContact = IContact & {
+  primary_email_custom_type?: string | null;
+  additional_email_addresses?: CreateContactInput['additional_email_addresses'];
+};
 
 interface ContactDetailsEditProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -39,7 +48,10 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
   onCancel,
   isInDrawer = false
 }) => {
-  const [contact, setContact] = useState<IContact>(initialContact);
+  const [contact, setContact] = useState<EditableContact>({
+    ...initialContact,
+    additional_email_addresses: initialContact.additional_email_addresses ?? [],
+  });
   const [tags, setTags] = useState<ITag[]>([]);
   const { tags: allTags } = useTags();
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('all');
@@ -51,6 +63,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
   const [countries, setCountries] = useState<ICountry[]>([]);
   const [customPhoneTypeSuggestions, setCustomPhoneTypeSuggestions] = useState<string[]>([]);
   const [phoneValidationErrors, setPhoneValidationErrors] = useState<string[]>([]);
+  const [emailValidationErrors, setEmailValidationErrors] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -125,7 +138,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
     };
   }, []);
 
-  const handleInputChange = (field: keyof IContact, value: string | boolean | ContactPhoneNumberInput[]) => {
+  const handleInputChange = <K extends keyof EditableContact,>(field: K, value: EditableContact[K]) => {
     setContact(prev => ({ ...prev, [field]: value }));
   };
 
@@ -146,11 +159,11 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
         setError('Email address is required');
         return;
       }
-      
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(contact.email.trim())) {
-        setError('Please enter a valid email address');
+
+      const currentEmailErrors = validateContactEmailAddresses(contact);
+      setEmailValidationErrors(currentEmailErrors);
+      if (currentEmailErrors.length > 0) {
+        setError(currentEmailErrors[0]);
         return;
       }
 
@@ -161,8 +174,10 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
         return;
       }
 
+      const compactedEmails = compactContactEmailAddresses(contact);
       const updatedContact = await updateContact({
         ...contact,
+        ...compactedEmails,
         phone_numbers: compactContactPhoneNumbers(contact.phone_numbers),
       });
 
@@ -246,12 +261,19 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
               value={contact.full_name} 
               onChange={(value) => handleInputChange('full_name', value)} 
             />
-            <TableRow 
-              id={`${id}-email`}
-              label="Email" 
-              value={contact.email ?? ''} 
-              onChange={(value) => handleInputChange('email', value)} 
-            />
+            <tr>
+              <td className="py-2 font-semibold align-top">Email addresses:</td>
+              <td className="py-2">
+                <ContactEmailAddressesEditor
+                  id={`${id}-email`}
+                  value={contact}
+                  onChange={(value) => setContact((previousContact) => ({ ...previousContact, ...value }))}
+                  customTypeSuggestions={[]}
+                  errorMessages={emailValidationErrors}
+                  onValidationChange={setEmailValidationErrors}
+                />
+              </td>
+            </tr>
             <TableRow 
               id={`${id}-role`}
               label="Role" 

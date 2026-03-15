@@ -154,6 +154,24 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
     return 'Other';
   };
 
+  const getEmailTypeLabel = ({
+    canonical_type,
+    custom_type,
+  }: {
+    canonical_type?: IContact['primary_email_canonical_type'] | null;
+    custom_type?: string | null;
+  }): string => {
+    if (custom_type) {
+      return custom_type;
+    }
+
+    if (canonical_type) {
+      return canonical_type.charAt(0).toUpperCase() + canonical_type.slice(1);
+    }
+
+    return 'Other';
+  };
+
   const handleEditContact = () => {
     openDrawer(
       <ContactDetailsEdit
@@ -336,7 +354,38 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
         <table className="min-w-full">
           <tbody>
             <TableRow label="Full Name" value={contact.full_name} />
-            <TableRow label="Email" value={contact.email ?? 'N/A'} />
+            <tr>
+              <td className="py-2 font-semibold align-top">Email addresses:</td>
+              <td className="py-2">
+                {!contact.email ? (
+                  'N/A'
+                ) : (
+                  <div className="space-y-2">
+                    <div className="rounded-md border border-gray-200 px-3 py-2">
+                      <div className="text-sm font-medium text-gray-900">{contact.email}</div>
+                      <div className="text-xs text-gray-500">
+                        {getEmailTypeLabel({
+                          canonical_type: contact.primary_email_canonical_type,
+                          custom_type: contact.primary_email_type,
+                        })}
+                        {' • Default'}
+                      </div>
+                    </div>
+                    {contact.additional_email_addresses.map((emailAddress) => (
+                      <div
+                        key={emailAddress.contact_additional_email_address_id}
+                        className="rounded-md border border-gray-200 px-3 py-2"
+                      >
+                        <div className="text-sm font-medium text-gray-900">{emailAddress.email_address}</div>
+                        <div className="text-xs text-gray-500">
+                          {getEmailTypeLabel(emailAddress)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </td>
+            </tr>
             <tr>
               <td className="py-2 font-semibold align-top">Phone:</td>
               <td className="py-2">

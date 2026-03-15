@@ -43,6 +43,10 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
   Button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
 }));
 
+vi.mock('@alga-psa/ui/components/Card', () => ({
+  Card: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+}));
+
 vi.mock('@alga-psa/ui/components/Input', () => ({
   Input: (props: any) => <input {...props} />,
 }));
@@ -73,6 +77,18 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
         </option>
       ))}
     </select>
+  ),
+}));
+
+vi.mock('@alga-psa/ui/components/SearchableSelect', () => ({
+  default: ({ id, value, onChange, placeholder }: any) => (
+    <input
+      id={id}
+      aria-label={id}
+      placeholder={placeholder}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    />
   ),
 }));
 
@@ -111,7 +127,7 @@ afterEach(() => {
   cleanup();
 });
 
-describe('QuickAddClient normalized contact phone numbers', () => {
+describe('QuickAddClient hybrid inline-contact payloads', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     createClientMock.mockResolvedValue({
@@ -125,7 +141,7 @@ describe('QuickAddClient normalized contact phone numbers', () => {
     createClientContactMock.mockResolvedValue({});
   });
 
-  it('T021: creates the inline contact with the normalized phone collection and chosen default phone', async () => {
+  it('T023: creates the inline contact with the hybrid email payload plus the normalized phone collection', async () => {
     const user = userEvent.setup();
 
     render(
@@ -138,7 +154,10 @@ describe('QuickAddClient normalized contact phone numbers', () => {
 
     await user.type(document.getElementById('client-name') as HTMLInputElement, 'Acme');
     await user.type(document.getElementById('contact-name') as HTMLInputElement, 'Alex Contact');
-    await user.type(document.getElementById('client-contact-email') as HTMLInputElement, 'alex@acme.com');
+    await user.type(document.getElementById('client-contact-email-primary-email') as HTMLInputElement, 'alex@acme.com');
+    await user.click(document.getElementById('client-contact-email-add') as HTMLButtonElement);
+    await user.type(document.getElementById('client-contact-email-additional-email-0') as HTMLInputElement, 'billing@acme.com');
+    await user.selectOptions(screen.getByLabelText('client-contact-email-additional-type-0'), 'billing');
 
     await waitFor(() => {
       expect(screen.getAllByLabelText('Phone Number')).toHaveLength(1);
@@ -153,7 +172,7 @@ describe('QuickAddClient normalized contact phone numbers', () => {
     const phoneInputs = screen.getAllByLabelText('Phone Number');
     await user.type(phoneInputs[0]!, '+1 555 111 2222');
     await user.type(phoneInputs[1]!, '+1 555 333 4444');
-    await user.click(screen.getByTestId('client-contact-phone-default-1'));
+    await user.click(screen.getAllByRole('radio', { name: 'Default' })[1]!);
 
     await user.click(screen.getByRole('button', { name: /create client/i }));
 
@@ -165,16 +184,26 @@ describe('QuickAddClient normalized contact phone numbers', () => {
       clientId: 'client-1',
       fullName: 'Alex Contact',
       email: 'alex@acme.com',
+      primaryEmailCanonicalType: 'work',
+      primaryEmailCustomType: null,
+      additionalEmailAddresses: [
+        expect.objectContaining({
+          email_address: 'billing@acme.com',
+          canonical_type: 'billing',
+          custom_type: null,
+          display_order: 0,
+        }),
+      ],
       phoneNumbers: [
         expect.objectContaining({
-          phone_number: '+15551112222',
+          phone_number: '+1 555 111 2222',
           canonical_type: 'work',
           custom_type: null,
           is_default: false,
           display_order: 0,
         }),
         expect.objectContaining({
-          phone_number: '+15553334444',
+          phone_number: '+1 555 333 4444',
           canonical_type: 'work',
           custom_type: null,
           is_default: true,

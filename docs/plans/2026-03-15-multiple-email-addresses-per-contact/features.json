@@ -109,7 +109,7 @@
   {
     "id": "F013",
     "description": "Create a shared `ContactEmailAddressesEditor` that renders the primary/default email row plus additional email rows with add/remove/reorder/promote interactions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-09",
       "FR-10"
@@ -118,7 +118,7 @@
   {
     "id": "F014",
     "description": "Support canonical email labels plus tenant-scoped custom-label suggestions in the shared email editor, mirroring the phone-label UX.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-04",
       "FR-09"
@@ -127,7 +127,7 @@
   {
     "id": "F015",
     "description": "Wire contact create/edit/detail surfaces to the hybrid email model, including primary label editing and rendering of additional emails.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-09",
       "FR-10"
@@ -136,7 +136,7 @@
   {
     "id": "F016",
     "description": "Wire quick-add contact creation flows, including inline contact creation in client flows, to author the hybrid primary-plus-additional email payload.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-09"
     ]

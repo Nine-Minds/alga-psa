@@ -143,7 +143,7 @@
   {
     "id": "T018",
     "description": "ContactEmailAddressesEditor renders a pinned primary row plus additional rows and normalizes their order on save.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ]
@@ -151,7 +151,7 @@
   {
     "id": "T019",
     "description": "ContactEmailAddressesEditor supports canonical label selection and custom label suggestions for both primary and additional rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013",
       "F014"
@@ -160,7 +160,7 @@
   {
     "id": "T020",
     "description": "Contact detail edit flow saves the hybrid email payload instead of a single unlabeled scalar email input.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ]
@@ -168,7 +168,7 @@
   {
     "id": "T021",
     "description": "Contact detail view renders the primary/default email distinctly and lists additional emails with labels.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F017"
@@ -177,7 +177,7 @@
   {
     "id": "T022",
     "description": "QuickAddContact creates a contact with labeled primary email data and optional additional-email rows.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]
@@ -185,7 +185,7 @@
   {
     "id": "T023",
     "description": "QuickAddClient inline contact creation saves the hybrid email payload for the new contact.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]

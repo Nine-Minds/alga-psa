@@ -38,8 +38,11 @@ function buildDefaultPhoneNumbers(phoneNumber?: string | null) {
   }];
 }
 
-type ContactActionInput = Omit<Partial<IContact>, 'phone_numbers'> & {
+type ContactActionInput = Omit<Partial<IContact>, 'phone_numbers' | 'additional_email_addresses'> & {
   phone_numbers?: CreateContactInput['phone_numbers'];
+  primary_email_canonical_type?: CreateContactInput['primary_email_canonical_type'];
+  primary_email_custom_type?: CreateContactInput['primary_email_custom_type'];
+  additional_email_addresses?: CreateContactInput['additional_email_addresses'];
 };
 
 function getDerivedDefaultPhone(contact: Pick<IContact, 'default_phone_number' | 'phone_numbers'>): string {
@@ -318,6 +321,9 @@ export const addContact = withAuth(async (
   const createInput: CreateContactInput = {
     full_name: contactData.full_name || '',
     email: contactData.email ?? undefined,
+    primary_email_canonical_type: contactData.primary_email_canonical_type ?? undefined,
+    primary_email_custom_type: contactData.primary_email_custom_type ?? undefined,
+    additional_email_addresses: contactData.additional_email_addresses ?? [],
     phone_numbers: contactData.phone_numbers ?? [],
     client_id: contactData.client_id || undefined,
     role: contactData.role ?? undefined,
@@ -514,6 +520,9 @@ export const updateContact = withAuth(async (
         client_id: contactData.client_id === '' ? undefined : contactData.client_id || undefined,
         phone_numbers: contactData.phone_numbers,
         email: contactData.email ?? undefined,
+        primary_email_canonical_type: contactData.primary_email_canonical_type ?? undefined,
+        primary_email_custom_type: contactData.primary_email_custom_type ?? undefined,
+        additional_email_addresses: contactData.additional_email_addresses,
         role: contactData.role ?? undefined,
         notes: contactData.notes ?? undefined,
         is_inactive: contactData.is_inactive ?? undefined,
@@ -1080,6 +1089,9 @@ export const createClientContact = withAuth(async (
     clientId,
     fullName,
     email,
+    primaryEmailCanonicalType,
+    primaryEmailCustomType,
+    additionalEmailAddresses,
     phone = '',
     phoneNumbers,
     jobTitle = ''
@@ -1087,6 +1099,9 @@ export const createClientContact = withAuth(async (
     clientId: string;
     fullName: string;
     email: string;
+    primaryEmailCanonicalType?: CreateContactInput['primary_email_canonical_type'];
+    primaryEmailCustomType?: CreateContactInput['primary_email_custom_type'];
+    additionalEmailAddresses?: CreateContactInput['additional_email_addresses'];
     phone?: string;
     phoneNumbers?: CreateContactInput['phone_numbers'];
     jobTitle?: string;
@@ -1109,6 +1124,9 @@ export const createClientContact = withAuth(async (
       return ContactModel.createContact({
         full_name: fullName,
         email: email.trim().toLowerCase(),
+        primary_email_canonical_type: primaryEmailCanonicalType,
+        primary_email_custom_type: primaryEmailCustomType,
+        additional_email_addresses: additionalEmailAddresses ?? [],
         phone_numbers: phoneNumbers ?? buildDefaultPhoneNumbers(phone),
         client_id: clientId,
         role: jobTitle,
