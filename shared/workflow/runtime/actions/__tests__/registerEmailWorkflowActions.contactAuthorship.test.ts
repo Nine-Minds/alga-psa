@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 type RegisteredAction = {
   id: string;
   inputSchema: { parse: (input: unknown) => any };
+  outputSchema?: { parse: (output: unknown) => any };
   handler: (input: any, ctx: { tenantId?: string }) => Promise<any>;
 };
 
@@ -255,6 +256,52 @@ describe('registerEmailWorkflowActionsV2 contact authorship', () => {
       }),
       'tenant-1'
     );
+  });
+
+  it('T037/T038: runtime email actions keep primary contact email and matched sender email separate', async () => {
+    findContactByEmailMock.mockResolvedValue({
+      contact_id: 'contact-1',
+      client_id: 'client-1',
+      user_id: 'client-user-1',
+      email: 'primary@example.com',
+      matched_email: 'billing@example.com',
+      name: 'Billing Contact',
+      client_name: 'Client One',
+    });
+
+    const { registerEmailWorkflowActionsV2 } = await import('../registerEmailWorkflowActions');
+    registerEmailWorkflowActionsV2();
+
+    const findContactAction = registeredActions.find((entry) => entry.id === 'find_contact_by_email');
+    expect(findContactAction).toBeDefined();
+
+    const findContactResult = await findContactAction!.handler(
+      {
+        email: 'billing@example.com',
+      },
+      { tenantId: 'tenant-1' }
+    );
+
+    const parsedFindContactResult = findContactAction!.outputSchema!.parse(findContactResult);
+    expect(parsedFindContactResult.contact?.email).toBe('primary@example.com');
+    expect(parsedFindContactResult.contact?.matched_email).toBe('billing@example.com');
+
+    const resolveContextAction = registeredActions.find((entry) => entry.id === 'resolve_inbound_ticket_context');
+    expect(resolveContextAction).toBeDefined();
+
+    const contextResult = await resolveContextAction!.handler(
+      {
+        senderEmail: 'billing@example.com',
+        providerId: 'provider-1',
+      },
+      { tenantId: 'tenant-1' }
+    );
+
+    expect(contextResult.matchedClient).toMatchObject({
+      email: 'primary@example.com',
+      matched_email: 'billing@example.com',
+      contact_id: 'contact-1',
+    });
   });
 
 });

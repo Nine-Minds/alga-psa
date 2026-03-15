@@ -292,7 +292,7 @@
   {
     "id": "T036",
     "description": "Inbound email processing preserves contact authorship with the exact matched sender email when the contact matched through an additional email row.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
@@ -300,7 +300,7 @@
   {
     "id": "T037",
     "description": "Inbound email processing still uses `contacts.email` as the default outbound contact email even when the inbound match used an additional email.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023",
       "F024"
@@ -309,7 +309,7 @@
   {
     "id": "T038",
     "description": "Runtime email-action schemas and workflow mappings expose matched sender email separately from the primary/default contact email.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]

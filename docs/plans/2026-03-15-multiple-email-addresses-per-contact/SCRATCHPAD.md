@@ -274,4 +274,24 @@ Working memory for adding multiple email addresses to contacts using a compatibi
   - `shared/workflow/actions/__tests__/emailWorkflowActions.findContactByEmail.context.test.ts`
 - Verification runbook used:
   - `cd shared && pnpm vitest run workflow/actions/__tests__/emailWorkflowActions.findContactByEmail.context.test.ts --coverage=false`
+
+## Update (2026-03-15, inbound matched-email preservation)
+- Completed `F023` and flipped `T036` and `T037` to implemented.
+- Confirmed `processInboundEmailInApp` already preserved the exact sender email separately from the matched contact’s primary/default email by:
+  - using `senderEmail` when building inbound email metadata (`metadata.email.fromAddress`)
+  - using the matched contact only for authorship/contact resolution (`contact_id`, `author_id`, `client_id`)
+- Added a focused regression covering the additional-email-match path:
+  - `shared/services/email/__tests__/processInboundEmailInApp.additionalPaths.test.ts`
+- Verification runbook used:
+  - `cd shared && pnpm vitest run services/email/__tests__/processInboundEmailInApp.additionalPaths.test.ts --coverage=false`
+
+## Update (2026-03-15, runtime matched-email contracts)
+- Completed `F024` and flipped `T038` to implemented.
+- Updated `shared/workflow/runtime/actions/registerEmailWorkflowActions.ts` so runtime contact outputs now expose:
+  - `email` for the primary/default `contacts.email`
+  - `matched_email` for the exact sender email that matched when it differs from the primary email
+- Extended runtime registry coverage:
+  - `shared/workflow/runtime/actions/__tests__/registerEmailWorkflowActions.contactAuthorship.test.ts`
+- Verification runbook used:
+  - `cd shared && pnpm vitest run workflow/runtime/actions/__tests__/registerEmailWorkflowActions.contactAuthorship.test.ts --coverage=false`
   - `cd server && pnpm vitest run src/test/integration/emailServiceContactLookup.integration.test.ts --coverage=false`

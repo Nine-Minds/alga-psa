@@ -199,7 +199,7 @@
   {
     "id": "F023",
     "description": "Update `processInboundEmailInApp` so contact matching can hit an additional email while preserving the exact matched sender email separately from `contacts.email`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-13",
       "FR-14"
@@ -208,7 +208,7 @@
   {
     "id": "F024",
     "description": "Update runtime email-action schemas and workflow mappings so matched inbound email and primary/default contact email remain unambiguous under the hybrid model.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-14",
       "FR-16"
