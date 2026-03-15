@@ -7,10 +7,37 @@ import '@testing-library/jest-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import RightSidebarContent from '@ee/components/layout/RightSidebarContent';
-import { listCurrentUserChatsAction } from '@ee/lib/chat-actions/chatActions';
+import { getChatMessagesAction, listCurrentUserChatsAction } from '@ee/lib/chat-actions/chatActions';
 
 vi.mock('@ee/components/chat/Chat', () => ({
-  Chat: () => <div data-testid="chat-body" />,
+  Chat: ({
+    initialChatId,
+    onChatIdChange,
+    onHasMessagesChange,
+    onInterruptibleStateChange,
+    onRegisterCancelHandler,
+  }: {
+    initialChatId?: string | null;
+    onChatIdChange?: (chatId: string | null) => void;
+    onHasMessagesChange?: (hasMessages: boolean) => void;
+    onInterruptibleStateChange?: (isInterruptible: boolean) => void;
+    onRegisterCancelHandler?: (cancelHandler: (() => void) | null) => void;
+  }) => {
+    React.useEffect(() => {
+      onChatIdChange?.(initialChatId ?? null);
+    }, [initialChatId, onChatIdChange]);
+
+    React.useEffect(() => {
+      onHasMessagesChange?.(false);
+    }, [onHasMessagesChange]);
+
+    React.useEffect(() => {
+      onInterruptibleStateChange?.(false);
+      onRegisterCancelHandler?.(null);
+    }, [onInterruptibleStateChange, onRegisterCancelHandler]);
+
+    return <div data-testid="chat-body" />;
+  },
 }));
 
 vi.mock('@radix-ui/react-collapsible', () => ({
@@ -55,6 +82,10 @@ vi.mock('@alga-psa/ui/components/Input', () => ({
       <input {...props} />
     </label>
   ),
+}));
+
+vi.mock('@alga-psa/ui/components/Skeleton', () => ({
+  Skeleton: ({ className }: { className?: string }) => <div data-testid="skeleton-block" className={className} />,
 }));
 
 vi.mock('@ee/lib/chat-actions/chatActions', () => ({
@@ -124,13 +155,111 @@ describe('RightSidebarContent history toggle', () => {
     expect(listCurrentUserChatsAction).toHaveBeenCalledTimes(1);
   });
 
-  it('exposes a visible hide button that closes the sidebar', () => {
+  it('does not repeatedly reload history when the active chat id stays the same', async () => {
+    vi.mocked(getChatMessagesAction).mockResolvedValue([]);
+    vi.mocked(listCurrentUserChatsAction).mockResolvedValue([
+      {
+        id: 'chat-1',
+        title_text: 'Saved chat',
+        title_is_locked: false,
+        created_at: '2026-03-15T10:00:00.000Z',
+        updated_at: '2026-03-15T10:05:00.000Z',
+        preview_text: 'Preview text',
+      },
+    ]);
+
+    const props = {
+      isOpen: true,
+      setIsOpen: vi.fn(),
+      clientUrl: 'https://example.invalid',
+      accountId: 'account-1',
+      messages: [],
+      userRole: 'admin',
+      userId: 'user-1',
+      selectedAccount: 'account-1',
+      handleSelectAccount: vi.fn(),
+      auth_token: 'token',
+      setChatTitle: vi.fn(),
+      isTitleLocked: false,
+      handoffChatId: 'chat-1',
+      handoffNonce: 1,
+    };
+
+    const { rerender } = render(<RightSidebarContent {...props} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show chat history' }));
+
+    await waitFor(() => {
+      expect(listCurrentUserChatsAction).toHaveBeenCalledTimes(1);
+    });
+
+    rerender(<RightSidebarContent {...props} />);
+
+    await waitFor(() => {
+      expect(listCurrentUserChatsAction).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('shows a chat skeleton while loading a persisted chat from history', async () => {
+    let resolveMessages: ((value: any[]) => void) | undefined;
+    vi.mocked(getChatMessagesAction).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveMessages = resolve;
+        })
+    );
+    vi.mocked(listCurrentUserChatsAction).mockResolvedValue([
+      {
+        id: 'chat-1',
+        title_text: 'Saved chat',
+        title_is_locked: false,
+        created_at: '2026-03-15T10:00:00.000Z',
+        updated_at: '2026-03-15T10:05:00.000Z',
+        preview_text: 'Preview text',
+      },
+    ]);
+
+    render(
+      <RightSidebarContent
+        isOpen
+        setIsOpen={vi.fn()}
+        clientUrl="https://example.invalid"
+        accountId="account-1"
+        messages={[]}
+        userRole="admin"
+        userId="user-1"
+        selectedAccount="account-1"
+        handleSelectAccount={vi.fn()}
+        auth_token="token"
+        setChatTitle={vi.fn()}
+        isTitleLocked={false}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show chat history' }));
+    expect(await screen.findByText('Saved chat')).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole('button', { name: /Saved chat/ })[0]);
+
+    expect(await screen.findByTestId('chat-loading-skeleton')).toBeInTheDocument();
+
+    resolveMessages?.([]);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('chat-loading-skeleton')).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId('chat-body')).toBeInTheDocument();
+  });
+
+  it('exposes a visible hide button that delegates sidebar closing', () => {
     const setIsOpen = vi.fn();
+    const onRequestClose = vi.fn();
 
     render(
       <RightSidebarContent
         isOpen
         setIsOpen={setIsOpen}
+        onRequestClose={onRequestClose}
         clientUrl="https://example.invalid"
         accountId="account-1"
         messages={[]}
@@ -146,6 +275,7 @@ describe('RightSidebarContent history toggle', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Hide chat sidebar' }));
 
-    expect(setIsOpen).toHaveBeenCalledWith(false);
+    expect(onRequestClose).toHaveBeenCalledTimes(1);
+    expect(setIsOpen).not.toHaveBeenCalledWith(false);
   });
 });

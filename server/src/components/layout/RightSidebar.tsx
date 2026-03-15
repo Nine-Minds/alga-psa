@@ -6,6 +6,7 @@ import * as Collapsible from '@radix-ui/react-collapsible';
 interface RightSidebarProps {
   isOpen: boolean;
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  onRequestClose?: () => void;
   clientUrl: string;
   accountId: string;
   messages: any[];
@@ -18,6 +19,8 @@ interface RightSidebarProps {
   isTitleLocked: boolean;
   handoffChatId?: string | null;
   handoffNonce?: number;
+  onInterruptibleStateChange?: (isInterruptible: boolean) => void;
+  onRegisterCancelHandler?: (cancelHandler: (() => void) | null) => void;
 }
 
 const resolvedEdition =

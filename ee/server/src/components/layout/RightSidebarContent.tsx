@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@alga-psa/ui/components/DropdownMenu';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import {
   deleteCurrentUserChatAction,
   getChatMessagesAction,
@@ -23,6 +24,7 @@ import '../chat/chat.css';
 interface RightSidebarProps {
   isOpen: boolean;
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  onRequestClose?: () => void;
   clientUrl: string;
   accountId: string;
   messages: any[];
@@ -35,6 +37,8 @@ interface RightSidebarProps {
   isTitleLocked: boolean;
   handoffChatId?: string | null;
   handoffNonce?: number;
+  onInterruptibleStateChange?: (isInterruptible: boolean) => void;
+  onRegisterCancelHandler?: (cancelHandler: (() => void) | null) => void;
 }
 
 const HISTORY_LIMIT = 20;
@@ -76,6 +80,36 @@ const getChatTitle = (chat: Pick<ChatHistoryItem, 'title_text'>) => {
   return title && title.length > 0 ? title : 'Untitled chat';
 };
 
+const ChatLoadingSkeleton = () => (
+  <div
+    className="flex h-full flex-col gap-4 bg-white p-4"
+    data-testid="chat-loading-skeleton"
+    aria-label="Loading chat conversation"
+  >
+    <div className="space-y-2">
+      <Skeleton className="h-4 w-32" />
+      <Skeleton className="h-3 w-48" />
+    </div>
+    <div className="space-y-3">
+      <div className="ml-auto max-w-[78%] space-y-2 rounded-2xl bg-blue-50 p-3">
+        <Skeleton className="h-3 w-40" />
+        <Skeleton className="h-3 w-24" />
+      </div>
+      <div className="max-w-[82%] space-y-2 rounded-2xl border border-gray-200 p-3">
+        <Skeleton className="h-3 w-52" />
+        <Skeleton className="h-3 w-44" />
+        <Skeleton className="h-3 w-28" />
+      </div>
+      <div className="ml-auto max-w-[72%] space-y-2 rounded-2xl bg-blue-50 p-3">
+        <Skeleton className="h-3 w-32" />
+      </div>
+    </div>
+    <div className="mt-auto rounded-2xl border border-gray-200 p-3">
+      <Skeleton className="h-10 w-full" />
+    </div>
+  </div>
+);
+
 const RightSidebarContent: React.FC<RightSidebarProps> = ({
   isOpen,
   setIsOpen,
@@ -91,6 +125,9 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
   isTitleLocked,
   handoffChatId,
   handoffNonce,
+  onRequestClose,
+  onInterruptibleStateChange,
+  onRegisterCancelHandler,
 }) => {
   const [chatKey, setChatKey] = useState(0);
   const [width, setWidth] = useState(384);
@@ -112,8 +149,15 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
   const sidebarRef = useRef<HTMLDivElement | null>(null);
   const startXRef = useRef(0);
   const startWidthRef = useRef(384);
+  const activeChatIdRef = useRef<string | null>(null);
+  const showHistoryRef = useRef(showHistory);
+
+  useEffect(() => {
+    showHistoryRef.current = showHistory;
+  }, [showHistory]);
 
   const resetChatSession = useCallback(() => {
+    activeChatIdRef.current = null;
     setActiveChatId(null);
     setActiveChatMessages([]);
     setHasActiveMessages(false);
@@ -146,6 +190,7 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
     }
 
     setLoadingHistoryChatId(chatId);
+    activeChatIdRef.current = chatId;
     setActiveChatId(chatId);
     setActiveChatMessages([]);
     setHasActiveMessages(false);
@@ -172,8 +217,29 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
   };
 
   const handleHideSidebar = () => {
+    if (onRequestClose) {
+      onRequestClose();
+      return;
+    }
     setIsOpen(false);
   };
+
+  const handleChatIdChange = useCallback(
+    (chatId: string | null) => {
+      const nextChatId = chatId ?? null;
+      if (activeChatIdRef.current === nextChatId) {
+        return;
+      }
+
+      activeChatIdRef.current = nextChatId;
+      setActiveChatId(nextChatId);
+
+      if (nextChatId && showHistoryRef.current) {
+        void loadHistory();
+      }
+    },
+    [loadHistory]
+  );
 
   void auth_token;
 
@@ -236,6 +302,7 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
   }, [handoffChatId, handoffNonce, loadPersistedChat]);
 
   const messagesForChat = activeChatId ? activeChatMessages : initialMessages;
+  const isChatLoading = loadingHistoryChatId !== null && loadingHistoryChatId === activeChatId;
 
   const handleRenameSubmit = async () => {
     if (!renameTargetChat) {
@@ -300,7 +367,16 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
   };
 
   return (
-    <Collapsible.Root open={isOpen} onOpenChange={setIsOpen}>
+    <Collapsible.Root
+      open={isOpen}
+      onOpenChange={(nextOpen) => {
+        if (nextOpen) {
+          setIsOpen(true);
+          return;
+        }
+        handleHideSidebar();
+      }}
+    >
       <Collapsible.Content
         style={{ width: `${width}px` }}
         ref={sidebarRef}
@@ -454,29 +530,30 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
               Chat with AI - Ask anything!
             </div>
             <div className="flex flex-1 min-h-0">
-              <Chat
-                key={chatKey}
-                clientUrl={clientUrl}
-                accountId={accountId}
-                messages={messagesForChat}
-                userRole={userRole}
-                userId={userId}
-                selectedAccount={selectedAccount}
-                handleSelectAccount={handleSelectAccount}
-                auth_token={auth_token}
-                setChatTitle={setChatTitle}
-                isTitleLocked={isTitleLocked}
-                onUserInput={() => void 0}
-                hf={null}
-                initialChatId={activeChatId}
-                onHasMessagesChange={setHasActiveMessages}
-                onChatIdChange={(chatId) => {
-                  setActiveChatId(chatId);
-                  if (chatId) {
-                    void loadHistory();
-                  }
-                }}
-              />
+              {isChatLoading ? (
+                <ChatLoadingSkeleton />
+              ) : (
+                <Chat
+                  key={chatKey}
+                  clientUrl={clientUrl}
+                  accountId={accountId}
+                  messages={messagesForChat}
+                  userRole={userRole}
+                  userId={userId}
+                  selectedAccount={selectedAccount}
+                  handleSelectAccount={handleSelectAccount}
+                  auth_token={auth_token}
+                  setChatTitle={setChatTitle}
+                  isTitleLocked={isTitleLocked}
+                  onUserInput={() => void 0}
+                  hf={null}
+                  initialChatId={activeChatId}
+                  onHasMessagesChange={setHasActiveMessages}
+                  onChatIdChange={handleChatIdChange}
+                  onInterruptibleStateChange={onInterruptibleStateChange}
+                  onRegisterCancelHandler={onRegisterCancelHandler}
+                />
+              )}
             </div>
           </div>
         </div>
