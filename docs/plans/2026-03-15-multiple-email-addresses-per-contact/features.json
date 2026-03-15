@@ -144,7 +144,7 @@
   {
     "id": "F017",
     "description": "Keep list, picker, and summary surfaces anchored on `contacts.email` while exposing the richer email model where detailed contact rendering is needed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-10",
       "FR-11"
@@ -153,7 +153,7 @@
   {
     "id": "F018",
     "description": "Update contact query actions and `ContactService` list/search/filter/sort/export behavior to match both primary and additional emails while returning/displaying `contacts.email` as the summary address.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-11",
       "FR-12"

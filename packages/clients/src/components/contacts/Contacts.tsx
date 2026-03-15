@@ -733,7 +733,10 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     return contacts.filter(contact => {
       const searchTermLower = searchTerm.toLowerCase();
       const matchesSearch = contact.full_name.toLowerCase().includes(searchTermLower) || 
-                          (contact.email && contact.email.toLowerCase().includes(searchTermLower));
+                          (contact.email && contact.email.toLowerCase().includes(searchTermLower)) ||
+                          contact.additional_email_addresses?.some((emailAddress) =>
+                            emailAddress.email_address.toLowerCase().includes(searchTermLower)
+                          );
       const matchesStatus = filterStatus === 'all' ||
         (filterStatus === 'active' && !contact.is_inactive) ||
         (filterStatus === 'inactive' && contact.is_inactive);

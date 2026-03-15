@@ -37,6 +37,34 @@ function normalizePhoneForSearch(value: string): string {
   return value.replace(/\D/g, '');
 }
 
+function normalizeEmailForSearch(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function applyEmailSearchClause(
+  query: Knex.QueryBuilder,
+  knex: Knex,
+  value: string,
+  contactAlias = 'c'
+): void {
+  const normalizedEmail = normalizeEmailForSearch(value);
+  query.where(function emailSearch() {
+    this.whereILike(`${contactAlias}.email`, `%${value}%`)
+      .orWhereExists(function existsAdditionalEmail() {
+        this.select(knex.raw('1'))
+          .from('contact_additional_email_addresses as caea')
+          .whereRaw(`caea.tenant = ${contactAlias}.tenant`)
+          .andWhereRaw(`caea.contact_name_id = ${contactAlias}.contact_name_id`)
+          .andWhere(function matchAdditionalEmail() {
+            this.whereILike('caea.email_address', `%${value}%`);
+            if (normalizedEmail) {
+              this.orWhere('caea.normalized_email_address', 'like', `%${normalizedEmail}%`);
+            }
+          });
+      });
+  });
+}
+
 function applyDefaultPhoneJoins(query: Knex.QueryBuilder, knex: Knex, contactAlias = 'c'): Knex.QueryBuilder {
   return query
     .leftJoin('contact_phone_numbers as cpn_default', function joinDefaultPhone() {
@@ -387,6 +415,10 @@ export class ContactService extends BaseService<IContact> {
                 });
             });
           });
+        } else if (field === 'email') {
+          subQuery[method](function emailSearch() {
+            applyEmailSearchClause(this, knex, searchData.query, 'c');
+          });
         } else {
           subQuery[method](`c.${field}`, 'ilike', `%${searchData.query}%`);
         }
@@ -529,7 +561,9 @@ export class ContactService extends BaseService<IContact> {
           query.whereILike('c.full_name', `%${value}%`);
           break;
         case 'email':
-          query.whereILike('c.email', `%${value}%`);
+          query.where((subQuery) => {
+            applyEmailSearchClause(subQuery, query.client!, String(value), 'c');
+          });
           break;
         case 'phone_number': {
           const normalizedDigits = normalizePhoneForSearch(String(value));
@@ -573,7 +607,9 @@ export class ContactService extends BaseService<IContact> {
           query.where((subQuery) => {
             subQuery
               .whereILike('c.full_name', `%${value}%`)
-              .orWhereILike('c.email', `%${value}%`)
+              .orWhere(function emailSearch() {
+                applyEmailSearchClause(this, query.client!, String(value), 'c');
+              })
               .orWhereILike('c.role', `%${value}%`)
               .orWhereILike('comp.client_name', `%${value}%`)
               .orWhereExists(function existsPhone() {

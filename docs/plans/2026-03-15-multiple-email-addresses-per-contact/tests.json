@@ -193,7 +193,7 @@
   {
     "id": "T024",
     "description": "Contacts and client-contact lists continue rendering `contacts.email` as the visible summary email.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F031"
@@ -202,7 +202,7 @@
   {
     "id": "T025",
     "description": "ContactPicker and related summary pickers continue showing the primary email while remaining compatible with the richer contact contract.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F031"
@@ -211,7 +211,7 @@
   {
     "id": "T026",
     "description": "ContactService and query actions match contacts when the search term hits an additional email row.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ]
@@ -219,7 +219,7 @@
   {
     "id": "T027",
     "description": "ContactService export still emits the primary `email` summary while additional-email aware queries remain available for filtering/search.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F026"

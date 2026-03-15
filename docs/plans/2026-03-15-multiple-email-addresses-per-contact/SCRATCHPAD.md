@@ -150,6 +150,13 @@ Working memory for adding multiple email addresses to contacts using a compatibi
   - `server/src/test/unit/contacts/QuickAddClient.phoneNumbers.test.tsx`
 - Commands run for the contact-surface wiring milestone:
   - `cd server && pnpm vitest run src/test/unit/contacts/ContactEmailAddressesEditor.test.tsx src/test/unit/contacts/ContactDetailsEmailAddresses.contract.test.ts src/test/unit/contacts/QuickAddContact.phoneNumbers.test.tsx src/test/unit/contacts/QuickAddClient.phoneNumbers.test.tsx --coverage=false`
+- Completed summary-surface compatibility audit:
+  - `Contacts.tsx`, `ClientDetails.tsx`, `ContactPicker.tsx`, and `ContactPickerDialog.tsx` already remained anchored on scalar `contact.email` for summary rendering and picker search.
+  - Added a contract regression test to lock in that list and picker surfaces keep using the primary/default `contacts.email` field even as detailed contact rendering grows richer.
+- Added coverage for the summary-surface compatibility audit:
+  - `server/src/test/unit/contacts/ContactSummaryEmail.contract.test.ts`
+- Command run for the summary-surface compatibility audit:
+  - `cd server && pnpm vitest run src/test/unit/contacts/ContactSummaryEmail.contract.test.ts --coverage=false`
 
 ## Update (2026-03-15, validation/persistence block)
 - Completed `F008` through `F011` in the shared contact model and flipped `T008` through `T016` to implemented.
@@ -185,3 +192,19 @@ Working memory for adding multiple email addresses to contacts using a compatibi
   - `packages/clients/src/actions/contact-actions/contactActions.tsx`
 - Verification runbook used:
   - `pnpm vitest run workflow/streams/domainEventBuilders/__tests__/contactEventBuilders.test.ts` from `shared/`
+
+## Update (2026-03-15, contact search/export compatibility)
+- Completed `F018` and flipped `T026` and `T027` to implemented.
+- Extended server-side contact email searching so `ContactService` now treats both the primary `contacts.email` column and `contact_additional_email_addresses.email_address` as valid matches for:
+  - search clauses targeting the `email` field
+  - list filters using `email`
+  - free-text contact search
+- Kept compatibility boundaries intact:
+  - contact lists, pickers, and exports continue rendering/emitting scalar `contact.email` as the summary/default address
+  - local client-side filtering in `Contacts.tsx` now includes additional email rows without changing the visible summary email column
+- Added regression coverage:
+  - `server/src/test/integration/contactServiceEmailSearch.integration.test.ts`
+  - `server/src/test/unit/contacts/ContactsAdditionalEmailSearch.contract.test.ts`
+  - `server/src/test/unit/contacts/ContactSummaryEmail.contract.test.ts`
+- Verification runbook used:
+  - `cd server && pnpm vitest run src/test/unit/contacts/ContactSummaryEmail.contract.test.ts src/test/unit/contacts/ContactsAdditionalEmailSearch.contract.test.ts src/test/integration/contactServiceEmailSearch.integration.test.ts --coverage=false`
