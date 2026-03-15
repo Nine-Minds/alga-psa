@@ -262,5 +262,16 @@ Working memory for adding multiple email addresses to contacts using a compatibi
   - `server/src/test/integration/emailServiceContactLookup.integration.test.ts`
 - Verification runbook used:
   - `cd shared && pnpm vitest run services/__tests__/emailService.contactLookup.test.ts --coverage=false`
-- Environment note:
-  - The DB-backed `server/src/test/integration/emailServiceContactLookup.integration.test.ts` suite matches the feature scope but was not executed here because the local PostgreSQL harness on `127.0.0.1:5438` is blocked in this Codex environment.
+
+## Update (2026-03-15, workflow contact email lookup)
+- Completed `F022` and flipped `T035` to implemented.
+- Updated `shared/workflow/actions/emailWorkflowActions.ts#findContactByEmail` so workflow contact matching now searches both:
+  - `contacts.email`
+  - `contact_additional_email_addresses.normalized_email_address`
+- Kept the existing context-aware ticket/default-client resolution logic intact after broadening the candidate query, so inbound workflow attribution still prefers ticket/default-client boundaries when multiple mocked candidates are present in tests.
+- `createOrFindContact` in the workflow action already used `ContactModel.getContactByEmail`, so it now inherits the hybrid lookup behavior while continuing to create new contacts with only a primary email on `contacts.email`.
+- Extended the existing workflow unit suite:
+  - `shared/workflow/actions/__tests__/emailWorkflowActions.findContactByEmail.context.test.ts`
+- Verification runbook used:
+  - `cd shared && pnpm vitest run workflow/actions/__tests__/emailWorkflowActions.findContactByEmail.context.test.ts --coverage=false`
+  - `cd server && pnpm vitest run src/test/integration/emailServiceContactLookup.integration.test.ts --coverage=false`

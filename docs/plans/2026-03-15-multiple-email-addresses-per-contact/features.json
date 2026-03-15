@@ -190,7 +190,7 @@
   {
     "id": "F022",
     "description": "Update shared workflow email actions to search both primary and additional contact emails while creating new contacts with a primary email only.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-13",
       "FR-15"

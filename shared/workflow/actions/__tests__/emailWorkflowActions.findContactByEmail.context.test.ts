@@ -6,12 +6,14 @@ type Scenario = {
   contactRows: any[];
   internalUserRow: any | null;
   ticketRow: { client_id?: string | null; contact_name_id?: string | null } | null;
+  contactsQueryUsedAdditionalEmailMatch: boolean;
 };
 
 const scenario: Scenario = {
   contactRows: [],
   internalUserRow: null,
   ticketRow: null,
+  contactsQueryUsedAdditionalEmailMatch: false,
 };
 
 function makeChainable(base: Record<string, any> = {}) {
@@ -30,7 +32,29 @@ function makeChainable(base: Record<string, any> = {}) {
 }
 
 function makeContactsQuery(rows: any[]) {
-  const query = makeChainable();
+  const query = makeChainable({
+    andWhere: vi.fn().mockImplementation((clause: unknown) => {
+      if (typeof clause === 'function') {
+        const nestedQuery: any = {
+          where: vi.fn().mockReturnThis(),
+          orWhereExists: vi.fn().mockImplementation((callback: (this: any) => void) => {
+            scenario.contactsQueryUsedAdditionalEmailMatch = true;
+            const existsQuery: any = {
+              select: vi.fn().mockReturnThis(),
+              from: vi.fn().mockReturnThis(),
+              whereRaw: vi.fn().mockReturnThis(),
+              andWhere: vi.fn().mockReturnThis(),
+            };
+            callback.call(existsQuery);
+            return nestedQuery;
+          }),
+        };
+        clause.call(nestedQuery);
+      }
+
+      return query;
+    }),
+  });
   query.then = (resolve: (value: any[]) => any, reject?: (error: unknown) => any) =>
     Promise.resolve(rows).then(resolve, reject);
   return query;
@@ -72,6 +96,7 @@ describe('findContactByEmail context-aware resolution', () => {
     scenario.contactRows = [];
     scenario.internalUserRow = null;
     scenario.ticketRow = null;
+    scenario.contactsQueryUsedAdditionalEmailMatch = false;
 
     withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
       const trx = vi.fn((table: string) => {
@@ -84,11 +109,15 @@ describe('findContactByEmail context-aware resolution', () => {
         if (table === 'contact_phone_numbers as cpn') {
           return makePhoneNumbersQuery([]);
         }
+        if (table === 'contact_additional_email_addresses as cea') {
+          return makePhoneNumbersQuery([]);
+        }
         if (table === 'users') {
           return makeUsersQuery(scenario.internalUserRow);
         }
         throw new Error(`Unexpected table in test: ${table}`);
       });
+      trx.raw = vi.fn((value: string) => value);
 
       return callback(trx);
     });
@@ -253,5 +282,30 @@ describe('findContactByEmail context-aware resolution', () => {
 
     expect(result?.contact_id).toBe('contact-a');
     expect(result?.user_id).toBeUndefined();
+  });
+
+  it('T035: resolves a contact when the sender matches an additional email row', async () => {
+    scenario.contactRows = [
+      {
+        contact_name_id: 'contact-a',
+        contact_id: 'contact-a',
+        name: 'Primary Contact',
+        email: 'primary@example.com',
+        client_id: 'client-a',
+        user_id: null,
+        client_name: 'Client A',
+      },
+    ];
+
+    const { findContactByEmail } = await import('../emailWorkflowActions');
+    const result = await findContactByEmail('billing@example.com', 'tenant-1');
+
+    expect(scenario.contactsQueryUsedAdditionalEmailMatch).toBe(true);
+    expect(result).toMatchObject({
+      contact_id: 'contact-a',
+      email: 'primary@example.com',
+      client_id: 'client-a',
+      client_name: 'Client A',
+    });
   });
 });

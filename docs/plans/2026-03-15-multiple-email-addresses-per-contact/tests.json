@@ -284,7 +284,7 @@
   {
     "id": "T035",
     "description": "Shared workflow `findContactByEmail` resolves a contact when the sender matches an additional email row.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]

@@ -297,8 +297,18 @@ export async function findContactByEmail(
             .andOn('clients.tenant', 'contacts.tenant');
         })
         .where({
-          'contacts.email': normalizedEmail,
           'contacts.tenant': tenant
+        })
+        .andWhere(function contactEmailMatch(this: Knex.QueryBuilder) {
+          this
+            .where('contacts.email', normalizedEmail)
+            .orWhereExists(function additionalEmailMatch() {
+              this.select(trx.raw('1'))
+                .from('contact_additional_email_addresses as caea')
+                .whereRaw('caea.contact_name_id = contacts.contact_name_id')
+                .andWhere('caea.tenant', tenant)
+                .andWhere('caea.normalized_email_address', normalizedEmail);
+            });
         })
         .orderBy('contacts.created_at', 'asc')
         .orderBy('contacts.contact_name_id', 'asc');
