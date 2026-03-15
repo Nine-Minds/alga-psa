@@ -2,17 +2,13 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "sebastian.fullname" . }}-bootstrap
+  name: {{ include "sebastian.fullname" . }}-bootstrap-r{{ .Release.Revision }}
   namespace: {{ include "sebastian.namespace" . }}
-  annotations:
-    "helm.sh/hook": post-install,post-upgrade
-    "helm.sh/hook-weight": "5"
-    "helm.sh/hook-delete-policy": hook-succeeded,before-hook-creation
 spec:
   ttlSecondsAfterFinished: 300
   template:
     metadata:
-      name: {{ include "sebastian.fullname" . }}-bootstrap
+      name: {{ include "sebastian.fullname" . }}-bootstrap-r{{ .Release.Revision }}
     spec:
       {{- if .Values.setup.image.is_private }}
       imagePullSecrets:
@@ -22,7 +18,108 @@ spec:
         - name: bootstrap
           image: "{{ .Values.setup.image.name }}:{{ .Values.setup.image.tag }}"
           imagePullPolicy: {{ .Values.setup.pullPolicy }}
-          command: ["{{ .Values.setup.entrypoint | default "/opt/setup/entrypoint.sh" }}"]
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              log() {
+                echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
+              }
+
+              is_enabled() {
+                case "${1:-true}" in
+                  [Ff][Aa][Ll][Ss][Ee]|0|[Nn][Oo]|[Oo][Ff][Ff])
+                    return 1
+                    ;;
+                  *)
+                    return 0
+                    ;;
+                esac
+              }
+
+              get_admin_password() {
+                local password=""
+
+                if [ -f /run/secrets/postgres_password ]; then
+                  password="$(cat /run/secrets/postgres_password 2>/dev/null)"
+                fi
+
+                if [ -z "$password" ] && [ -n "${DB_PASSWORD_ADMIN:-}" ]; then
+                  password="${DB_PASSWORD_ADMIN}"
+                fi
+
+                if [ -z "$password" ] && [ -n "${DB_PASSWORD_SUPERUSER:-}" ]; then
+                  password="${DB_PASSWORD_SUPERUSER}"
+                fi
+
+                echo "$password" | tr -d '[:space:]'
+              }
+
+              wait_for_postgres() {
+                local pg_admin_host="${DB_HOST_ADMIN:-${DB_HOST:-postgres}}"
+                local pg_admin_port="${DB_PORT_ADMIN:-${DB_PORT:-5432}}"
+                local pg_admin_user="${DB_USER_ADMIN:-${DB_USER:-postgres}}"
+                local pg_password
+
+                pg_password="$(get_admin_password)"
+                if [ -z "$pg_password" ]; then
+                  log "ERROR: No admin database password available"
+                  exit 1
+                fi
+
+                until PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d postgres -c '\q' 2>/dev/null; do
+                  log "PostgreSQL is unavailable at ${pg_admin_host}:${pg_admin_port} - sleeping"
+                  sleep 1
+                done
+
+                log "PostgreSQL is up and running"
+              }
+
+              check_seeds_status() {
+                local pg_admin_host="${DB_HOST_ADMIN:-${DB_HOST:-postgres}}"
+                local pg_admin_port="${DB_PORT_ADMIN:-${DB_PORT:-5432}}"
+                local pg_admin_user="${DB_USER_ADMIN:-${DB_USER:-postgres}}"
+                local pg_password
+
+                pg_password="$(get_admin_password)"
+                PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d "${DB_NAME_SERVER:-server}" -tAc "SELECT EXISTS (SELECT 1 FROM users LIMIT 1);" 2>/dev/null | grep -q '^t$'
+              }
+
+              wait_for_postgres
+
+              log "Creating databases and roles"
+              timeout 120 node /app/server/setup/create_database.js
+
+              if is_enabled "${SETUP_RUN_MIGRATIONS:-true}"; then
+                pg_admin_host="${DB_HOST_ADMIN:-${DB_HOST:-postgres}}"
+                pg_admin_port="${DB_PORT_ADMIN:-${DB_PORT:-5432}}"
+                pg_admin_user="${DB_USER_ADMIN:-${DB_USER:-postgres}}"
+
+                pg_password="$(get_admin_password)"
+
+                log "Creating pgboss schema"
+                PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d "${DB_NAME_SERVER:-server}" -c 'CREATE SCHEMA IF NOT EXISTS pgboss;'
+
+                log "Granting necessary permissions"
+                PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d "${DB_NAME_SERVER:-server}" -c 'GRANT ALL ON SCHEMA public TO postgres;'
+
+                log "Running migrations"
+                NODE_ENV=migration timeout 300 npx knex migrate:latest --knexfile /app/server/knexfile.cjs --verbose
+              else
+                log "SETUP_RUN_MIGRATIONS is disabled; skipping migrations"
+              fi
+
+              if is_enabled "${SETUP_RUN_SEEDS:-true}"; then
+                if check_seeds_status; then
+                  log "Seeds already exist; skipping"
+                else
+                  log "Running seeds"
+                  NODE_ENV=migration timeout 300 npx knex seed:run --knexfile /app/server/knexfile.cjs --verbose
+                fi
+              else
+                log "SETUP_RUN_SEEDS is disabled; skipping seeds"
+              fi
+
+              log "Setup completed"
           env:
             - name: APP_NAME
               value: "{{ .Values.nameOverride }}"
@@ -87,6 +184,8 @@ spec:
                 secretKeyRef:
                   name: db-credentials
                   key: DB_PASSWORD_SUPERUSER
+            - name: DB_USER_ADMIN
+              value: "postgres"
             - name: DB_PASSWORD_SUPERUSER
               valueFrom:
                 secretKeyRef:
@@ -132,6 +231,8 @@ spec:
               {{- else }}
               value: {{ .Values.config.db.server_admin_password | quote }}
               {{- end }}
+            - name: DB_USER_ADMIN
+              value: "{{ .Values.config.db.adminUser | default .Values.config.db.user }}"
             - name: DB_PASSWORD_SUPERUSER
               {{- if and .Values.config.db.server_password_admin_secret.name .Values.config.db.server_password_admin_secret.key }}
               valueFrom:
