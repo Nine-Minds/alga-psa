@@ -318,12 +318,15 @@ Working memory for adding multiple email addresses to contacts using a compatibi
 - Updated `server/src/lib/api/schemas/contact.ts` so REST contact schemas now accept and return:
   - scalar `email` as the primary/default address
   - `primary_email_canonical_type`
+  - `primary_email_custom_type`
   - `primary_email_custom_type_id`
   - `primary_email_type` on responses
   - `additional_email_addresses`
 - Updated `server/src/lib/api/services/ContactService.ts#create` so create requests stop dropping the hybrid email fields before they reach `ContactModel.createContact`.
 - Added focused unit coverage:
-  - `server/src/test/unit/validation/contactEmailSchemas.test.ts`
-  - `server/src/test/unit/api/contactServiceEmailAddresses.test.ts`
+  - `server/src/test/unit/validation/contactPhoneSchemas.test.ts`
+  - `server/src/test/unit/api/contactService.hybridEmailFields.test.ts`
 - Verification runbook used:
-  - `cd server && pnpm vitest run src/test/unit/validation/contactEmailSchemas.test.ts src/test/unit/api/contactServiceEmailAddresses.test.ts --coverage=false`
+  - `cd server && pnpm vitest run src/test/unit/validation/contactPhoneSchemas.test.ts src/test/unit/api/contactService.hybridEmailFields.test.ts --coverage=false`
+- Constraint observed:
+  - A DB-backed `ContactService` integration variant was not kept because local Postgres connectivity to the `.env.localtest` harness is currently blocked (`EPERM` to `127.0.0.1:5438` / `::1:5438`) in this environment.
