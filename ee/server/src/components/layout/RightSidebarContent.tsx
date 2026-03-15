@@ -122,7 +122,7 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
       <Collapsible.Content
         style={{ width: `${width}px` }}
         ref={sidebarRef}
-        className={`fixed top-0 right-0 h-full bg-gray-50 shadow-xl overflow-hidden transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'
+        className={`fixed top-0 right-0 z-[45] h-full bg-gray-50 shadow-xl overflow-hidden transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
       >
         <div
