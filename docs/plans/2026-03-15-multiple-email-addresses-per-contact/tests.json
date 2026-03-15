@@ -268,7 +268,7 @@
   {
     "id": "T033",
     "description": "Shared `EmailService.findContactByEmail` preserves both the matched sender email and the contact's primary/default `contacts.email` when the match came from an additional row.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
@@ -276,7 +276,7 @@
   {
     "id": "T034",
     "description": "Shared `EmailService.createOrFindContact` remains compatible by creating contacts with only a primary email in `contacts.email`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]

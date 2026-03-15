@@ -180,7 +180,7 @@
   {
     "id": "F021",
     "description": "Update shared `EmailService.findContactByEmail` and `EmailService.createOrFindContact` to understand the hybrid contact-email model and preserve both matched email and primary email where needed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR-13",
       "FR-14",

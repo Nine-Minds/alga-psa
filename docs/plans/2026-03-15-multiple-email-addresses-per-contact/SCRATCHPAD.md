@@ -245,3 +245,22 @@ Working memory for adding multiple email addresses to contacts using a compatibi
 - Verification runbook used:
   - `cd shared && pnpm vitest run models/__tests__/contactModel.getContactByEmail.test.ts --coverage=false`
   - `cd server && pnpm vitest run src/test/unit/contacts/contactEmailLookup.contract.test.ts --coverage=false`
+
+## Update (2026-03-15, shared email service lookup semantics)
+- Completed `F021` and flipped `T033` and `T034` to implemented.
+- Updated `shared/services/emailService.ts` so `EmailService.findContactByEmail` now:
+  - delegates contact resolution to `ContactModel.getContactByEmail`
+  - preserves the canonical primary/default contact email on `email`
+  - surfaces the exact lookup match separately on `matched_email`
+  - still hydrates default phone and client name for downstream consumers
+- Confirmed `EmailService.createOrFindContact` remains compatibility-safe:
+  - it reuses the hybrid lookup path through `findContactByEmail`
+  - it still creates new contacts with only `contacts.email` populated and no additional-email rows when no match exists
+- Added focused no-DB coverage:
+  - `shared/services/__tests__/emailService.contactLookup.test.ts`
+- Added a DB-backed integration regression for environments where the local test harness is available:
+  - `server/src/test/integration/emailServiceContactLookup.integration.test.ts`
+- Verification runbook used:
+  - `cd shared && pnpm vitest run services/__tests__/emailService.contactLookup.test.ts --coverage=false`
+- Environment note:
+  - The DB-backed `server/src/test/integration/emailServiceContactLookup.integration.test.ts` suite matches the feature scope but was not executed here because the local PostgreSQL harness on `127.0.0.1:5438` is blocked in this Codex environment.
